@@ -80,21 +80,4 @@ public class JetstreamBuilderTests
 
         Assert.Equal(closeTimeout, jetstream.Options.CloseTimeout);
     }
-
-    [Fact]
-    public void TheMessageSizesSetOnTheBuilderReachTheOptionsTheyName()
-    {
-        const int readBlockSize = 4096;
-        const int maximumTotalMessageSize = 64 * 1024;
-
-        using AtProtoJetstream jetstream = AtProtoJetstream.CreateBuilder()
-            .SetMaximumMessageSize(readBlockSize)
-            .SetMaximumTotalMessageSize(maximumTotalMessageSize)
-            .Build();
-
-        // SetMaximumMessageSize configures the size of each block read from the socket, and it is
-        // SetMaximumTotalMessageSize which bounds how large a message may be.
-        Assert.Equal(readBlockSize, jetstream.Options.BufferSize);
-        Assert.Equal(maximumTotalMessageSize, jetstream.Options.MaxMessageSize);
-    }
 }

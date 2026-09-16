@@ -179,7 +179,9 @@ The `options` parameter on the constructor allows you to configure
 * `UseCompression` - a flag indication whether compression should be used. This defaults to `true`.
 * `Dictionary` - the zst compression/decompression dictionary to use if compression is enabled. This defaults to a generated dictionary specific to the jetstream.
 * `TaskFactory` - the `TaskFactory` to use when creating new tasks. This allows you to configure `TaskScheduler` settings if needed.
-* `MaximumMessageSize` - the maximum size of messages you are willing to accept, in bytes. This defaults to 8096.
+* `BufferSize` - the size, in bytes, of each block read from the web socket. This is the size of the buffer a single read fills, not a limit on anything; a larger message is read in several blocks and reassembled. This defaults to 8096.
+* `MaxMessageSize` - the maximum size, in bytes, of a message you are willing to accept. Messages larger than this are rejected rather than reassembled, and the value is also sent to the server, which will not send a message larger than it. This defaults to 1048576.
+* `CloseTimeout` - how long to wait for a server to answer a close handshake before the connection is aborted instead. This defaults to 30 seconds.
 
 The `webSocketOptions` parameter allows you to configure the underlying web socket client,
 

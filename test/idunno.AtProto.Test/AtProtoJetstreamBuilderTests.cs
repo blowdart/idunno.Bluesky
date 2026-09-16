@@ -89,7 +89,7 @@ public class AtProtoJetstreamBuilderTests
             .UseCompression(false)
             .WithCompressionDictionary(dictionary)
             .WithTaskFactory(taskFactory)
-            .SetMaximumMessageSize(4096)
+            .SetReadBufferSize(4096)
             .SetMaximumTotalMessageSize(65536)
             .Build();
 
@@ -130,6 +130,14 @@ public class AtProtoJetstreamBuilderTests
         Assert.Throws<ArgumentNullException>(
             "webSocketOptions",
             () => AtProtoJetstreamBuilder.Create().WithWebSocketOptions(null!));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void SetReadBufferSizeRejectsSizesWhichAreNotPositive(int readBufferSize) =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            "readBufferSize",
+            () => AtProtoJetstreamBuilder.Create().SetReadBufferSize(readBufferSize));
 
     [Theory]
     [InlineData(0)]
