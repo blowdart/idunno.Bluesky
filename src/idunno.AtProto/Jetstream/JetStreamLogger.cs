@@ -20,9 +20,6 @@ internal static partial class JetStreamLogger
     [LoggerMessage(3, LogLevel.Error, "Error in message loop")]
     internal static partial void MessageLoopError(ILogger logger, Exception ex);
 
-    [LoggerMessage(4, LogLevel.Information, "WSS operation in messageLoop has been cancelled")]
-    internal static partial void MessageLoopCancellation(ILogger logger);
-
     [LoggerMessage(5, LogLevel.Debug, "Client state changed to {state}")]
     internal static partial void ClientStateChanged(ILogger logger, WebSocketState state);
 
@@ -44,9 +41,6 @@ internal static partial class JetStreamLogger
     [LoggerMessage(11, LogLevel.Error, "Exception when calling _client.Dispose() in ConnectAsync()")]
     internal static partial void ErrorDisposingClientInConnectAsync(ILogger logger, Exception ex);
 
-    [LoggerMessage(12, LogLevel.Warning, "{fault} logged. Current fault count is {currentCount}")]
-    internal static partial void FaultLogged(ILogger logger, string fault, int currentCount);
-
     [LoggerMessage(13, LogLevel.Debug, "WSS: WebSocket created")]
     internal static partial void InternalClientWebSocketCreated(ILogger logger);
 
@@ -59,27 +53,15 @@ internal static partial class JetStreamLogger
     [LoggerMessage(16, LogLevel.Warning, "WSS: Unexpected message type {webSocketMessageType}")]
     internal static partial void UnexpectedMessageType(ILogger logger, WebSocketMessageType webSocketMessageType);
 
-    [LoggerMessage(17, LogLevel.Information, "Attempting to reconnect {retry} of {maximumReconnectionRetries} to the jetstream")]
-    internal static partial void AttemptingReconnect(ILogger logger, int retry, int maximumReconnectionRetries);
-
     [LoggerMessage(18, LogLevel.Error, "WSS: Exception thrown")]
     internal static partial void WebSocketException(ILogger logger, WebSocketException exception);
-
-    [LoggerMessage(19, LogLevel.Information, "Reconnection cancelled")]
-    internal static partial void ReconnectionCancelled(ILogger logger);
-
-    [LoggerMessage(20, LogLevel.Information, "Reconnected")]
-    internal static partial void Reconnected(ILogger logger);
-
-    [LoggerMessage(21, LogLevel.Error, "Reconnection failed {state}")]
-    internal static partial void ReconnectionFailed(ILogger logger, WebSocketState state);
-
-    [LoggerMessage(22, LogLevel.Error, "Reconnection threw")]
-    internal static partial void ReconnectionThrew(ILogger logger, Exception ex);
 
     [LoggerMessage(23, LogLevel.Error, "Decompression failed")]
     internal static partial void DecompressionException(ILogger logger, ZstdException ex);
 
     [LoggerMessage(24, LogLevel.Error, "Connection failed {state}")]
     internal static partial void ConnectionFailed(ILogger logger, WebSocketState state);
+
+    [LoggerMessage(25, LogLevel.Warning, "The close handshake was not answered within {closeTimeout}, aborting the connection")]
+    internal static partial void CloseTimedOut(ILogger logger, TimeSpan closeTimeout);
 }

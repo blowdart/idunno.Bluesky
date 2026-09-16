@@ -50,14 +50,26 @@ public sealed class AtProtoJetstreamBuilder
     public byte[] CompressionDictionary { get; set; } = Resource.zstDictionary;
 
     /// <summary>
-    /// Gets or sets the maximum message size the Jetstream should send.
+    /// Gets or sets the size, in bytes, of each block read from the web socket.
     /// </summary>
+    /// <remarks>
+    /// <para>This is the size of the buffer a single read fills, not a limit on anything. Use <see cref="MaximumTotalMessageSize"/>
+    /// to limit how large a message may be.</para>
+    /// </remarks>
     public int MaximumMessageSize { get; set; } = 8096;
 
     /// <summary>
     /// Gets or sets the maximum total size of a message the jetstream will accept. Messages exceeding this limit are rejected.
     /// </summary>
+    /// <remarks>
+    /// <para>This is also the size sent to the server, which will not send a message larger than it.</para>
+    /// </remarks>
     public int MaximumTotalMessageSize { get; set; } = WebSocketExtensions.DefaultMaxMessageSize;
+
+    /// <summary>
+    /// Gets or sets how long to wait for a server to answer a close handshake before the connection is aborted instead.
+    /// </summary>
+    public TimeSpan CloseTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Gets or sets any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.
@@ -155,12 +167,15 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
-    /// Configures the compression dictionary to use when <see cref="EnableCompression"/> is <see langword="true"/>.
+    /// Sets the compression dictionary to use when <see cref="EnableCompression"/> is <see langword="true"/>.
     /// </summary>
     /// <param name="compressionDictionary">A byte[] containing a custom zst dictionary.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="compressionDictionary"/> is <see langword="null"/>.</exception>
     public AtProtoJetstreamBuilder WithCompressionDictionary(byte[] compressionDictionary)
     {
+        ArgumentNullException.ThrowIfNull(compressionDictionary);
+
         CompressionDictionary = compressionDictionary;
 
         return this;
@@ -171,19 +186,29 @@ public sealed class AtProtoJetstreamBuilder
     /// </summary>
     /// <param name="taskFactory">A custom <see cref="TaskFactory"/> to use for background message parsing.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="taskFactory"/> is <see langword="null"/>.</exception>
     public AtProtoJetstreamBuilder WithTaskFactory(TaskFactory taskFactory)
     {
+        ArgumentNullException.ThrowIfNull(taskFactory);
+
         TaskFactory = taskFactory;
 
         return this;
     }
 
     /// <summary>
-    /// Configures the maximum message size the <see cref="AtProtoJetstream"/> should send.
+    /// Configures the size, in bytes, of each block the <see cref="AtProtoJetstream"/> reads from the web socket.
     /// </summary>
-    /// <param name="maximumMessageSize">The maximum message size, in bytes, the jetstream should send.</param>
+    /// <param name="maximumMessageSize">The size, in bytes, of each block read from the web socket.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumMessageSize"/> is equal to, or less than, zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is the size of the buffer a single read fills, not a limit on anything. A message larger than this is read in several
+    ///   blocks and reassembled, so setting it does not bound how much a message can allocate. Use <see cref="SetMaximumTotalMessageSize(int)"/>
+    ///   for that.
+    /// </para>
+    /// </remarks>
     public AtProtoJetstreamBuilder SetMaximumMessageSize(int maximumMessageSize)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumMessageSize);
@@ -215,6 +240,21 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures how long the <see cref="AtProtoJetstream"/> waits for a server to answer a close handshake.
+    /// </summary>
+    /// <param name="closeTimeout">How long to wait for a server to answer a close handshake before aborting the connection instead.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="closeTimeout"/> is equal to, or less than, zero.</exception>
+    public AtProtoJetstreamBuilder SetCloseTimeout(TimeSpan closeTimeout)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(closeTimeout, TimeSpan.Zero);
+
+        CloseTimeout = closeTimeout;
+
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.
     /// </summary>
     /// <param name="webSocketOptions">The <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.</param>
@@ -234,9 +274,12 @@ public sealed class AtProtoJetstreamBuilder
     /// </summary>
     /// <param name="dids">The <see cref="Did"/>s to filter on.</param>
     /// <returns>A collection of <see cref="Did"/>s to limit commit events for.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Can be combined with <see cref="FilterTo(Nsid[])"/>.</para></remarks>
     public AtProtoJetstreamBuilder FilterTo(Did[] dids)
     {
+        ArgumentNullException.ThrowIfNull(dids);
+
         DidsToFilterOn = dids;
 
         return this;
@@ -247,9 +290,12 @@ public sealed class AtProtoJetstreamBuilder
     /// </summary>
     /// <param name="collections">The <see cref="Nsid"/> of any collections to filter on.</param>
     /// <returns>A collection of <see cref="Nsid"/>s to limit commit events for.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="collections"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Can be combined with <see cref="FilterTo(Did[])"/>.</para></remarks>
     public AtProtoJetstreamBuilder FilterTo(Nsid[] collections)
     {
+        ArgumentNullException.ThrowIfNull(collections);
+
         CollectionsToFilterOn = collections;
 
         return this;
@@ -317,6 +363,7 @@ public sealed class AtProtoJetstreamBuilder
             BufferSize = MaximumMessageSize,
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
+            CloseTimeout = CloseTimeout,
         };
 
         if (HttpClientFactory is null)

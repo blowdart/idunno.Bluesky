@@ -40,7 +40,10 @@ public record AtJetstreamEvent
     /// <summary>
     /// A list of keys and element data that do not map to any strongly typed properties.
     /// </summary>
-    [NotNull]
+    /// <remarks>
+    /// <para>Settable, and so nullable, because deserialization needs to be able to set it. Consumers should check for
+    /// <see langword="null"/> rather than rely on the initial value surviving.</para>
+    /// </remarks>
     [JsonExtensionData]
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
