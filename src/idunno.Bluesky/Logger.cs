@@ -186,6 +186,15 @@ internal static partial class Logger
     [LoggerMessage(125, LogLevel.Error, "Could not delete temporary file {fileName}")]
     internal static partial void CouldNotDeleteTemporaryFile(ILogger logger, string fileName, Exception ex);
 
+    [LoggerMessage(151, LogLevel.Debug, "Image at {uri} has a scheme of {scheme}, which is not http or https")]
+    internal static partial void EmbeddedCardImageSchemeNotSupported(ILogger logger, Uri uri, string scheme);
+
+    [LoggerMessage(152, LogLevel.Debug, "Image at {uri} was declared as {declaredMimeType} but its content is {sniffedMimeType}, which is what the blob will record")]
+    internal static partial void EmbeddedCardImageTypeMismatch(ILogger logger, Uri uri, string declaredMimeType, string sniffedMimeType);
+
+    [LoggerMessage(153, LogLevel.Debug, "The canonical url {canonicalUrl} for the card for {uri} has a scheme which is not http or https")]
+    internal static partial void EmbeddedCardCanonicalUrlSchemeNotSupported(ILogger logger, Uri uri, string canonicalUrl);
+
     [LoggerMessage(135, LogLevel.Error, "StartUpload getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
     internal static partial void StartUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 

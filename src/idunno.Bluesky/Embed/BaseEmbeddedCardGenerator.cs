@@ -84,6 +84,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not a valid http or https URI.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxPageSize"/> is zero or negative.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the generator has been disposed.</exception>
     /// <remarks>
     /// <para>
     ///   The page is served by whoever controls <paramref name="uri"/>, so at most <paramref name="maxPageSize"/> bytes are
@@ -95,6 +96,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Bounding parameter added with a default to preserve the existing shape")]
     protected virtual async Task<string?> GetPageContent(Uri uri, int maxPageSize = DefaultMaximumPageSize, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxPageSize);
 
@@ -173,13 +175,21 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// Gets an image from the specified <paramref name="uri"/> and uploads it to blob storage via the <see cref="BlueskyAgent"/>.
     /// </summary>
     /// <param name="uri">The URI of the image to download.</param>
-    /// <param name="imageMimeType">The mime type of the image, if known.</param>
+    /// <param name="imageMimeType">The mime type of the image, if known. This is treated as a hint; the type recorded on the blob is always the one sniffed from the content.</param>
     /// <param name="maxDownloadSize">The maximum number of bytes to download.</param>
     /// <param name="bufferSize">The size of the buffer to use when downloading the image.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The uploaded <see cref="Blob"/> or <see langword="null"/> if the operation fails.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="UnauthorizedAccessException">Thrown if the agent is not authenticated.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the generator has been disposed.</exception>
+    /// <remarks>
+    /// <para>
+    ///   <paramref name="imageMimeType"/> typically comes from the page being read, which is served by whoever controls it,
+    ///   so it cannot be used to decide what is uploaded. The content is always sniffed and anything which is not a
+    ///   recognised image is rejected.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Allows for string/Uri overloads")]
     protected async Task<Blob?> DownloadAndUploadImageBlob(
@@ -189,11 +199,20 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         int bufferSize = 1000000,
         CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         ArgumentNullException.ThrowIfNull(uri);
 
         if (!Agent.IsAuthenticated)
         {
             throw new UnauthorizedAccessException();
+        }
+
+        // The URI comes from the page being read, so it is not necessarily something which should be requested at all.
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.EmbeddedCardImageSchemeNotSupported(ILogger, uri, uri.Scheme);
+            return null;
         }
 
         Blob? result = null;
@@ -235,20 +254,31 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                                 return null;
                             }
 
-                            imageMimeType ??= SniffImageContentType(header) ?? UnknownImageType;
-                            if (imageMimeType == UnknownImageType)
+                            // The declared type is only a hint, and the page which supplied it is untrusted, so the type
+                            // recorded on the blob is always the one the content itself says it is.
+                            string? sniffedMimeType = SniffImageContentType(header);
+
+                            if (sniffedMimeType is null)
                             {
                                 stream.Close();
                                 Logger.EmbeddedCardImageTypeNotRecognized(ILogger, uri);
                                 return null;
                             }
 
+                            if (imageMimeType is not null &&
+                                !imageMimeType.Equals(sniffedMimeType, StringComparison.OrdinalIgnoreCase))
+                            {
+                                Logger.EmbeddedCardImageTypeMismatch(ILogger, uri, imageMimeType, sniffedMimeType);
+                            }
+
+                            imageMimeType = sniffedMimeType;
+
                             string fileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                             byte[] readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
                             try
                             {
-                                using (var fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize, useAsync: true))
+                                using (var fileStream = new FileStream(fileName, CreateTemporaryFileOptions(bufferSize)))
                                 {
                                     // Write the header bytes we already read
                                     await fileStream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
@@ -258,15 +288,17 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                                     int bytesRead;
                                     while ((bytesRead = await stream.ReadAsync(readBuffer, cancellationToken).ConfigureAwait(false)) > 0)
                                     {
-                                        await fileStream.WriteAsync(readBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
-                                        totalBytesRead += bytesRead;
-
-                                        if (totalBytesRead > maxDownloadSize)
+                                        // Checked before the write rather than after it, so that a server cannot have an
+                                        // extra buffer's worth written to disk by sending it in one read.
+                                        if (totalBytesRead + bytesRead > maxDownloadSize)
                                         {
                                             fileStream.Close();
-                                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, totalBytesRead, maxDownloadSize);
+                                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, totalBytesRead + bytesRead, maxDownloadSize);
                                             return null;
                                         }
+
+                                        await fileStream.WriteAsync(readBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                                        totalBytesRead += bytesRead;
                                     }
                                     await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                                     fileStream.Close();
@@ -370,7 +402,8 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 }
             }
 
-            return Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            // The page decides how its bytes are encoded, so decode with the charset it declared rather than assuming UTF-8.
+            return EncodingFor(content.Headers.ContentType?.CharSet).GetString(buffer, 0, bytesRead);
         }
         finally
         {
@@ -378,7 +411,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         }
     }
 
-    private static string SniffImageContentType(byte[] imageData)
+    private static string? SniffImageContentType(byte[] imageData)
     {
         // Simple content type sniffing based on file signatures (magic numbers)
         if (imageData.Length >= 4)
@@ -399,14 +432,63 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 return "image/gif";
             }
         }
-        // Default to octet-stream if content type cannot be determined
-        return UnknownImageType;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Creates the options a downloaded image is written to a temporary file with.
+    /// </summary>
+    private static FileStreamOptions CreateTemporaryFileOptions(int bufferSize)
+    {
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            BufferSize = bufferSize,
+            Options = FileOptions.Asynchronous
+        };
+
+        // The temporary directory is shared with every other user of the machine, so the file is created readable only
+        // by the user which created it. Setting this on Windows throws, where the ACL inherited from the directory
+        // already restricts it.
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// Returns the <see cref="Encoding"/> named by <paramref name="charSet"/>, or <see cref="Encoding.UTF8"/> if it does not name one.
+    /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Any unusable charset falls back to UTF-8.")]
+    private static Encoding EncodingFor(string? charSet)
+    {
+        if (string.IsNullOrWhiteSpace(charSet))
+        {
+            return Encoding.UTF8;
+        }
+
+        try
+        {
+            return Encoding.GetEncoding(charSet.Trim().Trim('"'));
+        }
+        catch (Exception)
+        {
+            return Encoding.UTF8;
+        }
     }
 
     /// <summary>
     /// Releases the unmanaged resources used by the <see cref="BaseEmbeddedCardGenerator"/> and optionally disposes of the managed resources.
     /// </summary>
     /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to releases only unmanaged resources.</param>
+    /// <remarks>
+    /// <para>Once disposed, a generator throws <see cref="ObjectDisposedException"/> rather than making any further requests.</para>
+    /// </remarks>
     protected virtual void Dispose(bool disposing)
     {
         if (!_isDisposed)
