@@ -6,6 +6,8 @@
 
 #### idunno.AtProto
 
+* Added `Resolution.VerifyHandle()` and `Resolution.ResolveVerifiedHandle()`, which check that a handle and a DID resolve to each other.
+* Added an optional `maximumWellKnownResponseSize` parameter to the `Resolution.ResolveDidDocument()` and `Resolution.ResolvePds()` overloads which resolve a handle.
 * Added `StringExtensions.GetUtf8Length()`, which returns the length of a string when encoded as UTF-8 bytes. AT Protocol lexicons count their
   `maxLength` constraints in UTF-8 bytes rather than in UTF-16 characters, so use this rather than `string.Length` when validating a value against a
   `maxLength` limit. It sits alongside the existing `GetGraphemeLength()`, which covers the matching `maxGraphemes` constraint.
@@ -86,6 +88,7 @@
 
 #### idunno.AtProto
 
+* A cancelled request now throws `OperationCanceledException` instead of returning a result with a status code of `OK`.
 * Removed the `ReaderWriterLockSlim` property in `Credentials` to avoid potential deadlocks. Any custom credentials using this property should now use its own locking mechanism to avoid deadlocks.
 * `DPoPRevokeCredentials` no longer implement `IDisposable`.
 * The `onCredentialsUpdated` parameter on `AtProtoServer` and `AtProtoHttpClient` methods has changed from `Action<AtProtoCredential>?` to
@@ -125,6 +128,7 @@
 
 #### idunno.AtProto
 
+* An `HttpContent` request body supplied by the caller is no longer disposed by the client, and is buffered so that it survives a DPoP nonce retry.
 * A failed background credential refresh now schedules a retry even when the refresh timer had not been created yet, which previously ended background refresh for the lifetime of the agent.
 * The refresh token replay check now remembers the last few exchanged tokens rather than only the most recent one.
 * Exchanged refresh tokens are now forgotten when the session ends, so they are not retained for the lifetime of the agent.

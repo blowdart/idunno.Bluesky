@@ -1670,6 +1670,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
             using (var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(service, endpoint)))
             {
+                bool callerSuppliedContent = false;
+
                 SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, _extraRequestHeaders);
 
                 // Add authentication headers
@@ -1685,6 +1687,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     {
                         case HttpContent httpContent:
                             httpRequestMessage.Content = httpContent;
+                            callerSuppliedContent = true;
                             break;
 
                         case byte[] blob:
@@ -1710,12 +1713,24 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     {
                         SetContentHeaders(httpRequestMessage, contentHeaders);
                     }
-                }
 
-                await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                    if (callerSuppliedContent && retry && credentials is IDPoPBoundCredential)
+                    {
+                        // A DPoP nonce error causes the request to be reissued with the same HttpContent instance. Caller supplied
+                        // content may be backed by a stream which can only be read once, so buffer it now so that the retry has
+                        // something it can serialize a second time.
+#if NET9_0_OR_GREATER
+                        await httpRequestMessage.Content.LoadIntoBufferAsync(cancellationToken).ConfigureAwait(false);
+#else
+                        // The overload which takes a CancellationToken was only added in .NET 9.
+                        await httpRequestMessage.Content.LoadIntoBufferAsync().ConfigureAwait(false);
+#endif
+                    }
+                }
 
                 try
                 {
+                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
                     _metrics.RequestsSent.Add(
                         1,
                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1968,7 +1983,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     Logger.AtProtoClientRequestCancelled
                         (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                    return new AtProtoHttpResult<TResult>(null, HttpStatusCode.OK, null);
+                    throw;
+                }
+                finally
+                {
+                    if (callerSuppliedContent)
+                    {
+                        // The content belongs to the caller, who may want to reuse or dispose it themselves, so detach it before
+                        // the request message is disposed. Disposing a request message disposes whatever content is attached to it.
+                        httpRequestMessage.Content = null;
+                    }
                 }
             }
         }
