@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Types.Test;
 
+[Collection("TimestampIdentifier")]
 public class TimestampIdentifierTests
 {
     [Fact]
