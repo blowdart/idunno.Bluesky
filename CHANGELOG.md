@@ -125,13 +125,8 @@
 
 #### idunno.AtProto
 
-* `did:web` DIDs are now resolved only when they meet the restrictions AT Protocol places on the method. A DID is chosen by whoever controls the handle
-  or record it was read from, so resolving one lets a third party pick the host a request is made to. Only hostname level DIDs are resolved, matching the
-  [AT Protocol DID specification](https://atproto.com/specs/did), which rules out IP address literals such as `did:web:169.254.169.254` and internal
-  names such as `did:web:internal-api`. Path based DIDs, which the specification does not support, are rejected, as is a port number on any host other
-  than `localhost`. A DID which is not resolvable fails with an `AtErrorDetail` whose `Error` is `UnsupportedWebDid`.
-* `ResolvePds()` now rejects an `#atproto_pds` service endpoint which is neither `https`, nor `http` to a loopback address. A DID document is served by
-  whoever controls the DID, and requests to a PDS carry access credentials, so an endpoint served over clear text is no longer used.
+* `did:web` DIDs are now resolved only when they meet the restrictions AT Protocol places on the method.
+* `ResolvePds()` now rejects an `#atproto_pds` service endpoint which is neither `https`, nor `http` to a loopback address.
 * The background credential refresh timer no longer throws an `ArgumentException` when an access token expires in exactly sixty seconds. The refresh
   interval subtracts a minute from the expiry, which at exactly sixty seconds left an interval of zero, a value `System.Timers.Timer` rejects.
 * `Label`, `SelfLabel` and `CreateModerationReport()` now measure their lexicon `maxLength` limits in UTF-8 bytes rather than in UTF-16 characters,
