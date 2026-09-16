@@ -4,8 +4,11 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Web;
 
 using idunno.AtProto;
@@ -20,8 +23,80 @@ namespace idunno.DidPlcDirectory;
 /// Provides a class for sending requests to and receiving responses from an directory service, identified by its service URI.
 /// </summary>
 [SuppressMessage("Performance", "CA1812", Justification = "Used in DID resolution.")]
-internal static class DirectoryServer
+internal static partial class DirectoryServer
 {
+    private const string LocalHost = "localhost";
+
+    // The maximum length of a DNS name, which a did:web identifier resolves to a request against.
+    private const int MaximumHostNameLength = 253;
+
+    // AT Proto did:web identifiers are hostnames, which is the same grammar a handle uses, so the handle
+    // validation pattern is reused here. As well as requiring a well formed hostname it requires the right
+    // most label to begin with a letter, which is what rules out IPv4 literals such as 169.254.169.254.
+    [GeneratedRegex(Handle.ValidationRegex, RegexOptions.None, 5000)]
+    private static partial Regex s_validateHostName();
+
+    /// <summary>
+    /// Tries to create the <see cref="Uri"/> of the web server a <c>did:web</c> DID document should be resolved from.
+    /// </summary>
+    /// <param name="identifier">The method specific identifier of the DID, the portion following <c>did:web:</c>.</param>
+    /// <param name="service">The <see cref="Uri"/> of the web server, if <paramref name="identifier"/> is supported, otherwise <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if <paramref name="identifier"/> is a supported <c>did:web</c> identifier, otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A DID is not necessarily trustworthy, it can be chosen by whoever controls the handle or record it was read from,
+    ///   and resolving one causes an outbound request to the host it names. AT Proto narrows the did:web method considerably,
+    ///   and applying those restrictions is what stops a DID naming an internal host or a host and port of the caller's choosing.
+    /// </para>
+    /// <para>
+    ///   See <see href="https://atproto.com/specs/did">the AT Proto DID specification</see>. Only hostname level DIDs are
+    ///   supported, path based DIDs are not, and a port number is only allowed on <c>localhost</c>, for testing and development.
+    /// </para>
+    /// </remarks>
+    internal static bool TryGetWebDidService(string identifier, [NotNullWhen(true)] out Uri? service)
+    {
+        service = null;
+
+        if (string.IsNullOrEmpty(identifier))
+        {
+            return false;
+        }
+
+        // In the did:web method a colon separates path segments. AT Proto does not support path based DIDs, so an
+        // undecoded colon here means the DID is one this library will not resolve.
+        if (identifier.Contains(':', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // A port number is carried percent encoded, so the identifier has to be decoded before it can be validated.
+        string hostAndPort = HttpUtility.UrlDecode(identifier);
+
+        string host = hostAndPort;
+        int portSeparatorPosition = hostAndPort.IndexOf(':', StringComparison.Ordinal);
+
+        if (portSeparatorPosition >= 0)
+        {
+            host = hostAndPort[..portSeparatorPosition];
+
+            // A port number is only allowed on localhost, for testing and development.
+            if (!host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) ||
+                !ushort.TryParse(hostAndPort[(portSeparatorPosition + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out ushort port) ||
+                port == 0)
+            {
+                return false;
+            }
+        }
+
+        if (!host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) &&
+            (host.Length > MaximumHostNameLength || !s_validateHostName().IsMatch(host)))
+        {
+            return false;
+        }
+
+        return Uri.TryCreate($"https://{hostAndPort}", UriKind.Absolute, out service);
+    }
+
     // DirectoryServer's json classes are encapsulated in the default source generation context, we can hard code this.
     private static readonly JsonSerializerOptions s_jsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -176,9 +251,21 @@ internal static class DirectoryServer
                 }
                 else if (did.ToString().StartsWith(webDidPrefix, StringComparison.InvariantCulture))
                 {
-                    string webDidDomainNameAndPath = HttpUtility.UrlDecode(did.ToString().Substring(webDidPrefix.Length).Replace(':', '/'));
+                    string webDidIdentifier = did.ToString()[webDidPrefix.Length..];
 
-                    Uri service = new($"https://{webDidDomainNameAndPath}");
+                    if (!TryGetWebDidService(webDidIdentifier, out Uri? service))
+                    {
+                        metrics.TotalRequests.Add(1, new KeyValuePair<string, object?>("did.type", "web"));
+                        metrics.FailedRequests.Add(1, new KeyValuePair<string, object?>("did.type", "web"));
+                        Logger.UnsupportedWebDid(logger, did);
+
+                        return new AtProtoHttpResult<DidDocument>(
+                            result: null,
+                            statusCode: HttpStatusCode.BadRequest,
+                            httpResponseHeaders: null,
+                            atErrorDetail: new AtErrorDetail("UnsupportedWebDid", $"{did} is not a supported did:web identifier."),
+                            rateLimit: null);
+                    }
 
                     Logger.ResolvingWebDid(logger, did, service);
                     metrics.TotalRequests.Add(1, new KeyValuePair<string, object?>("did.type", "web"));

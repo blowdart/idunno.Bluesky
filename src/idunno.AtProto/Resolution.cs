@@ -330,6 +330,12 @@ public sealed class Resolution
         if (didDocument is not null && didDocument.Services is not null)
         {
             pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
+
+            if (pds is not null && !IsSupportedServiceEndpoint(pds))
+            {
+                Logger.UnsupportedPdsUri(logger, did, pds);
+                pds = null;
+            }
         }
 
         if (pds is null)
@@ -440,5 +446,28 @@ public sealed class Resolution
         {
             throw new ArgumentException("Could not parse AtIdentifier.", nameof(atIdentifier));
         }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether <paramref name="serviceEndpoint"/> is a service endpoint this library will issue requests to.
+    /// </summary>
+    /// <param name="serviceEndpoint">The service endpoint to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="serviceEndpoint"/> is supported, otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A DID document is served by whoever controls the DID, so the service endpoints it carries are chosen by
+    ///   a third party rather than by the calling application. Requests to a PDS carry access credentials, so an
+    ///   endpoint which would send those credentials in clear text is rejected rather than used.
+    /// </para>
+    /// </remarks>
+    internal static bool IsSupportedServiceEndpoint(Uri serviceEndpoint)
+    {
+        if (serviceEndpoint.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // http is only supported against loopback, for testing and development, where a trusted certificate may not exist.
+        return serviceEndpoint.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) && serviceEndpoint.IsLoopback;
     }
 }

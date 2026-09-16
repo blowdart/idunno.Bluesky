@@ -456,6 +456,33 @@ public class FacetExtractorTests
     }
 
 
+    [Theory]
+    // A handle which resolves is only looked up once, however many times it is mentioned.
+    [InlineData("@blowdart.me @blowdart.me @blowdart.me", 1, 3)]
+    [InlineData("@blowdart.me and @bot.idunno.blue and @blowdart.me", 2, 3)]
+    // A handle which does not resolve is also only looked up once, otherwise a handle which does not exist
+    // would be looked up again for every time it appears.
+    [InlineData("@handle.invalid @handle.invalid @handle.invalid", 1, 0)]
+    [InlineData("@blowdart.me @handle.invalid @blowdart.me @handle.invalid", 2, 2)]
+    // Resolution is not case sensitive, so handles differing only in case are the same lookup.
+    [InlineData("@blowdart.me @BLOWDART.ME", 1, 2)]
+    [InlineData("@blowdart.me @bot.idunno.blue @sinclairinat0r.com", 3, 3)]
+    public async Task EachDistinctMentionedHandleIsResolvedOnlyOnce(string text, int expectedResolutions, int expectedMentionCount)
+    {
+        List<string> resolvedHandles = [];
+
+        DefaultFacetExtractor extractor = new((handle, cancellationToken) =>
+        {
+            resolvedHandles.Add(handle);
+            return MockResolver(handle, cancellationToken);
+        });
+
+        IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectedResolutions, resolvedHandles.Count);
+        Assert.Equal(expectedMentionCount, results.Count);
+    }
+
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Mocking ResolveHandle() signature.")]

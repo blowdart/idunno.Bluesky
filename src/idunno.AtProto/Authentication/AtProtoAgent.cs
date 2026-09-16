@@ -1672,9 +1672,10 @@ public partial class AtProtoAgent
         {
             TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(accessCredentials.AccessJwt);
 
-            if (accessTokenExpiresIn.TotalSeconds < 60)
+            if (accessTokenExpiresIn.TotalSeconds <= 60)
             {
-                // As we're about to expire, go refresh the token
+                // As we're about to expire, go refresh the token. Sixty seconds is included because the refresh
+                // interval below subtracts a minute, which at exactly sixty seconds would leave nothing to wait for.
                 BackgroundRefreshCredentials().FireAndForget();
                 return;
             }
