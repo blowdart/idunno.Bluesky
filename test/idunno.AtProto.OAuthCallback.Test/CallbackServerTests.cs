@@ -7,6 +7,7 @@ using System.Net.Sockets;
 
 namespace idunno.AtProto.OAuthCallback.Test;
 
+[Collection("CallbackServer")]
 public class CallbackServerTests
 {
     private static readonly TimeSpan s_completionBudget = TimeSpan.FromSeconds(15);
