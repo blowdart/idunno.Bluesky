@@ -102,6 +102,8 @@
 
 #### idunno.Bluesky
 
+* The `imageMimeType` parameter on `BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob()` is now only a hint; the type recorded on the uploaded blob is always the sniffed one.
+
 * The `Maximum` constants which carry a lexicon `maxLength` have been renamed to end in `InBytes`, because a lexicon `maxLength` is counted in UTF-8
   bytes rather than in characters. `PostLengthInCharacters`, `TagLengthInCharacters`, `MessageLengthInCharacters` and `DraftTextLengthInCharacters`
   become `PostLengthInBytes`, `TagLengthInBytes`, `MessageLengthInBytes` and `DraftTextLengthInBytes`, and `DisplayNameLength`, `DescriptionLength`
@@ -253,6 +255,14 @@
 
 #### idunno.Bluesky
 
+* The embedded card generators now decide a thumbnail's MIME type by sniffing the downloaded content rather than trusting the type declared by the page.
+* The embedded card generators now reject an `og:url` whose scheme is not http or https.
+* The embedded card generators now read `/.well-known/site.standard.publication` with a 4KB limit rather than the 1MB page limit.
+* The embedded card generators now apply the image download limit before writing to the temporary file rather than after.
+* The embedded card generators no longer request a thumbnail whose URI scheme is not http or https.
+* The embedded card generators now create their temporary file readable only by the current user on Unix.
+* The embedded card generators now decode a page using the character set it declares rather than always assuming UTF-8.
+* The embedded card generators now throw `ObjectDisposedException` once disposed rather than continuing to make requests.
 * `BlueskyAgent.SendMessage()` now rejects an over-long message before extracting facets from it, rather than after scanning it and resolving every handle it mentions.
 * `RichText.DefaultFacetExtractor` now resolves each distinct handle mentioned in a piece of text at most once. A handle mentioned more than once, or
   one which does not resolve, caused a separate network round trip for every time it appeared.

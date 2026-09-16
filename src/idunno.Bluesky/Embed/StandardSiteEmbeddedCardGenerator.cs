@@ -166,7 +166,12 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
                 Path = "/.well-known/site.standard.publication"
             };
 
-            publicationMetadata = await GetPageContent(publicationMetaDataPathBuilder.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+            // A publication record is one short AT URI, so it is read with the well known budget rather than the budget
+            // for a whole web page.
+            publicationMetadata = await GetPageContent(
+                publicationMetaDataPathBuilder.Uri,
+                maxPageSize: AtProtoServer.DefaultMaximumWellKnownResponseSize,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         // If there is no publication metadata after trying embeds and the well-known path

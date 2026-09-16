@@ -177,8 +177,17 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         }
 
         string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : uri.ToString();
-        if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? _))
+        if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? canonicalUri))
         {
+            return null;
+        }
+
+        // og:url is supplied by the page, and an absolute URI is not necessarily a web one. Without this a page can put
+        // a javascript: or data: URI into the card the caller is about to post.
+        if (!canonicalUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !canonicalUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.EmbeddedCardCanonicalUrlSchemeNotSupported(ILogger, uri, canonicalUrl);
             return null;
         }
 
