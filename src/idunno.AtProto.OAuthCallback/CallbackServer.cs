@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Buffers;
 using System.Net;
 using System.Net.Sockets;
 
@@ -22,6 +23,11 @@ namespace idunno.AtProto.OAuthCallback;
 /// <remarks>
 /// <para>Only <c>GET</c> requests are accepted, as described in RFC 8252 section 7.3. Any other
 /// method receives a <see cref="HttpStatusCode.MethodNotAllowed"/> response.</para>
+/// <para>A request is only treated as a callback when it looks like the end of an authorization flow: it must carry a
+/// query string containing at least one of <c>code</c>, <c>state</c> or <c>error</c>, and, if the requesting browser
+/// says what the request was for, it must be a top level navigation. Anything else receives a
+/// <see cref="HttpStatusCode.BadRequest"/> response and leaves the pending callback pending, so a page the user
+/// happens to be visiting cannot consume the single callback this server accepts and deny the login.</para>
 /// </remarks>
 public sealed class CallbackServer : IAsyncDisposable
 {
@@ -34,6 +40,18 @@ public sealed class CallbackServer : IAsyncDisposable
     // Declaring the character set keeps the browser from sniffing an encoding for a page which may
     // contain a caller supplied SuccessBody.
     private const string HtmlContentType = "text/html; charset=utf-8";
+
+    // The unreserved characters of RFC 3986 plus the segment separator. Anything else either means something to the
+    // routing template parser or changes what the advertised Uri points at.
+    private static readonly SearchValues<char> s_validPathCharacters = SearchValues.Create(
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~/");
+
+    // A browser performing the redirect at the end of an authorization flow navigates the top level document, so it
+    // sends Sec-Fetch-Dest: document. A cross site request made by a page the user happens to be visiting carries
+    // something else, such as image or empty.
+    private const string NavigationFetchDestination = "document";
+
+    private const string FetchDestinationHeader = "Sec-Fetch-Dest";
 
     private readonly ILogger<CallbackServer> _logger;
 
@@ -54,7 +72,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private CancellationTokenRegistration _timeoutRegistration;
     private CancellationToken _callerCancellationToken;
     private bool _callbackAwaited;
-    private bool _disposed;
+    private volatile bool _disposed;
 
     private WebApplication? _listener;
 
@@ -65,6 +83,7 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <param name="path">An optional path the host should respond on.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="port"/> is zero or negative, or is greater than 65535.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> contains a character which is not valid in a path segment.</exception>
     [SuppressMessage("Minor Vulnerability", "S5332:Clear-text protocols should not be used", Justification = "Has to be clear text, as local machines may not have a trusted localhost certificate and we shouldn't create one.")]
     public CallbackServer(int port, string? path = null, ILoggerFactory? loggerFactory = default)
     {
@@ -85,6 +104,17 @@ public sealed class CallbackServer : IAsyncDisposable
             path = path[1..];
         }
 
+        // The path goes into both the route pattern and the advertised Uri without escaping. A '{', '}' or '*' would
+        // be read as a route parameter or a catch all rather than as literal text, and a '?', '#' or a space would
+        // make the Uri a caller hands to an authorization server describe something other than the route which was
+        // actually mapped. Restricting the path to characters which mean the same thing in both avoids a redirect URI
+        // which cannot be matched, or a route which answers far more than it should.
+        int invalidCharacterIndex = path.AsSpan().IndexOfAnyExcept(s_validPathCharacters);
+
+        if (invalidCharacterIndex >= 0)
+        {
+            throw new ArgumentException($"'{path[invalidCharacterIndex]}' is not valid in a callback path.", nameof(path));
+        }
         Uri = new Uri($"http://{IPAddress.Loopback}:{port}/{path}");
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -132,6 +162,7 @@ public sealed class CallbackServer : IAsyncDisposable
         {
             context.Response.Headers["Referrer-Policy"] = "no-referrer";
             context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers.XContentTypeOptions = "nosniff";
 
             await next(context).ConfigureAwait(false);
         });
@@ -139,9 +170,11 @@ public sealed class CallbackServer : IAsyncDisposable
         _listener.MapShortCircuit(404, "robots.txt", "favicon.ico");
 
         _listener.MapGet($"{path}", PullQueryString);
-        _listener.MapPost($"{path}", MethodNotAllowed);
 
-        _listener.MapFallback(BadRequest);
+        // Only GET is answered, so anything else is a method problem wherever it was addressed, and a fallback which
+        // looks at the method keeps that true for verbs which are not mapped at all rather than only for the handful
+        // which are.
+        _listener.MapFallback(context => HttpMethods.IsGet(context.Request.Method) ? BadRequest(context) : MethodNotAllowed(context));
 
         Logger.ListeningOn(_logger, Uri);
 
@@ -335,15 +368,55 @@ public sealed class CallbackServer : IAsyncDisposable
     /// after calling this to keep that window as small as possible. If the port is lost the task
     /// returned by <see cref="WaitForCallbackAsync(int, CancellationToken)"/> faults rather than
     /// hanging.</para>
+    /// <para>A <see cref="CallbackServer"/> binds both loopback families, so a port which is free on IPv4 but taken on
+    /// IPv6 is no use. The port returned is checked against both.</para>
     /// </remarks>
     public static int GetRandomUnusedPort()
     {
-        using (var listener = new TcpListener(IPAddress.Loopback, 0))
+        const int maximumAttempts = 10;
+
+        int port = 0;
+
+        // Giving up after a number of attempts rather than looping forever, because a machine where every candidate
+        // port is taken on IPv6 should fail when the server starts, with the exception that explains why, rather than
+        // hang inside what looks like a trivial helper.
+        for (int attempt = 1; attempt <= maximumAttempts; attempt++)
         {
+            using (var listener = new TcpListener(IPAddress.Loopback, 0))
+            {
+                listener.Start();
+                port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                listener.Stop();
+            }
+
+            if (!Socket.OSSupportsIPv6 || IsFreeOnIPv6Loopback(port))
+            {
+                break;
+            }
+        }
+
+        return port;
+    }
+
+    /// <summary>
+    /// Returns whether <paramref name="port"/> can be bound on the IPv6 loopback adapter.
+    /// </summary>
+    /// <param name="port">The port to test.</param>
+    /// <returns><see langword="true"/> if the port is free, otherwise <see langword="false"/>.</returns>
+    private static bool IsFreeOnIPv6Loopback(int port)
+    {
+        try
+        {
+            using var listener = new TcpListener(IPAddress.IPv6Loopback, port);
+
             listener.Start();
-            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
-            return port;
+
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
         }
     }
 
@@ -365,15 +438,42 @@ public sealed class CallbackServer : IAsyncDisposable
 
         string? queryString = null;
 
-        if (context.Request.QueryString.HasValue)
+        // A page the user is visiting can point a browser at this server just as easily as the authorization server
+        // can, and the Host it sends is the loopback address this server answers to, so neither host filtering nor the
+        // remote address check above tells the two apart. The callback is single shot, so one cross site request would
+        // otherwise consume it and the redirect which actually carries the authorization code would arrive to find the
+        // wait already finished. Sec-Fetch-Dest separates them: the redirect at the end of an authorization flow is a
+        // top level navigation, an <img> or a fetch from another page is not. The header is absent on browsers which
+        // do not send it, and on non browser callers, so its absence is not treated as a rejection.
+        string? fetchDestination = context.Request.Headers[FetchDestinationHeader];
+
+        if (!string.IsNullOrEmpty(fetchDestination) &&
+            !string.Equals(fetchDestination, NavigationFetchDestination, StringComparison.Ordinal))
         {
-            Logger.ReceivedCallback(_logger);
-            queryString = context.Request.QueryString.Value;
+            Logger.NonNavigationRequestRejected(_logger, fetchDestination);
+
+            await BadRequest(context).ConfigureAwait(false);
+
+            return;
         }
-        else
+
+        // Second half of the same defence, and the reason a bare request to the callback address no longer reports a
+        // successful login. A request which carries none of the parameters an authorization server sends cannot be the
+        // callback, so answering it as one would be wrong even if it were not a way to end the wait early.
+        if (!context.Request.QueryString.HasValue ||
+            (!context.Request.Query.ContainsKey("code") &&
+             !context.Request.Query.ContainsKey("state") &&
+             !context.Request.Query.ContainsKey("error")))
         {
             Logger.ReceivedCallbackWithNoQuerystring(_logger);
+
+            await BadRequest(context).ConfigureAwait(false);
+
+            return;
         }
+
+        Logger.ReceivedCallback(_logger);
+        queryString = context.Request.QueryString.Value;
 
         try
         {
@@ -399,9 +499,15 @@ public sealed class CallbackServer : IAsyncDisposable
         }
         catch
         {
-            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            context.Response.ContentType = HtmlContentType;
-            await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            // Setting the status code once the response has started throws, which would replace whatever went wrong
+            // here with a less useful exception and skip the flush below. The browser has a partial page either way.
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                context.Response.ContentType = HtmlContentType;
+                await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            }
+
             await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
         }
         finally
@@ -428,7 +534,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
     private async Task MethodNotAllowed(HttpContext context)
     {
-        Logger.MethodNotAllowed(_logger, context.Request.Path);
+        Logger.MethodNotAllowed(_logger, context.Request.Method, context.Request.Path);
 
         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
         context.Response.ContentType = HtmlContentType;
