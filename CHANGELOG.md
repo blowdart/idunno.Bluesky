@@ -141,6 +141,13 @@
 
 #### idunno.AtProto
 
+* A rotated DPoP nonce is now applied to the credentials it belongs to whether or not a credentials updated callback was supplied, so calls made directly through `AtProtoServer` and `BlueskyServer` no longer fail once a server rotates its nonce.
+* A failed or throwing call to `AtProtoAgent.RefreshCredentials()` no longer leaves the background refresh timer stopped for the lifetime of the agent.
+* A refresh token the server has already exchanged is now remembered even when the credentials it issued cannot be validated, so it is not presented a second time.
+* `AtProtoAgent.RefreshCredentials()` now reads the agent credentials once, so a refresh which runs concurrently cannot leave it refreshing a credential it did not check.
+* `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
+* `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
+* `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
 * Trimming and AOT suppressions which never reached the IL trimmer have been corrected, so `idunno.AtProto` and `idunno.Bluesky` now trim and publish as native AOT without warnings.
 * `AtProtoJetstream` connection state change events are now raised outside the lock which guards its filters and outside the semaphore which serialises connections, so a handler which sets a filter or reconnects no longer deadlocks.
 * `AtProtoJetstream.CloseAsync()` now abandons the close handshake once `JetstreamOptions.CloseTimeout` expires, instead of waiting indefinitely for a server which never answers it.

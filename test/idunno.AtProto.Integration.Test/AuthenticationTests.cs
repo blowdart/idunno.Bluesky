@@ -255,6 +255,80 @@ public class AuthenticationTests
     }
 
     [Fact]
+    public async Task ApiEndpointRotatingDPoPNonceUpdatesCredentialsWhenNoCredentialsUpdatedCallbackIsSupplied()
+    {
+        bool cycleDPopNonce = true;
+
+        Uri server = new("https://test.invalid");
+        const string endpoint = "/xrpc/com.atproto.repo.createRecord";
+
+        const string repo = "did:plc:identifier";
+        const string collection = "test.idunno.lexiconType";
+
+        TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Headers.Authorization.Count == 0)
+            {
+                response.StatusCode = 401;
+                return;
+            }
+
+            if (request.Path == endpoint)
+            {
+                if (cycleDPopNonce)
+                {
+                    // Simulate a DPoP nonce rotation
+                    response.Headers.Append("DPoP-Nonce", "newNonce");
+                    cycleDPopNonce = false;
+                }
+
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+
+                var createRecordResponse = new CreateRecordResponse(
+                    new($"at://{repo}/{collection}/rkey"),
+                    new("bafyreihd3v4j"))
+                {
+                    Commit = null,
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+            }
+        });
+
+        DPoPAccessCredentials credentials = (DPoPAccessCredentials)AtProtoCredential.Create(
+            server,
+            authenticationType: AuthenticationType.OAuth,
+            accessJwt: JwtBuilder.CreateJwt(new Did(repo)),
+            refreshToken: "refreshToken",
+            dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+            dPoPNonce: "nonce");
+
+        using HttpClient httpClient = testServer.CreateClient();
+
+        // The credentials updated callback is deliberately not supplied. Notification is how a caller persists a nonce
+        // change, not what makes the change take effect, so the credential must still be left holding the new nonce.
+        AtProtoHttpResult<CreateRecordResult> result = await AtProtoServer.CreateRecord(
+            record: new TestRecord() { TestValue = "test" },
+            collection: collection,
+            creator: new Did(repo),
+            rKey: null,
+            validate: null,
+            swapCommit: null,
+            service: server,
+            accessCredentials: credentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("newNonce", credentials.DPoPNonce);
+    }
+
+    [Fact]
     public async Task ApiEndpointRotatingDPoPNonceInA400ResponseUpdatesCredentialsAndRaisesEventAndRetries()
     {
         int callCount = 0;
