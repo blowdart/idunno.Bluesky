@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'dev/*'
       - 'version/*'
       - 'dependabot/nuget/*'
     paths-ignore:
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - 'main'
+      - 'dev/*'
       - 'version/*'
       - 'dependabot/nuget/*'
 
@@ -120,5 +122,54 @@ jobs:
         path: | 
           ${{ env.COVERAGE_REPORT }}
           ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
+        retention-days: 5
+
+  trimming:
+    name: Trimming and AOT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: 'Harden Runner'
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: 'Checkout'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        persist-credentials: false
+
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
+
+    - name: 'Report SDK versions'
+      run : dotnet --info
+
+    # Native AOT needs a platform linker, which the .NET SDK does not carry.
+    - name: 'Install native AOT prerequisites'
+      run: sudo apt-get update && sudo apt-get install --yes clang zlib1g-dev
+
+    # Publishing the trimming test project is the test. ILLink and ILC report a diagnostic for anything in
+    # idunno.AtProto or idunno.Bluesky which is not safe to trim or to compile ahead of time, and
+    # TreatWarningsAsErrors turns those into errors. The test project is not run, because it talks to the live
+    # service. RequireNativeBinary is passed so that a linker missing from the agent fails rather than warns.
+    - name: 'Trimming and AOT test'
+      id: trimming
+      shell: pwsh
+      run: ./trimTest.ps1 -Rid linux-x64 -RequireNativeBinary
+
+    - name: Upload Trimming Binary Log
+      if: failure() && steps.trimming.outcome == 'failure'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: trimming-binlog
+        path: trimming/trimmingTest.binlog
         retention-days: 5
 
