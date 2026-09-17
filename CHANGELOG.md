@@ -72,6 +72,8 @@
 
 * `AtProtoJetstream` no longer builds a `ServiceCollection`, a `ServiceProvider` and a `SocketsHttpHandler` of its own when an `IHttpClientFactory` is
   supplied, and now shares the single definition of the SSRF protected handler an agent uses rather than carrying a second copy of it.
+* `OAuthClient.OpenBrowser()` now throws an `ArgumentException` for a relative uri, or one whose scheme is not `http` or `https`, rather than handing it
+  to the platform shell and launching whichever handler is registered for it.
 
 #### idunno.Bluesky
 

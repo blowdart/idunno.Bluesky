@@ -502,13 +502,14 @@ public class OAuthClient
                 {
                     throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
                 }
-                else if (serverDescriptionResult.HttpResponseHeaders is null)
-                {
-                    throw new OAuthException("DescribeServer() returned no headers");
-                }
 
                 Logger.OAuthClientRefreshSucceeded(_logger, authority);
 
+                // Duende's RefreshTokenResult does not surface the token response, so the nonce the authorization server
+                // returned with the refresh is not reachable here. Carrying the previous one forward costs at most one
+                // use_dpop_nonce challenge, which the client handles. A credential holds a single nonce shared between the
+                // authorization server and the PDS, so storing an authorization server nonce here would not be an
+                // improvement; that needs per origin nonce storage rather than a different value in this line.
                 return new(
                     refreshCredential.Service,
                     refreshResult.AccessToken,
@@ -524,10 +525,31 @@ public class OAuthClient
     /// </summary>
     /// <param name="uri">The uri to open.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is relative, or its scheme is not <c>http</c> or <c>https</c>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   On Windows <paramref name="uri"/> is handed to the shell, and on Linux and macOS to <c>xdg-open</c> and <c>open</c>,
+    ///   all three of which launch whichever handler is registered for the scheme rather than a browser specifically. A login
+    ///   flow builds its address from the authorization endpoint of a discovered authorization server, so an application which
+    ///   turns discovery validation off could otherwise reach an arbitrary registered protocol handler from nothing more than
+    ///   a hostile handle. Only <c>http</c> and <c>https</c> are opened.
+    /// </para>
+    /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Vulnerability", "S4036:OS commands should not rely on PATH resolution", Justification = "Browser opening is platform-specific and relies on system commands, which may be installed anywhere.")]
     public static void OpenBrowser(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri)
+        {
+            throw new ArgumentException("Uri must be absolute.", nameof(uri));
+        }
+
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.Ordinal) &&
+            !uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"Uri scheme '{uri.Scheme}' is not opened, only http and https are.", nameof(uri));
+        }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {

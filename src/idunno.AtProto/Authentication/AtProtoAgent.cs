@@ -333,6 +333,20 @@ public partial class AtProtoAgent
     /// the PDS for the specified <paramref name="handle"/> cannot be resolved, or
     /// the authorization server for <paramref name="handle"/> cannot be discovered.
     /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   <paramref name="allowInsecureProtocols"/> and <paramref name="allowLoopback"/> govern the validation of the endpoints
+    ///   discovered for <paramref name="handle"/>, not the transport the requests are then made over. Whether the agent will
+    ///   actually connect over HTTP or to a loopback address is decided separately, from the scheme and host of the OAuth return
+    ///   uri the agent is configured with, because that is the application's own declaration of how it is deployed.
+    /// </para>
+    /// <para>
+    ///   Relaxing these without a matching return uri therefore admits an endpoint at validation which the agent will then refuse
+    ///   to connect to. To reach an authorization server or personal data server over HTTP or on the loopback interface, configure
+    ///   <see cref="OAuthOptions.ReturnUri"/> to match, as the localhost client development setup at
+    ///   <see href="https://atproto.com/specs/oauth#clients">atproto.com</see> does.
+    /// </para>
+    /// </remarks>
     public async Task<Uri> BuildOAuth2LoginUri(
         OAuthClient oAuthClient,
         Handle handle,
