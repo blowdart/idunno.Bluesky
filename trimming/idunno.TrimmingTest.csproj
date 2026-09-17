@@ -6,17 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>true</PublishAot>
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
     <Configurations>Debug;Release;CodeQL</Configurations>
   </PropertyGroup>
-
-  <ItemGroup>
-    <EditorConfigFiles Remove="G:\idunno.Bluesky\test\TrimmingTestApp\.editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="G:\idunno.Bluesky\test\TrimmingTestApp\.editorconfig" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\src\idunno.AtProto\idunno.AtProto.csproj" />

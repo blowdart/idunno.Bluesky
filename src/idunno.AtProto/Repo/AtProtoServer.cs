@@ -1211,7 +1211,7 @@ public static partial class AtProtoServer
     /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "")]
-    [SuppressMessage("Trimming",
+    [UnconditionalSuppressMessage("Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All serialization information is captured by the underlying options.")]
     [UnconditionalSuppressMessage(
