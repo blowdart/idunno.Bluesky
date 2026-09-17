@@ -361,14 +361,15 @@ public class AtProtoJetstreamConnectionTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        using var server = new RawJetstreamServer();
 
-        await server.Start((webSocket, connectionNumber, serverCancellationToken) =>
+        await server.Start(async (client, connectionNumber, serverCancellationToken) =>
         {
-            // Dropped rather than closed, which is what a connection lost to the network looks like to the client.
-            webSocket.Abort();
+            // Given long enough to let the client finish connecting and start reading, so the connection is lost rather
+            // than never established.
+            await Task.Delay(500, serverCancellationToken);
 
-            return Task.CompletedTask;
+            RawJetstreamServer.Drop(client);
         });
 
         using var disconnected = new ManualResetEventSlim(false);
@@ -413,28 +414,29 @@ public class AtProtoJetstreamConnectionTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        using var server = new RawJetstreamServer();
 
         // Large enough that it has to be reassembled from several reads, so two loops sharing the socket tear it apart
         // between them rather than taking one whole message each.
         string payload = "{\"did\":\"" + TestDid + "\",\"time_us\":1,\"kind\":\"identity\",\"pad\":\"" + new string('x', 8192) + "\"}";
+        byte[] payloadAsBytes = Encoding.UTF8.GetBytes(payload);
 
-        await server.Start(async (webSocket, connectionNumber, serverCancellationToken) =>
+        await server.Start(async (client, connectionNumber, serverCancellationToken) =>
         {
             if (connectionNumber == 1)
             {
-                webSocket.Abort();
+                await Task.Delay(500, serverCancellationToken);
+
+                RawJetstreamServer.Drop(client);
             }
             else
             {
                 for (int sent = 0; sent < 200 && !serverCancellationToken.IsCancellationRequested; sent++)
                 {
-                    await webSocket.SendAsync(
-                        Encoding.UTF8.GetBytes(payload),
-                        WebSocketMessageType.Text,
-                        endOfMessage: true,
-                        serverCancellationToken);
+                    await RawJetstreamServer.SendTextFrame(client, payloadAsBytes, serverCancellationToken);
                 }
+
+                await Task.Delay(Timeout.Infinite, serverCancellationToken);
             }
         });
 
@@ -546,6 +548,140 @@ public class AtProtoJetstreamConnectionTests
             }
 
             _meters.Clear();
+        }
+    }
+
+    /// <summary>
+    /// A WebSocket server built directly on a TCP socket, so a connection can be dropped with a reset rather than
+    /// closed. <see cref="WebSocket.Abort"/> on an <see cref="HttpListener"/> socket does not reach the client on
+    /// every platform, and a dropped connection is the thing these tests are about.
+    /// </summary>
+    private sealed class RawJetstreamServer : IDisposable
+    {
+        private readonly TcpListener _listener;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private int _connectionCount;
+
+        public RawJetstreamServer()
+        {
+            int port = FreePort();
+
+            _listener = new TcpListener(IPAddress.Loopback, port);
+            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://127.0.0.1:{port}"));
+        }
+
+        public Uri Uri { get; }
+
+        public Task Start(Func<TcpClient, int, CancellationToken, Task> onConnected)
+        {
+            _listener.Start();
+
+            _ = Task.Run(async () =>
+            {
+                while (!_cancellationTokenSource.IsCancellationRequested)
+                {
+                    TcpClient client = await _listener.AcceptTcpClientAsync(_cancellationTokenSource.Token);
+
+                    int connectionNumber = Interlocked.Increment(ref _connectionCount);
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await CompleteHandshake(client, _cancellationTokenSource.Token);
+                            await onConnected(client, connectionNumber, _cancellationTokenSource.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
+                        catch (IOException)
+                        {
+                        }
+                        catch (SocketException)
+                        {
+                        }
+                    }, _cancellationTokenSource.Token);
+                }
+            }, _cancellationTokenSource.Token);
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Drops the connection with a reset, which is what a connection lost to the network looks like to the client.
+        /// </summary>
+        public static void Drop(TcpClient client)
+        {
+            client.LingerState = new LingerOption(enable: true, seconds: 0);
+            client.Close();
+        }
+
+        public static async Task SendTextFrame(TcpClient client, byte[] payload, CancellationToken cancellationToken)
+        {
+            byte[] header;
+
+            if (payload.Length < 126)
+            {
+                header = [0x81, (byte)payload.Length];
+            }
+            else
+            {
+                header = [0x81, 126, (byte)(payload.Length >> 8), (byte)(payload.Length & 0xFF)];
+            }
+
+            NetworkStream stream = client.GetStream();
+
+            await stream.WriteAsync(header, cancellationToken);
+            await stream.WriteAsync(payload, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+        }
+
+        private static async Task CompleteHandshake(TcpClient client, CancellationToken cancellationToken)
+        {
+            NetworkStream stream = client.GetStream();
+
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            string request = string.Empty;
+
+            while (!request.Contains("\r\n\r\n", StringComparison.Ordinal))
+            {
+                int read = await stream.ReadAsync(buffer.AsMemory(total, buffer.Length - total), cancellationToken);
+
+                if (read == 0)
+                {
+                    throw new IOException("The client closed the connection during the handshake.");
+                }
+
+                total += read;
+                request = Encoding.ASCII.GetString(buffer, 0, total);
+            }
+
+            string key = request
+                .Split("\r\n")
+                .First(line => line.StartsWith("Sec-WebSocket-Key:", StringComparison.OrdinalIgnoreCase))
+                .Split(':')[1]
+                .Trim();
+
+            string accept = Convert.ToBase64String(
+                System.Security.Cryptography.SHA1.HashData(
+                    Encoding.ASCII.GetBytes(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
+
+            byte[] response = Encoding.ASCII.GetBytes(
+                "HTTP/1.1 101 Switching Protocols\r\n" +
+                "Upgrade: websocket\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Sec-WebSocket-Accept: " + accept + "\r\n\r\n");
+
+            await stream.WriteAsync(response, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+        }
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Cancel();
+            _listener.Dispose();
+            _cancellationTokenSource.Dispose();
         }
     }
 
