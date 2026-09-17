@@ -76,7 +76,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<BookmarkView>>(
-                new PagedViewReadOnlyCollection<BookmarkView>(new List<BookmarkView>(response.Result.Bookmarks).AsReadOnly(), response.Result.Cursor),
+                new PagedViewReadOnlyCollection<BookmarkView>(WithoutNullEntries(response.Result.Bookmarks, service, nameof(response.Result.Bookmarks), loggerFactory).AsReadOnly(), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

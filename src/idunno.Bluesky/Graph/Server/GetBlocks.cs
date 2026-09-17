@@ -90,7 +90,7 @@ public static partial class BlueskyServer
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                 new PagedViewReadOnlyCollection<ProfileView>(
-                    new List<ProfileView>(response.Result.Blocks).AsReadOnly(),
+                    WithoutNullEntries(response.Result.Blocks, service, nameof(response.Result.Blocks), loggerFactory).AsReadOnly(),
                     cursor: response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,

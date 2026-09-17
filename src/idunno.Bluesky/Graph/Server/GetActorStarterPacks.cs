@@ -80,7 +80,7 @@ public static partial class BlueskyServer
         {
             PagedViewReadOnlyCollection<StarterPackViewBasic> pagedCollection =
                 new(
-                    new List<StarterPackViewBasic>(response.Result.StarterPacks).AsReadOnly(),
+                    WithoutNullEntries(response.Result.StarterPacks, service, nameof(response.Result.StarterPacks), loggerFactory).AsReadOnly(),
                     response.Result.Cursor);
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>(
                 pagedCollection,

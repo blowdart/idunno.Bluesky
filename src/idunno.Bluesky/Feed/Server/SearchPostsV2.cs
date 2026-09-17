@@ -340,7 +340,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SearchV2Results>(
-                new SearchV2Results([], null, null, null),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

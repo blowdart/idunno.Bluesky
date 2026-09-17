@@ -199,7 +199,7 @@ public sealed class Program
             }
 
             Console.WriteLine("Making initial request...");
-            AtProtoHttpResult<int> getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
+            AtProtoHttpResult<int?> getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
             getNotificationCount.EnsureSucceeded();
 
             Console.WriteLine("Waiting for 90 seconds for the nonce to rotate.");

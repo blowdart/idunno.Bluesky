@@ -73,19 +73,8 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            List<LabelerView> labels;
-
-            if (response.Result.Views is null)
-            {
-                labels = [];
-            }
-            else
-            {
-                labels = [.. response.Result.Views];
-            }
-
             return new AtProtoHttpResult<ICollection<LabelerView>>(
-                result: labels,
+                result: WithoutNullEntries(response.Result.Views, service, nameof(response.Result.Views), loggerFactory),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
@@ -94,7 +83,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<ICollection<LabelerView>>(
-                result: [],
+                result: default,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,

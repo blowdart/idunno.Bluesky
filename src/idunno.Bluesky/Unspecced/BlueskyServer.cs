@@ -171,7 +171,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
-                new PagedViewReadOnlyCollection<GeneratorView>(response.Result.Feeds, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<GeneratorView>(WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory), response.Result.Cursor),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,

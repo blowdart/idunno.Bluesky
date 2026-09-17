@@ -18,7 +18,10 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>An <see cref="AtProtoHttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(DateTimeOffset? seenAt = null, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <para>The result is <see langword="null"/> if the API call failed, which is distinct from a successful call which returned a count of zero.</para>
+    /// </remarks>
+    public async Task<AtProtoHttpResult<int?>> GetNotificationUnreadCount(DateTimeOffset? seenAt = null, CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {

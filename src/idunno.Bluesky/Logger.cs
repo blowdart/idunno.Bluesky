@@ -247,4 +247,8 @@ internal static partial class Logger
     [LoggerMessage(154, LogLevel.Warning, "ListNotifications skipped a null notification returned by {service}")]
     internal static partial void ListNotificationsSkippedNullNotification(ILogger logger, Uri service);
 
+    // Paged readers
+    [LoggerMessage(155, LogLevel.Warning, "{caller} skipped {skipped} null entries in {collection} returned by {service}")]
+    internal static partial void SkippedNullCollectionEntries(ILogger logger, string caller, int skipped, string collection, Uri service);
+
 }

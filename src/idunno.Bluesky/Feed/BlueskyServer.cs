@@ -65,8 +65,6 @@ public static partial class BlueskyServer
     // https://docs.bsky.app/docs/api/app-bsky-feed-search-posts
     private const string SearchPostsEndpoint = "/xrpc/app.bsky.feed.searchPosts";
 
-    private static readonly IReadOnlyCollection<PostView> s_emptyFeedPostCollection = new List<PostView>().AsReadOnly();
-
     /// <summary>
     /// Gets a description for the feed generator at <paramref name="generatorUri"/>.
     /// </summary>
@@ -179,7 +177,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
-                new PagedViewReadOnlyCollection<GeneratorView>(response.Result.Feeds, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<GeneratorView>(WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -270,7 +268,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -396,7 +394,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -535,7 +533,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
-                new List<GeneratorView>().AsReadOnly(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -620,7 +618,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -723,7 +721,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<LikesCollection>(
-                new LikesCollection(uri, cid),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -805,7 +803,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -972,7 +970,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
-                s_emptyFeedPostCollection,
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1070,7 +1068,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<QuotesCollection>(
-                new QuotesCollection(uri, cid),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1167,7 +1165,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<RepostedBy>(
-                new RepostedBy(uri, cid),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1232,7 +1230,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SuggestedFeeds>(
-                new SuggestedFeeds(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1330,7 +1328,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1480,7 +1478,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SearchResults>(
-                new SearchResults(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

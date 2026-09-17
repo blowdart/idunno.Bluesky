@@ -30,6 +30,9 @@ public static partial class BlueskyServer
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="status"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// <para>The result is <see langword="null"/> if the API call failed, which is distinct from a successful call which marked no conversations as read.</para>
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -37,7 +40,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<ulong>> UpdateAllRead(
+    public static async Task<AtProtoHttpResult<ulong?>> UpdateAllRead(
         string status,
         Uri service,
         AccessCredentials accessCredentials,
@@ -67,7 +70,7 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<ulong>(
+            return new AtProtoHttpResult<ulong?>(
                 response.Result.UpdatedCount,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -76,8 +79,8 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<ulong>(
-                0,
+            return new AtProtoHttpResult<ulong?>(
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

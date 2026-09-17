@@ -78,7 +78,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
-                new Collection<ProfileViewDetailed>(response.Result.Profiles).AsReadOnly(),
+                WithoutNullEntries(response.Result.Profiles, service, nameof(response.Result.Profiles), loggerFactory).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

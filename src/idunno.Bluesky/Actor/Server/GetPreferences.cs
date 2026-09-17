@@ -62,7 +62,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Preferences>(
-                new Preferences(response.Result.Preferences, includeBlueskyModerationLabeler),
+                new Preferences(WithoutNullEntries(response.Result.Preferences, service, nameof(response.Result.Preferences), loggerFactory), includeBlueskyModerationLabeler),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -70,7 +70,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<Preferences>(new Preferences(), response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
+            return new AtProtoHttpResult<Preferences>(default, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
         }
     }
 }
