@@ -10,7 +10,7 @@ namespace idunno.AtProto.OAuthCallback;
 
 internal static partial class Logger
 {
-    [LoggerMessage(1, LogLevel.Debug, "Callback listener statred on {listeningOn}")]
+    [LoggerMessage(1, LogLevel.Debug, "Callback listener started on {listeningOn}")]
     internal static partial void ListeningOn(ILogger logger, Uri listeningOn);
 
     [LoggerMessage(2, LogLevel.Debug, "Awaiting callback for {timeout} seconds")]
@@ -25,8 +25,8 @@ internal static partial class Logger
     [LoggerMessage(5, LogLevel.Error, "BadRequest made to {path}")]
     internal static partial void BadRequest(ILogger logger, PathString path);
 
-    [LoggerMessage(7, LogLevel.Error, "PUT request made to {path}")]
-    internal static partial void MethodNotAllowed(ILogger logger, PathString path);
+    [LoggerMessage(7, LogLevel.Error, "Request with disallowed method {method} made to {path}")]
+    internal static partial void MethodNotAllowed(ILogger logger, string method, PathString path);
 
     [LoggerMessage(10, LogLevel.Error, "Internal listener is null, cancelling task")]
     internal static partial void ListenerIsNull(ILogger logger);
@@ -42,4 +42,7 @@ internal static partial class Logger
 
     [LoggerMessage(14, LogLevel.Error, "Rejected callback request from non loopback address {remoteAddress}")]
     internal static partial void NonLoopbackRequestRejected(ILogger logger, IPAddress remoteAddress);
+
+    [LoggerMessage(15, LogLevel.Error, "Rejected callback request which was not a navigation, Sec-Fetch-Dest was {fetchDestination}")]
+    internal static partial void NonNavigationRequestRejected(ILogger logger, string fetchDestination);
 }

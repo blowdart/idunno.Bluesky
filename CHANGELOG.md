@@ -266,6 +266,19 @@
 * Repeated calls to `CallbackServer.WaitForCallbackAsync()` no longer leak a `CancellationTokenSource` when the supplied `CancellationToken` was already cancelled.
 * Disposing a `CallbackServer` without ever calling `WaitForCallbackAsync()` no longer raises a `TaskScheduler.UnobservedTaskException`.
 * `CallbackServer` now listens on, and accepts requests addressed to, the IPv6 loopback address and `localhost` as well as `127.0.0.1`.
+* `CallbackServer` now only treats a request as the callback when it carries a `code`, `state` or `error` query string parameter and, where the browser
+  says so through `Sec-Fetch-Dest`, is a top level navigation. The callback is single shot, so any page the user happened to be visiting during a login
+  could previously consume it with a cross site request to the loopback address, leaving the redirect which actually carried the authorization code to
+  arrive after the wait had already finished. A request with no query string is now rejected rather than answered with the success page.
+* `CallbackServer` now rejects a `path` containing a character which does not mean the same thing in a route pattern and in a URI. `{`, `}` and `*` were
+  read as a route parameter or a catch all, and `?`, `#` or a space made `CallbackServer.Uri` describe something other than the route which was mapped.
+* `CallbackServer` now answers every method other than `GET` with `405 Method Not Allowed`, as its documentation said. Only `POST` did so previously, and
+  `PUT`, `DELETE`, `PATCH` and `HEAD` fell through to a `400 Bad Request`.
+* `CallbackServer.GetRandomUnusedPort()` now returns a port which is free on both loopback families. It only checked IPv4, but the server binds both, so a
+  port already taken on IPv6 stopped the server from starting.
+* `CallbackServer` now sends `X-Content-Type-Options: nosniff` with every response.
+* `CallbackServer` no longer throws an `InvalidOperationException` over the original failure when writing the callback response fails after the response
+  has started.
 
 #### idunno.AtProto.Types
 
