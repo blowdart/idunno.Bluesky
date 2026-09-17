@@ -12,6 +12,8 @@ You will need, at a minimum, a [.NET SDK 10](https://dotnet.microsoft.com/en-us/
 If you want to use Visual Studio you will need [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the
 ASP.NET and web development workload installed. Visual Studio 2026 community edition will work just fine.
 
+You will also need NPM installed to build the ASP.NET Core Authentication sample/workspace. You can get it from [here](https://nodejs.org/en/download/).
+
 ## Issues
 
 Issues will be marked stale after 14 days of inactivity, and closed 14 days after they have been marked stale.

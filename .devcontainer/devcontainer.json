@@ -2,7 +2,10 @@
     "name": "idunno.Bluesky",
     "image": "mcr.microsoft.com/devcontainers/dotnet:10.0",
     "features": {
-        "ghcr.io/devcontainers/features/powershell:1": {}
+        "ghcr.io/devcontainers/features/powershell:1": {},
+        "ghcr.io/devcontainers/features/node:2": {
+            "version": "lts"
+        }
     },
 
     "postCreateCommand": "dotnet restore",

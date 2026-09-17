@@ -1,17 +1,29 @@
 {
   "version": "1.0",
     "components": [
+        "Component.Microsoft.VisualStudio.RazorExtension",
+        "Component.Microsoft.Web.LibraryManager",
+        "Microsoft.Component.MSBuild",
+        "Microsoft.NetCore.Component.DevelopmentTools",
         "Microsoft.NetCore.Component.Runtime.8.0",
         "Microsoft.NetCore.Component.Runtime.9.0",
         "Microsoft.NetCore.Component.Runtime.10.0",
         "Microsoft.NetCore.Component.SDK",
+        "Microsoft.NetCore.Component.Web",
         "Microsoft.VisualStudio.Component.CoreEditor",
-        "Microsoft.Component.MSBuild",
+        "Microsoft.VisualStudio.Component.JavaScript.Diagnostics",
+        "Microsoft.VisualStudio.Component.JavaScript.TypeScript",
         "Microsoft.VisualStudio.Component.NuGet",
         "Microsoft.VisualStudio.Component.NuGet.BuildTools",
         "Microsoft.VisualStudio.Component.Roslyn.Compiler",
         "Microsoft.VisualStudio.Component.Roslyn.LanguageServices",
-        "Microsoft.VisualStudio.Workload.CoreEditor"
+        "Microsoft.VisualStudio.Component.Web",
+        "Microsoft.VisualStudio.Workload.CoreEditor",
+        "Microsoft.VisualStudio.ComponentGroup.Web",
+        "Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions",
+        "Microsoft.VisualStudio.Workload.CoreEditor",
+        "Microsoft.VisualStudio.Workload.NetWeb",
+        "Microsoft.VisualStudio.Workload.Node"
     ],
   "extensions": []
 }
