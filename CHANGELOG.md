@@ -153,6 +153,11 @@
 * `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
 * `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
+* `AtProtoJetstream` now reads each connection on the socket it was opened for, so reconnecting no longer leaves the previous receive loop reading the new connection alongside the new one and tearing messages in half between them.
+* `AtProtoJetstream` now raises `ConnectionStateChanged` when a connection is lost without a close handshake, rather than ending its receive loop silently.
+* `AtProtoJetstream` now serialises writes to the underlying WebSocket, which allows only one at a time.
+* `AtProtoJetstream.CloseAsync()` now works against a single socket, so a concurrent reconnection cannot leave it aborting one socket having inspected another.
+* `AtProtoJetstream.MessageLastReceived` and `AtProtoJetstream.DisconnectedGracefully` are now published to the threads which read them.
 * Trimming and AOT suppressions which never reached the IL trimmer have been corrected, so `idunno.AtProto` and `idunno.Bluesky` now trim and publish as native AOT without warnings.
 * `AtProtoJetstream` connection state change events are now raised outside the lock which guards its filters and outside the semaphore which serialises connections, so a handler which sets a filter or reconnects no longer deadlocks.
 * `AtProtoJetstream.CloseAsync()` now abandons the close handshake once `JetstreamOptions.CloseTimeout` expires, instead of waiting indefinitely for a server which never answers it.

@@ -356,6 +356,159 @@ public class AtProtoJetstreamConnectionTests
         }
     }
 
+    [Fact]
+    public async Task AConnectionLostWithoutACloseHandshakeRaisesAConnectionStateChange()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) =>
+        {
+            // Dropped rather than closed, which is what a connection lost to the network looks like to the client.
+            webSocket.Abort();
+
+            return Task.CompletedTask;
+        });
+
+        using var disconnected = new ManualResetEventSlim(false);
+
+        WebSocketState? disconnectedState = null;
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false }))
+        {
+            jetstream.ConnectionStateChanged += (sender, e) =>
+            {
+                if (e.State is not WebSocketState.None and not WebSocketState.Open and not WebSocketState.Connecting)
+                {
+                    disconnectedState = e.State;
+                    disconnected.Set();
+                }
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                // A dropped connection is only visible to a consumer through this event, so a receive loop which ends
+                // without raising it leaves anything waiting to reconnect waiting forever.
+                Assert.True(
+                    disconnected.Wait(TimeSpan.FromSeconds(30), cancellationToken),
+                    "No connection state change was raised when the connection was dropped.");
+            }
+        }
+
+        Assert.NotNull(disconnectedState);
+        Assert.NotEqual(WebSocketState.Open, disconnectedState!.Value);
+    }
+
+    [Fact]
+    public async Task ReconnectingFromAFaultHandlerDoesNotLeaveTheOldReceiveLoopReadingTheNewSocket()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        // Large enough that it has to be reassembled from several reads, so two loops sharing the socket tear it apart
+        // between them rather than taking one whole message each.
+        string payload = "{\"did\":\"" + TestDid + "\",\"time_us\":1,\"kind\":\"identity\",\"pad\":\"" + new string('x', 8192) + "\"}";
+
+        await server.Start(async (webSocket, connectionNumber, serverCancellationToken) =>
+        {
+            if (connectionNumber == 1)
+            {
+                webSocket.Abort();
+            }
+            else
+            {
+                for (int sent = 0; sent < 200 && !serverCancellationToken.IsCancellationRequested; sent++)
+                {
+                    await webSocket.SendAsync(
+                        Encoding.UTF8.GetBytes(payload),
+                        WebSocketMessageType.Text,
+                        endOfMessage: true,
+                        serverCancellationToken);
+                }
+            }
+        });
+
+        List<string> faults = [];
+        int faultCount = 0;
+        int messagesReceived = 0;
+        int tornMessages = 0;
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = false,
+                BufferSize = 512
+            }))
+        {
+            using (var httpClient = new HttpClient())
+            {
+                jetstream.MessageReceived += (sender, e) =>
+                {
+                    Interlocked.Increment(ref messagesReceived);
+
+                    if (!string.Equals(e.Message, payload, StringComparison.Ordinal))
+                    {
+                        Interlocked.Increment(ref tornMessages);
+                    }
+                };
+
+                jetstream.FaultRaised += (sender, e) =>
+                {
+                    lock (faults)
+                    {
+                        faults.Add(e.Fault);
+                    }
+
+                    // Raised synchronously on the thread running the receive loop, so reconnecting here and waiting for
+                    // it to finish puts a freshly connected socket in place before the loop takes its next turn. A loop
+                    // which reads the field rather than the socket it was started for then reads that new socket
+                    // alongside the loop which was started for it.
+                    if (Interlocked.Increment(ref faultCount) == 1)
+                    {
+                        jetstream.ConnectAsync(
+                            uri: server.Uri,
+                            cursor: null,
+                            httpClient: httpClient,
+                            cancellationToken: cancellationToken).GetAwaiter().GetResult();
+                    }
+                };
+
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+        }
+
+        string[] recorded;
+
+        lock (faults)
+        {
+            recorded = [.. faults];
+        }
+
+        Assert.True(recorded.Length > 0, "The dropped connection never raised a fault.");
+        Assert.True(Volatile.Read(ref messagesReceived) > 0, "No messages were received after reconnecting.");
+
+        // Two loops reading one socket take alternate reads of the same message, so each of them reassembles a mixture
+        // of its own fragments and the other one's.
+        Assert.Equal(0, Volatile.Read(ref tornMessages));
+    }
+
     private static int FreePort()
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

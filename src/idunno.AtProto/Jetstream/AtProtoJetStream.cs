@@ -53,6 +53,18 @@ public class AtProtoJetstream : IDisposable
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a connection attempt holds it makes the release which ends that attempt throw.")]
     private readonly SemaphoreSlim _connectSemaphore = new(1, 1);
 
+    /// <summary>
+    /// Serialises writes to the underlying web socket.
+    /// </summary>
+    /// <remarks>
+    /// <para>A <see cref="ClientWebSocket"/> allows one outstanding send at a time, and throws if a second one starts
+    /// whilst the first is in flight. Setting both filters together, or setting one whilst the connection is closing,
+    /// otherwise puts two sends on the same socket.</para>
+    /// <para>Deliberately not disposed, for the same reason as <see cref="_connectSemaphore"/>.</para>
+    /// </remarks>
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a send holds it makes the release which ends that send throw.")]
+    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
+
     private const string SubscribeEndpoint = "/subscribe";
 
     private readonly JetstreamMetrics _metrics;
@@ -67,14 +79,22 @@ public class AtProtoJetstream : IDisposable
 
     private List<Did> _dids = [];
 
-    private ClientWebSocket _client;
+    // Replaced on reconnection, under _syncLock, but read without it by the state properties and by anything holding
+    // its own reference to a socket, so the write has to be published rather than left for a reader to notice.
+    private volatile ClientWebSocket _client;
 
     private const string HttpClientName = Agent.HttpClientName;
     internal HttpClientOptions? _httpClientOptions;
     private readonly ServiceProvider? _serviceProvider;
     private readonly HttpClient _httpClient;
 
-    private Uri? _server;
+    // Written by whichever thread connects and read by the receive loop and the metrics it emits.
+    private volatile Uri? _server;
+
+    // DateTimeOffset is too wide to read or write atomically, so the timestamp is held as ticks, which are not.
+    private long _messageLastReceivedTicks;
+
+    private volatile bool _disconnectedGracefully;
 
     /// <summary>
     /// Creates a new instance of <see cref="Jetstream"/>.
@@ -309,16 +329,34 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Gets a flag indicating whether the underlying WebSocket was disconnected gracefully.
     /// </summary>
-    public bool DisconnectedGracefully { get => _client.State == WebSocketState.Closed && field; private set; }
+    public bool DisconnectedGracefully
+    {
+        get => _client.State == WebSocketState.Closed && _disconnectedGracefully;
+        private set => _disconnectedGracefully = value;
+    }
 
     /// <summary>
     /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
     /// </summary>
-    public DateTimeOffset? MessageLastReceived { get; private set; }
+    public DateTimeOffset? MessageLastReceived
+    {
+        get
+        {
+            long ticks = Interlocked.Read(ref _messageLastReceivedTicks);
+
+            return ticks == 0 ? null : new DateTimeOffset(ticks, TimeSpan.Zero);
+        }
+
+        private set => Interlocked.Exchange(ref _messageLastReceivedTicks, value?.UtcTicks ?? 0);
+    }
 
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> receives a message.
     /// </summary>
+    /// <remarks>
+    /// <para>Raised on the thread which read the message, before it is parsed, so handlers run one at a time and in the
+    /// order the messages arrived. A handler which blocks stops the jetstream reading anything else.</para>
+    /// </remarks>
     public event EventHandler<MessageReceivedEventArgs>? MessageReceived;
 
     /// <summary>
@@ -329,6 +367,12 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> parses a message and converts it to a record.
     /// </summary>
+    /// <remarks>
+    /// <para>Messages are parsed on <see cref="JetstreamOptions.TaskFactory"/>, so handlers can run concurrently with
+    /// one another and are not raised in the order the messages arrived. A handler which touches shared state needs to
+    /// do its own synchronisation, and one which cares about ordering needs to use
+    /// <see cref="AtJetstreamEvent.TimeStamp"/> rather than the order it is called in.</para>
+    /// </remarks>
     public event EventHandler<RecordReceivedEventArgs>? RecordReceived;
 
     /// <summary>
@@ -550,7 +594,7 @@ public class AtProtoJetstream : IDisposable
         // State changes are collected rather than raised as they happen, so they can be raised once neither the
         // connection semaphore nor the sync lock is held.
         List<WebSocketState> stateChanges = [];
-        bool startReceiveLoop = false;
+        ClientWebSocket? connectedClient = null;
 
         try
         {
@@ -561,7 +605,7 @@ public class AtProtoJetstream : IDisposable
 
             try
             {
-                startReceiveLoop = await ConnectInternalAsync(uri, cursor, httpClient, stateChanges, cancellationToken).ConfigureAwait(false);
+                connectedClient = await ConnectInternalAsync(uri, cursor, httpClient, stateChanges, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -580,15 +624,17 @@ public class AtProtoJetstream : IDisposable
             }
         }
 
-        if (startReceiveLoop && !_disposed)
+        if (connectedClient is not null && !_disposed)
         {
-            ReceiveLoop(cancellationToken).FireAndForget();
+            // The loop is given the socket this call connected rather than reading the field, so a later reconnection
+            // which replaces the field does not hand this loop the new socket to read alongside the loop started for it.
+            ReceiveLoop(connectedClient, cancellationToken).FireAndForget();
         }
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
-    private async Task<bool> ConnectInternalAsync(
+    private async Task<ClientWebSocket?> ConnectInternalAsync(
         Uri? uri,
         long? cursor,
         HttpClient? httpClient,
@@ -597,8 +643,10 @@ public class AtProtoJetstream : IDisposable
     {
         if (_client is not null && _client.State == WebSocketState.Open)
         {
-            return false;
+            return null;
         }
+
+        ClientWebSocket client;
 
         lock (_syncLock)
         {
@@ -625,6 +673,10 @@ public class AtProtoJetstream : IDisposable
                 _client = CreateWebSocketClient();
                 stateChanges.Add(_client.State);
             }
+
+            // Everything below works against the socket this attempt settled on rather than the field, so a dispose or
+            // a later reconnection which replaces the field cannot move this attempt onto a different socket part way through.
+            client = _client;
         }
 
         uri ??= _uri;
@@ -694,7 +746,7 @@ public class AtProtoJetstream : IDisposable
 
         Uri jetStreamUri = new(uriBuilder.ToString());
 
-        WebSocketState previousState = _client.State;
+        WebSocketState previousState = client.State;
 
         JetStreamLogger.ConnectingTo(_logger, jetStreamUri);
 
@@ -702,7 +754,7 @@ public class AtProtoJetstream : IDisposable
 
         try
         {
-            await _client.ConnectAsync(
+            await client.ConnectAsync(
                 uri: jetStreamUri,
                 invoker: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -719,28 +771,28 @@ public class AtProtoJetstream : IDisposable
             // Counted once here, however the connection failed, rather than again below.
             _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
 
-            if (_client.State != previousState)
+            if (client.State != previousState)
             {
-                stateChanges.Add(_client.State);
+                stateChanges.Add(client.State);
             }
 
             throw;
         }
 
-        if (_client.State != previousState)
+        if (client.State != previousState)
         {
-            stateChanges.Add(_client.State);
+            stateChanges.Add(client.State);
         }
 
-        if (_client.State == WebSocketState.Open)
+        if (client.State == WebSocketState.Open)
         {
-            return true;
+            return client;
         }
 
-        JetStreamLogger.ConnectionFailed(_logger, _client.State);
+        JetStreamLogger.ConnectionFailed(_logger, client.State);
         _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
 
-        return false;
+        return null;
     }
 
     /// <summary>
@@ -760,13 +812,17 @@ public class AtProtoJetstream : IDisposable
         string statusDescription = "Client disconnect",
         CancellationToken cancellationToken = default)
     {
-        WebSocketState startingState = _client.State;
+        // Captured once, so a reconnection which replaces the field cannot leave this call inspecting one socket and
+        // aborting another.
+        ClientWebSocket client = _client;
 
-        if (_client.State == WebSocketState.Closed)
+        WebSocketState startingState = client.State;
+
+        if (client.State == WebSocketState.Closed)
         {
             return;
         }
-        else if (_client.State == WebSocketState.Open)
+        else if (client.State == WebSocketState.Open)
         {
             // The close handshake completes when the server replies to it, so without a deadline of its own a server
             // which never replies holds the caller here for as long as it cares to.
@@ -776,7 +832,21 @@ public class AtProtoJetstream : IDisposable
 
             try
             {
-                await _client.CloseAsync(status, statusDescription, closeCancellationTokenSource.Token).ConfigureAwait(false);
+                // A close frame is a write, so it is serialised with the other writes to the socket. Waiting for the
+                // other writes to finish is done on the close deadline rather than the caller's token, so a send which
+                // is stuck against an unresponsive server cannot hold the close past the timeout which exists to stop
+                // exactly that.
+                await _sendSemaphore.WaitAsync(closeCancellationTokenSource.Token).ConfigureAwait(false);
+
+                try
+                {
+                    await client.CloseAsync(status, statusDescription, closeCancellationTokenSource.Token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _sendSemaphore.Release();
+                }
+
                 DisconnectedGracefully = true;
                 _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
             }
@@ -789,7 +859,7 @@ public class AtProtoJetstream : IDisposable
                 // The deadline expired rather than the caller cancelling, so the connection is dropped instead of
                 // being left open waiting on a server which is not answering.
                 JetStreamLogger.CloseTimedOut(_logger, Options.CloseTimeout);
-                _client.Abort();
+                client.Abort();
                 _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
             }
             catch (OperationCanceledException)
@@ -802,11 +872,11 @@ public class AtProtoJetstream : IDisposable
             }
 
         }
-        else if (_client.State == WebSocketState.Connecting)
+        else if (client.State == WebSocketState.Connecting)
         {
             try
             {
-                _client.Abort();
+                client.Abort();
                 _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
             }
             catch (ObjectDisposedException)
@@ -823,9 +893,9 @@ public class AtProtoJetstream : IDisposable
             }
         }
 
-        if (_client.State != startingState)
+        if (client.State != startingState)
         {
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
         }
     }
 
@@ -903,16 +973,20 @@ public class AtProtoJetstream : IDisposable
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
     [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
-    private async Task ReceiveLoop(CancellationToken cancellationToken)
+    private async Task ReceiveLoop(ClientWebSocket client, CancellationToken cancellationToken)
     {
         WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
-        while (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+        // Tracks whether the state the loop ended on has already been announced, so the close path which raises it
+        // itself is not followed by a second event saying the same thing.
+        bool finalStateRaised = false;
+
+        while (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
         {
             try
             {
                 (WebSocketReceiveResult webSocketReceiveResult, byte[] message) =
-                    await _client.ReceiveNextMessageAsync(
+                    await client.ReceiveNextMessageAsync(
                         bufferSize: Options.BufferSize,
                         maxMessageSize: Options.MaxMessageSize,
                         logger: _logger,
@@ -920,7 +994,20 @@ public class AtProtoJetstream : IDisposable
 
                 if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                 {
-                    await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    // A close frame is a write, so it is serialised with the other writes to the socket. The semaphore
+                    // is released before the event below is raised, so a handler which closes or reconnects does not
+                    // wait on a semaphore this loop is holding.
+                    await _sendSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                    try
+                    {
+                        await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        _sendSemaphore.Release();
+                    }
+
                     JetStreamLogger.CloseMessageReceived(_logger);
 
                     // The server asked to close and the close was completed by replying to it, which is as graceful as
@@ -928,7 +1015,8 @@ public class AtProtoJetstream : IDisposable
                     DisconnectedGracefully = true;
 
                     _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
-                    OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+                    OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                    finalStateRaised = true;
 
                     break;
                 }
@@ -991,7 +1079,7 @@ public class AtProtoJetstream : IDisposable
                 }
                 else
                 {
-                    if (_client.State == WebSocketState.Open)
+                    if (client.State == WebSocketState.Open)
                     {
                         LogFault("Message conversion to string failed.");
                         _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
@@ -1006,9 +1094,17 @@ public class AtProtoJetstream : IDisposable
             }
         }
 
-        if (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+        if (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
         {
+            // CloseAsync raises the state change itself.
             await CloseAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        else if (!finalStateRaised && client.State != WebSocketState.Open)
+        {
+            // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
+            // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
+            // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
+            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
         }
     }
 
@@ -1093,9 +1189,13 @@ public class AtProtoJetstream : IDisposable
 
     }
 
+    [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "The socket can close whilst a send waits on the semaphore, which the analyzer cannot see.")]
     private async Task SendOptionsUpdateMessage()
     {
-        if (_client is null || _client.State != WebSocketState.Open)
+        // Captured once, so the state which is checked and the socket which is written to are the same one.
+        ClientWebSocket client = _client;
+
+        if (client is null || client.State != WebSocketState.Open)
         {
             return;
         }
@@ -1136,7 +1236,24 @@ public class AtProtoJetstream : IDisposable
         string message = JsonSerializer.Serialize(optionsUpdateMessage, SourceGenerationContext.Default.OptionsUpdateMessage);
         byte[] messageAsBytes = Encoding.UTF8.GetBytes(message);
 
-        await _client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+        await _sendSemaphore.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            // The state is re-checked now the socket is held, as it can have closed whilst this send was queued behind
+            // another one, and sending on a closed socket throws.
+            if (client.State != WebSocketState.Open)
+            {
+                return;
+            }
+
+            await client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            _sendSemaphore.Release();
+        }
+
         JetStreamLogger.OptionsUpdateMessageSent(_logger);
     }
 
