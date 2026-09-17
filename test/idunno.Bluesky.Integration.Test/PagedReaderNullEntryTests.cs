@@ -4,8 +4,10 @@
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Unspecced;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -242,4 +244,70 @@ public class PagedReaderNullEntryTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Result);
     }
+
+    [Fact]
+    public async Task GetPostsSkipsANullPostRatherThanReturningIt()
+    {
+        AtProtoHttpResult<IReadOnlyCollection<PostView>> result = await BlueskyServer.GetPosts(
+            uris: [s_starterPack],
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: CreateClient("""{"posts":[null]}"""),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Result);
+        Assert.Empty(result.Result);
+    }
+
+#pragma warning disable BSKYUnspecced // Unspecced endpoints are called deliberately here to cover their null entry handling.
+
+    [Fact]
+    public async Task GetTrendsSkipsANullTrendRatherThanReturningIt()
+    {
+        AtProtoHttpResult<ICollection<TrendView>> result = await BlueskyServer.GetTrends(
+            limit: 25,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: CreateClient("""{"trends":[null]}"""),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Result);
+        Assert.Empty(result.Result);
+    }
+
+    [Fact]
+    public async Task GetSuggestedUsersSkipsANullActorRatherThanReturningIt()
+    {
+        AtProtoHttpResult<ICollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
+            category: null,
+            limit: 25,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: CreateClient("""{"actors":[null]}"""),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Result);
+        Assert.Empty(result.Result);
+    }
+
+    [Fact]
+    public async Task GetSuggestedUsersAcceptsAResponseWithoutARecommendationIdentifier()
+    {
+        AtProtoHttpResult<ICollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
+            category: null,
+            limit: 25,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: CreateClient("""{"actors":[]}"""),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Result);
+        Assert.Empty(result.Result);
+    }
+
+#pragma warning restore BSKYUnspecced
 }

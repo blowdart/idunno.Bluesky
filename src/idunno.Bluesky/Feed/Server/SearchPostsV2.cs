@@ -331,7 +331,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SearchV2Results>(
-                new SearchV2Results(response.Result.Posts, response.Result.HitsTotal, response.Result.Cursor, response.Result.DetectedQueryLanguages),
+                new SearchV2Results(WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.HitsTotal, response.Result.Cursor, response.Result.DetectedQueryLanguages is null ? null : WithoutNullEntries(response.Result.DetectedQueryLanguages, service, nameof(response.Result.DetectedQueryLanguages), loggerFactory)),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

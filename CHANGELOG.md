@@ -219,6 +219,8 @@
 * Responses are now deserialized with `RespectNullableAnnotations` enabled, so a property declared non-nullable which the service sends as `null` fails deserialization rather than leaving a `null` in a non-nullable member.
 * `ApplyWrites()` no longer throws a `NullReferenceException` when the service omits the `results` collection or sends it as `null`.
 * `UploadBlob()` and `DescribeRepo()` now use the same `JsonSerializerOptions` as every other endpoint, rather than the source generation context's own options.
+* `QueryLabels()` now skips and logs a `null` entry inside an otherwise well formed `labels` collection rather than handing that `null` to the caller. Neither
+  `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -329,6 +331,20 @@
 * `KnownFollowers` now reports a response which omits its `followers` collection as a failure, rather than throwing an `ArgumentNullException`.
 * `EmbeddedImages` no longer throws an `ArgumentOutOfRangeException` when deserializing an empty `images` array. `app.bsky.embed.images` sets no minimum,
   so an empty array is a valid payload. Constructing an `EmbeddedImages` directly still requires at least one image.
+* `GetPosts()`, `GetSuggestedStarterPacks()`, `GetSuggestedUsers()`, `GetSuggestions()`, `GetTrends()` and `SendMessageBatch()` now skip and log `null` entries
+  inside an otherwise well formed collection rather than handing those `null`s to the caller, matching the paged readers.
+* The recommendation identifier returned by `app.bsky.unspecced.getSuggestedUsers` is now read as nullable. It is optional in the lexicon, and a missing
+  property is not covered by `RespectNullableAnnotations`, so the member claimed a guarantee the wire format does not give.
+* `GetConversationMembers()`, `GetListsWithMembership()`, `GetPopularFeedGenerators()`, `GetStarterPacksWithMembership()`, `GetSuggestedStarterPacks()`,
+  `GetTaggedSuggestions()`, `GetTrends()` and `ListActivitySubscriptions()` now report a response which omits its collection as a failure. The collection is
+  required by the lexicon, but it is declared as a positional record parameter, where `JsonRequired` has to be applied with the `property:` target to have any
+  effect. Without it a missing collection surfaced to the caller as a `NullReferenceException` rather than as a failed result.
+* `ListActivitySubscriptions()` now skips and logs `null` entries inside an otherwise well formed `subscriptions` collection rather than handing those `null`s
+  to the caller.
+* `GetConversationLog()`, `GetMessages()`, `ListConversations()`, `GetList()`, `GetFeedGenerators()`, `GetLikes()`, `GetQuotes()`, `GetRepostedBy()`,
+  `GetSuggestedFeeds()`, `GetTimeline()`, `SearchPosts()`, `SearchPostsV2()` and `GetPostThreadOtherV2()` now skip and log `null` entries inside their
+  collections rather than returning them. Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a service could
+  place a `null` inside an otherwise well formed collection and it would be handed straight to the caller.
 
 ## 6.0.0 - 2026-09-05
 

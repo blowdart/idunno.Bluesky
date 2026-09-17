@@ -218,6 +218,9 @@ internal static partial class Logger
     [LoggerMessage(124, LogLevel.Warning, "ListRecords skipped a null record in {collection} on {service}.")]
     internal static partial void ListRecordsSkippedNullRecord(ILogger logger, Nsid collection, Uri service);
 
+    [LoggerMessage(125, LogLevel.Warning, "{caller} skipped {skipped} null entries in {collection} returned by {service}")]
+    internal static partial void SkippedNullCollectionEntries(ILogger logger, string caller, int skipped, string collection, Uri service);
+
     [LoggerMessage(130, LogLevel.Error, "UploadBlob to {service} failed as current session is not authenticated.")]
     internal static partial void UploadBlobFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 

@@ -3,8 +3,10 @@
 
 using idunno.Bluesky.Actor;
 
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Notifications.Model;
 
-internal sealed record ListActivitySubscriptionsResponse(IList<ProfileView> Subscriptions, string? Cursor)
+internal sealed record ListActivitySubscriptionsResponse([property: JsonRequired] IList<ProfileView> Subscriptions, string? Cursor)
 {
 }

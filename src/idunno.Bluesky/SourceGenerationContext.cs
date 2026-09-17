@@ -322,7 +322,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Graph.Model.GetListsResponse), TypeInfoPropertyName = "GraphModelGetListsResponse")]
 [JsonSerializable(typeof(Graph.Model.GetListsWithMembershipResponse), TypeInfoPropertyName = "GraphModelGetListsWithMembershipResponse")]
 [JsonSerializable(typeof(Graph.Model.GetMutesResponse), TypeInfoPropertyName = "GraphModelGetMutesResponse")]
-[JsonSerializable(typeof(Graph.Model.GetRelationshipsResponse), TypeInfoPropertyName = "GraphModelGetRelationshipsResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPackResponse), TypeInfoPropertyName = "GraphModelGetStarterPackResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPacksResponse), TypeInfoPropertyName = "GraphModelGetStarterPacksResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPacksWithMembershipResponse), TypeInfoPropertyName = "GraphModelGetStarterPacksWithMembershipResponse")]

@@ -10,12 +10,26 @@ using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Chat.Group.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Model;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
 
 namespace idunno.Bluesky.Serialization.Test;
 
 public class RequiredPropertyTests
 {
+    [Fact]
+    public void GetSuggestedUsersResponseRecommendationIdentifierIsAnnotatedAsNullable()
+    {
+        // recId is optional in app.bsky.unspecced.getSuggestedUsers. A missing field silently leaves a non-nullable
+        // reference member null rather than throwing, so only the annotation, not a runtime value check, can catch
+        // the member claiming a guarantee the wire format does not give.
+        PropertyInfo property = typeof(Unspecced.Model.GetSuggestedUsersResponse)
+            .GetProperty(nameof(Unspecced.Model.GetSuggestedUsersResponse.RecId))!;
+        NullabilityInfo nullability = new NullabilityInfoContext().Create(property);
+
+        Assert.Equal(NullabilityState.Nullable, nullability.ReadState);
+    }
+
     [Fact]
     public void NoFieldInTheBlueskyAssemblyCarriesJsonRequired()
     {
@@ -43,7 +57,7 @@ public class RequiredPropertyTests
     [Theory]
     [InlineData(typeof(SearchPostsResponse), """{"cursor":"x"}""")]
     [InlineData(typeof(SearchActorsTypeAheadResponse), """{}""")]
-    [InlineData(typeof(GetRelationshipsResponse), """{"actor":"did:plc:abc123abc123abc123abc123"}""")]
+    [InlineData(typeof(RelationshipMap), """{"actor":"did:plc:abc123abc123abc123abc123"}""")]
     [InlineData(typeof(LabelersPreference), """{"$type":"app.bsky.actor.defs#labelersPref"}""")]
     [InlineData(typeof(KnownFollowers), """{"count":1}""")]
     [InlineData(typeof(ListJoinRequestsResponse), """{"cursor":"x"}""")]

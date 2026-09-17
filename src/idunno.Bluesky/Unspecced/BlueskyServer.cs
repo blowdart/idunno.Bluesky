@@ -252,7 +252,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<ICollection<StarterPackView>>(
-                response.Result.StarterPacks,
+                WithoutNullEntries(response.Result.StarterPacks, service, nameof(response.Result.StarterPacks), loggerFactory),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
@@ -338,7 +338,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<ICollection<Suggestion>>(
-                response.Result.Suggestions,
+                WithoutNullEntries(response.Result.Suggestions, service, nameof(response.Result.Suggestions), loggerFactory),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
@@ -507,7 +507,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<ICollection<TrendView>>(
-                response.Result.Trends,
+                WithoutNullEntries(response.Result.Trends, service, nameof(response.Result.Trends), loggerFactory),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
