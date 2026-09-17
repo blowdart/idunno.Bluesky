@@ -151,15 +151,33 @@ public interface IIdentityStore
     /// being silently lost. AT Proto refresh tokens are single use, so a swallowed failure here would leave the store
     /// holding a refresh token the service has already invalidated.
     /// </para>
+    /// <para>
+    /// An agent raises this for a rotated DPoP nonce as well as for a token refresh, and it writes back the whole credential,
+    /// not just the part which changed. A request which picks up a nonce is not holding the refresh lock, so the stored
+    /// identity is read back first and left alone when it carries a later expiry than the credentials being written. Without
+    /// that check a long running request could restore the tokens it started with over a refresh another request had already
+    /// stored, putting back a refresh token the service had spent and signing the user out at the next refresh. The nonce is
+    /// dropped in that case rather than merged, which costs at most one <c>use_dpop_nonce</c> challenge on a later request.
+    /// </para>
     /// </remarks>
-    public virtual Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)
+    public virtual async Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)
     {
-        if (e is not null && e.AccessCredentials is not null)
+        if (e is null || e.AccessCredentials is null)
         {
-            return Update(e.AccessCredentials, cancellationToken);
+            return;
         }
 
-        return Task.CompletedTask;
+        ClaimsIdentity? storedIdentity = await GetIdentity(e.AccessCredentials.Did, cancellationToken).ConfigureAwait(false);
+
+        if (storedIdentity is not null &&
+            AtProtoCredential.TryCreate(storedIdentity, out DPoPAccessCredentials? storedCredentials) &&
+            storedCredentials is not null &&
+            storedCredentials.ExpiresOn > e.AccessCredentials.ExpiresOn)
+        {
+            return;
+        }
+
+        await Update(e.AccessCredentials, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

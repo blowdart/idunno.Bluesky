@@ -536,11 +536,14 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> whose credentials should be checked.</param>
     /// <param name="currentUtc">The current UTC time to check the credential expiry against.</param>
-    private bool HasUnexpiredCredentials(ClaimsIdentity identity, DateTimeOffset currentUtc)
+    private static bool HasUnexpiredCredentials(ClaimsIdentity identity, DateTimeOffset currentUtc)
     {
-        using BlueskyAgent agent = new(new ClaimsPrincipal(identity), HttpClientFactory, BlueskyAgentOptions);
+        if (!AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? credentials) || credentials is null)
+        {
+            return false;
+        }
 
-        return agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) >= currentUtc;
+        return (credentials.ExpiresOn - s_refreshClockSkew) >= currentUtc;
     }
 
     /// <summary>
