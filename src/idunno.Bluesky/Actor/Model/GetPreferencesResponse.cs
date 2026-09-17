@@ -16,5 +16,6 @@ internal sealed record GetPreferencesResponse
     }
 
     [JsonInclude]
+    [JsonRequired]
     public Preference[] Preferences { get; init; }
 }

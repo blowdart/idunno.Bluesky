@@ -92,7 +92,7 @@ public partial class BlueskyServer
 
         // Flatten into collection
         PagedViewReadOnlyCollection<JoinRequestView>? result = response.Result is not null
-            ? new PagedViewReadOnlyCollection<JoinRequestView>(response.Result.Requests, response.Result.Cursor)
+            ? new PagedViewReadOnlyCollection<JoinRequestView>(WithoutNullEntries(response.Result.Requests, service, nameof(response.Result.Requests), loggerFactory), response.Result.Cursor)
             : null;
 
         return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>(

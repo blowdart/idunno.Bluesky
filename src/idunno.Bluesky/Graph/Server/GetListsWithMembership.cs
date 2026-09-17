@@ -102,7 +102,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListWithMembership>>(
-                new PagedViewReadOnlyCollection<ListWithMembership>(response.Result.ListsWithMembership, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<ListWithMembership>(WithoutNullEntries(response.Result.ListsWithMembership, service, nameof(response.Result.ListsWithMembership), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

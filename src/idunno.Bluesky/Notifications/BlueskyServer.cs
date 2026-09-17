@@ -50,7 +50,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(
+    public static async Task<AtProtoHttpResult<int?>> GetNotificationUnreadCount(
         DateTimeOffset? seenAt,
         Uri service,
         AccessCredentials accessCredentials,
@@ -81,7 +81,7 @@ public static partial class BlueskyServer
             subscribedLabelers: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        int unreadCount = -1;
+        int? unreadCount = null;
         if (response.Succeeded)
         {
             unreadCount = response.Result.Count;

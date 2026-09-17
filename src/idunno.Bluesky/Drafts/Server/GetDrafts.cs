@@ -97,7 +97,7 @@ public partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<DraftView>>(
-                new PagedViewReadOnlyCollection<DraftView>(new List<DraftView>(response.Result.Drafts).AsReadOnly(), response.Result.Cursor),
+                new PagedViewReadOnlyCollection<DraftView>(WithoutNullEntries(response.Result.Drafts, service, nameof(response.Result.Drafts), loggerFactory).AsReadOnly(), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

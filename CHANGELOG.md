@@ -129,6 +129,10 @@
 * The properties on `Chat.Group.JoinRequestView` and `Chat.Group.JoinRequestConversationView`, and the `Facets`, `Embed` and `ReplyTo` properties on
   `Chat.MessageInput`, are now `init` only. They are populated when the object is created and describe a message which has been sent or a request which
   has been made.
+* `GetNotificationUnreadCount()` on `BlueskyAgent` and `BlueskyServer` now returns an `AtProtoHttpResult<int?>` rather than an `AtProtoHttpResult<int>`,
+  and `UpdateAllRead()` on both now returns an `AtProtoHttpResult<ulong?>` rather than an `AtProtoHttpResult<ulong>`. `AtProtoHttpResult<T>.Succeeded`
+  requires `Result` to be non-null, which a non-nullable value type can never be, so these methods reported a failed call as a success carrying a
+  meaningless count. Callers reading `Result` will need to handle a `null`, which now unambiguously means the call failed.
 
 ### Fixed
 
@@ -305,6 +309,11 @@
 * Paged readers no longer throw a `NullReferenceException` or `ArgumentNullException` when the service omits a collection or sends it as `null`. `ListNotifications()`, `SearchActors()`, `GetSuggestions()`, `GetProfiles()`, `GetBookmarks()`, `SearchPostsV2()` and `GetTrendingTopics()` now require their collections to be present and non-null.
 * A response which returns `200 OK` but cannot be deserialized is no longer reported as a successful empty page. Fifteen readers returned an empty collection alongside the original status code, which left `Succeeded` returning `true`, hiding the failure and silently reporting no results.
 * `ListNotifications()` now skips and logs a null notification within a page, rather than throwing a `NullReferenceException`.
+* Paged readers now skip and log a null entry within an otherwise well formed collection, rather than handing the `null` to the caller. Twenty nine readers wrapped the collection returned by the service wholesale, and neither `JsonRequired` nor `RespectNullableAnnotations` applies to the element type of a collection.
+* A further fifteen readers which returned `200 OK` with a body which could not be deserialized no longer report the failure as a successful empty result. These readers built their empty result with a constructor call, such as `new Timeline()` or `new Followers(subject: null, followers: [], null)`, so were missed when this was first fixed.
+* `GetPreferences()` now reports a response which omits its `preferences` collection as a failure, rather than throwing an `ArgumentNullException`.
+* `GetLabelerServices()` now reports a response which omits its `views` collection as a failure, rather than returning an empty collection alongside a successful status code.
+* `GetNotificationUnreadCount()` no longer reports a failed call as a success carrying a count of `-1`, and `UpdateAllRead()` no longer reports a failed call as a success carrying a count of `0`. See the breaking changes above.
 
 ## 6.0.0 - 2026-09-05
 

@@ -102,7 +102,7 @@ public static partial class BlueskyServer
             return new AtProtoHttpResult<Followers>(
                 new Followers(
                     subject: response.Result.Subject,
-                    followers: new List<ProfileView>(response.Result.Followers).AsReadOnly(),
+                    followers: WithoutNullEntries(response.Result.Followers, service, nameof(response.Result.Followers), loggerFactory).AsReadOnly(),
                     cursor: response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -112,7 +112,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<Followers>(
-                new Followers(subject: null, followers: [], null),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

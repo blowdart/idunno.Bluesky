@@ -79,7 +79,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>(
-                new List<StarterPackViewBasic>(response.Result.StarterPacks).AsReadOnly(),
+                WithoutNullEntries(response.Result.StarterPacks, service, nameof(response.Result.StarterPacks), loggerFactory).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -88,7 +88,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>(
-                new List<StarterPackViewBasic>().AsReadOnly(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
