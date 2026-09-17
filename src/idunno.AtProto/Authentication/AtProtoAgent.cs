@@ -254,7 +254,8 @@ public partial class AtProtoAgent
     /// Builds a preconfigured <see cref="HttpMessageHandler"/> to use for making requests during the OAuth flow, with SSRF protections in place.
     /// If a proxy is configured in <see cref="Options"/>, the handler will be configured to route requests through the proxy while still applying SSRF protections
     /// to the ultimate endpoints being called.
-    /// If the OAuth return URI configured in <see cref="Options"/> is using HTTP or is a loopback address, the handler will be configured to allow insecure protocols or
+    /// If <see cref="OAuthOptions.AllowInsecureProtocols"/> or <see cref="OAuthOptions.AllowLoopback"/> is set, or the OAuth return URI configured in
+    /// <see cref="Options"/> is using HTTP or is a loopback address, the handler will be configured to allow insecure protocols or
     /// loopback addresses respectively, but will still apply SSRF protections to all other endpoints.
     /// </summary>
     /// <returns>A preconfigured <see cref="HttpMessageHandler"/> instance.</returns>
@@ -270,8 +271,8 @@ public partial class AtProtoAgent
             };
         }
 
-        bool allowInsecureProtocols = Options?.OAuthOptions?.ReturnUri != null && Options.OAuthOptions.ReturnUri.Scheme == Uri.UriSchemeHttp;
-        bool allowLoopback = Options?.OAuthOptions?.ReturnUri != null && Options.OAuthOptions.ReturnUri.IsLoopback;
+        bool allowInsecureProtocols = Options?.OAuthOptions?.AllowInsecureProtocolsOnTheWire == true;
+        bool allowLoopback = Options?.OAuthOptions?.AllowLoopbackOnTheWire == true;
 
         if (_httpClientOptions is not null && _httpClientOptions.ProxyUri is not null)
         {
@@ -335,16 +336,18 @@ public partial class AtProtoAgent
     /// </exception>
     /// <remarks>
     /// <para>
-    ///   <paramref name="allowInsecureProtocols"/> and <paramref name="allowLoopback"/> govern the validation of the endpoints
-    ///   discovered for <paramref name="handle"/>, not the transport the requests are then made over. Whether the agent will
-    ///   actually connect over HTTP or to a loopback address is decided separately, from the scheme and host of the OAuth return
-    ///   uri the agent is configured with, because that is the application's own declaration of how it is deployed.
+    ///   <paramref name="allowInsecureProtocols"/> and <paramref name="allowLoopback"/> apply to the validation of the endpoints
+    ///   discovered for <paramref name="handle"/>, and are combined with <see cref="OAuthOptions.AllowInsecureProtocols"/> and
+    ///   <see cref="OAuthOptions.AllowLoopback"/>, which apply to both that validation and the transport the requests are then
+    ///   made over. Setting either option is therefore enough to reach an authorization server or personal data server over HTTP
+    ///   or on the loopback interface, as the localhost client development setup at
+    ///   <see href="https://atproto.com/specs/oauth#clients">atproto.com</see> needs.
     /// </para>
     /// <para>
-    ///   Relaxing these without a matching return uri therefore admits an endpoint at validation which the agent will then refuse
-    ///   to connect to. To reach an authorization server or personal data server over HTTP or on the loopback interface, configure
-    ///   <see cref="OAuthOptions.ReturnUri"/> to match, as the localhost client development setup at
-    ///   <see href="https://atproto.com/specs/oauth#clients">atproto.com</see> does.
+    ///   Passing these parameters alone relaxes only the validation, so an endpoint the agent will then refuse to connect to can
+    ///   still be admitted, unless the configured OAuth return uri already allows it. A return uri which itself uses HTTP or is a
+    ///   loopback address relaxes the transport, because an application whose own callback is not served over HTTPS is by
+    ///   definition not in a position to require it, but it does not relax the validation.
     /// </para>
     /// </remarks>
     public async Task<Uri> BuildOAuth2LoginUri(
@@ -382,6 +385,9 @@ public partial class AtProtoAgent
             validatePds ??= SecurityHelpers.DefaultDiscoveryUriValidator;
             validateAuthorizationServer ??= SecurityHelpers.DefaultDiscoveryUriValidator;
         }
+
+        allowInsecureProtocols = allowInsecureProtocols || Options.OAuthOptions.AllowInsecureProtocols;
+        allowLoopback = allowLoopback || Options.OAuthOptions.AllowLoopback;
 
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");

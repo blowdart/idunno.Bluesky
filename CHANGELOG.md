@@ -6,6 +6,9 @@
 
 #### idunno.AtProto
 
+* Added `OAuthOptions.AllowInsecureProtocols` and `OAuthOptions.AllowLoopback`, which allow an OAuth flow to reach an authorization server or personal data
+  server over HTTP, or on a loopback address, without the OAuth return uri having to use one itself. Both default to `false`, and apply to the validation of a
+  discovered endpoint as well as to the transport, so a single setting now covers local development against a server on the local machine.
 * Added `JetstreamOptions.CloseTimeout` and `AtProtoJetstreamBuilder.SetCloseTimeout()`, which bound how long a jetstream waits for a server to answer a close handshake before aborting the connection. The default is 30 seconds.
 * Added `Resolution.VerifyHandle()` and `Resolution.ResolveVerifiedHandle()`, which check that a handle and a DID resolve to each other.
 * Added an optional `maximumWellKnownResponseSize` parameter to the `Resolution.ResolveDidDocument()` and `Resolution.ResolvePds()` overloads which resolve a handle.

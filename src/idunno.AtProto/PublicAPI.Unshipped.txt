@@ -158,6 +158,10 @@ virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Eve
 idunno.AtProto.AtProtoHttpClient.OnResponseReceived.set -> void
 idunno.AtProto.AtProtoHttpClient.OnSendingRequest.set -> void
 static idunno.AtProto.StringExtensions.GetUtf8Length(this string! s) -> int
+idunno.AtProto.Authentication.OAuthOptions.AllowInsecureProtocols.get -> bool
+idunno.AtProto.Authentication.OAuthOptions.AllowInsecureProtocols.set -> void
+idunno.AtProto.Authentication.OAuthOptions.AllowLoopback.get -> bool
+idunno.AtProto.Authentication.OAuthOptions.AllowLoopback.set -> void
 idunno.AtProto.Authentication.OAuthOptions.ClockSkew.get -> System.TimeSpan
 idunno.AtProto.Authentication.OAuthOptions.ClockSkew.set -> void
 static readonly idunno.AtProto.Authentication.OAuthOptions.DefaultClockSkew -> System.TimeSpan
