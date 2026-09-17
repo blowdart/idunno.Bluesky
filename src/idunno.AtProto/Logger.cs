@@ -362,6 +362,9 @@ internal static partial class Logger
     [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
     internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri actual, Uri expected, Guid correlation);
 
+    [LoggerMessage(607, LogLevel.Warning, "OAuth authorization server did not grant the requested scope {requestedScope}, it granted \"{grantedScopes}\", correlation {correlation}")]
+    internal static partial void OAuthScopeNotGranted(ILogger logger, Guid correlation, string requestedScope, string grantedScopes);
+
     [LoggerMessage(610, LogLevel.Debug, "OAuthClient refresh called for token issued by {service} against authority {authority}")]
     internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);
 

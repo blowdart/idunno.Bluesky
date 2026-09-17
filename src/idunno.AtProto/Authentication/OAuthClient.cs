@@ -22,11 +22,44 @@ namespace idunno.AtProto.Authentication;
 /// <summary>
 /// Helper methods for oauth authentication.
 /// </summary>
+/// <remarks>
+/// <para>
+///   An instance carries the state of a single login: the DPoP proof key, the authorize state holding the PKCE code
+///   verifier, and the authority and service the issued token is validated against. Starting a second login on the same
+///   instance replaces all of it, so an instance must not be shared between logins or between users. Every login starts
+///   with a new instance, and a login which is completed in a later request is resumed by restoring <see cref="State"/>
+///   onto a new instance.
+/// </para>
+/// <para>
+///   The state is published and read as a set, so a caller reading <see cref="State"/> whilst another thread is starting
+///   a login sees either all of the previous login or all of the new one, never a proof key from one paired with the
+///   authorize state of another.
+/// </para>
+/// </remarks>
 public class OAuthClient
 {
     const string OAuthDiscoveryDocumentEndpoint = ".well-known/oauth-authorization-server";
 
+    /// <summary>
+    /// The token type an authorization server issues for a DPoP bound access token.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   RFC 9449 requires the token type of a DPoP bound token to be <c>DPoP</c>. An authorization server which answers
+    ///   with <c>Bearer</c> has issued a token which is not bound to the proof key, and which anything that steals it can
+    ///   replay. Treating that as a DPoP credential would leave the SDK believing a token is sender constrained when it
+    ///   is not.
+    /// </para>
+    /// </remarks>
+    private const string DPoPTokenType = "DPoP";
+
     private readonly OAuthOptions? _options;
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _stateLock = new();
+#else
+    private readonly object _stateLock = new();
+#endif
 
     private OidcClient? _oidcClient;
 
@@ -78,26 +111,40 @@ public class OAuthClient
     /// Gets or sets the state the needs to be held between starting the authorize request and the parsing the response
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the <see cref="OAuthLoginState.ExpectedAuthority"/> or <see cref="OAuthLoginState.ExpectedService"/> of the
+    /// value being set is not an absolute http or https uri.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="OAuthLoginState.ExpectedAuthority"/> is what an issued access token's <c>iss</c> claim is checked against,
+    ///   so restored state decides which authorization server is trusted to have issued the token. It is validated when set
+    ///   rather than when it is used, so state which has been tampered with in transit is rejected before it can widen that check.
+    /// </para>
+    /// </remarks>
     public OAuthLoginState? State
     {
         get
         {
-            if (_authorizeState == null ||
-                _expectedAuthority == null ||
-                _expectedService == null ||
-                _proofKey == null)
+            lock (_stateLock)
             {
-                return null;
-            }
-            else
-            {
-                return new OAuthLoginState(
-                    _authorizeState,
-                    _expectedAuthority.ToString(),
-                    _expectedService.ToString(),
-                    _proofKey,
-                    _correlationId,
-                    _stateExtraProperties);
+                if (_authorizeState == null ||
+                    _expectedAuthority == null ||
+                    _expectedService == null ||
+                    _proofKey == null)
+                {
+                    return null;
+                }
+                else
+                {
+                    return new OAuthLoginState(
+                        _authorizeState,
+                        _expectedAuthority.ToString(),
+                        _expectedService.ToString(),
+                        _proofKey,
+                        _correlationId,
+                        _stateExtraProperties);
+                }
             }
         }
 
@@ -105,13 +152,31 @@ public class OAuthClient
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            _authorizeState = value;
-            _expectedAuthority = new Uri(value.ExpectedAuthority);
-            _expectedService = new Uri(value.ExpectedService);
-            _proofKey = value.ProofKey;
-            _correlationId = value.CorrelationId;
-            _stateExtraProperties = value.ExtraProperties;
+            Uri expectedAuthority = ParseLoginStateUri(value.ExpectedAuthority, nameof(OAuthLoginState.ExpectedAuthority));
+            Uri expectedService = ParseLoginStateUri(value.ExpectedService, nameof(OAuthLoginState.ExpectedService));
+
+            lock (_stateLock)
+            {
+                _authorizeState = value;
+                _expectedAuthority = expectedAuthority;
+                _expectedService = expectedService;
+                _proofKey = value.ProofKey;
+                _correlationId = value.CorrelationId;
+                _stateExtraProperties = value.ExtraProperties;
+            }
         }
+    }
+
+    private static Uri ParseLoginStateUri(string uri, string propertyName)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? parsedUri) ||
+            (!parsedUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.Ordinal) &&
+             !parsedUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.Ordinal)))
+        {
+            throw new ArgumentException($"{propertyName} is not an absolute http or https uri.", nameof(uri));
+        }
+
+        return parsedUri;
     }
 
     /// <summary>
@@ -148,20 +213,19 @@ public class OAuthClient
         clientId ??= _options?.ClientId;
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
-        _proofKey = JsonWebKeys.CreateRsaJson();
+        string[]? requestedScopes = scopes is null ? null : [.. scopes];
 
-        if (scopes is not null)
+        if (requestedScopes is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(scopes.Count());
+            ArgumentOutOfRangeException.ThrowIfZero(requestedScopes.Length);
         }
 
-        _expectedAuthority = authority;
-        _expectedService = service;
+        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= [.. DefaultScopes];
 
-        scopes ??= _options?.Scopes;
-        scopes ??= DefaultScopes;
+        string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
-        string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+        string proofKey = JsonWebKeys.CreateRsaJson();
 
         // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
         // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -173,7 +237,7 @@ public class OAuthClient
         OidcClientOptions oidcClientOptions = new()
         {
             ClientId = clientId,
-            Authority = _expectedAuthority.ToString(),
+            Authority = authority.ToString(),
             Scope = scopeString,
             RedirectUri = returnUri.ToString(),
             LoadProfile = false,
@@ -182,16 +246,16 @@ public class OAuthClient
             HttpClientFactory = (oidcOptions) =>
             {
                 var httpClient = new HttpClient(new ProofTokenMessageHandler(
-                    new DefaultDPoPProofTokenFactory(_proofKey),
+                    new DefaultDPoPProofTokenFactory(proofKey),
                     _innerFactoryHandler()), true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
 
         oidcClientOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-        oidcClientOptions.ConfigureDPoP(_proofKey);
+        oidcClientOptions.ConfigureDPoP(proofKey);
 
-        _oidcClient = new OidcClient(oidcClientOptions);
+        OidcClient oidcClient = new(oidcClientOptions);
 
         Parameters? extraParameters = null;
 
@@ -212,24 +276,36 @@ public class OAuthClient
             }
         }
 
-        _authorizeState = await _oidcClient.PrepareLoginAsync(extraParameters, cancellationToken: cancellationToken).ConfigureAwait(false);
+        AuthorizeState authorizeState = await oidcClient.PrepareLoginAsync(extraParameters, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (_authorizeState is null)
+        if (authorizeState is null)
         {
             throw new OAuthException("state preparation failed");
         }
-        else if (_authorizeState.IsError)
+        else if (authorizeState.IsError)
         {
-            throw new OAuthException(_authorizeState.Error);
+            throw new OAuthException(authorizeState.Error);
         }
         else
         {
-            if (stateExtraProperties is not null)
+            // Nothing on the instance has been touched until this point, so a login which fails to prepare leaves any
+            // previously prepared login intact rather than pairing its authorize state with a new proof key.
+            _oidcClient = oidcClient;
+
+            lock (_stateLock)
             {
-                _stateExtraProperties = stateExtraProperties;
+                _proofKey = proofKey;
+                _expectedAuthority = authority;
+                _expectedService = service;
+                _authorizeState = authorizeState;
+
+                if (stateExtraProperties is not null)
+                {
+                    _stateExtraProperties = stateExtraProperties;
+                }
             }
 
-            Uri startUri = new(_authorizeState.StartUrl);
+            Uri startUri = new(authorizeState.StartUrl);
 
             Logger.OAuthLoginUriGenerated(_logger, authority, startUri, _correlationId);
 
@@ -256,10 +332,11 @@ public class OAuthClient
         clientId ??= _options?.ClientId;
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
-        scopes ??= _options?.Scopes;
-        scopes ??= DefaultScopes;
+        string[]? requestedScopes = scopes is null ? null : [.. scopes];
+        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= [.. DefaultScopes];
 
-        string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+        string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
         // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
         // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -268,39 +345,47 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
-        if (_proofKey is null)
-        {
-            throw new OAuthException("ProofKey is null");
-        }
+        string proofKey;
+        AuthorizeState authorizeState;
+        Uri expectedService;
+        Uri expectedAuthority;
 
-        if (_authorizeState is null)
+        // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
+        // another thread starts a new one part way through.
+        lock (_stateLock)
         {
-            throw new OAuthException("Internal _authorizeState is null");
-        }
+            if (_proofKey is null ||
+                _authorizeState is null ||
+                _expectedService is null ||
+                _expectedAuthority is null)
+            {
+                throw new OAuthException("There is no login in progress on this instance. Start one with BuildOAuth2LoginUri(), or restore a saved one by setting State.");
+            }
 
-        if (_expectedService is null)
-        {
-            throw new OAuthException("Internal _expectedService is null");
-        }
-
-        if (_expectedAuthority is null)
-        {
-            throw new OAuthException("Internal _expectedAuthority is null");
+            proofKey = _proofKey;
+            authorizeState = _authorizeState;
+            expectedService = _expectedService;
+            expectedAuthority = _expectedAuthority;
         }
 
         if (_oidcClient is null)
         {
-            OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, null, scopes);
+            OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, null, requestedScopes);
             _oidcClient = new OidcClient(oidcClientOptions);
         }
 
-        LoginResult loginResult = await _oidcClient.ProcessResponseAsync(callbackData, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+        LoginResult loginResult = await _oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (loginResult.IsError)
         {
-            _proofKey = null;
+            ClearLoginState();
             Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
             return null;
+        }
+
+        if (!DPoPTokenType.Equals(loginResult.TokenResponse.TokenType, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new OAuthException($"Authorization server issued a '{loginResult.TokenResponse.TokenType}' token, not a DPoP bound token.");
         }
 
         if (loginResult.TokenResponse.DPoPNonce is null)
@@ -310,19 +395,21 @@ public class OAuthClient
 
         JsonWebToken accessToken = new(loginResult.AccessToken);
 
-        ValidateAccessToken(accessToken, _expectedAuthority, _correlationId);
+        ValidateAccessToken(accessToken, expectedAuthority, _correlationId);
+
+        WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, _correlationId);
 
         AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
         using (var httpClient = new HttpClient(_innerFactoryHandler()))
         {
             _clientConfigurationHandler(httpClient);
-            serverDescriptionResult = await AtProtoServer.DescribeServer(_expectedService, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+            serverDescriptionResult = await AtProtoServer.DescribeServer(expectedService, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         }
 
         if (!serverDescriptionResult.Succeeded)
         {
-            throw new OAuthException($"Could not get service description for {_expectedService}");
+            throw new OAuthException($"Could not get service description for {expectedService}");
         }
         else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
         {
@@ -332,11 +419,49 @@ public class OAuthClient
         Logger.OAuthLoginCompleted(_logger, _correlationId);
 
         return new(
-            _expectedService,
+            expectedService,
             loginResult.AccessToken,
             loginResult.RefreshToken,
-            _proofKey,
+            proofKey,
             loginResult.TokenResponse.DPoPNonce);
+    }
+
+    /// <summary>
+    /// Discards the state of the login in progress.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The state is discarded as a set. Clearing only the proof key would leave the authorize state, and its single use
+    ///   PKCE code verifier, available to a subsequent call which has no proof key to bind a token to.
+    /// </para>
+    /// </remarks>
+    private void ClearLoginState()
+    {
+        lock (_stateLock)
+        {
+            _proofKey = null;
+            _authorizeState = null;
+            _expectedAuthority = null;
+            _expectedService = null;
+            _stateExtraProperties = null;
+        }
+
+        _oidcClient = null;
+    }
+
+    private void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
+    {
+        if (grantedScopes is null)
+        {
+            return;
+        }
+
+        string[] granted = grantedScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (string requestedScope in requestedScopes.Where(s => !string.IsNullOrEmpty(s) && !granted.Contains(s, StringComparer.Ordinal)))
+        {
+            Logger.OAuthScopeNotGranted(_logger, correlationId, requestedScope, grantedScopes);
+        }
     }
 
     /// <summary>
@@ -426,10 +551,11 @@ public class OAuthClient
 
         ArgumentNullException.ThrowIfNull(authority);
 
-        scopes ??= _options?.Scopes;
-        scopes ??= DefaultScopes;
+        string[]? requestedScopes = scopes is null ? null : [.. scopes];
+        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= [.. DefaultScopes];
 
-        string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+        string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
         clientId ??= _options?.ClientId;
 
@@ -442,6 +568,10 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
+        // Importing the RSA proof key is not cheap, and Duende may call the client factory more than once for a single
+        // refresh, so the factory is built once here rather than on every call into the lambda.
+        DefaultDPoPProofTokenFactory proofTokenFactory = new(refreshCredential.DPoPProofKey);
+
         OidcClientOptions oidcOptions = new()
         {
             ClientId = clientId,
@@ -452,7 +582,7 @@ public class OAuthClient
             LoggerFactory = _loggerFactory,
             HttpClientFactory = (oidcOptions) =>
             {
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(refreshCredential.DPoPProofKey), _innerFactoryHandler()), true);
+                var httpClient = new HttpClient(new ProofTokenMessageHandler(proofTokenFactory, _innerFactoryHandler()), true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
@@ -485,6 +615,13 @@ public class OAuthClient
                 JsonWebToken accessToken = new(refreshResult.AccessToken);
 
                 ValidateAccessToken(accessToken, authority, correlationId);
+
+                // Duende's RefreshTokenResult does not surface the token response, so token_type cannot be checked here
+                // the way it is on the login path. The granted scopes are taken from the issued token instead.
+                if (accessToken.TryGetClaim("scope", out Claim? grantedScopeClaim))
+                {
+                    WarnOnScopesNotGranted(requestedScopes, grantedScopeClaim.Value, correlationId);
+                }
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
                 using (HttpMessageHandler handler = _innerFactoryHandler())
@@ -629,6 +766,14 @@ public class OAuthClient
         if (accessToken.Audiences is null || !accessToken.Audiences.Any())
         {
             throw new OAuthException("Issued token does not contain aud.");
+        }
+
+        // The subject becomes the Did of the resulting credentials. Rejecting it here keeps a token which cannot
+        // identify its holder inside the validation contract, rather than letting the Did constructor throw an
+        // ArgumentException from further down the call chain.
+        if (!Did.TryParse(accessToken.Subject, out _))
+        {
+            throw new OAuthException("Issued token does not contain a valid sub.");
         }
 
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a

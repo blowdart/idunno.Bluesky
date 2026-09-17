@@ -38,6 +38,7 @@ public class OAuthAccessTokenValidationTests
     private static JsonWebToken CreateToken(
         string? issuer = "https://authority.test/",
         string? audience = "did:plc:testing",
+        string? subject = "did:plc:abcdefghijklmnopqrstuvwx",
         string? scope = "atproto",
         DateTimeOffset? notBefore = null,
         DateTimeOffset? expires = null,
@@ -54,6 +55,11 @@ public class OAuthAccessTokenValidationTests
         if (audience is not null)
         {
             payload["aud"] = audience;
+        }
+
+        if (subject is not null)
+        {
+            payload["sub"] = subject;
         }
 
         if (scope is not null)
@@ -219,6 +225,21 @@ public class OAuthAccessTokenValidationTests
             () => CreateOAuthClient().ValidateAccessToken(CreateToken(issuer: null), s_authority, Guid.NewGuid()));
 
         Assert.Equal("Issued token does not contain a valid iss.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("not-a-did")]
+    [InlineData("did:plc:")]
+    [InlineData("https://example.test/")]
+    public void TokenWithoutAUsableSubjectThrowsOAuthExceptionRatherThanEscapingAsAnArgumentException(string? subject)
+    {
+        OAuthException exception = Assert.Throws<OAuthException>(
+            () => CreateOAuthClient().ValidateAccessToken(CreateToken(subject: subject), s_authority, Guid.NewGuid()));
+
+        Assert.Equal("Issued token does not contain a valid sub.", exception.Message);
     }
 
     [Fact]
