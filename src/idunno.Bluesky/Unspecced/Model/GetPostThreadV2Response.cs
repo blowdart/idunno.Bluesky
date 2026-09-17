@@ -9,9 +9,9 @@ namespace idunno.Bluesky.Unspecced.Model;
 
 internal sealed record GetPostThreadV2Response(
 #pragma warning disable BSKYUnspecced // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-    [field: JsonRequired] ICollection<ThreadItem> Thread,
+    [property: JsonRequired] ICollection<ThreadItem> Thread,
 #pragma warning restore BSKYUnspecced // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ThreadGateView? Threadgate,
-    [field: JsonRequired] bool HasOtherReplies)
+    [property: JsonRequired] bool HasOtherReplies)
 {
 }

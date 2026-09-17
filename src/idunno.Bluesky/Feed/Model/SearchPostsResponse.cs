@@ -18,6 +18,7 @@ internal sealed record SearchPostsResponse
     }
 
     [JsonInclude]
+    [JsonRequired]
     public ICollection<PostView> Posts { get; init; }
 
     [JsonInclude]

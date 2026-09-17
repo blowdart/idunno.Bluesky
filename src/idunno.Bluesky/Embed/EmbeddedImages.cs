@@ -27,8 +27,23 @@ public record EmbeddedImages : EmbeddedMediaBase
     }
 
     /// <summary>
+    /// Creates a new instance of <see cref="EmbeddedImages"/> when deserializing.
+    /// </summary>
+    /// <remarks>
+    /// <para><see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/images.json">app.bsky.embed.images</see>
+    /// places no lower bound on the number of images, so an empty collection is a valid payload and must not be rejected when reading.
+    /// The stricter validation in the public constructor applies only to images being embedded in a post by this library.</para>
+    /// </remarks>
+    [JsonConstructor]
+    internal EmbeddedImages()
+    {
+        Images = [];
+    }
+
+    /// <summary>
     /// Gets the collection of images to embed.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public ICollection<EmbeddedImage> Images { get; init; }
 }

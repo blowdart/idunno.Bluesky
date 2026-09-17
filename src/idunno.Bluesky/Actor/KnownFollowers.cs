@@ -32,5 +32,6 @@ public sealed record KnownFollowers
     /// The list of known followers the authenticated user shares with another actor.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public IReadOnlyList<ProfileViewBasic> Followers { get; init; }
 }

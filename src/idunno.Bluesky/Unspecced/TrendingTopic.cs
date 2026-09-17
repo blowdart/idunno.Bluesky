@@ -17,9 +17,9 @@ namespace idunno.Bluesky.Unspecced;
 /// </remarks>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference in summary")]
 public sealed record TrendingTopic(
-    [field: JsonRequired()] string Topic,
+    [property: JsonRequired] string Topic,
     string? DisplayName,
     string? Description,
-    [field: JsonRequired()] string Link)
+    [property: JsonRequired] string Link)
 {
 }

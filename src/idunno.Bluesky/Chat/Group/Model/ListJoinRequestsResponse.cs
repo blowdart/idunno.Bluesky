@@ -18,5 +18,6 @@ internal sealed record ListJoinRequestsResponse
 
     public string? Cursor { get; init; }
 
+    [JsonRequired]
     public ICollection<JoinRequestView> Requests { get; init; }
 }

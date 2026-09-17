@@ -28,5 +28,6 @@ public sealed record LabelersPreference : Preference
     /// Gets the list of <see cref="LabelersPreference"/>.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public IReadOnlyList<LabelerPreference> Labelers { get; init; }
 }

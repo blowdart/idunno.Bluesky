@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
@@ -12,5 +13,6 @@ internal sealed class GetRelationshipsResponse(Did actor, ICollection<Relationsh
 {
     public Did Actor { get; init; } = actor;
 
+    [JsonRequired]
     public ICollection<RelationshipType> Relationships { get; init; } = relationships;
 }

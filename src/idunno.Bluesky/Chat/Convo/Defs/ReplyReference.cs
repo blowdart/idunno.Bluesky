@@ -11,6 +11,6 @@ namespace idunno.Bluesky.Chat;
 /// A reference to another message within the same convo, used to indicate that a message is a reply to it.
 /// </summary>
 /// <param name="MessageId">The message ID of the message being replied to.</param>
-public sealed record ReplyReference([field: JsonRequired] string MessageId)
+public sealed record ReplyReference([property: JsonRequired] string MessageId)
 {
 }

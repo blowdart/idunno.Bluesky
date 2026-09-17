@@ -99,6 +99,9 @@
   `Func<AtProtoCredential, CancellationToken, Task>?`, and the callback is now awaited. Previously the callback was invoked synchronously, which meant
   asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
   `credential => Save(credential)` to `(credential, cancellationToken) => SaveAsync(credential, cancellationToken)`.
+* `Label.Signature` is now `IEnumerable<byte>?` rather than `IEnumerable<byte>`. The `sig` property is optional in
+  `com.atproto.label.defs`, so most labels carry no signature. Previously an absent `sig` left the non-nullable property `null`,
+  and code following the annotation would fail with a `NullReferenceException`. Check `Signature` for `null` before enumerating it.
 
 #### idunno.Bluesky
 
@@ -314,6 +317,18 @@
 * `GetPreferences()` now reports a response which omits its `preferences` collection as a failure, rather than throwing an `ArgumentNullException`.
 * `GetLabelerServices()` now reports a response which omits its `views` collection as a failure, rather than returning an empty collection alongside a successful status code.
 * `GetNotificationUnreadCount()` no longer reports a failed call as a success carrying a count of `-1`, and `UpdateAllRead()` no longer reports a failed call as a success carrying a count of `0`. See the breaking changes above.
+* Eighteen properties across nine types applied `JsonRequired` with the `field:` attribute target rather than `property:`. The attribute landed on the
+  compiler generated backing field, where `System.Text.Json` ignores it, so none of those properties were ever actually required. `ChatStatus`,
+  `ReplyReference`, `ListConvoRequestsResponse`, `SearchStarterPacksResponse`, `SearchStarterPacksV2Response`, `TrendingTopic`, `TrendView`,
+  `GetPostThreadOtherV2Response` and `GetPostThreadV2Response` now use `property:` and reject a response which omits the property.
+* `SearchPosts()`, `SearchActorsTypeahead()`, `GetRelationships()` and `ListJoinRequests()` now report a response which omits its collection as a failure.
+  The collection is required by the lexicon, but a missing property is not covered by `RespectNullableAnnotations`, which rejects only an explicit `null`,
+  so the collection was silently `null`.
+* `LabelersPreference` now reports a preference which omits its `labelers` collection as a failure rather than leaving it `null`. Its sibling preference
+  types already guarded against this.
+* `KnownFollowers` now reports a response which omits its `followers` collection as a failure, rather than throwing an `ArgumentNullException`.
+* `EmbeddedImages` no longer throws an `ArgumentOutOfRangeException` when deserializing an empty `images` array. `app.bsky.embed.images` sets no minimum,
+  so an empty array is a valid payload. Constructing an `EmbeddedImages` directly still requires at least one image.
 
 ## 6.0.0 - 2026-09-05
 
