@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,7 @@ using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -35,7 +37,7 @@ public static partial class AtProtoServer
     internal const string GetRecordEndpoint = "/xrpc/com.atproto.repo.getRecord";
 
     // https://docs.bsky.app/docs/api/com-atproto-repo-list-records
-    internal const string ListRecordsEndpoint = "/xrpc/com.atproto.repo.ListRecords";
+    internal const string ListRecordsEndpoint = "/xrpc/com.atproto.repo.listRecords";
 
     // https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
     internal const string UploadBlobEndpoint = "/xrpc/com.atproto.repo.uploadBlob";
@@ -68,7 +70,10 @@ public static partial class AtProtoServer
     /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
     /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
     [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
@@ -111,21 +116,19 @@ public static partial class AtProtoServer
             {
                 case CreateOperation createOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution)) ??
+                            throw new ArgumentException("A create operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                         break;
                     }
 
                 case UpdateOperation putOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution)) ??
+                            throw new ArgumentException("An update operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                         break;
                     }
 
@@ -133,6 +136,10 @@ public static partial class AtProtoServer
                     mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                     break;
 
+                default:
+                    throw new ArgumentException(
+                        string.Create(CultureInfo.InvariantCulture, $"Write operations of type {operation.GetType()} are not supported."),
+                        nameof(operations));
             }
         }
 
@@ -208,7 +215,10 @@ public static partial class AtProtoServer
     /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
     /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -253,27 +263,30 @@ public static partial class AtProtoServer
             {
                 case CreateOperation createOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, jsonSerializerOptions));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, jsonSerializerOptions)) ??
+                            throw new ArgumentException("A create operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                         break;
                     }
 
                 case UpdateOperation putOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, jsonSerializerOptions));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, jsonSerializerOptions)) ??
+                            throw new ArgumentException("An update operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                         break;
                     }
 
                 case DeleteOperation deleteOperation:
                     mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                     break;
+
+                default:
+                    throw new ArgumentException(
+                        string.Create(CultureInfo.InvariantCulture, $"Write operations of type {operation.GetType()} are not supported."),
+                        nameof(operations));
             }
         }
 
@@ -518,14 +531,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (!response.Succeeded &&
-            response.AtErrorDetail is not null &&
-            response.AtErrorDetail.Error is not null &&
-            string.Equals(InvalidSwap.ErrorTitle, response.AtErrorDetail.Error, StringComparison.Ordinal))
-        {
-            response.AtErrorDetail = new InvalidSwap(response.AtErrorDetail);
-        }
 
         if (response.Succeeded)
         {
@@ -897,8 +902,8 @@ public static partial class AtProtoServer
             creator: repositoryRecord.Uri.Repo,
             rKey: repositoryRecord.Uri.RecordKey,
             validate: validate,
-            swapCommit: repositoryRecord.Cid,
-            swapRecord: null,
+            swapCommit: null,
+            swapRecord: repositoryRecord.Cid,
             service: service,
             accessCredentials: accessCredentials,
             httpClient: httpClient,
@@ -1320,7 +1325,7 @@ public static partial class AtProtoServer
         if (limit is not null &&
            (limit < 1 || limit > 100))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 100."));
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}";
@@ -1339,6 +1344,8 @@ public static partial class AtProtoServer
         {
             queryString += "&reverse=true";
         }
+
+        ILogger logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger(nameof(AtProtoServer));
 
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
@@ -1367,15 +1374,33 @@ public static partial class AtProtoServer
 
             // Run through the nodes and deserialize one by one to the strongly typed PagedReadOnlyCollection<T>, avoiding
             // the need to expose ListRecordsResponse<T>.
-            foreach (JsonObject record in response.Result.Records)
+            //
+            // A record the caller's type cannot represent is remote data we do not control, so it is skipped and logged
+            // rather than thrown, which would make an entire collection unenumerable because of a single bad record.
+            foreach (JsonObject? record in response.Result.Records ?? [])
             {
-                string jsonString = record.ToJsonString();
-
-                AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(jsonString, DefaultJsonSerializerOptionsWithNoTypeResolution);
-
-                if (atProtoRecord is not null)
+                if (record is null)
                 {
-                    records.Add(atProtoRecord);
+                    Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    continue;
+                }
+
+                try
+                {
+                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(record.ToJsonString(), DefaultJsonSerializerOptionsWithNoTypeResolution);
+
+                    if (atProtoRecord is not null)
+                    {
+                        records.Add(atProtoRecord);
+                    }
+                    else
+                    {
+                        Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Logger.ListRecordsSkippedUndeserializableRecord(logger, GetRecordUri(record), collection, service, ex);
                 }
             }
 
@@ -1452,7 +1477,7 @@ public static partial class AtProtoServer
         if (limit is not null &&
            (limit < 1 || limit > 100))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 100."));
         }
 
         if (accessCredentials is not null && service != accessCredentials.Service)
@@ -1476,6 +1501,8 @@ public static partial class AtProtoServer
         {
             queryString += "&reverse=true";
         }
+
+        ILogger logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger(nameof(AtProtoServer));
 
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
@@ -1507,17 +1534,35 @@ public static partial class AtProtoServer
 
             // Run through the nodes and deserialize one by one to the strongly typed PagedReadOnlyCollection<T>, avoiding
             // the need to expose ListRecordsResponse<T>.
-            foreach (JsonObject record in response.Result.Records)
+            //
+            // A record the caller's type cannot represent is remote data we do not control, so it is skipped and logged
+            // rather than thrown, which would make an entire collection unenumerable because of a single bad record.
+            foreach (JsonObject? record in response.Result.Records ?? [])
             {
-                string jsonString = record.ToJsonString();
-
-                AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(
-                    jsonString,
-                    jsonSerializerOptions);
-
-                if (atProtoRecord is not null)
+                if (record is null)
                 {
-                    records.Add(atProtoRecord);
+                    Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    continue;
+                }
+
+                try
+                {
+                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(
+                        record.ToJsonString(),
+                        jsonSerializerOptions);
+
+                    if (atProtoRecord is not null)
+                    {
+                        records.Add(atProtoRecord);
+                    }
+                    else
+                    {
+                        Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Logger.ListRecordsSkippedUndeserializableRecord(logger, GetRecordUri(record), collection, service, ex);
                 }
             }
 
@@ -1559,7 +1604,7 @@ public static partial class AtProtoServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty, or is not a valid media type in the type/subtype format.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     /// <remarks>
     /// <para>
@@ -1590,9 +1635,9 @@ public static partial class AtProtoServer
         ArgumentOutOfRangeException.ThrowIfZero(blob.Length);
 
         ArgumentException.ThrowIfNullOrEmpty(mimeType);
-        if (!mimeType.Contains('/', StringComparison.Ordinal) || mimeType.Count(c => c == '/') != 1)
+        if (!MediaTypeHeaderValue.TryParse(mimeType, out MediaTypeHeaderValue? parsedMimeType))
         {
-            throw new ArgumentException("Mime type must be in the format 'type/subtype'.", nameof(mimeType));
+            throw new ArgumentException("Mime type must be a valid media type in the format 'type/subtype'.", nameof(mimeType));
         }
 
         ArgumentNullException.ThrowIfNull(service);
@@ -1606,7 +1651,7 @@ public static partial class AtProtoServer
 
         List<NameValueHeaderValue> contentHeaders =
         [
-            new NameValueHeaderValue("Content-Type", mimeType)
+            new NameValueHeaderValue("Content-Type", parsedMimeType.ToString())
         ];
 
         AtProtoHttpClient<CreateBlobResponse> client;
@@ -1630,7 +1675,7 @@ public static partial class AtProtoServer
                 credentials: accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions: SourceGenerationContext.Default.Options,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -1691,9 +1736,23 @@ public static partial class AtProtoServer
             service: service,
             endpoint: $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
             httpClient: httpClient,
-            jsonSerializerOptions: SourceGenerationContext.Default.Options,
+            jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result;
+    }
+
+    // Best effort extraction of the uri of a record which could not be deserialized, so the record can be identified
+    // in logs and retrieved individually through an untyped GetRecord() call.
+    private static string? GetRecordUri(JsonObject record)
+    {
+        if (record.TryGetPropertyValue("uri", out JsonNode? uriNode) &&
+            uriNode is JsonValue uriValue &&
+            uriValue.TryGetValue(out string? uri))
+        {
+            return uri;
+        }
+
+        return null;
     }
 }

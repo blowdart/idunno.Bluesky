@@ -203,6 +203,15 @@
 * `AtProtoJetstream.DidFilter` and `AtProtoJetstream.CollectionFilter` now throw `ArgumentNullException` when set to `null`, are updated under a lock,
   and are copied under that lock when the filters are sent to the server, so the server is sent a consistent pair of filters rather than one from
   before a concurrent update and one from after it.
+* `AtProtoServer.ApplyWrites()` now throws an `ArgumentException` when an operation is not a `CreateOperation`, `UpdateOperation` or `DeleteOperation`, or when its record value cannot be serialized, rather than silently dropping the operation from the batch.
+* `ListRecords()` now skips and logs a record it cannot deserialize, rather than failing the entire page, and no longer throws a `NullReferenceException` when the service returns a null `records` collection or a null record within it.
+* `UploadBlob()` now validates the mime type with `MediaTypeHeaderValue.TryParse()` and sends the parsed value, rejecting mime types containing control characters and accepting well formed values with surrounding whitespace which previously threw a `FormatException`.
+* The `PutRecord()` overload which takes an `AtProtoRepositoryRecord<TRecord>` and a `JsonSerializerOptions` now sends the record's `Cid` as `swapRecord` rather than as `swapCommit`. A record CID never matches a commit CID, so the compare-and-swap that overload performed could never succeed.
+* `ListRecords()` now calls `com.atproto.repo.listRecords`, matching the casing in the lexicon.
+* The exception thrown when `limit` is out of range now reports the supplied value rather than the literal text `{limit}`.
+* Responses are now deserialized with `RespectNullableAnnotations` enabled, so a property declared non-nullable which the service sends as `null` fails deserialization rather than leaving a `null` in a non-nullable member.
+* `ApplyWrites()` no longer throws a `NullReferenceException` when the service omits the `results` collection or sends it as `null`.
+* `UploadBlob()` and `DescribeRepo()` now use the same `JsonSerializerOptions` as every other endpoint, rather than the source generation context's own options.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -293,6 +302,9 @@
 * `ListConversations()` now returns the cursor the service sent, rather than always returning `null`. Paging conversations returned the first page
   repeatedly, and a caller paging until the cursor was `null` never terminated. It was the only paged chat endpoint which did not return its cursor.
 * `AddReaction()` now rejects a reaction longer than `Maximum.ReactionLengthInBytes` (64) UTF-8 bytes.
+* Paged readers no longer throw a `NullReferenceException` or `ArgumentNullException` when the service omits a collection or sends it as `null`. `ListNotifications()`, `SearchActors()`, `GetSuggestions()`, `GetProfiles()`, `GetBookmarks()`, `SearchPostsV2()` and `GetTrendingTopics()` now require their collections to be present and non-null.
+* A response which returns `200 OK` but cannot be deserialized is no longer reported as a successful empty page. Fifteen readers returned an empty collection alongside the original status code, which left `Succeeded` returning `true`, hiding the failure and silently reporting no results.
+* `ListNotifications()` now skips and logs a null notification within a page, rather than throwing a `NullReferenceException`.
 
 ## 6.0.0 - 2026-09-05
 

@@ -106,7 +106,7 @@ public partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<DraftView>>(
-                new PagedViewReadOnlyCollection<DraftView>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

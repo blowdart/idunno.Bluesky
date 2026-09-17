@@ -11,6 +11,7 @@ using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky;
 
@@ -98,9 +99,19 @@ public static partial class BlueskyServer
         // Transform from DTO and flatten
         if (response.Succeeded)
         {
+            ILogger logger = loggerFactory?.CreateLogger(nameof(BlueskyServer)) ?? NullLogger.Instance;
+
             List<Notification> notifications = [];
             foreach (NotificationResponse notificationResponse in response.Result.Notifications)
             {
+                // A null entry is a protocol violation. Skip it rather than throwing, so a single bad
+                // notification does not make the entire page unreadable.
+                if (notificationResponse is null)
+                {
+                    Logger.ListNotificationsSkippedNullNotification(logger, service);
+                    continue;
+                }
+
                 notifications.Add(new Notification(notificationResponse));
             }
 
@@ -114,7 +125,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<NotificationCollection>(
-                new(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

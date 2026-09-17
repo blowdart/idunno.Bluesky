@@ -20,5 +20,6 @@ internal sealed record GetSuggestionsResponse
     public string? Cursor { get; init; }
 
     [JsonInclude]
+    [JsonRequired]
     public IReadOnlyCollection<ProfileView> Actors { get; init; }
 }
