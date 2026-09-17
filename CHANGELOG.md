@@ -341,6 +341,8 @@
   effect. Without it a missing collection surfaced to the caller as a `NullReferenceException` rather than as a failed result.
 * `ListActivitySubscriptions()` now skips and logs `null` entries inside an otherwise well formed `subscriptions` collection rather than handing those `null`s
   to the caller.
+* `GetTimeline()` now reports a response which omits its `feed` collection as a failure. The collection is required by the lexicon, but the response type
+  declared it as nullable and substituted an empty collection when it was absent, so a malformed response was indistinguishable from an empty timeline.
 * `GetConversationLog()`, `GetMessages()`, `ListConversations()`, `GetList()`, `GetFeedGenerators()`, `GetLikes()`, `GetQuotes()`, `GetRepostedBy()`,
   `GetSuggestedFeeds()`, `GetTimeline()`, `SearchPosts()`, `SearchPostsV2()` and `GetPostThreadOtherV2()` now skip and log `null` entries inside their
   collections rather than returning them. Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a service could

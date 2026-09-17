@@ -184,4 +184,20 @@ public class MissingCollectionTests
     }
 
 #pragma warning restore BSKYUnspecced
+
+    [Fact]
+    public async Task GetTimelineReportsAMissingFeedCollectionAsAFailure()
+    {
+        AtProtoHttpResult<Timeline> result = await BlueskyServer.GetTimeline(
+            algorithm: null,
+            limit: 25,
+            cursor: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: CreateClient("{}"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Result);
+    }
 }
