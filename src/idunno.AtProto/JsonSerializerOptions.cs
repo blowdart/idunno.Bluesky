@@ -17,6 +17,7 @@ public partial class AtProtoServer
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
+        RespectNullableAnnotations = true,
         TypeInfoResolver = SourceGenerationContext.Default,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
     };

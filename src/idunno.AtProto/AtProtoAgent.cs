@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -548,7 +549,10 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="operations"/> or <paramref name="repo" /> is <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -2029,7 +2033,7 @@ public partial class AtProtoAgent : Agent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is empty, or <paramref name="mimeType"/> is empty or is not a valid media type.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the file specified by <paramref name="fileName"/> could not be found.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
@@ -2096,7 +2100,7 @@ public partial class AtProtoAgent : Agent
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length, or if <paramref name="mimeType"/> is <see langword="null"/>, empty, or is not a valid media type.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
@@ -2175,7 +2179,7 @@ public partial class AtProtoAgent : Agent
         if (limit is not null &&
            (limit < 1 || limit > 250))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 250."));
         }
 
         service ??= Service;

@@ -85,7 +85,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<BookmarkView>>(
-                new PagedViewReadOnlyCollection<BookmarkView>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

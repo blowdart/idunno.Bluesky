@@ -67,7 +67,7 @@ public static partial class AtProtoServer
         if (limit is not null &&
            (limit < 1 || limit > 250))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 250."));
         }
 
         List<Did> sourcesList = [];

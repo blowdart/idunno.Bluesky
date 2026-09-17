@@ -212,6 +212,12 @@ internal static partial class Logger
     [LoggerMessage(122, LogLevel.Error, "ListRecords succeeded but returned a null result against {repo} {collection} on {service}.")]
     internal static partial void ListRecordsSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, Nsid collection, Uri service);
 
+    [LoggerMessage(123, LogLevel.Warning, "ListRecords skipped the record {uri} in {collection} on {service} as it could not be deserialized.")]
+    internal static partial void ListRecordsSkippedUndeserializableRecord(ILogger logger, string? uri, Nsid collection, Uri service, Exception exception);
+
+    [LoggerMessage(124, LogLevel.Warning, "ListRecords skipped a null record in {collection} on {service}.")]
+    internal static partial void ListRecordsSkippedNullRecord(ILogger logger, Nsid collection, Uri service);
+
     [LoggerMessage(130, LogLevel.Error, "UploadBlob to {service} failed as current session is not authenticated.")]
     internal static partial void UploadBlobFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 

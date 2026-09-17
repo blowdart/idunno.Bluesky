@@ -91,15 +91,9 @@ public partial class BlueskyServer
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Flatten into collection
-        PagedViewReadOnlyCollection<JoinRequestView> result;
-        if (response.Result is not null)
-        {
-            result = new PagedViewReadOnlyCollection<JoinRequestView>(response.Result.Requests, response.Result.Cursor);
-        }
-        else
-        {
-            result = new PagedViewReadOnlyCollection<JoinRequestView>();
-        }
+        PagedViewReadOnlyCollection<JoinRequestView>? result = response.Result is not null
+            ? new PagedViewReadOnlyCollection<JoinRequestView>(response.Result.Requests, response.Result.Cursor)
+            : null;
 
         return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>(
             result: result,

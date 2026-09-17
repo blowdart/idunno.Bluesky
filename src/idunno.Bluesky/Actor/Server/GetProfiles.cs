@@ -87,7 +87,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
-                new Collection<ProfileViewDetailed>().AsReadOnly(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

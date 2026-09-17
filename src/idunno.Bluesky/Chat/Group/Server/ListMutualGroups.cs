@@ -83,15 +83,9 @@ public partial class BlueskyServer
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Flatten into collection
-        PagedViewReadOnlyCollection<ConversationView> result;
-        if (response.Result is not null)
-        {
-            result = new PagedViewReadOnlyCollection<ConversationView>(response.Result.Conversations, response.Result.Cursor);
-        }
-        else
-        {
-            result = new PagedViewReadOnlyCollection<ConversationView>();
-        }
+        PagedViewReadOnlyCollection<ConversationView>? result = response.Result is not null
+            ? new PagedViewReadOnlyCollection<ConversationView>(response.Result.Conversations, response.Result.Cursor)
+            : null;
 
         return new AtProtoHttpResult<PagedViewReadOnlyCollection<ConversationView>>(
             result: result,
