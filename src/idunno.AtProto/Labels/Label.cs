@@ -110,10 +110,14 @@ public sealed record Label : AtProtoObject
     public DateTimeOffset CreationTimestamp { get; init; }
 
     /// <summary>
-    /// Signature of dag-cbor encoded label.
+    /// Signature of dag-cbor encoded label, if the label was signed.
     /// </summary>
+    /// <remarks>
+    /// <para>The <c>sig</c> property is optional in <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/defs.json">com.atproto.label.defs</see>,
+    /// so this will be <see langword="null" /> for labels which carry no signature.</para>
+    /// </remarks>
     [JsonPropertyName("sig")]
-    public IEnumerable<byte> Signature { get; init; }
+    public IEnumerable<byte>? Signature { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => '{' + Value + '}';

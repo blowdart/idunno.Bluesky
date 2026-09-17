@@ -20,14 +20,14 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="Actors">A collection of actors contributing to the <paramref name="Topic" />.</param>
 /// <param name="Description">An optional description of the trend.</param>
 public sealed record TrendView(
-    [field: JsonRequired] string Topic,
-    [field: JsonRequired] string DisplayName,
-    [field: JsonRequired] string Link,
-    [field: JsonRequired] DateTimeOffset StartedAt,
-    [field: JsonRequired] int PostCount,
+    [property: JsonRequired] string Topic,
+    [property: JsonRequired] string DisplayName,
+    [property: JsonRequired] string Link,
+    [property: JsonRequired] DateTimeOffset StartedAt,
+    [property: JsonRequired] int PostCount,
     string? Status,
     string? Category,
-    [field: JsonRequired] IReadOnlyCollection<ProfileViewBasic> Actors,
+    [property: JsonRequired] IReadOnlyCollection<ProfileViewBasic> Actors,
     string? Description) : View
 {
 }
