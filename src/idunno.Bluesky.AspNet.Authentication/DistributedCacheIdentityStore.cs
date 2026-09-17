@@ -305,7 +305,15 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         byte[]? current = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
 
-        if (current is not null && !Encoding.UTF8.GetString(current).Equals(refreshLockToken, StringComparison.Ordinal))
+        if (current is null)
+        {
+            // The lock already expired, so there is nothing of ours to release. Removing the key anyway would delete a
+            // lock another caller acquired between this read and that removal.
+            Logger.EndRefreshLockNotOwned(did);
+            return;
+        }
+
+        if (!Encoding.UTF8.GetString(current).Equals(refreshLockToken, StringComparison.Ordinal))
         {
             // The lock expired and someone else acquired it, so it is not ours to release.
             Logger.EndRefreshLockNotOwned(did);

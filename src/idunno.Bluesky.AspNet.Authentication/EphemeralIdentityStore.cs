@@ -296,8 +296,14 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
         lock (_refreshLock)
         {
-            if (RefreshCache.Get($"{did}") is string currentToken &&
-                !currentToken.Equals(refreshLockToken, StringComparison.Ordinal))
+            if (RefreshCache.Get($"{did}") is not string currentToken)
+            {
+                // The lock already expired, so there is nothing of ours to release.
+                Logger.EndRefreshLockNotOwned(did);
+                return Task.CompletedTask;
+            }
+
+            if (!currentToken.Equals(refreshLockToken, StringComparison.Ordinal))
             {
                 // The lock expired and someone else acquired it, so it is not ours to release.
                 Logger.EndRefreshLockNotOwned(did);

@@ -281,6 +281,11 @@ public class BlueskySignInManager
     ///   <see langword="null" /> and a <see cref="BlueskyAuthenticationMetrics.CorrelationStateRejections"/> count
     ///   carrying the reason, rather than an exception which would surface to the user as a server error.
     /// </para>
+    /// <para>
+    ///   Passing a <paramref name="correlationId"/> skips the correlation cookie, and with it the check which ties a callback
+    ///   to a login this application started in this browser. Only pass an identifier the application is itself tracking, never
+    ///   one taken from the request, otherwise the login flow loses its cross site request forgery protection.
+    /// </para>
     /// </remarks>
     public async Task<OAuthLoginState?> LoadState(Guid? correlationId = null)
     {
