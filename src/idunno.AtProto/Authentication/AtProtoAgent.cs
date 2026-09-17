@@ -68,11 +68,24 @@ public partial class AtProtoAgent
     private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);
     private readonly TimeSpan _backgroundRefreshRetryInterval = new(0, 1, 0);
 
+    /// <summary>
+    /// The delay used when an access token is already at or close to expiry when the refresh timer is started.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The refresh is scheduled rather than run inline because <see cref="StartTokenRefreshTimer"/> is itself called
+    ///   from inside a refresh, whilst the refresh semaphore is still held. Running it inline would recurse, and a server
+    ///   issuing short lived access tokens would drive an unbounded chain of immediate refreshes with no delay between them.
+    /// </para>
+    /// </remarks>
+    private readonly TimeSpan _immediateRefreshInterval = new(0, 0, 1);
+
     private System.Timers.Timer? _credentialRefreshTimer;
 
     /// <summary>
     /// Gets the current credentials for the agent, if any.
     /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown when setting the credentials on a disposed agent.</exception>
     public AccessCredentials? Credentials
     {
         get
@@ -90,19 +103,18 @@ public partial class AtProtoAgent
 
         set
         {
-            if (!_disposed)
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            lock (_credentialLock)
             {
-                lock (_credentialLock)
+                _credentials = value;
+                if (_credentials is not null)
                 {
-                    _credentials = value;
-                    if (_credentials is not null)
-                    {
-                        Service = _credentials.Service;
-                    }
-                    else
-                    {
-                        Service = OriginalService;
-                    }
+                    Service = _credentials.Service;
+                }
+                else
+                {
+                    Service = OriginalService;
                 }
             }
         }
@@ -136,6 +148,14 @@ public partial class AtProtoAgent
     /// <summary>
     /// Gets a value indicating whether the agent has current authentication tokens.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is a snapshot. Another thread can log the agent out, or a background refresh can replace the
+    ///   credentials, between this being read and <see cref="Credentials"/> being read. Callers which need both must
+    ///   read <see cref="Credentials"/> into a local and test that, rather than relying on the guarantee this
+    ///   property gives the compiler.
+    /// </para>
+    /// </remarks>
     [MemberNotNullWhen(true, nameof(Credentials))]
     [MemberNotNullWhen(true, nameof(Did))]
     public override bool IsAuthenticated
@@ -159,6 +179,14 @@ public partial class AtProtoAgent
     /// <summary>
     /// Gets a flag indicating whether the agent has access credentials.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is a snapshot. Another thread can log the agent out, or a background refresh can replace the
+    ///   credentials, between this being read and <see cref="Credentials"/> being read. Callers which need both must
+    ///   read <see cref="Credentials"/> into a local and test that, rather than relying on the guarantee this
+    ///   property gives the compiler.
+    /// </para>
+    /// </remarks>
     [MemberNotNullWhen(true, nameof(Credentials))]
     [MemberNotNullWhen(true, nameof(Did))]
     public bool HasCredentials
@@ -1069,16 +1097,21 @@ public partial class AtProtoAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public async Task Logout(CancellationToken cancellationToken = default)
     {
-        if (Credentials is null)
+        // The agent credentials are read once. Logout spans several awaits, and re-reading the property would let a
+        // concurrent logout, or a background refresh landing part way through, revoke one credential having checked
+        // another, or null the property and leave the later reads throwing a NullReferenceException.
+        AccessCredentials? credentials = Credentials;
+
+        if (credentials is null)
         {
             return;
         }
 
-        if (Credentials.AuthenticationType != AuthenticationType.UsernamePassword &&
-            Credentials.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
+        if (credentials.AuthenticationType != AuthenticationType.UsernamePassword &&
+            credentials.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
         {
             // Call revocation openid-connect endpoint
-            if (Credentials is not DPoPAccessCredentials accessCredentials)
+            if (credentials is not DPoPAccessCredentials accessCredentials)
             {
                 throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
             }
@@ -1107,7 +1140,7 @@ public partial class AtProtoAgent
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
-            Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
+            Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
             StopTokenRefreshTimer();
 
@@ -1159,7 +1192,7 @@ public partial class AtProtoAgent
 
                 if (!revokeResponse.Succeeded)
                 {
-                    Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "refresh_token");
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "refresh_token");
                     throw new LogoutException()
                     {
                         StatusCode = revokeResponse.StatusCode,
@@ -1192,7 +1225,7 @@ public partial class AtProtoAgent
 
                 if (!revokeResponse.Succeeded)
                 {
-                    Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "access_token");
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "access_token");
                     throw new LogoutException()
                     {
                         StatusCode = revokeResponse.StatusCode,
@@ -1201,7 +1234,7 @@ public partial class AtProtoAgent
                 }
             }
 
-            var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
+            var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
 
             ForgetExchangedRefreshTokens();
             Credentials = null;
@@ -1209,24 +1242,24 @@ public partial class AtProtoAgent
         }
         else
         {
-            if (Credentials.Did is null || Credentials.Service is null || Credentials.RefreshToken is null)
+            if (credentials.Did is null || credentials.Service is null || credentials.RefreshToken is null)
             {
                 throw new CredentialException("agent.Credentials is missing information needed to call DeleteSession");
             }
 
-            Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
+            Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
             StopTokenRefreshTimer();
 
             // Take the refresh token value from credentials and make it a specific refresh token.
-            RefreshCredential refreshCredential = new(Credentials);
+            RefreshCredential refreshCredential = new(credentials);
 
             AtProtoHttpResult<EmptyResponse> deleteSessionResult =
                 await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
 
             if (deleteSessionResult.Succeeded)
             {
-                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
+                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
 
                 ForgetExchangedRefreshTokens();
                 Credentials = null;
@@ -1234,7 +1267,7 @@ public partial class AtProtoAgent
             }
             else
             {
-                Logger.LogoutFailed(_logger, Credentials.Did, Credentials.Service, deleteSessionResult.StatusCode);
+                Logger.LogoutFailed(_logger, credentials.Did, credentials.Service, deleteSessionResult.StatusCode);
                 ForgetExchangedRefreshTokens();
                 Credentials = null;
                 throw new LogoutException()
@@ -1467,6 +1500,7 @@ public partial class AtProtoAgent
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
         CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
 
@@ -1480,8 +1514,14 @@ public partial class AtProtoAgent
 
                 if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                 {
-                    succeeded = true;
-                    return true;
+                    succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+
+                    if (!succeeded)
+                    {
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+                    }
+
+                    return succeeded;
                 }
 
                 StopTokenRefreshTimer();
@@ -1500,6 +1540,8 @@ public partial class AtProtoAgent
 
                 if (refreshedCredentials is null)
                 {
+                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
                     return false;
                 }
 
@@ -1510,6 +1552,8 @@ public partial class AtProtoAgent
                 if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
                     Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
+
+                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
 
                     throw new SecurityTokenValidationException("The issued access token could not be validated.");
                 }
@@ -1536,6 +1580,12 @@ public partial class AtProtoAgent
             if (timerStopped && !succeeded)
             {
                 RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+            }
+
+            // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+            if (tokenRefreshFailedEventArgs is not null)
+            {
+                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
             }
         }
 
@@ -1569,6 +1619,7 @@ public partial class AtProtoAgent
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
         CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
 
@@ -1582,8 +1633,14 @@ public partial class AtProtoAgent
 
                 if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                 {
-                    succeeded = true;
-                    return true;
+                    succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+
+                    if (!succeeded)
+                    {
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+                    }
+
+                    return succeeded;
                 }
 
                 StopTokenRefreshTimer();
@@ -1610,14 +1667,11 @@ public partial class AtProtoAgent
                 {
                     Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
 
-                    var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
-                        did: Did!,
-                        service: refreshCredential.Service,
-                        refreshCredential.RefreshToken,
+                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(
+                        refreshCredential,
                         refreshSessionResult.StatusCode,
                         refreshSessionResult.AtErrorDetail);
 
-                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
                     return false;
                 }
 
@@ -1628,6 +1682,8 @@ public partial class AtProtoAgent
                 if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
                     Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
 
                     throw new SecurityTokenValidationException("The issued access token could not be validated.");
                 }
@@ -1661,6 +1717,12 @@ public partial class AtProtoAgent
             {
                 RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
             }
+
+            // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+            if (tokenRefreshFailedEventArgs is not null)
+            {
+                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+            }
         }
 
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
@@ -1670,6 +1732,72 @@ public partial class AtProtoAgent
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Creates the arguments describing a failed refresh of <paramref name="refreshCredential"/>, if the agent knows which
+    /// account the credential belongs to.
+    /// </summary>
+    /// <param name="refreshCredential">The refresh credential which could not be exchanged.</param>
+    /// <param name="statusCode">The <see cref="HttpStatusCode"/> returned by the API, if the failure came from an API call.</param>
+    /// <param name="error">The <see cref="AtErrorDetail"/> returned by the API, if any.</param>
+    /// <returns>
+    ///   The event arguments, or <see langword="null"/> if the agent no longer holds credentials and so cannot say which
+    ///   account failed.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   A refresh credential does not carry a <see cref="Did"/>, so it has to come from the agent. It can be absent when a
+    ///   logout races the refresh, and publishing a null through a property declared as non nullable would push the problem
+    ///   into every handler.
+    /// </para>
+    /// </remarks>
+    private TokenRefreshFailedEventArgs? CreateTokenRefreshFailedEventArgs(RefreshCredential refreshCredential, HttpStatusCode? statusCode, AtErrorDetail? error)
+    {
+        Did? did = Did;
+
+        if (did is null)
+        {
+            return null;
+        }
+
+        return new TokenRefreshFailedEventArgs(
+            did: did,
+            service: refreshCredential.Service,
+            refreshToken: refreshCredential.RefreshToken,
+            statusCode: statusCode,
+            error: error);
+    }
+
+    /// <summary>
+    /// Returns a flag indicating whether the already recorded exchange of <paramref name="refreshToken"/> left the agent
+    /// holding refreshed credentials.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token which has already been exchanged.</param>
+    /// <param name="tokenHash">The hash of <paramref name="refreshToken"/>, used for logging.</param>
+    /// <returns>
+    ///   <see langword="true"/> if the agent credentials have moved on from <paramref name="refreshToken"/>, otherwise <see langword="false"/>.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   A token is recorded as exchanged before the exchange has completed, so that a failure part way through cannot let a
+    ///   retry re-present a token the server has already spent. A recorded token therefore does not on its own mean the agent
+    ///   has usable credentials: if the agent is still holding the spent token then the exchange did not finish, and reporting
+    ///   success would tell the caller it had been refreshed when it had not, and stop the background refresh retrying.
+    /// </para>
+    /// </remarks>
+    private bool HasExchangeOfRefreshTokenProducedNewCredentials(string refreshToken, string tokenHash)
+    {
+        AccessCredentials? currentCredentials = Credentials;
+
+        if (currentCredentials is not null && !string.Equals(currentCredentials.RefreshToken, refreshToken, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        Logger.RefreshTokenExchangedButCredentialsUnchanged(_logger, tokenHash);
+
+        return false;
     }
 
     /// <summary>
@@ -1827,7 +1955,7 @@ public partial class AtProtoAgent
             {
                 // As we're about to expire, go refresh the token. Sixty seconds is included because the refresh
                 // interval below subtracts a minute, which at exactly sixty seconds would leave nothing to wait for.
-                BackgroundRefreshCredentials().FireAndForget();
+                ScheduleImmediateTokenRefresh();
                 return;
             }
 
@@ -1855,6 +1983,48 @@ public partial class AtProtoAgent
         }
     }
 
+    /// <summary>
+    /// Schedules a token refresh to run as soon as practical, rather than running it inline.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="StartTokenRefreshTimer"/> is called from inside a refresh, whilst the refresh semaphore is still held.
+    ///   Refreshing inline from there would recurse through the refresh, and a server issuing access tokens which are already
+    ///   close to expiry would drive an unbounded chain of immediate refreshes. Going through the timer breaks the recursion
+    ///   and puts a floor under how often the refresh can run.
+    /// </para>
+    /// </remarks>
+    private void ScheduleImmediateTokenRefresh()
+    {
+        lock (_timerLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            EnsureTokenRefreshTimer();
+
+            _credentialRefreshTimer.Interval = _immediateRefreshInterval.TotalMilliseconds;
+            _credentialRefreshTimer.Enabled = true;
+            _credentialRefreshTimer.Start();
+
+            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
+        }
+    }
+
+    /// <summary>
+    /// Stops the token refresh timer, and optionally disposes of it.
+    /// </summary>
+    /// <param name="dispose">A flag indicating whether the timer should be disposed of as well as stopped.</param>
+    /// <remarks>
+    /// <para>
+    ///   Stopping the timer does not recall an Elapsed callback which has already been handed to the thread pool, so a refresh
+    ///   which stops the timer can still be joined by one the timer started moments earlier. The second refresh blocks on the
+    ///   refresh semaphore and then finds the token it holds has already been exchanged, which is what stops it presenting a
+    ///   spent token to the server.
+    /// </para>
+    /// </remarks>
     private void StopTokenRefreshTimer(bool dispose = false)
     {
         lock (_timerLock)
