@@ -6,6 +6,7 @@ using System.Security.Claims;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.AspNetCore.DataProtection;
@@ -392,5 +393,78 @@ public abstract class IdentityStoreTests
         Assert.NotNull(await store.StartRefresh(second, cancellationToken));
 
         Assert.True(await store.IsRefreshing(first, cancellationToken));
+    }
+
+    [Fact]
+    public async Task OnCredentialsUpdatedDoesNotOverwriteAnIdentityAnotherRequestHasAlreadyRefreshed()
+    {
+        // An agent raises CredentialsUpdated for a rotated DPoP nonce as well as for a refresh, and writes back the whole
+        // credential. A request which only picks up a nonce does not hold the refresh lock, so it can be carrying tokens a
+        // refresh on another request has already superseded. Writing those back would restore a refresh token the service
+        // has spent, and the user would be signed out the next time the store's credentials needed refreshing.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        IIdentityStore store = CreateStore();
+        Did did = TestData.NewDid();
+        Uri service = new("https://bsky.social");
+
+        DPoPAccessCredentials refreshed = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(2)),
+            refreshToken: "refresh-token-from-the-refresh",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-from-the-refresh");
+
+        await store.Add(IIdentityStore.BuildClaimsIdentity(refreshed), cancellationToken);
+
+        DPoPAccessCredentials superseded = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(1)),
+            refreshToken: "refresh-token-the-service-has-spent",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-rotated-on-the-in-flight-request");
+
+        await store.OnCredentialsUpdated(new CredentialsUpdatedEventArgs(did, service, superseded), cancellationToken);
+
+        ClaimsIdentity? stored = await store.GetIdentity(did, cancellationToken);
+
+        Assert.NotNull(stored);
+        Assert.Equal(refreshed.RefreshToken, stored.FindFirst(AtProtoClaims.RefreshToken)?.Value);
+        Assert.Equal(refreshed.AccessJwt, stored.FindFirst(AtProtoClaims.AccessToken)?.Value);
+    }
+
+    [Fact]
+    public async Task OnCredentialsUpdatedStoresCredentialsWhichSupersedeTheStoredIdentity()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        IIdentityStore store = CreateStore();
+        Did did = TestData.NewDid();
+        Uri service = new("https://bsky.social");
+
+        DPoPAccessCredentials stale = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(1)),
+            refreshToken: "refresh-token-about-to-be-spent",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce");
+
+        await store.Add(IIdentityStore.BuildClaimsIdentity(stale), cancellationToken);
+
+        DPoPAccessCredentials refreshed = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(2)),
+            refreshToken: "refresh-token-from-the-refresh",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-from-the-refresh");
+
+        await store.OnCredentialsUpdated(new CredentialsUpdatedEventArgs(did, service, refreshed), cancellationToken);
+
+        ClaimsIdentity? stored = await store.GetIdentity(did, cancellationToken);
+
+        Assert.NotNull(stored);
+        Assert.Equal(refreshed.RefreshToken, stored.FindFirst(AtProtoClaims.RefreshToken)?.Value);
+        Assert.Equal(refreshed.AccessJwt, stored.FindFirst(AtProtoClaims.AccessToken)?.Value);
+        Assert.Equal(refreshed.DPoPNonce, stored.FindFirst(AtProtoClaims.DPoPNonce)?.Value);
     }
 }

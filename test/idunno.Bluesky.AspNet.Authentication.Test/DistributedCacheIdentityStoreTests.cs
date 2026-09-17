@@ -107,4 +107,74 @@ public class DistributedCacheIdentityStoreTests : IdentityStoreTests
         Assert.Null(await store.GetIdentity(did, cancellationToken));
         Assert.False(await store.IsRefreshing(did, cancellationToken));
     }
+
+    [Fact]
+    public async Task EndRefreshDoesNotRemoveALockAcquiredWhileItWasFindingItsOwnHadExpired()
+    {
+        // IDistributedCache has no atomic compare and delete, so EndRefresh reads the lock and then removes it. When this
+        // caller's own lock has already expired the read finds nothing, and another node can acquire the lock in the gap
+        // before the removal. Removing the key then releases a refresh which is genuinely in progress, and both callers
+        // go on to spend the same single use refresh token.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        LockStealingCache cache = new(TestData.DistributedCache());
+        DistributedCacheIdentityStore store = new(cache, NullLoggerFactory.Instance);
+
+        Did did = TestData.NewDid();
+
+        await store.EndRefresh(did, "a-token-whose-lock-has-already-expired", cancellationToken);
+
+        Assert.True(cache.Stole, "the cache did not steal the lock, so the race this test covers was never run");
+        Assert.True(await store.IsRefreshing(did, cancellationToken));
+    }
+
+    /// <summary>
+    /// An <see cref="IDistributedCache"/> which, the first time a refresh lock is read and found to be absent, writes a lock
+    /// for another caller before returning. That stands in for a second node acquiring the lock in the window between the
+    /// read and the removal which follows it.
+    /// </summary>
+    private sealed class LockStealingCache(IDistributedCache inner) : IDistributedCache
+    {
+        private const string RefreshStorePrefix = "_tokenRefreshLock:";
+
+        internal bool Stole { get; private set; }
+
+        private void StealIfAbsent(string key)
+        {
+            if (Stole || !key.StartsWith(RefreshStorePrefix, StringComparison.Ordinal) || inner.Get(key) is not null)
+            {
+                return;
+            }
+
+            Stole = true;
+            inner.Set(key, System.Text.Encoding.UTF8.GetBytes("a-token-belonging-to-another-node"), new DistributedCacheEntryOptions());
+        }
+
+        public byte[]? Get(string key)
+        {
+            byte[]? value = inner.Get(key);
+            StealIfAbsent(key);
+            return value;
+        }
+
+        public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
+        {
+            byte[]? value = await inner.GetAsync(key, token);
+            StealIfAbsent(key);
+            return value;
+        }
+
+        public void Refresh(string key) => inner.Refresh(key);
+
+        public Task RefreshAsync(string key, CancellationToken token = default) => inner.RefreshAsync(key, token);
+
+        public void Remove(string key) => inner.Remove(key);
+
+        public Task RemoveAsync(string key, CancellationToken token = default) => inner.RemoveAsync(key, token);
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options) => inner.Set(key, value, options);
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default) =>
+            inner.SetAsync(key, value, options, token);
+    }
 }
