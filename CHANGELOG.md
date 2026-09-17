@@ -149,6 +149,12 @@
 * A rotated DPoP nonce is now applied to the credentials it belongs to whether or not a credentials updated callback was supplied, so calls made directly through `AtProtoServer` and `BlueskyServer` no longer fail once a server rotates its nonce.
 * A failed or throwing call to `AtProtoAgent.RefreshCredentials()` no longer leaves the background refresh timer stopped for the lifetime of the agent.
 * A refresh token the server has already exchanged is now remembered even when the credentials it issued cannot be validated, so it is not presented a second time.
+* A refresh token which was exchanged by an attempt that never completed is no longer reported as a successful refresh, so the background refresh keeps retrying instead of leaving the agent on credentials it never refreshed.
+* `TokenRefreshFailed` is now raised when an OAuth refresh fails, and when the access token a refresh issues cannot be validated.
+* `TokenRefreshFailed` is now raised outside the credential refresh semaphore, so a handler which refreshes the agent no longer deadlocks it.
+* An access token which is already close to expiry when the refresh timer starts is now refreshed through the timer rather than inline, which stops a server issuing short lived tokens driving an unbounded chain of immediate refreshes.
+* `AtProtoAgent.Logout()` now reads the agent credentials once, so a concurrent logout or refresh cannot leave it revoking one credential having checked another.
+* Setting `AtProtoAgent.Credentials` on a disposed agent now throws `ObjectDisposedException` rather than silently discarding the credential.
 * `AtProtoAgent.RefreshCredentials()` now reads the agent credentials once, so a refresh which runs concurrently cannot leave it refreshing a credential it did not check.
 * `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.

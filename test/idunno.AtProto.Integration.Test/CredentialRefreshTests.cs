@@ -8,6 +8,7 @@ using System.Timers;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
+using idunno.AtProto.Events;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -292,6 +293,161 @@ public class CredentialRefreshTests
             // The server never exchanged this token, so it must remain usable.
             Assert.DoesNotContain(refreshToken, GetExchangedRefreshTokens(agent));
         }
+    }
+
+    [Fact]
+    public async Task ARefreshTokenSpentByAnExchangeWhichNeverCompletedIsNotReportedAsASuccessfulRefresh()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = true;
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = false;
+
+            // The token is remembered before the exchange completes, so that a failure part way through cannot let a retry
+            // re-present it. Treating that as a completed refresh tells the caller the agent holds fresh credentials when
+            // it is still holding the ones which could not be refreshed.
+            Assert.False(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task ABackgroundRefreshOfATokenSpentByAnExchangeWhichNeverCompletedKeepsRetrying()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = true;
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            StopRefreshTimer(agent);
+            Assert.False(GetRefreshTimer(agent)!.Enabled);
+
+            await InvokeBackgroundRefresh(agent);
+
+            // Reporting the remembered token as a completed refresh leaves the timer stopped, so the agent sits on
+            // credentials it never refreshed until they expire.
+            Assert.True(GetRefreshTimer(agent)!.Enabled);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshWhoseIssuedAccessTokenCannotBeValidatedRaisesTokenRefreshFailed()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            TokenRefreshFailedEventArgs? failure = null;
+            agent.TokenRefreshFailed += (sender, e) => failure = e;
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = true;
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // Without this the application has no signal that the session is over, and no chance to authenticate again.
+            Assert.NotNull(failure);
+            Assert.Equal(ExpectedDid, failure.Did.ToString());
+            Assert.Null(failure.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task ATokenRefreshFailedHandlerWhichRefreshesTheAgentDoesNotDeadlockTheRefresh()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            refreshTestServer.FailRefresh = true;
+
+            bool reentered = false;
+
+            agent.TokenRefreshFailed += (sender, e) =>
+            {
+                if (!reentered)
+                {
+                    reentered = true;
+
+                    // The handler runs on the thread which raised the event. Raising whilst the refresh semaphore is held
+                    // leaves this waiting on a semaphore only the thread it has blocked can release.
+                    agent.RefreshCredentials(cancellationToken).GetAwaiter().GetResult();
+                }
+            };
+
+            Task<bool> refresh = agent.RefreshCredentials(cancellationToken);
+
+            Assert.Same(refresh, await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(30), cancellationToken)));
+            Assert.False(await refresh);
+            Assert.True(reentered);
+        }
+    }
+
+    [Fact]
+    public async Task AnAccessTokenWhichIsAlreadyCloseToExpiryIsRefreshedThroughTheTimerRatherThanInline()
+    {
+        RefreshTestServer refreshTestServer = new(this)
+        {
+            // Short enough that the refresh timer start refreshes immediately rather than waiting.
+            AccessJwtLifetime = TimeSpan.FromSeconds(30)
+        };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            // Refreshing inline recurses, because the refresh starts the timer whilst it still holds the refresh
+            // semaphore, and a server issuing tokens this short lived never lets that chain end.
+            System.Timers.Timer? timer = GetRefreshTimer(agent);
+
+            Assert.NotNull(timer);
+            Assert.True(timer.Enabled);
+            Assert.Equal(TimeSpan.FromSeconds(1).TotalMilliseconds, timer.Interval);
+        }
+    }
+
+    [Fact]
+    public async Task SettingCredentialsOnADisposedAgentThrows()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        AtProtoAgent agent = CreateAgent(refreshTestServer);
+        AccessCredentials credentials;
+
+        using (agent)
+        {
+            await Login(agent);
+
+            credentials = agent.Credentials!;
+        }
+
+        // Silently discarding the credential leaves the caller believing the agent has been given one.
+        Assert.Throws<ObjectDisposedException>(() => agent.Credentials = credentials);
+    }
+
+    private static void StopRefreshTimer(AtProtoAgent agent)
+    {
+        typeof(AtProtoAgent)
+            .GetMethod("StopTokenRefreshTimer", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(agent, [false]);
     }
 
     private static int CountElapsedSubscribers(AtProtoAgent agent)
