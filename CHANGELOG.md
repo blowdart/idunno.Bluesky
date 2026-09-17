@@ -141,6 +141,7 @@
 
 #### idunno.AtProto
 
+* Trimming and AOT suppressions which never reached the IL trimmer have been corrected, so `idunno.AtProto` and `idunno.Bluesky` now trim and publish as native AOT without warnings.
 * `AtProtoJetstream` connection state change events are now raised outside the lock which guards its filters and outside the semaphore which serialises connections, so a handler which sets a filter or reconnects no longer deadlocks.
 * `AtProtoJetstream.CloseAsync()` now abandons the close handshake once `JetstreamOptions.CloseTimeout` expires, instead of waiting indefinitely for a server which never answers it.
 * `AtProtoJetstream` now truncates a message to 1024 characters before logging it, instead of writing the whole of a remote message to the log.
