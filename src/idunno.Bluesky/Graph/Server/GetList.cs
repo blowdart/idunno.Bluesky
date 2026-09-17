@@ -95,7 +95,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<ListViewWithItems>(
-                new ListViewWithItems(response.Result.List, response.Result.Items, response.Result.Cursor),
+                new ListViewWithItems(response.Result.List, WithoutNullEntries(response.Result.Items, service, nameof(response.Result.Items), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

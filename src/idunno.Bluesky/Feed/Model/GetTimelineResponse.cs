@@ -10,23 +10,15 @@ namespace idunno.Bluesky.Feed.Model;
 internal sealed record GetTimelineResponse
 {
     [JsonConstructor]
-    internal GetTimelineResponse(ICollection<FeedViewPost>? feed, string? cursor)
+    internal GetTimelineResponse(ICollection<FeedViewPost> feed, string? cursor)
     {
-        if (feed is null)
-        {
-            Feed = [.. new List<FeedViewPost>()];
-        }
-        else
-        {
-            Feed = [.. feed];
-        }
-
+        Feed = feed;
         Cursor = cursor;
     }
 
     [JsonInclude]
-    [NotNull]
-    public ICollection<FeedViewPost>? Feed { get; init; }
+    [JsonRequired]
+    public ICollection<FeedViewPost> Feed { get; init; }
 
     [JsonInclude]
     public string? Cursor { get; init; }

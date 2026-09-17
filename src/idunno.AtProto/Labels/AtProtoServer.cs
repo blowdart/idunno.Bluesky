@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using idunno.AtProto.Authentication;
@@ -10,6 +11,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -105,7 +107,7 @@ public static partial class AtProtoServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
-                new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor),
+                new PagedReadOnlyCollection<Label>(WithoutNullEntries(response.Result.Labels, service, nameof(response.Result.Labels), loggerFactory), cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -120,5 +122,44 @@ public static partial class AtProtoServer
                 response.AtErrorDetail,
                 response.RateLimit);
         }
+    }
+
+    /// <summary>
+    /// Returns the non <see langword="null"/> entries in <paramref name="source"/>, logging a warning if any were skipped.
+    /// </summary>
+    /// <remarks>
+    /// <para>Neither <see cref="System.Text.Json.Serialization.JsonRequiredAttribute"/> nor
+    /// <see cref="System.Text.Json.JsonSerializerOptions.RespectNullableAnnotations"/> applies to a collection's element
+    /// type, so a service can return a <see langword="null"/> entry inside an otherwise well formed collection.</para>
+    /// </remarks>
+    private static List<T> WithoutNullEntries<T>(
+        IEnumerable<T> source,
+        Uri service,
+        string collection,
+        ILoggerFactory? loggerFactory,
+        [CallerMemberName] string caller = "") where T : class
+    {
+        List<T> entries = [];
+        int skipped = 0;
+
+        foreach (T? entry in source)
+        {
+            if (entry is null)
+            {
+                skipped++;
+            }
+            else
+            {
+                entries.Add(entry);
+            }
+        }
+
+        if (skipped != 0)
+        {
+            ILogger logger = loggerFactory?.CreateLogger(nameof(AtProtoServer)) ?? NullLogger.Instance;
+            Logger.SkippedNullCollectionEntries(logger, caller, skipped, collection, service);
+        }
+
+        return entries;
     }
 }

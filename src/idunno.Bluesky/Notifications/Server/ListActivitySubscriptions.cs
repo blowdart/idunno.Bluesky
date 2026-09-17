@@ -92,7 +92,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                new(response.Result.Subscriptions, response.Result.Cursor),
+                new(WithoutNullEntries(response.Result.Subscriptions, service, nameof(response.Result.Subscriptions), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

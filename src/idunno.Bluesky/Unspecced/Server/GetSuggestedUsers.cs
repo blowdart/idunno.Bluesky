@@ -87,7 +87,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<ICollection<ProfileView>>(
-                response.Result.Actors,
+                WithoutNullEntries(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,

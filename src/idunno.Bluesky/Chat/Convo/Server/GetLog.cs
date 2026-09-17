@@ -71,7 +71,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Logs>(
-                new Logs(response.Result.Logs, response.Result.Cursor),
+                new Logs(WithoutNullEntries(response.Result.Logs, service, nameof(response.Result.Logs), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

@@ -75,7 +75,7 @@ public static partial class BlueskyServer
         if (result.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ThreadItem>>(
-                result.Result.Thread,
+                WithoutNullEntries(result.Result.Thread, service, nameof(result.Result.Thread), loggerFactory),
                 statusCode: result.StatusCode,
                 httpResponseHeaders: result.HttpResponseHeaders,
                 atErrorDetail: result.AtErrorDetail,

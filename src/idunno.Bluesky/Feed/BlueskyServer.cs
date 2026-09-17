@@ -524,7 +524,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
-                response.Result.Feeds.AsReadOnly(),
+                WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -712,7 +712,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<LikesCollection>(
-                new LikesCollection(response.Result.Uri, response.Result.Cid, response.Result.Likes, response.Result.Cursor),
+                new LikesCollection(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.Likes, service, nameof(response.Result.Likes), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -961,7 +961,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
-                response.Result.Posts,
+                WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1059,7 +1059,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<QuotesCollection>(
-                new QuotesCollection(response.Result.Uri, response.Result.Cid, response.Result.Posts, response.Result.Cursor),
+                new QuotesCollection(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1156,7 +1156,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<RepostedBy>(
-                new RepostedBy(response.Result.Uri, response.Result.Cid, response.Result.RepostedBy, response.Result.Cursor),
+                new RepostedBy(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.RepostedBy, service, nameof(response.Result.RepostedBy), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1221,7 +1221,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SuggestedFeeds>(
-                new SuggestedFeeds(response.Result.Feeds, response.Result.Cursor),
+                new SuggestedFeeds(WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1319,7 +1319,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(response.Result.Feed, response.Result.Cursor),
+                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1469,7 +1469,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SearchResults>(
-                new SearchResults(response.Result.Posts, response.Result.HitsTotal, response.Result.Cursor),
+                new SearchResults(WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.HitsTotal, response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

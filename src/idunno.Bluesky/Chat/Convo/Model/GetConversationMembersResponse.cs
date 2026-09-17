@@ -10,6 +10,6 @@ namespace idunno.Bluesky.Chat.Convo.Model;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Used in GetMessages.")]
 [method: JsonConstructor]
-internal record GetConversationMembersResponse(string? Cursor, ICollection<ProfileViewBasic> Members)
+internal record GetConversationMembersResponse(string? Cursor, [property: JsonRequired] ICollection<ProfileViewBasic> Members)
 {
 }
