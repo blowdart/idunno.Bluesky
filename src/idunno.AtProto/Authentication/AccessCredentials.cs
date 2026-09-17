@@ -20,6 +20,8 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
 #endif
 
     private string _accessToken;
+    private DateTimeOffset _expiresOn;
+    private Did _did;
 
     /// <summary>
     /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/> and <paramref name="refreshToken"/>.
@@ -72,13 +74,35 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     /// <remarks>
     /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
     /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>
+    /// <para>
+    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
+    ///   expiry of one token alongside another, or a value part written by a refresh running on another thread.
+    /// </para>
     /// </remarks>
-    public DateTimeOffset ExpiresOn { get; private set; }
+    public DateTimeOffset ExpiresOn
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _expiresOn;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
     /// </summary>
-    public Did Did { get; private set; }
+    public Did Did
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _did;
+            }
+        }
+    }
 
     /// <summary>
     /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
@@ -97,14 +121,17 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     /// </summary>
     /// <param name="jwt">A string representation of the jwt to extract the properties from</param>.
     /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or whitespace.</exception>
-    [MemberNotNull(nameof(Did))]
-    [MemberNotNull(nameof(ExpiresOn))]
+    [MemberNotNull(nameof(_did))]
     protected void ExtractJwtProperties(string jwt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
         JsonWebToken token = new(jwt);
-        Did = new Did(token.Subject);
-        ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+
+        lock (_lock)
+        {
+            _did = new Did(token.Subject);
+            _expiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+        }
     }
 }

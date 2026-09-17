@@ -11,6 +11,7 @@ using idunno.AtProto.Authentication.Models;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -208,6 +209,91 @@ public class CredentialRefreshTests
         }
     }
 
+    [Fact]
+    public async Task AFailedUserInitiatedRefreshRestartsTheRefreshTimerSoTheRefreshIsRetried()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            refreshTestServer.FailRefresh = true;
+
+            Assert.False(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // A refresh started by the caller stops the timer just as a background refresh does, so a failure must not
+            // leave it stopped either, otherwise one failed call silently ends background refresh for the agent's lifetime.
+            System.Timers.Timer? timer = GetRefreshTimer(agent);
+
+            Assert.NotNull(timer);
+            Assert.True(timer.Enabled);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshWhichThrowsRestartsTheRefreshTimerSoTheRefreshIsRetried()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = true;
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            System.Timers.Timer? timer = GetRefreshTimer(agent);
+
+            Assert.NotNull(timer);
+            Assert.True(timer.Enabled);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshTokenTheServerHasSpentIsRememberedEvenWhenTheIssuedTokenCannotBeValidated()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            string spentRefreshToken = agent.Credentials!.RefreshToken;
+
+            refreshTestServer.IssueUnvalidatableAccessJwtOnRefresh = true;
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // The server exchanged the token before the response failed validation. Forgetting that leaves the retry
+            // presenting a spent token, which on a server which revokes on reuse ends the session.
+            Assert.Contains(spentRefreshToken, GetExchangedRefreshTokens(agent));
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshWhichTheServerRejectsDoesNotRememberTheRefreshToken()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            string refreshToken = agent.Credentials!.RefreshToken;
+
+            refreshTestServer.FailRefresh = true;
+
+            Assert.False(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // The server never exchanged this token, so it must remain usable.
+            Assert.DoesNotContain(refreshToken, GetExchangedRefreshTokens(agent));
+        }
+    }
+
     private static int CountElapsedSubscribers(AtProtoAgent agent)
     {
         System.Timers.Timer? timer = GetRefreshTimer(agent);
@@ -286,6 +372,8 @@ public class CredentialRefreshTests
 
         internal bool FailRefresh { get; set; }
 
+        internal bool IssueUnvalidatableAccessJwtOnRefresh { get; set; }
+
         internal TimeSpan AccessJwtLifetime { get; set; } = TimeSpan.FromMinutes(15);
 
         internal int RefreshCount => Volatile.Read(ref _refreshCount);
@@ -336,7 +424,7 @@ public class CredentialRefreshTests
 
                 await response.WriteAsJsonAsync(
                     new RefreshSessionResponse(
-                        accessJwt: CreateAccessJwt(),
+                        accessJwt: IssueUnvalidatableAccessJwtOnRefresh ? CreateUnvalidatableAccessJwt() : CreateAccessJwt(),
                         refreshJwt: NextRefreshToken(),
                         handle: new Handle(DomainName),
                         did: new Did(ExpectedDid),
@@ -373,6 +461,11 @@ public class CredentialRefreshTests
         }
 
         private string CreateAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
+
+        /// <summary>
+        /// Creates an access token whose audience is not the service it was requested from, so validation of it fails.
+        /// </summary>
+        private string CreateUnvalidatableAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), "did:web:elsewhere.invalid", expiresIn: AccessJwtLifetime);
 
         private string NextRefreshToken() => $"refreshToken{Interlocked.Increment(ref _tokenSerialNumber)}";
     }

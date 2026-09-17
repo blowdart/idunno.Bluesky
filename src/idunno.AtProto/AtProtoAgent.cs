@@ -377,8 +377,6 @@ public partial class AtProtoAgent : Agent
 
             ForgetExchangedRefreshTokens();
 
-            _credentialRefreshSemaphore.Dispose();
-
             _directoryAgent.Dispose();
         }
 

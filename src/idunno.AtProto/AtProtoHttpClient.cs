@@ -1556,32 +1556,49 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
-    private async Task RaiseCredentialsUpdatedOnDPoPNonceChange(
+    /// <summary>
+    /// Updates the DPoP nonce held by <paramref name="credentials"/> if the server returned a new one, raising
+    /// <paramref name="credentialsUpdated"/> so the change can be persisted.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The nonce is applied whether or not a <paramref name="credentialsUpdated"/> callback was supplied. Applying it is
+    ///   what makes the next request, and the retry of this one, carry a proof the server will accept; notification is only
+    ///   how a caller persists that change. Skipping the update when nobody asked to be notified leaves the credential
+    ///   pinned to a nonce the server has already rejected, and every subsequent request fails.
+    /// </para>
+    /// </remarks>
+    private async Task UpdateDPoPNonceAndRaiseCredentialsUpdated(
         AtProtoCredential? credentials,
         HttpRequestMessage httpRequestMessage,
         HttpResponseMessage httpResponseMessage,
         Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated,
         CancellationToken cancellationToken)
     {
-        if (credentials is null || credentialsUpdated is null || (credentials is not IAccessCredential && credentials is not DPoPRevokeCredentials))
+        if (credentials is not IDPoPBoundCredential dPoPBoundCredential ||
+            !httpResponseMessage.Headers.ContainsDPoPNonce())
         {
             return;
         }
 
-        if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
-            httpResponseMessage.Headers.ContainsDPoPNonce())
+        string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
+
+        if (returnedDPoPNonce is null ||
+            string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
         {
-            string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
+            return;
+        }
 
-            if (returnedDPoPNonce is not null &&
-                !string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
-            {
-                Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+        Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
+        dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
 
-                await credentialsUpdated(credentials, cancellationToken).ConfigureAwait(false);
-            }
+        // Only credentials a caller can hold on to are worth raising an update for. A refresh credential is created for a
+        // single exchange and discarded, so there is nothing for a handler to persist.
+        if (credentialsUpdated is not null &&
+            (credentials is IAccessCredential || credentials is DPoPRevokeCredentials))
+        {
+            await credentialsUpdated(credentials, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -1765,7 +1782,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             RateLimit = ExtractRateLimitFromResponse(httpResponseMessage.Headers)
                         };
 
-                        await RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
+                        await UpdateDPoPNonceAndRaiseCredentialsUpdated(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
 
                         if (HasOnResponseReceivedHandler)
                         {
@@ -1932,9 +1949,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                     if (!string.IsNullOrEmpty(updatedDPoPNonce))
                                     {
-                                        // dPoP nonce was already updated in RaiseCredentialsUpdatedOnDPoPNonceChange,
-                                        // but raise the event again to ensure that any credential update logic that needs to run on a nonce change runs before the retry.
-                                        await RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
+                                        // The nonce was already applied when the response was first seen. Call again so the
+                                        // credential is left holding the nonce this response carried before the retry is issued.
+                                        await UpdateDPoPNonceAndRaiseCredentialsUpdated(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
 
                                         _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 

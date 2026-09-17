@@ -32,6 +32,15 @@ public partial class AtProtoAgent
     private readonly object _timerLock = new();
 #endif
 
+    /// <summary>
+    /// Serialises credential refreshes.
+    /// </summary>
+    /// <remarks>
+    /// <para>Deliberately not disposed. Disposing it whilst a refresh holds it makes the release which ends that refresh
+    /// throw, turning a disposal which races a refresh into an exception out of <see cref="RefreshCredentials(CancellationToken)"/>.
+    /// Nothing here uses <see cref="SemaphoreSlim.AvailableWaitHandle"/>, which is the only thing its disposal frees.</para>
+    /// </remarks>
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a refresh holds it makes the release which ends that refresh throw.")]
     private readonly SemaphoreSlim _credentialRefreshSemaphore = new(1, 1);
 
     private AccessCredentials? _credentials;
@@ -1226,22 +1235,30 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
     /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The agent <see cref="Credentials"/> are read once. Reading them repeatedly would allow a background refresh
+    ///   landing part way through to have the type checked on one credential and the refresh performed with another.
+    /// </para>
+    /// </remarks>
     public async Task<bool> RefreshCredentials(CancellationToken cancellationToken = default)
     {
-        if (Credentials is null || Credentials.RefreshToken is null)
+        AccessCredentials? credentials = Credentials;
+
+        if (credentials is null || credentials.RefreshToken is null)
         {
             Logger.RefreshCredentialsFailedNoSession(_logger);
             throw new AuthenticationRequiredException();
         }
 
-        if (Credentials.AuthenticationType == AuthenticationType.UsernamePassword ||
-            Credentials.AuthenticationType == AuthenticationType.UsernamePasswordAuthFactorToken)
+        if (credentials.AuthenticationType == AuthenticationType.UsernamePassword ||
+            credentials.AuthenticationType == AuthenticationType.UsernamePasswordAuthFactorToken)
         {
-            return await RefreshSessionIssuedCredentials(Credentials, cancellationToken).ConfigureAwait(false);
+            return await RefreshSessionIssuedCredentials(credentials, cancellationToken).ConfigureAwait(false);
         }
-        else if (Credentials.AuthenticationType == AuthenticationType.OAuth)
+        else if (credentials.AuthenticationType == AuthenticationType.OAuth)
         {
-            if (Credentials is not DPoPAccessCredentials accessCredentials)
+            if (credentials is not DPoPAccessCredentials accessCredentials)
             {
                 throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
             }
@@ -1252,7 +1269,7 @@ public partial class AtProtoAgent
         }
         else
         {
-            throw new CredentialException(Credentials);
+            throw new CredentialException(credentials);
         }
     }
 
@@ -1430,6 +1447,8 @@ public partial class AtProtoAgent
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
         CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        bool timerStopped = false;
+        bool succeeded = false;
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1441,10 +1460,12 @@ public partial class AtProtoAgent
 
                 if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                 {
+                    succeeded = true;
                     return true;
                 }
 
                 StopTokenRefreshTimer();
+                timerStopped = true;
 
                 // Get authorization server
                 Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
@@ -1462,6 +1483,10 @@ public partial class AtProtoAgent
                     return false;
                 }
 
+                // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
+                // a retry re-presents a token which has already been exchanged.
+                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
                 if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
                     Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
@@ -1471,11 +1496,10 @@ public partial class AtProtoAgent
 
                 Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
-
                 Credentials = refreshedCredentials;
 
                 StartTokenRefreshTimer();
+                succeeded = true;
 
                 credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
                     refreshedCredentials.Did,
@@ -1486,6 +1510,13 @@ public partial class AtProtoAgent
         finally
         {
             _credentialRefreshSemaphore.Release();
+
+            // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
+            // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
+            if (timerStopped && !succeeded)
+            {
+                RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+            }
         }
 
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
@@ -1518,6 +1549,8 @@ public partial class AtProtoAgent
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
         CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        bool timerStopped = false;
+        bool succeeded = false;
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1529,10 +1562,12 @@ public partial class AtProtoAgent
 
                 if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                 {
+                    succeeded = true;
                     return true;
                 }
 
                 StopTokenRefreshTimer();
+                timerStopped = true;
 
                 AtProtoHttpResult<Session> refreshSessionResult;
                 try
@@ -1566,6 +1601,10 @@ public partial class AtProtoAgent
                     return false;
                 }
 
+                // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
+                // a retry re-presents a token which has already been exchanged.
+                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
                 if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
                     Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
@@ -1581,11 +1620,10 @@ public partial class AtProtoAgent
 
                 Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
-
                 Credentials = refreshedCredentials;
 
                 StartTokenRefreshTimer();
+                succeeded = true;
 
                 credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
                     refreshedCredentials.Did,
@@ -1596,6 +1634,13 @@ public partial class AtProtoAgent
         finally
         {
             _credentialRefreshSemaphore.Release();
+
+            // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
+            // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
+            if (timerStopped && !succeeded)
+            {
+                RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+            }
         }
 
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
