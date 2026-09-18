@@ -159,6 +159,14 @@
 * `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
 * `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
+* `OAuthClient` now reuses its DPoP proof token factory when refreshing credentials instead of importing the proof key on every request it makes.
+* `OAuthClient` now rejects an access token whose `sub` is missing or is not a DID, rather than letting it escape as an `ArgumentException` when the credential is built.
+* `OAuthClient` now rejects a login whose token response is not of type `DPoP`, so a token which is not bound to the proof key is no longer stored as though it were.
+* Restoring `OAuthClient.State` now rejects an expected authority or expected service which is not an absolute http or https uri. The expected authority is what an issued token's `iss` is checked against, so tampered state can no longer widen that check.
+* `OAuthClient` no longer replaces the proof key, expected authority and expected service of a login in progress when a subsequent call to `BuildOAuth2LoginUri()` is rejected or fails to prepare.
+* A failed login now clears all of the `OAuthClient` login state rather than just the proof key, so the next call reports that there is no login in progress instead of a missing proof key.
+* `OAuthClient` now enumerates the scopes it is passed once, so a sequence which can only be enumerated once is handled correctly.
+* `OAuthClient` now logs a warning for each requested scope the authorization server did not grant.
 * `AtProtoJetstream` now reads each connection on the socket it was opened for, so reconnecting no longer leaves the previous receive loop reading the new connection alongside the new one and tearing messages in half between them.
 * `AtProtoJetstream` now raises `ConnectionStateChanged` when a connection is lost without a close handshake, rather than ending its receive loop silently.
 * `AtProtoJetstream` now serialises writes to the underlying WebSocket, which allows only one at a time.
