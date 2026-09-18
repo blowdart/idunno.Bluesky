@@ -74,6 +74,36 @@ public class AtProtoHttpClient(
 
     private AtProtoHttpClient<string>? _internalAtProtoHttpClient;
 
+    private HttpClient? _defaultHttpClient;
+
+    /// <summary>
+    /// Gets the <see cref="HttpClient"/> used when a caller does not supply one of their own.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Created once and reused for the lifetime of this instance. It wraps the handler shared by every request this
+    ///   instance makes, so it is created with disposeHandler set to false. A client created and disposed per call would
+    ///   take that shared handler with it, and every later request on this instance would throw
+    ///   <see cref="ObjectDisposedException"/>.
+    /// </para>
+    /// </remarks>
+    private HttpClient DefaultHttpClient
+    {
+        get
+        {
+            lock (_internalAtProtoHttpClientLock)
+            {
+                return _defaultHttpClient ??= new HttpClient(
+                    handler: _defaultClientHandler,
+                    disposeHandler: false)
+                {
+                    DefaultRequestVersion = HttpVersion.Version20,
+                    DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+                };
+            }
+        }
+    }
+
 #if NET9_0_OR_GREATER
     private readonly Lock _internalAtProtoHttpClientLock = new();
 #else
@@ -204,25 +234,16 @@ public class AtProtoHttpClient(
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalHttpClient = new(
-            handler: _defaultClientHandler,
-            disposeHandler: true)
-        {
-            DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-        })
-        {
-            return await InternalAtProtoHttpClient.Get(
-                service: service,
-                endpoint: endpoint,
-                credentials: credentials,
-                httpClient: httpClient ?? internalHttpClient,
-                onCredentialsUpdated: onCredentialsUpdated,
-                requestHeaders: requestHeaders,
-                subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        return await InternalAtProtoHttpClient.Get(
+            service: service,
+            endpoint: endpoint,
+            credentials: credentials,
+            httpClient: httpClient ?? DefaultHttpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            requestHeaders: requestHeaders,
+            subscribedLabelers: subscribedLabelers,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -307,26 +328,17 @@ public class AtProtoHttpClient(
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalHttpClient = new(
-            handler: _defaultClientHandler,
-            disposeHandler: true)
-        {
-            DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
-        })
-        {
-            return await InternalAtProtoHttpClient.Post(
-                service: service,
-                endpoint: endpoint,
-                record: body,
-                credentials: credentials,
-                httpClient: httpClient ?? internalHttpClient,
-                onCredentialsUpdated: onCredentialsUpdated,
-                requestHeaders: requestHeaders,
-                subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        return await InternalAtProtoHttpClient.Post(
+            service: service,
+            endpoint: endpoint,
+            record: body,
+            credentials: credentials,
+            httpClient: httpClient ?? DefaultHttpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            requestHeaders: requestHeaders,
+            subscribedLabelers: subscribedLabelers,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1605,44 +1617,43 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
+    /// <summary>
+    /// Merges the headers configured on this instance with those supplied for a single call.
+    /// </summary>
+    /// <param name="requestHeaders">The headers supplied for the call being made.</param>
+    /// <returns>The headers to send with the request.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A header supplied for a single call wins over one configured on this instance. The merged collection is a new one;
+    ///   the collection a caller supplies belongs to the caller and may be reused across calls, so adding this instance's
+    ///   headers to it would accumulate them on every call.
+    /// </para>
+    /// </remarks>
     private ICollection<NameValueHeaderValue>? MergeRequestHeaders(ICollection<NameValueHeaderValue>? requestHeaders)
     {
-        if (requestHeaders is null && _extraRequestHeaders is null)
+        if (_extraRequestHeaders is null || _extraRequestHeaders.Count == 0)
         {
-            return null;
+            return requestHeaders;
         }
 
-        if (requestHeaders is null && _extraRequestHeaders is not null)
+        if (requestHeaders is null || requestHeaders.Count == 0)
         {
             return _extraRequestHeaders;
         }
 
-        if (requestHeaders is not null && _extraRequestHeaders is null)
-        {
-            return requestHeaders;
-        }
+        List<NameValueHeaderValue> mergedHeaders = [.. requestHeaders];
 
-        if (requestHeaders is not null && _extraRequestHeaders is not null)
+        foreach (NameValueHeaderValue header in _extraRequestHeaders)
         {
-            foreach (NameValueHeaderValue header in _extraRequestHeaders)
+            if (mergedHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)) && header.Value != null)
-                {
-                    continue;
-                }
-
-                if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase) && h.Value == header.Value))
-                {
-                    continue;
-                }
-
-                requestHeaders.Add(header);
+                continue;
             }
 
-            return requestHeaders;
+            mergedHeaders.Add(header);
         }
 
-        return requestHeaders;
+        return mergedHeaders;
     }
 
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
@@ -1692,7 +1703,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
             {
                 bool callerSuppliedContent = false;
 
-                SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, _extraRequestHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, requestHeaders);
 
                 // Add authentication headers
                 credentials?.SetAuthenticationHeaders(httpRequestMessage);
@@ -1952,9 +1963,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                     if (!string.IsNullOrEmpty(updatedDPoPNonce))
                                     {
-                                        // The nonce was already applied when the response was first seen. Call again so the
-                                        // credential is left holding the nonce this response carried before the retry is issued.
-                                        await UpdateDPoPNonceAndRaiseCredentialsUpdated(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
+                                        // The nonce this response carried was already applied when the response was first
+                                        // seen, so the credential is holding it and the retry will send a proof built from it.
 
                                         _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 

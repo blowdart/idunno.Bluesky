@@ -165,6 +165,10 @@
 * An empty or whitespace `DPoP-Nonce` response header is no longer treated as a nonce to rotate to, which could throw whilst handling a response or discard a working nonce.
 * `DPoPRefreshCredential` and `DPoPRevokeCredentials` no longer build a DPoP proof token factory on every request.
 * `AccessCredentials.ExtractJwtProperties()` is no longer exposed as a protected member.
+* `AtProtoHttpClient` no longer disposes the HTTP handler it shares between requests, which left every request after the first on an instance throwing `ObjectDisposedException`.
+* Request headers supplied to an individual `AtProtoHttpClient` call are now sent with that request. Previously only headers configured on the client were sent, which silently dropped the headers passed to methods such as `BlueskyAgent.GetFeed()`.
+* A header collection supplied to an `AtProtoHttpClient` call is no longer modified, so a collection reused across calls no longer accumulates the headers configured on the client.
+* A header supplied for an individual call now replaces the one configured on the client rather than both being sent.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
 * `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
 * `OAuthClient` now reuses its DPoP proof token factory when refreshing credentials instead of importing the proof key on every request it makes.
