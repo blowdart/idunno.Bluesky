@@ -1,7 +1,9 @@
 ## Overview
 
 `idunno.Bluesky` is a .NET 8/9/10 SDK for [Bluesky](https://bsky.social/) and the underlying
-[AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api). The solution ships several NuGet packages layered on top of each other; most work happens in `src/idunno.AtProto` (the AT Protocol/XRPC client) and `src/idunno.Bluesky` (the Bluesky-specific client built on top of it).
+[AT Protocol](https://endpoints.bsky.app/#bluesky-app/description/introduction). The solution ships several NuGet packages layered on top of each other;
+most work happens in `src/idunno.AtProto` (the AT Protocol/XRPC client) and `src/idunno.Bluesky` (the Bluesky-specific client built on top of it).
+DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-social/atproto/tree/main/lexicons.
 
 ## Build, test, and lint
 
@@ -54,3 +56,10 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 * Prefer a single `[Theory]` with `[InlineData]`/`[MemberData]` over many near-duplicate `[Fact]` methods.
 * Test projects are split by purpose: `*.Test` (unit), `*.Serialization.Test` (JSON (de)serialization, often against captured responses), and `*.Integration.Test` (uses `TestServerBuilder` to stand up a mock server).
 * Any code you commit must build cleanly and keep related tests passing. Actually run the build and the affected tests to confirm — don't assume a fix works.
+
+## Checkin conversations
+
+* Do not make verbose commit messages. Use the imperative mood and keep it short (e.g., "Add X", "Fix Y", "Update Z").
+* Never commit directly to `main`. Use a feature branch and open a pull request. The PR description should summarize the change, link to any relevant issues, and note any breaking changes.
+* Never create unsigned commits. All commits must be signed with a GPG key or SSH key.
+* Do not attempt to work around signing failures, report them, and ask if you should retry the commit. If you cannot sign commits, do not commit until the issue is resolved.
