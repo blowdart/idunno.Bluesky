@@ -22,6 +22,9 @@ internal static partial class Logger
     [LoggerMessage(4, LogLevel.Error, "Received callback with no querystring")]
     internal static partial void ReceivedCallbackWithNoQuerystring(ILogger logger);
 
+    [LoggerMessage(6, LogLevel.Warning, "Received callback which carried no authorization code")]
+    internal static partial void ReceivedCallbackWithoutAnAuthorizationCode(ILogger logger);
+
     [LoggerMessage(5, LogLevel.Error, "BadRequest made to {path}")]
     internal static partial void BadRequest(ILogger logger, PathString path);
 

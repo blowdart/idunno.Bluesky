@@ -52,6 +52,12 @@
   credential persistence completes before the updated credentials are used, and any exceptions it throws surface to the caller rather than being
   silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
 
+#### idunno.AtProto.OAuthCallback
+
+* Added `CallbackServer.ContentSecurityPolicy`, which sets the `Content-Security-Policy` header sent with every response. It defaults to a policy which
+  allows only what the built in page needs.
+* Added `CallbackServer.FailureTitle` and `CallbackServer.FailureBody`, the page rendered when a callback arrives without an authorization code.
+
 #### idunno.AtProto.Types
 
 * Added `Cid.TryParse(string, out Cid?)` which attempts to parse a string into a `Cid` instance, returning a boolean indicating success or failure.
@@ -92,6 +98,15 @@
 * `AtProtoAgent.CreateOAuthClient()` is now `public virtual`, so the transport an agent uses for OAuth can be replaced.
 * `AtProtoAgent.RefreshCredentials()` now throws `SecurityTokenValidationException` when the authorization server issues a token for an account other
   than the one being refreshed.
+
+#### idunno.AtProto.OAuthCallback
+
+* `CallbackServer` now sends a `Content-Security-Policy` header with every response. A caller whose `SuccessBody`, `FailureBody` or `ResponseStyleSheet`
+  loads anything beyond inline CSS and data URI images has to widen `CallbackServer.ContentSecurityPolicy` to match.
+* `CallbackServer.WaitForCallbackAsync()` now throws `ObjectDisposedException` when disposal runs between its disposal check and taking its lock,
+  rather than returning a task cancelled with a token which was never cancelled.
+* The documentation for `CallbackServer.SuccessTitle` and `CallbackServer.ResponseStyleSheet` now says that the value is written into the `head` of the
+  page verbatim, so it has to carry its own `title` or `style` element.
 
 #### idunno.Bluesky
 
@@ -161,6 +176,9 @@
 
 #### idunno.AtProto
 
+* A handle whose `_atproto` DNS record set carries more than one, conflicting, `did=` text record is now treated as unresolvable, and the conflict is
+  logged as an error. Resolution previously fell back to `/.well-known/atproto-did`, which let the host the handle points at choose which of the
+  conflicting records won. Identical, repeated, records are still resolved.
 * A rotated DPoP nonce is now applied to the credentials it belongs to whether or not a credentials updated callback was supplied, so calls made directly through `AtProtoServer` and `BlueskyServer` no longer fail once a server rotates its nonce.
 * A failed or throwing call to `AtProtoAgent.RefreshCredentials()` no longer leaves the background refresh timer stopped for the lifetime of the agent.
 * A refresh token the server has already exchanged is now remembered even when the credentials it issued cannot be validated, so it is not presented a second time.
@@ -342,6 +360,13 @@
 * `CallbackServer` now sends `X-Content-Type-Options: nosniff` with every response.
 * `CallbackServer` no longer throws an `InvalidOperationException` over the original failure when writing the callback response fails after the response
   has started.
+* `CallbackServer` now renders a failure page, rather than the success page, when a callback arrives without an authorization code. A user who denied
+  consent was previously told the login had completed.
+* `CallbackServer` now rejects a `path` which a `Uri` resolves away, such as one containing a `.` or `..` segment. `CallbackServer.Uri` described a
+  different address from the route which was mapped, so the redirect arrived to find nothing listening for it.
+* `CallbackServer` now releases the timeout registration on the caller's `CancellationToken` once a callback has arrived, rather than leaving the server
+  rooted to a long lived token until it is disposed.
+* `CallbackServer` no longer logs that it is awaiting a callback with a timeout it will not use when `WaitForCallbackAsync()` is called a second time.
 
 #### idunno.AtProto.Types
 

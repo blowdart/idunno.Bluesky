@@ -53,6 +53,11 @@ public sealed class CallbackServer : IAsyncDisposable
 
     private const string FetchDestinationHeader = "Sec-Fetch-Dest";
 
+    // The default page carries an inline style sheet and a data uri image, and nothing else. Denying everything else
+    // means a page whose URL is a secret cannot name a third party which could be told that URL.
+    private const string DefaultContentSecurityPolicy =
+        "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
+
     private readonly ILogger<CallbackServer> _logger;
 
     // Continuations must not run inline on the Kestrel request thread which publishes the callback,
@@ -83,7 +88,8 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <param name="path">An optional path the host should respond on.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="port"/> is zero or negative, or is greater than 65535.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> contains a character which is not valid in a path segment.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="path"/> contains a character which is not valid in a path segment,
+    /// or contains a dot segment which a <see cref="System.Uri"/> would resolve away.</exception>
     [SuppressMessage("Minor Vulnerability", "S5332:Clear-text protocols should not be used", Justification = "Has to be clear text, as local machines may not have a trusted localhost certificate and we shouldn't create one.")]
     public CallbackServer(int port, string? path = null, ILoggerFactory? loggerFactory = default)
     {
@@ -93,6 +99,8 @@ public sealed class CallbackServer : IAsyncDisposable
         ResponseStyleSheet = Resources.StyleSheet;
         SuccessTitle = Resources.SuccessTitle;
         SuccessBody = Resources.SuccessBody;
+        FailureTitle = Resources.FailureTitle;
+        FailureBody = Resources.FailureBody;
 
         LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = LoggerFactory.CreateLogger<CallbackServer>();
@@ -115,7 +123,21 @@ public sealed class CallbackServer : IAsyncDisposable
         {
             throw new ArgumentException($"'{path[invalidCharacterIndex]}' is not valid in a callback path.", nameof(path));
         }
-        Uri = new Uri($"http://{IPAddress.Loopback}:{port}/{path}");
+
+        Uri uri = new($"http://{IPAddress.Loopback}:{port}/{path}");
+
+        // A '.' or '..' segment is made of characters which are valid in a path, but a Uri resolves dot segments as it
+        // is built, so the address a caller hands to an authorization server would point at a different route from the
+        // one mapped below and the redirect would arrive to find nothing listening for it. Comparing the path back
+        // against the route catches that, and anything else a Uri rewrites, rather than enumerating the cases.
+        if (!string.Equals(uri.AbsolutePath, $"/{path}", StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                $"'{path}' does not survive being resolved into a uri, so it cannot be used as a callback path.",
+                nameof(path));
+        }
+
+        Uri = uri;
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
@@ -158,11 +180,18 @@ public sealed class CallbackServer : IAsyncDisposable
         // the whole URL is a secret. Referrer-Policy stops it being handed to a third party through the
         // Referer header of any resource a caller supplied SuccessBody or ResponseStyleSheet references,
         // and Cache-Control keeps it out of the browser cache and any intermediary.
-        _listener.Use(static async (context, next) =>
+        _listener.Use(async (context, next) =>
         {
             context.Response.Headers["Referrer-Policy"] = "no-referrer";
             context.Response.Headers.CacheControl = "no-store";
             context.Response.Headers.XContentTypeOptions = "nosniff";
+
+            string? contentSecurityPolicy = ContentSecurityPolicy;
+
+            if (!string.IsNullOrEmpty(contentSecurityPolicy))
+            {
+                context.Response.Headers.ContentSecurityPolicy = contentSecurityPolicy;
+            }
 
             await next(context).ConfigureAwait(false);
         });
@@ -216,19 +245,66 @@ public sealed class CallbackServer : IAsyncDisposable
     public ILoggerFactory LoggerFactory { get; init; }
 
     /// <summary>
-    /// Gets or sets any CSS rendered when a callback has happened.
+    /// Gets or sets the <c>Content-Security-Policy</c> sent with every response, or <see langword="null" /> to send none.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The request this server answers carries the authorization code in its query string, so the address of the page
+    ///   is a secret. The default policy allows only what the default page needs, which stops markup supplied through
+    ///   <see cref="SuccessBody"/> or <see cref="FailureBody"/> reaching a third party which could be told that address.
+    ///   A caller whose page loads anything else has to widen this to match.
+    /// </para>
+    /// </remarks>
+    public string? ContentSecurityPolicy { get; set; } = DefaultContentSecurityPolicy;
+
+    /// <summary>
+    /// Gets or sets the CSS rendered when a callback has happened.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is written into the <c>head</c> of the page exactly as it is given, so it has to carry its own
+    ///   <c>style</c> element. A bare style sheet would be rendered as text.
+    /// </para>
+    /// </remarks>
     public string? ResponseStyleSheet { get; set; }
 
     /// <summary>
-    /// Gets or sets the HTML rendered when a callback has happened.
+    /// Gets or sets the HTML rendered in the body of the page when a callback carried an authorization code.
     /// </summary>
+    /// <remarks>
+    /// <para>The value is written into the page exactly as it is given, and is not encoded.</para>
+    /// </remarks>
     public string SuccessBody { get; set; }
 
     /// <summary>
-    /// Gets or sets the page title used when a callback has happened.
+    /// Gets or sets the page title used when a callback carried an authorization code.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is written into the <c>head</c> of the page exactly as it is given, so it has to carry its own
+    ///   <c>title</c> element. A bare title would be rendered as text at the top of the page.
+    /// </para>
+    /// </remarks>
     public string? SuccessTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTML rendered in the body of the page when a callback did not carry an authorization code.
+    /// </summary>
+    /// <remarks>
+    /// <para>The value is written into the page exactly as it is given, and is not encoded.</para>
+    /// </remarks>
+    public string FailureBody { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page title used when a callback did not carry an authorization code.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is written into the <c>head</c> of the page exactly as it is given, so it has to carry its own
+    ///   <c>title</c> element. A bare title would be rendered as text at the top of the page.
+    /// </para>
+    /// </remarks>
+    public string? FailureTitle { get; set; }
 
     /// <summary>
     /// Gets the URI of the server.
@@ -254,16 +330,16 @@ public sealed class CallbackServer : IAsyncDisposable
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timeoutInSeconds);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(timeoutInSeconds, MaximumTimeout);
 
-        Logger.AwaitingCallback(_logger, timeoutInSeconds);
-
         lock (_syncLock)
         {
+            // The check above is not taken under the lock, so a disposal which ran between the two lands here. Reporting
+            // it the same way keeps a caller from having to handle disposal as a cancellation as well as an exception
+            // depending on which side of that window it arrived.
             if (_listener is null)
             {
                 Logger.ListenerIsNull(_logger);
-                _source.TrySetCanceled(cancellationToken);
 
-                return _source.Task;
+                throw new ObjectDisposedException(nameof(CallbackServer));
             }
 
             if (_callbackAwaited)
@@ -272,6 +348,8 @@ public sealed class CallbackServer : IAsyncDisposable
 
                 return _source.Task;
             }
+
+            Logger.AwaitingCallback(_logger, timeoutInSeconds);
 
             // A dedicated flag rather than "_timeoutRegistration != default", because registering on a
             // token that is already cancelled runs the callback inline and hands back a default
@@ -288,6 +366,40 @@ public sealed class CallbackServer : IAsyncDisposable
         }
 
         return _source.Task;
+    }
+
+    /// <summary>
+    /// Releases the timeout armed by <see cref="WaitForCallbackAsync(int, CancellationToken)"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The timeout is linked to the caller's cancellation token, so until it is released this instance, and the web
+    ///   application it holds, stay reachable from that token. A caller which passes a token that lives as long as the
+    ///   application would otherwise keep the server alive after the callback it was waiting for has arrived.
+    /// </para>
+    /// </remarks>
+    private void ReleaseTimeout()
+    {
+        CancellationTokenRegistration registration;
+        CancellationTokenSource? timeoutSource;
+
+        lock (_syncLock)
+        {
+            // Disposal takes these apart itself, so leave them to it rather than racing it for them.
+            if (_disposed)
+            {
+                return;
+            }
+
+            registration = _timeoutRegistration;
+            _timeoutRegistration = default;
+
+            timeoutSource = _timeoutCancellationSource;
+            _timeoutCancellationSource = null;
+        }
+
+        registration.Dispose();
+        timeoutSource?.Dispose();
     }
 
     /// <summary>
@@ -475,15 +587,28 @@ public sealed class CallbackServer : IAsyncDisposable
         Logger.ReceivedCallback(_logger);
         queryString = context.Request.QueryString.Value;
 
+        // A callback which carries no authorization code did not complete a login, whatever else it carries, so telling
+        // the person at the browser that it did would be wrong. The waiting caller is handed the query string either
+        // way and decides what the failure was.
+        bool authorizationCodeIssued = context.Request.Query.ContainsKey("code");
+
+        string? title = authorizationCodeIssued ? SuccessTitle : FailureTitle;
+        string body = authorizationCodeIssued ? SuccessBody : FailureBody;
+
+        if (!authorizationCodeIssued)
+        {
+            Logger.ReceivedCallbackWithoutAnAuthorizationCode(_logger);
+        }
+
         try
         {
             context.Response.StatusCode = (int)HttpStatusCode.OK;
             context.Response.ContentType = HtmlContentType;
             await context.Response.WriteAsync("<html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("<head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(SuccessTitle))
+            if (!string.IsNullOrEmpty(title))
             {
-                await context.Response.WriteAsync(SuccessTitle, cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                await context.Response.WriteAsync(title, cancellationToken: context.RequestAborted).ConfigureAwait(false);
             }
             if (!string.IsNullOrEmpty(ResponseStyleSheet))
             {
@@ -491,7 +616,7 @@ public sealed class CallbackServer : IAsyncDisposable
             }
             await context.Response.WriteAsync("</head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("<body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
-            await context.Response.WriteAsync(SuccessBody, cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync(body, cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("</body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("</html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
 
@@ -518,6 +643,8 @@ public sealed class CallbackServer : IAsyncDisposable
             if (queryString is not null)
             {
                 _source.TrySetResult(queryString);
+
+                ReleaseTimeout();
             }
         }
     }

@@ -66,6 +66,7 @@ public class HandleVerificationTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -81,6 +82,7 @@ public class HandleVerificationTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring("at://someone.else.invalid"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -96,6 +98,7 @@ public class HandleVerificationTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), OtherDid);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -111,6 +114,7 @@ public class HandleVerificationTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), wellKnownDid: null);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -124,6 +128,7 @@ public class HandleVerificationTests
     [Fact]
     public async Task ResolveVerifiedHandleReturnsTheHandleWhenBothDirectionsAgree()
     {
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -139,6 +144,7 @@ public class HandleVerificationTests
     [Fact]
     public async Task ResolveVerifiedHandleReturnsTheFirstDeclaredHandleWhichResolvesBack()
     {
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(
             DidDocumentDeclaring("at://someone.else.invalid", $"at://{TestServerBuilder.DefaultDomainName}"),
             Did);
@@ -156,6 +162,7 @@ public class HandleVerificationTests
     [Fact]
     public async Task ResolveVerifiedHandleReturnsAnInvalidHandleWhenTheDeclaredHandleResolvesElsewhere()
     {
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), OtherDid);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -174,6 +181,7 @@ public class HandleVerificationTests
     [InlineData("at://")]
     public async Task ResolveVerifiedHandleReturnsAnInvalidHandleWhenNoUsableHandleIsDeclared(string alsoKnownAs)
     {
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring(alsoKnownAs), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -193,6 +201,7 @@ public class HandleVerificationTests
     {
         string alsoKnownAs = string.Format(CultureInfo.InvariantCulture, template, TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(DidDocumentDeclaring(alsoKnownAs), Did);
         using HttpClient httpClient = testServer.CreateClient();
 

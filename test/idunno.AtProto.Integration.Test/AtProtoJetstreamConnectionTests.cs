@@ -893,8 +893,28 @@ public class AtProtoJetstreamConnectionTests
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _listener.Close();
-            _cancellationTokenSource.Dispose();
+
+            try
+            {
+                // Closing the listener flushes whatever response is still open. A test which abandons a connection
+                // rather than completing the close handshake leaves a socket behind which the managed HttpListener
+                // used on platforms without http.sys cannot write to, and it says so by throwing out of Close().
+                // The server is being torn down either way, so there is nothing to report.
+                _listener.Close();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (HttpListenerException)
+            {
+            }
+            catch (SocketException)
+            {
+            }
+            finally
+            {
+                _cancellationTokenSource.Dispose();
+            }
         }
     }
 }

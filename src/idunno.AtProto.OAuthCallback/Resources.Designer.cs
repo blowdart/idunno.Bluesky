@@ -91,5 +91,23 @@ namespace idunno.AtProto.OAuthCallback {
                 return ResourceManager.GetString("SuccessTitle", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;h1&gt;Login was not completed.&lt;/h1&gt;&lt;p&gt;The authorization server did not issue an authorization code. You may now close this window and return to your application.&lt;/p&gt;.
+        /// </summary>
+        internal static string FailureBody {
+            get {
+                return ResourceManager.GetString("FailureBody", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to &lt;title&gt;Login was not completed&lt;/title&gt;.
+        /// </summary>
+        internal static string FailureTitle {
+            get {
+                return ResourceManager.GetString("FailureTitle", resourceCulture);
+            }
+        }
     }
 }
