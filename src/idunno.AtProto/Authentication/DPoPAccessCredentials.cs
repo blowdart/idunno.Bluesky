@@ -111,15 +111,20 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     ///   The proof token factory is cached and rebuilt only when the <see cref="DPoPProofKey"/> changes. Building it imports
     ///   the key, which every request sharing this credential would otherwise pay for whilst holding the lock.
     /// </para>
+    /// <para>
+    ///   The access token is read before the DPoP lock is taken rather than inside it. This type and its base class guard
+    ///   their state with separate locks, and taking one whilst holding the other establishes an ordering between them which
+    ///   nothing else enforces.
+    /// </para>
     /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
+        string accessJwt = AccessJwt;
+
         lock (_dPoPAccessCredentialsLock)
         {
-            string accessJwt = AccessJwt;
-
             DPoPProofRequest dPoPProofRequest = new()
             {
                 AccessToken = accessJwt,

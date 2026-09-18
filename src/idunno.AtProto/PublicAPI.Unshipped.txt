@@ -187,3 +187,5 @@ idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedExcep
 idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedException(string! message, System.Net.WebSockets.WebSocketCloseStatus closeStatus) -> void
 idunno.AtProto.WebSocketOptions.KeepAliveTimeout.get -> System.TimeSpan?
 idunno.AtProto.WebSocketOptions.KeepAliveTimeout.init -> void
+*REMOVED*idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!
+virtual idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!

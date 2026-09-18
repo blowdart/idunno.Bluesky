@@ -61,7 +61,12 @@ public class OAuthClient
     private readonly object _stateLock = new();
 #endif
 
+    // The cached OidcClient is held alongside the proof key and authority it was built for. An OidcClient signs the token
+    // request with the key it was configured with, so one built for a previous login would bind the issued token to that
+    // key whilst the credentials returned to the caller carry the key of the login actually being processed.
     private OidcClient? _oidcClient;
+    private string? _oidcClientProofKey;
+    private Uri? _oidcClientAuthority;
 
     private readonly Func<HttpClient, HttpClient> _clientConfigurationHandler = (httpClient) => { return httpClient; };
     private readonly Func<HttpMessageHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
@@ -234,26 +239,7 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
-        OidcClientOptions oidcClientOptions = new()
-        {
-            ClientId = clientId,
-            Authority = authority.ToString(),
-            Scope = scopeString,
-            RedirectUri = returnUri.ToString(),
-            LoadProfile = false,
-            DisablePushedAuthorization = false,
-            LoggerFactory = _loggerFactory,
-            HttpClientFactory = (oidcOptions) =>
-            {
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(
-                    new DefaultDPoPProofTokenFactory(proofKey),
-                    _innerFactoryHandler()), true);
-                return _clientConfigurationHandler(httpClient);
-            }
-        };
-
-        oidcClientOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-        oidcClientOptions.ConfigureDPoP(proofKey);
+        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes);
 
         OidcClient oidcClient = new(oidcClientOptions);
 
@@ -290,10 +276,12 @@ public class OAuthClient
         {
             // Nothing on the instance has been touched until this point, so a login which fails to prepare leaves any
             // previously prepared login intact rather than pairing its authorize state with a new proof key.
-            _oidcClient = oidcClient;
-
             lock (_stateLock)
             {
+                _oidcClient = oidcClient;
+                _oidcClientProofKey = proofKey;
+                _oidcClientAuthority = authority;
+
                 _proofKey = proofKey;
                 _expectedAuthority = authority;
                 _expectedService = service;
@@ -368,62 +356,67 @@ public class OAuthClient
             expectedAuthority = _expectedAuthority;
         }
 
-        if (_oidcClient is null)
+        // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
+        // which the authorization server has spent by the time a response is processed, and the proof key is a private key,
+        // so neither has any further use to this instance and both remain readable through State until they are cleared.
+        try
         {
-            OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, null, requestedScopes);
-            _oidcClient = new OidcClient(oidcClientOptions);
+            OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes);
+
+            LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (loginResult.IsError)
+            {
+                Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
+                return null;
+            }
+
+            if (!DPoPTokenType.Equals(loginResult.TokenResponse.TokenType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new OAuthException($"Authorization server issued a '{loginResult.TokenResponse.TokenType}' token, not a DPoP bound token.");
+            }
+
+            if (loginResult.TokenResponse.DPoPNonce is null)
+            {
+                throw new OAuthException("login result has no dPoP nonce");
+            }
+
+            JsonWebToken accessToken = new(loginResult.AccessToken);
+
+            ValidateAccessToken(accessToken, expectedAuthority, _correlationId);
+
+            WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, _correlationId);
+
+            AtProtoHttpResult<ServerDescription> serverDescriptionResult;
+
+            using (var httpClient = new HttpClient(_innerFactoryHandler()))
+            {
+                _clientConfigurationHandler(httpClient);
+                serverDescriptionResult = await AtProtoServer.DescribeServer(expectedService, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (!serverDescriptionResult.Succeeded)
+            {
+                throw new OAuthException($"Could not get service description for {expectedService}");
+            }
+            else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
+            {
+                throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
+            }
+
+            Logger.OAuthLoginCompleted(_logger, _correlationId);
+
+            return new(
+                expectedService,
+                loginResult.AccessToken,
+                loginResult.RefreshToken,
+                proofKey,
+                loginResult.TokenResponse.DPoPNonce);
         }
-
-        LoginResult loginResult = await _oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (loginResult.IsError)
+        finally
         {
             ClearLoginState();
-            Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
-            return null;
         }
-
-        if (!DPoPTokenType.Equals(loginResult.TokenResponse.TokenType, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new OAuthException($"Authorization server issued a '{loginResult.TokenResponse.TokenType}' token, not a DPoP bound token.");
-        }
-
-        if (loginResult.TokenResponse.DPoPNonce is null)
-        {
-            throw new OAuthException("login result has no dPoP nonce");
-        }
-
-        JsonWebToken accessToken = new(loginResult.AccessToken);
-
-        ValidateAccessToken(accessToken, expectedAuthority, _correlationId);
-
-        WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, _correlationId);
-
-        AtProtoHttpResult<ServerDescription> serverDescriptionResult;
-
-        using (var httpClient = new HttpClient(_innerFactoryHandler()))
-        {
-            _clientConfigurationHandler(httpClient);
-            serverDescriptionResult = await AtProtoServer.DescribeServer(expectedService, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (!serverDescriptionResult.Succeeded)
-        {
-            throw new OAuthException($"Could not get service description for {expectedService}");
-        }
-        else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
-        {
-            throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
-        }
-
-        Logger.OAuthLoginCompleted(_logger, _correlationId);
-
-        return new(
-            expectedService,
-            loginResult.AccessToken,
-            loginResult.RefreshToken,
-            proofKey,
-            loginResult.TokenResponse.DPoPNonce);
     }
 
     /// <summary>
@@ -444,9 +437,11 @@ public class OAuthClient
             _expectedAuthority = null;
             _expectedService = null;
             _stateExtraProperties = null;
-        }
 
-        _oidcClient = null;
+            _oidcClient = null;
+            _oidcClientProofKey = null;
+            _oidcClientAuthority = null;
+        }
     }
 
     private void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
@@ -490,6 +485,20 @@ public class OAuthClient
     /// <param name="returnUri">The redirect URI where the oauth server should respond back to.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> or <paramref name="authority"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is <see langword="null"/> or white space and no default <see cref="OAuthOptions.ClientId" /> has been set on <see cref="OAuthOptions"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   No <c>id_token_hint</c> is sent. The agent holds an access token rather than an ID token, and the hint travels in the
+    ///   query string of an address handed to a browser, so sending it would write a live token into the address bar, the
+    ///   browser history, the authorization server's logs and any <c>Referer</c> header the logout page goes on to send.
+    /// </para>
+    /// <para>
+    ///   The login state of this instance is left untouched. Building a logout address is not a login, and overwriting the
+    ///   proof key or authority would leave a login prepared on this instance holding a proof key its authorize state was
+    ///   never bound to.
+    /// </para>
+    /// </remarks>
     internal async Task<Uri> BuildOAuth2LogoutUri(
         DPoPAccessCredentials credentials,
         Uri authority,
@@ -498,24 +507,15 @@ public class OAuthClient
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(authority);
 
         clientId ??= _options?.ClientId;
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
-        _expectedAuthority = authority;
-        _proofKey = credentials.DPoPProofKey;
+        OidcClient oidcClient = GetOrCreateOidcClient(credentials.DPoPProofKey, authority, clientId, returnUri);
 
-        if (_oidcClient is null)
-        {
-            OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, returnUri);
-            _oidcClient = new OidcClient(oidcClientOptions);
-        }
-
-        string logoutUri = await _oidcClient.PrepareLogoutAsync(
-            new LogoutRequest
-            {
-                IdTokenHint = credentials.AccessJwt,
-            },
+        string logoutUri = await oidcClient.PrepareLogoutAsync(
+            new LogoutRequest(),
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return new Uri(logoutUri);
@@ -797,30 +797,42 @@ public class OAuthClient
         }
     }
 
+    /// <summary>
+    /// Builds the <see cref="OidcClientOptions"/> for a request signed with the specified <paramref name="proofKey"/>.
+    /// </summary>
+    /// <param name="proofKey">The DPoP proof key the request is to be signed with.</param>
+    /// <param name="authority">The authorization server the request is to be made against.</param>
+    /// <param name="clientId">The client ID.</param>
+    /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
+    /// <param name="scopes">The scopes to request, if any.</param>
+    /// <returns>The <see cref="OidcClientOptions"/> to build an <see cref="OidcClient"/> from.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The proof key and authority are taken as parameters rather than read from the instance fields, so that the options,
+    ///   the proof token handler they install, and the caller's view of which login is being processed all describe the same
+    ///   key. Reading the fields would let a login starting on another thread change the key the handler signs with after
+    ///   the options have already captured a different one.
+    /// </para>
+    /// </remarks>
     private OidcClientOptions BuildOidcClientOptions(
+        string proofKey,
+        Uri authority,
         string? clientId = null,
         Uri? returnUri = null,
         IEnumerable<string>? scopes = null)
     {
-        if (_expectedAuthority is null)
-        {
-            throw new OAuthException("_expectedAuthority is null");
-        }
-
-        if (_proofKey is null)
-        {
-            throw new OAuthException("_proofKey is null");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(proofKey);
+        ArgumentNullException.ThrowIfNull(authority);
 
         OidcClientOptions oidcOptions = new()
         {
-            Authority = _expectedAuthority.ToString(),
+            Authority = authority.ToString(),
             LoadProfile = false,
             DisablePushedAuthorization = false,
             LoggerFactory = _loggerFactory,
             HttpClientFactory = (oidcOptions) =>
             {
-                var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(_proofKey), _innerFactoryHandler()), true);
+                var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(proofKey), _innerFactoryHandler()), true);
                 return _clientConfigurationHandler(httpClient);
             }
         };
@@ -842,8 +854,51 @@ public class OAuthClient
         }
 
         oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-        oidcOptions.ConfigureDPoP(_proofKey);
+        oidcOptions.ConfigureDPoP(proofKey);
 
         return oidcOptions;
+    }
+
+    /// <summary>
+    /// Gets the cached <see cref="OidcClient"/> if it was built for the specified <paramref name="proofKey"/> and
+    /// <paramref name="authority"/>, otherwise builds a new one and caches it.
+    /// </summary>
+    /// <param name="proofKey">The DPoP proof key the request is to be signed with.</param>
+    /// <param name="authority">The authorization server the request is to be made against.</param>
+    /// <param name="clientId">The client ID.</param>
+    /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
+    /// <param name="scopes">The scopes to request, if any.</param>
+    /// <returns>An <see cref="OidcClient"/> configured for the specified <paramref name="proofKey"/> and <paramref name="authority"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A cached client is reused only when it was built for the same key and authority. Reusing one built for a different
+    ///   login would sign the token request with that login's key, so the issued token would be bound to a key the returned
+    ///   credentials do not carry and every request made with them would be rejected.
+    /// </para>
+    /// </remarks>
+    private OidcClient GetOrCreateOidcClient(
+        string proofKey,
+        Uri authority,
+        string? clientId = null,
+        Uri? returnUri = null,
+        IEnumerable<string>? scopes = null)
+    {
+        lock (_stateLock)
+        {
+            if (_oidcClient is not null &&
+                string.Equals(_oidcClientProofKey, proofKey, StringComparison.Ordinal) &&
+                _oidcClientAuthority == authority)
+            {
+                return _oidcClient;
+            }
+
+            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes));
+
+            _oidcClient = oidcClient;
+            _oidcClientProofKey = proofKey;
+            _oidcClientAuthority = authority;
+
+            return oidcClient;
+        }
     }
 }
