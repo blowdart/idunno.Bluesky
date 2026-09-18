@@ -37,6 +37,15 @@
 * Added `AtProtoJetstreamBuilder.WithWebSocketOptions()` and `AtProtoJetstreamBuilder.SetMaximumTotalMessageSize()`. The `WebSocketOptions` the jetstream
   constructor accepts, which carry the WebSocket proxy and keep-alive interval, and the maximum total message size, could not be expressed through the
   builder at all, so a jetstream created by the builder always used the defaults for both.
+* Added `WebSocketOptions.KeepAliveTimeout`, which bounds how long a WebSocket waits for a keep-alive ping to be answered before the connection is
+  considered dead. A jetstream now defaults both `KeepAliveInterval` and `KeepAliveTimeout` to 30 seconds, so a peer which stops responding without
+  closing its socket is noticed rather than leaving the jetstream reading forever. `KeepAliveTimeout` is ignored on .NET 8, whose `ClientWebSocketOptions`
+  has no keep-alive timeout.
+* Added `JetstreamOptions.MaximumConcurrentMessageParsers` and `AtProtoJetstreamBuilder.SetMaximumConcurrentMessageParsers()`, which bound how many
+  messages a jetstream parses at once. Reading pauses when the limit is reached, so a slow event handler applies back pressure to the server rather
+  than growing an unbounded number of in-flight parses. The default is 64.
+* Added `WebSocketMessageAbandonedException`, thrown when a WebSocket message is abandoned because it exceeded the maximum message size or arrived as
+  too many consecutive empty fragments.
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
 * Added `AtProtoAgent.CredentialsUpdatedAsync`, an awaitable counterpart to the `CredentialsUpdated` event, of type
   `Func<CredentialsUpdatedEventArgs, CancellationToken, Task>?`. Unlike the event, the agent awaits this callback before continuing, so asynchronous
@@ -197,6 +206,11 @@
 * `AtProtoJetstream` no longer throws when an event names a payload it does not carry.
 * `AtProtoJetstream` no longer counts a single connection failure twice in its `total_connections_failed` metric.
 * `AtProtoJetstream` no longer throws `ObjectDisposedException` from its connection semaphore when it is disposed during a connection attempt.
+* `AtProtoJetstream` now replaces its WebSocket whenever the previous one has been connected, rather than only when it reached `Aborted` or `Closed`. A close which did not complete left a socket in `CloseSent` or `CloseReceived`, which was then reused, and a `ClientWebSocket` can only be connected once, so every subsequent reconnection failed for the lifetime of the jetstream.
+* `AtProtoJetstream.CloseAsync()` now aborts the socket when the close handshake is cancelled or throws, rather than leaving a half closed socket behind.
+* `AtProtoJetstream` now closes the connection when a message is abandoned because it exceeded the maximum message size or arrived as too many consecutive empty fragments. The remainder of the abandoned message is still queued on the socket and cannot be skipped, so reading on returned its tail as though it were a message of its own.
+* `AtProtoJetstream` now resets `DisconnectedGracefully` when it connects, so a new connection no longer reports how the connection before it ended.
+* The `AtProtoJetstreamBuilder` properties which correspond to a `Set` or `With` method now apply the same validation as the method, rather than accepting `null` or an out of range value which then failed, or silently misbehaved, when the jetstream was built.
 * An `HttpContent` request body supplied by the caller is no longer disposed by the client, and is buffered so that it survives a DPoP nonce retry.
 * A failed background credential refresh now schedules a retry even when the refresh timer had not been created yet, which previously ended background refresh for the lifetime of the agent.
 * The refresh token replay check now remembers the last few exchanged tokens rather than only the most recent one.

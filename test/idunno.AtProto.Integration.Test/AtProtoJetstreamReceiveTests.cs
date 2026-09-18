@@ -255,13 +255,28 @@ public class AtProtoJetstreamReceiveTests
         ConcurrentQueue<string> faults = [];
 
         TaskCompletionSource<AtJetstreamEvent> recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<WebSocketState> disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions
+            {
+                UseCompression = false,
+
+                // This server never reads, so it never answers the close the jetstream sends. Without a shorter deadline
+                // the connection is only dropped once the default close timeout expires.
+                CloseTimeout = TimeSpan.FromSeconds(2)
+            }))
         {
             jetstream.FaultRaised += (sender, e) => faults.Enqueue(e.Fault);
             jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult(e.ParsedEvent);
+            jetstream.ConnectionStateChanged += (sender, e) =>
+            {
+                if (e.State != WebSocketState.Open)
+                {
+                    disconnected.TrySetResult(e.State);
+                }
+            };
 
             using (var httpClient = new HttpClient())
             {
@@ -271,13 +286,19 @@ public class AtProtoJetstreamReceiveTests
                     httpClient: httpClient,
                     cancellationToken: cancellationToken);
 
-                AtJetstreamEvent received = await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-
-                // The jetstream carried on and read the message which followed the abandoned one.
-                AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(received);
-                Assert.Equal(2U, identityEvent.Identity.Sequence);
+                await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
                 Assert.Contains(faults, fault => fault.Contains("empty fragments", StringComparison.Ordinal));
+
+                // The fragments making up the rest of the abandoned message are still queued on the socket, and there is
+                // no way to skip them, so the connection is dropped rather than read on into the middle of a message.
+                Assert.False(jetstream.IsConnected);
+
+                // Which also means the message the server sent after the abandoned one is never delivered.
+                Assert.False(recordReceived.Task.IsCompleted);
+
+                // The disconnection was forced by the message, not performed by either end deciding to close.
+                Assert.False(jetstream.DisconnectedGracefully);
             }
         }
     }
@@ -333,6 +354,131 @@ public class AtProtoJetstreamReceiveTests
                 Assert.True(jetstream.IsConnected);
 
                 return await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AMessageWhichExceedsTheMaximumMessageSizeDropsTheConnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(sequence: 1, padding: new string('a', 8192)), serverCancellationToken);
+
+            await SendText(webSocket, IdentityEvent(sequence: 2), serverCancellationToken);
+        });
+
+        ConcurrentQueue<string> faults = [];
+
+        TaskCompletionSource<AtJetstreamEvent> recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<WebSocketState> disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = false,
+                MaxMessageSize = 2048,
+
+                // This server never reads, so it never answers the close the jetstream sends. Without a shorter deadline
+                // the connection is only dropped once the default close timeout expires.
+                CloseTimeout = TimeSpan.FromSeconds(2)
+            }))
+        {
+            jetstream.FaultRaised += (sender, e) => faults.Enqueue(e.Fault);
+            jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult(e.ParsedEvent);
+            jetstream.ConnectionStateChanged += (sender, e) =>
+            {
+                if (e.State != WebSocketState.Open)
+                {
+                    disconnected.TrySetResult(e.State);
+                }
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+                Assert.Contains(faults, fault => fault.Contains("maximum allowed size", StringComparison.Ordinal));
+
+                // The rest of the oversized message is still queued on the socket, so reading on would hand its tail to
+                // the parser as though it were a message of its own.
+                Assert.False(jetstream.IsConnected);
+                Assert.False(recordReceived.Task.IsCompleted);
+                Assert.False(jetstream.DisconnectedGracefully);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task NoMoreMessagesAreParsedAtOnceThanTheConfiguredLimit()
+    {
+        const int messageCount = 8;
+
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            for (int sequence = 1; sequence <= messageCount; sequence++)
+            {
+                await SendText(webSocket, IdentityEvent(sequence), serverCancellationToken);
+            }
+        });
+
+        int inFlight = 0;
+        int maximumInFlight = 0;
+        object maximumLock = new();
+
+        using var allParsed = new CountdownEvent(messageCount);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, MaximumConcurrentMessageParsers = 1 }))
+        {
+            jetstream.RecordReceived += (sender, e) =>
+            {
+                int current = Interlocked.Increment(ref inFlight);
+
+                lock (maximumLock)
+                {
+                    maximumInFlight = Math.Max(maximumInFlight, current);
+                }
+
+                // Held long enough that anything dispatched alongside this one overlaps it.
+                Thread.Sleep(50);
+
+                Interlocked.Decrement(ref inFlight);
+                allParsed.Signal();
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                Assert.True(allParsed.Wait(TimeSpan.FromSeconds(30), cancellationToken));
+
+                // Without a limit every message read is handed straight to the task factory, so a server which sends
+                // faster than the parsing keeps up with has all of them in flight at once and nothing bounds the queue.
+                lock (maximumLock)
+                {
+                    Assert.Equal(1, maximumInFlight);
+                }
             }
         }
     }

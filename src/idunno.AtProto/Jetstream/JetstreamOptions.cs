@@ -109,4 +109,31 @@ public record JetstreamOptions
             field = value;
         }
     } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets the maximum number of messages which may be parsed at once. Defaults to 64.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Messages are parsed away from the loop which reads them, so without a bound a server which sends faster than the parsing
+    ///   keeps up with has every message it sends queued behind the ones still being parsed, and nothing stops that queue growing.
+    ///   <see cref="MaxMessageSize"/> limits how large a single message may be, not how many of them may be in flight.
+    /// </para>
+    /// <para>
+    ///   Once this many messages are being parsed the jetstream stops reading from the web socket until one of them finishes,
+    ///   which is what lets the transport apply back pressure to the server.
+    /// </para>
+    /// </remarks>
+    public int MaximumConcurrentMessageParsers
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 64;
 }

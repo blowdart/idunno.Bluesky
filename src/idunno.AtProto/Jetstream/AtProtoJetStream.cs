@@ -65,6 +65,19 @@ public class AtProtoJetstream : IDisposable
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a send holds it makes the release which ends that send throw.")]
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
+    /// <summary>
+    /// Bounds the number of messages being parsed at once.
+    /// </summary>
+    /// <remarks>
+    /// <para>Parsing runs away from the receive loop, so without a bound a server which sends faster than the parsing
+    /// keeps up with has every message it sends queued behind the ones still being parsed, and nothing stops that queue
+    /// growing. <see cref="JetstreamOptions.MaxMessageSize"/> limits how large one message may be, not how many of them
+    /// may be in flight.</para>
+    /// <para>Deliberately not disposed, for the same reason as <see cref="_connectSemaphore"/>.</para>
+    /// </remarks>
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a parse holds it makes the release which ends that parse throw.")]
+    private readonly SemaphoreSlim _parseSemaphore;
+
     private const string SubscribeEndpoint = "/subscribe";
 
     private readonly JetstreamMetrics _metrics;
@@ -194,6 +207,8 @@ public class AtProtoJetstream : IDisposable
         }
 
         _metrics = new JetstreamMetrics(Options.MeterFactory);
+
+        _parseSemaphore = new SemaphoreSlim(Options.MaximumConcurrentMessageParsers, Options.MaximumConcurrentMessageParsers);
 
         if (Options.UseCompression)
         {
@@ -656,7 +671,12 @@ public class AtProtoJetstream : IDisposable
 
             // The state is re-checked inside the lock. Checking it outside only narrows the race, it does not remove it,
             // and a caller which loses that race would otherwise have the socket it is about to connect disposed underneath it.
-            if (_client is null || _client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
+            //
+            // Anything other than None has already been connected, and a ClientWebSocket can only be connected once, so
+            // every one of those states needs a new socket. Listing the states which do rather than the one which does not
+            // leaves out the half closed states, which a close that did not complete can leave behind, and a socket left in
+            // one of those is neither replaced here nor connectable, so the jetstream can never reconnect.
+            if (_client is null || _client.State != WebSocketState.None)
             {
                 if (_client is not null)
                 {
@@ -752,6 +772,10 @@ public class AtProtoJetstream : IDisposable
 
         httpClient ??= _httpClient;
 
+        // Reset before the attempt, as the flag describes how the connection this attempt is making ends, and carrying
+        // the previous connection's answer into it would have a new connection reporting how an older one was disconnected.
+        DisconnectedGracefully = false;
+
         try
         {
             await client.ConnectAsync(
@@ -814,8 +838,30 @@ public class AtProtoJetstream : IDisposable
     {
         // Captured once, so a reconnection which replaces the field cannot leave this call inspecting one socket and
         // aborting another.
-        ClientWebSocket client = _client;
+        await CloseSocketAsync(_client, status, statusDescription, recordAsGracefulDisconnection: true, cancellationToken).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// Closes the specified <paramref name="client"/>.
+    /// </summary>
+    /// <param name="client">The <see cref="ClientWebSocket"/> to close.</param>
+    /// <param name="status">Status for the shutdown.</param>
+    /// <param name="statusDescription">Reason for the shutdown.</param>
+    /// <param name="recordAsGracefulDisconnection">Whether a completed close should be recorded as a graceful disconnection.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <exception cref="ObjectDisposedException">Thrown if <paramref name="client"/> has been disposed.</exception>
+    /// <remarks>
+    /// <para>The socket to close is taken as a parameter rather than read from the field, so a caller which is working
+    /// against a particular socket closes that one rather than whichever socket a reconnection has since installed.</para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all to avoid a close failure propagating.")]
+    private async Task CloseSocketAsync(
+        ClientWebSocket client,
+        WebSocketCloseStatus status,
+        string statusDescription,
+        bool recordAsGracefulDisconnection,
+        CancellationToken cancellationToken)
+    {
         WebSocketState startingState = client.State;
 
         if (client.State == WebSocketState.Closed)
@@ -847,7 +893,7 @@ public class AtProtoJetstream : IDisposable
                     _sendSemaphore.Release();
                 }
 
-                DisconnectedGracefully = true;
+                DisconnectedGracefully = recordAsGracefulDisconnection;
                 _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
             }
             catch (ObjectDisposedException)
@@ -864,11 +910,18 @@ public class AtProtoJetstream : IDisposable
             }
             catch (OperationCanceledException)
             {
-                // Swallow
+                // The caller cancelled part way through the close, which can leave the socket half closed. A socket in
+                // that state can neither be used nor connected again, so it is dropped rather than left behind for a
+                // later reconnection to find.
+                client.Abort();
             }
             catch (Exception ex)
             {
                 JetStreamLogger.CloseError(_logger, ex);
+
+                // The close frame may already have gone, which leaves the socket half closed, and a socket in that
+                // state can neither be used nor connected again.
+                client.Abort();
             }
 
         }
@@ -950,6 +1003,22 @@ public class AtProtoJetstream : IDisposable
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// The keep-alive interval applied when <see cref="WebSocketOptions.KeepAliveInterval"/> does not supply one.
+    /// </summary>
+    private static readonly TimeSpan s_defaultKeepAliveInterval = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The keep-alive timeout applied when <see cref="WebSocketOptions.KeepAliveTimeout"/> does not supply one.
+    /// </summary>
+    /// <remarks>
+    /// <para>A default is applied because without a timeout a keep-alive ping is sent and never acted on, so a connection
+    /// lost to a network failure leaves the socket reporting itself as open and the read loop waiting on it forever.</para>
+    /// </remarks>
+#if NET9_0_OR_GREATER
+    private static readonly TimeSpan s_defaultKeepAliveTimeout = TimeSpan.FromSeconds(30);
+#endif
+
     private ClientWebSocket CreateWebSocketClient()
     {
         var client = new ClientWebSocket();
@@ -962,10 +1031,11 @@ public class AtProtoJetstream : IDisposable
                 client.Options.Proxy = WebSocketOptions.Proxy;
             }
 
-            if (WebSocketOptions.KeepAliveInterval is not null)
-            {
-                client.Options.KeepAliveInterval = WebSocketOptions.KeepAliveInterval.Value;
-            }
+            client.Options.KeepAliveInterval = WebSocketOptions.KeepAliveInterval ?? s_defaultKeepAliveInterval;
+
+#if NET9_0_OR_GREATER
+            client.Options.KeepAliveTimeout = WebSocketOptions.KeepAliveTimeout ?? s_defaultKeepAliveTimeout;
+#endif
         }
 
         return client;
@@ -985,12 +1055,38 @@ public class AtProtoJetstream : IDisposable
         {
             try
             {
-                (WebSocketReceiveResult webSocketReceiveResult, byte[] message) =
-                    await client.ReceiveNextMessageAsync(
-                        bufferSize: Options.BufferSize,
-                        maxMessageSize: Options.MaxMessageSize,
-                        logger: _logger,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                WebSocketReceiveResult webSocketReceiveResult;
+                byte[] message;
+
+                try
+                {
+                    (webSocketReceiveResult, message) =
+                        await client.ReceiveNextMessageAsync(
+                            bufferSize: Options.BufferSize,
+                            maxMessageSize: Options.MaxMessageSize,
+                            logger: _logger,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                catch (WebSocketMessageAbandonedException ex)
+                {
+                    // The rest of the abandoned message is still queued on the socket and there is no way to skip it, so
+                    // reading on would return its tail as though it were a message of its own. The connection is finished,
+                    // and the peer is told why rather than simply being dropped.
+                    JetStreamLogger.MessageLoopError(_logger, ex);
+                    LogFault(ex.Message);
+
+                    await CloseSocketAsync(
+                        client,
+                        ex.CloseStatus,
+                        ex.Message,
+                        recordAsGracefulDisconnection: false,
+                        cancellationToken).ConfigureAwait(false);
+
+                    // CloseSocketAsync raises the state change itself.
+                    finalStateRaised = true;
+
+                    break;
+                }
 
                 if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                 {
@@ -1072,9 +1168,16 @@ public class AtProtoJetstream : IDisposable
 
                     OnMessageReceived(new MessageReceivedEventArgs(messageAsString));
 
-                    // Now go to handle message in a new task.
+                    // Parsing runs away from this loop, so nothing here waits for it and a server which sends faster than
+                    // the parsing keeps up with would otherwise have every message it sent queued, unbounded, behind the
+                    // ones still being parsed. Waiting for a slot stops reading from the socket instead, which is what
+                    // lets the transport apply the back pressure the server needs to see.
+                    await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+                    // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
+                    // never running the delegate, and the slot taken above is only given back by running it.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    Options.TaskFactory.StartNew(() => ParseMessage(messageAsString, _logger).FireAndForgetAsync(_logger), cancellationToken).ConfigureAwait(false);
+                    Options.TaskFactory.StartNew(() => ParseMessageAndReleaseSlot(messageAsString), CancellationToken.None);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
                 else
@@ -1187,6 +1290,23 @@ public class AtProtoJetstream : IDisposable
             return Task.FromException(ex);
         }
 
+    }
+
+    /// <summary>
+    /// Parses the specified <paramref name="json"/> and gives back the slot the receive loop took for it.
+    /// </summary>
+    /// <param name="json">The message to parse.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private async Task ParseMessageAndReleaseSlot(string json)
+    {
+        try
+        {
+            await ParseMessage(json, _logger).FireAndForgetAsync(_logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            _parseSemaphore.Release();
+        }
     }
 
     [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "The socket can close whilst a send waits on the semaphore, which the analyzer cannot see.")]

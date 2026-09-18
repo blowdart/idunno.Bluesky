@@ -158,4 +158,62 @@ public class AtProtoJetstreamBuilderTests
         Assert.Throws<ArgumentNullException>(
             "configure",
             () => AtProtoJetstreamBuilder.Create().ConfigureHttpClientOptions(null!));
+
+    [Theory]
+    [MemberData(nameof(NullRejectingProperties))]
+    public void SettingAPropertyToNullThrows(Action<AtProtoJetstreamBuilder> set) =>
+        Assert.Throws<ArgumentNullException>(() => set(AtProtoJetstreamBuilder.Create()));
+
+    [Theory]
+    [MemberData(nameof(OutOfRangeProperties))]
+    public void SettingAPropertyOutOfRangeThrows(Action<AtProtoJetstreamBuilder> set) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => set(AtProtoJetstreamBuilder.Create()));
+
+    /// <summary>
+    /// The properties whose fluent counterparts reject <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Setting one of these directly used to be accepted where the fluent method rejected it, so which of the two
+    /// ways of configuring a builder was used decided whether a mistake was caught.</para>
+    /// </remarks>
+    public static TheoryData<Action<AtProtoJetstreamBuilder>> NullRejectingProperties()
+    {
+        TheoryData<Action<AtProtoJetstreamBuilder>> data = [];
+
+        data.Add(builder => builder.Service = null!);
+        data.Add(builder => builder.LoggerFactory = null!);
+        data.Add(builder => builder.CompressionDictionary = null!);
+        data.Add(builder => builder.TaskFactory = null!);
+
+        return data;
+    }
+
+    /// <summary>
+    /// The properties whose fluent counterparts reject values which are equal to, or less than, zero.
+    /// </summary>
+    public static TheoryData<Action<AtProtoJetstreamBuilder>> OutOfRangeProperties()
+    {
+        TheoryData<Action<AtProtoJetstreamBuilder>> data = [];
+
+        data.Add(builder => builder.ReadBufferSize = 0);
+        data.Add(builder => builder.ReadBufferSize = -1);
+        data.Add(builder => builder.MaximumTotalMessageSize = 0);
+        data.Add(builder => builder.MaximumTotalMessageSize = -1);
+        data.Add(builder => builder.MaximumConcurrentMessageParsers = 0);
+        data.Add(builder => builder.MaximumConcurrentMessageParsers = -1);
+        data.Add(builder => builder.CloseTimeout = TimeSpan.Zero);
+        data.Add(builder => builder.CloseTimeout = TimeSpan.FromSeconds(-1));
+
+        return data;
+    }
+
+    [Fact]
+    public void BuildPassesTheMaximumConcurrentMessageParsersToTheJetstream()
+    {
+        using AtProtoJetstream jetstream = AtProtoJetstreamBuilder.Create()
+            .SetMaximumConcurrentMessageParsers(7)
+            .Build();
+
+        Assert.Equal(7, jetstream.Options.MaximumConcurrentMessageParsers);
+    }
 }

@@ -174,3 +174,16 @@ idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.get -> System.TimeSpan
 idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.init -> void
 idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>?
 *REMOVED*idunno.AtProto.Authentication.AccessCredentials.ExtractJwtProperties(string! jwt) -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumConcurrentMessageParsers.get -> int
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumConcurrentMessageParsers.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetMaximumConcurrentMessageParsers(int maximumConcurrentMessageParsers) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamOptions.MaximumConcurrentMessageParsers.get -> int
+idunno.AtProto.Jetstream.JetstreamOptions.MaximumConcurrentMessageParsers.init -> void
+idunno.AtProto.WebSocketMessageAbandonedException
+idunno.AtProto.WebSocketMessageAbandonedException.CloseStatus.get -> System.Net.WebSockets.WebSocketCloseStatus
+idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedException() -> void
+idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedException(string! message) -> void
+idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedException(string! message, System.Exception! innerException) -> void
+idunno.AtProto.WebSocketMessageAbandonedException.WebSocketMessageAbandonedException(string! message, System.Net.WebSockets.WebSocketCloseStatus closeStatus) -> void
+idunno.AtProto.WebSocketOptions.KeepAliveTimeout.get -> System.TimeSpan?
+idunno.AtProto.WebSocketOptions.KeepAliveTimeout.init -> void

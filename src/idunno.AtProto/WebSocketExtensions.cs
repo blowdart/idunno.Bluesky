@@ -35,7 +35,12 @@ internal static class WebSocketExtensions
     /// <param name="logger">The <see cref="ILogger"/> to use for logging, if any.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    /// <exception cref="WebSocketException">Thrown when the <paramref name="webSocket"/> is not open, or the message exceeds <paramref name="maxMessageSize"/>.</exception>
+    /// <exception cref="WebSocketException">Thrown when the <paramref name="webSocket"/> is not open, or closed before the end of the message was reached.</exception>
+    /// <exception cref="WebSocketMessageAbandonedException">Thrown when the message exceeds <paramref name="maxMessageSize"/>, or is made up of too many consecutive empty fragments.</exception>
+    /// <remarks>
+    /// <para>A message which is abandoned part way through leaves the fragments which make up the rest of it queued on the
+    /// socket, so a <see cref="WebSocketMessageAbandonedException"/> means the connection can no longer be read from.</para>
+    /// </remarks>
     public static async Task<(WebSocketReceiveResult Result, byte[] Message)> ReceiveNextMessageAsync(
         this ClientWebSocket webSocket,
         int bufferSize,
@@ -71,7 +76,9 @@ internal static class WebSocketExtensions
                             Logger.ReceivedTooManyEmptyFragments(logger, MaximumConsecutiveEmptyFragments);
                         }
 
-                        throw new WebSocketException(WebSocketError.InvalidMessageType, $"Message contained more than {MaximumConsecutiveEmptyFragments} consecutive empty fragments.");
+                        throw new WebSocketMessageAbandonedException(
+                            $"Message contained more than {MaximumConsecutiveEmptyFragments} consecutive empty fragments.",
+                            WebSocketCloseStatus.ProtocolError);
                     }
                 }
                 else
@@ -86,7 +93,9 @@ internal static class WebSocketExtensions
                         Logger.ReceivedMessageTooLarge(logger, (int)ms.Length + receiveResult.Count, maxMessageSize);
                     }
 
-                    throw new WebSocketException(WebSocketError.InvalidMessageType, $"Message exceeds the maximum allowed size of {maxMessageSize} bytes.");
+                    throw new WebSocketMessageAbandonedException(
+                        $"Message exceeds the maximum allowed size of {maxMessageSize} bytes.",
+                        WebSocketCloseStatus.MessageTooBig);
                 }
 
                 await ms.WriteAsync(

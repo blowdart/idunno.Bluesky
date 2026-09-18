@@ -26,12 +26,34 @@ public sealed class AtProtoJetstreamBuilder
     /// <summary>
     /// Gets or sets the service the agent will initially connect to.
     /// </summary>
-    public Uri Service { get; set; } = s_defaultUri;
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    public Uri Service
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    } = s_defaultUri;
 
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/> to use when creating loggers.
     /// </summary>
-    public ILoggerFactory LoggerFactory { get; set; } = NullLoggerFactory.Instance;
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    public ILoggerFactory LoggerFactory
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    } = NullLoggerFactory.Instance;
 
     /// <summary>
     /// Gets or sets the <see cref="IMeterFactory"/> to use when creating meters.
@@ -46,30 +68,94 @@ public sealed class AtProtoJetstreamBuilder
     /// <summary>
     /// Gets or sets the compression dictionary used by zst decompression when <see cref="EnableCompression"/> is <see langword="true"/>.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
     [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "zst expects a dictionary and we're not concerned about mutability.")]
-    public byte[] CompressionDictionary { get; set; } = Resource.zstDictionary;
+    public byte[] CompressionDictionary
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    } = Resource.zstDictionary;
 
     /// <summary>
     /// Gets or sets the size, in bytes, of each block read from the web socket.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
     /// <remarks>
     /// <para>This is the size of the buffer a single read fills, not a limit on anything. Use <see cref="MaximumTotalMessageSize"/>
     /// to limit how large a message may be.</para>
     /// </remarks>
-    public int ReadBufferSize { get; set; } = 8096;
+    public int ReadBufferSize
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 8096;
 
     /// <summary>
     /// Gets or sets the maximum total size of a message the jetstream will accept. Messages exceeding this limit are rejected.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
     /// <remarks>
     /// <para>This is also the size sent to the server, which will not send a message larger than it.</para>
     /// </remarks>
-    public int MaximumTotalMessageSize { get; set; } = WebSocketExtensions.DefaultMaxMessageSize;
+    public int MaximumTotalMessageSize
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = WebSocketExtensions.DefaultMaxMessageSize;
+
+    /// <summary>
+    /// Gets or sets the maximum number of messages the jetstream will parse at once.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
+    /// <remarks>
+    /// <para>Once this many messages are being parsed the jetstream stops reading from the web socket until one of them
+    /// finishes, which is what applies back pressure to a server sending faster than the parsing keeps up with.</para>
+    /// </remarks>
+    public int MaximumConcurrentMessageParsers
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 64;
 
     /// <summary>
     /// Gets or sets how long to wait for a server to answer a close handshake before the connection is aborted instead.
     /// </summary>
-    public TimeSpan CloseTimeout { get; set; } = TimeSpan.FromSeconds(30);
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
+    public TimeSpan CloseTimeout
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Gets or sets any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.
@@ -79,7 +165,18 @@ public sealed class AtProtoJetstreamBuilder
     /// <summary>
     /// Gets or sets a custom <see cref="TaskFactory"/> to use for background message parsing.
     /// </summary>
-    public TaskFactory TaskFactory { get; set; } = new TaskFactory(TaskScheduler.Default);
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    public TaskFactory TaskFactory
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    } = new TaskFactory(TaskScheduler.Default);
 
     /// <summary>
     /// Gets or sets any <see cref="Did"/>s to limit commit events to.
@@ -240,6 +337,28 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures the maximum number of messages the <see cref="AtProtoJetstream"/> will parse at once.
+    /// </summary>
+    /// <param name="maximumConcurrentMessageParsers">The maximum number of messages to parse at once.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumConcurrentMessageParsers"/> is equal to, or less than, zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Messages are parsed away from the loop which reads them, so this bounds how many of them may be in flight at once, whereas
+    ///   <see cref="SetMaximumTotalMessageSize(int)"/> bounds how large any one of them may be. Once the limit is reached the jetstream
+    ///   stops reading from the web socket until a parse finishes.
+    /// </para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder SetMaximumConcurrentMessageParsers(int maximumConcurrentMessageParsers)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumConcurrentMessageParsers);
+
+        MaximumConcurrentMessageParsers = maximumConcurrentMessageParsers;
+
+        return this;
+    }
+
+    /// <summary>
     /// Configures how long the <see cref="AtProtoJetstream"/> waits for a server to answer a close handshake.
     /// </summary>
     /// <param name="closeTimeout">How long to wait for a server to answer a close handshake before aborting the connection instead.</param>
@@ -364,6 +483,7 @@ public sealed class AtProtoJetstreamBuilder
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
             CloseTimeout = CloseTimeout,
+            MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
         };
 
         if (HttpClientFactory is null)
