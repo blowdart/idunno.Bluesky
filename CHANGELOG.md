@@ -157,6 +157,14 @@
 * Setting `AtProtoAgent.Credentials` on a disposed agent now throws `ObjectDisposedException` rather than silently discarding the credential.
 * `AtProtoAgent.RefreshCredentials()` now reads the agent credentials once, so a refresh which runs concurrently cannot leave it refreshing a credential it did not check.
 * `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
+* Setting `AccessTokenCredential.AccessJwt` now updates `Did` and `ExpiresOn` from the new token, rather than leaving them describing the token it replaced.
+* Setting `AccessJwt` on `AccessCredentials`, `AccessTokenCredential` and `ServiceCredential` now extracts the new token's identity and expiry before publishing any of them, so a token which cannot be read leaves the credential untouched instead of pairing a new token with an old identity.
+* `ServiceCredential.ExpiresOn` and `ServiceCredential.Did`, and `AccessTokenCredential.ExpiresOn` and `AccessTokenCredential.Did`, are now read under the lock their values are written under.
+* A service token carrying no audience is now rejected with `ArgumentException` rather than `InvalidOperationException`.
+* `AtProtoCredential.TryCreate()` now rejects a `ClaimsIdentity` whose `did` claim disagrees with the subject of its access token, and requires the service to be an absolute http or https `Uri`.
+* An empty or whitespace `DPoP-Nonce` response header is no longer treated as a nonce to rotate to, which could throw whilst handling a response or discard a working nonce.
+* `DPoPRefreshCredential` and `DPoPRevokeCredentials` no longer build a DPoP proof token factory on every request.
+* `AccessCredentials.ExtractJwtProperties()` is no longer exposed as a protected member.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
 * `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
 * `OAuthClient` now reuses its DPoP proof token factory when refreshing credentials instead of importing the proof key on every request it makes.

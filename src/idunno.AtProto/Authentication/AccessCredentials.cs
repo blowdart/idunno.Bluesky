@@ -14,9 +14,9 @@ namespace idunno.AtProto.Authentication;
 public class AccessCredentials : RefreshCredential, IAccessCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _accessCredentialsLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _accessCredentialsLock = new();
 #endif
 
     private string _accessToken;
@@ -38,19 +38,26 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
+        (_did, _expiresOn) = ExtractJwtProperties(accessJwt);
         _accessToken = accessJwt;
-        ExtractJwtProperties(accessJwt);
     }
 
     /// <summary>
     /// Gets a string representation of the JWT to use when making authenticated access requests.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Setting this also updates <see cref="Did"/> and <see cref="ExpiresOn"/> from the new token. The new values are
+    ///   extracted before any of the three are published, so a token whose subject cannot be read is rejected without
+    ///   leaving the credential holding a token paired with the identity or the expiry of the one it replaced.
+    /// </para>
+    /// </remarks>
     public string AccessJwt
     {
         get
         {
-            lock (_lock)
+            lock (_accessCredentialsLock)
             {
                 return _accessToken;
             }
@@ -60,10 +67,13 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            (Did did, DateTimeOffset expiresOn) = ExtractJwtProperties(value);
+
+            lock (_accessCredentialsLock)
             {
                 _accessToken = value;
-                ExtractJwtProperties(value);
+                _did = did;
+                _expiresOn = expiresOn;
             }
         }
     }
@@ -83,7 +93,7 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     {
         get
         {
-            lock (_lock)
+            lock (_accessCredentialsLock)
             {
                 return _expiresOn;
             }
@@ -97,7 +107,7 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     {
         get
         {
-            lock (_lock)
+            lock (_accessCredentialsLock)
             {
                 return _did;
             }
@@ -117,21 +127,17 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     }
 
     /// <summary>
-    /// Extracts the DID and expiration date from the specified jwt and sets the <see cref="Did"/> and <see cref="ExpiresOn"/> properties.
+    /// Extracts the DID and expiration date from the specified jwt.
     /// </summary>
     /// <param name="jwt">A string representation of the jwt to extract the properties from</param>.
+    /// <returns>The DID and expiration date the jwt carries.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or whitespace.</exception>
-    [MemberNotNull(nameof(_did))]
-    protected void ExtractJwtProperties(string jwt)
+    private static (Did did, DateTimeOffset expiresOn) ExtractJwtProperties(string jwt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
         JsonWebToken token = new(jwt);
 
-        lock (_lock)
-        {
-            _did = new Did(token.Subject);
-            _expiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
-        }
+        return (new Did(token.Subject), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
     }
 }

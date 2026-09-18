@@ -16,12 +16,14 @@ namespace idunno.AtProto.Authentication;
 public class ServiceCredential : AtProtoCredential, IAccessCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _serviceCredentialLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _serviceCredentialLock = new();
 #endif
 
     private string _accessToken;
+    private DateTimeOffset _expiresOn;
+    private Did _did;
 
     /// <summary>
     /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/>.
@@ -29,25 +31,31 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
     /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> is <see langword="null"/> or whitespace, or carries no audience.</exception>
     public ServiceCredential(Uri service, string accessJwt) : base(service, AuthenticationType.Service)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
 
+        (_did, _expiresOn) = ExtractJwtProperties(accessJwt);
         _accessToken = accessJwt;
-        ExtractJwtProperties(accessJwt);
     }
 
     /// <summary>
     /// Gets a string representation of the JWT to use when making authenticated access requests.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace, or carries no audience.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Setting this also updates <see cref="Did"/> and <see cref="ExpiresOn"/> from the new token. The three are published
+    ///   together, so a token is never left paired with the identity or the expiry of the token it replaced.
+    /// </para>
+    /// </remarks>
     public string AccessJwt
     {
         get
         {
-            lock (_lock)
+            lock (_serviceCredentialLock)
             {
                 return _accessToken;
             }
@@ -57,10 +65,13 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            (Did did, DateTimeOffset expiresOn) = ExtractJwtProperties(value);
+
+            lock (_serviceCredentialLock)
             {
                 _accessToken = value;
-                ExtractJwtProperties(value);
+                _did = did;
+                _expiresOn = expiresOn;
             }
         }
     }
@@ -71,13 +82,41 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     /// <remarks>
     /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
     /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>
+    /// <para>
+    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
+    ///   expiry of one token alongside another.
+    /// </para>
     /// </remarks>
-    public DateTimeOffset ExpiresOn { get; private set; }
+    public DateTimeOffset ExpiresOn
+    {
+        get
+        {
+            lock (_serviceCredentialLock)
+            {
+                return _expiresOn;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
     /// </summary>
-    public Did Did { get; private set; }
+    /// <remarks>
+    /// <para>
+    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
+    ///   audience of one token alongside another.
+    /// </para>
+    /// </remarks>
+    public Did Did
+    {
+        get
+        {
+            lock (_serviceCredentialLock)
+            {
+                return _did;
+            }
+        }
+    }
 
     /// <summary>
     /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
@@ -88,21 +127,20 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        lock (_lock)
-        {
-            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
-        }
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
     }
 
-    [MemberNotNull(nameof(ExpiresOn))]
-    [MemberNotNull(nameof(Did))]
-    private void ExtractJwtProperties(string jwt)
+    private static (Did did, DateTimeOffset expiresOn) ExtractJwtProperties(string jwt)
     {
         JsonWebToken token = new(jwt);
 
         // Service JWTs don't have subjects, but they do have audiences which is equivalent for services.
 
-        Did = new Did(token.Audiences.First());
-        ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+        if (token.Audiences is null || !token.Audiences.Any())
+        {
+            throw new ArgumentException("Service token carries no audience.", nameof(jwt));
+        }
+
+        return (new Did(token.Audiences.First()), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
     }
 }

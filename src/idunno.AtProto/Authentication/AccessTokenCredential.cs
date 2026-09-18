@@ -14,12 +14,14 @@ namespace idunno.AtProto.Authentication;
 public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _accessTokenCredentialLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _accessTokenCredentialLock = new();
 #endif
 
     private string _accessJwt;
+    private DateTimeOffset _expiresOn;
+    private Did _did;
 
     private static readonly Uri s_invalidServiceUri = new("https://invalid.invalid");
 
@@ -45,19 +47,25 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
+        (_did, _expiresOn) = ExtractJwtProperties(jwt);
         _accessJwt = jwt;
-        ExtractJwtProperties(jwt);
     }
 
     /// <summary>
     /// Gets a string representation of the JWT to use when making authenticated access requests.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Setting this also updates <see cref="Did"/> and <see cref="ExpiresOn"/> from the new token. The three are published
+    ///   together, so a token is never left paired with the identity or the expiry of the token it replaced.
+    /// </para>
+    /// </remarks>
     public string AccessJwt
     {
         get
         {
-            lock (_lock)
+            lock (_accessTokenCredentialLock)
             {
                 return _accessJwt;
             }
@@ -67,9 +75,13 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            (Did did, DateTimeOffset expiresOn) = ExtractJwtProperties(value);
+
+            lock (_accessTokenCredentialLock)
             {
                 _accessJwt = value;
+                _did = did;
+                _expiresOn = expiresOn;
             }
         }
     }
@@ -80,13 +92,41 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
     /// <remarks>
     /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
     /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>
+    /// <para>
+    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
+    ///   expiry of one token alongside another.
+    /// </para>
     /// </remarks>
-    public DateTimeOffset ExpiresOn { get; private set; }
+    public DateTimeOffset ExpiresOn
+    {
+        get
+        {
+            lock (_accessTokenCredentialLock)
+            {
+                return _expiresOn;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
     /// </summary>
-    public Did Did { get; private set; }
+    /// <remarks>
+    /// <para>
+    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
+    ///   subject of one token alongside another.
+    /// </para>
+    /// </remarks>
+    public Did Did
+    {
+        get
+        {
+            lock (_accessTokenCredentialLock)
+            {
+                return _did;
+            }
+        }
+    }
 
     /// <summary>
     /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
@@ -97,21 +137,16 @@ public sealed class AccessTokenCredential : AtProtoCredential, IAccessCredential
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        lock (_lock)
-        {
-            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
-        }
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
     }
 
-    [MemberNotNull(nameof(ExpiresOn))]
-    [MemberNotNull(nameof(Did))]
-    private void ExtractJwtProperties(string jwt)
+    private static (Did did, DateTimeOffset expiresOn) ExtractJwtProperties(string jwt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
         JsonWebToken token = new(jwt);
-        Did = new Did(token.Subject);
-        ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+
+        return (new Did(token.Subject), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
     }
 
 }

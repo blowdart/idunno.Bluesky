@@ -12,9 +12,9 @@ namespace idunno.AtProto.Authentication;
 public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _dPoPAccessCredentialsLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _dPoPAccessCredentialsLock = new();
 #endif
 
     private string _dPoPProofKey;
@@ -54,7 +54,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPAccessCredentialsLock)
             {
                 return _dPoPProofKey;
             }
@@ -64,7 +64,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            lock (_dPoPAccessCredentialsLock)
             {
                 _dPoPProofKey = value;
                 _proofTokenFactory = null;
@@ -80,7 +80,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPAccessCredentialsLock)
             {
                 return _dPoPNonce;
             }
@@ -90,7 +90,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            lock (_dPoPAccessCredentialsLock)
             {
                 _dPoPNonce = value;
             }
@@ -116,7 +116,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        lock (_lock)
+        lock (_dPoPAccessCredentialsLock)
         {
             string accessJwt = AccessJwt;
 
