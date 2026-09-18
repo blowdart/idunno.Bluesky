@@ -46,7 +46,7 @@ internal sealed class Worker(IOptionsMonitor<BotOptions> optionsDelegate) : Back
                     try
                     {
                         Post? post = JsonSerializer.Deserialize<Post>(
-                            commitEvent.Commit.Record,
+                            commitEvent.Commit.Record.Value,
                             BlueskyServer.BlueskyJsonSerializerOptions);
 
                         if (post != null && !string.IsNullOrEmpty(post.Text))

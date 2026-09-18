@@ -88,6 +88,18 @@ public class AtProtoJetstream : IDisposable
 
     private readonly Decompressor? _decompressor;
 
+    /// <summary>
+    /// Serialises use of <see cref="_decompressor"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>A <see cref="Decompressor"/> holds the decompression context, so it cannot be used from two places at once.</para>
+    /// </remarks>
+#if NET9_0_OR_GREATER
+    private readonly Lock _decompressorLock = new();
+#else
+    private readonly object _decompressorLock = new();
+#endif
+
     private List<Nsid> _collections = [];
 
     private List<Did> _dids = [];
@@ -783,7 +795,10 @@ public class AtProtoJetstream : IDisposable
                 invoker: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
+            // Tagged with the server rather than with the subscription uri. The subscription uri carries every did and
+            // collection the caller is following, and a cursor, so tagging with it would both publish who is being
+            // watched to whatever collects the metrics and give the tag an unbounded set of values.
+            _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
         }
         catch (Exception ex)
         {
@@ -792,8 +807,9 @@ public class AtProtoJetstream : IDisposable
                 JetStreamLogger.WebSocketException(_logger, webSocketException);
             }
 
-            // Counted once here, however the connection failed, rather than again below.
-            _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
+            // Counted once here, however the connection failed, rather than again below, and tagged with the server
+            // rather than with the subscription uri for the reasons given above.
+            _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
 
             if (client.State != previousState)
             {
@@ -1090,25 +1106,40 @@ public class AtProtoJetstream : IDisposable
 
                 if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                 {
-                    // A close frame is a write, so it is serialised with the other writes to the socket. The semaphore
-                    // is released before the event below is raised, so a handler which closes or reconnects does not
-                    // wait on a semaphore this loop is holding.
-                    await _sendSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    // A close frame is a write, so it is serialised with the other writes to the socket. Both the wait
+                    // and the write are given a deadline of their own, because a write which is already in flight
+                    // against a peer that has stopped reading never completes by itself, and without a deadline it
+                    // would hold this reply, and so this loop, for as long as the peer cared to leave it there.
+                    using CancellationTokenSource sendCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+                    sendCancellationTokenSource.CancelAfter(Options.SendTimeout);
 
                     try
                     {
-                        await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        await _sendSemaphore.WaitAsync(sendCancellationTokenSource.Token).ConfigureAwait(false);
+
+                        try
+                        {
+                            await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: sendCancellationTokenSource.Token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            _sendSemaphore.Release();
+                        }
+
+                        // The server asked to close and the close was completed by replying to it, which is as graceful
+                        // as a disconnection gets. The flag records how the connection ended, not which end ended it.
+                        DisconnectedGracefully = true;
                     }
-                    finally
+                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                     {
-                        _sendSemaphore.Release();
+                        // The reply could not be sent within the deadline, so the connection is dropped rather than
+                        // left waiting on a server which has stopped reading it.
+                        JetStreamLogger.CloseReplyTimedOut(_logger, Options.SendTimeout);
+                        client.Abort();
                     }
 
                     JetStreamLogger.CloseMessageReceived(_logger);
-
-                    // The server asked to close and the close was completed by replying to it, which is as graceful as
-                    // a disconnection gets. The flag records how the connection ended, not which end ended it.
-                    DisconnectedGracefully = true;
 
                     _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                     OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
@@ -1133,7 +1164,14 @@ public class AtProtoJetstream : IDisposable
                         // Unwrap defaults to allowing 2GB of decompressed output, so without a limit of our own the
                         // maximum message size would only bound the compressed frame. A 24KB frame can declare, and
                         // expand to, hundreds of megabytes, so the limit has to be applied to what comes out of it.
-                        receivedData = _decompressor!.Unwrap(bufferAsSpan, Options.MaxMessageSize).ToArray();
+                        //
+                        // A Decompressor holds the decompression context, so it cannot be used from two places at once.
+                        // A reconnection started from a ConnectionStateChanged handler can leave a second receive loop
+                        // running before this one has noticed its own socket closing, and both would reach this.
+                        lock (_decompressorLock)
+                        {
+                            receivedData = _decompressor!.Unwrap(bufferAsSpan, Options.MaxMessageSize).ToArray();
+                        }
                     }
                     catch (ZstdException ex)
                     {
@@ -1174,11 +1212,26 @@ public class AtProtoJetstream : IDisposable
                     // lets the transport apply the back pressure the server needs to see.
                     await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
-                    // never running the delegate, and the slot taken above is only given back by running it.
+                    try
+                    {
+                        // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
+                        // never running the delegate, and the slot taken above is only given back by running it.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    Options.TaskFactory.StartNew(() => ParseMessageAndReleaseSlot(messageAsString), CancellationToken.None);
+                        Options.TaskFactory.StartNew(() => ParseMessageAndReleaseSlot(messageAsString), CancellationToken.None);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                    }
+                    catch (Exception ex)
+                    {
+                        // The slot is only ever given back by the delegate, so a factory which refuses to run it keeps
+                        // the slot for good. Enough of those and this loop waits above forever with the socket still
+                        // open, reading nothing and reporting nothing.
+                        _parseSemaphore.Release();
+
+                        JetStreamLogger.CouldNotStartMessageParser(_logger, ex);
+                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+
+                        throw;
+                    }
                 }
                 else
                 {
@@ -1257,7 +1310,19 @@ public class AtProtoJetstream : IDisposable
 
                 if (derivedEvent is not null)
                 {
-                    OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
+                    // Raised outside the parsing catches below. A handler is application code, and an exception out of
+                    // one says nothing about the message, so letting it fall into them would both count an application
+                    // bug as a message parsing failure and log it as though the server had sent something unparsable.
+                    try
+                    {
+                        OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
+                    }
+                    catch (Exception ex)
+                    {
+                        JetStreamLogger.RecordReceivedHandlerThrew(logger, ex);
+
+                        return Task.FromException(ex);
+                    }
                 }
                 else
                 {
@@ -1356,7 +1421,20 @@ public class AtProtoJetstream : IDisposable
         string message = JsonSerializer.Serialize(optionsUpdateMessage, SourceGenerationContext.Default.OptionsUpdateMessage);
         byte[] messageAsBytes = Encoding.UTF8.GetBytes(message);
 
-        await _sendSemaphore.WaitAsync().ConfigureAwait(false);
+        // Both the wait and the send are given a deadline. A send against a peer which has stopped reading never
+        // completes by itself, and this send holds the semaphore every other write to the socket queues behind,
+        // including the reply which completes a close handshake the server started.
+        using CancellationTokenSource sendCancellationTokenSource = new(Options.SendTimeout);
+
+        try
+        {
+            await _sendSemaphore.WaitAsync(sendCancellationTokenSource.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            JetStreamLogger.OptionsUpdateMessageTimedOut(_logger, Options.SendTimeout);
+            return;
+        }
 
         try
         {
@@ -1367,7 +1445,7 @@ public class AtProtoJetstream : IDisposable
                 return;
             }
 
-            await client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+            await client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, sendCancellationTokenSource.Token).FireAndForgetAsync(_logger).ConfigureAwait(false);
         }
         finally
         {

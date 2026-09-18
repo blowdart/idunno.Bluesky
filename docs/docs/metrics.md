@@ -84,6 +84,12 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 | --- | --- | --- | --- |
 | `total.message_parsing_failures` | Counter&lt;long&gt; | Messages | Total number of messages that failed to parse after receipt by a `AtProtoJetstream` instance. |
 
+### Metric: total.message_decompression_failures
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `total.message_decompression_failures` | Counter&lt;long&gt; | Messages | Total number of messages that failed to decompress after receipt by a `AtProtoJetstream` instance. |
+
 ### Metric: total.events_parsed
 
 | Name | Instrument Type | Unit | Description |

@@ -35,7 +35,11 @@ public sealed record AtJetstreamCommit
     /// <summary>
     /// Gets the value, if any, of the record that triggered the commit event.
     /// </summary>
-    public JsonDocument? Record { get; init; }
+    /// <remarks>
+    /// <para>A record can be of any type, including one this library knows nothing about, so it is presented as raw
+    /// JSON rather than as a strongly typed value.</para>
+    /// </remarks>
+    public JsonElement? Record { get; init; }
 
     /// <summary>
     /// Gets the content identifier for the commit event.

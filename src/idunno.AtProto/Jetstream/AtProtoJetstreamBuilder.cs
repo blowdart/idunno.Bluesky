@@ -158,6 +158,22 @@ public sealed class AtProtoJetstreamBuilder
     } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Gets or sets how long a single write to the web socket may take before it is abandoned.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
+    public TimeSpan SendTimeout
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets or sets any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.
     /// </summary>
     public WebSocketOptions? WebSocketOptions { get; set; }
@@ -374,6 +390,21 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures how long a single write to the web socket may take before the <see cref="AtProtoJetstream"/> abandons it.
+    /// </summary>
+    /// <param name="sendTimeout">How long a single write to the web socket may take before it is abandoned.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sendTimeout"/> is equal to, or less than, zero.</exception>
+    public AtProtoJetstreamBuilder SetSendTimeout(TimeSpan sendTimeout)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sendTimeout, TimeSpan.Zero);
+
+        SendTimeout = sendTimeout;
+
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.
     /// </summary>
     /// <param name="webSocketOptions">The <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.</param>
@@ -483,6 +514,7 @@ public sealed class AtProtoJetstreamBuilder
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
             CloseTimeout = CloseTimeout,
+            SendTimeout = SendTimeout,
             MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
         };
 

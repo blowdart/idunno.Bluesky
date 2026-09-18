@@ -62,8 +62,51 @@ If you want the raw messages from the jetstream subscribe to the `MessageReceive
 
 > [!WARNING]
 > The Jetstream covers all ATProto events. The Commit events cover not only Bluesky record commits but any commits from a registered PDS, such as [WhiteWind](https://whtwnd.com)
-> blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages.  This is why the `Record` property in `AtJetstreamCommit` is presented as a `JsonDocument`.
+> blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages.  This is why the `Record` property in `AtJetstreamCommit` is presented as a `JsonElement`.
 > When deserializing this property to, for example, a `BlueskyRecord` you will encounter exceptions if you attempt it on a non-Bluesky defined record 
+
+> [!IMPORTANT]
+> In version 7.0.0 `AtJetstreamCommit.Record` changed from a `JsonDocument?` to a `JsonElement?`.
+>
+> Reading the record directly changes from
+>
+> ```c#
+> JsonDocument? record = commitEvent.Commit.Record;
+>
+> if (record is not null)
+> {
+>     Console.WriteLine(record.RootElement.GetProperty("text").GetString());
+> }
+> ```
+>
+> to
+>
+> ```c#
+> JsonElement? record = commitEvent.Commit.Record;
+>
+> if (record is not null)
+> {
+>     Console.WriteLine(record.Value.GetProperty("text").GetString());
+> }
+> ```
+>
+> Deserializing it changes from
+>
+> ```c#
+> Post? post = JsonSerializer.Deserialize<Post>(
+>     commitEvent.Commit.Record.RootElement,
+>     BlueskyServer.BlueskyJsonSerializerOptions);
+> ```
+>
+> to
+>
+> ```c#
+> Post? post = JsonSerializer.Deserialize<Post>(
+>     commitEvent.Commit.Record.Value,
+>     BlueskyServer.BlueskyJsonSerializerOptions);
+> ```
+>
+> In short, replace `.RootElement` with `.Value`, and delete any `using` or `Dispose()` you had wrapped around the record.
 
 Once you have a configured instance of `AtProtoJetstream` call `ConnectAsync` and processing will begin in the background, raising events as appropriate.
 When you are finished with the Jetstream call `CloseAsync`

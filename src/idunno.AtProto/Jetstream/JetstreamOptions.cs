@@ -111,6 +111,29 @@ public record JetstreamOptions
     } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Gets how long a single write to the web socket may take before it is abandoned. Defaults to 30 seconds.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Writes to a web socket are serialised, because only one may be outstanding at a time. A write to a peer which has
+    ///   stopped reading never completes by itself, so without a deadline it holds every later write behind it, including the
+    ///   reply which completes a close handshake the server started.
+    /// </para>
+    /// </remarks>
+    public TimeSpan SendTimeout
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets the maximum number of messages which may be parsed at once. Defaults to 64.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>

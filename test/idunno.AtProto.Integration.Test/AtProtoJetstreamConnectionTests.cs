@@ -223,6 +223,49 @@ public class AtProtoJetstreamConnectionTests
     }
 
     [Fact]
+    public async Task ConnectionMetricsAreNotTaggedWithTheSubscriptionFilters()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        Did watchedDid = new("did:plc:g6ylltenitt4tp27bpwalh7b");
+        Nsid watchedCollection = new("app.bsky.feed.post");
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        using var meterFactory = new TestMeterFactory();
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory },
+            collections: [watchedCollection],
+            dids: [watchedDid]))
+        {
+            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.connections_opened");
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+            }
+
+            string?[] tags = [.. collector.GetMeasurementSnapshot().Select(measurement => measurement.Tags["server"]?.ToString())];
+
+            Assert.NotEmpty(tags);
+
+            // The subscription uri names every did and collection being watched. Tagging a metric with it publishes
+            // who is being watched to whatever collects the metrics, and gives the tag an unbounded set of values.
+            Assert.All(tags, tag => Assert.Equal(server.Uri.ToString(), tag));
+            Assert.All(tags, tag => Assert.DoesNotContain("wantedDids", tag, StringComparison.Ordinal));
+            Assert.All(tags, tag => Assert.DoesNotContain(watchedDid.ToString(), tag, StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
     public async Task AConnectionWhichCannotBeMadeIsCountedOnce()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -235,7 +278,7 @@ public class AtProtoJetstreamConnectionTests
             uri: deadUri,
             options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory }))
         {
-            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total_connections_failed");
+            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.connections_failed");
 
             using (var httpClient = new HttpClient())
             {
@@ -525,30 +568,6 @@ public class AtProtoJetstreamConnectionTests
         finally
         {
             listener.Stop();
-        }
-    }
-
-    private sealed class TestMeterFactory : System.Diagnostics.Metrics.IMeterFactory
-    {
-        private readonly List<System.Diagnostics.Metrics.Meter> _meters = [];
-
-        public System.Diagnostics.Metrics.Meter Create(System.Diagnostics.Metrics.MeterOptions options)
-        {
-            var meter = new System.Diagnostics.Metrics.Meter(options.Name, options.Version, options.Tags, scope: this);
-
-            _meters.Add(meter);
-
-            return meter;
-        }
-
-        public void Dispose()
-        {
-            foreach (System.Diagnostics.Metrics.Meter meter in _meters)
-            {
-                meter.Dispose();
-            }
-
-            _meters.Clear();
         }
     }
 

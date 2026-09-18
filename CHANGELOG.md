@@ -51,6 +51,8 @@
   `Func<CredentialsUpdatedEventArgs, CancellationToken, Task>?`. Unlike the event, the agent awaits this callback before continuing, so asynchronous
   credential persistence completes before the updated credentials are used, and any exceptions it throws surface to the caller rather than being
   silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
+* Added `JetstreamOptions.SendTimeout` and `AtProtoJetstreamBuilder.SetSendTimeout()`, which bound how long a jetstream waits to send a message to the
+  server. The default is 30 seconds.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -137,6 +139,11 @@
 * `Label.Signature` is now `IEnumerable<byte>?` rather than `IEnumerable<byte>`. The `sig` property is optional in
   `com.atproto.label.defs`, so most labels carry no signature. Previously an absent `sig` left the non-nullable property `null`,
   and code following the annotation would fail with a `NullReferenceException`. Check `Signature` for `null` before enumerating it.
+* `AtJetstreamCommit.Record` is now `JsonElement?` rather than `JsonDocument?`. A `JsonDocument` owns memory rented from the array pool and has to be
+  disposed, but a record handed to an event handler has no owner to dispose it, so every commit leaked the buffer it had rented. A `JsonElement` owns
+  nothing. Replace `Record.RootElement` with `Record.Value`, and remove any `using` or `Dispose()` around the record.
+* The `idunno.atproto.jetstream.total_connections_failed` counter has been renamed to `idunno.atproto.jetstream.total.connections_failed`, matching the
+  documented name and every other counter the jetstream publishes. Dashboards and alerts using the old name need updating.
 
 #### idunno.Bluesky
 
@@ -176,6 +183,20 @@
 
 #### idunno.AtProto
 
+* A jetstream event whose `kind` is one this library does not model is now surfaced as `JetStreamEventKind.Unknown` rather than failing to deserialize.
+  The jetstream server decides which kinds it emits, so a kind added upstream previously made every message carrying it unparsable and dropped.
+* `AtJetstreamEvent.DateTimeOffset` now clamps a `time_us` outside the range a `DateTimeOffset` can hold to `DateTimeOffset.MinValue` or
+  `DateTimeOffset.MaxValue`, rather than throwing `ArgumentOutOfRangeException` out of a property getter on remote input.
+* Copying an `AtJetstreamEvent` with `with { TimeStamp = ... }` now reports the new timestamp. A cached value was copied by the record copy
+  constructor, so a copy whose original had already been read reported the original's time.
+* The jetstream connection counters are no longer tagged with the subscription uri, which names every DID and collection being watched and the cursor.
+  The tag now carries only the server, so who is being watched is not published to whatever collects the metrics, and the tag has a bounded set of values.
+* A jetstream whose `TaskFactory` refuses to start a message parser now gives back the parse slot it took. Previously enough such failures left the
+  receive loop waiting forever for a slot with the socket still open, reading nothing and reporting nothing.
+* An exception thrown by a `RecordReceived` handler is no longer counted as a message parsing failure or logged as an unparsable server message.
+* The jetstream now bounds how long it waits to send a close reply or an options update, so an unresponsive server cannot leave it blocked indefinitely
+  holding the send lock.
+* The `ZstdSharp.Decompressor` a jetstream shares across messages is now used under a lock, as it is not thread safe and messages are parsed concurrently.
 * A handle whose `_atproto` DNS record set carries more than one, conflicting, `did=` text record is now treated as unresolvable, and the conflict is
   logged as an error. Resolution previously fell back to `/.well-known/atproto-did`, which let the host the handle points at choose which of the
   conflicting records won. Identical, repeated, records are still resolved.
