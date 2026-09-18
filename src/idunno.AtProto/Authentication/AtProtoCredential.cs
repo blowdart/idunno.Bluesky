@@ -139,8 +139,20 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// <param name="claimsIdentity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
     /// <param name="credentials">When this method returns, contains the <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="claimsIdentity"/>, or <see langword="null"/> if the creation failed.</param>
     /// <returns><see langword="true"/> if the <see cref="DPoPAccessCredentials"/> was successfully created; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="CredentialException">Thrown when the <paramref name="claimsIdentity"/> does not contain the required claims, or the claim values are invalid.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="claimsIdentity"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    ///   Thrown when the subject of the access token claim in <paramref name="claimsIdentity"/> is not a valid <see cref="AtProto.Did"/>.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="AtProtoClaims.Did"/> claim is required to agree with the subject of the access token the credentials
+    ///   are built from. An identity whose claims disagree describes two different actors, so it is rejected rather than
+    ///   allowing the token's subject to silently win.
+    /// </para>
+    /// <para>
+    ///   The service <see cref="Uri"/> is taken from the issuer of the did claim and is required to be an absolute http or
+    ///   https <see cref="Uri"/>, so that a hostile issuer cannot direct requests at another scheme.
+    /// </para>
+    /// </remarks>
     public static bool TryCreate(ClaimsIdentity claimsIdentity, out DPoPAccessCredentials? credentials)
     {
         if (claimsIdentity is null)
@@ -173,7 +185,7 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
             return false;
         }
 
-        if (!Did.TryParse(didAsString, out Did? _))
+        if (!Did.TryParse(didAsString, out Did? did))
         {
             credentials = null;
             return false;
@@ -182,18 +194,29 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
         if (!Uri.TryCreate(
             serviceAsString,
             new UriCreationOptions(),
-            out Uri? service))
+            out Uri? service) ||
+            !service.IsAbsoluteUri ||
+            (!service.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.Ordinal) &&
+             !service.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.Ordinal)))
         {
             credentials = null;
             return false;
         }
 
-        credentials = new DPoPAccessCredentials(
+        DPoPAccessCredentials createdCredentials = new(
             service: service,
             accessJwt: accessJwt,
             refreshToken: refreshToken,
             dPoPProofKey: dPoPProofKey,
             dPoPNonce: dPoPNonce);
+
+        if (createdCredentials.Did != did)
+        {
+            credentials = null;
+            return false;
+        }
+
+        credentials = createdCredentials;
 
         return true;
     }

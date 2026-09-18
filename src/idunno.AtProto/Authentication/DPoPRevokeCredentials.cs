@@ -9,10 +9,12 @@ namespace idunno.AtProto.Authentication;
 internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _dPoPRevokeCredentialsLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _dPoPRevokeCredentialsLock = new();
 #endif
+
+    private DefaultDPoPProofTokenFactory? _proofTokenFactory;
 
     public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
     {
@@ -38,7 +40,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
             }
@@ -48,7 +50,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 field = value;
             }
@@ -59,7 +61,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
             }
@@ -69,9 +71,10 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 field = value;
+                _proofTokenFactory = null;
             }
         }
     }
@@ -90,7 +93,7 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
             }
@@ -98,20 +101,36 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
 
         set
         {
-            lock (_lock)
+            lock (_dPoPRevokeCredentialsLock)
             {
                 field = value ?? string.Empty;
             }
         }
     }
 
+    /// <summary>
+    /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
+    /// </summary>
+    /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The proof for a revocation request deliberately does not carry an <c>ath</c> claim, so
+    ///   <see cref="DPoPProofRequest.AccessToken"/> is left unset. Revocation is not a protected resource request, and
+    ///   setting it has been tested against a live authorization server and rejected. Do not add it back.
+    /// </para>
+    /// <para>
+    ///   The proof token factory is cached and rebuilt only when the <see cref="DPoPProofKey"/> changes. Building it imports
+    ///   the key, which every request sharing this credential would otherwise pay for whilst holding the lock.
+    /// </para>
+    /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        lock (_lock)
+        lock (_dPoPRevokeCredentialsLock)
         {
-
+            // Do not set AccessToken here. See the remarks above.
             DPoPProofRequest dPoPProofRequest = new()
             {
                 DPoPNonce = DPoPNonce,
@@ -119,8 +138,8 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
                 Url = httpRequestMessage.GetDPoPUrl()
             };
 
-            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+            _proofTokenFactory ??= new DefaultDPoPProofTokenFactory(DPoPProofKey);
+            DPoPProof proofToken = _proofTokenFactory.CreateProofToken(dPoPProofRequest);
 
             httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
         }

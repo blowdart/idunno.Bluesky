@@ -173,3 +173,4 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetCloseTimeout(System.TimeSpan
 idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.get -> System.TimeSpan
 idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.init -> void
 idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>?
+*REMOVED*idunno.AtProto.Authentication.AccessCredentials.ExtractJwtProperties(string! jwt) -> void

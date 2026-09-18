@@ -1583,7 +1583,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
 
-        if (returnedDPoPNonce is null ||
+        // An empty nonce header carries nothing to rotate to. Assigning it would throw on a credential whose nonce
+        // setter requires a value, out of the middle of handling a response, and would discard a working nonce on one
+        // whose setter does not.
+        if (string.IsNullOrWhiteSpace(returnedDPoPNonce) ||
             string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
         {
             return;

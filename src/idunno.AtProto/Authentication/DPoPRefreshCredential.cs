@@ -12,13 +12,14 @@ namespace idunno.AtProto.Authentication;
 public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential
 {
 #if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
+    private readonly Lock _dPoPRefreshCredentialLock = new();
 #else
-    private readonly object _lock = new();
+    private readonly object _dPoPRefreshCredentialLock = new();
 #endif
 
     private string _dPoPProofKey;
     private string _dPoPNonce;
+    private DefaultDPoPProofTokenFactory? _proofTokenFactory;
 
     /// <summary>
     /// Creates a new instance of <see cref="DPoPRefreshCredential"/> with the specified <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> and <paramref name="dPoPNonce"/>.
@@ -68,7 +69,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPRefreshCredentialLock)
             {
                 return _dPoPProofKey;
             }
@@ -78,9 +79,10 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            lock (_lock)
+            lock (_dPoPRefreshCredentialLock)
             {
                 _dPoPProofKey = value;
+                _proofTokenFactory = null;
             }
         }
     }
@@ -99,7 +101,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     {
         get
         {
-            lock (_lock)
+            lock (_dPoPRefreshCredentialLock)
             {
                 return _dPoPNonce;
             }
@@ -107,7 +109,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
 
         set
         {
-            lock (_lock)
+            lock (_dPoPRefreshCredentialLock)
             {
                 _dPoPNonce = value ?? string.Empty;
             }
@@ -124,12 +126,16 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     ///   The <see cref="RefreshCredential.RefreshToken">refresh token</see> is read once so that the proof token's <c>ath</c>
     ///   claim and the token presented in the authorization header are always bound to the same value.
     /// </para>
+    /// <para>
+    ///   The proof token factory is cached and rebuilt only when the <see cref="DPoPProofKey"/> changes. Building it imports
+    ///   the key, which every request sharing this credential would otherwise pay for whilst holding the lock.
+    /// </para>
     /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        lock (_lock)
+        lock (_dPoPRefreshCredentialLock)
         {
             string refreshToken = RefreshToken;
 
@@ -141,8 +147,8 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
                 Url = httpRequestMessage.GetDPoPUrl()
             };
 
-            DefaultDPoPProofTokenFactory factory = new(_dPoPProofKey);
-            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+            _proofTokenFactory ??= new DefaultDPoPProofTokenFactory(_dPoPProofKey);
+            DPoPProof proofToken = _proofTokenFactory.CreateProofToken(dPoPProofRequest);
 
             httpRequestMessage.SetDPoPToken(refreshToken, proofToken.ProofToken);
         }
