@@ -89,6 +89,9 @@
   supplied, and now shares the single definition of the SSRF protected handler an agent uses rather than carrying a second copy of it.
 * `OAuthClient.OpenBrowser()` now throws an `ArgumentException` for a relative uri, or one whose scheme is not `http` or `https`, rather than handing it
   to the platform shell and launching whichever handler is registered for it.
+* `AtProtoAgent.CreateOAuthClient()` is now `public virtual`, so the transport an agent uses for OAuth can be replaced.
+* `AtProtoAgent.RefreshCredentials()` now throws `SecurityTokenValidationException` when the authorization server issues a token for an account other
+  than the one being refreshed.
 
 #### idunno.Bluesky
 
@@ -170,6 +173,17 @@
 * `AtProtoAgent.RefreshCredentials()` now reads the agent credentials once, so a refresh which runs concurrently cannot leave it refreshing a credential it did not check.
 * `AccessCredentials.ExpiresOn` and `AccessCredentials.Did` are now read under the lock their values are written under.
 * Setting `AccessTokenCredential.AccessJwt` now updates `Did` and `ExpiresOn` from the new token, rather than leaving them describing the token it replaced.
+* An OAuth login response is now processed with the proof key of the login it belongs to, rather than with a cached client left over from an earlier
+  login, which bound the issued token to a key the returned credentials did not carry.
+* The state of a login in progress is now discarded however processing its response ends, rather than only when the authorization server returned an
+  error, so a spent PKCE code verifier and a private proof key are no longer readable through `OAuthClient.State` after a login completes or fails.
+* `OAuthClient.BuildOAuth2LogoutUri()` no longer sends the access token as an `id_token_hint`, so a live token does not reach the browser address bar,
+  history, or the `Referer` of anything the logout page goes on to request.
+* `OAuthClient.BuildOAuth2LogoutUri()` no longer overwrites the proof key and authority of a login in progress, and no longer writes them outside the
+  lock the rest of the login state is published under.
+* An OAuth refresh which is answered with a token for a different account is now rejected rather than silently re-pointing the agent at that account.
+* `AccessTokenCredential` and `DPoPAccessCredentials` now report a value which cannot be parsed as a token, or which carries a subject which is not a
+  DID, as an `ArgumentException` naming the parameter it came from.
 * Setting `AccessJwt` on `AccessCredentials`, `AccessTokenCredential` and `ServiceCredential` now extracts the new token's identity and expiry before publishing any of them, so a token which cannot be read leaves the credential untouched instead of pairing a new token with an old identity.
 * `ServiceCredential.ExpiresOn` and `ServiceCredential.Did`, and `AccessTokenCredential.ExpiresOn` and `AccessTokenCredential.Did`, are now read under the lock their values are written under.
 * A service token carrying no audience is now rejected with `ArgumentException` rather than `InvalidOperationException`.

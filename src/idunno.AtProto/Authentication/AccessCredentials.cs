@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto.Authentication;
 
@@ -31,7 +32,10 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
     /// <param name="refreshToken">A string representation of the token to use when a new access token is required.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is <see langword="null"/> or whitespace,
+    /// or when <paramref name="accessJwt"/> cannot be parsed as a JWT carrying a subject which is a valid <see cref="AtProto.Did"/>.
+    /// </exception>
     public AccessCredentials(Uri service, AuthenticationType authenticationType, string accessJwt, string refreshToken) : base(service, authenticationType, refreshToken)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -45,7 +49,10 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     /// <summary>
     /// Gets a string representation of the JWT to use when making authenticated access requests.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when setting the value and the value is <see langword="null"/> or whitespace, or cannot be parsed as a JWT
+    /// carrying a subject which is a valid <see cref="AtProto.Did"/>.
+    /// </exception>
     /// <remarks>
     /// <para>
     ///   Setting this also updates <see cref="Did"/> and <see cref="ExpiresOn"/> from the new token. The new values are
@@ -131,13 +138,40 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     /// </summary>
     /// <param name="jwt">A string representation of the jwt to extract the properties from</param>.
     /// <returns>The DID and expiration date the jwt carries.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="jwt"/> is <see langword="null"/> or whitespace, cannot be parsed as a JWT, or does not
+    /// carry a subject which is a valid <see cref="AtProto.Did"/>.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   A token which cannot be parsed, or whose subject is not a DID, is reported as an <see cref="ArgumentException"/>
+    ///   naming the parameter it came from. Both are properties of the value being supplied, so letting the underlying
+    ///   <see cref="SecurityTokenMalformedException"/> or the <see cref="AtProto.Did"/> constructor's own exception escape
+    ///   would report a failure to validate an argument as something the caller cannot relate to the value it passed.
+    /// </para>
+    /// </remarks>
     private static (Did did, DateTimeOffset expiresOn) ExtractJwtProperties(string jwt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
 
-        JsonWebToken token = new(jwt);
+        JsonWebToken token;
 
-        return (new Did(token.Subject), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
+        try
+        {
+            token = new JsonWebToken(jwt);
+        }
+        catch (ArgumentException ex)
+        {
+            // SecurityTokenMalformedException derives from ArgumentException, so this catches both an argument the token
+            // reader rejects outright and a value which is not a well formed JWT.
+            throw new ArgumentException("Value could not be parsed as a JWT.", nameof(jwt), ex);
+        }
+
+        if (!Did.TryParse(token.Subject, out Did? did))
+        {
+            throw new ArgumentException("Value does not contain a subject which is a valid DID.", nameof(jwt));
+        }
+
+        return (did, DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
     }
 }

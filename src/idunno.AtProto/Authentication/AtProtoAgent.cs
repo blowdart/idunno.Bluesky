@@ -251,7 +251,13 @@ public partial class AtProtoAgent
     /// Creates a new instance of <see cref="OAuthClient"/>.
     /// </summary>
     /// <returns>The new <see cref="OAuthClient"/> instance.</returns>
-    public OAuthClient CreateOAuthClient()
+    /// <remarks>
+    /// <para>
+    ///   This is the single place the agent builds the client it talks to an authorization server with, so overriding it
+    ///   replaces the transport for every OAuth exchange the agent performs, including the background credential refresh.
+    /// </para>
+    /// </remarks>
+    public virtual OAuthClient CreateOAuthClient()
     {
         return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
         {
@@ -1346,6 +1352,10 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
     /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
+    /// <exception cref="SecurityTokenValidationException">
+    ///   Thrown when the issued access token could not be validated, or was issued for a different actor to the one the
+    ///   agent is currently authenticated as.
+    /// </exception>
     /// <remarks>
     /// <para>
     ///   The agent <see cref="Credentials"/> are read once. Reading them repeatedly would allow a background refresh
@@ -1376,7 +1386,7 @@ public partial class AtProtoAgent
 
             DPoPRefreshCredential refreshCredential = new(accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
 
-            return await RefreshOAuthIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false);
+            return await RefreshOAuthIssuedCredentials(refreshCredential, accessCredentials.Did, cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -1393,9 +1403,17 @@ public partial class AtProtoAgent
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
     /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="credential"/> is <see langword="null"/>.</exception>
+    /// <exception cref="SecurityTokenValidationException">
+    ///   Thrown when the issued access token could not be validated, or was issued for a different actor to the one
+    ///   <paramref name="credential"/> identifies.
+    /// </exception>
     public async Task<bool> RefreshCredentials(AtProtoCredential credential, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(credential);
+
+        // The DID the credential was issued for, where the caller supplied something which carries one, so that the tokens
+        // the refresh token is exchanged for can be checked to belong to the same actor.
+        Did? expectedDid = (credential as AccessCredentials)?.Did;
 
         // Create refresh credentials if passed access credentials.
         if (credential is DPoPAccessCredentials dPoPAccessCredentials)
@@ -1409,7 +1427,7 @@ public partial class AtProtoAgent
 
         return credential switch
         {
-            DPoPRefreshCredential dPoPRefreshCredential => await RefreshOAuthIssuedCredentials(dPoPRefreshCredential, cancellationToken).ConfigureAwait(false),
+            DPoPRefreshCredential dPoPRefreshCredential => await RefreshOAuthIssuedCredentials(dPoPRefreshCredential, expectedDid, cancellationToken).ConfigureAwait(false),
             RefreshCredential refreshCredential => await RefreshSessionIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false),
             _ => throw new CredentialException(credential, "Cannot refresh credentials of this type."),
         };
@@ -1536,7 +1554,7 @@ public partial class AtProtoAgent
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    internal async Task<bool> RefreshOAuthIssuedCredentials(DPoPRefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+    internal async Task<bool> RefreshOAuthIssuedCredentials(DPoPRefreshCredential refreshCredential, Did? expectedDid = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(refreshCredential);
         ArgumentNullException.ThrowIfNull(refreshCredential.Service);
@@ -1606,6 +1624,18 @@ public partial class AtProtoAgent
                 // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
                 // a retry re-presents a token which has already been exchanged.
                 RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
+                // The refresh token was issued to one actor, so the tokens it is exchanged for must belong to that same actor.
+                // Without this an authorization server which answered with a token for a different subject would silently
+                // re-point the agent, and everything built on it, at another account.
+                if (expectedDid is not null && refreshedCredentials.Did != expectedDid)
+                {
+                    Logger.RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(_logger, expectedDid, refreshedCredentials.Did, refreshCredential.Service);
+
+                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                    throw new SecurityTokenValidationException("The issued access token was not issued for the account being refreshed.");
+                }
 
                 if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
                 {

@@ -188,4 +188,42 @@ public class CredentialTests
 
         Assert.NotNull(credentials);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("notAJwt")]
+    [InlineData("one.two")]
+    [InlineData("one.two.three.four.five.six")]
+    public void ConstructingAnAccessTokenCredentialFromAValueWhichIsNotAJwtThrowsArgumentException(string accessJwt)
+    {
+        Assert.Throws<ArgumentException>(() => new AccessTokenCredential(s_service, accessJwt));
+    }
+
+    [Theory]
+    [InlineData("notADid")]
+    [InlineData("did:")]
+    [InlineData("https://service.test/")]
+    public void ConstructingAnAccessTokenCredentialFromAJwtWhoseSubjectIsNotADidThrowsArgumentException(string subject)
+    {
+        Assert.Throws<ArgumentException>(() => new AccessTokenCredential(s_service, CreateJwt(subject: subject)));
+    }
+
+    [Fact]
+    public void SettingTheAccessJwtOnAnAccessTokenCredentialToAValueWhichIsNotAJwtThrowsArgumentException()
+    {
+        AccessTokenCredential credential = new(s_service, CreateJwt());
+
+        Assert.Throws<ArgumentException>(() => credential.AccessJwt = "notAJwt");
+    }
+
+    [Theory]
+    [InlineData("notAJwt")]
+    [InlineData("one.two")]
+    [InlineData("one.two.three.four.five.six")]
+    public void ConstructingDPoPAccessCredentialsFromAValueWhichIsNotAJwtThrowsArgumentException(string accessJwt)
+    {
+        Assert.Throws<ArgumentException>(
+            () => new DPoPAccessCredentials(s_service, accessJwt, "refreshToken", "proofKey", "nonce"));
+    }
 }

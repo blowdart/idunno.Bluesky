@@ -108,6 +108,9 @@ internal static partial class Logger
     [LoggerMessage(47, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
     internal static partial void RefreshOAuthIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
 
+    [LoggerMessage(1121, LogLevel.Error, "RefreshOAuthIssuedCredentials was refreshing {expectedDid} on {service} but the authorization server issued a token for {issuedDid}")]
+    internal static partial void RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
+
     [LoggerMessage(48, LogLevel.Debug, "Refresh token #{tokenHash} has already been exchanged by another caller, skipping refresh")]
     internal static partial void RefreshTokenAlreadyExchanged(ILogger logger, string tokenHash);
 
