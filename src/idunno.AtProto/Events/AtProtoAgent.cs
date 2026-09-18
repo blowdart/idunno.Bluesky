@@ -56,7 +56,7 @@ public partial class AtProtoAgent
     {
         EventHandler<AuthenticatedEventArgs>? authenticated = Authenticated;
 
-        if (!_disposed)
+        if (!_atProtoAgentDisposed)
         {
             authenticated?.Invoke(this, e);
         }
@@ -70,7 +70,7 @@ public partial class AtProtoAgent
     {
         EventHandler<CredentialsUpdatedEventArgs>? credentialsUpdated = CredentialsUpdated;
 
-        if (!_disposed)
+        if (!_atProtoAgentDisposed)
         {
             credentialsUpdated?.Invoke(this, e);
         }
@@ -88,7 +88,7 @@ public partial class AtProtoAgent
 
         Func<CredentialsUpdatedEventArgs, CancellationToken, Task>? credentialsUpdatedAsync = CredentialsUpdatedAsync;
 
-        if (!_disposed && credentialsUpdatedAsync is not null)
+        if (!_atProtoAgentDisposed && credentialsUpdatedAsync is not null)
         {
             await credentialsUpdatedAsync(e, cancellationToken).ConfigureAwait(false);
         }
@@ -102,7 +102,7 @@ public partial class AtProtoAgent
     {
         EventHandler<TokenRefreshFailedEventArgs>? tokenRefreshFailed = TokenRefreshFailed;
 
-        if (!_disposed)
+        if (!_atProtoAgentDisposed)
         {
             tokenRefreshFailed?.Invoke(this, e);
         }
@@ -116,7 +116,7 @@ public partial class AtProtoAgent
     {
         EventHandler<UnauthenticatedEventArgs>? unauthenticated = Unauthenticated;
 
-        if (!_disposed)
+        if (!_atProtoAgentDisposed)
         {
             unauthenticated?.Invoke(this, e);
         }

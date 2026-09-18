@@ -90,7 +90,7 @@ public partial class AtProtoAgent
     {
         get
         {
-            if (_disposed)
+            if (_atProtoAgentDisposed)
             {
                 return null;
             }
@@ -103,7 +103,7 @@ public partial class AtProtoAgent
 
         set
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(_atProtoAgentDisposed, this);
 
             lock (_credentialLock)
             {
@@ -127,7 +127,7 @@ public partial class AtProtoAgent
     {
         get
         {
-            if (_disposed)
+            if (_atProtoAgentDisposed)
             {
                 return null;
             }
@@ -162,7 +162,7 @@ public partial class AtProtoAgent
     {
         get
         {
-            if (_disposed)
+            if (_atProtoAgentDisposed)
             {
                 return false;
             }
@@ -193,7 +193,7 @@ public partial class AtProtoAgent
     {
         get
         {
-            if (_disposed)
+            if (_atProtoAgentDisposed)
             {
                 return false;
             }
@@ -223,7 +223,7 @@ public partial class AtProtoAgent
                 new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials),
                 cancellationToken).ConfigureAwait(false);
 
-            if (!_disposed)
+            if (!_atProtoAgentDisposed)
             {
                 Credentials = dPopAccessCredentials;
             }
@@ -235,7 +235,7 @@ public partial class AtProtoAgent
                 new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials),
                 cancellationToken).ConfigureAwait(false);
 
-            if (!_disposed)
+            if (!_atProtoAgentDisposed)
             {
                 Credentials = accessCredentials;
             }
@@ -817,99 +817,110 @@ public partial class AtProtoAgent
 
         using (_logger.BeginScope($"Handle/Password login for {handle}"))
         {
+            bool succeeded = false;
+
             StopTokenRefreshTimer();
 
-            if (service is null)
+            try
             {
-                Did? userDid = await ResolveHandle(handle, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (userDid is null || cancellationToken.IsCancellationRequested)
+                if (service is null)
                 {
-                    return new AtProtoHttpResult<bool>(
-                        false,
-                        HttpStatusCode.NotFound,
-                        null,
-                        new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
+                    Did? userDid = await ResolveHandle(handle, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (userDid is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            null,
+                            new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
+                    }
+
+                    Uri? pds = null;
+
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        pds = await ResolvePds(userDid, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (pds is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            null,
+                            new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
+                    }
+
+                    service = pds;
                 }
 
-                Uri? pds = null;
+                Logger.CreateSessionCalled(_logger, handle.ToString(), service);
 
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    pds = await ResolvePds(userDid, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (pds is null || cancellationToken.IsCancellationRequested)
-                {
-                    return new AtProtoHttpResult<bool>(
-                        false,
-                        HttpStatusCode.NotFound,
-                        null,
-                        new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
-                }
-
-                service = pds;
-            }
-
-            Logger.CreateSessionCalled(_logger, handle.ToString(), service);
-
-            AtProtoHttpResult<Session> createSessionResult =
-                await AtProtoServer.CreateSession(
-                    handle.ToString(),
-                    password,
-                    authFactorToken,
-                    service,
-                    httpClient: HttpClient,
-                    loggerFactory: LoggerFactory,
-                    maximumResponseSize: MaximumResponseSize,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
-
-            if (createSessionResult.Succeeded)
-            {
-                if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
-                {
-                    Logger.CreateSessionJwtValidationFailed(_logger);
-                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
-                }
-
-                AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
-                if (!string.IsNullOrWhiteSpace(authFactorToken))
-                {
-                    authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
-                }
-
-                AccessCredentials accessCredentials = new(
+                AtProtoHttpResult<Session> createSessionResult =
+                    await AtProtoServer.CreateSession(
+                        handle.ToString(),
+                        password,
+                        authFactorToken,
                         service,
-                        authenticationType,
-                        createSessionResult.Result.AccessJwt,
-                        createSessionResult.Result.RefreshJwt);
+                        httpClient: HttpClient,
+                        loggerFactory: LoggerFactory,
+                        maximumResponseSize: MaximumResponseSize,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
-                await InternalLogin(accessCredentials).ConfigureAwait(false);
-
-                return new AtProtoHttpResult<bool>()
+                if (createSessionResult.Succeeded)
                 {
-                    Result = true,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit
-                };
+                    if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
+                    {
+                        Logger.CreateSessionJwtValidationFailed(_logger);
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
+
+                    AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
+                    if (!string.IsNullOrWhiteSpace(authFactorToken))
+                    {
+                        authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
+                    }
+
+                    AccessCredentials accessCredentials = new(
+                            service,
+                            authenticationType,
+                            createSessionResult.Result.AccessJwt,
+                            createSessionResult.Result.RefreshJwt);
+
+                    await InternalLogin(accessCredentials).ConfigureAwait(false);
+
+                    succeeded = true;
+
+                    return new AtProtoHttpResult<bool>()
+                    {
+                        Result = true,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
+                else
+                {
+                    Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
+
+                    StopTokenRefreshTimer();
+                    ForgetExchangedRefreshTokens();
+                    Credentials = null;
+
+                    return new AtProtoHttpResult<bool>
+                    {
+                        Result = false,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
             }
-            else
+            finally
             {
-                Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
-
-                StopTokenRefreshTimer();
-                ForgetExchangedRefreshTokens();
-                Credentials = null;
-
-                return new AtProtoHttpResult<bool>
-                {
-                    Result = false,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit
-                };
+                RestoreTokenRefreshTimerAfterFailure(succeeded);
             }
         }
     }
@@ -937,88 +948,99 @@ public partial class AtProtoAgent
 
         using (_logger.BeginScope($"Did/Password login for {did}"))
         {
+            bool succeeded = false;
+
             StopTokenRefreshTimer();
 
-            if (service is null)
+            try
             {
-                Uri? pds = null;
-
-                if (!cancellationToken.IsCancellationRequested)
+                if (service is null)
                 {
-                    pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false);
+                    Uri? pds = null;
+
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (pds is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            null,
+                            new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {did}." });
+                    }
+
+                    service = pds;
                 }
 
-                if (pds is null || cancellationToken.IsCancellationRequested)
-                {
-                    return new AtProtoHttpResult<bool>(
-                        false,
-                        HttpStatusCode.NotFound,
-                        null,
-                        new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {did}." });
-                }
+                Logger.CreateSessionCalled(_logger, did.ToString(), service);
 
-                service = pds;
-            }
-
-            Logger.CreateSessionCalled(_logger, did.ToString(), service);
-
-            AtProtoHttpResult<Session> createSessionResult =
-                await AtProtoServer.CreateSession(
-                    did,
-                    password,
-                    authFactorToken,
-                    service,
-                    httpClient: HttpClient,
-                    loggerFactory: LoggerFactory,
-                    maximumResponseSize: MaximumResponseSize,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
-
-            if (createSessionResult.Succeeded)
-            {
-                if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
-                {
-                    Logger.CreateSessionJwtValidationFailed(_logger);
-                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
-                }
-
-                AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
-                if (!string.IsNullOrWhiteSpace(authFactorToken))
-                {
-                    authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
-                }
-
-                AccessCredentials accessCredentials = new(
+                AtProtoHttpResult<Session> createSessionResult =
+                    await AtProtoServer.CreateSession(
+                        did,
+                        password,
+                        authFactorToken,
                         service,
-                        authenticationType,
-                        createSessionResult.Result.AccessJwt,
-                        createSessionResult.Result.RefreshJwt);
+                        httpClient: HttpClient,
+                        loggerFactory: LoggerFactory,
+                        maximumResponseSize: MaximumResponseSize,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
-                await InternalLogin(accessCredentials).ConfigureAwait(false);
-
-                return new AtProtoHttpResult<bool>()
+                if (createSessionResult.Succeeded)
                 {
-                    Result = true,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit
-                };
+                    if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
+                    {
+                        Logger.CreateSessionJwtValidationFailed(_logger);
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
+
+                    AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
+                    if (!string.IsNullOrWhiteSpace(authFactorToken))
+                    {
+                        authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
+                    }
+
+                    AccessCredentials accessCredentials = new(
+                            service,
+                            authenticationType,
+                            createSessionResult.Result.AccessJwt,
+                            createSessionResult.Result.RefreshJwt);
+
+                    await InternalLogin(accessCredentials).ConfigureAwait(false);
+
+                    succeeded = true;
+
+                    return new AtProtoHttpResult<bool>()
+                    {
+                        Result = true,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
+                else
+                {
+                    Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
+
+                    StopTokenRefreshTimer();
+                    ForgetExchangedRefreshTokens();
+                    Credentials = null;
+
+                    return new AtProtoHttpResult<bool>
+                    {
+                        Result = false,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
             }
-            else
+            finally
             {
-                Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
-
-                StopTokenRefreshTimer();
-                ForgetExchangedRefreshTokens();
-                Credentials = null;
-
-                return new AtProtoHttpResult<bool>
-                {
-                    Result = false,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit
-                };
+                RestoreTokenRefreshTimerAfterFailure(succeeded);
             }
         }
     }
@@ -1142,103 +1164,128 @@ public partial class AtProtoAgent
 
             Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
+            bool succeeded = false;
+
             StopTokenRefreshTimer();
 
-            AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory) { MaximumResponseSize = MaximumResponseSize };
-
-            DPoPRevokeCredentials dPoPRevokeCredentials = new(
-                accessCredentials.Service,
-                accessCredentials.RefreshToken,
-                accessCredentials.DPoPProofKey,
-                string.Empty);
-
-            // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
-            // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
-            Task logoutCredentialsUpdated(AtProtoCredential credentials, CancellationToken token)
+            try
             {
-                ArgumentNullException.ThrowIfNull(credentials);
+                AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory) { MaximumResponseSize = MaximumResponseSize };
 
-                if (credentials is DPoPRevokeCredentials refreshedCredentials)
+                DPoPRevokeCredentials dPoPRevokeCredentials = new(
+                    accessCredentials.Service,
+                    accessCredentials.RefreshToken,
+                    accessCredentials.DPoPProofKey,
+                    string.Empty);
+
+                // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
+                // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
+                Task logoutCredentialsUpdated(AtProtoCredential credentials, CancellationToken token)
                 {
-                    dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
+                    ArgumentNullException.ThrowIfNull(credentials);
 
-                    Logger.OnCredentialUpdatedCallbackCalled(_logger);
-                }
-                else
-                {
-                    throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
-                }
-
-                return Task.CompletedTask;
-            }
-
-            // First revoke the refresh token, then revoke the access token.
-            using (var formData = new FormUrlEncodedContent(
-            [
-                new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
-                    new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
-                    new KeyValuePair<string, string>("client_id", clientId),
-                ]))
-            {
-                AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                    service: authorizationService,
-                    endpoint: revocationEndpoint.AbsolutePath,
-                    record: formData,
-                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                    credentials: dPoPRevokeCredentials,
-                    onCredentialsUpdated: logoutCredentialsUpdated,
-                    httpClient: HttpClient,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!revokeResponse.Succeeded)
-                {
-                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "refresh_token");
-                    throw new LogoutException()
+                    if (credentials is DPoPRevokeCredentials refreshedCredentials)
                     {
-                        StatusCode = revokeResponse.StatusCode,
-                        Error = revokeResponse.AtErrorDetail
-                    };
-                }
-            }
+                        dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
 
-            // Now revoke the access token.
-            // Some authorization servers may not require this second call if revoking the refresh token also invalidates the access token,
-            // but some may require both to be revoked to ensure the session is fully revoked, so calling both to be safe.
-            dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
-
-            using (var formData = new FormUrlEncodedContent(
-            [
-                new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
-                    new KeyValuePair<string, string>("token_type_hint", "access_token"),
-                    new KeyValuePair<string, string>("client_id", clientId),
-                ]))
-            {
-                AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                    service: authorizationService,
-                    endpoint: revocationEndpoint.AbsolutePath,
-                    record: formData,
-                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                    credentials: dPoPRevokeCredentials,
-                    onCredentialsUpdated: logoutCredentialsUpdated,
-                    httpClient: HttpClient,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!revokeResponse.Succeeded)
-                {
-                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "access_token");
-                    throw new LogoutException()
+                        Logger.OnCredentialUpdatedCallbackCalled(_logger);
+                    }
+                    else
                     {
-                        StatusCode = revokeResponse.StatusCode,
-                        Error = revokeResponse.AtErrorDetail
-                    };
+                        throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
+                    }
+
+                    return Task.CompletedTask;
                 }
+
+                // First revoke the refresh token, then revoke the access token.
+                using (var formData = new FormUrlEncodedContent(
+                [
+                    new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
+                        new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
+                        new KeyValuePair<string, string>("client_id", clientId),
+                    ]))
+                {
+                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                        service: authorizationService,
+                        endpoint: revocationEndpoint.AbsolutePath,
+                        record: formData,
+                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                        credentials: dPoPRevokeCredentials,
+                        onCredentialsUpdated: logoutCredentialsUpdated,
+                        httpClient: HttpClient,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!revokeResponse.Succeeded)
+                    {
+                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "refresh_token");
+
+                        // The credentials are discarded even though the revocation failed, so that a failed logout does not
+                        // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
+                        // DeleteSession() below.
+                        ForgetExchangedRefreshTokens();
+                        Credentials = null;
+
+                        throw new LogoutException()
+                        {
+                            StatusCode = revokeResponse.StatusCode,
+                            Error = revokeResponse.AtErrorDetail
+                        };
+                    }
+                }
+
+                // Now revoke the access token.
+                // Some authorization servers may not require this second call if revoking the refresh token also invalidates the access token,
+                // but some may require both to be revoked to ensure the session is fully revoked, so calling both to be safe.
+                dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
+
+                using (var formData = new FormUrlEncodedContent(
+                [
+                    new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
+                        new KeyValuePair<string, string>("token_type_hint", "access_token"),
+                        new KeyValuePair<string, string>("client_id", clientId),
+                    ]))
+                {
+                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                        service: authorizationService,
+                        endpoint: revocationEndpoint.AbsolutePath,
+                        record: formData,
+                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                        credentials: dPoPRevokeCredentials,
+                        onCredentialsUpdated: logoutCredentialsUpdated,
+                        httpClient: HttpClient,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!revokeResponse.Succeeded)
+                    {
+                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "access_token");
+
+                        // The refresh token has already been revoked by this point, so the session is over whatever happens
+                        // to the access token. Holding on to the credentials would leave the agent reporting itself as
+                        // authenticated against a session which no longer exists.
+                        ForgetExchangedRefreshTokens();
+                        Credentials = null;
+
+                        throw new LogoutException()
+                        {
+                            StatusCode = revokeResponse.StatusCode,
+                            Error = revokeResponse.AtErrorDetail
+                        };
+                    }
+                }
+
+                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
+
+                ForgetExchangedRefreshTokens();
+                Credentials = null;
+                succeeded = true;
+
+                OnUnauthenticated(unauthenticatedEventArgs);
             }
-
-            var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
-
-            ForgetExchangedRefreshTokens();
-            Credentials = null;
-            OnUnauthenticated(unauthenticatedEventArgs);
+            finally
+            {
+                RestoreTokenRefreshTimerAfterFailure(succeeded);
+            }
         }
         else
         {
@@ -1249,32 +1296,43 @@ public partial class AtProtoAgent
 
             Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
+            bool succeeded = false;
+
             StopTokenRefreshTimer();
 
-            // Take the refresh token value from credentials and make it a specific refresh token.
-            RefreshCredential refreshCredential = new(credentials);
-
-            AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
-
-            if (deleteSessionResult.Succeeded)
+            try
             {
-                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
+                // Take the refresh token value from credentials and make it a specific refresh token.
+                RefreshCredential refreshCredential = new(credentials);
 
-                ForgetExchangedRefreshTokens();
-                Credentials = null;
-                OnUnauthenticated(unauthenticatedEventArgs);
-            }
-            else
-            {
-                Logger.LogoutFailed(_logger, credentials.Did, credentials.Service, deleteSessionResult.StatusCode);
-                ForgetExchangedRefreshTokens();
-                Credentials = null;
-                throw new LogoutException()
+                AtProtoHttpResult<EmptyResponse> deleteSessionResult =
+                    await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+
+                if (deleteSessionResult.Succeeded)
                 {
-                    StatusCode = deleteSessionResult.StatusCode,
-                    Error = deleteSessionResult.AtErrorDetail
-                };
+                    var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
+
+                    ForgetExchangedRefreshTokens();
+                    Credentials = null;
+                    succeeded = true;
+
+                    OnUnauthenticated(unauthenticatedEventArgs);
+                }
+                else
+                {
+                    Logger.LogoutFailed(_logger, credentials.Did, credentials.Service, deleteSessionResult.StatusCode);
+                    ForgetExchangedRefreshTokens();
+                    Credentials = null;
+                    throw new LogoutException()
+                    {
+                        StatusCode = deleteSessionResult.StatusCode,
+                        Error = deleteSessionResult.AtErrorDetail
+                    };
+                }
+            }
+            finally
+            {
+                RestoreTokenRefreshTimerAfterFailure(succeeded);
             }
         }
 
@@ -1855,6 +1913,24 @@ public partial class AtProtoAgent
         }
     }
 
+    /// <summary>
+    /// Clears the agent credentials without going through the <see cref="Credentials"/> property.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Used during disposal, where the <see cref="Credentials"/> setter would throw because the agent has already been
+    ///   marked as disposed. Leaving the credentials in place would keep a live access token and refresh token reachable
+    ///   for as long as anything holds a reference to the disposed agent.
+    /// </para>
+    /// </remarks>
+    private void ClearCredentials()
+    {
+        lock (_credentialLock)
+        {
+            _credentials = null;
+        }
+    }
+
     private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
     {
         Logger.BackgroundTokenRefreshFired(_logger);
@@ -1909,7 +1985,7 @@ public partial class AtProtoAgent
     {
         lock (_timerLock)
         {
-            if (!_enableTokenRefresh || _disposed || Credentials is not AccessCredentials)
+            if (!_enableTokenRefresh || _atProtoAgentDisposed || Credentials is not AccessCredentials)
             {
                 return;
             }
@@ -1967,7 +2043,7 @@ public partial class AtProtoAgent
 
             lock (_timerLock)
             {
-                if (_disposed)
+                if (_atProtoAgentDisposed)
                 {
                     return;
                 }
@@ -1980,6 +2056,28 @@ public partial class AtProtoAgent
 
                 Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
             }
+        }
+    }
+
+    /// <summary>
+    /// Restarts the token refresh timer when an operation which stopped it did not complete successfully.
+    /// </summary>
+    /// <param name="succeeded">A flag indicating whether the operation which stopped the timer succeeded.</param>
+    /// <remarks>
+    /// <para>
+    ///   An operation which stops the timer and then fails must not leave it stopped, otherwise a single failed login or
+    ///   logout silently ends background refresh for the lifetime of the agent, and the session it left in place expires.
+    /// </para>
+    /// <para>
+    ///   Nothing is restarted when the failure also cleared the agent credentials, because <see cref="StartTokenRefreshTimer"/>
+    ///   only starts the timer when there are credentials to refresh.
+    /// </para>
+    /// </remarks>
+    private void RestoreTokenRefreshTimerAfterFailure(bool succeeded)
+    {
+        if (!succeeded)
+        {
+            StartTokenRefreshTimer();
         }
     }
 
@@ -1998,7 +2096,7 @@ public partial class AtProtoAgent
     {
         lock (_timerLock)
         {
-            if (_disposed)
+            if (_atProtoAgentDisposed)
             {
                 return;
             }
