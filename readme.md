@@ -71,7 +71,7 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 
 ## License
 
-`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,
+`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack`, `idunno.AtProto.Types` and `idunno.Bluesky.AspNet.Authentication` are available under the MIT license,
 see the [LICENSE](LICENSE) file for more information.
 
 ## Support Policy
