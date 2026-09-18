@@ -5,7 +5,9 @@ using System.Security.Claims;
 
 using idunno.AtProto.Authentication;
 
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -102,6 +104,48 @@ public sealed class BlueskyAgentFactory
     }
 
     /// <summary>
+    /// Resolves the <see cref="IIdentityStore"/> credential updates should be written to.
+    /// </summary>
+    /// <param name="authenticationScheme">The authentication type carried by the identity the agent was built from, if any.</param>
+    /// <remarks>
+    /// <para>
+    ///   An identity issued by the authentication handler carries the name of the scheme which issued it as its authentication type, which is the name the
+    ///   options for that scheme, and so its identity store, are configured against. An identity issued by anything else carries a name no Bluesky scheme
+    ///   was registered under, and asking the options monitor for it would build a fresh, default options instance with an identity store of its own which
+    ///   nothing ever reads, silently discarding every credential update. The scheme the factory was registered for is used in that case instead.
+    /// </para>
+    /// </remarks>
+    private IIdentityStore? ResolveIdentityStore(string? authenticationScheme)
+    {
+        if (!string.IsNullOrEmpty(authenticationScheme) &&
+            !string.Equals(authenticationScheme, _authenticationScheme, StringComparison.Ordinal) &&
+            !IsBlueskyScheme(authenticationScheme))
+        {
+            authenticationScheme = _authenticationScheme;
+        }
+
+        return GetAuthenticationOptions(authenticationScheme).IdentityStore;
+    }
+
+    /// <summary>
+    /// Returns a flag indicating whether <paramref name="authenticationScheme"/> is a registered scheme handled by <see cref="BlueskyAuthenticationHandler"/>.
+    /// </summary>
+    /// <param name="authenticationScheme">The name of the authentication scheme to check.</param>
+    private bool IsBlueskyScheme(string authenticationScheme)
+    {
+        // The scheme provider is resolved from the request rather than injected, because the factory is a singleton and
+        // this is only consulted for a principal which did not come from the scheme it was registered for.
+        if (Context?.RequestServices.GetService<IAuthenticationSchemeProvider>() is not IAuthenticationSchemeProvider schemeProvider)
+        {
+            return false;
+        }
+
+        AuthenticationScheme? scheme = schemeProvider.GetSchemeAsync(authenticationScheme).GetAwaiter().GetResult();
+
+        return scheme is not null && typeof(BlueskyAuthenticationHandler).IsAssignableFrom(scheme.HandlerType);
+    }
+
+    /// <summary>
     /// Creates a <see cref="BlueskyAgent"/>.
     /// </summary>
     /// <returns>A new instance of <see cref="BlueskyAgent"/>.</returns>
@@ -131,7 +175,7 @@ public sealed class BlueskyAgentFactory
 
         // An identity issued by the authentication handler carries the name of the scheme which issued it as its authentication type,
         // which is the name the options for that scheme, and so its identity store, are configured against.
-        IIdentityStore? identityStore = GetAuthenticationOptions(identity?.AuthenticationType).IdentityStore;
+        IIdentityStore? identityStore = ResolveIdentityStore(identity?.AuthenticationType);
 
         if (identityStore is not null)
         {

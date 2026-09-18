@@ -189,6 +189,7 @@ public class BlueskyAuthenticationMetrics
         nameof(AccessTokenRefreshWaitDuration),
         nameof(DataProtectionFailures),
         nameof(ProfileCacheMisses),
+        nameof(HandleVerificationFailures),
         nameof(ProfileCacheHits),
         nameof(SigninsSucceeded),
         nameof(SigninsFailed),
@@ -233,6 +234,11 @@ public class BlueskyAuthenticationMetrics
             name: $"{MeterName.ToLowerInvariant()}.profilecache.misses.total",
             description: "Total profile cache misses",
             unit: "{misses}");
+
+        HandleVerificationFailures = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.handleverification.failures.total",
+            description: "Total handles returned by a profile which did not resolve back to the DID they were returned for",
+            unit: "{failures}");
 
         ProfileCacheHits = meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.profilecache.hits.total",
@@ -352,6 +358,17 @@ public class BlueskyAuthenticationMetrics
     /// Gets the counter of profile cache misses.
     /// </summary>
     public Counter<long> ProfileCacheMisses { get; private set; }
+
+    /// <summary>
+    /// Gets the counter of handles which did not resolve back to the DID whose profile returned them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   A handle is asserted by the user's own personal data server, so it is verified against the directory before it
+    ///   becomes a claim. Anything counted here was dropped rather than presented to the application.
+    /// </para>
+    /// </remarks>
+    public Counter<long> HandleVerificationFailures { get; private set; }
 
     /// <summary>
     /// Gets the counter of profile cache hits.

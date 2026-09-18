@@ -77,6 +77,9 @@
 * Add a new package, `idunno.Bluesky.AspNet.Authentication`, which provides ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
   `AuthenticationBuilder.AddBluesky()`, and a `ProfileClaimsTransformer` which can be registered with `IServiceCollection.AddProfileClaimsTransformer()`.
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
+* Added `BlueskyClaimsTransformerOptions.VerifyHandle`, which controls whether the handle a profile carries is verified against the directory before it
+  becomes a claim. It defaults to `true`.
+* Added `BlueskyAuthenticationMetrics.HandleVerificationFailures`, a counter of handles which did not resolve back to the DID whose profile returned them.
 
 ### Changed
 
@@ -424,6 +427,22 @@
   `GetSuggestedFeeds()`, `GetTimeline()`, `SearchPosts()`, `SearchPostsV2()` and `GetPostThreadOtherV2()` now skip and log `null` entries inside their
   collections rather than returning them. Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a service could
   place a `null` inside an otherwise well formed collection and it would be handed straight to the caller.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* The authentication cookie re-issued by a renewal now carries only the DID claim, as the cookie written at sign in does, rather than the hydrated identity.
+  A renewal previously protected the access token, the refresh token and the DPoP proof key into the cookie, putting them in the browser.
+* The identity store and the correlation state cache are now protected with data protection unless the application configures
+  `BlueskyAuthenticationOptions.IdentityStoreEvents` or `CorrelationStateCacheEvents` itself, so credentials and login state are no longer written to shared
+  storage in the clear by default.
+* The handle a profile carries is now verified against the directory before it becomes a `ClaimTypes.Name` or handle claim, and is dropped when it does not
+  resolve back to the DID it was returned for.
+* A stored identity whose credentials cannot be read no longer authenticates the request. It previously skipped the expiry check and was handed to the application.
+* An expired ticket now revokes the credentials it referred to at the authorization server rather than only dropping the local record of them.
+* Signing in as a different DID now revokes and removes the session it replaces, rather than leaving live credentials in the store until they age out.
+* An agent built from a principal issued by a scheme other than a registered Bluesky one now writes credential updates to the identity store of the scheme
+  the agent factory was registered for, rather than to a fresh store nothing reads.
+* The identity store refresh lock token is now compared in constant time.
 
 ## 6.0.0 - 2026-09-05
 

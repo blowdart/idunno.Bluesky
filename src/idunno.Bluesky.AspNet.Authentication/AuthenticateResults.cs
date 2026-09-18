@@ -11,6 +11,7 @@ internal static class AuthenticateResults
     internal static readonly AuthenticateResult s_missingDidInCookie = AuthenticateResult.Fail("Did missing in cookie");
     internal static readonly AuthenticateResult s_invalidDidInCookie = AuthenticateResult.Fail("Did in cookie is not a valid DID");
     internal static readonly AuthenticateResult s_missingIdentityInStore = AuthenticateResult.Fail("Identity missing in identity store");
+    internal static readonly AuthenticateResult s_noCredentialsInStoredIdentity = AuthenticateResult.Fail("Stored identity carries no usable credentials");
     internal static readonly AuthenticateResult s_expiredTicket = AuthenticateResult.Fail("Ticket expired");
     internal static readonly AuthenticateResult s_noPrincipal = AuthenticateResult.Fail("No principal.");
     internal static readonly AuthenticateResult s_tokenRefreshFailed = AuthenticateResult.Fail("Token refresh failed.");
@@ -56,6 +57,11 @@ internal static class AuthenticateResults
         if (ReferenceEquals(result, s_missingIdentityInStore))
         {
             return "identity_missing_in_store";
+        }
+
+        if (ReferenceEquals(result, s_noCredentialsInStoredIdentity))
+        {
+            return "no_credentials_in_stored_identity";
         }
 
         if (ReferenceEquals(result, s_expiredTicket))

@@ -183,33 +183,83 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// calls methods on the provider which give the application control at certain points where processing is occurring.
     /// If it is not provided a default instance is supplied which does nothing when the methods are called.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown if the value being set is <see langword="null" />.</exception>
     /// <remarks>
     /// <para>
     ///   This is applied to <see cref="IdentityStore"/> when the options for the scheme are built, so it takes effect
     ///   whether the store is the default one or one the application supplied.
     /// </para>
+    /// <para>
+    ///   The identity store holds the access token, the refresh token and the DPoP proof key, so unless the application
+    ///   sets this it defaults to a
+    ///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents"/> built from
+    ///   <see cref="DataProtectionProvider"/>, and stored identities are encrypted at rest. Setting this to a plain
+    ///   <see cref="Events.IdentityStoreEvents"/> turns that off and stores them in the clear.
+    /// </para>
     /// </remarks>
     [JsonIgnore]
-    public IdentityStoreEvents IdentityStoreEvents { get; set; } = new IdentityStoreEvents();
+    public IdentityStoreEvents IdentityStoreEvents
+    {
+        get;
+        set
+        {
+            field = value ?? throw new ArgumentNullException(nameof(value));
+            IdentityStoreEventsConfigured = true;
+        }
+    } = new IdentityStoreEvents();
+
+    /// <summary>
+    /// Gets a value indicating whether the application set <see cref="IdentityStoreEvents"/> itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The property initializer assigns the backing field directly rather than going through the setter, so this stays
+    ///   <see langword="false"/> until something assigns the property. That is what lets the options be given a
+    ///   protecting default without overwriting a choice the application made.
+    /// </para>
+    /// </remarks>
+    internal bool IdentityStoreEventsConfigured { get; private set; }
 
     /// <summary>
     /// The CorrelationStateCacheEvents may be assigned to an instance of an object created by the application at startup time. The
     /// sign in manager calls methods on the provider which give the application control at certain points where processing is occurring.
     /// If it is not provided a default instance is supplied which does nothing when the methods are called.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown if the value being set is <see langword="null" />.</exception>
     /// <remarks>
     /// <para>
     ///   This is applied to <see cref="CorrelationCache"/> when the options for the scheme are built, so it takes effect
     ///   whether the cache is the default one or one the application supplied.
     /// </para>
     /// <para>
-    ///   Correlation state holds the PKCE code verifier and, for a DPoP login, the DPoP private key, so an application using a
-    ///   correlation cache backed by shared storage should set this to a
-    ///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents"/>.
+    ///   Correlation state holds the PKCE code verifier and, for a DPoP login, the DPoP private key, so unless the
+    ///   application sets this it defaults to a
+    ///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents"/> built from
+    ///   <see cref="DataProtectionProvider"/>, and stored state is encrypted at rest. Setting this to a plain
+    ///   <see cref="Events.CorrelationStateCacheEvents"/> turns that off and stores it in the clear.
     /// </para>
     /// </remarks>
     [JsonIgnore]
-    public CorrelationStateCacheEvents CorrelationStateCacheEvents { get; set; } = new CorrelationStateCacheEvents();
+    public CorrelationStateCacheEvents CorrelationStateCacheEvents
+    {
+        get;
+        set
+        {
+            field = value ?? throw new ArgumentNullException(nameof(value));
+            CorrelationStateCacheEventsConfigured = true;
+        }
+    } = new CorrelationStateCacheEvents();
+
+    /// <summary>
+    /// Gets a value indicating whether the application set <see cref="CorrelationStateCacheEvents"/> itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The property initializer assigns the backing field directly rather than going through the setter, so this stays
+    ///   <see langword="false"/> until something assigns the property.
+    /// </para>
+    /// </remarks>
+    internal bool CorrelationStateCacheEventsConfigured { get; private set; }
 
     /// <summary>
     /// <para>

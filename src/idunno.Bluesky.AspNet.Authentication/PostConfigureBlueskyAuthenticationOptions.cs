@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using idunno.Bluesky.AspNet.Authentication.Events;
+
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
@@ -80,6 +82,20 @@ public class PostConfigureBlueskyAuthenticationOptions(
         }
 
         options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive, options.RefreshLockLength);
+
+        // The identity store holds the access token, the refresh token and the DPoP proof key, and the correlation
+        // cache holds the PKCE verifier and the DPoP private key of a login in flight. Both are encrypted at rest
+        // unless the application asked for something else, so a store backed by shared infrastructure does not hold
+        // them in the clear by default.
+        if (!options.IdentityStoreEventsConfigured)
+        {
+            options.IdentityStoreEvents = new DataProtectingIdentityStoreEvents(options.DataProtectionProvider);
+        }
+
+        if (!options.CorrelationStateCacheEventsConfigured)
+        {
+            options.CorrelationStateCacheEvents = new DataProtectingCorrelationStateCacheEvents(options.DataProtectionProvider);
+        }
 
         // The options are configured named by scheme, so a store cannot read the events it should raise from its own
         // constructor, which only ever sees the unnamed options instance. They are pushed onto the store here instead.
