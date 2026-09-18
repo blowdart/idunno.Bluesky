@@ -334,7 +334,7 @@ internal static partial class Logger
     [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
     internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
 
-    [LoggerMessage(507, LogLevel.Error, "DNS resolution for {handle} returned {recordCount} did text records in {txtRecord}, which is ambiguous, so {handle} cannot be resolved via DNS")]
+    [LoggerMessage(507, LogLevel.Error, "DNS resolution for {handle} returned {recordCount} conflicting did text records in {txtRecord}, which is ambiguous, so {handle} cannot be resolved")]
     internal static partial void MultipleDidTextRecordsFound(ILogger logger, Handle handle, string txtRecord, int recordCount);
 
     [LoggerMessage(508, LogLevel.Error, "DNS record {txtRecord} for {handle} did not parse as a DID")]

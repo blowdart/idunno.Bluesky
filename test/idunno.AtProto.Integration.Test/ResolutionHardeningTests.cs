@@ -67,6 +67,8 @@ public class ResolutionHardeningTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
+
         TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             context.Response.StatusCode = 200;
@@ -87,6 +89,8 @@ public class ResolutionHardeningTests
     public async Task ResolveHandleDoesNotReadAnOverLongWellKnownResponse()
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
 
         // A response longer than the default maximum must be rejected rather than read into memory.
         string overLongResponse = "did:plc:" + new string('a', AtProtoServer.DefaultMaximumWellKnownResponseSize);
@@ -113,6 +117,8 @@ public class ResolutionHardeningTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
 
+        using TestDns dns = TestDns.WithNoTextRecords();
+
         // Comfortably under the default well known maximum, but over the one the caller asks for.
         string response = "did:plc:" + new string('a', maximumWellKnownResponseSize * 2);
 
@@ -136,6 +142,8 @@ public class ResolutionHardeningTests
     public async Task ResolveHandleDoesNotBufferAnOverLongWellKnownResponseIntoMemory()
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
 
         const int chunkSize = 64 * 1024;
         const int maximumChunks = 1024;
@@ -176,6 +184,8 @@ public class ResolutionHardeningTests
     public async Task ResolveHandleDoesNotDisposeACallerSuppliedHttpClient()
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
 
         TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
@@ -382,6 +392,8 @@ public class ResolutionHardeningTests
     {
         Handle handle = new(TestServerBuilder.DefaultDomainName);
         const string wellKnownResponse = "did:plc:identifier";
+
+        using TestDns dns = TestDns.WithNoTextRecords();
 
         TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {

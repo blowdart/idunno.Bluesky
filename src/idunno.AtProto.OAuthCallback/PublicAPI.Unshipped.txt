@@ -1,1 +1,7 @@
 #nullable enable
+idunno.AtProto.OAuthCallback.CallbackServer.ContentSecurityPolicy.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.ContentSecurityPolicy.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.FailureBody.get -> string!
+idunno.AtProto.OAuthCallback.CallbackServer.FailureBody.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.FailureTitle.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.FailureTitle.set -> void

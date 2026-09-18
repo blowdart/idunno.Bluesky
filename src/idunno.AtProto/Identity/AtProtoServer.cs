@@ -21,6 +21,24 @@ public static partial class AtProtoServer
     /// </summary>
     public const int DefaultMaximumWellKnownResponseSize = 4096;
 
+    private static readonly AsyncLocal<Func<string, CancellationToken, Task<IReadOnlyList<string>>>?> s_dnsTextRecordResolver = new();
+
+    /// <summary>
+    /// Gets or sets the function used to read the text records for a host, replacing the DNS lookup <see cref="ResolveHandle(Handle, HttpClient, ILoggerFactory?, int, CancellationToken)"/>
+    /// would otherwise perform. This exists so tests can resolve handles without depending on a working DNS server.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is held in an <see cref="AsyncLocal{T}"/>, so a resolver installed by a test flows into the work that
+    ///   test starts and is invisible to tests running alongside it.
+    /// </para>
+    /// </remarks>
+    internal static Func<string, CancellationToken, Task<IReadOnlyList<string>>>? DnsTextRecordResolver
+    {
+        get => s_dnsTextRecordResolver.Value;
+        set => s_dnsTextRecordResolver.Value = value;
+    }
+
     /// <summary>
     /// Resolves a handle (domain name) to a DID.
     /// </summary>
@@ -94,15 +112,6 @@ public static partial class AtProtoServer
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger logger = loggerFactory.CreateLogger(typeof(AtProtoServer));
 
-        LookupClient lookupClient = new(new LookupClientOptions()
-        {
-            ContinueOnDnsError = true,
-            ContinueOnEmptyResponse = true,
-            ThrowDnsErrors = false,
-            Timeout = TimeSpan.FromSeconds(15),
-            UseCache = true
-        });
-
         using (logger.BeginScope($"Resolving {handle}"))
         {
             // First try DNS lookup
@@ -111,22 +120,28 @@ public static partial class AtProtoServer
 
             Logger.ResolvingHandleViaDNS(logger, handle, didTxtRecordHost);
 
+            // Set when DNS gives an answer which is ambiguous rather than absent. The handle is then unresolvable, so
+            // the well known fallback below is skipped as well, rather than letting the host the handle points at pick
+            // which of the conflicting records wins.
+            bool ambiguousDnsRecords = false;
+
             try
             {
+                IReadOnlyList<string> textRecords = await QueryTextRecords(didTxtRecordHost, cancellationToken).ConfigureAwait(false);
 
-                IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(didTxtRecordHost, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
-                if (!cancellationToken.IsCancellationRequested && !dnsLookupResult.HasError)
+                if (!cancellationToken.IsCancellationRequested)
                 {
                     List<string> didTextRecords =
-                        [.. dnsLookupResult.Answers.TxtRecords()
-                            .SelectMany(textRecord => textRecord.Text)
+                        [.. textRecords
                             .Where(text => text.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture))
                             .Distinct(StringComparer.Ordinal)];
 
                     if (didTextRecords.Count > 1)
                     {
                         // The specification requires that a handle with more than one did text record is treated as unresolvable,
-                        // rather than an arbitrary record being chosen.
+                        // rather than an arbitrary record being chosen. Records which agree with each other are removed by the
+                        // Distinct() above, so reaching here means the records disagree.
+                        ambiguousDnsRecords = true;
                         Logger.MultipleDidTextRecordsFound(logger, handle, didTxtRecordHost, didTextRecords.Count);
                     }
                     else if (didTextRecords.Count == 1)
@@ -148,7 +163,7 @@ public static partial class AtProtoServer
                 Logger.ErrorResolvingHandleViaDNS(logger, handle, ex);
             }
 
-            if (!cancellationToken.IsCancellationRequested && did is null)
+            if (!cancellationToken.IsCancellationRequested && did is null && !ambiguousDnsRecords)
             {
                 // Fall back to /well-known/did.json
                 Uri didUri = new($"https://{handle}/.well-known/atproto-did");
@@ -208,5 +223,40 @@ public static partial class AtProtoServer
         }
 
         return did;
+    }
+
+    /// <summary>
+    /// Reads the text records for <paramref name="host"/>, through <see cref="DnsTextRecordResolver"/> if one is installed,
+    /// and through DNS if not.
+    /// </summary>
+    /// <param name="host">The host whose text records should be read.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private static async Task<IReadOnlyList<string>> QueryTextRecords(string host, CancellationToken cancellationToken)
+    {
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? resolver = DnsTextRecordResolver;
+
+        if (resolver is not null)
+        {
+            return await resolver(host, cancellationToken).ConfigureAwait(false);
+        }
+
+        LookupClient lookupClient = new(new LookupClientOptions()
+        {
+            ContinueOnDnsError = true,
+            ContinueOnEmptyResponse = true,
+            ThrowDnsErrors = false,
+            Timeout = TimeSpan.FromSeconds(15),
+            UseCache = true
+        });
+
+        IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(host, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
+
+        if (dnsLookupResult.HasError)
+        {
+            return [];
+        }
+
+        return [.. dnsLookupResult.Answers.TxtRecords().SelectMany(textRecord => textRecord.Text)];
     }
 }
