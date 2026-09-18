@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
@@ -684,6 +685,122 @@ public class AtProtoJetstreamConnectionTests
             _cancellationTokenSource.Dispose();
         }
     }
+
+    [Fact]
+    public async Task AHalfClosedSocketIsReplacedSoTheJetstreamCanStillReconnect()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer { DrainSockets = false };
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+
+        using var httpClient = new HttpClient();
+
+        // A socket whose close the server never answers is left in CloseSent. It is neither Open, so a reconnection
+        // cannot skip it, nor Closed or Aborted, which used to be the only states a reconnection replaced a socket for,
+        // and a ClientWebSocket can only be connected once.
+        ClientWebSocket halfClosed = new();
+
+        await halfClosed.ConnectAsync(server.Uri, httpClient, cancellationToken);
+        await halfClosed.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken);
+
+        Assert.Equal(WebSocketState.CloseSent, halfClosed.State);
+
+        GetClientField(jetstream).SetValue(jetstream, halfClosed);
+
+        await jetstream.ConnectAsync(
+            uri: server.Uri,
+            cursor: null,
+            httpClient: httpClient,
+            cancellationToken: cancellationToken);
+
+        Assert.True(jetstream.IsConnected);
+        Assert.NotSame(halfClosed, GetClient(jetstream));
+    }
+
+    [Fact]
+    public async Task AReconnectionDoesNotInheritThePreviousConnectionsGracefulDisconnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(
+            uri: server.Uri,
+            cursor: null,
+            httpClient: httpClient,
+            cancellationToken: cancellationToken);
+
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+        Assert.True(jetstream.DisconnectedGracefully);
+
+        await jetstream.ConnectAsync(
+            uri: server.Uri,
+            cursor: null,
+            httpClient: httpClient,
+            cancellationToken: cancellationToken);
+
+        Assert.True(jetstream.IsConnected);
+
+        // Read from the field rather than the property, as the property is gated on the socket being closed and so
+        // answers false for any open connection, whatever the flag beneath it says.
+        Assert.False(GetDisconnectedGracefully(jetstream));
+    }
+
+    [Fact]
+    public void AJetstreamAppliesAKeepAliveTimeoutSoAnUnresponsivePeerIsNoticed()
+    {
+        using var jetstream = new AtProtoJetstream();
+
+        ClientWebSocket client = GetClient(jetstream);
+
+        // A keep-alive interval on its own only sends pings. Without a timeout nothing acts on a peer which never
+        // answers one, so a connection lost to a network failure is read from forever.
+#if NET9_0_OR_GREATER
+        Assert.Equal(TimeSpan.FromSeconds(30), client.Options.KeepAliveTimeout);
+#endif
+        Assert.Equal(TimeSpan.FromSeconds(30), client.Options.KeepAliveInterval);
+    }
+
+    [Fact]
+    public void ConfiguredKeepAliveOptionsAreAppliedToTheWebSocket()
+    {
+        using var jetstream = new AtProtoJetstream(
+            webSocketOptions: new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(5),
+                KeepAliveTimeout = TimeSpan.FromSeconds(7)
+            });
+
+        ClientWebSocket client = GetClient(jetstream);
+
+        Assert.Equal(TimeSpan.FromSeconds(5), client.Options.KeepAliveInterval);
+#if NET9_0_OR_GREATER
+        Assert.Equal(TimeSpan.FromSeconds(7), client.Options.KeepAliveTimeout);
+#endif
+    }
+
+    private static FieldInfo GetClientField(AtProtoJetstream jetstream) =>
+        jetstream.GetType().GetField("_client", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+    private static ClientWebSocket GetClient(AtProtoJetstream jetstream) =>
+        (ClientWebSocket)GetClientField(jetstream).GetValue(jetstream)!;
+
+    private static bool GetDisconnectedGracefully(AtProtoJetstream jetstream) =>
+        (bool)jetstream
+            .GetType()
+            .GetField("_disconnectedGracefully", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(jetstream)!;
 
     private sealed class TestJetstreamServer : IDisposable
     {
