@@ -29,6 +29,8 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
     private readonly IHttpClientFactory? _httpClientFactory;
 
+    private readonly ILoggerFactory _loggerFactory;
+
     /// <summary>
     /// The type of the claim added to mark a principal as having already had its profile claims applied.
     /// </summary>
@@ -75,6 +77,8 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
         Options = options;
 
         loggerFactory ??= NullLoggerFactory.Instance;
+
+        _loggerFactory = loggerFactory;
 
         BlueskyAgentOptions = blueskyAgentOptions;
         AuthenticationOptions = blueskyAuthenticationOptions;
@@ -177,6 +181,24 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
                 {
                     Logger.TransformerGetProfileSucceeded(agent.Did);
                     cachedProfile = new (getProfileResult.Result, agent.Service.ToString());
+
+                    // The profile, and so the handle in it, comes from the user's own PDS. A handle claim is used by
+                    // applications to name and to authorize, so a handle which does not resolve back to the DID it was
+                    // returned for is dropped rather than presented as though the directory agreed with it.
+                    if (Options.CurrentValue.VerifyHandle &&
+                        cachedProfile.Handle is not null &&
+                        !await Resolution.VerifyHandle(
+                            cachedProfile.Handle,
+                            agent.Did,
+                            loggerFactory: _loggerFactory,
+                            httpClient: agent.HttpClient,
+                            cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                    {
+                        Logger.HandleVerificationFailed(cachedProfile.Handle.ToString(), agent.Did);
+                        _metrics.HandleVerificationFailures.Add(1);
+                        cachedProfile = cachedProfile with { Handle = null };
+                    }
+
                     await Cache.Add(agent.Did, cachedProfile).ConfigureAwait(false);
                     Logger.TransformerCachedClaimsForDid(agent.Did);
                     return SupplementClaimsPrincipal(principal, cachedProfile);

@@ -29,6 +29,24 @@ internal static partial class Logger
     [LoggerMessage(15, LogLevel.Debug, "Principal did not contain a ClaimsIdentity.")]
     public static partial void PrincipalDidNotContainAClaimsIdentity(this ILogger logger);
 
+    [LoggerMessage(16, LogLevel.Error, "The identity being signed in did not contain a DID claim, so no authentication cookie was written.")]
+    public static partial void PrincipalDidNotContainADidClaim(this ILogger logger);
+
+    [LoggerMessage(17, LogLevel.Warning, "The authentication cookie was not renewed because the principal carried no DID claim. The session will run out its original lifetime.")]
+    public static partial void RenewalSkippedNoDidClaim(this ILogger logger);
+
+    [LoggerMessage(18, LogLevel.Warning, "The stored identity for {did} carries no usable credentials, so the request has not been authenticated and the identity has been removed from the store.")]
+    public static partial void StoredIdentityHasNoCredentials(this ILogger logger, Did did);
+
+    [LoggerMessage(19, LogLevel.Debug, "The authentication cookie for {did} had expired, so its stored credentials were revoked and removed.")]
+    public static partial void ExpiredTicketCredentialsRevoked(this ILogger logger, Did did);
+
+    [LoggerMessage(29, LogLevel.Debug, "Signing in {did} replaced an existing session for {previousDid}, whose credentials were revoked and removed.")]
+    public static partial void PreviousSessionReplacedOnSignIn(this ILogger logger, string did, Did previousDid);
+
+    [LoggerMessage(30, LogLevel.Warning, "The handle '{handle}' returned for {did} does not resolve back to it, so no handle claim has been added.")]
+    public static partial void HandleVerificationFailed(this ILogger logger, string handle, Did did);
+
     // Manager Logging
     [LoggerMessage(20, LogLevel.Error, "OAuth state could not be prepared.")]
     public static partial void CouldNotPrepareOAuthState(this ILogger logger);

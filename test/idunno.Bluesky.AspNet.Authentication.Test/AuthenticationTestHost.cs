@@ -165,6 +165,8 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                         configureOptions?.Invoke(options);
                     });
 
+                    services.AddBlueskyAgentFactory(Scheme);
+
                     // Registered after AddBluesky so it replaces the SSRF protected client the package registers, which
                     // would otherwise try to reach the real network when an agent revokes credentials.
                     if (httpClientFactory is not null)
@@ -234,6 +236,26 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
 
         return ExtractCookie(response, CookieName)
             ?? throw new InvalidOperationException($"Sign in did not write a {CookieName} cookie.");
+    }
+
+    /// <summary>
+    /// Signs an identity in through the handler whilst the request carries an existing authentication cookie, which is
+    /// what an application does when a user signs in again without signing out first.
+    /// </summary>
+    /// <param name="identity">The identity to sign in.</param>
+    /// <param name="cookie">The authentication cookie the request should carry.</param>
+    internal async Task<HttpResponseMessage> SignInCarryingCookie(ClaimsIdentity identity, string cookie)
+    {
+        _pendingSignIn.Identity = identity;
+
+        try
+        {
+            return await GetWithCookie("/test/signin", cookie);
+        }
+        finally
+        {
+            _pendingSignIn.Identity = null;
+        }
     }
 
     /// <summary>
@@ -342,6 +364,29 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         });
 
         endpoints.MapGet("/test/challenge", context => context.ChallengeAsync(Scheme));
+
+        // Reports which identity store the agent factory wired an agent's credential updates to, for a user whose
+        // identity carries the authentication type named in the query string.
+        endpoints.MapGet("/test/agent/store", async context =>
+        {
+            string authenticationType = context.Request.Query["scheme"].ToString();
+
+            context.User = new ClaimsPrincipal(
+                TestData.AuthenticatedClaimsIdentity(TestData.NewDid(), authenticationType: authenticationType));
+
+            BlueskyAgentFactory factory = context.RequestServices.GetRequiredService<BlueskyAgentFactory>();
+
+            using BlueskyAgent agent = factory.CreateAgent();
+
+            BlueskyAuthenticationOptions options = context.RequestServices
+                .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAuthenticationOptions>>()
+                .Get(Scheme);
+
+            await context.Response.WriteAsync(
+                ReferenceEquals(agent.CredentialsUpdatedAsync?.Target, options.IdentityStore)
+                    ? "store=scheme"
+                    : "store=other");
+        });
 
         endpoints.MapGet("/test/signin", async context =>
         {

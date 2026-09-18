@@ -56,6 +56,7 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreO
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.ProfileCacheHits.get -> System.Diagnostics.Metrics.Counter<long>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.RecordIdentityStoreOperation(string! operation, long startTimestamp) -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SignOuts.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.HandleVerificationFailures.get -> System.Diagnostics.Metrics.Counter<long>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.ProfileCacheMisses.get -> System.Diagnostics.Metrics.Counter<long>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SigninsFailed.get -> System.Diagnostics.Metrics.Counter<long>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SigninsSucceeded.get -> System.Diagnostics.Metrics.Counter<long>!
@@ -109,6 +110,8 @@ idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.Cache.get -
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.Cache.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.CacheTimeout.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.CacheTimeout.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.VerifyHandle.get -> bool
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.VerifyHandle.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.AuthenticationScheme.get -> string!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.AuthenticationScheme.set -> void

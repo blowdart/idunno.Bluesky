@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -76,9 +78,16 @@ internal sealed class FakePds : IAsyncDisposable
     ///   Whether the authorization server should serve its metadata. Set this to <see langword="false"/> to exercise a
     ///   revocation which fails before the handler reaches the revocation endpoint.
     /// </param>
+    /// <param name="profile">The handle and DID the profile endpoint should report, if it should serve a profile at all.</param>
+    /// <param name="directoryHandle">
+    ///   The handle the directory should report the profile's DID as also being known as. Set this to something other
+    ///   than the profile handle, or leave it unset, to exercise a handle which does not verify.
+    /// </param>
     internal static async Task<FakePds> Create(
         int revocationStatusCode = StatusCodes.Status200OK,
-        bool serveAuthorizationServerMetadata = true)
+        bool serveAuthorizationServerMetadata = true,
+        (string Handle, Did Did)? profile = null,
+        string? directoryHandle = null)
     {
         FakePds? pds = null;
 
@@ -88,6 +97,38 @@ internal sealed class FakePds : IAsyncDisposable
                 .Configure(app => app.Run(async context =>
                 {
                     pds!.RecordRequest($"{context.Request.Method} {context.Request.Path}");
+
+                    if (profile is (string profileHandle, Did profileDid))
+                    {
+                        // The directory lookup is addressed to the PLC directory by DID, and the handle owner's
+                        // declaration to the handle's own host, so both are matched on path rather than on host.
+                        if (context.Request.Path == $"/{profileDid}")
+                        {
+                            string alsoKnownAs = directoryHandle is null
+                                ? "[]"
+                                : $$"""["at://{{directoryHandle}}"]""";
+
+                            await WriteJson(
+                                context,
+                                $$"""{"id":"{{profileDid}}","alsoKnownAs":{{alsoKnownAs}}}""");
+                            return;
+                        }
+
+                        if (context.Request.Path == "/.well-known/atproto-did")
+                        {
+                            context.Response.ContentType = "text/plain";
+                            await context.Response.WriteAsync(profileDid.Value);
+                            return;
+                        }
+
+                        if (context.Request.Path == "/xrpc/app.bsky.actor.getProfile")
+                        {
+                            await WriteJson(
+                                context,
+                                $$"""{"did":"{{profileDid}}","handle":"{{profileHandle}}"}""");
+                            return;
+                        }
+                    }
 
                     switch (context.Request.Path)
                     {

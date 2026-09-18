@@ -243,6 +243,23 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         _signInCalled = true;
 
         await EnsureCookieTicket().ConfigureAwait(false);
+
+        // Signing in replaces whatever session the request arrived with. Its credentials are still live at the
+        // authorization server, and nothing will ever present the cookie which named them again, so they are revoked
+        // and dropped rather than left in the store until they age out.
+        if (CurrentUserDid is not null &&
+            userIdentity.FindFirst(AtProtoClaims.Did)?.Value is string signingInDid &&
+            !CurrentUserDid.Value.Equals(signingInDid, StringComparison.Ordinal))
+        {
+            Did replacedDid = CurrentUserDid;
+
+            await RevokeCredentials(replacedDid).ConfigureAwait(false);
+            await IdentityStore.Remove(replacedDid).ConfigureAwait(false);
+            CurrentUserDid = null;
+
+            Logger.PreviousSessionReplacedOnSignIn(signingInDid, replacedDid);
+        }
+
         CookieOptions cookieOptions = BuildCookieOptions();
 
         BlueskySigningInContext signInContext = new(
@@ -281,12 +298,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         await IdentityStore.Add(userIdentity).ConfigureAwait(false);
 
         // Strip the principal down to just the DID, acting as a reference cookie.
-        var ticketPrincipal = new ClaimsPrincipal(
-            new ClaimsIdentity(
-                [
-                    new Claim(AtProtoClaims.Did, userIdentity.FindFirst(AtProtoClaims.Did)!.Value, ClaimValueTypes.String, userIdentity.FindFirst(AtProtoClaims.Did)!.Issuer)
-                ],
-                userIdentity.AuthenticationType));
+        if (!TryCreateReferencePrincipal(userIdentity, out ClaimsPrincipal? ticketPrincipal))
+        {
+            Logger.PrincipalDidNotContainADidClaim();
+            return;
+        }
 
         var ticket = new AuthenticationTicket(ticketPrincipal, signInContext.Properties, signInContext.Scheme.Name);
 
@@ -499,14 +515,59 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         }
     }
 
-    private static AuthenticationTicket CloneTicket(AuthenticationTicket ticket, ClaimsPrincipal? replacedPrincipal)
+    /// <summary>
+    /// Builds the principal which is written to the authentication cookie, holding nothing but the DID claim.
+    /// </summary>
+    /// <param name="identity">The <see cref="ClaimsIdentity"/> to take the DID claim from.</param>
+    /// <param name="referencePrincipal">The principal built, if <paramref name="identity"/> carries a DID claim.</param>
+    /// <returns><see langword="true"/> if a reference principal was built; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The cookie is a reference to the identity store, not a copy of what it holds. The stored identity carries the
+    ///   access token, the refresh token and the DPoP proof key, none of which belong in a cookie, so everything except
+    ///   the DID which names the stored entry is dropped.
+    /// </para>
+    /// </remarks>
+    private static bool TryCreateReferencePrincipal(ClaimsIdentity identity, [NotNullWhen(true)] out ClaimsPrincipal? referencePrincipal)
+    {
+        referencePrincipal = null;
+
+        if (identity.FindFirst(AtProtoClaims.Did) is not Claim didClaim)
+        {
+            return false;
+        }
+
+        referencePrincipal = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                [
+                    new Claim(AtProtoClaims.Did, didClaim.Value, ClaimValueTypes.String, didClaim.Issuer)
+                ],
+                identity.AuthenticationType));
+
+        return true;
+    }
+
+    /// <summary>
+    /// Builds the ticket a renewal writes back to the cookie.
+    /// </summary>
+    /// <param name="ticket">The ticket being renewed, whose properties the new ticket carries.</param>
+    /// <param name="replacedPrincipal">The principal supplied by a caller which replaced the one on <paramref name="ticket"/>, if any.</param>
+    /// <returns>The ticket to write, or <see langword="null"/> if no DID claim could be found to build one from.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A ticket reaching here has already been hydrated from the identity store, so its principal carries the stored
+    ///   credentials. Writing it back as it stands would put the access token, refresh token and DPoP proof key in the
+    ///   cookie, so the principal is reduced to the same DID reference a sign in writes.
+    /// </para>
+    /// </remarks>
+    private static AuthenticationTicket? CloneTicket(AuthenticationTicket ticket, ClaimsPrincipal? replacedPrincipal)
     {
         ClaimsPrincipal principal = replacedPrincipal ?? ticket.Principal;
-        ClaimsPrincipal newPrincipal = new();
 
-        foreach (ClaimsIdentity identity in principal.Identities)
+        if (principal.Identity is not ClaimsIdentity identity ||
+            !TryCreateReferencePrincipal(identity, out ClaimsPrincipal? referencePrincipal))
         {
-            newPrincipal.AddIdentity(identity.Clone());
+            return null;
         }
 
         var newProperties = new AuthenticationProperties();
@@ -515,7 +576,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             newProperties.Items[item.Key] = item.Value;
         }
 
-        return new AuthenticationTicket(newPrincipal, newProperties, ticket.AuthenticationScheme);
+        return new AuthenticationTicket(referencePrincipal, newProperties, ticket.AuthenticationScheme);
     }
 
     private Task<AuthenticateResult> EnsureCookieTicket()
@@ -679,6 +740,10 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (expiresUtc != null && expiresUtc.Value < currentUtc)
         {
+            // The credentials the cookie referred to are still live at the authorization server until they expire on
+            // their own, so revoke them rather than only dropping the local record of them.
+            await RevokeCredentials(CurrentUserDid).ConfigureAwait(false);
+            Logger.ExpiredTicketCredentialsRevoked(CurrentUserDid);
             await IdentityStore.Remove(CurrentUserDid).ConfigureAwait(false);
             CurrentUserDid = null;
             return AuthenticateResults.s_expiredTicket;
@@ -690,7 +755,18 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         // Now check the actual token from the store, and spin up an agent to check if the token is still valid
         using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, BlueskyAgentOptions))
         {
-            if (agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) < currentUtc )
+            if (!agent.HasCredentials)
+            {
+                // The stored identity carries no credentials which can be read, so there is nothing to refresh and
+                // nothing to call the PDS with. Authenticating the request on the strength of the DID alone would
+                // hand the application a signed in user it can do nothing for.
+                Logger.StoredIdentityHasNoCredentials(CurrentUserDid);
+                await IdentityStore.Remove(CurrentUserDid).ConfigureAwait(false);
+                CurrentUserDid = null;
+                return AuthenticateResults.s_noCredentialsInStoredIdentity;
+            }
+
+            if ((agent.Credentials.ExpiresOn - s_refreshClockSkew) < currentUtc)
             {
                 // Fresh the token as it has expired, and update the identity store with the new credentials
                 // Do not use the cancellation token from HttpContext.RequestAborted, this needs to process all the way through
@@ -851,12 +927,21 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (issuedUtc != null && expiresUtc != null)
         {
+            if (CloneTicket(ticket, replacedPrincipal) is not AuthenticationTicket refreshTicket)
+            {
+                // Without a DID the renewed cookie would not name an entry in the identity store, so it could never be
+                // authenticated. Leaving the existing cookie in place lets the session run out its original lifetime
+                // rather than ending it here.
+                Logger.RenewalSkippedNoDidClaim();
+                return;
+            }
+
             _shouldRefresh = true;
             DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
             _refreshIssuedUtc = currentUtc;
             TimeSpan timeSpan = expiresUtc.Value.Subtract(issuedUtc.Value);
             _refreshExpiresUtc = currentUtc.Add(timeSpan);
-            _refreshTicket = CloneTicket(ticket, replacedPrincipal);
+            _refreshTicket = refreshTicket;
         }
     }
 }

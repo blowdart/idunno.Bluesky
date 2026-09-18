@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -303,7 +304,9 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
                 return Task.CompletedTask;
             }
 
-            if (!currentToken.Equals(refreshLockToken, StringComparison.Ordinal))
+            if (!CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(currentToken),
+                    Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
             {
                 // The lock expired and someone else acquired it, so it is not ours to release.
                 Logger.EndRefreshLockNotOwned(did);

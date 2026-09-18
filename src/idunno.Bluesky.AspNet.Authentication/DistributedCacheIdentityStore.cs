@@ -287,7 +287,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         byte[]? written = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
 
-        if (written is null || !Encoding.UTF8.GetString(written).Equals(refreshLockToken, StringComparison.Ordinal))
+        if (written is null ||
+            !CryptographicOperations.FixedTimeEquals(written, Encoding.UTF8.GetBytes(refreshLockToken)))
         {
             Logger.StartRefreshDenied(did);
             return null;
@@ -313,7 +314,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
             return;
         }
 
-        if (!Encoding.UTF8.GetString(current).Equals(refreshLockToken, StringComparison.Ordinal))
+        if (!CryptographicOperations.FixedTimeEquals(current, Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
         {
             // The lock expired and someone else acquired it, so it is not ours to release.
             Logger.EndRefreshLockNotOwned(did);
