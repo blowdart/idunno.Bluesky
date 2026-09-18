@@ -169,6 +169,12 @@
 * Request headers supplied to an individual `AtProtoHttpClient` call are now sent with that request. Previously only headers configured on the client were sent, which silently dropped the headers passed to methods such as `BlueskyAgent.GetFeed()`.
 * A header collection supplied to an `AtProtoHttpClient` call is no longer modified, so a collection reused across calls no longer accumulates the headers configured on the client.
 * A header supplied for an individual call now replaces the one configured on the client rather than both being sent.
+* A failed `Login()` no longer leaves background token refresh stopped for the session it did not replace. A login which could not resolve a PDS, or whose
+  issued access token could not be validated, left the agent holding its existing credentials with nothing left to refresh them, and the session then expired.
+* A failed `Logout()` no longer leaves background token refresh stopped for the session it did not end.
+* An OAuth `Logout()` whose token revocation fails now discards the agent credentials, as a username and password logout already did. The agent previously
+  went on reporting itself as authenticated, and refreshing, against a session the caller had asked it to end.
+* Disposing an agent now clears the credentials it is holding, so a live access token and refresh token are not left reachable through a disposed agent.
 * `AtProtoAgent` no longer throws `ObjectDisposedException` from its credential refresh semaphore when it is disposed during a refresh.
 * `DPoPAccessCredentials` now reuses its DPoP proof token factory instead of importing the proof key on every request.
 * `OAuthClient` now reuses its DPoP proof token factory when refreshing credentials instead of importing the proof key on every request it makes.

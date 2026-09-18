@@ -22,7 +22,17 @@ namespace idunno.AtProto;
 /// </summary>
 public partial class AtProtoAgent : Agent
 {
-    private volatile bool _disposed;
+    /// <summary>
+    /// Tracks disposal of this class only.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="Agent"/> tracks its own disposal separately and privately. The name says which of the two this is,
+    ///   so that a field here is never mistaken for the base class state, or the other way around.
+    /// </para>
+    /// </remarks>
+    private volatile bool _atProtoAgentDisposed;
+
     private readonly ILogger<AtProtoAgent> _logger;
     internal readonly DirectoryAgent _directoryAgent;
 
@@ -358,15 +368,15 @@ public partial class AtProtoAgent : Agent
     /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
     protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (_atProtoAgentDisposed)
         {
             return;
         }
 
+        _atProtoAgentDisposed = true;
+
         if (disposing)
         {
-            _disposed = true;
-
             Authenticated = null;
             CredentialsUpdated = null;
             CredentialsUpdatedAsync = null;
@@ -376,6 +386,7 @@ public partial class AtProtoAgent : Agent
             StopTokenRefreshTimer(dispose: true);
 
             ForgetExchangedRefreshTokens();
+            ClearCredentials();
 
             _directoryAgent.Dispose();
         }
