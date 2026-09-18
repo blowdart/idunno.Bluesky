@@ -8,6 +8,8 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Events;
 
@@ -481,6 +483,128 @@ public class AtProtoJetstreamReceiveTests
                 }
             }
         }
+    }
+
+    [Fact]
+    public async Task AThrowingRecordReceivedHandlerDoesNotDropTheConnectionOrCountAsAParsingFailure()
+    {
+        const int messageCount = 4;
+
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            for (int sequence = 1; sequence <= messageCount; sequence++)
+            {
+                await SendText(webSocket, IdentityEvent(sequence), serverCancellationToken);
+            }
+        });
+
+        using var meterFactory = new TestMeterFactory();
+        using var allHandled = new CountdownEvent(messageCount);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory }))
+        {
+            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.message_parsing_failures");
+
+            jetstream.RecordReceived += (sender, e) =>
+            {
+                allHandled.Signal();
+
+                throw new InvalidOperationException("Handler failure.");
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                Assert.True(allHandled.Wait(TimeSpan.FromSeconds(30), cancellationToken));
+
+                // The handler signals before it throws, so the catch which decides whether to count the failure has
+                // not necessarily run yet. Give it time to land rather than reading the counter out from under it.
+                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+
+                // A handler is application code. An exception out of one says nothing about the message, so counting
+                // it as a parsing failure makes an application bug indistinguishable from a malformed server message.
+                Assert.Equal(0, collector.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+
+                // The slot taken for each message is still given back, so reading carries on.
+                Assert.True(jetstream.IsConnected);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AMessageParserWhichCannotBeStartedDoesNotStallTheReceiveLoop()
+    {
+        // More messages than there are parser slots. Each failure used to keep the slot it took, so once this many
+        // had failed the receive loop waited for a slot which nothing was ever going to give back.
+        const int messageCount = 5;
+
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            for (int sequence = 1; sequence <= messageCount; sequence++)
+            {
+                await SendText(webSocket, IdentityEvent(sequence), serverCancellationToken);
+            }
+        });
+
+        using var allRead = new CountdownEvent(messageCount);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = false,
+                MaximumConcurrentMessageParsers = 2,
+                TaskFactory = new TaskFactory(new RefusingTaskScheduler())
+            }))
+        {
+            jetstream.MessageReceived += (sender, e) =>
+            {
+                if (!allRead.IsSet)
+                {
+                    allRead.Signal();
+                }
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                Assert.True(
+                    allRead.Wait(TimeSpan.FromSeconds(30), cancellationToken),
+                    $"The receive loop stopped reading after {messageCount - allRead.CurrentCount} of {messageCount} messages.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A <see cref="TaskScheduler"/> which refuses everything queued to it.
+    /// </summary>
+    private sealed class RefusingTaskScheduler : TaskScheduler
+    {
+        protected override void QueueTask(Task task) => throw new InvalidOperationException("This scheduler accepts nothing.");
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
+
+        protected override IEnumerable<Task> GetScheduledTasks() => [];
     }
 
     private static async Task SendText(WebSocket webSocket, string message, CancellationToken cancellationToken)

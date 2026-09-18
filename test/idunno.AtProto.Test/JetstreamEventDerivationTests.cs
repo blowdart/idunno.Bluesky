@@ -79,4 +79,23 @@ public class JetstreamEventDerivationTests
 
         Assert.Equal(1U, derived.Identity.Sequence);
     }
+
+    [Fact]
+    public void AnEventOfAnUnknownKindDerivesToTheEventItself()
+    {
+        using var jetstream = new AtProtoJetstream();
+
+        AtJetstreamEvent jetstreamEvent = new()
+        {
+            Did = new Did(TestDid),
+            TimeStamp = 1746663645473657,
+            Kind = JetStreamEventKind.Unknown
+        };
+
+        // An unknown kind is not a failure to parse. The event is still delivered, so a consumer can decide for
+        // itself what to do with a kind this library does not model.
+        AtJetstreamEvent? derived = jetstream.DeriveEvent(jetstreamEvent);
+
+        Assert.Same(jetstreamEvent, derived);
+    }
 }

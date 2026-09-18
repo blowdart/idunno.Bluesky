@@ -12,8 +12,6 @@ namespace idunno.AtProto.Jetstream;
 /// </summary>
 public record AtJetstreamEvent
 {
-    private DateTimeOffset? _timeStamp;
-
     /// <summary>
     /// The <see cref="AtProto.Did"/> of the account the event refers to.
     /// </summary>
@@ -32,9 +30,13 @@ public record AtJetstreamEvent
     /// <summary>
     /// Gets the kind of the event.
     /// </summary>
+    /// <remarks>
+    /// <para>A kind which this library does not know about is reported as <see cref="JetStreamEventKind.Unknown"/>, so
+    /// an event kind added to the jetstream after this library was built does not make the whole event unreadable.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    [JsonConverter(typeof(JsonStringEnumConverter<JetStreamEventKind>))]
+    [JsonConverter(typeof(JetStreamEventKindConverter))]
     public required JetStreamEventKind Kind { get; init; }
 
     /// <summary>
@@ -51,14 +53,40 @@ public record AtJetstreamEvent
     /// <summary>
     /// Gets the timestamp for the record as a <see cref="DateTimeOffset"/>.
     /// </summary>
+    /// <remarks>
+    /// <para><see cref="TimeStamp"/> is remote input, and the range of a <see cref="long"/> of microseconds is far wider
+    /// than the range a <see cref="System.DateTimeOffset"/> can hold, so a value outside that range is clamped to
+    /// <see cref="System.DateTimeOffset.MinValue"/> or <see cref="System.DateTimeOffset.MaxValue"/> rather than throwing
+    /// out of a property getter.</para>
+    /// </remarks>
     [JsonIgnore]
     public DateTimeOffset DateTimeOffset
     {
         get
         {
-            _timeStamp ??= DateTimeOffset.FromUnixTimeMilliseconds(TimeStamp / 1000).ToUniversalTime();
+            long milliseconds = TimeStamp / 1000;
 
-            return _timeStamp.Value;
+            if (milliseconds < MinimumUnixTimeMilliseconds)
+            {
+                return System.DateTimeOffset.MinValue;
+            }
+
+            if (milliseconds > MaximumUnixTimeMilliseconds)
+            {
+                return System.DateTimeOffset.MaxValue;
+            }
+
+            return System.DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).ToUniversalTime();
         }
     }
+
+    /// <summary>
+    /// The smallest number of Unix milliseconds <see cref="System.DateTimeOffset.FromUnixTimeMilliseconds(long)"/> accepts.
+    /// </summary>
+    private const long MinimumUnixTimeMilliseconds = -62135596800000;
+
+    /// <summary>
+    /// The largest number of Unix milliseconds <see cref="System.DateTimeOffset.FromUnixTimeMilliseconds(long)"/> accepts.
+    /// </summary>
+    private const long MaximumUnixTimeMilliseconds = 253402300799999;
 }

@@ -189,3 +189,10 @@ idunno.AtProto.WebSocketOptions.KeepAliveTimeout.get -> System.TimeSpan?
 idunno.AtProto.WebSocketOptions.KeepAliveTimeout.init -> void
 *REMOVED*idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!
 virtual idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommit.Record.get -> System.Text.Json.JsonDocument?
+idunno.AtProto.Jetstream.AtJetstreamCommit.Record.get -> System.Text.Json.JsonElement?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SendTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SendTimeout.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetSendTimeout(System.TimeSpan sendTimeout) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamOptions.SendTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.JetstreamOptions.SendTimeout.init -> void

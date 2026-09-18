@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="idunno.Bluesky" Version="6.0.0" />
+    <ProjectReference Include="..\..\..\..\..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

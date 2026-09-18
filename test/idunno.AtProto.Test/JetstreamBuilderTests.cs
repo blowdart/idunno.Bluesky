@@ -80,4 +80,37 @@ public class JetstreamBuilderTests
 
         Assert.Equal(closeTimeout, jetstream.Options.CloseTimeout);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void SetSendTimeoutRejectsATimeoutWhichIsNotPositive(int seconds)
+    {
+        AtProtoJetstreamBuilder builder = AtProtoJetstream.CreateBuilder();
+
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => builder.SetSendTimeout(TimeSpan.FromSeconds(seconds)));
+
+        Assert.Equal("sendTimeout", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void JetstreamOptionsRejectsASendTimeoutWhichIsNotPositive(int seconds)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new JetstreamOptions { SendTimeout = TimeSpan.FromSeconds(seconds) });
+    }
+
+    [Fact]
+    public void TheSendTimeoutSetOnTheBuilderReachesTheOptions()
+    {
+        TimeSpan sendTimeout = TimeSpan.FromSeconds(11);
+
+        using AtProtoJetstream jetstream = AtProtoJetstream.CreateBuilder()
+            .SetSendTimeout(sendTimeout)
+            .Build();
+
+        Assert.Equal(sendTimeout, jetstream.Options.SendTimeout);
+    }
 }

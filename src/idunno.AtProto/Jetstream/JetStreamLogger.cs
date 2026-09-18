@@ -64,4 +64,16 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(25, LogLevel.Warning, "The close handshake was not answered within {closeTimeout}, aborting the connection")]
     internal static partial void CloseTimedOut(ILogger logger, TimeSpan closeTimeout);
+
+    [LoggerMessage(26, LogLevel.Warning, "The reply to a server initiated close could not be sent within {sendTimeout}, aborting the connection")]
+    internal static partial void CloseReplyTimedOut(ILogger logger, TimeSpan sendTimeout);
+
+    [LoggerMessage(27, LogLevel.Warning, "An options update message could not be sent within {sendTimeout} and was abandoned")]
+    internal static partial void OptionsUpdateMessageTimedOut(ILogger logger, TimeSpan sendTimeout);
+
+    [LoggerMessage(28, LogLevel.Error, "A RecordReceived handler threw an exception")]
+    internal static partial void RecordReceivedHandlerThrew(ILogger logger, Exception ex);
+
+    [LoggerMessage(29, LogLevel.Error, "A message parser could not be started, so the message was dropped")]
+    internal static partial void CouldNotStartMessageParser(ILogger logger, Exception ex);
 }
