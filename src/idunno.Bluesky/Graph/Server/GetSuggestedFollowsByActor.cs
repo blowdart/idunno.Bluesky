@@ -60,6 +60,19 @@ public static partial class BlueskyServer
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        if (response.Succeeded)
+        {
+            return new AtProtoHttpResult<SuggestedActors>(
+                response.Result with
+                {
+                    Suggestions = WithoutNullEntries(response.Result.Suggestions, service, nameof(SuggestedActors.Suggestions), loggerFactory)
+                },
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+
         return response;
     }
 }

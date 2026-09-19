@@ -36,7 +36,7 @@ public static partial class BlueskyServer
     public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
         AtUri listUri,
         Uri service,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,

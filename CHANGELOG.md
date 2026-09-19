@@ -79,6 +79,9 @@
 * Added `Maximum.ReactionLengthInBytes`.
 * Added `Maximum.JoinLinkPreviewCodes`, which `GetJoinGroupLinkPreviews()` now validates against in place of a hardcoded `50` in each of its two
   overloads.
+* Added `Maximum.ListNameLengthInBytes`, `Maximum.ListDescriptionLengthInBytes`, `Maximum.ListDescriptionLengthInGraphemes`,
+  `Maximum.StarterPackNameLengthInBytes`, `Maximum.StarterPackNameLengthInGraphemes`, `Maximum.StarterPackDescriptionLengthInBytes`,
+  `Maximum.StarterPackDescriptionLengthInGraphemes` and `Maximum.FeedsInStarterPack`, replacing the hard coded limits used by the graph records.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -182,6 +185,16 @@
   and `UpdateAllRead()` on both now returns an `AtProtoHttpResult<ulong?>` rather than an `AtProtoHttpResult<ulong>`. `AtProtoHttpResult<T>.Succeeded`
   requires `Result` to be non-null, which a non-nullable value type can never be, so these methods reported a failed call as a success carrying a
   meaningless count. Callers reading `Result` will need to handle a `null`, which now unambiguously means the call failed.
+* `BlueskyAgent.UpdateList(AtProtoRepositoryRecord<List>)` now sends the record's `Cid` as the `swapRecord` of the underlying `putRecord`, so an update
+  fails with a conflict if the list changed since it was read rather than silently discarding the other change. Use the
+  `UpdateList(AtUri, List)` overloads for an unconditional update.
+* `Graph.List` now validates `Name` against `Maximum.ListNameLengthInBytes` in UTF-8 bytes rather than in UTF-16 characters, and validates `Description`
+  against `Maximum.ListDescriptionLengthInBytes` as well as the existing grapheme limit. A name or description which the service would have rejected
+  now throws rather than being sent.
+* `Graph.StarterPack` now validates `Name`, `Description` and `List`, which were previously unchecked. The limits are the lexicon's, in both graphemes
+  and UTF-8 bytes.
+* `BlueskyServer.MuteActorList()` now declares its `accessCredentials` parameter as non-nullable. It always required credentials, and threw when passed
+  a `null`.
 
 ### Fixed
 
@@ -417,6 +430,17 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.DeleteFromList(AtUri, Did)` and `BlueskyAgent.DeleteFromList(AtUri, Handle)` now page through the list correctly. The loop which
+  searched for the subject never carried the cursor of the previous page forward and never re-read, so removing anyone who was not on the first page of a
+  list hung forever rather than returning.
+* `BlueskyAgent.DeleteFromList()` now reports a subject which is not in the list as a failed result carrying an `AtErrorDetail`, rather than as a result
+  with no status, no value and nothing to diagnose it with.
+* `BlueskyServer.GetList()` no longer throws when called without credentials. The endpoint is readable unauthenticated and the parameter was already
+  declared nullable.
+* `BlueskyServer.GetRelationships()`, `BlueskyServer.GetSuggestedFollowsByActor()` and `BlueskyServer.SearchStarterPacksV2()` now skip and log a `null`
+  entry in the collection they return rather than handing it to the caller.
+* `BlueskyServer.GetRelationships()` now rejects a `null` entry in `others` with an `ArgumentException` rather than throwing a `NullReferenceException`.
+* `BlueskyAgent.Unblock()` no longer logs a failure to resolve a handle, or a user who is not blocked, as a follow failure.
 * `PostBuilder.GetHashCode()` no longer returns a different value on every call for an unchanged builder.
 * `PostBuilder.Equals()` now compares builder contents rather than collection references, so two builders holding the same content are now equal. It also takes `DisableReplies` and any embedded video into account.
 * `PostBuilder.Append()` and `PostBuilder.WithText()` now measure text against the maximum post length in UTF-8 bytes rather than in UTF-16 characters, matching the constructor and the lexicon. Text which is within the character limit but over the byte limit is now rejected instead of producing a post the server refuses.

@@ -69,7 +69,11 @@ public static partial class BlueskyServer
         // See https://github.com/bluesky-social/atproto/issues/2919
         foreach (AtIdentifier other in others)
         {
-            if (other is Handle handle)
+            if (other is null)
+            {
+                throw new ArgumentException("The collection of others must not contain null entries.", nameof(others));
+            }
+            else if (other is Handle handle)
             {
                 Did? did = await AtProtoServer.ResolveHandle(handle, httpClient, loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false);
                 if (did is not null)
@@ -96,7 +100,7 @@ public static partial class BlueskyServer
 
         BlueskyHttpClient<RelationshipMap> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
-        return await client.Get(
+        AtProtoHttpResult<RelationshipMap> response = await client.Get(
             service: service,
             endpoint: $"/xrpc/app.bsky.graph.getRelationships?{queryString}",
             requestHeaders: null,
@@ -105,5 +109,20 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return new AtProtoHttpResult<RelationshipMap>(
+                response.Result with
+                {
+                    Relationships = WithoutNullEntries(response.Result.Relationships, service, nameof(RelationshipMap.Relationships), loggerFactory)
+                },
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+
+        return response;
     }
 }
