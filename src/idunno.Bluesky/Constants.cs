@@ -74,6 +74,70 @@ public static class Maximum
     public static readonly int TagLengthInGraphemes = 64;
 
     /// <summary>
+    /// The maximum length of a list name, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int ListNameLengthInBytes = 64;
+
+    /// <summary>
+    /// The maximum length of a list description, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int ListDescriptionLengthInBytes = 3000;
+
+    /// <summary>
+    /// The maximum length of a list description, in graphemes.
+    /// </summary>
+    public static readonly int ListDescriptionLengthInGraphemes = 300;
+
+    /// <summary>
+    /// The maximum length of a starter pack name, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int StarterPackNameLengthInBytes = 500;
+
+    /// <summary>
+    /// The maximum length of a starter pack name, in graphemes.
+    /// </summary>
+    public static readonly int StarterPackNameLengthInGraphemes = 50;
+
+    /// <summary>
+    /// The maximum length of a starter pack description, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int StarterPackDescriptionLengthInBytes = 3000;
+
+    /// <summary>
+    /// The maximum length of a starter pack description, in graphemes.
+    /// </summary>
+    public static readonly int StarterPackDescriptionLengthInGraphemes = 300;
+
+    /// <summary>
+    /// The maximum number of feeds a starter pack can contain.
+    /// </summary>
+    public static readonly int FeedsInStarterPack = 3;
+
+    /// <summary>
     /// The maximum number of rules a thread gate can contain.
     /// </summary>
     public static readonly int ThreadGateRules = 5;

@@ -28,13 +28,6 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        ArgumentNullException.ThrowIfNull(handle);
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
 
         if (didResolutionResult is null)

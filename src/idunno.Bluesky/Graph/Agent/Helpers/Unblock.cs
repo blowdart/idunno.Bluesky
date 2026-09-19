@@ -28,13 +28,11 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        ArgumentNullException.ThrowIfNull(handle);
-
         Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
 
         if (didResolutionResult is null)
         {
-            Logger.BlockFailedAsHandleCouldNotResolve(_logger, handle);
+            Logger.UnblockFailedAsHandleCouldNotResolve(_logger, handle);
         }
 
         if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
@@ -84,7 +82,7 @@ public partial class BlueskyAgent
 
         if (userProfileResult.Result.Viewer is null || userProfileResult.Result.Viewer.Blocking is null)
         {
-            Logger.UnblockFailedAsHandleCouldNotGetUserIsNotFollowing(_logger, did);
+            Logger.UnblockFailedAsUserIsNotBlocking(_logger, did);
 
             return new AtProtoHttpResult<Commit>(
                 null,

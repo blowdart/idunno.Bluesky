@@ -50,14 +50,14 @@ internal static partial class Logger
     [LoggerMessage(32, LogLevel.Information, "Unfollow() failed as current user is not following {did}.")]
     internal static partial void UnfollowFailedAsHandleCouldNotGetUserIsNotFollowing(ILogger logger, Did did);
 
-    [LoggerMessage(35, LogLevel.Error, "Block() failed as {handle} could not be resolved to a DID.")]
-    internal static partial void BlockFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);
+    [LoggerMessage(35, LogLevel.Error, "Unblock() failed as {handle} could not be resolved to a DID.")]
+    internal static partial void UnblockFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);
 
     [LoggerMessage(40, LogLevel.Information, "Unblock() failed as could not get user profile for {did}.")]
     internal static partial void UnblockFailedAsHandleCouldNotGetUserProfile(ILogger logger, Did did);
 
-    [LoggerMessage(41, LogLevel.Error, "Unblock() failed as current user is not following {did}.")]
-    internal static partial void UnblockFailedAsHandleCouldNotGetUserIsNotFollowing(ILogger logger, Did did);
+    [LoggerMessage(41, LogLevel.Error, "Unblock() failed as current user is not blocking {did}.")]
+    internal static partial void UnblockFailedAsUserIsNotBlocking(ILogger logger, Did did);
 
     [LoggerMessage(45, LogLevel.Debug, "CreatePostWithGatesSucceeded for {did} with a record key of {recordKey}")]
     internal static partial void CreatePostWithGatesSucceeded(ILogger logger, RecordKey recordKey, Did did);

@@ -89,7 +89,10 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SearchStarterPacksV2Result>(
-                new SearchStarterPacksV2Result(response.Result),
+                new SearchStarterPacksV2Result(
+                    WithoutNullEntries(response.Result.StarterPacks, service, nameof(SearchStarterPacksV2Response.StarterPacks), loggerFactory),
+                    response.Result.HitsTotal,
+                    response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

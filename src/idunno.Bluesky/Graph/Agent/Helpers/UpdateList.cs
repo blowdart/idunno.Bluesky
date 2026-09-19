@@ -44,12 +44,44 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
+        return await UpdateList(
+            uri: uri,
+            list: list,
+            swapRecord: null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the list record referenced by its <paramref name="uri"/>.
+    /// </summary>
+    /// <param name="uri">The <see cref="AtUri"/> of the list record to update.</param>
+    /// <param name="list">The <see cref="List"/> to update the record with</param>
+    /// <param name="swapRecord">The <see cref="Cid"/> of the record the update is expected to replace, if the update should be conditional.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    private async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
+        AtUri uri,
+        List list,
+        Cid? swapRecord,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(uri.RecordKey);
+
         return await PutRecord<BlueskyTimestampedRecord>(
             record: list,
             collection: CollectionNsid.List,
             rKey: uri.RecordKey,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             validate: true,
+            swapRecord: swapRecord,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -78,6 +110,7 @@ public partial class BlueskyAgent
         return await UpdateList(
             uri: list.Uri,
             list: list.Value,
+            swapRecord: list.Cid,
             cancellationToken: default).ConfigureAwait(false);
     }
 
@@ -108,6 +141,7 @@ public partial class BlueskyAgent
         return await UpdateList(
             uri: list.Uri,
             list: list.Value,
+            swapRecord: list.Cid,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
