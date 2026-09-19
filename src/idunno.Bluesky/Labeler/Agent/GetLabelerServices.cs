@@ -16,6 +16,10 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
+    /// <remarks>
+    /// <para>If the current user subscribes to no labelers an empty collection is returned, rather than a request
+    /// being made with no labeler <see cref="Did"/>s.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(
         bool getDetailedViews = false,
         CancellationToken cancellationToken = default)
@@ -32,8 +36,8 @@ public partial class BlueskyAgent
             Logger.GetUserPreferencesFailedInGetLabelerServices(
                 _logger,
                 userPreferencesResult.StatusCode,
-                userPreferencesResult.AtErrorDetail!.Error,
-                userPreferencesResult.AtErrorDetail.Message);
+                userPreferencesResult.AtErrorDetail?.Error,
+                userPreferencesResult.AtErrorDetail?.Message);
 
             return new AtProtoHttpResult<ICollection<LabelerView>>(
                 result: null,
@@ -43,8 +47,20 @@ public partial class BlueskyAgent
                 rateLimit: userPreferencesResult.RateLimit);
         }
 
+        List<Did> subscribedLabelers = [.. userPreferencesResult.Result.SubscribedLabelers];
+
+        if (subscribedLabelers.Count == 0)
+        {
+            return new AtProtoHttpResult<ICollection<LabelerView>>(
+                result: [],
+                statusCode: userPreferencesResult.StatusCode,
+                httpResponseHeaders: userPreferencesResult.HttpResponseHeaders,
+                atErrorDetail: userPreferencesResult.AtErrorDetail,
+                rateLimit: userPreferencesResult.RateLimit);
+        }
+
         return await BlueskyServer.GetLabelerServices(
-            dids: userPreferencesResult.Result.SubscribedLabelers,
+            dids: subscribedLabelers,
             getDetailedViews: getDetailedViews,
             service: Service,
             accessCredentials: Credentials,
@@ -64,7 +80,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty, or contains more than <see cref="Maximum.LabelerServices"/> entries.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(
         IEnumerable<Did> dids,
@@ -72,7 +88,12 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dids);
-        ArgumentOutOfRangeException.ThrowIfLessThan(dids.Count(), 1);
+
+        // Materialize once so a lazy or single pass sequence is not evaluated again by the server method.
+        List<Did> didList = [.. dids];
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(didList.Count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(didList.Count, Maximum.LabelerServices);
 
         if (!IsAuthenticated)
         {
@@ -80,7 +101,7 @@ public partial class BlueskyAgent
         }
 
         return await BlueskyServer.GetLabelerServices(
-            dids: dids,
+            dids: didList,
             getDetailedViews: getDetailedViews,
             service: Service,
             accessCredentials: Credentials,

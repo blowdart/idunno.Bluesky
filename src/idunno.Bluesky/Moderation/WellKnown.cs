@@ -85,15 +85,23 @@ public static class WellKnown
 
         reportOptionsByTarget.Add("other", [.. s_commonReportOptions]);
 
-        ReportTargets = reportOptionsByTarget.Keys;
+        ReportTargets = reportOptionsByTarget.Keys.ToList().AsReadOnly();
 
-        ReportOptions = reportOptionsByTarget.AsReadOnly();
+        ReportOptions = reportOptionsByTarget
+            .ToDictionary(entry => entry.Key, entry => (IReadOnlyList<ReportOption>)entry.Value.AsReadOnly())
+            .AsReadOnly();
     }
 
     /// <summary>
     /// Gets a dictionary of report options, where the key is the report target.
     /// </summary>
-    public static IReadOnlyDictionary<string, List<ReportOption>> ReportOptions { get; }
+    /// <remarks>
+    /// <para>Some targets offer more than one option for the same report type, because the options are what a
+    /// user chooses between, not the reasons the API accepts. For example a list, starter pack or feed generator
+    /// can be reported both for breaking the rules and for having a name or description which violates community
+    /// standards, and both of those submit a report of type <see cref="Moderation.ReportType.Violation"/>.</para>
+    /// </remarks>
+    public static IReadOnlyDictionary<string, IReadOnlyList<ReportOption>> ReportOptions { get; }
 
     /// <summary>
     /// Gets a read-only collection of well known report targets.
@@ -154,7 +162,7 @@ public enum ReportType
     Misleading,
 
     /// <summary>
-    /// `Excessive mentions, replies or unwanted messages.
+    /// Excessive mentions, replies or unwanted messages.
     /// </summary>
     Spam,
 

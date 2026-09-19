@@ -15,6 +15,10 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
+    /// <remarks>
+    /// <para>If the current user subscribes to no labelers an empty collection is returned, rather than a request
+    /// being made with no labeler <see cref="Did"/>s.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<ICollection<LabelerViewDetailed>>> GetUserSubscribedLabelerServices(
         CancellationToken cancellationToken = default)
     {
@@ -41,8 +45,20 @@ public partial class BlueskyAgent
                 rateLimit: userPreferencesResult.RateLimit);
         }
 
+        List<Did> subscribedLabelers = [.. userPreferencesResult.Result.SubscribedLabelers];
+
+        if (subscribedLabelers.Count == 0)
+        {
+            return new AtProtoHttpResult<ICollection<LabelerViewDetailed>>(
+                result: [],
+                statusCode: userPreferencesResult.StatusCode,
+                httpResponseHeaders: userPreferencesResult.HttpResponseHeaders,
+                atErrorDetail: userPreferencesResult.AtErrorDetail,
+                rateLimit: userPreferencesResult.RateLimit);
+        }
+
         AtProtoHttpResult<ICollection<LabelerView>> getLabelerServicesResult = await BlueskyServer.GetLabelerServices(
-            dids: userPreferencesResult.Result.SubscribedLabelers,
+            dids: subscribedLabelers,
             getDetailedViews: true,
             service: Service,
             accessCredentials: Credentials,

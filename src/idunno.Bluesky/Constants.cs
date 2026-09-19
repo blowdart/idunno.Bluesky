@@ -308,6 +308,11 @@ public static class Maximum
     public static readonly int Bookmarks = 100;
 
     /// <summary>
+    /// The maximum number of labeler services whose views can be requested in a single call.
+    /// </summary>
+    public static readonly int LabelerServices = 25;
+
+    /// <summary>
     /// The maximum number of tags that a post can contain.
     /// </summary>
     public static readonly int TagsInPost = 8;
