@@ -110,4 +110,56 @@ public record Properties
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyCollection<StrongReference>? AssociatedRefs { get; set; }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="Properties"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="Properties"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="AssociatedRefs"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(Properties? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return Uri == other.Uri &&
+            Title == other.Title &&
+            Description == other.Description &&
+            Thumbnail == other.Thumbnail &&
+            CollectionComparison.SequenceEquals(AssociatedRefs, other.AssociatedRefs);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The hash code is derived from the current property values, so it changes if the instance is mutated.
+    ///   Do not mutate an instance while it is being used as a key in a hashed collection.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Major Code Smell", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Value equality over mutable properties requires the hash code to be derived from the same state, which is documented on the member.")]
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(EqualityContract);
+        hashCode.Add(Uri, StringComparer.Ordinal);
+        hashCode.Add(Title, StringComparer.Ordinal);
+        hashCode.Add(Description, StringComparer.Ordinal);
+        hashCode.Add(Thumbnail);
+        CollectionComparison.AddSequence(ref hashCode, AssociatedRefs);
+
+        return hashCode.ToHashCode();
+    }
 }

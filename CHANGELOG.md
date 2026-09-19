@@ -126,6 +126,8 @@
 
 #### idunno.AtProto
 
+* `AtProtoRecord` and its derived record types now compare `ExtensionData` by its contents rather than by reference, so two records carrying the same extension data are now equal.
+* `SelfLabels` now has value equality, comparing its labels by their contents rather than by reference.
 * Renamed `AtProtoJetstreamBuilder.MaximumMessageSize` to `ReadBufferSize` and `AtProtoJetstreamBuilder.SetMaximumMessageSize()` to `SetReadBufferSize()`, as they configure the size of each block read from the web socket rather than a limit on a message. Use `SetMaximumTotalMessageSize()` to limit how large a message may be.
 * `AtProtoJetstream.ConnectAsync()` now throws `WebSocketException` when a connection cannot be made, instead of returning normally.
 * `AtProtoJetstreamBuilder.WithCompressionDictionary()`, `WithTaskFactory()` and the `FilterTo()` overloads now throw `ArgumentNullException` when passed `null`.
@@ -147,6 +149,8 @@
 
 #### idunno.Bluesky
 
+* `Post`, `EmbeddedImages`, `EmbeddedGallery`, `EmbeddedVideo` and `Embed.External.Properties` now compare their collection properties by contents rather than by reference. `Post` equality still includes `CreatedAt`, so two posts created at different times are never equal.
+* `EmbeddedImages` now copies the collection it is constructed from instead of holding on to the caller's collection.
 * The `imageMimeType` parameter on `BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob()` is now only a hint; the type recorded on the uploaded blob is always the sniffed one.
 
 * The `Maximum` constants which carry a lexicon `maxLength` have been renamed to end in `InBytes`, because a lexicon `maxLength` is counted in UTF-8
@@ -413,6 +417,10 @@
 
 #### idunno.Bluesky
 
+* `PostBuilder.GetHashCode()` no longer returns a different value on every call for an unchanged builder.
+* `PostBuilder.Equals()` now compares builder contents rather than collection references, so two builders holding the same content are now equal. It also takes `DisableReplies` and any embedded video into account.
+* `PostBuilder.Append()` and `PostBuilder.WithText()` now measure text against the maximum post length in UTF-8 bytes rather than in UTF-16 characters, matching the constructor and the lexicon. Text which is within the character limit but over the byte limit is now rejected instead of producing a post the server refuses.
+* `PostBuilder.ToPost()` no longer modifies the builder it was called on, and the returned `Post` no longer shares an image collection with it.
 * The embedded card generators now decide a thumbnail's MIME type by sniffing the downloaded content rather than trusting the type declared by the page.
 * The embedded card generators now reject an `og:url` whose scheme is not http or https.
 * The embedded card generators now read `/.well-known/site.standard.publication` with a 4KB limit rather than the 1MB page limit.

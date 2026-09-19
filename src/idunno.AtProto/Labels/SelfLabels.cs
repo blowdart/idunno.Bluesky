@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Labels;
@@ -11,7 +12,8 @@ namespace idunno.AtProto.Labels;
 /// </summary>
 [JsonPolymorphic]
 [JsonDerivedType(typeof(SelfLabels), typeDiscriminator: "com.atproto.label.defs#selfLabels")]
-public class SelfLabels
+[SuppressMessage("Major Code Smell", "S4035:Classes implementing \"IEquatable<T>\" should be sealed", Justification = "Sealing the type would be a breaking change. Equals guards against asymmetric comparisons by requiring both instances to be of the same runtime type.")]
+public class SelfLabels : IEquatable<SelfLabels>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
 #if NET9_0_OR_GREATER
@@ -163,5 +165,68 @@ public class SelfLabels
                 _values = updatedLabels;
             }
         }
+    }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="SelfLabels"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="SelfLabels"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para>Two instances are equal when they contain the same labels, in the same order.</para>
+    /// </remarks>
+    public bool Equals(SelfLabels? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || other.GetType() != GetType())
+        {
+            return false;
+        }
+
+        List<SelfLabel> snapshot;
+
+        lock (_syncLock)
+        {
+            snapshot = [.. _values];
+        }
+
+        return snapshot.SequenceEqual(other.Values);
+    }
+
+    /// <summary>
+    /// Determines whether the specified object is equal to the current instance.
+    /// </summary>
+    /// <param name="obj">The object to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="obj"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    public override bool Equals(object? obj) => Equals(obj as SelfLabels);
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The hash code is derived from the labels the instance currently contains, so it changes if the instance is mutated.
+    ///   Do not mutate an instance while it is being used as a key in a hashed collection.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Major Code Smell", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Value equality over a mutable collection requires the hash code to be derived from the same state, which is documented on the member.")]
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        lock (_syncLock)
+        {
+            foreach (SelfLabel label in _values)
+            {
+                hashCode.Add(label);
+            }
+        }
+
+        return hashCode.ToHashCode();
     }
 }

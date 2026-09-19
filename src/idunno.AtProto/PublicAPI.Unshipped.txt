@@ -196,3 +196,6 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SendTimeout.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetSendTimeout(System.TimeSpan sendTimeout) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Jetstream.JetstreamOptions.SendTimeout.get -> System.TimeSpan
 idunno.AtProto.Jetstream.JetstreamOptions.SendTimeout.init -> void
+idunno.AtProto.Labels.SelfLabels.Equals(idunno.AtProto.Labels.SelfLabels? other) -> bool
+override idunno.AtProto.Labels.SelfLabels.Equals(object? obj) -> bool
+override idunno.AtProto.Labels.SelfLabels.GetHashCode() -> int
