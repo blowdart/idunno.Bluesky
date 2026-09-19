@@ -19,6 +19,7 @@ public static class AtProtoJsonSerializerOptions
 {
     private static readonly JsonSerializerOptions s_options = new(JsonSerializerOptions.Web)
     {
+        AllowOutOfOrderMetadataProperties = true,
         TypeInfoResolver = SourceGenerationContext.Default,
     };
 

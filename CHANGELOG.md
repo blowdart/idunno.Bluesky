@@ -214,6 +214,9 @@
 
 #### idunno.AtProto
 
+* `AtProtoJsonSerializerOptions.Options` did not set `AllowOutOfOrderMetadataProperties`, so deserializing a polymorphic AT Protocol type threw `NotSupportedException`
+  when the server placed the `$type` discriminator after the other properties, which it is free to do. The same options are used by
+  `idunno.Bluesky.AspNet.Authentication`, so the authentication handlers were affected too.
 * A jetstream event whose `kind` is one this library does not model is now surfaced as `JetStreamEventKind.Unknown` rather than failing to deserialize.
   The jetstream server decides which kinds it emits, so a kind added upstream previously made every message carrying it unparsable and dropped.
 * `AtJetstreamEvent.DateTimeOffset` now clamps a `time_us` outside the range a `DateTimeOffset` can hold to `DateTimeOffset.MinValue` or
