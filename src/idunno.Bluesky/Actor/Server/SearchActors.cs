@@ -60,7 +60,7 @@ public static partial class BlueskyServer
 
         ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorSearchResults);
 
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(

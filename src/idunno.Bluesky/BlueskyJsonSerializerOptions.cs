@@ -29,7 +29,19 @@ public static class BlueskyJsonSerializerOptions
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
     /// </summary>
-    public static JsonSerializerOptions Options => AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(s_options);
+    public static JsonSerializerOptions Options
+    {
+        get
+        {
+            // Only the type resolver from s_options survives the chaining call, so converters have to be
+            // added to the result rather than declared on s_options.
+            JsonSerializerOptions options = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(s_options);
+
+            options.Converters.Add(new Json.PreferenceConverter());
+
+            return options;
+        }
+    }
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.

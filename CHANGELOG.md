@@ -66,6 +66,7 @@
 
 #### idunno.Bluesky
 
+* Added `Maximum.ProfilesToGet`, `Maximum.ActorSearchResults`, `Maximum.ActorTypeaheadSearchResults`, `Maximum.InterestTags`, `Maximum.MutedWordLengthInBytes` and `Maximum.MutedWordLengthInGraphemes`.
 * Added `Maximum.PostsToList`, `Maximum.PostsToGet`, `Maximum.PostThreadDepth` and `Maximum.PostThreadParentHeight`.
 * Added `BlueskyAgent.GetThreadGateRecord()` and `BlueskyAgent.GetPostGateRecord()`, which return the repository record so its `Cid` is available.
 * Added `BlueskyAgent.UpdateThreadGate(ThreadGate, Cid?, CancellationToken)` and `BlueskyAgent.UpdatePostGate(PostGate, Cid?, CancellationToken)`, allowing a conditional update.
@@ -156,6 +157,10 @@
 
 #### idunno.Bluesky
 
+* `Preferences.MutedWords` now returns `IReadOnlyList<MutedWord>` rather than `IList<MutedWord>`.
+* `Preference` polymorphism is now handled by a `JsonConverter` rather than `JsonPolymorphicAttribute`, so an unrecognized preference round-trips unchanged. Any new preference type must be registered with the converter.
+* `InterestsPreference` now validates the number of tags it is given, and the byte and grapheme length of each tag.
+* `MutedWord` now validates the byte and grapheme length of its value, and no longer accepts a null value or targets.
 * `BlueskyServer.GetTimeline()` and `BlueskyServer.GetSuggestedFeeds()` now take a non-nullable `AccessCredentials`, matching the authentication both endpoints require.
 * The cancellation token on `BlueskyAgent.UpdateThreadGate(ThreadGate, CancellationToken)` and `BlueskyAgent.UpdatePostGate(PostGate, CancellationToken)` is no longer optional.
 * `ThreadGate.Rules`, `ThreadGate.HiddenReplies`, `PostGate.Rules` and `PostGate.DetachedEmbeddingUris` now return a read-only copy of the collection they were constructed from, so entries can no longer be added past the validated maximum.
@@ -439,6 +444,12 @@
 
 #### idunno.Bluesky
 
+* An unrecognized preference returned by the API lost its `$type` discriminator when deserialized, so a get, modify and `PutPreferences()` cycle silently corrupted every preference type the SDK does not yet know about.
+* `ProfileViewBasic` measured `DisplayName` against the maximum byte length using its character length, accepting names the API rejects.
+* `Preferences` wrapped the list it was given rather than copying it, so the caller could mutate the collection afterwards.
+* `PostInteractionSettingsPreferences.ThreadGateAllowRules` and `PostInteractionSettingsPreferences.PostGateEmbeddingRules` wrapped the collections they were given, so entries could be added past the validated maximum.
+* `BlueskyAgent.SetContentVisibility(LabelerDeclaration, string, ContentVisibility, CancellationToken)` did not validate its `declaration` argument, throwing `NullReferenceException` instead of `ArgumentNullException`.
+* `Actor.DeclaredAgePreference` and `Actor.VerificationPreferences` were not registered in the source generation context.
 * `SearchPostsV2()` sent `embeddedAtUris`, `excludeEmbeddedAtUris`, `replyParentUri` and `threadRootUri` under parameter names the lexicon does not define, so those filters were silently ignored.
 * `SearchPostsV2()` sent `allTime` as `until`, losing the flag and corrupting the requested time window.
 * `SearchPostsV2()` emitted a dangling `&` in the query string when no query was supplied.

@@ -20,19 +20,22 @@ public sealed record PostInteractionSettingsPreferences : Preference
     /// </summary>
     /// <param name="threadGateAllowRules"> List of rules defining who can reply to this users posts.</param>
     /// <param name="postGateEmbeddingRules">List of rules defining who can embed this users posts.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when more than 5 rules are provided for either parameter.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when more than <see cref="Maximum.ThreadGateRules"/> thread gate rules or more than
+    /// <see cref="Maximum.PostGateRules"/> post gate rules are provided.
+    /// </exception>
     [JsonConstructor]
     public PostInteractionSettingsPreferences(ICollection<ThreadGateRule>? threadGateAllowRules, ICollection<PostGateRule>? postGateEmbeddingRules)
     {
         if (threadGateAllowRules is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(threadGateAllowRules.Count, 5);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(threadGateAllowRules.Count, Maximum.ThreadGateRules);
             ThreadGateAllowRules = threadGateAllowRules;
         }
 
         if (postGateEmbeddingRules is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(postGateEmbeddingRules.Count, 5);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(postGateEmbeddingRules.Count, Maximum.PostGateRules);
             PostGateEmbeddingRules = postGateEmbeddingRules;
         }
     }
@@ -42,12 +45,24 @@ public sealed record PostInteractionSettingsPreferences : Preference
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("threadgateAllowRules")]
-    public ICollection<ThreadGateRule>? ThreadGateAllowRules { get; init; }
+    public ICollection<ThreadGateRule>? ThreadGateAllowRules
+    {
+        get => _threadGateAllowRules;
+        init => _threadGateAllowRules = value is null ? null : new List<ThreadGateRule>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// List of rules defining who can embed this users posts. If value is an empty array or is <see langword="null"/>, no particular rules apply and anyone can embed.
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("postgateEmbeddingRules")]
-    public ICollection<PostGateRule>? PostGateEmbeddingRules { get; init; }
+    public ICollection<PostGateRule>? PostGateEmbeddingRules
+    {
+        get => _postGateEmbeddingRules;
+        init => _postGateEmbeddingRules = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
+    }
+
+    private readonly ICollection<ThreadGateRule>? _threadGateAllowRules;
+
+    private readonly ICollection<PostGateRule>? _postGateEmbeddingRules;
 }

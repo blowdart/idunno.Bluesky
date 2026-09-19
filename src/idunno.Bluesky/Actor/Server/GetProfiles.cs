@@ -56,10 +56,10 @@ public static partial class BlueskyServer
 
         var actorList = new List<AtIdentifier>(actors);
 
-        if (actorList.Count == 0 || actorList.Count > 25)
+        if (actorList.Count == 0 || actorList.Count > Maximum.ProfilesToGet)
         {
             ArgumentOutOfRangeException.ThrowIfZero(actorList.Count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, Maximum.ProfilesToGet);
         }
 
         string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));

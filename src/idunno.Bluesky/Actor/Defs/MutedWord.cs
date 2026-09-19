@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
+
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
@@ -20,8 +22,18 @@ public record MutedWord
     /// <param name="targets">The intended targets of the muted word.</param>
     /// <param name="actorTarget">Groups of users to apply the muted word to.</param>
     /// <param name="expiresAt">The date and time at which the muted word will expire and no longer be applied, if any.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> or <paramref name="targets"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="value"/> is longer than <see cref="Maximum.MutedWordLengthInBytes"/> bytes or
+    /// <see cref="Maximum.MutedWordLengthInGraphemes"/> graphemes.
+    /// </exception>
     public MutedWord(string? id, string value, IReadOnlyList<MutedWordTarget> targets, MutedWordActorTarget actorTarget, DateTimeOffset? expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentNullException.ThrowIfNull(targets);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.MutedWordLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.MutedWordLengthInGraphemes);
+
         Id = id;
         Value = value;
         Targets = new List<MutedWordTarget>(targets).AsReadOnly();

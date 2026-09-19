@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+using idunno.AtProto;
+
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
@@ -19,6 +21,11 @@ public sealed record InterestsPreference : Preference
     /// Creates a new instance of <see cref="InterestsPreference"/>.
     /// </summary>
     /// <param name="tags">A list of tags which describe the account owner's interests gathered during onboarding.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any entry in <paramref name="tags"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="tags"/> contains more than <see cref="Maximum.InterestTags"/> tags, or when any tag is
+    /// longer than <see cref="Maximum.TagLengthInBytes"/> bytes or <see cref="Maximum.TagLengthInGraphemes"/> graphemes.
+    /// </exception>
     public InterestsPreference(ICollection<string> tags)
     {
         if (tags is null)
@@ -27,6 +34,15 @@ public sealed record InterestsPreference : Preference
         }
         else
         {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.InterestTags);
+
+            foreach (string tag in tags)
+            {
+                ArgumentNullException.ThrowIfNull(tag);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+            }
+
             Tags = [.. tags];
         }
     }
