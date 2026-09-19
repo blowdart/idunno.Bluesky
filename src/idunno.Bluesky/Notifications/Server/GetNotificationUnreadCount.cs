@@ -51,7 +51,7 @@ public static partial class BlueskyServer
         string endpoint = "/xrpc/app.bsky.notification.getUnreadCount";
         if (seenAt is not null)
         {
-            endpoint = $"/xrpc/app.bsky.notification.getUnreadCount?seenAt={Uri.EscapeDataString(seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))}";
+            endpoint =  endpoint + $"?seenAt={Uri.EscapeDataString(seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))}";
         }
 
         BlueskyHttpClient<UnreadCountResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };

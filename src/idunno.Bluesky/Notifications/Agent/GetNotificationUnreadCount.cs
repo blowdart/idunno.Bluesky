@@ -1,11 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-
 using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky.Notifications;
 
 namespace idunno.Bluesky;
 

@@ -1,3 +1,6 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
 using idunno.AtProto;
 using idunno.Bluesky.Notifications;
 
@@ -17,10 +20,10 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when <paramref name="replies"/> is <see langword="true"/> but <paramref name="posts"/> is <see langword="false"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
     public async Task<AtProtoHttpResult<SubjectActivitySubscription>> SetActivitySubscription(
-    Did subject,
-    bool posts,
-    bool replies,
-    CancellationToken cancellationToken = default)
+        Did subject,
+        bool posts,
+        bool replies,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(subject);
 

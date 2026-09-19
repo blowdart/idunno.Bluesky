@@ -12,7 +12,7 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Creates a notification declaration record for the current user.Requires authentication.
+    /// Creates a notification declaration record for the current user. Requires authentication.
     /// </summary>
     /// <param name="notificationAllowedFrom">Indicates who will be allowed to subscribe to post notifications for the current user.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
