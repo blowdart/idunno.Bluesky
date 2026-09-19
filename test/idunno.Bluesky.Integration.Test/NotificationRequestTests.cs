@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -49,6 +50,21 @@ public class NotificationRequestTests
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
+            });
+
+    private static TestServer CreateBodyCapturingServer(Action<string, string> capture) =>
+        TestServerBuilder.CreateServer(
+            TestServerBuilder.DefaultUri,
+            async context =>
+            {
+                using StreamReader reader = new(context.Request.Body);
+                string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+
+                capture(context.Request.Path, body);
+
+                context.Response.StatusCode = (int)HttpStatusCode.OK;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{}", TestContext.Current.CancellationToken);
             });
 
     [Fact]
@@ -178,5 +194,63 @@ public class NotificationRequestTests
         await Assert.ThrowsAsync<ArgumentException>(async () => await agent.ListNotifications(
             reasons: [NotificationReason.Unknown],
             cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task UpdateNotificationSeenAtPostsTheSuppliedSeenAtToTheUpdateSeenEndpoint()
+    {
+        string? capturedPath = null;
+        string requestBody = string.Empty;
+
+        using TestServer testServer = CreateBodyCapturingServer(
+            (path, body) =>
+            {
+                capturedPath = path;
+                requestBody = body;
+            });
+
+        BlueskyAgent agent = CreateAgent(testServer);
+
+        DateTimeOffset seenAt = new(2024, 1, 1, 12, 30, 0, TimeSpan.Zero);
+
+        AtProtoHttpResult<EmptyResponse> result = await agent.UpdateNotificationSeenAt(
+            seenAt: seenAt,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("/xrpc/app.bsky.notification.updateSeen", capturedPath);
+
+        using JsonDocument document = JsonDocument.Parse(requestBody);
+
+        Assert.True(
+            document.RootElement.TryGetProperty("seenAt", out JsonElement seenAtElement),
+            $"Request body did not contain a seenAt property: {requestBody}");
+
+        Assert.Equal(seenAt, seenAtElement.GetDateTimeOffset());
+    }
+
+    [Fact]
+    public async Task UpdateNotificationSeenAtDefaultsToTheCurrentTimeWhenSeenAtIsNotSupplied()
+    {
+        string requestBody = string.Empty;
+
+        using TestServer testServer = CreateBodyCapturingServer((_, body) => requestBody = body);
+
+        BlueskyAgent agent = CreateAgent(testServer);
+
+        DateTimeOffset before = DateTimeOffset.UtcNow;
+
+        AtProtoHttpResult<EmptyResponse> result = await agent.UpdateNotificationSeenAt(
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        DateTimeOffset after = DateTimeOffset.UtcNow;
+
+        Assert.True(result.Succeeded);
+
+        using JsonDocument document = JsonDocument.Parse(requestBody);
+
+        DateTimeOffset seenAt = document.RootElement.GetProperty("seenAt").GetDateTimeOffset();
+
+        Assert.InRange(seenAt, before, after);
     }
 }
