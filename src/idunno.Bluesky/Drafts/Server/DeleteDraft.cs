@@ -53,7 +53,7 @@ public partial class BlueskyServer
         AtProtoHttpResult<EmptyResponse> result = await request.Post(
             service,
             record: new DeleteDraftRequest(draftId),
-            endpoint: $"/xrpc/app.bsky.draft.deleteDraft?id={Uri.EscapeDataString(draftId.ToString())}",
+            endpoint: "/xrpc/app.bsky.draft.deleteDraft",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

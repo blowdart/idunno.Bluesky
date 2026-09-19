@@ -48,7 +48,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3meiuav4lyk2t", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         DraftPost post = Assert.Single(actual.Draft.Posts!);
         Assert.Equal("Draft with an embedded quote record", post.Text);
@@ -103,7 +103,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3meitowig4k2x", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         Assert.Equal(3, actual.Draft.Posts!.Count);
         Assert.Equal("This is a draft thread with a thread gate, and a post gate", actual.Draft.Posts[0].Text);
@@ -164,7 +164,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3meitnaeyts25", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         DraftPost post = Assert.Single(actual.Draft.Posts);
         Assert.Equal("This is a self-labelled draft", post.Text);
@@ -210,7 +210,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3meitjzyfbs2x", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         DraftPost post = Assert.Single(actual.Draft.Posts);
         Assert.Equal("This is a draft with an external link\n\nhttps://www.heinz.com\n", post.Text);
@@ -263,7 +263,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3meitiszczs2d", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         DraftPost post = Assert.Single(actual.Draft.Posts);
         Assert.Equal("This is a video draft", post.Text);
@@ -313,7 +313,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3mehe45pqfk2q", actual.Id);
-        Assert.Equal(new Guid("c34a6403-4bf2-49bd-8578-21ad32567ec4"), actual.Draft!.DeviceId);
+        Assert.Equal("c34a6403-4bf2-49bd-8578-21ad32567ec4", actual.Draft!.DeviceId);
         Assert.Equal("iPhone", actual.Draft.DeviceName);
         DraftPost post = Assert.Single(actual.Draft.Posts);
         Assert.Equal("This is a photo draft ", post.Text);
@@ -327,7 +327,7 @@ public class DraftTests
     [Fact]
     public void TextOnlyDraftSerializesCorrectly()
     {
-        Guid expectedDeviceId = Guid.NewGuid();
+        string expectedDeviceId = Guid.NewGuid().ToString();
         string expectedDeviceName = "test harness";
         string expectedDraftPostText = "Draft Post";
         List<string> expectedLangs = ["en", "fr"];
@@ -343,7 +343,7 @@ public class DraftTests
         JsonNode? actual = JsonNode.Parse(json);
 
         Assert.Equal("app.bsky.draft.defs#draft", actual!["$type"]!.GetValue<string>());
-        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<Guid>());
+        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<string>());
         Assert.Equal(expectedDeviceName, actual["deviceName"]!.GetValue<string>());
 
         JsonArray actualDraftPostsArray = actual["posts"]!.AsArray();
@@ -371,7 +371,7 @@ public class DraftTests
     [Fact]
     public void MultipleTextOnlyDraftSerializesCorrectly()
     {
-        Guid expectedDeviceId = Guid.NewGuid();
+        string expectedDeviceId = Guid.NewGuid().ToString();
         string expectedDeviceName = "test harness";
 
         List<DraftPost> expectedDraftPosts = [];
@@ -390,7 +390,7 @@ public class DraftTests
         JsonNode? actual = JsonNode.Parse(json);
 
         Assert.Equal("app.bsky.draft.defs#draft", actual!["$type"]!.GetValue<string>());
-        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<Guid>());
+        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<string>());
         Assert.Equal(expectedDeviceName, actual["deviceName"]!.GetValue<string>());
 
         JsonArray actualPostsArray = actual["posts"]!.AsArray();
@@ -408,7 +408,7 @@ public class DraftTests
     [Fact]
     public void DraftWithGatesSerializesCorrectly()
     {
-        Guid expectedDeviceId = Guid.NewGuid();
+        string expectedDeviceId = Guid.NewGuid().ToString();
         string expectedDeviceName = "test harness";
         string expectedDraftPostText = "Draft Post";
         List<string> expectedLangs = ["en", "fr"];
@@ -442,7 +442,7 @@ public class DraftTests
     [Fact]
     public void DraftWithLabelsSerializesCorrectly()
     {
-        Guid expectedDeviceId = Guid.NewGuid();
+        string expectedDeviceId = Guid.NewGuid().ToString();
         string expectedDeviceName = "test harness";
         string expectedDraftPostText = "Draft Post";
         PostSelfLabels expectedSelfLabels = new()
@@ -483,7 +483,7 @@ public class DraftTests
     [Fact]
     public void DraftWithMultipleImagesSerializesCorrectly()
     {
-        Guid expectedDeviceId = Guid.NewGuid();
+        string expectedDeviceId = Guid.NewGuid().ToString();
         string expectedDeviceName = "test harness";
         string expectedDraftPostText = "Draft Post";
         List<DraftEmbedImage> expectedDraftEmbedImages = [];
@@ -503,7 +503,7 @@ public class DraftTests
         JsonNode? actual = JsonNode.Parse(json);
 
         Assert.Equal("app.bsky.draft.defs#draft", actual!["$type"]!.GetValue<string>());
-        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<Guid>());
+        Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<string>());
         Assert.Equal(expectedDeviceName, actual["deviceName"]!.GetValue<string>());
 
         JsonArray actualDraftPosts = actual["posts"]!.AsArray();
@@ -633,7 +633,7 @@ public class DraftTests
 
         Assert.NotNull(actual);
         Assert.Equal("3mujvfiepic2e", actual.Id);
-        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("5c76194c-fc19-4413-ac45-bf851a289459", actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
         DraftPost draftPost = Assert.Single(actual.Draft.Posts);
         Assert.Equal("Creating a draft with a gallery", draftPost.Text);
@@ -652,5 +652,102 @@ public class DraftTests
 
         Assert.Equal(DateTimeOffset.Parse("2026-09-02T12:04:38.360Z"), actual.CreatedAt);
         Assert.Equal(DateTimeOffset.Parse("2026-09-02T12:04:38.360Z"), actual.UpdatedAt);
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"app.bsky.draft.defs#draftEmbedImage"}""")]
+    [InlineData("""{"$type":"app.bsky.draft.defs#draftEmbedImage","localRef":null}""")]
+    public void DraftEmbedImageWithoutLocalRefStillFailsToDeserialize(string json)
+    {
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<DraftEmbedImage>(json, BlueskyJsonSerializerOptions.Options));
+    }
+
+    [Fact]
+    public void DraftEmbedLocalRefWithoutPathStillFailsToDeserialize()
+    {
+        string json = """{"$type":"app.bsky.draft.defs#draftEmbedLocalRef"}""";
+
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<DraftEmbedLocalRef>(json, BlueskyJsonSerializerOptions.Options));
+    }
+
+    [Fact]
+    public void DraftEmbedGalleryWithNullItemsThrows()
+    {
+        Assert.Throws<ArgumentNullException>(() => new DraftEmbedGallery(null!));
+    }
+
+    [Fact]
+    public void DraftWithEmptyOptionalCollectionsIsAccepted()
+    {
+        Draft draft = new(
+            posts: [new DraftPost("Text")],
+            deviceId: null,
+            deviceName: null,
+            langs: [],
+            postGateEmbeddingRules: [],
+            threadGateAllowRules: []);
+
+        Assert.Empty(draft.Langs!);
+        Assert.Empty(draft.PostGateEmbeddingRules!);
+        Assert.Empty(draft.ThreadGateAllowRules!);
+    }
+
+    [Fact]
+    public void DraftPostTextSetterValidatesWhenImagesArePresent()
+    {
+        DraftPost draftPost = new(
+            text: "Text",
+            embedImages: [new DraftEmbedImage(new DraftEmbedLocalRef("image:abc"))]);
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => draftPost.Text = new string('a', Maximum.DraftTextLengthInGraphemes + 1));
+    }
+
+    [Fact]
+    public void DraftPostTextSetterValidatesWhenVideosArePresent()
+    {
+        DraftPost draftPost = new(
+            text: "Text",
+            embedVideo: new DraftEmbedVideo(new DraftEmbedLocalRef("video:abc")));
+
+        Assert.Throws<ArgumentException>(() => draftPost.Text = string.Empty);
+    }
+
+    [Fact]
+    public void DraftCollectionsAreDefensivelyCopied()
+    {
+        List<DraftPost> posts = [new DraftPost("Text")];
+        List<string> langs = ["en"];
+
+        Draft draft = new(posts: posts, deviceId: null, deviceName: null, langs: langs);
+
+        posts.Add(new DraftPost("Added later"));
+        langs.Add("fr");
+
+        Assert.Single(draft.Posts);
+        Assert.Single(draft.Langs!);
+    }
+
+    [Fact]
+    public void DraftDeviceIdRoundTripsAsAString()
+    {
+        Draft draft = new(posts: [new DraftPost("Text")], deviceId: "not-a-guid", deviceName: "Web");
+
+        string json = JsonSerializer.Serialize(draft, BlueskyJsonSerializerOptions.Options);
+        JsonNode actual = JsonNode.Parse(json)!;
+
+        Assert.Equal("not-a-guid", actual["deviceId"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void DraftDeviceIdLongerThanTheMaximumThrows()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new Draft(
+                posts: [new DraftPost("Text")],
+                deviceId: new string('a', Maximum.DraftDeviceIdLengthInBytes + 1),
+                deviceName: null));
     }
 }

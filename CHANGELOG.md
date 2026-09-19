@@ -93,6 +93,10 @@
   `Maximum.VideoJobIdLengthInBytes`, replacing the hard coded limits used by the video upload APIs.
 * Added `BlueskyAgent.Post(DraftWithId, DraftMediaPathValidation, CancellationToken)`.
 * Added `DraftMediaPathValidation`, `BlueskyAgentOptions.DraftMediaRoots` and `BlueskyAgent.DraftMediaRoots`, which control where a draft's embedded media may be read from.
+* Added `Maximum.DraftDeviceIdLengthInBytes`, `Maximum.DraftDeviceNameLengthInBytes`, `Maximum.DraftPosts`, `Maximum.DraftLangs`,
+  `Maximum.DraftPostGateEmbeddingRules`, `Maximum.DraftThreadGateAllowRules`, `Maximum.DraftEmbedImages`, `Maximum.DraftEmbedVideos`,
+  `Maximum.DraftEmbedExternals`, `Maximum.DraftEmbedRecords`, `Maximum.DraftEmbedCaptions`, `Maximum.DraftEmbedAltTextLengthInGraphemes`,
+  `Maximum.DraftEmbedCaptionContentLengthInBytes` and `Maximum.DraftEmbedLocalRefPathLengthInBytes`, replacing the hard coded limits used by the draft types.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -221,6 +225,12 @@
   parameters as `long` rather than `int`, and `StartUploadResponse.PartSize` and `StartUploadResponse.PartCount` are now `long`. The AT Protocol `integer`
   type is a signed 64 bit value, and a `partSizeBytes` or `partCount` over `int.MaxValue` threw a `JsonException` rather than deserializing.
 * `BlueskyAgent.Post()` now validates the local file paths a draft carries against `BlueskyAgent.DraftMediaRoots` before reading them. A draft is fetched from a server, so its paths are untrusted input; previously any path the server supplied was read off disk and uploaded. A draft containing media can no longer be posted unless media roots are configured, or the overload taking `DraftMediaPathValidation.Trust` is used.
+* `Draft.DeviceId` is now a `string?` rather than a `Guid?`. The lexicon declares it as a string of up to 100 bytes, and a device id that was not a GUID
+  threw a `JsonException` rather than deserializing.
+* The collection properties of `Draft`, `DraftPost`, `DraftEmbedVideo` and `DraftEmbedGallery` are now `IReadOnlyList<T>` and are get only, and both the
+  constructors and the property initializers take a defensive copy. They previously stored the caller's collection by reference, so it could be mutated
+  after construction, and `init` allowed the constructor's validation to be bypassed entirely.
+* `DraftEmbedGallery.Items` is now required and non-nullable, and `DraftEmbedGallery` is no longer a positional record.
 
 ### Fixed
 
@@ -572,6 +582,28 @@
 * `StartUpload()` and `UploadVideo()` now measure `mimeType` and `name` in UTF-8 bytes, as the lexicon does, and `StartUpload()` validates `name`, which was
   previously unchecked.
 * Removed `image/svg+xml` from the MIME types a draft's embedded images may be uploaded as. Bluesky does not accept SVG images, and an SVG is an active content format.
+* `BlueskyServer.UpdateDraft()` now reports success. It declared its response as `CreateDraftResponse` while the endpoint returns no body, so a successful
+  update deserialized to `null` and surfaced as a failure.
+* `BlueskyServer.GetDrafts()` now escapes `cursor` before placing it in the query string. A cursor containing a reserved character was sent unescaped and
+  truncated or corrupted the request.
+* `BlueskyServer.DeleteDraft()` no longer sends the draft id in the query string as well as the request body. The lexicon declares the id as an input body
+  property only.
+* `DraftPost.Text` now validates its value in all cases. Validation was skipped entirely when the post carried an image or a video, so an over-length or
+  empty text was accepted.
+* `BlueskyAgent.Post()` no longer throws an `ArgumentOutOfRangeException` when a draft post carries an empty `EmbedExternals` or `EmbedRecords` collection.
+  Both were indexed after a null check alone.
+* A draft's embedded external link is no longer posted with its URI as the card title and description. The lexicon exposes only a `uri`, so both are now
+  empty.
+* The logging scope `BlueskyAgent.Post()` creates for a draft is now applied. Its `IDisposable` was discarded, so the scope ended immediately and the
+  enclosed log entries carried none of its state.
+* A draft's embedded video is now uploaded with a media type derived from the file extension rather than a hard coded `video/mp4`.
+* The video processing poll in `BlueskyAgent.Post()` now honours its `CancellationToken`. It previously exited the loop silently on cancellation and
+  continued as if the upload had completed.
+* A `Draft` no longer rejects an empty `Langs`, `PostGateEmbeddingRules` or `ThreadGateAllowRules` collection. The lexicon declares no minimum for any of
+  them.
+* `BlueskyAgent.Post()` now numbers the posts in its validation exceptions and log entries from zero rather than one.
+* `Draft`, `DraftPost`, `DraftEmbedCaption` and `DraftEmbedLocalRef` now measure their string properties in UTF-8 bytes, as the lexicon does, rather than in
+  UTF-16 characters.
 
 #### idunno.Bluesky.AspNet.Authentication
 

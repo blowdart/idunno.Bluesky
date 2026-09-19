@@ -29,7 +29,7 @@ public class DraftToPostTests
 
     private static readonly string s_expectedJobId = "jobId";
 
-    private static readonly Guid s_expectedDeviceId = Guid.NewGuid();
+    private static readonly string s_expectedDeviceId = Guid.NewGuid().ToString();
     private static readonly string s_expectedDeviceName = "test harness";
     private static readonly string s_expectedDraftPostText = "Draft Post";
 
@@ -85,8 +85,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -203,8 +205,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -338,8 +342,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -529,8 +535,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -675,8 +683,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -792,8 +802,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -911,8 +923,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1033,8 +1047,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1155,8 +1171,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1273,8 +1291,10 @@ public class DraftToPostTests
         {
             deleteCalled = true;
 
-            if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0]! == expectedDraftId)
+            using JsonDocument requestBody = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+
+            if (!requestBody.RootElement.TryGetProperty("id", out JsonElement idElement) ||
+                idElement.GetString() != expectedDraftId.ToString())
             {
                 context.Response.StatusCode = 500;
                 return;

@@ -22,13 +22,23 @@ public record DraftEmbedExternal
     [JsonConstructor]
     public DraftEmbedExternal(Uri uri)
     {
-        ArgumentNullException.ThrowIfNull(uri);
         Uri = uri;
     }
 
     /// <summary>
     /// Gets the embedded external <see cref="Uri"/>.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     [JsonRequired]
-    public Uri Uri { get; init; }
+    public Uri Uri
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 }

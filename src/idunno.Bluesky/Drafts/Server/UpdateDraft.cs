@@ -49,9 +49,9 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<CreateDraftResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
+        BlueskyHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
-        AtProtoHttpResult<CreateDraftResponse> result = await request.Post(
+        AtProtoHttpResult<EmptyResponse> result = await request.Post(
             service,
             "/xrpc/app.bsky.draft.updateDraft",
             record: new UpdateDraftRequest(draftWithId),
