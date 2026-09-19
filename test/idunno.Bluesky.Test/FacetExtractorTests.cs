@@ -483,6 +483,55 @@ public class FacetExtractorTests
         Assert.Equal(expectedMentionCount, results.Count);
     }
 
+    [Theory]
+    // Trailing punctuation which is not part of the link is trimmed from both the uri and the facet range.
+    [InlineData("Check https://example.com/page.", "https://example.com/page", 6, 30)]
+    [InlineData("Check https://example.com/page, then", "https://example.com/page", 6, 30)]
+    [InlineData("colon https://example.com/a: next", "https://example.com/a", 6, 27)]
+    [InlineData("bare https://example.com.", "https://example.com", 5, 24)]
+    // Only a single trailing punctuation character is trimmed, matching the reference implementation.
+    [InlineData("double https://example.com/a..", "https://example.com/a.", 7, 29)]
+    // An unbalanced closing parenthesis is trimmed.
+    [InlineData("See (https://example.com/page) ok", "https://example.com/page", 5, 29)]
+    // A balanced closing parenthesis is part of the link and is kept.
+    [InlineData("wiki https://en.wikipedia.org/wiki/Foo_(bar) end", "https://en.wikipedia.org/wiki/Foo_(bar)", 5, 44)]
+    public async Task LinksTrimTrailingPunctuationFromTheUriAndTheFacetRange(
+        string text,
+        string expectedLink,
+        int expectedStartPosition,
+        int expectedEndPosition)
+    {
+        DefaultFacetExtractor extractor = new(MockResolver);
+
+        IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+        Facet facet = Assert.Single(results);
+        LinkFacetFeature linkFeature = Assert.IsType<LinkFacetFeature>(Assert.Single(facet.Features));
+
+        Assert.Equal(expectedLink, linkFeature.Uri);
+        Assert.Equal(expectedStartPosition, facet.Index.ByteStart);
+        Assert.Equal(expectedEndPosition, facet.Index.ByteEnd);
+    }
+
+    [Fact]
+    public async Task FacetsAreReturnedInDocumentOrder()
+    {
+        const string text = "@blowdart.me said #tag see https://example.com";
+        //                   0         1         2         3         4
+        //                   0123456789012345678901234567890123456789012345
+
+        DefaultFacetExtractor extractor = new(MockResolver);
+
+        IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, results.Count);
+        Assert.Equal([0L, 18L, 27L], results.Select(facet => facet.Index.ByteStart));
+
+        Assert.IsType<MentionFacetFeature>(Assert.Single(results[0].Features));
+        Assert.IsType<TagFacetFeature>(Assert.Single(results[1].Features));
+        Assert.IsType<LinkFacetFeature>(Assert.Single(results[2].Features));
+    }
+
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Mocking ResolveHandle() signature.")]

@@ -275,7 +275,7 @@ idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, 
 idunno.Bluesky.Embed.External.Properties.Uri.get -> string!
 idunno.Bluesky.RichText.LinkFacetFeature.LinkFacetFeature(string! uri) -> void
 idunno.Bluesky.RichText.LinkFacetFeature.Uri.get -> string!
-idunno.Bluesky.RichText.LinkFacetFeature.Uri.set -> void
+idunno.Bluesky.RichText.LinkFacetFeature.Uri.init -> void
 idunno.Bluesky.Video.AbortUploadResponse.RawState.get -> string?
 idunno.Bluesky.Video.AbortUploadResponse.RawState.init -> void
 idunno.Bluesky.Video.StartUploadResponse.Deconstruct(out string! JobId, out long PartSize, out long PartCount, out System.DateTimeOffset ExpiresAt) -> void
