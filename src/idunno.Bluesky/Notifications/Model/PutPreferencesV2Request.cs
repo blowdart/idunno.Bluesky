@@ -3,6 +3,8 @@
 
 using idunno.Bluesky.Notifications.PreferenceTypes;
 
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Notifications.Model;
 
 internal sealed record PutPreferencesV2Request(
@@ -10,13 +12,14 @@ internal sealed record PutPreferencesV2Request(
     ChatPreference Chat,
 #pragma warning restore CS0618 // Type or member is obsolete
     FilterablePreference Follow,
+    FilterablePreference Like,
     FilterablePreference LikeViaRepost,
     FilterablePreference Mention,
     FilterablePreference Quote,
     FilterablePreference Reply,
     FilterablePreference Repost,
     FilterablePreference RepostViaRepost,
-    NonFilterablePreference StarterPackJoined,
+    [property: JsonPropertyName("starterpackJoined")] NonFilterablePreference StarterPackJoined,
     NonFilterablePreference SubscribedPost,
     NonFilterablePreference Unverified,
     NonFilterablePreference Verified)
@@ -24,6 +27,7 @@ internal sealed record PutPreferencesV2Request(
     public PutPreferencesV2Request(Preferences preferences) : this(
         Chat: preferences.Chat,
         Follow: preferences.Follow,
+        Like: preferences.Like,
         LikeViaRepost: preferences.LikeViaRepost,
         Mention: preferences.Mention,
         Quote: preferences.Quote,

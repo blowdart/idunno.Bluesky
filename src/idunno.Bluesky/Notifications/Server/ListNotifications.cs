@@ -17,12 +17,16 @@ namespace idunno.Bluesky;
 
 public static partial class BlueskyServer
 {
+    // https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/notification/listNotifications.json
+    private const string ListNotificationsEndpoint = "/xrpc/app.bsky.notification.listNotifications";
+
     /// <summary>
     /// Gets the notifications for the requesting account.
     /// </summary>
     /// <param name="limit">The maximum number of notifications to return. If specified this should be greater than 1 and less than or equal to 100.</param>
     /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
     /// <param name="seenAt">The date and time notifications were last checked.</param>
+    /// <param name="reasons">An optional collection of <see cref="NotificationReason"/>s to limit the results to.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -34,6 +38,7 @@ public static partial class BlueskyServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reasons"/> contains <see cref="NotificationReason.Unknown"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -45,6 +50,7 @@ public static partial class BlueskyServer
         int? limit,
         string? cursor,
         DateTimeOffset? seenAt,
+        IEnumerable<NotificationReason>? reasons,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -75,9 +81,22 @@ public static partial class BlueskyServer
             queryString.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}&");
         }
 
+        if (reasons is not null)
+        {
+            foreach (NotificationReason reason in reasons)
+            {
+                if (reason == NotificationReason.Unknown)
+                {
+                    throw new ArgumentException($"cannot contain {nameof(NotificationReason.Unknown)}.", nameof(reasons));
+                }
+
+                queryString.Append(CultureInfo.InvariantCulture, $"reasons={Uri.EscapeDataString(reason.ToNotificationReasonValue())}&");
+            }
+        }
+
         if (seenAt is not null)
         {
-            queryString.Append(CultureInfo.InvariantCulture, $"seenAt={seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}");
+            queryString.Append(CultureInfo.InvariantCulture, $"seenAt={Uri.EscapeDataString(seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))}");
         }
 
         if (queryString.Length > 0 && queryString[queryString.Length - 1] == '&')
@@ -88,7 +107,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
             service: service,
-            endpoint: $"/xrpc/app.bsky.notification.listNotifications?{queryString}",
+            endpoint: $"{ListNotificationsEndpoint}?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

@@ -12,8 +12,9 @@ namespace idunno.Bluesky.Notifications.Model;
 internal sealed record NotificationResponse(
     AtUri Uri,
     Cid Cid,
-    ProfileViewBasic Author,
+    ProfileView Author,
     string Reason,
+    AtUri? ReasonSubject,
     BlueskyRecord Record,
     StarterPackViewBasic? StarterPack,
     bool IsRead,

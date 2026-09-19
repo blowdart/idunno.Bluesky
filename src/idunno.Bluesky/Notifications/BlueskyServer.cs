@@ -64,16 +64,16 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Empty;
+        string endpoint = GetUnreadEndpoint;
         if (seenAt is not null)
         {
-            queryString = $"{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
+            endpoint = $"{GetUnreadEndpoint}?seenAt={Uri.EscapeDataString(seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))}";
         }
 
         BlueskyHttpClient<UnreadCountResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<UnreadCountResponse> response = await request.Get(
             service,
-            $"{GetUnreadEndpoint}?{queryString}",
+            endpoint,
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

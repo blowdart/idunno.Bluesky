@@ -56,10 +56,12 @@ public enum LimitTo
     /// <summary>
     /// All accounts
     /// </summary>
+    [JsonStringEnumMemberName("all")]
     All,
 
     /// <summary>
     /// Only accounts you follow
     /// </summary>
+    [JsonStringEnumMemberName("follows")]
     Follows
 }

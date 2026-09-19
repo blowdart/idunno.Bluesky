@@ -66,6 +66,7 @@
 
 #### idunno.Bluesky
 
+* `ListNotifications()` now accepts a `reasons` filter, limiting the returned notifications to the specified `NotificationReason` values.
 * Added `Maximum.ProfilesToGet`, `Maximum.ActorSearchResults`, `Maximum.ActorTypeaheadSearchResults`, `Maximum.InterestTags`, `Maximum.MutedWordLengthInBytes` and `Maximum.MutedWordLengthInGraphemes`.
 * Added `Maximum.PostsToList`, `Maximum.PostsToGet`, `Maximum.PostThreadDepth` and `Maximum.PostThreadParentHeight`.
 * Added `BlueskyAgent.GetThreadGateRecord()` and `BlueskyAgent.GetPostGateRecord()`, which return the repository record so its `Cid` is available.
@@ -169,6 +170,12 @@
 
 #### idunno.Bluesky
 
+* `Preferences` gains a `Like` positional parameter, changing its constructor and `Deconstruct` signatures.
+* `Notification.Author` is now a `ProfileView` rather than a `ProfileViewBasic`.
+* `SubjectActivitySubscription.ActivitySubscription` is now nullable, as the API omits it from `PutActivitySubscription()` responses.
+* `ListNotificationsResponse.SeenAt` is now nullable, as the lexicon marks it optional.
+* `BlueskyServer.ListNotifications()` and `BlueskyAgent.ListNotifications()` gain a `reasons` parameter.
+* `NotificationCollection.Priority` and `NotificationCollection.SeenAt` no longer have internal setters.
 * `Preferences.MutedWords` now returns `IReadOnlyList<MutedWord>` rather than `IList<MutedWord>`.
 * `Preference` polymorphism is now handled by a `JsonConverter` rather than `JsonPolymorphicAttribute`, so an unrecognized preference round-trips unchanged. Any new preference type must be registered with the converter.
 * `InterestsPreference` now validates the number of tags it is given, and the byte and grapheme length of each tag.
@@ -469,6 +476,16 @@
 
 #### idunno.Bluesky
 
+* The `like` notification preference was missing from `Preferences`, so `SetNotificationPreferences()` silently reset the user's like notification setting on every call.
+* `Preferences.StarterPackJoined` serialized as `starterPackJoined` rather than the lexicon's `starterpackJoined`, so the value was dropped on write.
+* `FilterablePreference.Include` and `ChatPreference.Include` serialized their enum values in Pascal case rather than the lexicon's lower case.
+* `GetNotificationUnreadCount()` sent `seenAt` as a nameless, unescaped query string value, so the API ignored it.
+* `ListNotifications()` did not escape `seenAt` when building its query string.
+* `Notification.ReasonSubject` was never populated from the API response.
+* `Notification.Author` was deserialized as `ProfileViewBasic`, discarding the description, banner, follower counts and other properties the API returns.
+* The `contact-match` notification reason was not mapped, falling back to `NotificationReason.Unknown`.
+* `Notification.Labels` did not defensively copy the collection passed to it.
+* Removed a dead `[JsonPropertyName]` attribute on `Notification.Reason`.
 * An unrecognized preference returned by the API lost its `$type` discriminator when deserialized, so a get, modify and `PutPreferences()` cycle silently corrupted every preference type the SDK does not yet know about.
 * `ProfileViewBasic` measured `DisplayName` against the maximum byte length using its character length, accepting names the API rejects.
 * `Preferences` wrapped the list it was given rather than copying it, so the caller could mutate the collection afterwards.

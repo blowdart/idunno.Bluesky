@@ -11,5 +11,5 @@ internal sealed record UnreadCountResponse
 {
     [JsonInclude]
     [JsonRequired]
-    internal int Count { get; set; } = -1;
+    internal int Count { get; init; }
 }
