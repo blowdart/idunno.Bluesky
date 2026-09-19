@@ -107,6 +107,52 @@ public record EmbeddedVideo : EmbeddedMediaBase
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Presentation { get; init; }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="EmbeddedVideo"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="EmbeddedVideo"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="Captions"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(EmbeddedVideo? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return base.Equals(other) &&
+            Video == other.Video &&
+            AltText == other.AltText &&
+            AspectRatio == other.AspectRatio &&
+            Presentation == other.Presentation &&
+            CollectionComparison.SequenceEquals(Captions, other.Captions);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(base.GetHashCode());
+        hashCode.Add(Video);
+        hashCode.Add(AltText);
+        hashCode.Add(AspectRatio);
+        hashCode.Add(Presentation);
+        CollectionComparison.AddSequence(ref hashCode, Captions);
+
+        return hashCode.ToHashCode();
+    }
 }
 
 /// <summary>

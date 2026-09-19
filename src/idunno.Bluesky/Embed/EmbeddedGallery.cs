@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Embed.Gallery;
@@ -157,4 +158,48 @@ public record EmbeddedGallery : EmbeddedMediaBase
     /// <param name="item">The <see cref="GalleryImage"/> item to remove.</param>
     /// <returns><see langword="true"/> if the item was successfully removed; otherwise, <see langword="false"/>.</returns>
     public bool Remove(GalleryImage item) => Items.Remove(item);
+
+    /// <summary>
+    /// Determines whether the specified <see cref="EmbeddedGallery"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="EmbeddedGallery"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="Items"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(EmbeddedGallery? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return base.Equals(other) && CollectionComparison.SequenceEquals(Items, other.Items);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The hash code is derived from the items the gallery currently contains, so it changes if the gallery is mutated.
+    ///   Do not mutate an instance while it is being used as a key in a hashed collection.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Major Code Smell", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Value equality over a mutable collection requires the hash code to be derived from the same state, which is documented on the member.")]
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(base.GetHashCode());
+        CollectionComparison.AddSequence(ref hashCode, Items);
+
+        return hashCode.ToHashCode();
+    }
 }

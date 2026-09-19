@@ -23,7 +23,7 @@ public record EmbeddedImages : EmbeddedMediaBase
         ArgumentOutOfRangeException.ThrowIfLessThan(images.Count, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
 
-        Images = images;
+        Images = [.. images];
     }
 
     /// <summary>
@@ -46,4 +46,41 @@ public record EmbeddedImages : EmbeddedMediaBase
     [JsonInclude]
     [JsonRequired]
     public ICollection<EmbeddedImage> Images { get; init; }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="EmbeddedImages"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="EmbeddedImages"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="Images"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(EmbeddedImages? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return base.Equals(other) && CollectionComparison.SequenceEquals(Images, other.Images);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(base.GetHashCode());
+        CollectionComparison.AddSequence(ref hashCode, Images);
+
+        return hashCode.ToHashCode();
+    }
 }

@@ -508,6 +508,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             {
                 if (value is not null)
                 {
+                    _embeddedImages.Clear();
                     _embeddedImages.AddRange(value);
                     _embeddedGalleryImages.Clear();
                     _embeddedVideo = null;
@@ -1071,7 +1072,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     {
         ArgumentException.ThrowIfNullOrEmpty(text);
 
-        if (text.Length > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
+        if (text.GetUtf8Length() > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
             throw new ArgumentOutOfRangeException(nameof(text), string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
         }
@@ -1287,6 +1288,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     ///  Thrown when <see cref="Text"/> is <see langword="null"/> or empty and this instance has no images, embedded records or video, or
     ///  this instance is both a reply and a quote, or this instance has both images and video.
     /// </exception>
+    /// <remarks>
+    /// <para>This instance is not modified, and the returned <see cref="Post"/> shares no mutable state with it.</para>
+    /// </remarks>
     public Post ToPost()
     {
         lock (_syncLock)
@@ -1306,6 +1310,8 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 throw new PostBuilderException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
             }
 
+            EmbeddedBase? embeddedRecord = _post.EmbeddedRecord;
+
             if (HasImages)
             {
                 if (_embeddedImages.Count > Maximum.ImagesInPost)
@@ -1313,17 +1319,17 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     if (InReplyTo is null && QuotePost is null)
                     {
                         // Plain old post
-                        _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                        embeddedRecord = new EmbeddedGallery(_embeddedImages);
                     }
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
-                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedImages));
+                        embeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedImages));
                     }
                     else
                     {
                         // Reply post
-                        _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                        embeddedRecord = new EmbeddedGallery(_embeddedImages);
                     }
                 }
                 else
@@ -1331,17 +1337,17 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     if (InReplyTo is null && QuotePost is null)
                     {
                         // Plain old post
-                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                        embeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
-                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
+                        embeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
                     }
                     else
                     {
                         // Reply post
-                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                        embeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                 }
             }
@@ -1350,17 +1356,17 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 if (InReplyTo is null && QuotePost is null)
                 {
                     // Plain old post
-                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
+                    embeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
                 }
                 else if (QuotePost is not null)
                 {
                     // Quote post, so we need fix up the embedded record to include images.
-                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedGalleryImages));
+                    embeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedGalleryImages));
                 }
                 else
                 {
                     // Reply post
-                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
+                    embeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
                 }
             }
 
@@ -1369,17 +1375,17 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 if (InReplyTo is null && QuotePost is null)
                 {
                     // Plain old post
-                    _post.EmbeddedRecord = _embeddedVideo;
+                    embeddedRecord = _embeddedVideo;
                 }
                 else if (QuotePost is not null)
                 {
                     // Quote post, so we need fix up the embedded record to include the video.
-                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), Video);
+                    embeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), Video);
                 }
                 else
                 {
                     // Reply post
-                    _post.EmbeddedRecord = _embeddedVideo;
+                    embeddedRecord = _embeddedVideo;
                 }
             }
 
@@ -1388,7 +1394,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 throw new PostBuilderException(Properties.Resources.PostHasLabelsButNoMediaValidationError);
             }
 
-            return new Post(_post);
+            return new Post(_post) { EmbeddedRecord = embeddedRecord };
         }
     }
 
@@ -1450,6 +1456,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="other">The <see cref="PostBuilder"/> to compare with the current instance.</param>
     /// <returns><see langword="true"/> if the specified <see cref="PostBuilder"/> is equal to the current instance; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>Two builders are equal when they would produce equal posts. Collections are compared by their contents rather than by reference.</para>
+    /// </remarks>
     public bool Equals(PostBuilder? other)
     {
         if (other is null)
@@ -1467,10 +1476,12 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         lock (_syncLock)
         {
             return EqualityComparer<Post>.Default.Equals(_post, other._post) &&
-                EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, other._embeddedImages) &&
-                EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, other._threadGateRules) &&
-                EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, other._postGateRules) &&
-                EqualityComparer<List<GalleryImage>>.Default.Equals(_embeddedGalleryImages, other._embeddedGalleryImages) &&
+                CollectionComparison.SequenceEquals(_embeddedImages, other._embeddedImages) &&
+                CollectionComparison.SequenceEquals(_embeddedGalleryImages, other._embeddedGalleryImages) &&
+                CollectionComparison.SequenceEquals(_threadGateRules, other._threadGateRules) &&
+                CollectionComparison.SequenceEquals(_postGateRules, other._postGateRules) &&
+                EqualityComparer<EmbeddedVideo?>.Default.Equals(_embeddedVideo, other._embeddedVideo) &&
+                _disableReplies == other._disableReplies &&
                 DisableEmbedding == other.DisableEmbedding;
         }
     }
@@ -1520,47 +1531,30 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Gets a hash code for the current object.
     /// </summary>
     /// <returns>A hash code for the current object.</returns>
-    [SuppressMessage("Minor Bug", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Locking and copying to avoid field changes whilst hash code is computed.")]
+    /// <remarks>
+    /// <para>
+    ///   The hash code is derived from the builder's current contents, so it changes as the builder is mutated.
+    ///   Do not mutate a builder while it is being used as a key in a hashed collection.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Minor Bug", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Value equality over mutable state requires the hash code to be derived from the same state. The fields are read under the instance lock and the behaviour is documented on the member.")]
     public override int GetHashCode()
     {
-        List<EmbeddedImage>? embeddedImages = null;
-        List<ThreadGateRule>? threadGateRules = null;
-        List<PostGateRule>? postGateRules = null;
-        List<GalleryImage>? embeddedGalleryImages = null;
+        HashCode hashCode = new();
 
         lock (_syncLock)
         {
-            Post postRecord = new(_post);
-
-            if (_embeddedImages is not null)
-            {
-                embeddedImages = [.. _embeddedImages];
-            }
-
-            if (_threadGateRules is not null)
-            {
-                threadGateRules = [.. _threadGateRules];
-            }
-
-            if (_postGateRules is not null)
-            {
-                postGateRules = [.. _postGateRules];
-            }
-
-            if (_embeddedGalleryImages is not null)
-            {
-                embeddedGalleryImages = [.. _embeddedGalleryImages];
-            }
-
-            if (embeddedImages is null && threadGateRules is null && postGateRules is null)
-            {
-                return postRecord.GetHashCode();
-            }
-            else
-            {
-                return HashCode.Combine(postRecord, embeddedImages, embeddedGalleryImages, threadGateRules, postGateRules, _embeddedVideo);
-            }
+            hashCode.Add(_post);
+            CollectionComparison.AddSequence(ref hashCode, _embeddedImages);
+            CollectionComparison.AddSequence(ref hashCode, _embeddedGalleryImages);
+            CollectionComparison.AddSequence(ref hashCode, _threadGateRules);
+            CollectionComparison.AddSequence(ref hashCode, _postGateRules);
+            hashCode.Add(_embeddedVideo);
+            hashCode.Add(_disableReplies);
+            hashCode.Add(DisableEmbedding);
         }
+
+        return hashCode.ToHashCode();
     }
 
     private static ByteSlice GetFacetPosition(string? currentText, string textToAdd)
