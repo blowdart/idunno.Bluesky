@@ -25,7 +25,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when a provided argument is invalid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<StartUploadResponse>> StartUpload(
-        int size,
+        long size,
         string mimeType,
         string? name = null,
         long? duration = null,
@@ -36,12 +36,17 @@ public partial class BlueskyAgent
         ArgumentOutOfRangeException.ThrowIfZero(size);
         ArgumentOutOfRangeException.ThrowIfNegative(size);
         ArgumentException.ThrowIfNullOrWhiteSpace(mimeType);
-        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.Length, 3);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.Length, 255);
+        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeMinimumLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeLengthInBytes);
 
         if (!mimeType.Contains('/', StringComparison.InvariantCulture))
         {
             throw new ArgumentException("MIME type must contain a '/' character.", nameof(mimeType));
+        }
+
+        if (name is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.VideoUploadNameLengthInBytes);
         }
 
         if (duration.HasValue)

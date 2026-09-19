@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -21,9 +22,9 @@ public partial class BlueskyAgent
     /// <param name="mimeType">The MIME type of the media.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> is <see langword="null"/>, whitespace, or is not a valid media type.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="media"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty, or when <paramref name="mimeType"/> is outside the allowable length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
         string fileName,
@@ -35,6 +36,14 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(media);
         ArgumentException.ThrowIfNullOrWhiteSpace(mimeType);
         ArgumentOutOfRangeException.ThrowIfZero(media.Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeMinimumLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeLengthInBytes);
+
+        if (!MediaTypeHeaderValue.TryParse(mimeType, out MediaTypeHeaderValue? parsedMimeType) ||
+            parsedMimeType.MediaType is null)
+        {
+            throw new ArgumentException("MIME type is not a valid media type.", nameof(mimeType));
+        }
 
         using (_logger.BeginScope($"Uploading media for {Did}"))
         {
@@ -89,11 +98,18 @@ public partial class BlueskyAgent
                         result.AtErrorDetail is not null &&
                         string.Equals("already_exists", result.AtErrorDetail.Error, StringComparison.Ordinal) &&
                         result.AtErrorDetail.ExtensionData is not null &&
-                        result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement))
+                        result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement) &&
+                        jobIdElement.ValueKind == JsonValueKind.String)
                     {
+                        // A JsonElement whose ValueKind is String never returns null from GetString().
                         string jobId = jobIdElement.GetString()!;
 
-                        return await GetJobStatus(jobId, cancellationToken).ConfigureAwait(false);
+                        if (!string.IsNullOrWhiteSpace(jobId))
+                        {
+                            return await GetJobStatus(jobId, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        Logger.UploadMediaAlreadyExistsJobIdUnusable(_logger, Did);
                     }
 
                     string? error = null;

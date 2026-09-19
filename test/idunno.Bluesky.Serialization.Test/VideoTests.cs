@@ -477,4 +477,117 @@ public class VideoTests
         Assert.Equal("encoding_failure", jobStatus.FailureCode);
         Assert.Equal("really not beans", jobStatus.Message);
     }
+
+    [Theory]
+    [InlineData(2147483648, 1)]
+    [InlineData(5242880, 2147483648)]
+    [InlineData(9223372036854775807, 9223372036854775807)]
+    public void StartUploadResponseDeserializesPartSizeAndPartCountLargerThanMaxIntCorrectly(long partSizeBytes, long partCount)
+    {
+        string jsonString = $$"""
+            {
+                "jobId": "da26a5b74lec73akn0b0",
+                "partSizeBytes": {{partSizeBytes}},
+                "partCount": {{partCount}},
+                "expiresAt": "2026-08-18T14:58:45.544456319Z"
+            }
+            """;
+
+        StartUploadResponse? startUploadResponse = JsonSerializer.Deserialize<StartUploadResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+
+        Assert.NotNull(startUploadResponse);
+        Assert.Equal(partSizeBytes, startUploadResponse.PartSize);
+        Assert.Equal(partCount, startUploadResponse.PartCount);
+    }
+
+    [Fact]
+    public void UploadStatusReceivedPartsIsNotTheCollectionPassedToTheConstructor()
+    {
+        List<int> receivedParts = [1, 2, 3];
+
+        UploadStatus uploadStatus = new(
+            jobId: "da26a5b74lec73akn0b0",
+            partSize: 5242880,
+            partCount: 3,
+            receivedParts: receivedParts,
+            expiresAt: DateTimeOffset.UtcNow,
+            state: "created",
+            completedJobId: null,
+            jobStatus: null,
+            failureReason: null);
+
+        Assert.NotSame(receivedParts, uploadStatus.ReceivedParts);
+        Assert.IsNotType<List<int>>(uploadStatus.ReceivedParts);
+
+        receivedParts.Add(4);
+
+        Assert.Equal(3, uploadStatus.ReceivedParts.Count);
+        Assert.Equal([1, 2, 3], uploadStatus.ReceivedParts);
+    }
+
+    [Fact]
+    public void UploadStatusReceivedPartsFromTheWireFormatIsNotTheDeserializedCollection()
+    {
+        string jsonString = """
+            {
+                "jobId": "da26a5b74lec73akn0b0",
+                "partSizeBytes": 5242880,
+                "partCount": 3,
+                "receivedParts": [1, 2, 3],
+                "expiresAt": "2026-08-18T14:58:45.544456319Z",
+                "state": "created"
+            }
+            """;
+
+        GetUploadStatusResponse? getUploadStatusResponse = JsonSerializer.Deserialize<GetUploadStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(getUploadStatusResponse);
+
+        UploadStatus uploadStatus = new(getUploadStatusResponse);
+
+        Assert.NotSame(getUploadStatusResponse.ReceivedParts, uploadStatus.ReceivedParts);
+        Assert.IsNotType<List<int>>(uploadStatus.ReceivedParts);
+        Assert.Equal([1, 2, 3], uploadStatus.ReceivedParts);
+    }
+
+    [Theory]
+    [InlineData("created", UploadState.Created)]
+    [InlineData("completed", UploadState.Completed)]
+    [InlineData("something_the_library_does_not_know_about", UploadState.Unknown)]
+    public void UploadStatusRawStatePreservesTheStateReturnedByTheApi(string state, UploadState expectedState)
+    {
+        UploadStatus uploadStatus = new(
+            jobId: "da26a5b74lec73akn0b0",
+            partSize: 5242880,
+            partCount: 3,
+            receivedParts: [1, 2, 3],
+            expiresAt: DateTimeOffset.UtcNow,
+            state: state,
+            completedJobId: null,
+            jobStatus: null,
+            failureReason: null);
+
+        Assert.Equal(expectedState, uploadStatus.State);
+        Assert.Equal(state, uploadStatus.RawState);
+    }
+
+    [Theory]
+    [InlineData("aborted", UploadState.Aborted)]
+    [InlineData("completed", UploadState.Completed)]
+    [InlineData("something_the_library_does_not_know_about", UploadState.Unknown)]
+    public void AbortUploadResponseRawStatePreservesTheStateReturnedByTheApi(string state, UploadState expectedState)
+    {
+        string jsonString = $$"""
+            {
+                "state": "{{state}}"
+            }
+            """;
+
+        AbortUploadWireResponse? abortUploadWireResponse = JsonSerializer.Deserialize<AbortUploadWireResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(abortUploadWireResponse);
+
+        AbortUploadResponse abortUploadResponse = new(abortUploadWireResponse);
+
+        Assert.Equal(expectedState, abortUploadResponse.State);
+        Assert.Equal(state, abortUploadResponse.RawState);
+    }
 }

@@ -234,4 +234,85 @@ public class LengthValidationTests
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new Document("https://example.org", "title", DateTimeOffset.UtcNow, description: description));
     }
+
+    [Fact]
+    public async Task StartUploadThrowsWhenTheNameExceedsTheMaximumNumberOfBytes()
+    {
+        // Eleven family emoji are 121 UTF-16 characters but 275 UTF-8 bytes, so only the byte limit rejects them.
+        string name = Families(11);
+
+        Assert.True(name.Length <= Maximum.VideoUploadNameLengthInBytes, "name should be within the character count the limit used to be measured against");
+        Assert.True(Encoding.UTF8.GetByteCount(name) > Maximum.VideoUploadNameLengthInBytes, "name should exceed the byte limit");
+
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => agent.StartUpload(1024, "video/mp4", name: name, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task StartUploadThrowsWhenTheMimeTypeExceedsTheMaximumNumberOfBytes()
+    {
+        // "video/" plus ten family emoji is 116 UTF-16 characters but 256 UTF-8 bytes, so only the byte limit rejects it.
+        string mimeType = "video/" + Families(10);
+
+        Assert.True(mimeType.Length <= Maximum.VideoMimeTypeLengthInBytes, "mimeType should be within the character count the limit used to be measured against");
+        Assert.True(Encoding.UTF8.GetByteCount(mimeType) > Maximum.VideoMimeTypeLengthInBytes, "mimeType should exceed the byte limit");
+
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => agent.StartUpload(1024, mimeType, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task UploadVideoThrowsWhenTheMimeTypeExceedsTheMaximumNumberOfBytes()
+    {
+        string mimeType = "video/" + Families(10);
+
+        Assert.True(mimeType.Length <= Maximum.VideoMimeTypeLengthInBytes, "mimeType should be within the character count the limit used to be measured against");
+        Assert.True(Encoding.UTF8.GetByteCount(mimeType) > Maximum.VideoMimeTypeLengthInBytes, "mimeType should exceed the byte limit");
+
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => agent.UploadVideo("test.mp4", [1, 2, 3], mimeType, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task StartUploadAcceptsANameOfExactlyTheMaximumNumberOfBytes()
+    {
+        string name = new('a', Maximum.VideoUploadNameLengthInBytes);
+
+        Assert.Equal(Maximum.VideoUploadNameLengthInBytes, Encoding.UTF8.GetByteCount(name));
+
+        using BlueskyAgent agent = new();
+
+        // The agent is unauthenticated, so getting as far as the authentication check proves the argument validation passed.
+        await Assert.ThrowsAsync<AuthenticationRequiredException>(
+            () => agent.StartUpload(1024, "video/mp4", name: name, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("ab")]
+    [InlineData("video")]
+    public async Task StartUploadThrowsWhenTheMimeTypeIsNotAValidMediaType(string mimeType)
+    {
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(
+            () => agent.StartUpload(1024, mimeType, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("ab")]
+    [InlineData("video")]
+    [InlineData("video/mp4\r\nX-Injected: true")]
+    public async Task UploadVideoThrowsAnArgumentExceptionRatherThanAFormatExceptionWhenTheMimeTypeIsNotAValidMediaType(string mimeType)
+    {
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(
+            () => agent.UploadVideo("test.mp4", [1, 2, 3], mimeType, cancellationToken: TestContext.Current.CancellationToken));
+    }
 }

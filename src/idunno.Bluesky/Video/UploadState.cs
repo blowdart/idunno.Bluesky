@@ -9,8 +9,15 @@ namespace idunno.Bluesky.Video;
 public enum UploadState
 {
     /// <summary>
-    /// An unknown state was returned from the server and cannot be mapped to a known state. Treat as an error.
+    /// The upload state returned by the service is not a value this library knows about.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The known values in a lexicon are not a closed set, so a service may introduce states this library does not yet
+    /// map. This should not be treated as a terminal state on its own. The value the service actually returned is
+    /// available in <see cref="UploadStatus.RawState"/> and <see cref="AbortUploadResponse.RawState"/>.
+    /// </para>
+    /// </remarks>
     Unknown = 0,
 
     /// <summary>

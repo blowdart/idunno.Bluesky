@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
 using System.Text;
 
 using idunno.AtProto;
@@ -304,5 +305,126 @@ public class VideoTests
         Assert.NotNull(uploadVideoTimeStamp);
 
         Assert.True(serviceAuthTimeStamp < uploadVideoTimeStamp);
+    }
+
+    [Theory]
+    [InlineData("\"jobId\":12345")]
+    [InlineData("\"jobId\":null")]
+    [InlineData("\"jobId\":\"\"")]
+    [InlineData("\"jobId\":\"   \"")]
+    [InlineData("\"jobId\":[\"jobId\"]")]
+    [InlineData("\"jobId\":{\"value\":\"jobId\"}")]
+    [InlineData("\"jobId\":true")]
+    [InlineData("\"notAJobId\":\"jobId\"")]
+    public async Task UploadVideoReturnsTheConflictResultWhenTheAlreadyExistsJobIdIsUnusable(string jobIdJson)
+    {
+        int jobStatusCallCount = 0;
+
+        AtProtoHttpResult<JobStatus> uploadResult = await UploadVideoAgainstAConflictingServer(jobIdJson, () => jobStatusCallCount++);
+
+        Assert.False(uploadResult.Succeeded);
+        Assert.Equal(HttpStatusCode.Conflict, uploadResult.StatusCode);
+        Assert.NotNull(uploadResult.AtErrorDetail);
+        Assert.Equal("already_exists", uploadResult.AtErrorDetail.Error);
+
+        // An unusable job id must not be followed up on, the original conflict is returned to the caller instead.
+        Assert.Equal(0, jobStatusCallCount);
+    }
+
+    [Fact]
+    public async Task UploadVideoFollowsTheAlreadyExistsJobIdWhenItIsUsable()
+    {
+        int jobStatusCallCount = 0;
+
+        AtProtoHttpResult<JobStatus> uploadResult = await UploadVideoAgainstAConflictingServer("\"jobId\":\"jobId\"", () => jobStatusCallCount++);
+
+        Assert.True(uploadResult.Succeeded);
+        Assert.Equal("jobId", uploadResult.Result.JobId);
+        Assert.Equal(1, jobStatusCallCount);
+    }
+
+    /// <summary>
+    /// Uploads a video to a server which always answers the upload with a 409 <c>already_exists</c> carrying <paramref name="jobIdJson"/>.
+    /// </summary>
+    private static async Task<AtProtoHttpResult<JobStatus>> UploadVideoAgainstAConflictingServer(string jobIdJson, Action onJobStatusRequested)
+    {
+        Did expectedDid = "did:plc:test";
+
+        string expectedServiceAuth = JwtBuilder.CreateJwt(
+            did: null,
+            issuer: expectedDid.ToString(),
+            audience: "did:web:pds.test.internal",
+            lxm: "com.atproto.repo.uploadBlob");
+
+        AccessCredentials expectedCredentials = new(
+            service: TestServerBuilder.DefaultUri,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+            refreshToken: "refreshToken");
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Host.Host == TestServerBuilder.DefaultUri.Host)
+            {
+                if (request.Path == "/xrpc/com.atproto.server.describeServer")
+                {
+                    response.StatusCode = 200;
+                    var serverDescription = new ServerDescription(
+                        did: $"{expectedDid}",
+                        contact: new Contact($"test@{request.Host.Host}"),
+                        links: new Links
+                        {
+                            PrivacyPolicy = new Uri($"https://{request.Host.Host}/privacy"),
+                            TermsOfService = new Uri($"https://{request.Host.Host}/terms")
+                        },
+                        availableUserDomains: [request.Host.Host],
+                        inviteCodeRequired: false,
+                        phoneVerificationRequired: false,
+                        blobUploadLimit: 10000000);
+                    await response.WriteAsJsonAsync(serverDescription);
+                    return;
+                }
+
+                if (request.Path == "/xrpc/com.atproto.server.getServiceAuth")
+                {
+                    response.StatusCode = 200;
+                    response.ContentType = "application/json";
+                    await response.WriteAsync($"{{\"token\":\"{expectedServiceAuth}\"}}");
+                    return;
+                }
+            }
+
+            if (request.Host.Host == "video.bsky.app")
+            {
+                if (request.Path == "/xrpc/app.bsky.video.uploadVideo")
+                {
+                    response.StatusCode = 409;
+                    response.ContentType = "application/json";
+                    await response.WriteAsync($"{{\"error\":\"already_exists\",\"message\":\"Video already processed\",{jobIdJson}}}");
+                    return;
+                }
+
+                if (request.Path == "/xrpc/app.bsky.video.getJobStatus")
+                {
+                    onJobStatusRequested();
+
+                    response.StatusCode = 200;
+                    response.ContentType = "application/json";
+                    await response.WriteAsync("{\"jobStatus\":{\"did\":\"did:plc:test\",\"jobId\":\"jobId\",\"state\":\"JOB_STATE_COMPLETED\"}}");
+                    return;
+                }
+            }
+        });
+
+        using var agent = new BlueskyAgent(new TestHttpClientFactory(testServer))
+        {
+            Credentials = expectedCredentials,
+            Service = TestServerBuilder.DefaultUri
+        };
+
+        return await agent.UploadVideo("test.mp4", Encoding.ASCII.GetBytes("video"), "video/mp4", TestContext.Current.CancellationToken);
     }
 }

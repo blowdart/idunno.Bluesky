@@ -104,13 +104,7 @@ public sealed class Program
             }
 
             var fileInfo = new FileInfo(filePath);
-            if (fileInfo.Length > int.MaxValue)
-            {
-                Console.WriteLine($"❌ File {filePath} is too large to upload. Max size is {int.MaxValue} bytes.");
-                return;
-            }
-
-            int fileSize = (int)fileInfo.Length;
+            long fileSize = fileInfo.Length;
 
             // Check the authenticated user has the ability to upload a video of this size.
             var getVideoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -153,15 +147,17 @@ public sealed class Program
                 CancellationToken = cancellationToken
             };
 
-            await Parallel.ForAsync(0, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
+            await Parallel.ForAsync(0L, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
             {
                 string jobId = startUploadResult.Result.JobId;
-                int partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
-                int offset = uploadPart * startUploadResult.Result.PartSize;
-                int partSize = uploadPart == startUploadResult.Result.PartCount - 1
+                long partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
+                long offset = uploadPart * startUploadResult.Result.PartSize;
+
+                // A single part is always small enough to fit in an int, as it has to be buffered in a byte array before uploading.
+                int partSize = checked((int)(uploadPart == startUploadResult.Result.PartCount - 1
                     ? fileSize - offset
-                    : startUploadResult.Result.PartSize;
-                byte[] partBytes = pool.Rent(startUploadResult.Result.PartSize);
+                    : startUploadResult.Result.PartSize));
+                byte[] partBytes = pool.Rent(partSize);
 
                 try
                 {
@@ -222,11 +218,11 @@ public sealed class Program
                 jobId: startUploadResult.Result.JobId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // If the finish upload call failed, or if the job status is failed or unknown, abort the upload and exit the sample.
+            // If the finish upload call failed, or if the job status is failed, abort the upload and exit the sample.
+            // An unknown state is not a failure; the lexicon specifies that any state which is not a known value indicates the job is still in process.
             if (!finishUploadResult.Succeeded ||
-                finishUploadResult.Result.JobStatus is not null &&
-                (finishUploadResult.Result.JobStatus!.State == JobState.Failed ||
-                finishUploadResult.Result.JobStatus!.State == JobState.Unknown))
+                (finishUploadResult.Result.JobStatus is not null &&
+                finishUploadResult.Result.JobStatus.State == JobState.Failed))
             {
                 var abortUploadResult = await agent.AbortUpload(
                     jobId: startUploadResult.Result.JobId,
@@ -245,7 +241,7 @@ public sealed class Program
 
             Console.WriteLine($"✅ Finished upload for jobID {startUploadResult.Result.JobId}");
 
-            // Poll the job status until it is completed, failed, or unknown.
+            // Poll the job status until it is completed or failed.
             // This is a long running operation and may take several minutes to complete, depending on the size of the video and the current load on the server.
             AtProtoHttpResult<JobStatus> getJobStatusResult;
             bool finished = false;
@@ -269,10 +265,8 @@ public sealed class Program
                         case JobState.Failed:
                             finished = true;
                             break;
-                        case JobState.Unknown: // This should never happen, but if it does, we will treat it as a failure.
-                            finished = true;
-                            break;
                         default:
+                            // Any other state, including JobState.Unknown, indicates the job is still in process.
                             break;
                     }
 
