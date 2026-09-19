@@ -175,6 +175,7 @@ public partial class BlueskyAgent
     /// <param name="declaration">The declaration record.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -185,7 +186,9 @@ public partial class BlueskyAgent
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration, CancellationToken cancellationToken)
-            {
+    {
+        ArgumentNullException.ThrowIfNull(declaration);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
@@ -207,6 +210,7 @@ public partial class BlueskyAgent
     /// </summary>
     /// <param name="declaration">The declaration record.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration)
     {

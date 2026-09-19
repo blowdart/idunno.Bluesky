@@ -183,6 +183,36 @@ public static class Maximum
     public static readonly int SuggestedActors = 100;
 
     /// <summary>
+    /// The maximum number of actor profiles that can be retrieved in a single call.
+    /// </summary>
+    public static readonly int ProfilesToGet = 25;
+
+    /// <summary>
+    /// The maximum number of actors that can be returned by an actor search.
+    /// </summary>
+    public static readonly int ActorSearchResults = 100;
+
+    /// <summary>
+    /// The maximum number of actors that can be returned by an actor typeahead search.
+    /// </summary>
+    public static readonly int ActorTypeaheadSearchResults = 100;
+
+    /// <summary>
+    /// The maximum number of tags that can be saved in an actor's interests.
+    /// </summary>
+    public static readonly int InterestTags = 100;
+
+    /// <summary>
+    /// The maximum length, in bytes, of a muted word.
+    /// </summary>
+    public static readonly int MutedWordLengthInBytes = 10000;
+
+    /// <summary>
+    /// The maximum length, in graphemes, of a muted word.
+    /// </summary>
+    public static readonly int MutedWordLengthInGraphemes = 1000;
+
+    /// <summary>
     /// The maximum number of conversations to list.
     /// </summary>
     public static readonly int ConversationsToList = 100;

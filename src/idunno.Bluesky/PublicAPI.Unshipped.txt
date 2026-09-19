@@ -344,3 +344,11 @@ idunno.Bluesky.BlueskyAgent.UpdatePostGate(idunno.Bluesky.Feed.Gates.PostGate! p
 *REMOVED*idunno.Bluesky.BlueskyAgent.UpdateThreadGate(idunno.Bluesky.Feed.Gates.ThreadGate! threadGate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdatePostGate(idunno.Bluesky.Feed.Gates.PostGate! postGate, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateThreadGate(idunno.Bluesky.Feed.Gates.ThreadGate! threadGate, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+static readonly idunno.Bluesky.Maximum.ProfilesToGet -> int
+static readonly idunno.Bluesky.Maximum.ActorSearchResults -> int
+static readonly idunno.Bluesky.Maximum.ActorTypeaheadSearchResults -> int
+static readonly idunno.Bluesky.Maximum.InterestTags -> int
+static readonly idunno.Bluesky.Maximum.MutedWordLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.MutedWordLengthInGraphemes -> int
+*REMOVED*idunno.Bluesky.Actor.Preferences.MutedWords.get -> System.Collections.Generic.IList<idunno.Bluesky.Actor.MutedWord!>!
+idunno.Bluesky.Actor.Preferences.MutedWords.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.MutedWord!>!
