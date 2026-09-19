@@ -31,6 +31,7 @@ public partial class AtProtoServer
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        RespectNullableAnnotations = true
     };
 
     /// <summary>

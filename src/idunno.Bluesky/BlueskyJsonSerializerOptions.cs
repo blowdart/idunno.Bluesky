@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
@@ -22,8 +23,12 @@ public static class BlueskyJsonSerializerOptions
     [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Won't work with the suppress message attributes")]
     private static readonly JsonSerializerOptions s_options = new(JsonSerializerOptions.Web)
     {
+        AllowOutOfOrderMetadataProperties = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        IgnoreReadOnlyProperties = false,
+        RespectNullableAnnotations = true,
         TypeInfoResolver = SourceGenerationContext.Default,
-        AllowOutOfOrderMetadataProperties = true
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip
     };
 
     /// <summary>
