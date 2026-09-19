@@ -360,6 +360,8 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Post))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Post>))]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Gates.ThreadGate>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedThreadGate")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Gates.PostGate>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedPostGate")]
 [JsonSerializable(typeof(View), TypeInfoPropertyName = "BaseView")]
 [JsonSerializable(typeof(Graph.ListPurpose), TypeInfoPropertyName = "GraphListPurpose")]
 

@@ -172,7 +172,49 @@ public partial class BlueskyAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateThreadGate(
         ThreadGate threadGate,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
+    {
+        return await UpdateThreadGate(threadGate, swapRecord: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the specified <see cref="ThreadGate"/> in the current user's repository.
+    /// </summary>
+    /// <param name="threadGate">The <see cref="ThreadGate"/> to update.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    public async Task<AtProtoHttpResult<PutRecordResult>> UpdateThreadGate(ThreadGate threadGate)
+    {
+        return await UpdateThreadGate(threadGate, swapRecord: null, cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the specified <see cref="ThreadGate"/> in the current user's repository, replacing the record identified by <paramref name="swapRecord"/>.
+    /// </summary>
+    /// <param name="threadGate">The <see cref="ThreadGate"/> to update.</param>
+    /// <param name="swapRecord">The <see cref="Cid"/> of the record the update is expected to replace, if the update should be conditional.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the post the gate applies to does not point to a post record, its RecordKey is <see langword="null"/>, or it is not owned by the current user.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="GetThreadGateRecord(AtUri, CancellationToken)"/> to read the <see cref="Cid"/> of the record being replaced. The update
+    /// fails rather than discarding a change made since the record was read.</para>
+    /// </remarks>
+    [UnconditionalSuppressMessage(
+         "Trimming",
+         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    public async Task<AtProtoHttpResult<PutRecordResult>> UpdateThreadGate(
+        ThreadGate threadGate,
+        Cid? swapRecord,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(threadGate);
 
@@ -201,6 +243,7 @@ public partial class BlueskyAgent
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             collection: CollectionNsid.ThreadGate,
             rKey: threadGate.Post.RecordKey,
+            swapRecord: swapRecord,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -241,14 +284,7 @@ public partial class BlueskyAgent
             throw new ArgumentException("Does not point to a Post record", nameof(post));
         }
 
-        AtProtoHttpResult<AtProtoRepositoryRecord<ThreadGate>> recordResponse = await GetRecord<ThreadGate>(
-            repo: Did,
-            collection: CollectionNsid.ThreadGate,
-            rKey: post.RecordKey,
-            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-            cid: null,
-            service: Service,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        AtProtoHttpResult<AtProtoRepositoryRecord<ThreadGate>> recordResponse = await GetThreadGateRecord(post, cancellationToken).ConfigureAwait(false);
 
         if (recordResponse.Succeeded)
         {
@@ -268,6 +304,58 @@ public partial class BlueskyAgent
                 recordResponse.AtErrorDetail,
                 recordResponse.RateLimit);
         }
+    }
+
+    /// <summary>
+    /// Gets the repository record holding the <see cref="ThreadGate"/> for the specified <paramref name="post"/>, if any.
+    /// </summary>
+    /// <param name="post">The <see cref="AtUri"/> for the post whose thread gate should be retrieved.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    /// <remarks>
+    /// <para>Unlike <see cref="GetThreadGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
+    /// <see cref="UpdateThreadGate(ThreadGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
+    /// </remarks>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<ThreadGate>>> GetThreadGateRecord(
+        AtUri post,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(post);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        if (post.RecordKey is null)
+        {
+            throw new ArgumentException("RecordKey is null", nameof(post));
+        }
+
+        if (post.Collection != CollectionNsid.Post)
+        {
+            throw new ArgumentException("Does not point to a Post record", nameof(post));
+        }
+
+        return await GetRecord<ThreadGate>(
+            repo: Did,
+            collection: CollectionNsid.ThreadGate,
+            rKey: post.RecordKey,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            cid: null,
+            service: Service,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -327,6 +415,9 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
          "Trimming",
@@ -344,6 +435,21 @@ public partial class BlueskyAgent
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
+        }
+
+        if (postGate.Post.RecordKey is null)
+        {
+            throw new ArgumentException("Post.RecordKey is null", nameof(postGate));
+        }
+
+        if (postGate.Post.Collection != CollectionNsid.Post)
+        {
+            throw new ArgumentException("Post does not point to a Post record", nameof(postGate));
+        }
+
+        if (!await IsRecordOwnedBy(postGate.Post, Did, cancellationToken: cancellationToken).ConfigureAwait(false))
+        {
+            throw new ArgumentException("Post was not created by the current user.", nameof(postGate));
         }
 
         return await CreateRecord(
@@ -432,14 +538,7 @@ public partial class BlueskyAgent
             throw new ArgumentException("Does not point to a Post record", nameof(post));
         }
 
-        AtProtoHttpResult<AtProtoRepositoryRecord<PostGate>> recordResponse = await GetRecord<PostGate>(
-            repo: Did,
-            collection: CollectionNsid.PostGate,
-            rKey: post.RecordKey,
-            cid: null,
-            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-            service: Service,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        AtProtoHttpResult<AtProtoRepositoryRecord<PostGate>> recordResponse = await GetPostGateRecord(post, cancellationToken).ConfigureAwait(false);
 
         if (recordResponse.Succeeded)
         {
@@ -462,6 +561,58 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Gets the repository record holding the <see cref="PostGate"/> for the specified <paramref name="post"/>, if any.
+    /// </summary>
+    /// <param name="post">The <see cref="AtUri"/> for the post whose post gate should be retrieved.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    /// <remarks>
+    /// <para>Unlike <see cref="GetPostGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
+    /// <see cref="UpdatePostGate(PostGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
+    /// </remarks>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<PostGate>>> GetPostGateRecord(
+        AtUri post,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(post);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        if (post.RecordKey is null)
+        {
+            throw new ArgumentException("RecordKey is null", nameof(post));
+        }
+
+        if (post.Collection != CollectionNsid.Post)
+        {
+            throw new ArgumentException("Does not point to a Post record", nameof(post));
+        }
+
+        return await GetRecord<PostGate>(
+            repo: Did,
+            collection: CollectionNsid.PostGate,
+            rKey: post.RecordKey,
+            cid: null,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            service: Service,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Updates the specified <paramref name="postGate"/> record in the current user's repository.
     /// </summary>
     /// <param name="postGate">The <paramref name="postGate"/> record to update.</param>
@@ -481,7 +632,53 @@ public partial class BlueskyAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdatePostGate(
         PostGate postGate,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
+    {
+        return await UpdatePostGate(postGate, swapRecord: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the specified <paramref name="postGate"/> record in the current user's repository.
+    /// </summary>
+    /// <param name="postGate">The <paramref name="postGate"/> record to update.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    /// </exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    public async Task<AtProtoHttpResult<PutRecordResult>> UpdatePostGate(PostGate postGate)
+    {
+        return await UpdatePostGate(postGate, swapRecord: null, cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the specified <paramref name="postGate"/> record in the current user's repository, replacing the record identified by <paramref name="swapRecord"/>.
+    /// </summary>
+    /// <param name="postGate">The <paramref name="postGate"/> record to update.</param>
+    /// <param name="swapRecord">The <see cref="Cid"/> of the record the update is expected to replace, if the update should be conditional.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
+    /// </exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="GetPostGateRecord(AtUri, CancellationToken)"/> to read the <see cref="Cid"/> of the record being replaced. The update
+    /// fails rather than discarding a change made since the record was read.</para>
+    /// </remarks>
+    [UnconditionalSuppressMessage(
+         "Trimming",
+         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    public async Task<AtProtoHttpResult<PutRecordResult>> UpdatePostGate(
+        PostGate postGate,
+        Cid? swapRecord,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(postGate);
 
@@ -510,6 +707,7 @@ public partial class BlueskyAgent
             collection: CollectionNsid.PostGate,
             rKey: postGate.Post.RecordKey,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            swapRecord: swapRecord,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

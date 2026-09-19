@@ -119,14 +119,14 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
 
         if (query is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"query={Uri.EscapeDataString(query)}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&query={Uri.EscapeDataString(query)}");
         }
 
         if (sort is not null)
@@ -170,7 +170,7 @@ public static partial class BlueskyServer
         {
             foreach (AtUri embeddedAtUri in embeddedAtUris)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&embedded={Uri.EscapeDataString(embeddedAtUri.ToString())}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&embeddedAtUris={Uri.EscapeDataString(embeddedAtUri.ToString())}");
             }
         }
 
@@ -178,6 +178,9 @@ public static partial class BlueskyServer
         {
             foreach (string hashTag in hashTags)
             {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hashTag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hashTag.GetUtf8Length(), Maximum.TagLengthInBytes);
+
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&hashtags={Uri.EscapeDataString(hashTag)}");
             }
         }
@@ -218,7 +221,7 @@ public static partial class BlueskyServer
         {
             foreach (AtUri excludeEmbeddedAtUri in excludeEmbeddedAtUris)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeEmbedded={Uri.EscapeDataString(excludeEmbeddedAtUri.ToString())}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeEmbeddedAtUris={Uri.EscapeDataString(excludeEmbeddedAtUri.ToString())}");
             }
         }
 
@@ -226,6 +229,9 @@ public static partial class BlueskyServer
         {
             foreach (string excludeHashTag in excludeHashTags)
             {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(excludeHashTag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(excludeHashTag.GetUtf8Length(), Maximum.TagLengthInBytes);
+
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeHashtags={Uri.EscapeDataString(excludeHashTag)}");
             }
         }
@@ -242,7 +248,7 @@ public static partial class BlueskyServer
 
         if (allTime is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&until={Uri.EscapeDataString(allTime.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&allTime={Uri.EscapeDataString(allTime.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant())}");
         }
 
         if (languages is not null && languages.Count > 0)
@@ -273,12 +279,12 @@ public static partial class BlueskyServer
 
         if (replyParentUri is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&replyParent={Uri.EscapeDataString(replyParentUri.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&replyParentUri={Uri.EscapeDataString(replyParentUri.ToString())}");
         }
 
         if (threadRootUri is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&threadRoot={Uri.EscapeDataString(threadRootUri.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&threadRootUri={Uri.EscapeDataString(threadRootUri.ToString())}");
         }
 
         if (excludeReplies is not null)
@@ -305,6 +311,9 @@ public static partial class BlueskyServer
         {
             throw new ArgumentException("A query or at least one filter is required.");
         }
+
+        // Every parameter is appended with a leading separator, so the first one has to have its separator removed.
+        queryStringBuilder.Remove(0, 1);
 
         if (limit is not null)
         {

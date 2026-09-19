@@ -92,11 +92,23 @@ public sealed record PostGate : AtProtoRecord
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("embeddingRules")]
-    public ICollection<PostGateRule>? Rules { get; init; }
+    public ICollection<PostGateRule>? Rules
+    {
+        get => _rules;
+        init => _rules = value is null ? null : new List<PostGateRule>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// Gets the list of <see cref="AtUri"/>s of posts embedding the <see cref="Post"/> that the author has detached, if any.
     /// </summary>
     [JsonInclude]
-    public ICollection<AtUri>? DetachedEmbeddingUris { get; init; }
+    public ICollection<AtUri>? DetachedEmbeddingUris
+    {
+        get => _detachedEmbeddingUris;
+        init => _detachedEmbeddingUris = value is null ? null : new List<AtUri>(value).AsReadOnly();
+    }
+
+    private readonly ICollection<PostGateRule>? _rules;
+
+    private readonly ICollection<AtUri>? _detachedEmbeddingUris;
 }
