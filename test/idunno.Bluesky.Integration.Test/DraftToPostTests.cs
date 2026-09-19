@@ -416,12 +416,11 @@ public class DraftToPostTests
             Assert.False(actualPost.ContainsPorn);
             Assert.False(actualPost.ContainsSexualContent);
 
-            Assert.IsType<EmbeddedImages>(actualPost.EmbeddedRecord);
+            EmbeddedImages actualEmbeddedImages = Assert.IsType<EmbeddedImages>(actualPost.EmbeddedRecord);
 
-            EmbeddedImages? actualEmbeddedImages = actualPost.EmbeddedRecord as EmbeddedImages;
-            Assert.Single(actualEmbeddedImages!.Images);
-            Assert.Equal(expectedAltText, actualEmbeddedImages!.Images.First()!.AltText);
-            Assert.Equal(s_expectedBlobCid, actualEmbeddedImages!.Images.First()!.Image.Reference.Link);
+            EmbeddedImage item = Assert.Single(actualEmbeddedImages.Images);
+            Assert.Equal(expectedAltText, item!.AltText);
+            Assert.Equal(s_expectedBlobCid, actualEmbeddedImages.Images.First()!.Image.Reference.Link);
 
             Assert.False(deleteCalled);
         }
@@ -617,9 +616,8 @@ public class DraftToPostTests
             Assert.False(actualPost.ContainsPorn);
             Assert.False(actualPost.ContainsSexualContent);
 
-            Assert.IsType<EmbeddedVideo>(actualPost.EmbeddedRecord);
+            EmbeddedVideo actualEmbeddedVideo = Assert.IsType<EmbeddedVideo>(actualPost.EmbeddedRecord);
 
-            EmbeddedVideo? actualEmbeddedVideo = actualPost.EmbeddedRecord as EmbeddedVideo;
             Assert.Equal(expectedAltText, actualEmbeddedVideo!.AltText);
             Assert.Equal(s_expectedVideoBlobCid, actualEmbeddedVideo!.Video.Reference.Link);
 
