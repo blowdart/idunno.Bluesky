@@ -87,6 +87,10 @@
 * Added `Maximum.ListNameLengthInBytes`, `Maximum.ListDescriptionLengthInBytes`, `Maximum.ListDescriptionLengthInGraphemes`,
   `Maximum.StarterPackNameLengthInBytes`, `Maximum.StarterPackNameLengthInGraphemes`, `Maximum.StarterPackDescriptionLengthInBytes`,
   `Maximum.StarterPackDescriptionLengthInGraphemes` and `Maximum.FeedsInStarterPack`, replacing the hard coded limits used by the graph records.
+* Added `UploadStatus.RawState` and `AbortUploadResponse.RawState`, exposing the upload state exactly as the video service returned it, so a state the library
+  does not yet map can still be read and logged. `JobStatus.RawState` already did this.
+* Added `Maximum.VideoMimeTypeMinimumLengthInBytes`, `Maximum.VideoMimeTypeLengthInBytes`, `Maximum.VideoUploadNameLengthInBytes` and
+  `Maximum.VideoJobIdLengthInBytes`, replacing the hard coded limits used by the video upload APIs.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -121,6 +125,8 @@
 #### idunno.Bluesky
 
 * `DefaultFacetExtractor` now uses a more permissive regex for URLs, which allows for query strings to be included in the extracted URL.
+* The documentation for `JobState.Unknown` and `UploadState.Unknown` no longer describes them as errors. The lexicon specifies that any state which is not a
+  known value indicates the job is still in process, so callers should keep polling rather than give up.
 
 ### Breaking Changes
 
@@ -209,6 +215,9 @@
   and UTF-8 bytes.
 * `BlueskyServer.MuteActorList()` now declares its `accessCredentials` parameter as non-nullable. It always required credentials, and threw when passed
   a `null`.
+* `BlueskyAgent.StartUpload()`, `BlueskyServer.StartUpload()`, `BlueskyAgent.UploadPart()` and `BlueskyServer.UploadPart()` now take their `size` and `part`
+  parameters as `long` rather than `int`, and `StartUploadResponse.PartSize` and `StartUploadResponse.PartCount` are now `long`. The AT Protocol `integer`
+  type is a signed 64 bit value, and a `partSizeBytes` or `partCount` over `int.MaxValue` threw a `JsonException` rather than deserializing.
 
 ### Fixed
 
@@ -550,6 +559,15 @@
   `GetSuggestedFeeds()`, `GetTimeline()`, `SearchPosts()`, `SearchPostsV2()` and `GetPostThreadOtherV2()` now skip and log `null` entries inside their
   collections rather than returning them. Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a service could
   place a `null` inside an otherwise well formed collection and it would be handed straight to the caller.
+* `UploadVideo()` no longer throws when a `409 already_exists` response carries a `jobId` which is not a usable string. The value comes from the service's
+  error extension data and was read with `GetString()!`, so a number, `null`, an array, an object or a blank string threw rather than returning the conflict
+  to the caller. Such a response is now logged and the original result is returned.
+* `UploadStatus.ReceivedParts` is now a defensive copy. It previously exposed the caller's or the deserializer's own collection through an
+  `IReadOnlyCollection<int>`, which could be cast back to `List<int>` and mutated.
+* `UploadVideo()` now validates `mimeType` and throws an `ArgumentException` when it is not a valid media type. An invalid value previously reached
+  `MediaTypeHeaderValue` and surfaced as an undocumented `FormatException`.
+* `StartUpload()` and `UploadVideo()` now measure `mimeType` and `name` in UTF-8 bytes, as the lexicon does, and `StartUpload()` validates `name`, which was
+  previously unchecked.
 
 #### idunno.Bluesky.AspNet.Authentication
 

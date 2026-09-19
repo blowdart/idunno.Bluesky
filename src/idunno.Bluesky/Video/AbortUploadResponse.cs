@@ -13,6 +13,7 @@ public sealed record AbortUploadResponse
     internal AbortUploadResponse(AbortUploadWireResponse response)
     {
         State = response.State.ToUploadState();
+        RawState = response.State;
         CompletedJobId = response.CompletedJobId;
         FailureReason = response.FailureReason;
     }
@@ -21,6 +22,11 @@ public sealed record AbortUploadResponse
     /// Gets the current state of the upload after the abort request. This can be used to determine if the abort was successful or if the upload has already completed or failed.
     /// </summary>
     public UploadState State { get; init; }
+
+    /// <summary>
+    /// Gets the state of the upload, as the string returned from the API.
+    /// </summary>
+    public string? RawState { get; init; }
 
     /// <summary>
     /// Gets the completed job id if the upload had already completed. Present only if the state is <see cref="UploadState.Completed"/>.

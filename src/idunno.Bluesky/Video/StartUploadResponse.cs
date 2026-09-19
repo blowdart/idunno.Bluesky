@@ -14,8 +14,8 @@ namespace idunno.Bluesky.Video;
 /// <param name="ExpiresAt">The expiration date and time when the upload job expires and no longer accepts new parts.</param>
 public sealed record StartUploadResponse(
     [property: JsonRequired] string JobId,
-    [property: JsonRequired, JsonPropertyName("partSizeBytes")] int PartSize,
-    [property: JsonRequired] int PartCount,
+    [property: JsonRequired, JsonPropertyName("partSizeBytes")] long PartSize,
+    [property: JsonRequired] long PartCount,
     [property: JsonRequired] DateTimeOffset ExpiresAt)
 {
 }

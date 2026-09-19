@@ -415,6 +415,50 @@ public static class Maximum
     /// The maximum number of items in a gallery.
     /// </summary>
     public static readonly int GalleryItems = 10;
+
+    /// <summary>
+    /// The minimum length of the declared MIME type of a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoMimeTypeMinimumLengthInBytes = 3;
+
+    /// <summary>
+    /// The maximum length of the declared MIME type of a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoMimeTypeLengthInBytes = 255;
+
+    /// <summary>
+    /// The maximum length of the client provided file name for a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoUploadNameLengthInBytes = 256;
+
+    /// <summary>
+    /// The maximum length of a video upload job identifier, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoJobIdLengthInBytes = 256;
 }
 
 /// <summary>

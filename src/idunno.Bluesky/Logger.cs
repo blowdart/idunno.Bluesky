@@ -251,4 +251,7 @@ internal static partial class Logger
     [LoggerMessage(155, LogLevel.Warning, "{caller} skipped {skipped} null entries in {collection} returned by {service}")]
     internal static partial void SkippedNullCollectionEntries(ILogger logger, string caller, int skipped, string collection, Uri service);
 
+    [LoggerMessage(156, LogLevel.Error, "UploadMedia for {did} returned already_exists but the jobId in the error detail was missing, was not a JSON string, or was empty")]
+    internal static partial void UploadMediaAlreadyExistsJobIdUnusable(ILogger logger, Did did);
+
 }

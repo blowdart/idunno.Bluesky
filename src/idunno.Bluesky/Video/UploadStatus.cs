@@ -26,9 +26,10 @@ public sealed record UploadStatus
         JobId = jobId;
         PartSize = partSize;
         PartCount = partCount;
-        ReceivedParts = receivedParts;
+        ReceivedParts = new List<int>(receivedParts).AsReadOnly();
         ExpiresAt = expiresAt;
         State = state.ToUploadState();
+        RawState = state;
         CompletedJobId = completedJobId;
         JobStatus = jobStatus;
         FailureReason = failureReason;
@@ -39,9 +40,10 @@ public sealed record UploadStatus
         JobId = getUploadStatusResponse.JobId;
         PartSize = getUploadStatusResponse.PartSize;
         PartCount = getUploadStatusResponse.PartCount;
-        ReceivedParts = getUploadStatusResponse.ReceivedParts;
+        ReceivedParts = new List<int>(getUploadStatusResponse.ReceivedParts).AsReadOnly();
         ExpiresAt = getUploadStatusResponse.ExpiresAt;
         State = getUploadStatusResponse.State.ToUploadState();
+        RawState = getUploadStatusResponse.State;
         CompletedJobId = getUploadStatusResponse.CompletedJobId;
 
         if (getUploadStatusResponse.JobStatus is not null)
@@ -85,6 +87,11 @@ public sealed record UploadStatus
     /// Gets the current state of the upload session.
     /// </summary>
     public UploadState State { get; init; }
+
+    /// <summary>
+    /// Gets the state of the upload session, as the string returned from the API.
+    /// </summary>
+    public string? RawState { get; init; }
 
     /// <summary>
     /// Gets the completed job id if the upload has completed successfully. May differ from <see cref="JobId"/> on deduplication.
