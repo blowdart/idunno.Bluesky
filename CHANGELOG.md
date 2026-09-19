@@ -170,6 +170,10 @@
 
 #### idunno.Bluesky
 
+* `Facet.Features` now takes a defensive copy of the collection it is given and returns a read only collection.
+* `ByteSlice` now throws an `ArgumentOutOfRangeException` when either byte position is negative, or the end position is before the start position.
+* `HashTag` no longer validates its display text against the tag length limits.
+* `LinkFacetFeature.Uri` is now init only.
 * `Preferences` gains a `Like` positional parameter, changing its constructor and `Deconstruct` signatures.
 * `Notification.Author` is now a `ProfileView` rather than a `ProfileViewBasic`.
 * `SubjectActivitySubscription.ActivitySubscription` is now nullable, as the API omits it from `PutActivitySubscription()` responses.
@@ -476,6 +480,10 @@
 
 #### idunno.Bluesky
 
+* Trailing sentence punctuation is no longer swallowed into a link facet extracted by `DefaultFacetExtractor`, and the facet's byte range now matches the trimmed uri.
+* Facets extracted by `DefaultFacetExtractor` are now returned in document order rather than grouped by facet type.
+* `HashTag` no longer rejects a tag of the maximum allowed length because of the `#` prefix added to its display text.
+* `ToString()` on a `PostBuilderFacetFeature` with no text no longer returns `null`.
 * The `like` notification preference was missing from `Preferences`, so `SetNotificationPreferences()` silently reset the user's like notification setting on every call.
 * `Preferences.StarterPackJoined` serialized as `starterPackJoined` rather than the lexicon's `starterpackJoined`, so the value was dropped on write.
 * `FilterablePreference.Include` and `ChatPreference.Include` serialized their enum values in Pascal case rather than the lexicon's lower case.

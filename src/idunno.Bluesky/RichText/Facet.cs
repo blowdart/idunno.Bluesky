@@ -34,9 +34,17 @@ public record Facet
     /// <summary>
     /// A list of <see cref="FacetFeature"/>s for the facet.
     /// </summary>
+    /// <remarks>
+    /// <para>The collection is copied when it is set, so later changes to the collection the caller supplied do
+    /// not alter the facet, and the returned collection is read only.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public IList<FacetFeature> Features { get; init; }
+    public IList<FacetFeature> Features
+    {
+        get;
+        init => field = new List<FacetFeature>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// The byte slice the facet refers to.

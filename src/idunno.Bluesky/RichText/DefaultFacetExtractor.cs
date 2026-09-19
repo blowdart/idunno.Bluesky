@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers;
 using System.Text.RegularExpressions;
 
 using idunno.AtProto;
@@ -15,6 +16,9 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
     // Regexes and logic taken from https://docs.bsky.app/docs/advanced-guides/post-richtext
 
     private readonly Func<string, CancellationToken, Task<Did?>> _resolveHandle;
+
+    // Punctuation which is trimmed from the end of an extracted link. See ExtractUris.
+    private static readonly SearchValues<char> s_trailingPunctuation = SearchValues.Create(".,;:!?");
 
     [GeneratedRegex(@"(?:^|\s)(#[^\d\s]\S*)", RegexOptions.IgnoreCase, 1000)]
     private static partial Regex s_HashTagRegex();
@@ -82,6 +86,11 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
         {
             facets.AddRange(mentionFacets);
         }
+
+        // Facets are extracted a type at a time, so the list is grouped by facet type rather than ordered by
+        // position in the text. Sorting by the starting byte puts them into document order, which is the order
+        // the AT Protocol expects and which clients rely on when they walk the text a facet at a time.
+        facets.Sort(static (x, y) => x.Index.ByteStart.CompareTo(y.Index.ByteStart));
 
         return facets;
     }
@@ -179,9 +188,34 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
 
         foreach (Match match in matches)
         {
-            LinkFacetFeature tagFacetFeature = new(match.Value);
-            ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + match.Length));
-            links.Add(new Facet(index, [tagFacetFeature]));
+            string uri = match.Value;
+
+            // Trailing punctuation is far more likely to be the punctuation of the sentence the link sits in than
+            // part of the link itself, so it is trimmed from both the uri and the facet's byte range. This mirrors
+            // the behavior of the official Bluesky clients.
+            if (uri.Length > 0 && s_trailingPunctuation.Contains(uri[^1]))
+            {
+                uri = uri[..^1];
+            }
+
+            // A closing parenthesis only belongs to the link if the link also contains an opening one, so that
+            // a link wrapped in parentheses drops the closing one, but a link such as
+            // https://en.wikipedia.org/wiki/Foo_(bar) keeps it.
+            if (uri.EndsWith(')') && !uri.Contains('(', StringComparison.Ordinal))
+            {
+                uri = uri[..^1];
+            }
+
+            if (uri.Length == 0)
+            {
+                continue;
+            }
+
+            LinkFacetFeature linkFacetFeature = new(uri);
+
+            // Only trailing characters are trimmed, so the start of the match is still the start of the link.
+            ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + uri.Length));
+            links.Add(new Facet(index, [linkFacetFeature]));
         }
 
         return links;

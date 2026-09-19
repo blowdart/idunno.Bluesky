@@ -17,17 +17,18 @@ public record HashTag : PostBuilderFacetFeature
     /// <exception cref="ArgumentException">if <paramref name="tag"/> is <see langword="null"/> or white space.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// If <paramref name="tag"/> is longer than the allowed maximum.</exception>
+    /// <remarks>
+    /// <para>The lexicon limits apply to <paramref name="tag"/> itself, not to the text it renders as, so a tag
+    /// of the maximum allowed length is still valid once its '#' prefix is added.</para>
+    /// </remarks>
     public HashTag(string tag)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
-        Tag = tag;
 
-        string tagAsHashTagText = $"#{tag}";
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetUtf8Length(), Maximum.TagLengthInBytes);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
-        Text = tagAsHashTagText;
+        Tag = tag;
+        Text = $"#{tag}";
     }
 
     /// <summary>
@@ -36,9 +37,11 @@ public record HashTag : PostBuilderFacetFeature
     /// <param name="tag">The hash tag to add to a post. Do not include the '#' prefix except in the case of 'double hash tags'.</param>
     /// <param name="text">The text to wrap the hashtag around, if any. The text usually includes a '#' prefix.</param>
     /// <exception cref="ArgumentException">if <paramref name="tag"/> is <see langword="null"/> or white space.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">If <paramref name="tag"/> or <paramref name="text"/> are longer than the allowed maximums.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">If <paramref name="tag"/> is longer than the allowed maximum.</exception>
     /// <remarks>
     /// <para>If <paramref name="text"/> is not specified the <paramref name="tag"/> will be used as the facet feature text.</para>
+    /// <para>The lexicon limits apply to <paramref name="tag"/> only. <paramref name="text"/> is the text the tag
+    /// renders as, and so counts towards the length of the post rather than the length of the tag.</para>
     /// </remarks>
     public HashTag(string tag, string text) : base(text)
     {
@@ -46,8 +49,7 @@ public record HashTag : PostBuilderFacetFeature
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.TagLengthInBytes);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+
         Tag = tag;
         Text = text;
     }

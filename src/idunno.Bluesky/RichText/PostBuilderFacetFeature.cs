@@ -31,12 +31,14 @@ public abstract record PostBuilderFacetFeature
     /// <summary>
     /// Gets the text to wrap the facet feature around.
     /// </summary>
-    [NotNull]
+    /// <remarks>
+    /// <para>This is <see langword="null"/> until a derived type sets it.</para>
+    /// </remarks>
     public string? Text { get; protected set; }
 
     /// <summary>
     /// Returns a string that represents the current object.
     /// </summary>
-    /// <returns>The text of the facet.</returns>
-    public override string ToString() => Text;
+    /// <returns>The text of the facet, or an empty string if the facet has no text.</returns>
+    public override string ToString() => Text ?? string.Empty;
 }

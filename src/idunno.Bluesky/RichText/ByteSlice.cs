@@ -15,6 +15,9 @@ public sealed record ByteSlice
     /// </summary>
     /// <param name="byteStart">The byte index at which the facet starts.</param>
     /// <param name="byteEnd">The byte index at which the facet ends.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="byteStart"/> or <paramref name="byteEnd"/> is negative,
+    /// or when <paramref name="byteEnd"/> is before <paramref name="byteStart"/>.</exception>
     /// <remarks>
     /// <para><paramref name="byteStart"/> is zero-indexed and inclusive.</para>
     /// <para><paramref name="byteEnd"/> is zero-indexed and exclusive.</para>
@@ -22,6 +25,10 @@ public sealed record ByteSlice
     [JsonConstructor]
     public ByteSlice(long byteStart, long byteEnd)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(byteStart);
+        ArgumentOutOfRangeException.ThrowIfNegative(byteEnd);
+        ArgumentOutOfRangeException.ThrowIfLessThan(byteEnd, byteStart);
+
         ByteStart = byteStart;
         ByteEnd = byteEnd;
     }
