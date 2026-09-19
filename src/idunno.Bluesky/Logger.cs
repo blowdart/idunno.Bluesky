@@ -133,6 +133,8 @@ internal static partial class Logger
     [LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
     internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
+    [LoggerMessage(157, LogLevel.Error, "Draft media path {path} in draft {draftId} was rejected: {reason}")]
+    internal static partial void DraftMediaPathRejected(ILogger logger, string path, TimestampIdentifier draftId, string reason);
     [LoggerMessage(109, LogLevel.Information, "Uploading gallery image {fileName} from draft {draftId}")]
     internal static partial void UploadingGalleryImageFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
 

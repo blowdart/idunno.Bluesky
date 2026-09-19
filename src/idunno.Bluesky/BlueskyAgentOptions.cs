@@ -82,4 +82,20 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
     /// Gets or sets the facet extractor to use when extracting facets from post or message texts.
     /// </summary>
     public IFacetExtractor? FacetExtractor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the directories draft media may be read from when a draft is posted.
+    /// </summary>
+    /// <remarks>
+    ///   <para>
+    ///     The local paths in a draft's media embeds come from the service the agent is connected to and should be treated as untrusted
+    ///     input. When a draft is posted with <see cref="Drafts.DraftMediaPathValidation.Enforce"/> every media path must resolve to a
+    ///     location inside one of these directories before the file it points to is read and uploaded.
+    ///   </para>
+    ///   <para>
+    ///     Relative entries are resolved against the current working directory when the agent is created. If this is empty posting a draft
+    ///     which contains media fails unless <see cref="Drafts.DraftMediaPathValidation.Trust"/> is specified.
+    ///   </para>
+    /// </remarks>
+    public IList<string> DraftMediaRoots { get; } = [];
 }
