@@ -24,13 +24,23 @@ public record DraftEmbedRecord
     [JsonConstructor]
     public DraftEmbedRecord(StrongReference record)
     {
-        ArgumentNullException.ThrowIfNull(record);
         Record = record;
     }
 
     /// <summary>
     /// Gets a strong reference to the record to embed.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     [JsonRequired]
-    public StrongReference Record { get; init; }
+    public StrongReference Record
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 }

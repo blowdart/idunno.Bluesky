@@ -43,12 +43,34 @@ public record DraftWithId
     /// <summary>
     /// Gets the <see cref="TimestampIdentifier"/> used as a draft identifier.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     [JsonRequired]
-    public TimestampIdentifier Id { get; init; }
+    public TimestampIdentifier Id
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets the draft containing an array of draft posts.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     [JsonRequired]
-    public Draft Draft { get; init; }
+    public Draft Draft
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 }

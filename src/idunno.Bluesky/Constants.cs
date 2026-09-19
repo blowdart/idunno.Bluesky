@@ -412,6 +412,105 @@ public static class Maximum
     public static readonly int DraftTextLengthInGraphemes = 1000;
 
     /// <summary>
+    /// The maximum number of posts in a draft.
+    /// </summary>
+    public static readonly int DraftPosts = 100;
+
+    /// <summary>
+    /// The maximum length of the identifier of the device which created a draft, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftDeviceIdLengthInBytes = 100;
+
+    /// <summary>
+    /// The maximum length of the name of the device which created a draft, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftDeviceNameLengthInBytes = 100;
+
+    /// <summary>
+    /// The maximum number of languages a draft can declare.
+    /// </summary>
+    public static readonly int DraftLangs = 3;
+
+    /// <summary>
+    /// The maximum number of post gate embedding rules a draft can declare.
+    /// </summary>
+    public static readonly int DraftPostGateEmbeddingRules = 5;
+
+    /// <summary>
+    /// The maximum number of thread gate allow rules a draft can declare.
+    /// </summary>
+    public static readonly int DraftThreadGateAllowRules = 5;
+
+    /// <summary>
+    /// The maximum number of images which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedImages = 4;
+
+    /// <summary>
+    /// The maximum number of videos which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedVideos = 1;
+
+    /// <summary>
+    /// The maximum number of external embeds which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedExternals = 1;
+
+    /// <summary>
+    /// The maximum number of records which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedRecords = 1;
+
+    /// <summary>
+    /// The maximum length of the local path of a file embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftEmbedLocalRefPathLengthInBytes = 1024;
+
+    /// <summary>
+    /// The minimum length of the local path of a file embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    public static readonly int DraftEmbedLocalRefPathMinimumLengthInBytes = 1;
+
+    /// <summary>
+    /// The maximum length of the alt text of an image or video embedded in a draft post, in graphemes.
+    /// </summary>
+    public static readonly int DraftEmbedAltTextLengthInGraphemes = 2000;
+
+    /// <summary>
+    /// The maximum length of the content of a caption embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftEmbedCaptionContentLengthInBytes = 10000;
+
+    /// <summary>
+    /// The maximum number of captions which can be attached to a video embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedVideoCaptions = 20;
+
+    /// <summary>
     /// The maximum number of items in a gallery.
     /// </summary>
     public static readonly int GalleryItems = 10;

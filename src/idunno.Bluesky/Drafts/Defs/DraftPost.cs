@@ -25,11 +25,11 @@ public record DraftPost
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="labels">The labels to apply to the post.</param>
-    /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
+    /// <param name="embedImages">The images to embed in the post. (Maximum <see cref="Maximum.DraftEmbedImages"/>)</param>
     /// <param name="embedGallery">The gallery to embed in the post.</param>
-    /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
-    /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
-    /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
+    /// <param name="embedVideos">The videos to embed in the post. (Maximum <see cref="Maximum.DraftEmbedVideos"/>)</param>
+    /// <param name="embedExternals">The external content to embed in the post. (Maximum <see cref="Maximum.DraftEmbedExternals"/>)</param>
+    /// <param name="embedRecords">The records to embed in the post. (Maximum <see cref="Maximum.DraftEmbedRecords"/>)</param>
     /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or
@@ -39,11 +39,11 @@ public record DraftPost
     public DraftPost(
         string text,
         SelfLabels? labels,
-        IList<DraftEmbedImage>? embedImages,
+        IReadOnlyList<DraftEmbedImage>? embedImages,
         DraftEmbedGallery? embedGallery,
-        IList<DraftEmbedVideo>? embedVideos,
-        IList<DraftEmbedExternal>? embedExternals,
-        IList<DraftEmbedRecord>? embedRecords)
+        IReadOnlyList<DraftEmbedVideo>? embedVideos,
+        IReadOnlyList<DraftEmbedExternal>? embedExternals,
+        IReadOnlyList<DraftEmbedRecord>? embedRecords)
     {
         ArgumentException.ThrowIfNullOrEmpty(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
@@ -55,24 +55,24 @@ public record DraftPost
 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             embedImages?.Count ?? 0,
-            4);
+            Maximum.DraftEmbedImages);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             embedVideos?.Count ?? 0,
-            1);
+            Maximum.DraftEmbedVideos);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             embedExternals?.Count ?? 0,
-            1);
+            Maximum.DraftEmbedExternals);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             embedRecords?.Count ?? 0,
-            1);
+            Maximum.DraftEmbedRecords);
 
         Text = text;
         Labels = labels;
-        EmbedImages = embedImages;
+        EmbedImages = embedImages is null ? null : new List<DraftEmbedImage>(embedImages).AsReadOnly();
         EmbedGallery = embedGallery;
-        EmbedVideos = embedVideos;
-        EmbedExternals = embedExternals;
-        EmbedRecords = embedRecords;
+        EmbedVideos = embedVideos is null ? null : new List<DraftEmbedVideo>(embedVideos).AsReadOnly();
+        EmbedExternals = embedExternals is null ? null : new List<DraftEmbedExternal>(embedExternals).AsReadOnly();
+        EmbedRecords = embedRecords is null ? null : new List<DraftEmbedRecord>(embedRecords).AsReadOnly();
     }
 
     /// <summary>
@@ -103,10 +103,10 @@ public record DraftPost
     /// Creates a new instance of <see cref="DraftPost"/> with the specified content and embedded images.
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
-    /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
+    /// <param name="embedImages">The images to embed in the post. (Maximum <see cref="Maximum.DraftEmbedImages"/>)</param>
     /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or when the number of embedded images exceeds 4.</exception>
-    public DraftPost(string text, IList<DraftEmbedImage> embedImages) : this(
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or when the number of embedded images exceeds <see cref="Maximum.DraftEmbedImages"/>.</exception>
+    public DraftPost(string text, IReadOnlyList<DraftEmbedImage> embedImages) : this(
         text: text,
         labels: null,
         embedImages: embedImages,
@@ -125,7 +125,7 @@ public record DraftPost
 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             embedImages?.Count ?? 0,
-            4);
+            Maximum.DraftEmbedImages);
     }
 
     /// <summary>
@@ -171,8 +171,8 @@ public record DraftPost
     {
         ArgumentException.ThrowIfNullOrEmpty(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
-            text.Length,
-           Maximum.DraftTextLengthInGraphemes);
+            text.GetUtf8Length(),
+            Maximum.DraftTextLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetGraphemeLength(),
             Maximum.DraftTextLengthInGraphemes);
@@ -218,11 +218,11 @@ public record DraftPost
     public DraftPost(
         string text,
         PostSelfLabels? postSelfLabels,
-        IList<DraftEmbedImage>? embedImages,
+        IReadOnlyList<DraftEmbedImage>? embedImages,
         DraftEmbedGallery? embedGallery,
-        IList<DraftEmbedVideo>? embedVideos,
-        IList<DraftEmbedExternal>? embedExternals,
-        IList<DraftEmbedRecord>? embedRecords) : this(
+        IReadOnlyList<DraftEmbedVideo>? embedVideos,
+        IReadOnlyList<DraftEmbedExternal>? embedExternals,
+        IReadOnlyList<DraftEmbedRecord>? embedRecords) : this(
             text: text,
             labels: null,
             embedImages: embedImages,
@@ -259,18 +259,14 @@ public record DraftPost
 
         set
         {
-            if ((EmbedImages is null || EmbedImages.Count == 0) &&
-                (EmbedVideos is null || EmbedVideos.Count == 0))
-            {
-                ArgumentException.ThrowIfNullOrEmpty(value);
+            ArgumentException.ThrowIfNullOrEmpty(value);
 
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(
-                    value.GetUtf8Length(),
-                    Maximum.DraftTextLengthInBytes);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(
-                    value.GetGraphemeLength(),
-                    Maximum.DraftTextLengthInGraphemes);
-            }
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                value.GetUtf8Length(),
+                Maximum.DraftTextLengthInBytes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                value.GetGraphemeLength(),
+                Maximum.DraftTextLengthInGraphemes);
 
             field = value;
         }
@@ -286,31 +282,31 @@ public record DraftPost
     /// Gets the embedded images for this draft.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IList<DraftEmbedImage>? EmbedImages { get; init; }
+    public IReadOnlyList<DraftEmbedImage>? EmbedImages { get; }
 
     /// <summary>
     /// Gets the embedded gallery for this draft.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DraftEmbedGallery? EmbedGallery { get; init; }
+    public DraftEmbedGallery? EmbedGallery { get; }
 
     /// <summary>
     /// Gets the embedded videos for this draft.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IList<DraftEmbedVideo>? EmbedVideos { get; init; }
+    public IReadOnlyList<DraftEmbedVideo>? EmbedVideos { get; }
 
     /// <summary>
     /// Gets the embedded external content for this draft.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IList<DraftEmbedExternal>? EmbedExternals { get; init; }
+    public IReadOnlyList<DraftEmbedExternal>? EmbedExternals { get; }
 
     /// <summary>
     /// Gets the embedded records for this draft.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IList<DraftEmbedRecord>? EmbedRecords { get; init; }
+    public IReadOnlyList<DraftEmbedRecord>? EmbedRecords { get; }
 
     /// <summary>
     /// Gets or sets a flag indicating the post media contains porn.

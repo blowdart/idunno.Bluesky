@@ -15,6 +15,8 @@ namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
+    private static readonly TimeSpan VideoUploadPollingInterval = TimeSpan.FromSeconds(1);
+
     /// <summary>
     /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/>.
     /// </summary>
@@ -46,7 +48,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        _logger.BeginScope($"Posting Draft ID {draftWithId.Id}");
+        using (_logger.BeginScope($"Posting Draft ID {draftWithId.Id}"))
         {
             List<CreateRecordResult> results = [];
             StrongReference? rootPostStrongReference = null;
@@ -56,7 +58,7 @@ public partial class BlueskyAgent
             int videoCount = 0;
             long totalVideoUploadSize = 0;
 
-            int validationOffset = 0;
+            int validationOffset = -1;
 
             // First we check that any local media exists
             foreach (DraftPost? draftPost in draftWithId.Draft.Posts)
@@ -68,11 +70,17 @@ public partial class BlueskyAgent
                     continue;
                 }
 
-                if (draftPost.Text is not null && (draftPost.Text.GetUtf8Length() > Maximum.PostLengthInBytes || draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+                if (draftPost.Text.GetUtf8Length() > Maximum.PostLengthInBytes || draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
                 {
                     throw new DraftException($"Draft text in DraftPost[{validationOffset}] is too long for a real post.");
                 }
 
+                if ((draftPost.EmbedImages is not null && draftPost.EmbedGallery is not null) ||
+                    (draftPost.EmbedImages is not null && draftPost.EmbedVideos is not null) ||
+                    (draftPost.EmbedGallery is not null && draftPost.EmbedVideos is not null))
+                {
+                    throw new DraftException($"DraftPost[{validationOffset}] has more than one type of media embedded.");
+                }
 
                 if (draftPost.EmbedImages is not null)
                 {
@@ -115,13 +123,6 @@ public partial class BlueskyAgent
                         totalVideoUploadSize += new FileInfo(resolvedVideoPath).Length;
                     }
                 }
-
-                if ((draftPost.EmbedImages is not null && draftPost.EmbedGallery is not null) ||
-                    (draftPost.EmbedImages is not null && draftPost.EmbedVideos is not null) ||
-                    (draftPost.EmbedGallery is not null && draftPost.EmbedVideos is not null))
-                {
-                    throw new DraftException($"DraftPost[{validationOffset}] has more than one type of media embedded.");
-                }
             }
 
             // Now check the upload quote for videos if we have any.
@@ -140,7 +141,7 @@ public partial class BlueskyAgent
 
             // Now we go through each post in the draft, so we can build a thread if needed.
             bool firstPost = true;
-            int postOffset = 0;
+            int postOffset = -1;
             foreach (DraftPost? draftPost in draftWithId.Draft.Posts)
             {
                 postOffset++;
@@ -195,17 +196,19 @@ public partial class BlueskyAgent
                     postBuilder.PostGateRules = [.. interactionPreferences.PostGateEmbeddingRules];
                 }
 
-                if (draftPost.EmbedExternals is not null && draftPost.EmbedExternals[0] is not null)
+                if (draftPost.EmbedExternals is not null && draftPost.EmbedExternals.Count != 0)
                 {
+                    // The lexicon models an external embed as a bare uri, so there is no title or description to
+                    // carry over. They are left empty rather than being filled with the uri.
                     EmbeddedExternal embeddedExternal = new(
                         uri: draftPost.EmbedExternals[0].Uri.ToString(),
-                        title: draftPost.EmbedExternals[0].Uri.ToString(),
-                        description: draftPost.EmbedExternals[0].Uri.ToString(),
+                        title: string.Empty,
+                        description: string.Empty,
                         thumbnail: null);
                     postBuilder.Embed = embeddedExternal;
                 }
 
-                if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords[0] is not null)
+                if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords.Count != 0)
                 {
                     EmbeddedRecord embeddedRecord = new(draftPost.EmbedRecords[0].Record);
                     postBuilder.EmbedRecord(embeddedRecord);
@@ -285,7 +288,7 @@ public partial class BlueskyAgent
                         AtProtoHttpResult<JobStatus> uploadResult = await UploadVideo(
                             Path.GetFileName(resolvedVideoPath),
                             fileBytes,
-                            "video/mp4",
+                            MapExtensionToVideoMimeType(resolvedVideoPath),
                             cancellationToken: cancellationToken).ConfigureAwait(false);
                         if (!uploadResult.Succeeded)
                         {
@@ -293,10 +296,11 @@ public partial class BlueskyAgent
                         }
 
                         while (uploadResult.Succeeded &&
-                            (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress) &&
-                            !cancellationToken.IsCancellationRequested)
+                            (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress))
                         {
-                            await Task.Delay(1000, cancellationToken: cancellationToken).ConfigureAwait(false);
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            await Task.Delay(VideoUploadPollingInterval, cancellationToken: cancellationToken).ConfigureAwait(false);
                             uploadResult = await GetJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 
@@ -609,6 +613,27 @@ public partial class BlueskyAgent
         else
         {
             return null;
+        }
+    }
+
+    private static string MapExtensionToVideoMimeType(string file)
+    {
+        if (file.EndsWith(".mov", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video/quicktime";
+        }
+        else if (file.EndsWith(".webm", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video/webm";
+        }
+        else if (file.EndsWith(".mpg", StringComparison.OrdinalIgnoreCase) ||
+                file.EndsWith(".mpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video/mpeg";
+        }
+        else
+        {
+            return "video/mp4";
         }
     }
 }

@@ -68,7 +68,7 @@ public partial class BlueskyServer
 
         if (cursor is not null)
         {
-            uriBuilder.Append(CultureInfo.InvariantCulture, $"cursor={cursor}");
+            uriBuilder.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}");
 
             if (limit.HasValue)
             {

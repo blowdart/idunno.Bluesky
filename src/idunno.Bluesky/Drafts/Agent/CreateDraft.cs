@@ -20,12 +20,12 @@ public partial class BlueskyAgent
         Draft draft,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(draft);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
-
-        ArgumentNullException.ThrowIfNull(draft);
 
         return await BlueskyServer.CreateDraft(
             draft,
