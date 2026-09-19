@@ -158,6 +158,26 @@ public static class Maximum
     public static readonly int PostGateDetachedEmbeddingPosts = 50;
 
     /// <summary>
+    /// The maximum number of posts a feed endpoint will return in a single page.
+    /// </summary>
+    public static readonly int PostsToList = 100;
+
+    /// <summary>
+    /// The maximum number of posts that can be requested by <see cref="AtUri"/> in a single call.
+    /// </summary>
+    public static readonly int PostsToGet = 25;
+
+    /// <summary>
+    /// The maximum depth of replies a post thread can be retrieved to.
+    /// </summary>
+    public static readonly int PostThreadDepth = 1000;
+
+    /// <summary>
+    /// The maximum number of parent posts a post thread can be retrieved to.
+    /// </summary>
+    public static readonly int PostThreadParentHeight = 1000;
+
+    /// <summary>
     /// The maximum number of actors that can suggested 
     /// </summary>
     public static readonly int SuggestedActors = 100;

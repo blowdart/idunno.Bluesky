@@ -148,7 +148,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -239,7 +239,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -333,7 +333,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -587,7 +587,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -679,7 +679,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -773,7 +773,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -864,13 +864,13 @@ public static partial class BlueskyServer
         if (depth is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)depth, 0);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, 1000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, Maximum.PostThreadDepth);
         }
 
         if (parentHeight is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)parentHeight, 0);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, 1000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, Maximum.PostThreadParentHeight);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -942,7 +942,7 @@ public static partial class BlueskyServer
         if (uriList.Count == 0 || uriList.Count > 25)
         {
             ArgumentOutOfRangeException.ThrowIfZero(uriList.Count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, 25);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, Maximum.PostsToGet);
         }
 
         string queryString = string.Join("&", uriList.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
@@ -986,7 +986,7 @@ public static partial class BlueskyServer
     /// <param name="limit">The maximum number of posts to return.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>, or <see langword="null" /> to make an unauthenticated request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -994,7 +994,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" />, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> &lt;1 or &gt;100.</exception>
     [UnconditionalSuppressMessage(
                 "Trimming",
@@ -1019,13 +1019,12 @@ public static partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1122,7 +1121,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1195,7 +1194,7 @@ public static partial class BlueskyServer
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
         Uri service,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -1267,7 +1266,7 @@ public static partial class BlueskyServer
         int? limit,
         string? cursor,
         Uri service,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -1282,7 +1281,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1352,7 +1351,7 @@ public static partial class BlueskyServer
     /// <param name="limit">The maximum number of post views to return</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve search information from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>, or <see langword="null" /> to make an unauthenticated request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -1360,7 +1359,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" />, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> &lt;1 or &gt;100.</exception>
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The api demands lowercase.")]
     [UnconditionalSuppressMessage(
@@ -1394,13 +1393,12 @@ public static partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1423,7 +1421,7 @@ public static partial class BlueskyServer
         }
         if (author is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&mentions={Uri.EscapeDataString(author.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&author={Uri.EscapeDataString(author.ToString())}");
         }
         if (lang is not null)
         {

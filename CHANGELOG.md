@@ -66,6 +66,10 @@
 
 #### idunno.Bluesky
 
+* Added `Maximum.PostsToList`, `Maximum.PostsToGet`, `Maximum.PostThreadDepth` and `Maximum.PostThreadParentHeight`.
+* Added `BlueskyAgent.GetThreadGateRecord()` and `BlueskyAgent.GetPostGateRecord()`, which return the repository record so its `Cid` is available.
+* Added `BlueskyAgent.UpdateThreadGate(ThreadGate, Cid?, CancellationToken)` and `BlueskyAgent.UpdatePostGate(PostGate, Cid?, CancellationToken)`, allowing a conditional update.
+* Added `BlueskyAgent.UpdateThreadGate(ThreadGate)` and `BlueskyAgent.UpdatePostGate(PostGate)`.
 * Added `BlueskyAgent.UpdateProfile(Profile, Cid?, CancellationToken)` which allows updating a user's profile with an optional `Cid` parameter.
   The `Cid` is used to identify the specific version of the profile being updated, ensuring that updates are applied to the correct version and preventing conflicts.
 * Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
@@ -152,6 +156,11 @@
 
 #### idunno.Bluesky
 
+* `BlueskyServer.GetTimeline()` and `BlueskyServer.GetSuggestedFeeds()` now take a non-nullable `AccessCredentials`, matching the authentication both endpoints require.
+* The cancellation token on `BlueskyAgent.UpdateThreadGate(ThreadGate, CancellationToken)` and `BlueskyAgent.UpdatePostGate(PostGate, CancellationToken)` is no longer optional.
+* `ThreadGate.Rules`, `ThreadGate.HiddenReplies`, `PostGate.Rules` and `PostGate.DetachedEmbeddingUris` now return a read-only copy of the collection they were constructed from, so entries can no longer be added past the validated maximum.
+* `BlueskyAgent.AddPostGate(PostGate, CancellationToken)` now throws `ArgumentException` when the gated post is not owned by the current user, matching its sibling methods.
+* `BlueskyAgent.SearchPostsV2()` now validates hashtag lengths against `Maximum.TagLengthInGraphemes` and `Maximum.TagLengthInBytes`.
 * `Post`, `EmbeddedImages`, `EmbeddedGallery`, `EmbeddedVideo` and `Embed.External.Properties` now compare their collection properties by contents rather than by reference. `Post` equality still includes `CreatedAt`, so two posts created at different times are never equal.
 * `EmbeddedImages` now copies the collection it is constructed from instead of holding on to the caller's collection.
 * The `imageMimeType` parameter on `BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob()` is now only a hint; the type recorded on the uploaded blob is always the sniffed one.
@@ -430,6 +439,14 @@
 
 #### idunno.Bluesky
 
+* `SearchPostsV2()` sent `embeddedAtUris`, `excludeEmbeddedAtUris`, `replyParentUri` and `threadRootUri` under parameter names the lexicon does not define, so those filters were silently ignored.
+* `SearchPostsV2()` sent `allTime` as `until`, losing the flag and corrupting the requested time window.
+* `SearchPostsV2()` emitted a dangling `&` in the query string when no query was supplied.
+* `BlueskyServer.SearchPosts()` sent `author` as `mentions`, so it filtered on the wrong field and dropped `mentions` when both were supplied.
+* `BlueskyServer.GetQuotes()` and `BlueskyServer.SearchPosts()` threw `ArgumentNullException` when called without credentials, although both endpoints allow unauthenticated requests.
+* `ThreadViewPost.Replies` could contain `null` entries returned by a service.
+* `BlueskyAgent.GetThreadGate()` and `BlueskyAgent.GetPostGate()` always threw, as `AtProtoRepositoryRecord<ThreadGate>` and `AtProtoRepositoryRecord<PostGate>` were not registered for serialization.
+* Feed limits are now validated against the `Maximum` constants rather than hard coded values.
 * `BlueskyAgent.DeleteFromList(AtUri, Did)` and `BlueskyAgent.DeleteFromList(AtUri, Handle)` now page through the list correctly. The loop which
   searched for the subject never carried the cursor of the previous page forward and never re-read, so removing anyone who was not on the first page of a
   list hung forever rather than returning.
