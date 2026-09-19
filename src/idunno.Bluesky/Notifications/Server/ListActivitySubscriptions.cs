@@ -16,6 +16,9 @@ namespace idunno.Bluesky;
 
 public static partial class BlueskyServer
 {
+    // https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/notification/listActivitySubscriptions.json
+    private const string ListActivitySubscriptionsEndpoint = "/xrpc/app.bsky.notification.listActivitySubscriptions";
+
     /// <summary>
     /// Gets the activity subscriptions for the requesting account.
     /// </summary>
@@ -80,7 +83,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<ListActivitySubscriptionsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<ListActivitySubscriptionsResponse> response = await request.Get(
             service: service,
-            endpoint: $"/xrpc/app.bsky.notification.listActivitySubscriptions?{queryString}",
+            endpoint: $"{ListActivitySubscriptionsEndpoint}?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

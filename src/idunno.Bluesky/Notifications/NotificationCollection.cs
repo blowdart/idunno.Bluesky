@@ -36,11 +36,11 @@ public class NotificationCollection : PagedReadOnlyCollection<Notification>
     /// <summary>
     /// A flag indicating whether a notification list is a priority list.
     /// </summary>
-    public bool? Priority { get; internal set; }
+    public bool? Priority { get; }
 
     /// <summary>
     /// The date when the view was generated.
     /// </summary>
     [JsonInclude]
-    public DateTimeOffset? SeenAt { get; internal set; }
+    public DateTimeOffset? SeenAt { get; }
 }

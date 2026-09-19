@@ -53,10 +53,12 @@ public enum ChatNotificationsFrom
     /// <summary>
     /// All chats
     /// </summary>
+    [JsonStringEnumMemberName("all")]
     All,
 
     /// <summary>
     /// Only accepted chats
     /// </summary>
+    [JsonStringEnumMemberName("accepted")]
     Accepted
 }

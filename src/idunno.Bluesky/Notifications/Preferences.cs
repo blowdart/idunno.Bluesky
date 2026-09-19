@@ -15,6 +15,7 @@ namespace idunno.Bluesky.Notifications;
 /// </summary>
 /// <param name="Chat">Notification settings for chat.</param>
 /// <param name="Follow">Notification settings for follows.</param>
+/// <param name="Like">Notification settings for likes.</param>
 /// <param name="LikeViaRepost">Notification settings for likes of reposts.</param>
 /// <param name="Mention">Notification settings for mentions.</param>
 /// <param name="Quote">Notification settings for quotes of posts.</param>
@@ -31,13 +32,14 @@ public sealed record Preferences(
     ChatPreference Chat,
 #pragma warning restore CS0618 // Type or member is obsolete
     FilterablePreference Follow,
+    FilterablePreference Like,
     FilterablePreference LikeViaRepost,
     FilterablePreference Mention,
     FilterablePreference Quote,
     FilterablePreference Reply,
     FilterablePreference Repost,
     FilterablePreference RepostViaRepost,
-    NonFilterablePreference StarterPackJoined,
+    [property: JsonPropertyName("starterpackJoined")] NonFilterablePreference StarterPackJoined,
     NonFilterablePreference SubscribedPost,
     NonFilterablePreference Unverified,
     NonFilterablePreference Verified)
