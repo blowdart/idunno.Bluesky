@@ -91,6 +91,8 @@
   does not yet map can still be read and logged. `JobStatus.RawState` already did this.
 * Added `Maximum.VideoMimeTypeMinimumLengthInBytes`, `Maximum.VideoMimeTypeLengthInBytes`, `Maximum.VideoUploadNameLengthInBytes` and
   `Maximum.VideoJobIdLengthInBytes`, replacing the hard coded limits used by the video upload APIs.
+* Added `BlueskyAgent.Post(DraftWithId, DraftMediaPathValidation, CancellationToken)`.
+* Added `DraftMediaPathValidation`, `BlueskyAgentOptions.DraftMediaRoots` and `BlueskyAgent.DraftMediaRoots`, which control where a draft's embedded media may be read from.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -218,6 +220,7 @@
 * `BlueskyAgent.StartUpload()`, `BlueskyServer.StartUpload()`, `BlueskyAgent.UploadPart()` and `BlueskyServer.UploadPart()` now take their `size` and `part`
   parameters as `long` rather than `int`, and `StartUploadResponse.PartSize` and `StartUploadResponse.PartCount` are now `long`. The AT Protocol `integer`
   type is a signed 64 bit value, and a `partSizeBytes` or `partCount` over `int.MaxValue` threw a `JsonException` rather than deserializing.
+* `BlueskyAgent.Post()` now validates the local file paths a draft carries against `BlueskyAgent.DraftMediaRoots` before reading them. A draft is fetched from a server, so its paths are untrusted input; previously any path the server supplied was read off disk and uploaded. A draft containing media can no longer be posted unless media roots are configured, or the overload taking `DraftMediaPathValidation.Trust` is used.
 
 ### Fixed
 
@@ -568,6 +571,7 @@
   `MediaTypeHeaderValue` and surfaced as an undocumented `FormatException`.
 * `StartUpload()` and `UploadVideo()` now measure `mimeType` and `name` in UTF-8 bytes, as the lexicon does, and `StartUpload()` validates `name`, which was
   previously unchecked.
+* Removed `image/svg+xml` from the MIME types a draft's embedded images may be uploaded as. Bluesky does not accept SVG images, and an SVG is an active content format.
 
 #### idunno.Bluesky.AspNet.Authentication
 

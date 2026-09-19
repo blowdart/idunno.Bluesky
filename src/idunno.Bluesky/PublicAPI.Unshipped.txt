@@ -372,3 +372,11 @@ static readonly idunno.Bluesky.Maximum.VideoJobIdLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoMimeTypeLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoMimeTypeMinimumLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoUploadNameLengthInBytes -> int
+*REMOVED*idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Drafts.DraftWithId! draftWithId, bool extractFacets, bool deleteDraft, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.CreateRecordResult!>!>!>!
+idunno.Bluesky.BlueskyAgent.DraftMediaRoots.get -> System.Collections.Generic.IReadOnlyList<string!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Drafts.DraftWithId! draftWithId, bool extractFacets, bool deleteDraft, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences, idunno.Bluesky.Drafts.DraftMediaPathValidation mediaPathValidation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.CreateRecordResult!>!>!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Drafts.DraftWithId! draftWithId, idunno.Bluesky.Drafts.DraftMediaPathValidation mediaPathValidation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.CreateRecordResult!>!>!>!
+idunno.Bluesky.BlueskyAgentOptions.DraftMediaRoots.get -> System.Collections.Generic.IList<string!>!
+idunno.Bluesky.Drafts.DraftMediaPathValidation
+idunno.Bluesky.Drafts.DraftMediaPathValidation.Enforce = 0 -> idunno.Bluesky.Drafts.DraftMediaPathValidation
+idunno.Bluesky.Drafts.DraftMediaPathValidation.Trust = 1 -> idunno.Bluesky.Drafts.DraftMediaPathValidation

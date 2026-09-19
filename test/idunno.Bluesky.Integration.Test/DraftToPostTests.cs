@@ -371,7 +371,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -384,7 +384,7 @@ public class DraftToPostTests
             DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
 
             AtProtoHttpResult<IReadOnlyList<CreateRecordResult>> postResult =
-                await agent.Post(draftWithId, extractFacets: false, deleteDraft: false, interactionPreferences: null, cancellationToken: TestContext.Current.CancellationToken);
+                await agent.Post(draftWithId, extractFacets: false, deleteDraft: false, interactionPreferences: null, mediaPathValidation: DraftMediaPathValidation.Enforce, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(postResult.Succeeded);
             Assert.Single(postResult.Result);
@@ -458,12 +458,12 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
 
-            DraftPost expectedDraftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef("Z:\\bogus.jpg"), "alt text"));
+            DraftPost expectedDraftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef(Path.GetFullPath("doesnotexist.jpg")), "alt text"));
             Draft expectedDraft = new(
                 [expectedDraftPost],
                 deviceId: s_expectedDeviceId,
@@ -570,7 +570,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -583,7 +583,7 @@ public class DraftToPostTests
             DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
 
             AtProtoHttpResult<IReadOnlyList<CreateRecordResult>> postResult =
-                await agent.Post(draftWithId, extractFacets: false, deleteDraft: false, interactionPreferences: null, cancellationToken: TestContext.Current.CancellationToken);
+                await agent.Post(draftWithId, extractFacets: false, deleteDraft: false, interactionPreferences: null, mediaPathValidation: DraftMediaPathValidation.Enforce, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(postResult.Succeeded);
             Assert.Single(postResult.Result);
@@ -718,7 +718,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -835,7 +835,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -957,7 +957,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -1079,7 +1079,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -1201,7 +1201,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -1319,6 +1319,212 @@ public class DraftToPostTests
             Assert.False(uploadCalled);
             Assert.False(createCalled);
             Assert.False(deleteCalled);
+        }
+    }
+
+    public static TheoryData<string, string> RejectedDraftMediaPaths()
+    {
+        const string outsideEveryRoot = "resolves outside every configured draft media root";
+        string root = Directory.GetCurrentDirectory();
+
+        TheoryData<string, string> rejectedPaths =
+        [
+            // Escapes the configured root by traversal.
+            (Path.Combine(root, "..", "escaped.png"), outsideEveryRoot),
+
+            // Not fully qualified, so it would be resolved against the current working directory.
+            ("relative.png", "the path is not fully qualified"),
+
+            // A sibling directory which merely shares the root's prefix.
+            (root + "Elsewhere" + Path.DirectorySeparatorChar + "image.png", outsideEveryRoot),
+        ];
+
+        if (OperatingSystem.IsWindows())
+        {
+            const string uncOrDevice = "UNC and device paths are not allowed";
+
+            rejectedPaths.Add(@"\\server\share\image.png", uncOrDevice);
+            rejectedPaths.Add(@"\\?\C:\Windows\win.ini", uncOrDevice);
+            rejectedPaths.Add(@"\\.\PHYSICALDRIVE0", uncOrDevice);
+        }
+
+        return rejectedPaths;
+    }
+
+    [Theory]
+    [MemberData(nameof(RejectedDraftMediaPaths))]
+    public async Task DraftWithAMediaPathOutsideTheConfiguredRootsThrows(string mediaPath, string expectedReason)
+    {
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        TestServer testServer = BuildTestServer(expectedCredentials);
+
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
+        {
+            agent.Credentials = expectedCredentials;
+            agent.Service = TestServerBuilder.DefaultUri;
+
+            DraftPost draftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef(mediaPath), "alt text"));
+            Draft draft = new([draftPost], deviceId: s_expectedDeviceId, deviceName: s_expectedDeviceName);
+            DraftWithId draftWithId = new(TimestampIdentifier.Next(), draft);
+
+            DraftException exception = await Assert.ThrowsAsync<DraftException>(
+                () => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+
+            Assert.Contains(expectedReason, exception.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task DraftWithMediaThrowsWhenNoDraftMediaRootsAreConfigured()
+    {
+        string imagePath = Path.GetFullPath("image.png");
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        TestServer testServer = BuildTestServer(expectedCredentials);
+
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        {
+            agent.Credentials = expectedCredentials;
+            agent.Service = TestServerBuilder.DefaultUri;
+
+            DraftPost draftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef(imagePath), "alt text"));
+            Draft draft = new([draftPost], deviceId: s_expectedDeviceId, deviceName: s_expectedDeviceName);
+            DraftWithId draftWithId = new(TimestampIdentifier.Next(), draft);
+
+            DraftException exception = await Assert.ThrowsAsync<DraftException>(
+                () => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+
+            Assert.Contains(nameof(BlueskyAgentOptions.DraftMediaRoots), exception.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task DraftWithAMediaPathWhichLinksOutsideTheConfiguredRootsThrows()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"draftMediaRoot-{Guid.NewGuid():N}");
+        string linkPath = Path.Combine(root, "link.png");
+        string targetPath = Path.GetFullPath("image.png");
+
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            try
+            {
+                File.CreateSymbolicLink(linkPath, targetPath);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or PlatformNotSupportedException)
+            {
+                Assert.Skip($"Symbolic links cannot be created in this environment: {ex.Message}");
+                return;
+            }
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            TestServer testServer = BuildTestServer(expectedCredentials);
+
+            using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { root } }))
+            {
+                agent.Credentials = expectedCredentials;
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                DraftPost draftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef(linkPath), "alt text"));
+                Draft draft = new([draftPost], deviceId: s_expectedDeviceId, deviceName: s_expectedDeviceName);
+                DraftWithId draftWithId = new(TimestampIdentifier.Next(), draft);
+
+                DraftException exception = await Assert.ThrowsAsync<DraftException>(
+                    () => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+
+                Assert.Contains("through a link, outside every configured draft media root", exception.Message, StringComparison.Ordinal);
+            }
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task DraftWithAMediaPathOutsideTheConfiguredRootsPostsWhenThePathsAreTrusted()
+    {
+        string imagePath = Path.GetFullPath("image.png");
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        AtUri expectedAtUri = new($"at://{s_user}/app.bsky.feed.post/{TimestampIdentifier.Next()}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        async Task captureCreateRequest(HttpContext context)
+        {
+            context.Response.StatusCode = 200;
+            var response = new CreateRecordResponse(expectedAtUri, expectedCid)
+            {
+                Commit = new(expectedCid, "revision"),
+                ValidationStatus = "valid"
+            };
+            await context.Response.WriteAsJsonAsync(
+                response,
+                options: AtProtoJsonSerializerOptions.Options,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        async Task uploadBlob(HttpContext context)
+        {
+            context.Response.StatusCode = 200;
+            var createBlobResponse = new CreateBlobResponse(
+                new Blob(
+                    new CidLink(s_expectedBlobCid),
+                    $"image/{Path.GetExtension(imagePath)[1..]}",
+                    (int)new FileInfo(imagePath).Length));
+
+            await context.Response.WriteAsJsonAsync(
+                createBlobResponse,
+                options: AtProtoJsonSerializerOptions.Options,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, null, uploadBlob);
+
+        // The configured root deliberately does not contain the image, so Enforce would reject it.
+        string unrelatedRoot = Path.Combine(Directory.GetCurrentDirectory(), "noDraftMediaHere");
+
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { unrelatedRoot } }))
+        {
+            agent.Credentials = expectedCredentials;
+            agent.Service = TestServerBuilder.DefaultUri;
+
+            DraftPost draftPost = new(s_expectedDraftPostText, new DraftEmbedImage(new DraftEmbedLocalRef(imagePath), "alt text"));
+            Draft draft = new([draftPost], deviceId: s_expectedDeviceId, deviceName: s_expectedDeviceName);
+            DraftWithId draftWithId = new(TimestampIdentifier.Next(), draft);
+
+            await Assert.ThrowsAsync<DraftException>(
+                () => agent.Post(draftWithId, DraftMediaPathValidation.Enforce, cancellationToken: TestContext.Current.CancellationToken));
+
+            AtProtoHttpResult<IReadOnlyList<CreateRecordResult>> postResult = await agent.Post(
+                draftWithId,
+                DraftMediaPathValidation.Trust,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(postResult.Succeeded);
+            Assert.Single(postResult.Result);
         }
     }
 

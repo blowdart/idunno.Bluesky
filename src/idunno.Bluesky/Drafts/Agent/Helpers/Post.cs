@@ -22,11 +22,12 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Automatically extracts rich text facets from the draft post content.</param>
     /// <param name="deleteDraft">Flag indicating whether to delete the saved draft if posting it is successful.</param>
     /// <param name="interactionPreferences">The current user's interaction preferences, if any.</param>
+    /// <param name="mediaPathValidation">Specifies how the local media paths in <paramref name="draftWithId"/> are validated before the files they point to are read and uploaded.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post.</exception>
+    /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post, or when one of its local media paths is rejected.</exception>
     [SuppressMessage("Minor Code Smell", "S1199:Nested code blocks should not be used", Justification = "Nesting is due to a logger scope.")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
     public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(
@@ -34,6 +35,7 @@ public partial class BlueskyAgent
         bool extractFacets,
         bool deleteDraft,
         PostInteractionSettingsPreferences? interactionPreferences,
+        DraftMediaPathValidation mediaPathValidation,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(draftWithId);
@@ -74,46 +76,43 @@ public partial class BlueskyAgent
 
                 if (draftPost.EmbedImages is not null)
                 {
-                    var missingImages = draftPost.EmbedImages
-                        .Where(image => !File.Exists(image.LocalRef.Path))
-                        .ToList();
-
-                    if (missingImages.Count > 0)
+                    foreach (string mediaPath in draftPost.EmbedImages.Select(image => image.LocalRef.Path))
                     {
-                        throw new DraftException($"Embedded image {missingImages[0].LocalRef.Path} in DraftPost[{validationOffset}] not found.");
+                        string resolvedImagePath = ResolveDraftMediaPath(mediaPath, validationOffset, draftWithId.Id, mediaPathValidation);
+
+                        if (!File.Exists(resolvedImagePath))
+                        {
+                            throw new DraftException($"Embedded image {mediaPath} in DraftPost[{validationOffset}] not found.");
+                        }
                     }
                 }
 
                 if (draftPost.EmbedGallery is not null && draftPost.EmbedGallery.Items is not null)
                 {
-                    var missingImages = draftPost.EmbedGallery.Items
-                        .Where(image => !File.Exists(image.LocalRef.Path))
-                        .ToList();
-
-                    if (missingImages.Count > 0)
+                    foreach (string mediaPath in draftPost.EmbedGallery.Items.Select(image => image.LocalRef.Path))
                     {
-                        throw new DraftException($"Embedded Gallary has embedded image {missingImages[0].LocalRef.Path} in DraftPost[{validationOffset}] not found.");
+                        string resolvedImagePath = ResolveDraftMediaPath(mediaPath, validationOffset, draftWithId.Id, mediaPathValidation);
+
+                        if (!File.Exists(resolvedImagePath))
+                        {
+                            throw new DraftException($"Embedded Gallary has embedded image {mediaPath} in DraftPost[{validationOffset}] not found.");
+                        }
                     }
                 }
 
                 if (draftPost.EmbedVideos is not null)
                 {
-                    var missingVideos = draftPost.EmbedVideos
-                        .Select(embed => embed.LocalRef)
-                        .Where(localRef => !File.Exists(localRef.Path))
-                        .ToList();
+                    foreach (string mediaPath in draftPost.EmbedVideos.Select(video => video.LocalRef.Path))
+                    {
+                        string resolvedVideoPath = ResolveDraftMediaPath(mediaPath, validationOffset, draftWithId.Id, mediaPathValidation);
 
-                    if (missingVideos.Count > 0)
-                    {
-                        throw new DraftException($"Embedded video {missingVideos[0].Path} in DraftPost[{validationOffset}] not found.");
-                    }
-                    else
-                    {
-                        foreach (DraftEmbedVideo videoPath in draftPost.EmbedVideos)
+                        if (!File.Exists(resolvedVideoPath))
                         {
-                            videoCount++;
-                            totalVideoUploadSize += new FileInfo(videoPath.LocalRef.Path).Length;
+                            throw new DraftException($"Embedded video {mediaPath} in DraftPost[{validationOffset}] not found.");
                         }
+
+                        videoCount++;
+                        totalVideoUploadSize += new FileInfo(resolvedVideoPath).Length;
                     }
                 }
 
@@ -141,8 +140,11 @@ public partial class BlueskyAgent
 
             // Now we go through each post in the draft, so we can build a thread if needed.
             bool firstPost = true;
+            int postOffset = 0;
             foreach (DraftPost? draftPost in draftWithId.Draft.Posts)
             {
+                postOffset++;
+
                 if (draftPost is null)
                 {
                     continue;
@@ -212,11 +214,13 @@ public partial class BlueskyAgent
                 // Upload the images for the post, then attach.
                 foreach (DraftEmbedImage embed in draftPost.EmbedImages ?? [])
                 {
+                    string resolvedImagePath = ResolveDraftMediaPath(embed.LocalRef.Path, postOffset, draftWithId.Id, mediaPathValidation);
+
                     Logger.UploadingImageFromDraft(_logger, embed.LocalRef.Path, draftWithId.Id);
 
-                    string? mimeType = MapExtensionToMimeType(embed.LocalRef.Path) ?? throw new DraftException($"Unsupported image format for file {embed.LocalRef.Path}.");
+                    string? mimeType = MapExtensionToMimeType(resolvedImagePath) ?? throw new DraftException($"Unsupported image format for file {embed.LocalRef.Path}.");
 
-                    byte[] fileBytes = await File.ReadAllBytesAsync(embed.LocalRef.Path, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    byte[] fileBytes = await File.ReadAllBytesAsync(resolvedImagePath, cancellationToken: cancellationToken).ConfigureAwait(false);
                     AtProtoHttpResult<EmbeddedImage> uploadResult = await UploadImage(
                         fileBytes,
                         mimeType: mimeType,
@@ -237,9 +241,11 @@ public partial class BlueskyAgent
                 {
                     foreach (DraftEmbedImage embed in draftPost.EmbedGallery.Items ?? [])
                     {
+                        string resolvedImagePath = ResolveDraftMediaPath(embed.LocalRef.Path, postOffset, draftWithId.Id, mediaPathValidation);
+
                         Logger.UploadingGalleryImageFromDraft(_logger, embed.LocalRef.Path, draftWithId.Id);
-                        string? mimeType = MapExtensionToMimeType(embed.LocalRef.Path) ?? throw new DraftException($"Unsupported image format for file {embed.LocalRef.Path}.");
-                        byte[] fileBytes = await File.ReadAllBytesAsync(embed.LocalRef.Path, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        string? mimeType = MapExtensionToMimeType(resolvedImagePath) ?? throw new DraftException($"Unsupported image format for file {embed.LocalRef.Path}.");
+                        byte[] fileBytes = await File.ReadAllBytesAsync(resolvedImagePath, cancellationToken: cancellationToken).ConfigureAwait(false);
                         AtProtoHttpResult<EmbeddedImage> uploadResult = await UploadImage(
                             fileBytes,
                             mimeType: mimeType,
@@ -260,10 +266,11 @@ public partial class BlueskyAgent
                     foreach (DraftEmbedVideo embedVideo in draftPost.EmbedVideos)
                     {
                         string path = embedVideo.LocalRef.Path;
+                        string resolvedVideoPath = ResolveDraftMediaPath(path, postOffset, draftWithId.Id, mediaPathValidation);
 
                         Logger.UploadingVideoFromDraft(_logger, path, draftWithId.Id);
 
-                        byte[] fileBytes = await File.ReadAllBytesAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        byte[] fileBytes = await File.ReadAllBytesAsync(resolvedVideoPath, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                         AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
                         videoUploadLimitsResult.EnsureSucceeded();
@@ -276,7 +283,7 @@ public partial class BlueskyAgent
                         }
 
                         AtProtoHttpResult<JobStatus> uploadResult = await UploadVideo(
-                            Path.GetFileName(path),
+                            Path.GetFileName(resolvedVideoPath),
                             fileBytes,
                             "video/mp4",
                             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -392,6 +399,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post, or when one of its local media paths is rejected.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
     public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(
         DraftWithId draftWithId,
@@ -407,10 +415,158 @@ public partial class BlueskyAgent
 
         return await Post(
             draftWithId,
+            mediaPathValidation: DraftMediaPathValidation.Enforce,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/> and deletes the draft if it is successfully posted.
+    /// </summary>
+    /// <param name="draftWithId">The <see cref="DraftWithId"/> to use to create the post record(s).</param>
+    /// <param name="mediaPathValidation">Specifies how the local media paths in <paramref name="draftWithId"/> are validated before the files they point to are read and uploaded.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post, or when one of its local media paths is rejected.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
+    public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(
+        DraftWithId draftWithId,
+        DraftMediaPathValidation mediaPathValidation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(draftWithId);
+        ArgumentNullException.ThrowIfNull(draftWithId.Draft);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await Post(
+            draftWithId,
             extractFacets: true,
             deleteDraft: true,
             interactionPreferences: null,
+            mediaPathValidation: mediaPathValidation,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Validates a local media path taken from a draft and returns the path that should be used to read the file it refers to.
+    /// </summary>
+    private string ResolveDraftMediaPath(
+        string path,
+        int postIndex,
+        TimestampIdentifier draftId,
+        DraftMediaPathValidation mediaPathValidation)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path is empty");
+        }
+
+        if (path.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path contains characters which are not valid in a path");
+        }
+
+        if (mediaPathValidation == DraftMediaPathValidation.Trust)
+        {
+            return path;
+        }
+
+        if (DraftMediaRoots.Count == 0)
+        {
+            throw RejectDraftMediaPath(
+                path,
+                postIndex,
+                draftId,
+                $"no draft media roots are configured. Set {nameof(BlueskyAgentOptions)}.{nameof(BlueskyAgentOptions.DraftMediaRoots)}, or post the draft with {nameof(DraftMediaPathValidation)}.{nameof(DraftMediaPathValidation.Trust)} if its paths are known to be correct");
+        }
+
+        // A UNC or device path is fully qualified, but reading one reaches out to another host or to a raw device,
+        // so neither is ever an acceptable source for draft media.
+        if (IsUncOrDevicePath(path))
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "UNC and device paths are not allowed");
+        }
+
+        // A relative path would be resolved against the current working directory, which is never what a device bound draft means.
+        if (!Path.IsPathFullyQualified(path))
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path is not fully qualified");
+        }
+
+        string resolvedPath;
+
+        try
+        {
+            resolvedPath = Path.GetFullPath(path);
+        }
+        catch (ArgumentException)
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path could not be resolved");
+        }
+        catch (PathTooLongException)
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path is too long to resolve");
+        }
+
+        if (!IsWithinDraftMediaRoots(resolvedPath))
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path resolves outside every configured draft media root");
+        }
+
+        // A link inside a permitted root can still point outside it, so the final target is checked as well.
+        string? linkTargetPath = ResolveFinalLinkTarget(resolvedPath);
+
+        if (linkTargetPath is not null && !IsWithinDraftMediaRoots(linkTargetPath))
+        {
+            throw RejectDraftMediaPath(path, postIndex, draftId, "the path resolves, through a link, outside every configured draft media root");
+        }
+
+        return resolvedPath;
+    }
+
+    private DraftException RejectDraftMediaPath(string path, int postIndex, TimestampIdentifier draftId, string reason)
+    {
+        Logger.DraftMediaPathRejected(_logger, path, draftId, reason);
+
+        return new DraftException($"Embedded media path \"{path}\" in DraftPost[{postIndex}] was rejected because {reason}.");
+    }
+
+    private bool IsWithinDraftMediaRoots(string candidatePath)
+    {
+        StringComparison comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+        // The separator is appended so that a root of "/media" does not match a sibling directory named "/mediaElsewhere".
+        return DraftMediaRoots.Any(root => candidatePath.StartsWith(
+            root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar,
+            comparison));
+    }
+
+    private static bool IsUncOrDevicePath(string path)
+    {
+        return path.Length >= 2 &&
+            (path[0] == '\\' || path[0] == '/') &&
+            (path[1] == '\\' || path[1] == '/');
+    }
+
+    private static string? ResolveFinalLinkTarget(string path)
+    {
+        try
+        {
+            return new FileInfo(path).ResolveLinkTarget(returnFinalTarget: true)?.FullName;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private static string? MapExtensionToMimeType(string file)
@@ -440,10 +596,6 @@ public partial class BlueskyAgent
                 file.EndsWith(".tif", StringComparison.OrdinalIgnoreCase))
         {
             return "image/tiff";
-        }
-        else if (file.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
-        {
-            return "image/svg+xml";
         }
         else if (file.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
         {
