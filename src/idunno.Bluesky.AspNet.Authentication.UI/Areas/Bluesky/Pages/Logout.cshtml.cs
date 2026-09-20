@@ -56,14 +56,4 @@ public class LogoutModel(BlueskySignInManager blueskySignInManager) : PageModel
             return RedirectToPage();
         }
     }
-
-    /// <summary>
-    ///   This API supports the Bluesky ASP.NET Core Authentication default UI infrastructure and is not intended to be used directly from your code.
-    ///   This API may change or be removed in future releases.
-    /// </summary>
-    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Can't be static.")]
-    public void OnGet()
-    {
-        // Method intentionally left empty.
-    }
 }

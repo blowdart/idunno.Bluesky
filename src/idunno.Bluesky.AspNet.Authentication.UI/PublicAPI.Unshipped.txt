@@ -44,7 +44,6 @@ idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputMod
 idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel.ReturnUrl.get -> string?
 idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel.ReturnUrl.set -> void
 idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.LogoutModel(idunno.Bluesky.AspNet.Authentication.BlueskySignInManager! blueskySignInManager) -> void
-idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.OnGet() -> void
 idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.OnPost(string? returnUrl = null) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
 Microsoft.Extensions.DependencyInjection.BlueskyAuthenticationUIExtensions
 static Microsoft.Extensions.DependencyInjection.BlueskyAuthenticationUIExtensions.AddBlueskyAuthenticationUI(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
