@@ -5,6 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal sealed record GetTrendsResponse([property: JsonRequired] ICollection<TrendView> Trends)
+internal sealed record GetTrendsResponse([property: JsonRequired] ICollection<TrendView> Trends, string? RecIdStr)
 {
 }

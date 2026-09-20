@@ -29,15 +29,15 @@ public class PostThreadV2
     /// <summary>
     /// Gets a flat list of thread items. The depth of each item is indicated by the depth property inside the item.
     /// </summary>
-    public IReadOnlyCollection<ThreadItem> Thread { get; init; }
+    public IReadOnlyCollection<ThreadItem> Thread { get; }
 
     /// <summary>
     /// Gets the thread gate for the thread, if any.
     /// </summary>
-    public ThreadGateView? ThreadGate { get; init; }
+    public ThreadGateView? ThreadGate { get; }
 
     /// <summary>
     /// Flag indicating if there are other replies to the thread that are not included in this response.
     /// </summary>
-    public bool HasOtherReplies { get; init; }
+    public bool HasOtherReplies { get; }
 }

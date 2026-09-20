@@ -23,7 +23,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt;50.</exception>
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    public async Task<AtProtoHttpResult<ICollection<ProfileView>>> GetSuggestedUsers(
+    public async Task<AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>>> GetSuggestedUsers(
         string? category = null,
         int? limit = null,
         IEnumerable<Did>? subscribedLabelers = null,

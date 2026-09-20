@@ -35,6 +35,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="anchor"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="below"/> or <paramref name="branchingFactor"/> are negative or greater than their maximum permitted values.</exception>
     [UnconditionalSuppressMessage("Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
@@ -42,7 +43,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "javascript require lowercase")]
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The AT Protocol API requires lowercase boolean values in query strings.")]
     public static async Task<AtProtoHttpResult<PostThreadV2>> GetPostThreadV2(
         AtUri anchor,
         bool? above,
@@ -59,6 +60,16 @@ public static partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(anchor);
+
+        if (below is not null && (below.Value < 0 || below.Value > Maximum.PostThreadV2Below))
+        {
+            throw new ArgumentOutOfRangeException(nameof(below), below.Value, "Value must be between 0 and " + Maximum.PostThreadV2Below.ToString(CultureInfo.InvariantCulture) + ".");
+        }
+
+        if (branchingFactor is not null && (branchingFactor.Value < 0 || branchingFactor.Value > Maximum.PostThreadV2BranchingFactor))
+        {
+            throw new ArgumentOutOfRangeException(nameof(branchingFactor), branchingFactor.Value, "Value must be between 0 and " + Maximum.PostThreadV2BranchingFactor.ToString(CultureInfo.InvariantCulture) + ".");
+        }
 
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);

@@ -41,7 +41,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "javascript require lowercase")]
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The AT Protocol API requires lowercase boolean values in query strings.")]
     public static async Task<AtProtoHttpResult<IReadOnlyCollection<ThreadItem>>> GetPostThreadOtherV2(
         AtUri anchor,
         Uri service,

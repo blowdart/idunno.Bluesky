@@ -66,6 +66,9 @@
 
 #### idunno.Bluesky
 
+* Added `RecommendationReadOnlyCollection<T>`, returned by `GetSuggestedUsers()` and `GetTrends()`, exposing the recommendation identifier the service returns for feedback events.
+* Added `ThreadItemBlocked.Author`, which was previously discarded when deserializing a v2 post thread.
+* Added `Maximum.PostThreadV2Below` and `Maximum.PostThreadV2BranchingFactor`.
 * Added `Maximum.LabelerServices`.
 * `ListNotifications()` now accepts a `reasons` filter, limiting the returned notifications to the specified `NotificationReason` values.
 * Added `Maximum.ProfilesToGet`, `Maximum.ActorSearchResults`, `Maximum.ActorTypeaheadSearchResults`, `Maximum.InterestTags`, `Maximum.MutedWordLengthInBytes` and `Maximum.MutedWordLengthInGraphemes`.
@@ -171,6 +174,10 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.GetTrends()` and `BlueskyServer.GetTrends()` now return a `RecommendationReadOnlyCollection<TrendView>` rather than an `ICollection<TrendView>`.
+* `BlueskyAgent.GetSuggestedUsers()` and `BlueskyServer.GetSuggestedUsers()` now return a `RecommendationReadOnlyCollection<ProfileView>` rather than an `ICollection<ProfileView>`.
+* `BlueskyAgent.GetPopularFeedGenerators()`, `GetSuggestedStarterPacks()`, `GetTaggedSuggestions()`, `GetTrendingTopics()` and `GetTrends()` now take an optional `subscribedLabelers` parameter before their cancellation token.
+* `PostThreadV2.Thread`, `ThreadGate` and `HasOtherReplies` are now get-only.
 * `LabelerView.Labels` is now an `IReadOnlyCollection<Label>` which can be set during construction.
 * `WellKnown.ReportOptions` now exposes read only lists through a read only dictionary, and `WellKnown.ReportTargets` is a snapshot, so neither can be changed by callers.
 * `LabelerViewDetailed.Policies` is now init only.
@@ -487,6 +494,13 @@
 
 #### idunno.Bluesky
 
+* `GetTrendingTopics()` now sends the authenticated user as the `viewer` query string parameter, as the lexicon requires, rather than as `did`, and percent encodes it. Follower boosted ranking previously never applied.
+* `GetTaggedSuggestions()` now percent encodes parameter keys as well as values, closing a query string injection, and formats parameter values with the invariant culture.
+* `GetPostThreadV2()` now accepts `0` for `below` and `branchingFactor`, as the lexicon allows, and validates both in the server layer.
+* `GetPopularFeedGenerators()`, `GetSuggestedStarterPacks()`, `GetSuggestedUsers()`, `GetTaggedSuggestions()`, `GetTrendingTopics()` and `GetTrends()` no longer send a trailing `?` when no query string parameters are specified.
+* `TrendView.Actors`, `TrendingTopics.Topics` and `TrendingTopics.Suggested` now take defensive copies of the collections they are given.
+* A missing `status` in an `app.bsky.unspecced.getAgeAssuranceState` response is now rejected rather than silently read as `Unknown`.
+* Corrected the documented maximum for `GetSuggestedStarterPacks()` from 50 to 25, and the summary on `GetAgeAssuranceState()`.
 * Labels applied to a labeler are no longer silently discarded when a labeler view is deserialized.
 * `GetBookmarks()` no longer sends an empty `cursor` parameter, or a `limit` parameter with no value, when neither is supplied.
 * `GetLabelerServices()` no longer throws a `NullReferenceException` when the request for the actor's preferences fails without returning error detail.

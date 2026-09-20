@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
@@ -27,7 +28,21 @@ public sealed record TrendView(
     [property: JsonRequired] int PostCount,
     string? Status,
     string? Category,
-    [property: JsonRequired] IReadOnlyCollection<ProfileViewBasic> Actors,
+    IReadOnlyCollection<ProfileViewBasic> Actors,
     string? Description) : View
 {
+    /// <summary>
+    /// A collection of actors contributing to the <see cref="Topic" />.
+    /// </summary>
+    [JsonRequired]
+    public IReadOnlyCollection<ProfileViewBasic> Actors
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Actors);
+
+    private static ReadOnlyCollection<ProfileViewBasic> AsReadOnlyCopy(IReadOnlyCollection<ProfileViewBasic>? value)
+    {
+        return value is null ? new List<ProfileViewBasic>().AsReadOnly() : new List<ProfileViewBasic>(value).AsReadOnly();
+    }
 }

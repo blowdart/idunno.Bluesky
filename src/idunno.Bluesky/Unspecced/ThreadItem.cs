@@ -15,9 +15,9 @@ public sealed record ThreadItem : View
     [JsonConstructor]
     internal ThreadItem(AtUri uri, int depth, ThreadItemValue value)
     {
-        Uri = uri ?? throw new ArgumentNullException(nameof(uri));
+        Uri = uri;
         Depth = depth;
-        Value = value ?? throw new ArgumentNullException(nameof(value));
+        Value = value;
     }
 
     /// <summary>
