@@ -886,4 +886,36 @@ public class UnspeccedTests
         Assert.NotNull(actual);
         Assert.Equal("a-snowflake", actual.RecIdStr);
     }
+
+    [Theory]
+    [InlineData(AgeAssuranceStatus.Unknown, "unknown")]
+    [InlineData(AgeAssuranceStatus.Pending, "pending")]
+    [InlineData(AgeAssuranceStatus.Assured, "assured")]
+    [InlineData(AgeAssuranceStatus.Blocked, "blocked")]
+    public void AnAgeAssuranceStateRoundTrips(AgeAssuranceStatus status, string expectedWireValue)
+    {
+        AgeAssuranceState expected = new(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), status);
+
+        string json = JsonSerializer.Serialize(expected, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Contains("\"lastInitiatedAt\"", json, StringComparison.Ordinal);
+        Assert.Contains($"\"status\":\"{expectedWireValue}\"", json, StringComparison.Ordinal);
+
+        AgeAssuranceState? actual = JsonSerializer.Deserialize<AgeAssuranceState>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void AnAgeAssuranceStateWithoutAStatusThrowsWhenDeserializedDirectly()
+    {
+        string json = """
+            {
+                "lastInitiatedAt": "2025-01-01T00:00:00Z"
+            }
+            """;
+
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<AgeAssuranceState>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
 }

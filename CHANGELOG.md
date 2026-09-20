@@ -494,6 +494,8 @@
 
 #### idunno.Bluesky
 
+* `AgeAssuranceState` is now registered for JSON source generation, so it can be serialized and deserialized by callers, and rejects a response without a `status` rather than silently reading it as `Unknown`.
+* `AgeAssuranceStatus` now serializes as the lowercase values the lexicon declares rather than as its .NET member names.
 * `GetTrendingTopics()` now sends the authenticated user as the `viewer` query string parameter, as the lexicon requires, rather than as `did`, and percent encodes it. Follower boosted ranking previously never applied.
 * `GetTaggedSuggestions()` now percent encodes parameter keys as well as values, closing a query string injection, and formats parameter values with the invariant culture.
 * `GetPostThreadV2()` now accepts `0` for `below` and `branchingFactor`, as the lexicon allows, and validates both in the server layer.
