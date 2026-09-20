@@ -468,6 +468,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Unspecced.TrendView), TypeInfoPropertyName = "UnspeccedTrendView")]
 [JsonSerializable(typeof(Unspecced.Model.GetTrendsResponse), TypeInfoPropertyName = "UnspeccedModelGetTrendsResponse")]
 [JsonSerializable(typeof(Unspecced.AgeAssuranceStatus), TypeInfoPropertyName = "UnspeccedAgeAssuranceStatus")]
+[JsonSerializable(typeof(Unspecced.AgeAssuranceState), TypeInfoPropertyName = "UnspeccedAgeAssuranceState")]
 [JsonSerializable(typeof(Unspecced.Model.GetAgeAssuranceStateResponse), TypeInfoPropertyName = "UnspeccedModelGetAgeAssuranceStateResponse")]
 [JsonSerializable(typeof(Unspecced.ThreadItemValue), TypeInfoPropertyName = "UnspeccedThreadItem")]
 [JsonSerializable(typeof(Unspecced.ThreadItemPost), TypeInfoPropertyName = "UnspeccedThreadItemPost")]

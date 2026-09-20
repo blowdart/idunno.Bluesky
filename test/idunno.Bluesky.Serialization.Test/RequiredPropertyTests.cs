@@ -88,4 +88,26 @@ public class RequiredPropertyTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new EmbeddedImages([]));
     }
+
+    [Fact]
+    public void TheBlueskySerializerOptionsRespectNullableAnnotations()
+    {
+        // Much of the null rejection in these tests depends on RespectNullableAnnotations rather than on an explicit
+        // guard, so turning it off would quietly weaken deserialization across the whole assembly.
+        //
+        // Note that BlueskyJsonSerializerOptions.Options is built by chaining the type resolver onto
+        // AtProtoServer.AtProtoJsonSerializerOptions, so the effective value comes from the AtProto options rather
+        // than from the field the Bluesky options are declared in. Only the assembled options are worth asserting.
+        Assert.True(BlueskyJsonSerializerOptions.Options.RespectNullableAnnotations);
+        Assert.True(BlueskyServer.BlueskyJsonSerializerOptions.RespectNullableAnnotations);
+    }
+
+    [Fact]
+    public void AnExplicitNullForANonNullableMemberThrowsJsonException()
+    {
+        // The behaviour RespectNullableAnnotations buys. Unlike a missing property, an explicit null is rejected
+        // before the constructor runs, which is why the null guards in these constructors are unreachable on this path.
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<EmbeddedImages>("""{"images":null}""", BlueskyJsonSerializerOptions.Options));
+    }
 }
