@@ -472,7 +472,6 @@ static readonly idunno.Bluesky.Maximum.GroupNameLengthInGraphemes -> int
 static readonly idunno.Bluesky.Maximum.InterestTags -> int
 static readonly idunno.Bluesky.Maximum.JoinLinkPreviewCodes -> int
 static readonly idunno.Bluesky.Maximum.JoinRequestsToList -> int
-static readonly idunno.Bluesky.Maximum.LabelerServices -> int
 static readonly idunno.Bluesky.Maximum.ListDescriptionLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.ListDescriptionLengthInGraphemes -> int
 static readonly idunno.Bluesky.Maximum.ListNameLengthInBytes -> int

@@ -69,7 +69,6 @@
 * Added `RecommendationReadOnlyCollection<T>`, returned by `GetSuggestedUsers()` and `GetTrends()`, exposing the recommendation identifier the service returns for feedback events.
 * Added `ThreadItemBlocked.Author`, which was previously discarded when deserializing a v2 post thread.
 * Added `Maximum.PostThreadV2Below` and `Maximum.PostThreadV2BranchingFactor`.
-* Added `Maximum.LabelerServices`.
 * `ListNotifications()` now accepts a `reasons` filter, limiting the returned notifications to the specified `NotificationReason` values.
 * Added `Maximum.ProfilesToGet`, `Maximum.ActorSearchResults`, `Maximum.ActorTypeaheadSearchResults`, `Maximum.InterestTags`, `Maximum.MutedWordLengthInBytes` and `Maximum.MutedWordLengthInGraphemes`.
 * Added `Maximum.PostsToList`, `Maximum.PostsToGet`, `Maximum.PostThreadDepth` and `Maximum.PostThreadParentHeight`.
@@ -182,7 +181,6 @@
 * `WellKnown.ReportOptions` now exposes read only lists through a read only dictionary, and `WellKnown.ReportTargets` is a snapshot, so neither can be changed by callers.
 * `LabelerViewDetailed.Policies` is now init only.
 * `LabelersPreference` throws an `ArgumentNullException` when given no labelers, and copies the collection it is given.
-* `GetLabelerServices()` throws an `ArgumentOutOfRangeException` when given more than `Maximum.LabelerServices` `Did`s.
 * `CreateModerationReport()` throws an `ArgumentOutOfRangeException`, rather than a `KeyNotFoundException`, when given an undefined `ReportType`.
 * `Facet.Features` now takes a defensive copy of the collection it is given and returns a read only collection.
 * `ByteSlice` now throws an `ArgumentOutOfRangeException` when either byte position is negative, or the end position is before the start position.
@@ -505,6 +503,8 @@
 * Corrected the documented maximum for `GetSuggestedStarterPacks()` from 50 to 25, and the summary on `GetAgeAssuranceState()`.
 * Labels applied to a labeler are no longer silently discarded when a labeler view is deserialized.
 * `GetBookmarks()` no longer sends an empty `cursor` parameter, or a `limit` parameter with no value, when neither is supplied.
+* `GetLabelerServices()` and `GetUserSubscribedLabelerServices()` no longer throw an `ArgumentOutOfRangeException` when the actor subscribes to a large number of labelers. `app.bsky.labeler.getServices` sets no maximum on the number of `Did`s it accepts, so no upper bound is imposed.
+* `GetLabelerServices()` now names `dids` as the parameter when it rejects an empty collection, rather than an internal variable.
 * `GetLabelerServices()` no longer throws a `NullReferenceException` when the request for the actor's preferences fails without returning error detail.
 * The `reason` passed to `CreateModerationReport()` is now validated as UTF-8 bytes and graphemes, matching the limits the underlying endpoint enforces.
 * `GetLabelerServices()` no longer enumerates the collection of `Did`s it is given more than once.

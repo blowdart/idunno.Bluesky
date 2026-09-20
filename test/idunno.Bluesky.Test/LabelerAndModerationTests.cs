@@ -76,19 +76,42 @@ public class LabelerAndModerationTests
     {
         using BlueskyAgent agent = new();
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+        ArgumentOutOfRangeException exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => agent.GetLabelerServices([], cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal("dids", exception.ParamName);
     }
 
     [Fact]
-    public async Task GetLabelerServicesThrowsWhenTooManyDidsAreSupplied()
+    public async Task GetLabelerServicesOnTheServerThrowsWhenNoDidsAreSupplied()
     {
-        List<Did> dids = [.. Enumerable.Range(0, Maximum.LabelerServices + 1).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];
+        ArgumentOutOfRangeException exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => BlueskyServer.GetLabelerServices([], getDetailedViews: false, service: null!, accessCredentials: null!, httpClient: null!, cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal("dids", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task GetLabelerServicesDoesNotImposeAnUpperBoundOnTheDidsItIsSupplied()
+    {
+        // app.bsky.labeler.getServices declares no maximum on dids and the service applies none, so a large
+        // collection must not be rejected here. Reaching the authentication check proves it was let through.
+        List<Did> dids = [.. Enumerable.Range(0, 100).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];
 
         using BlueskyAgent agent = new();
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+        await Assert.ThrowsAsync<AuthenticationRequiredException>(
             () => agent.GetLabelerServices(dids, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetLabelerServicesOnTheServerDoesNotImposeAnUpperBoundOnTheDidsItIsSupplied()
+    {
+        List<Did> dids = [.. Enumerable.Range(0, 100).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];
+
+        // The collection is validated before the service, so an ArgumentNullException proves the dids were let through.
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => BlueskyServer.GetLabelerServices(dids, getDetailedViews: false, service: null!, accessCredentials: null!, httpClient: null!, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
