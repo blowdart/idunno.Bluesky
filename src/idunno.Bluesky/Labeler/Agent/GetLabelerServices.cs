@@ -80,7 +80,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty, or contains more than <see cref="Maximum.LabelerServices"/> entries.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(
         IEnumerable<Did> dids,
@@ -92,8 +92,10 @@ public partial class BlueskyAgent
         // Materialize once so a lazy or single pass sequence is not evaluated again by the server method.
         List<Did> didList = [.. dids];
 
-        ArgumentOutOfRangeException.ThrowIfLessThan(didList.Count, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(didList.Count, Maximum.LabelerServices);
+        if (didList.Count == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(dids), "At least one Did must be specified.");
+        }
 
         if (!IsAuthenticated)
         {

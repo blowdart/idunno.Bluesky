@@ -122,4 +122,66 @@ public class BookmarkAndLabelerRequestTests
             yield return new Did("did:plc:ar7c4by46qjdydhdevvrndac");
         }
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ThePreferencesDrivenLabelerServiceCallsWorkWhenTheActorSubscribesToALargeNumberOfLabelers(bool detailed)
+    {
+        // app.bsky.labeler.getServices declares no maximum on dids. The number of labelers an actor subscribes to is
+        // remote account state rather than a caller argument, so these overloads must not reject it.
+        const int subscribedLabelerCount = 30;
+
+        List<Did> subscribedLabelers = [.. Enumerable.Range(0, subscribedLabelerCount).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];
+
+        string preferencesResponse =
+            $$"""
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#labelersPref",
+                        "labelers": [{{string.Join(",", subscribedLabelers.Select(did => $$"""{"did":"{{did}}"}"""))}}]
+                    }
+                ]
+            }
+            """;
+
+        string queryString = string.Empty;
+
+        using TestServer testServer = TestServerBuilder.CreateServer(
+            TestServerBuilder.DefaultUri,
+            async context =>
+            {
+                switch (context.Request.Path)
+                {
+                    case "/xrpc/app.bsky.actor.getPreferences":
+                        context.Response.StatusCode = (int)HttpStatusCode.OK;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(preferencesResponse, TestContext.Current.CancellationToken);
+                        break;
+
+                    case "/xrpc/app.bsky.labeler.getServices":
+                        queryString = context.Request.QueryString.Value ?? string.Empty;
+                        context.Response.StatusCode = (int)HttpStatusCode.OK;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsync(EmptyServicesResponse, TestContext.Current.CancellationToken);
+                        break;
+
+                    default:
+                        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        break;
+                }
+            });
+
+        BlueskyAgent agent = CreateAgent(testServer);
+
+        bool succeeded = detailed
+            ? (await agent.GetUserSubscribedLabelerServices(TestContext.Current.CancellationToken)).Succeeded
+            : (await agent.GetLabelerServices(cancellationToken: TestContext.Current.CancellationToken)).Succeeded;
+
+        Assert.True(succeeded);
+
+        // Preferences prepends the Bluesky moderation labeler, so one more Did goes out than the actor subscribes to.
+        Assert.Equal(subscribedLabelerCount + 1, queryString.Split("dids=", StringSplitOptions.None).Length - 1);
+    }
 }

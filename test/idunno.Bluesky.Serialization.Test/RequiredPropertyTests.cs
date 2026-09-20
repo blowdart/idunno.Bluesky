@@ -95,11 +95,29 @@ public class RequiredPropertyTests
         // Much of the null rejection in these tests depends on RespectNullableAnnotations rather than on an explicit
         // guard, so turning it off would quietly weaken deserialization across the whole assembly.
         //
-        // Note that BlueskyJsonSerializerOptions.Options is built by chaining the type resolver onto
-        // AtProtoServer.AtProtoJsonSerializerOptions, so the effective value comes from the AtProto options rather
-        // than from the field the Bluesky options are declared in. Only the assembled options are worth asserting.
+        // Note that BlueskyJsonSerializerOptions.Options is built by chaining the Bluesky type resolver onto
+        // AtProtoServer.AtProtoJsonSerializerOptions, so the effective value comes from the AtProto options. Nothing
+        // else can be configured on the way in, so only the assembled options are worth asserting.
         Assert.True(BlueskyJsonSerializerOptions.Options.RespectNullableAnnotations);
         Assert.True(BlueskyServer.BlueskyJsonSerializerOptions.RespectNullableAnnotations);
+    }
+
+    [Fact]
+    public void TheAssembledBlueskySerializerOptionsCarryTheSettingsDeserializationDependsOn()
+    {
+        // These settings cannot be declared where the Bluesky options are assembled, because the chaining call
+        // keeps only the type resolver it is given. They have to arrive from the AtProto options instead, so assert
+        // the values the assembled options actually end up with.
+        JsonSerializerOptions options = BlueskyJsonSerializerOptions.Options;
+
+        Assert.True(options.AllowOutOfOrderMetadataProperties);
+        Assert.Equal(JsonIgnoreCondition.WhenWritingNull, options.DefaultIgnoreCondition);
+        Assert.False(options.IgnoreReadOnlyProperties);
+        Assert.Equal(JsonUnmappedMemberHandling.Skip, options.UnmappedMemberHandling);
+
+        // The converter and the resolver are the two things the Bluesky options add for themselves.
+        Assert.Contains(options.Converters, converter => converter is Json.PreferenceConverter);
+        Assert.Contains(SourceGenerationContext.Default, options.TypeInfoResolverChain);
     }
 
     [Fact]
