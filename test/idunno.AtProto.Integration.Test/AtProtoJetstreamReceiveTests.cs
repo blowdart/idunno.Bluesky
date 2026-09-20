@@ -708,8 +708,32 @@ public class AtProtoJetstreamReceiveTests
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
-            _listener.Close();
-            _cancellationTokenSource.Dispose();
+
+            try
+            {
+                // Abort() rather than Close(). Tests here deliberately abandon a connection instead of completing the
+                // close handshake, and Close() is the graceful path, so it tries to write the end of the response to a
+                // socket the client has already torn down. The managed HttpListener used on platforms without http.sys
+                // throws out of that write, and whether it does is a race against the listener reaping the connection,
+                // which made CI fail intermittently. Abort() discards the connections without flushing them.
+                //
+                // The catches mirror AtProtoJetstreamConnectionTests. The server is being torn down either way, so
+                // there is nothing to report.
+                _listener.Abort();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (HttpListenerException)
+            {
+            }
+            catch (SocketException)
+            {
+            }
+            finally
+            {
+                _cancellationTokenSource.Dispose();
+            }
         }
 
         private static int FreePort()
