@@ -28,7 +28,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="dids"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty, or contains more than <see cref="Maximum.LabelerServices"/> entries.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -48,13 +48,19 @@ public static partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dids);
-        ArgumentOutOfRangeException.ThrowIfLessThan(dids.Count(), 1);
+
+        // The collection is enumerated more than once below, so materialize it to keep a lazy or single
+        // pass sequence from being evaluated repeatedly.
+        List<Did> didList = [.. dids];
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(didList.Count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(didList.Count, Maximum.LabelerServices);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Join("&", dids.Select(did => $"dids={Uri.EscapeDataString(did.ToString())}"));
+        string queryString = string.Join("&", didList.Select(did => $"dids={Uri.EscapeDataString(did.ToString())}"));
 
         if (getDetailedViews)
         {

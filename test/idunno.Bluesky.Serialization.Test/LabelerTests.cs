@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -384,5 +385,60 @@ public class LabelerTests
         Assert.Equal("Bluesky Moderation Service", labelerView.Creator.DisplayName);
         Assert.NotNull(labelerView.Creator.Associated);
         Assert.True(labelerView.Creator.Associated.Labeler);
+    }
+
+    [Fact]
+    public void LabelerViewDeserializesTheLabelsAppliedToTheLabeler()
+    {
+        string json = """
+            {
+                "$type": "app.bsky.labeler.defs#labelerView",
+                "uri": "at://did:plc:ar7c4by46qjdydhdevvrndac/app.bsky.labeler.service/self",
+                "cid": "bafyreigu3v6uxtmx3rv7emh4yvuvz2tom7ib7a4yl3x2eimard2brqeaei",
+                "creator": {
+                    "did": "did:plc:ar7c4by46qjdydhdevvrndac",
+                    "handle": "moderation.bsky.app"
+                },
+                "likeCount": 8,
+                "indexedAt": "2024-03-13T15:52:53.522Z",
+                "labels": [
+                    {
+                        "src": "did:plc:ar7c4by46qjdydhdevvrndac",
+                        "uri": "at://did:plc:ar7c4by46qjdydhdevvrndac/app.bsky.labeler.service/self",
+                        "val": "spam",
+                        "cts": "2024-03-13T15:52:53.522Z"
+                    }
+                ]
+            }
+            """;
+
+        LabelerView? labelerView = JsonSerializer.Deserialize<LabelerView>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(labelerView);
+        Label label = Assert.Single(labelerView.Labels);
+        Assert.Equal("spam", label.Value);
+    }
+
+    [Fact]
+    public void LabelerViewWithNoLabelsDeserializesToAnEmptyCollection()
+    {
+        string json = """
+            {
+                "$type": "app.bsky.labeler.defs#labelerView",
+                "uri": "at://did:plc:ar7c4by46qjdydhdevvrndac/app.bsky.labeler.service/self",
+                "cid": "bafyreigu3v6uxtmx3rv7emh4yvuvz2tom7ib7a4yl3x2eimard2brqeaei",
+                "creator": {
+                    "did": "did:plc:ar7c4by46qjdydhdevvrndac",
+                    "handle": "moderation.bsky.app"
+                },
+                "likeCount": 8,
+                "indexedAt": "2024-03-13T15:52:53.522Z"
+            }
+            """;
+
+        LabelerView? labelerView = JsonSerializer.Deserialize<LabelerView>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(labelerView);
+        Assert.Empty(labelerView.Labels);
     }
 }

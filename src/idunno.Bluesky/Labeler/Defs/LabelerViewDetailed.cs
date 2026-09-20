@@ -15,7 +15,7 @@ public sealed record LabelerViewDetailed : LabelerView
     /// <summary>
     /// Gets the policies for the labeler
     /// </summary>
-    public required LabelerPolicies Policies { get; set; }
+    public required LabelerPolicies Policies { get; init; }
 
     /// <summary>
     /// The set of report reason 'codes' which are in-scope for this service to review and action.

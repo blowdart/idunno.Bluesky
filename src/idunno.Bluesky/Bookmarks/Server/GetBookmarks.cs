@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -20,7 +22,7 @@ public static partial class BlueskyServer
     /// Gets a pageable list of the specified user's bookmarks.
     /// </summary>
     /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="limit">The maximum number of suggested actors to return.</param>
+    /// <param name="limit">The maximum number of bookmarks to return.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -31,7 +33,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;1 or &gt;<see cref="Maximum.Bookmarks"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -55,17 +57,34 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        int limitValue = limit ?? 50;
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.Bookmarks);
+        }
 
-        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
-        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.Bookmarks);
+        StringBuilder queryString = new();
+
+        if (limit is not null)
+        {
+            queryString.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
+        }
+
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            queryString.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}&");
+        }
+
+        if (queryString.Length > 0)
+        {
+            queryString.Length--;
+        }
 
         BlueskyHttpClient<GetBookmarksResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetBookmarksResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.bookmark.getBookmarks?cursor={Uri.EscapeDataString(cursor ?? string.Empty)}&limit={limit}",
+            $"/xrpc/app.bsky.bookmark.getBookmarks?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
