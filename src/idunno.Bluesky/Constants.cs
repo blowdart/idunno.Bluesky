@@ -348,6 +348,16 @@ public static class Maximum
     public static readonly int Trends = 25;
 
     /// <summary>
+    /// The maximum number of levels of replies that can be requested below the anchor post of a v2 post thread.
+    /// </summary>
+    public static readonly int PostThreadV2Below = 20;
+
+    /// <summary>
+    /// The maximum number of replies that can be requested at each level of a v2 post thread.
+    /// </summary>
+    public static readonly int PostThreadV2BranchingFactor = 100;
+
+    /// <summary>
     /// The maximum length of a profile pronoun, in UTF-8 bytes.
     /// </summary>
     /// <remarks>

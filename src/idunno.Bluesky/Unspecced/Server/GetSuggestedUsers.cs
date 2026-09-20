@@ -2,10 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Unspecced;
 using idunno.Bluesky.Unspecced.Model;
 
 using Microsoft.Extensions.Logging;
@@ -37,7 +40,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    public static async Task<AtProtoHttpResult<ICollection<ProfileView>>> GetSuggestedUsers(
+    public static async Task<AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>>> GetSuggestedUsers(
         string? category,
         int? limit,
         Uri service,
@@ -58,25 +61,25 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Empty;
+        StringBuilder queryStringBuilder = new();
 
         if (!string.IsNullOrEmpty(category))
         {
-            queryString += $"category={Uri.EscapeDataString(category)}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"category={Uri.EscapeDataString(category)}&");
         }
 
         if (limit is not null)
         {
-            queryString += $"&limit={limit}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
         }
 
-        queryString = queryString.TrimStart('&');
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetSuggestedUsersResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetSuggestedUsersResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.unspecced.getSuggestedUsers?{queryString}",
+            $"/xrpc/app.bsky.unspecced.getSuggestedUsers{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -86,8 +89,10 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<ICollection<ProfileView>>(
-                WithoutNullEntries(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory),
+            return new AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>>(
+                new RecommendationReadOnlyCollection<ProfileView>(
+                    WithoutNullEntries(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory),
+                    response.Result.RecIdStr ?? response.Result.RecId),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
@@ -95,7 +100,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<ICollection<ProfileView>>(
+            return new AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>>(
                 null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,

@@ -265,7 +265,7 @@ public class PagedReaderNullEntryTests
     [Fact]
     public async Task GetTrendsSkipsANullTrendRatherThanReturningIt()
     {
-        AtProtoHttpResult<ICollection<TrendView>> result = await BlueskyServer.GetTrends(
+        AtProtoHttpResult<RecommendationReadOnlyCollection<TrendView>> result = await BlueskyServer.GetTrends(
             limit: 25,
             service: TestServerBuilder.DefaultUri,
             accessCredentials: CreateCredentials(),
@@ -280,7 +280,7 @@ public class PagedReaderNullEntryTests
     [Fact]
     public async Task GetSuggestedUsersSkipsANullActorRatherThanReturningIt()
     {
-        AtProtoHttpResult<ICollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
+        AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
             category: null,
             limit: 25,
             service: TestServerBuilder.DefaultUri,
@@ -296,7 +296,7 @@ public class PagedReaderNullEntryTests
     [Fact]
     public async Task GetSuggestedUsersAcceptsAResponseWithoutARecommendationIdentifier()
     {
-        AtProtoHttpResult<ICollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
+        AtProtoHttpResult<RecommendationReadOnlyCollection<ProfileView>> result = await BlueskyServer.GetSuggestedUsers(
             category: null,
             limit: 25,
             service: TestServerBuilder.DefaultUri,

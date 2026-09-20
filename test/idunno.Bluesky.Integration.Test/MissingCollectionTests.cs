@@ -172,7 +172,7 @@ public class MissingCollectionTests
     [Fact]
     public async Task GetTrendsReportsAMissingTrendsCollectionAsAFailure()
     {
-        AtProtoHttpResult<ICollection<TrendView>> result = await BlueskyServer.GetTrends(
+        AtProtoHttpResult<RecommendationReadOnlyCollection<TrendView>> result = await BlueskyServer.GetTrends(
             limit: 25,
             service: TestServerBuilder.DefaultUri,
             accessCredentials: CreateCredentials(),

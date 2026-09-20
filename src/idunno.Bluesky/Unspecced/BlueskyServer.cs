@@ -31,6 +31,27 @@ public static partial class BlueskyServer
     private const string GetTrendsEndpoint = "/xrpc/app.bsky.unspecced.getTrends";
 
     /// <summary>
+    /// Converts the accumulated <paramref name="queryStringBuilder"/> into a query string suffix, trimming any trailing
+    /// separator and returning <see cref="string.Empty"/> when no parameters were appended.
+    /// </summary>
+    /// <param name="queryStringBuilder">A <see cref="StringBuilder"/> whose parameters each end with an <c>&amp;</c> separator.</param>
+    /// <returns>Either <see cref="string.Empty"/> or a <c>?</c> prefixed query string.</returns>
+    private static string BuildQueryString(StringBuilder queryStringBuilder)
+    {
+        if (queryStringBuilder.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (queryStringBuilder[^1] == '&')
+        {
+            queryStringBuilder.Length--;
+        }
+
+        return $"?{queryStringBuilder}";
+    }
+
+    /// <summary>
     /// Gets the age assurance status for the current user.
     /// </summary>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
@@ -66,7 +87,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<GetAgeAssuranceStateResponse> response = await request.Get(
             service,
-            $"{GetAgeAssuranceStateEndpoint}",
+            GetAgeAssuranceStateEndpoint,
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -140,27 +161,29 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(httpClient);
 
         StringBuilder queryStringBuilder = new();
+
         if (query is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"q={Uri.EscapeDataString(query)}");
-        }
-        if (limit is not null)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
-        }
-        if (!string.IsNullOrWhiteSpace(cursor))
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"q={Uri.EscapeDataString(query)}&");
         }
 
-        string queryString = queryStringBuilder.ToString();
-        queryString = queryString.TrimStart('&');
+        if (limit is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
+        }
+
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}&");
+        }
+
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetPopularFeedGeneratorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetPopularFeedGeneratorsResponse> response = await request.Get(
             service,
-            $"{GetPopularFeedGeneratorsEndpoint}?{queryString}",
+            $"{GetPopularFeedGeneratorsEndpoint}{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -191,7 +214,7 @@ public static partial class BlueskyServer
     /// <summary>
     /// Get a collection of suggested <see cref="StarterPackView"/>s.
     /// </summary>
-    /// <param name="limit">The number of starter packs to return. Must be between 1 and 50.</param>
+    /// <param name="limit">The number of starter packs to return. Must be between 1 and 25.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -202,7 +225,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt;50.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt;25.</exception>
     [UnconditionalSuppressMessage("Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
@@ -230,18 +253,20 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Empty;
+        StringBuilder queryStringBuilder = new();
 
         if (limit is not null)
         {
-            queryString += $"limit={limit}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
         }
+
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetSuggestedStarterPacksResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetSuggestedStarterPacksResponse> response = await request.Get(
             service,
-            $"{GetSuggestedStarterPacksEndpoint}?{queryString}",
+            $"{GetSuggestedStarterPacksEndpoint}{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -301,33 +326,40 @@ public static partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        StringBuilder queryStringBuilder = new();
-        string? queryString = string.Empty;
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
-        if (parameters != null && parameters.Count > 0)
+        StringBuilder queryStringBuilder = new();
+
+        if (parameters is not null)
         {
             foreach (KeyValuePair<string, object> parameter in parameters)
             {
-                if (parameter.Value is not null && parameter.Value.ToString() is not null)
+                if (string.IsNullOrEmpty(parameter.Key))
                 {
-                    queryStringBuilder.Append(CultureInfo.InvariantCulture, $"{parameter.Key}={Uri.EscapeDataString(parameter.Value.ToString()!)}&");
+                    continue;
                 }
-                else
+
+                string encodedKey = Uri.EscapeDataString(parameter.Key);
+
+                string? value = parameter.Value switch
                 {
-                    queryStringBuilder.Append(CultureInfo.InvariantCulture, $"{parameter.Key}&");
-                }
+                    null => null,
+                    IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+                    _ => parameter.Value.ToString()
+                };
+
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"{encodedKey}={Uri.EscapeDataString(value ?? string.Empty)}&");
             }
-
-            queryStringBuilder.Length--;
-
-            queryString = queryStringBuilder.ToString();
         }
+
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetTaggedSuggestionsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTaggedSuggestionsResponse> response = await request.Get(
             service,
-            $"{GetTaggedSuggestionsEndpoint}?{queryString}",
+            $"{GetTaggedSuggestionsEndpoint}{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -397,25 +429,25 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Empty;
+        StringBuilder queryStringBuilder = new();
 
         if (limit is not null)
         {
-            queryString = $"limit={limit}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
         }
 
-        if (accessCredentials != null)
+        if (accessCredentials is not null)
         {
-            queryString += $"&did={accessCredentials.Did}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"viewer={Uri.EscapeDataString(accessCredentials.Did.ToString())}&");
         }
 
-        queryString = queryString.TrimStart('&');
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetTrendingTopicsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTrendingTopicsResponse> response = await request.Get(
             service,
-            $"{GetTrendingTopicEndpoint}?{queryString}",
+            $"{GetTrendingTopicEndpoint}{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -465,7 +497,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    public static async Task<AtProtoHttpResult<ICollection<TrendView>>> GetTrends(
+    public static async Task<AtProtoHttpResult<RecommendationReadOnlyCollection<TrendView>>> GetTrends(
         int? limit,
         Uri service,
         AccessCredentials? accessCredentials,
@@ -485,18 +517,20 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = string.Empty;
+        StringBuilder queryStringBuilder = new();
 
         if (limit is not null)
         {
-            queryString = $"limit={limit}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
         }
+
+        string queryString = BuildQueryString(queryStringBuilder);
 
         BlueskyHttpClient<GetTrendsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTrendsResponse> response = await request.Get(
             service,
-            $"{GetTrendsEndpoint}?{queryString}",
+            $"{GetTrendsEndpoint}{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -506,8 +540,10 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<ICollection<TrendView>>(
-                WithoutNullEntries(response.Result.Trends, service, nameof(response.Result.Trends), loggerFactory),
+            return new AtProtoHttpResult<RecommendationReadOnlyCollection<TrendView>>(
+                new RecommendationReadOnlyCollection<TrendView>(
+                    WithoutNullEntries(response.Result.Trends, service, nameof(response.Result.Trends), loggerFactory),
+                    response.Result.RecIdStr),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
                 atErrorDetail: response.AtErrorDetail,
@@ -515,7 +551,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<ICollection<TrendView>>(
+            return new AtProtoHttpResult<RecommendationReadOnlyCollection<TrendView>>(
                 null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
