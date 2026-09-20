@@ -18,21 +18,16 @@
     to make the next build recreate them. npm ci is used rather than npm install so the committed lock file is the only
     thing which decides the versions, and install scripts are not run because none of these packages need them.
   -->
-  <Target Name="NpmInstall"
-          Inputs="package.json;package-lock.json"
-          Outputs="node_modules\.package-lock.json">
+  <Target Name="NpmInstall" Inputs="package.json;package-lock.json" Outputs="node_modules\.package-lock.json">
     <Exec Command="npm ci --no-audit --no-fund --ignore-scripts" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
-  <Target Name="NpmBuild"
-          DependsOnTargets="NpmInstall"
-          BeforeTargets="Build"
-          Inputs="package.json;package-lock.json;scripts\copy-client-libraries.js"
-          Outputs="wwwroot\lib\jquery\dist\jquery.min.js">
+  <Target Name="NpmBuild" DependsOnTargets="NpmInstall" BeforeTargets="Build" Inputs="package.json;package-lock.json;scripts\copy-client-libraries.js" Outputs="wwwroot\lib\jquery\dist\jquery.min.js">
     <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.UI\idunno.Bluesky.AspNet.Authentication.UI.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
   </ItemGroup>
 

@@ -4,23 +4,24 @@
     @if (User.Identity?.IsAuthenticated ?? false)
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Manage/Index" title="Manage">
-                @if (User.GetAvatar() is not null)
-                {
-                    <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />
-                }
-                else if (User.GetDisplayName() is not null)
-                {
-                    <span>Hello @User.GetDisplayName()!</span>
-                }
-                else
-                {
-                    <span>Hello @User.Identity?.Name!</span>
-                }
-            </a>
+            @if (User.GetAvatar() is not null)
+            {
+                <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />
+            }
+            else if (User.GetDisplayName() is not null)
+            {
+                <span>Hello @User.GetDisplayName()!</span>
+            }
+            else
+            {
+                <span>Hello @User.Identity?.Name!</span>
+            }
         </li>
         <li class="nav-item">
-            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+            @{
+                var logoutReturnUrl = Url.Page("/Index", new { area = "" });
+            }
+            <form class="form-inline" asp-area="Bluesky" asp-page="/Logout" asp-route-returnUrl="@logoutReturnUrl" method="post">
                 <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
             </form>
         </li>
@@ -28,7 +29,7 @@
     else
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+            <a class="nav-link text-dark" asp-area="Bluesky" asp-page="/Login">Login</a>
         </li>
     }
 </ul>

@@ -29,19 +29,19 @@ public static class BlueskyAuthenticationDefaults
     /// The default value used by BlueskyAuthenticationMiddleware for the
     /// BlueskyAuthenticationDefaults.LoginPath
     /// </summary>
-    public static readonly PathString LoginPath = new("/Identity/Account/Login");
+    public static readonly PathString LoginPath = new("/Bluesky/Login");
 
     /// <summary>
     /// The default value used by BlueskyAuthenticationMiddleware for the
     /// BlueskyAuthenticationOptions.LogoutPath
     /// </summary>
-    public static readonly PathString LogoutPath = new("/Identity/Account/Logout");
+    public static readonly PathString LogoutPath = new("/Bluesky/Logout");
 
     /// <summary>
     /// The default value used by BlueskyAuthenticationMiddleware for the
     /// BlueskyAuthenticationOptions.AccessDeniedPath
     /// </summary>
-    public static readonly PathString AccessDeniedPath = new("/Identity/Account/AccessDenied");
+    public static readonly PathString AccessDeniedPath = new("/Bluesky/AccessDenied");
 
     /// <summary>
     /// The default value of the BlueskyAuthenticationOptions.ReturnUrlParameter

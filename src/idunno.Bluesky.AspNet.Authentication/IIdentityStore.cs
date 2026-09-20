@@ -195,6 +195,15 @@ public interface IIdentityStore
 
         List<Claim> claims =
         [
+            // A stable, unique identifier for the authenticated user. ASP.NET Core antiforgery uses the
+            // NameIdentifier claim to fingerprint the user in its tokens. Without it, antiforgery falls back to
+            // hashing every claim, including the rotating access/refresh tokens and DPoP nonce, which makes a
+            // token issued while signed in fail validation once those values change (an HTTP 400 on POST).
+            new Claim(
+                System.Security.Claims.ClaimTypes.NameIdentifier,
+                credentials.Did,
+                ClaimValueTypes.String,
+                credentials.Service.ToString()),
             new Claim(
                 AtProtoClaims.Did,
                 credentials.Did,

@@ -104,12 +104,14 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
-* Add a new package, `idunno.Bluesky.AspNet.Authentication`, which provides ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
+* Added a new package, `idunno.Bluesky.AspNet.Authentication`, which provides ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
   `AuthenticationBuilder.AddBluesky()`, and a `ProfileClaimsTransformer` which can be registered with `IServiceCollection.AddProfileClaimsTransformer()`.
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
-* Added `BlueskyClaimsTransformerOptions.VerifyHandle`, which controls whether the handle a profile carries is verified against the directory before it
-  becomes a claim. It defaults to `true`.
-* Added `BlueskyAuthenticationMetrics.HandleVerificationFailures`, a counter of handles which did not resolve back to the DID whose profile returned them.
+
+#### idunno.Bluesky.AspNet.Authentication.UI
+
+* Added a new package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides a default UI for the Bluesky ASP.NET Core authentication handler.
+  It includes Razor Pages for login and logout, and can be added to an application with `services.AddBlueskyAuthenticationUI()`.
 
 ### Changed
 
