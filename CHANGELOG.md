@@ -66,6 +66,8 @@
 
 #### idunno.Bluesky
 
+* Added `BlockModList()` and `UnblockModList()`, which block and unblock every actor in a moderation list by creating and deleting an
+  `app.bsky.graph.listblock` record. They sit alongside the existing `MuteModList()` and `UnmuteModList()`; blocks are public, mutes are private.
 * Added `RecommendationReadOnlyCollection<T>`, returned by `GetSuggestedUsers()` and `GetTrends()`, exposing the recommendation identifier the service returns for feedback events.
 * Added `ThreadItemBlocked.Author`, which was previously discarded when deserializing a v2 post thread.
 * Added `Maximum.PostThreadV2Below` and `Maximum.PostThreadV2BranchingFactor`.

@@ -499,3 +499,5 @@ static readonly idunno.Bluesky.Maximum.VideoMimeTypeLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoMimeTypeMinimumLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoUploadNameLengthInBytes -> int
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.GetPageContent(System.Uri! uri, int maxPageSize = 1048576, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+idunno.Bluesky.BlueskyAgent.BlockModList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UnblockModList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
