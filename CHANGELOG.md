@@ -1695,9 +1695,9 @@ for custom `AtProtoRecord` classes.
   * `CreateBlueskyRecord<TRecordValue>` is now `BlueskyRecord<TRecord>` and the `recordValue` parameter is renamed to `record`
   * `GetPostGate()` and `GetThreadGate` now use `AtProtoRepositoryRecord<T>` internally.
   * `ReferencedLabelerDeclaration` deleted in favor of `AtProtoRepositoryRecord<LabelerDeclaration>`
-  * `ReferencedPost` deleted deleted in favor of `AtProtoRepositoryRecord<Post>`.
-  * `ReferencedProfile` deleted deleted in favor of `AtProtoRepositoryRecord<Profile>`.
-  * `ReferencedVerification` deleted deleted in favor of `AtProtoRepositoryRecord<Verification>`.
+  * `ReferencedPost` deleted in favor of `AtProtoRepositoryRecord<Post>`.
+  * `ReferencedProfile` deleted in favor of `AtProtoRepositoryRecord<Profile>`.
+  * `ReferencedVerification` deleted in favor of `AtProtoRepositoryRecord<Verification>`.
 
 ## 0.8.0 - 2025-05-01
 
