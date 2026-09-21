@@ -40,9 +40,7 @@ public class ExpiredEntrySweepThrottleTests
     [Fact]
     public async Task OnlyOneOfManyConcurrentCallersClaimsTheSameInterval()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
-
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        ExpiredEntrySweepThrottle throttle = new(TimeSpan.FromMinutes(5), "interval", dueImmediately: true);
 
         using Barrier barrier = new(32);
         bool[] claims = new bool[32];

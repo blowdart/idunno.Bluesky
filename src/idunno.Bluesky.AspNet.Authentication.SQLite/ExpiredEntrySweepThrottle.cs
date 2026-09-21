@@ -41,6 +41,23 @@ internal sealed class ExpiredEntrySweepThrottle
     }
 
     /// <summary>
+    /// Creates a new instance of <see cref="ExpiredEntrySweepThrottle"/> whose current interval can be primed to be
+    /// immediately due. Intended for tests.
+    /// </summary>
+    /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
+    /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
+    /// <param name="dueImmediately">When <see langword="true"/>, the first sweep is claimable immediately rather than one interval after construction.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
+    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately)
+        : this(interval, paramName)
+    {
+        if (dueImmediately)
+        {
+            _nextSweepAt = Environment.TickCount64;
+        }
+    }
+
+    /// <summary>
     /// Gets a value indicating whether sweeping is enabled.
     /// </summary>
     internal bool IsEnabled => _intervalMilliseconds > 0;
