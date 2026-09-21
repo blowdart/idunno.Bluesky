@@ -8,7 +8,7 @@
 If you are using your own record types with an `AtProtoAgent` Native AOT requires 
 [JSON serialization source generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation).
 
-### Configurating the agent for source generation
+### Configuring the agent for source generation
 
 You must configure the `AtProtoAgent` to use the source generation context either for your classes via `JsonOptions`,
 
@@ -47,7 +47,7 @@ using var agent = builder.Build();
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.
 
 If you are using the generic static server methods which a `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.
-The `jsonSerializationOptions` value must be a a chained instance which adds the type resolver for your classes to the type resolved for the classes `AtProtoServer` uses internally.
+The `jsonSerializationOptions` value must be a chained instance which adds the type resolver for your classes to the type resolved for the classes `AtProtoServer` uses internally.
 To create a chained instance of `JsonSerializationOptions` call `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions()`
 and passing in the `JsonSerializerOptions.Default` from your code where you have JSON source generation configured
 

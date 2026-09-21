@@ -1,4 +1,4 @@
-﻿# Custom Lexicons and Records
+# Custom Lexicons and Records
 
 One of the features of [AT Protocol](https://atproto.com) is the ability to define custom [lexicons](https://atproto.com/guides/lexicon)
 and APIs. This allows developers to use the protocol with their own data types and structures, enabling a wide range of applications and use cases.
@@ -14,7 +14,7 @@ lexicons you can define your own records and use the generic `AtProtoHttpClient<
 
 ## Defining a custom lexicon
 
-Say, for example, you want to write records for what a user is currently listening to (check out (team.fm)[https://teal.fm/] who are doing
+Say, for example, you want to write records for what a user is currently listening to (check out [teal.fm](https://teal.fm/) who are doing
 this in reality). A listening record might need the following information.
 
 * Track Name
@@ -186,7 +186,7 @@ var createResult = await agent.CreateRecord(
 The result from `CreateRecord`, an `AtProtoHttpResult<CreateRecordResult>` allows you to check for success with the `Succeeded` property,
 and the `Result` property includes a `StrongReference` to the newly created record.
 
-The [Custom Records sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.CustomRecords) shows how to define a sample
+The [Custom Records sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.CustomRecords) shows how to define a sample
 record and use it with `AtProtoAgent` to create a new entry in a repository collection.
 
 AtProto provides [createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record),

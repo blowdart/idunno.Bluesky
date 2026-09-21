@@ -1,8 +1,8 @@
-﻿# Get started
+# Get started
 
 Let's make your first post to Bluesky via the API in under 5 minutes.
 
-## Create a .NET project with the idunno.Bluesky nuget package
+## Create a .NET project with the idunno.Bluesky NuGet package
 
 # [Command Line](#tab/commandLine)
 
@@ -19,8 +19,8 @@ Let's make your first post to Bluesky via the API in under 5 minutes.
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `HelloBluesky` and click Next.
 1. In the "**Additional information**" dialog choose a Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
+1. Close the **Manage NuGet packages** dialog.
 
 # [Visual Studio Code](#tab/vsCode)
 

@@ -21,7 +21,7 @@ It is implemented as a hash of the record.
 
 ### <a name="strongReference">StrongReference</a>
 
-A `StrongReference` is a record contain both the [at:// uri](#uri) of a record, and its [CID](#cid).
+A `StrongReference` is a record containing both the [at:// uri](#uri) of a record, and its [CID](#cid).
 
 ## <a name="repositories">Repositories</a>
 
@@ -46,20 +46,20 @@ The shape of a record is defined by the lexicon, for example you can find the de
 
 Collections are identified by namespace identifiers ([NSID](https://atproto.com/specs/nsid)s), which make up part of the [`at://` uri](commonTerms.md#atUris).
 
-A record can be referred to by its (strong reference)[#strongReference], or by an `at://` uri.
+A record can be referred to by its [strong reference](#strongReference), or by an `at://` uri.
 
 If we examine an `at://` uri, for example, `at://sinclairinat0r.com/app.bsky.feed.post/3l5ptjwzotx2h`, we can break it down into the following parts
 
 * An authority of `sinclairinat0r.com`, which can also be read as the repository name.
-* A collection of `app.bsky.feed.post`, the NSID of the collection the record is in. In this case it's in the post repository, which contains all the users posts.
-* A record key of `3jwdwj2ctlk26`, a key to the latest version an individual post in the record collection.
+* A collection of `app.bsky.feed.post`, the NSID of the collection the record is in. In this case it's in the post collection, which contains all the user's posts.
+* A record key of `3l5ptjwzotx2h`, a key to the latest version of an individual post in the record collection.
 
-Records can, according to the AT Protocol, have multiple versions. A (strong reference)[#strongReference] contains not only an [at:// uri](#uri)
-but also a [CID](#cid) which refers to a individual revision of a record.
+Records can, according to the AT Protocol, have multiple versions. A [strong reference](#strongReference) contains not only an [at:// uri](#uri)
+but also a [CID](#cid) which refers to an individual revision of a record.
 
 ## <a name="actorsHandlesDids">Actors, handles and DIDs</a>
 
-The Bluesky API documentation refers to a user or bot account as an`Actor`. Actors can be identified in one of two ways, a handle and a Distributed Identifier (`DID`)
+The Bluesky API documentation refers to a user or bot account as an `Actor`. Actors can be identified in one of two ways, a handle and a Distributed Identifier (`DID`)
 
 ### <a name="handles">Handles</a>
 
@@ -79,12 +79,12 @@ A `DID` looks something like this: `did:plc:hfgp6pj3akhqxntgqwramlbg`. The first
 the second part is an identifier for the issuer (`plc` is a `DID` issued by Bluesky, `web` is another common identifier indicating an independently issued `DID`),
 and the final part is a unique reference issued by the issuer.
 
-For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID`or a handle
+For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID` or a handle
 (this either/or combination is represented as an At-Identifier), but things like [updateAccountPassword](https://docs.bsky.app/docs/api/com-atproto-admin-update-subject-status) take just a `DID`.
 
 When you login via an agent the authenticated user's `DID` is available via the `Did` property on the agent instance.
 
-Bluesky's `DID` directory is available at https://web.plc.directory/. It servers up a `DidDoc` for a plc `DID` which allows discovery of things like a `DID`'s personal data
+Bluesky's `DID` directory is available at https://web.plc.directory/. It serves up a `DidDoc` for a plc `DID` which allows discovery of things like a `DID`'s personal data
 server where authenticated API calls should go. The `BlueskyAgent` class take care of PDS discovery automatically,
 but you can retrieve a `DidDoc` yourself using the `DirectoryAgent` `ResolveDidDocument` method.
 

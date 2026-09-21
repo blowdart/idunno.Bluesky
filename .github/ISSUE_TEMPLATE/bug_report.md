@@ -21,7 +21,7 @@ assignees: ''
 
 ### Actual behavior
 
-<!--Please replace this line with with a clear and concise description of what you expected to happen.-->
+<!--Please replace this line with a clear and concise description of what you expected to happen.-->
 
 ## Helpful Extra information
 

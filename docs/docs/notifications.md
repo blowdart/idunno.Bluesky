@@ -1,4 +1,4 @@
-﻿# <a name="checkingNotifications">Checking your notifications</a>
+# <a name="checkingNotifications">Checking your notifications</a>
 
 Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
@@ -59,7 +59,7 @@ foreach (Notification notification in notifications.Result!.Notifications)
             }
             break;
 
-        // See the notification sample for a full illustration of each of teh notification types.
+        // See the notification sample for a full illustration of each of the notification types.
 
         default:
             // Error handling in the case of an 
@@ -81,14 +81,14 @@ and then use the saved timestamp once you've finished, so that notifications tha
 `UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky things you last saw notifications, which is very handy
 for testing any notification viewer you've written.
 
-A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) project in the
-[samples](https://github.com/blowdart/idunno.atproto/tree/main/samples) directory in this GitHub repository.
+A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) project in the
+[samples](https://github.com/blowdart/idunno.Bluesky/tree/main/samples) directory in this GitHub repository.
 
 ## <a name=cursorsPagination>Paging results</a>
 
 `ListNotifications()` returns results a page at a time, more results may be waiting for a subsequent call.
 
-The [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) uses the `limit` and `cursor` parameters to get notifications
+The [Notifications sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) uses the `limit` and `cursor` parameters to get notifications
 one page at a time, consisting of five notifications per page.
 
 ```c#
@@ -98,7 +98,7 @@ AtProtoHttpResult<NotificationsView> notifications =
 
 The first call to `ListNotifications()` uses the `limit` parameter to control how many notifications are returned from the API.
 
-Then the code loops until either the the call to `ListNotifications()` returns an empty cursor, or it fails.
+Then the code loops until either the call to `ListNotifications()` returns an empty cursor, or it fails.
 
 ```c#
 if (notifications.Succeeded && notifications.Result.Count != 0)

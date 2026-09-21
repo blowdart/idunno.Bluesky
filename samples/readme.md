@@ -34,4 +34,4 @@ If you use an Bluesky app password you don't need to worry about authorization c
 * `Samples.TokenRefresh` - a sample that shows background token refresh happening, by hacking the refresh timer to be very short.
 * `Samples.Video` - a sample that demonstrates video uploading and embedding.
 
-* `Samples.BulkDelete` - a implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.
+* `Samples.BulkDelete` - an implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.

@@ -1,4 +1,4 @@
-﻿# <a name="connecting">Connecting to Bluesky</a>
+# <a name="connecting">Connecting to Bluesky</a>
 
 ## <a name="usernamesAndPasswords">Authenticating with handles and passwords</a>
 
@@ -82,7 +82,7 @@ For development a client it of `http://localhost` is special cased by the specif
 published your application metadata file.
 
 To use OAuth first configure the OAuth options for your agent. The options require the application `ClientId` and the `Scopes` your application requires,
-and the the `ReturnUri` from which your application will process OAuth logins. For web applications this will be a web page, for desktop applications
+and the `ReturnUri` from which your application will process OAuth logins. For web applications this will be a web page, for desktop applications
 this is typically a custom uri scheme you have registered with the OS.
 
 ```c#
@@ -150,7 +150,7 @@ contain a `state` query parameter, which can use as a primary key as needed for 
 
 ### Testing OAuth locally with localhost
 
-The `idunno.AtProto.OAuthCallback` nuget package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
+The `idunno.AtProto.OAuthCallback` NuGet package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
 to the package, set the  ClientId in options to "`http://localhost`" but do not set the ReturnUri, then create an instance of the callback server
 before you build the login URI, use the callback server uri when creating the login URI, and finally await the callback,
 which will return the callback data as a string
@@ -192,11 +192,11 @@ if (!string.IsNullOrEmpty(callbackData))
 }
 else
 {
-    // The process timed out, or another error occured.
+    // The process timed out, or another error occurred.
 }
 ```
 
-The [OAuth Sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.OAuth) shows how to use the callback server and login,
+The [OAuth Sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.OAuth) shows how to use the callback server and login,
 and logout with OAuth.
 
 ## Logging out

@@ -12,7 +12,7 @@ To store a draft on the Bluesky servers construct an instance of the `Draft` cla
 The `Draft` class looks a little different from the `Post` class you might be used to. It takes a collection of `DraftPost`,
 a `Guid` representing the device the draft was created on, and a `DateTime` representing when the draft was created, an optional
 name for the client, and, optionally collections of languages,
-[post gate](threadGatesAndPostGates.md#postGates) and [thread gate]((threadGatesAndPostGates.md#threadGates) rules that
+[post gate](threadGatesAndPostGates.md#postGates) and [thread gate](threadGatesAndPostGates.md#threadGates) rules that
 will be applied to the draft when it is turned into a post.
 
 To create a draft and save with a single post, you can use the following code:
