@@ -256,4 +256,11 @@ internal static partial class Logger
     [LoggerMessage(156, LogLevel.Error, "UploadMedia for {did} returned already_exists but the jobId in the error detail was missing, was not a JSON string, or was empty")]
     internal static partial void UploadMediaAlreadyExistsJobIdUnusable(ILogger logger, Did did);
 
+    // Moderation list blocks
+    [LoggerMessage(158, LogLevel.Error, "UnblockModList() failed as the list {listUri} could not be read.")]
+    internal static partial void UnblockModListFailedAsListCouldNotBeRead(ILogger logger, AtUri listUri);
+
+    [LoggerMessage(159, LogLevel.Error, "UnblockModList() failed as the current user is not blocking {listUri}.")]
+    internal static partial void UnblockModListFailedAsUserIsNotBlocking(ILogger logger, AtUri listUri);
+
 }

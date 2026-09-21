@@ -144,10 +144,10 @@ To mute all users of a moderation list use `MuteModList()`. Mutes are *private*.
 | listUri   | AtUri          | The AtUri of the moderation list to mute | Yes        |           |
 
 ```c#
-await agent.MuteModList(listUri)
+await agent.MuteModList(listUri);
 ```
 
-To unmute all users of a moderation list use `MuteModList()`.
+To unmute all users of a moderation list use `UnmuteModList()`.
 
 `UnmuteModList(listUri)`
 
@@ -156,7 +156,7 @@ To unmute all users of a moderation list use `MuteModList()`.
 | listUri   | AtUri          | The AtUri of the moderation list to mute | Yes        |           |
 
 ```c#
-await agent.UnmuteModList(listUri)
+await agent.UnmuteModList(listUri);
 ```
 
 > [!TIP]
@@ -165,7 +165,7 @@ await agent.UnmuteModList(listUri)
 
 ### Blocking and unblocking members of a moderation list
 
-To mute all users of a moderation list use `BlockModList()`. Blocks are *public*.
+To block all users of a moderation list use `BlockModList()`. Blocks are *public*.
 
 `BlockModList(listUri)`
 
@@ -174,19 +174,19 @@ To mute all users of a moderation list use `BlockModList()`. Blocks are *public*
 | listUri   | AtUri          | The AtUri of the moderation list to block | Yes        |           |
 
 ```c#
-await agent.BlockModList(listUri)
+await agent.BlockModList(listUri);
 ```
 
-To unmute all users of a moderation list use `MuteModList()`.
+To unblock all users of a moderation list use `UnblockModList()`.
 
-`UnmuteBlockList(listUri)`
+`UnblockModList(listUri)`
 
-| Parameter | Type           | Description                               | Required   | Default   |
-|-----------|----------------|-------------------------------------------|:----------:|:---------:|
-| listUri   | AtUri          | The AtUri of the moderation list to block | Yes        |           |
+| Parameter | Type           | Description                                 | Required   | Default   |
+|-----------|----------------|---------------------------------------------|:----------:|:---------:|
+| listUri   | AtUri          | The AtUri of the moderation list to unblock | Yes        |           |
 
 ```c#
-await agent.UnmuteBlockList(listUri)
+await agent.UnblockModList(listUri);
 ```
 
 > [!TIP]
@@ -218,7 +218,7 @@ authenticated user is using to block and mute list members.
 | limit     | int    | The number of posts to return per page (max 100)          | No         | 50        |
 
 ```c#
-var listBlocksResult = agent.GetListBlocks();
+var listBlocksResult = await agent.GetListBlocks();
 ```
 
 `GetListMutes(cursor?, limit?)`
@@ -229,7 +229,7 @@ var listBlocksResult = agent.GetListBlocks();
 | limit     | int    | The number of posts to return per page (max 100)          | No         | 50        |
 
 ```c#
-var listMutesResult = agent.GetListMutes();
+var listMutesResult = await agent.GetListMutes();
 ```
 
 
