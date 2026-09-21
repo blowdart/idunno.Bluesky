@@ -100,6 +100,16 @@ public class LengthValidationTests
     }
 
     [Fact]
+    public void MessageInputThrowsWhenTextAssignedInAnObjectInitializerExceedsTheMaximumNumberOfBytes()
+    {
+        string text = Families(900);
+
+        AssertOnlyExceedsTheByteLimit(text, Maximum.MessageLengthInBytes, Maximum.MessageLengthInGraphemes);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new MessageInput("some text") { Text = text });
+    }
+
+    [Fact]
     public void HashTagThrowsWhenTheTagExceedsTheMaximumNumberOfBytes()
     {
         string tag = Families(58);

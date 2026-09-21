@@ -66,6 +66,81 @@ public class ChatValidationTests
         Assert.Single(message.Facets);
     }
 
+    [Fact]
+    public void MessageInputThrowsWhenTextAssignedInAnObjectInitializerExceedsTheMaximumNumberOfGraphemes()
+    {
+        string text = new('\u00e9', Maximum.MessageLengthInGraphemes + 1);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new MessageInput("some text") { Text = text });
+    }
+
+    [Fact]
+    public void MessageViewDoesNotAliasTheCollectionsAssignedInAnObjectInitializer()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+        List<ReactionView> reactions =
+        [
+            new ReactionView("\U0001F44D", new ReactionViewSender(new Did("did:plc:sender")), DateTimeOffset.UtcNow)
+        ];
+
+        MessageView message = new(
+            id: "id",
+            revision: "rev",
+            text: "some text",
+            facets: null,
+            embed: null,
+            reactions: null,
+            sender: new MessageViewSender(new Did("did:plc:sender")),
+            sentAt: DateTimeOffset.UtcNow) { Facets = facets, Reactions = reactions };
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+        reactions.Add(new ReactionView("\U0001F44E", new ReactionViewSender(new Did("did:plc:sender")), DateTimeOffset.UtcNow));
+
+        Assert.Single(message.Facets);
+        Assert.Single(message.Reactions);
+    }
+
+    [Fact]
+    public void MessageViewNormalisesNullCollectionsToEmpty()
+    {
+        MessageView message = new(
+            id: "id",
+            revision: "rev",
+            text: "some text",
+            facets: null,
+            embed: null,
+            reactions: null,
+            sender: new MessageViewSender(new Did("did:plc:sender")),
+            sentAt: DateTimeOffset.UtcNow);
+
+        Assert.Empty(message.Facets);
+        Assert.Empty(message.Reactions);
+    }
+
+    [Fact]
+    public void ConversationViewDoesNotAliasTheMemberCollectionAssignedInAnObjectInitializer()
+    {
+        List<Chat.Actor.ProfileViewBasic> members =
+        [
+            new Chat.Actor.ProfileViewBasic(new Did("did:plc:member"), new Handle("member.test"), null, null, null, null, null, null, null, null)
+        ];
+
+        ConversationView conversation = new(
+            id: "id",
+            revision: "rev",
+            members: members,
+            lastMessage: null,
+            lastReaction: null,
+            muted: false,
+            unreadCount: 0,
+            status: null,
+            kind: null) { Members = members };
+
+        members.Add(new Chat.Actor.ProfileViewBasic(new Did("did:plc:other"), new Handle("other.test"), null, null, null, null, null, null, null, null));
+
+        Assert.Single(conversation.Members);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]

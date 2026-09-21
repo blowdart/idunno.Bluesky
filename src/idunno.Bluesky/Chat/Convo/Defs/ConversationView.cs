@@ -24,7 +24,7 @@ public sealed record ConversationView : ConversationViewBase
     /// <param name="lastReaction">A view of the last message and reaction to it in a conversation, if any.</param>
     /// <param name="muted">A flag indicating whether the conversation is muted.</param>
     /// <param name="unreadCount">A count of the number of unread messages in the conversation.</param>
-    /// <param name="status">The status of the conversation. If <see langword="null"/> defaults to <see cref="ConversationStatus.Requested"/></param>
+    /// <param name="status">The status of the conversation. Known values are defined in <see cref="ConversationStatus"/>.</param>
     /// <param name="kind">The kind of conversation, if any.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
@@ -50,7 +50,7 @@ public sealed record ConversationView : ConversationViewBase
 
         Id = id;
         Revision = revision;
-        Members = new List<Actor.ProfileViewBasic>(members).AsReadOnly();
+        Members = members;
         LastMessage = lastMessage;
         LastReaction = lastReaction;
         Muted = muted;
@@ -80,9 +80,25 @@ public sealed record ConversationView : ConversationViewBase
     /// the member who added the viewer, the member who sent the last message, the member who sent the last reaction),
     /// but will not contain the full list of members. Use <see cref="BlueskyAgent.GetConversationMembers(string, int?, string?, CancellationToken)"/> to list all members.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public IReadOnlyCollection<Actor.ProfileViewBasic> Members { get; init; }
+    public IReadOnlyCollection<Actor.ProfileViewBasic> Members
+    {
+        get => _members;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            _members = new List<Actor.ProfileViewBasic>(value).AsReadOnly();
+        }
+    }
 
     /// <summary>
     /// Gets a <see cref="MessageViewBase">view</see> over the last message in the conversation, if any.
@@ -117,7 +133,9 @@ public sealed record ConversationView : ConversationViewBase
     public string? Status { get; init; }
 
     /// <summary>
-    /// Gtets the kind of conversation, if any.
+    /// Gets the kind of conversation, if any.
     /// </summary>
     public ConversationKind? Kind { get; init; }
+
+    private readonly IReadOnlyCollection<Actor.ProfileViewBasic> _members = null!;
 }

@@ -37,7 +37,7 @@ public partial class BlueskyServer
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
         ICollection<string> codes,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         Uri service,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
@@ -46,14 +46,14 @@ public partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(codes);
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
-
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-        ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetJoinLinkPreviewsResponse> response = await client.Get(
