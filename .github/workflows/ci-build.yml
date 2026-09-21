@@ -156,20 +156,26 @@ jobs:
     - name: 'Install native AOT prerequisites'
       run: sudo apt-get update && sudo apt-get install --yes clang zlib1g-dev
 
-    # Publishing the trimming test project is the test. ILLink and ILC report a diagnostic for anything in
-    # idunno.AtProto or idunno.Bluesky which is not safe to trim or to compile ahead of time, and
-    # TreatWarningsAsErrors turns those into errors. The test project is not run, because it talks to the live
-    # service. RequireNativeBinary is passed so that a linker missing from the agent fails rather than warns.
+    # Whole-assembly analysis covers every package which claims trimming and AOT compatibility. Offline smoke
+    # binaries are then run from project references and locally packed NuGet packages, without credentials or
+    # network access. RequireNativeBinary makes a missing linker a CI failure rather than a local warning.
     - name: 'Trimming and AOT test'
       id: trimming
       shell: pwsh
       run: ./trimTest.ps1 -Rid linux-x64 -RequireNativeBinary
 
-    - name: Upload Trimming Binary Log
+    - name: Append trimming size report to build summary
+      if: always()
+      shell: bash
+      run: |
+        if [[ -f trimming/artifacts/size-report.md ]]; then
+          cat trimming/artifacts/size-report.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload Trimming Binary Logs
       if: failure() && steps.trimming.outcome == 'failure'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: trimming-binlog
-        path: trimming/trimmingTest.binlog
+        path: trimming/artifacts/logs/*.binlog
         retention-days: 5
-

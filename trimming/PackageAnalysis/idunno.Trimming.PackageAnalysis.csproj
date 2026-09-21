@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <Configurations>Debug;Release;CodeQL</Configurations>
+    <UsePackedPackages Condition="'$(UsePackedPackages)' == ''">false</UsePackedPackages>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(UsePackedPackages)' != 'true'">
+    <ProjectReference Include="..\..\src\idunno.AtProto.Types\idunno.AtProto.Types.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.MySQL\idunno.Bluesky.AspNet.Authentication.MySQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.Redis\idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UsePackedPackages)' == 'true'">
+    <PackageReference Include="idunno.AtProto.Types" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.AtProto" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.AtProto.OAuthCallback" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.AspNet.Authentication" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.AspNet.Authentication.MySQL" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.AspNet.Authentication.Redis" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.AspNet.Authentication.SQLite" VersionOverride="$(IdunnoPackageVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="idunno.AtProto.Types" />
+    <TrimmerRootAssembly Include="idunno.AtProto" />
+    <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
+    <TrimmerRootAssembly Include="idunno.Bluesky" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.MySQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.Redis" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.SQLite" />
+  </ItemGroup>
+
+</Project>

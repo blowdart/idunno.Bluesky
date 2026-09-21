@@ -328,7 +328,23 @@
     </Project>
   </Folder>
   <Folder Name="/trimming/">
-    <Project Path="trimming/idunno.TrimmingTest.csproj">
+    <Project Path="trimming/AuthenticationAnalysis/idunno.Trimming.AuthenticationAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/CoreAnalysis/idunno.Trimming.CoreAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PackageAnalysis/idunno.Trimming.PackageAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PackageConsumerSmoke/idunno.Trimming.PackageConsumerSmoke.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PublicApiSmoke/idunno.Trimming.PublicApiSmoke.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

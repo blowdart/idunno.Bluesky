@@ -108,7 +108,11 @@ For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProt
 
 # Native AOT
 
-`idunno.AtProto` and `idunno.Bluesky` support [.NET native ahead-of-time (AOT)](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/).
+`idunno.AtProto`, `idunno.Bluesky`, and the non-UI ASP.NET authentication packages support
+[.NET native ahead-of-time (AOT)](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/).
+
+`idunno.Bluesky.AspNet.Authentication.UI` contains Razor Pages and does not support trimming or Native AOT. Its
+`AddBlueskyAuthenticationUI()` entry point is annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`.
 
 Native AOT has benefits:
 
@@ -120,5 +124,5 @@ If you wish to use AOT with your own classes you must enable JSON Source Generat
 
 # Trimming
 
-Trimming is supported if your application targets .NET 9.0. You cannot target .NET 8.0 due the use of v9 of `System.Text.Json` and
+Trimming is supported if your application targets .NET 9.0 or later. You cannot target .NET 8.0 due the use of v9 of `System.Text.Json` and
 a [bug in the linker](https://github.com/dotnet/runtime/issues/114307).

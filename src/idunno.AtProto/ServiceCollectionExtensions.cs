@@ -14,19 +14,17 @@ namespace idunno.AtProto;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    internal const string RequiresDynamicCodeMessage = "Binding strongly typed objects to configuration values may require generating dynamic code at runtime.";
+    internal const string TrimmingRequiredUnreferencedCodeMessage = "AtProtoAgentOptions members may be trimmed. Ensure all required members are preserved.";
+
     /// <summary>
     /// Binds configuration for <see cref="AtProtoAgent"/> to the specified <paramref name="configuration"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the configuration to.</param>
     /// <param name="configuration">The configuration section to bind to.</param>
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved.")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved.")]
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static IServiceCollection AddAtProtoAgentOptions(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -44,13 +42,8 @@ public static class ServiceCollectionExtensions
     /// <param name="services">The <see cref="IServiceCollection"/> to add the configuration to.</param>
     /// <param name="configSectionPath">The configuration section to load configuration from.</param>
     /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved.")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved.")]
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static IServiceCollection AddAtProtoAgentOptions(
         this IServiceCollection services,
         string configSectionPath = AtProtoAgentOptions.AtProtoAgent)
