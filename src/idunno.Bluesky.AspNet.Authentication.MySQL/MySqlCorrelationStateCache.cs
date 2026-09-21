@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -9,6 +10,9 @@ using idunno.Bluesky.AspNet.Authentication.Events;
 
 using MySqlConnector;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace idunno.Bluesky.AspNet.Authentication.MySQL;
 
 /// <summary>
@@ -16,19 +20,41 @@ namespace idunno.Bluesky.AspNet.Authentication.MySQL;
 /// </summary>
 public class MySqlCorrelationStateCache : ICorrelationStateCache
 {
+    private const string CorrelationStatesTable = "idunno_bluesky_correlation_states";
+
     private static readonly TimeSpan s_defaultEntryTimeToLive = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan s_defaultExpiredEntrySweepInterval = TimeSpan.FromMinutes(5);
 
     private readonly string _connectionString;
     private readonly TimeSpan _entryTimeToLive;
+    private readonly ExpiredEntrySweepThrottle _sweepThrottle;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Creates a new instance of <see cref="MySqlCorrelationStateCache"/>.
     /// </summary>
     /// <param name="connectionString">The connection string for the MySQL database.</param>
     /// <param name="entryTimeToLive">The time to live for stored correlation state.</param>
+    /// <param name="expiredEntrySweepInterval">
+    /// How often expired correlation state is deleted, or <see cref="TimeSpan.Zero"/> to never delete it. Defaults to five minutes.
+    /// </param>
+    /// <param name="loggerFactory">An optional logger factory used to report sweep activity and failures.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is empty or invalid.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="entryTimeToLive"/> is not positive.</exception>
-    public MySqlCorrelationStateCache(string connectionString, TimeSpan? entryTimeToLive = null)
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="entryTimeToLive"/> is not positive, or <paramref name="expiredEntrySweepInterval"/> is negative.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   Expired correlation state is unreadable as soon as it expires, as every read filters on expiry. Sweeping only
+    ///   reclaims the storage it occupies, so disabling it changes no behaviour beyond letting the table grow. Disable it
+    ///   when an operator reclaims the rows themselves.
+    /// </para>
+    /// </remarks>
+    public MySqlCorrelationStateCache(
+        string connectionString,
+        TimeSpan? entryTimeToLive = null,
+        TimeSpan? expiredEntrySweepInterval = null,
+        ILoggerFactory? loggerFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
@@ -39,6 +65,11 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
         {
             throw new ArgumentOutOfRangeException(nameof(entryTimeToLive), _entryTimeToLive, "The time to live must be positive.");
         }
+
+        _sweepThrottle = new ExpiredEntrySweepThrottle(
+            expiredEntrySweepInterval ?? s_defaultExpiredEntrySweepInterval,
+            nameof(expiredEntrySweepInterval));
+        _logger = loggerFactory?.CreateLogger<MySqlCorrelationStateCache>() ?? NullLogger<MySqlCorrelationStateCache>.Instance;
     }
 
     /// <summary>
@@ -75,6 +106,8 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
         command.Parameters.Add("@entryTimeToLiveMicroseconds", MySqlDbType.Int64).Value = _entryTimeToLive.Ticks / TimeSpan.TicksPerMicrosecond;
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        await SweepExpiredEntries(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -189,6 +222,52 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
         catch (CryptographicException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Deletes expired correlation state, at most once per configured sweep interval.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Sweeping is housekeeping for the write which triggered it, and that write has already committed by the time this
+    ///   runs, so a failure here is logged and swallowed rather than surfaced. Failing a sign in because a table could not
+    ///   be tidied would trade a storage problem for an availability one.
+    /// </para>
+    /// <para>
+    ///   A cancelled sweep is abandoned rather than retried. The sweep interval has already been claimed, so the rows it
+    ///   would have removed are simply collected by the next sweep.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Sweeping is best effort housekeeping, failures are logged and the triggering operation continues.")]
+    private async Task SweepExpiredEntries(CancellationToken cancellationToken)
+    {
+        if (!_sweepThrottle.TryClaimSweep())
+        {
+            return;
+        }
+
+        try
+        {
+            using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
+            using MySqlCommand command = connection.CreateCommand();
+            command.CommandText = """
+                DELETE FROM `idunno_bluesky_correlation_states`
+                WHERE `ExpiresAtUtc` <= UTC_TIMESTAMP(6);
+                """;
+
+            int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            _logger.ExpiredEntriesSwept(rowsDeleted, CorrelationStatesTable);
+        }
+        catch (OperationCanceledException)
+        {
+            // The caller walked away. The sweep is housekeeping, so there is nothing to report and nothing to undo.
+        }
+        catch (Exception ex)
+        {
+            _logger.ExpiredEntrySweepFailed(CorrelationStatesTable, ex);
         }
     }
 

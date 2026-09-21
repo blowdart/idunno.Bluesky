@@ -27,5 +27,7 @@ builder.Services
 
 The identity store uses a seven-day sliding expiration by default. Refresh locks expire after 90 seconds, and correlation state expires after 15 minutes. Alternate lifetimes can be supplied to the constructors.
 
+Expired rows are deleted by the store which wrote them, at most once every five minutes per store instance, so the tables stay bounded without an operator scheduling anything. Pass `expiredEntrySweepInterval` to change how often that happens, or `TimeSpan.Zero` to turn it off and reclaim the rows yourself. Expiry is enforced on read either way, so an unswept row authenticates nobody.
+
 ## Documentation
 [Documentation](https://bluesky.idunno.dev/) is available, including API references.

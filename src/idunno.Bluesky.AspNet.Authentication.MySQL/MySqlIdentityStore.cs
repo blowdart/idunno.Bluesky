@@ -23,12 +23,17 @@ namespace idunno.Bluesky.AspNet.Authentication.MySQL;
 /// </summary>
 public class MySqlIdentityStore : IIdentityStore
 {
+    private const string IdentitiesTable = "idunno_bluesky_identities";
+    private const string RefreshLocksTable = "idunno_bluesky_refresh_locks";
+
     private static readonly TimeSpan s_defaultEntryTimeToLive = TimeSpan.FromDays(7);
     private static readonly TimeSpan s_defaultRefreshLockLength = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan s_defaultExpiredEntrySweepInterval = TimeSpan.FromMinutes(5);
 
     private readonly string _connectionString;
     private readonly TimeSpan _entryTimeToLive;
     private readonly TimeSpan _refreshLockLength;
+    private readonly ExpiredEntrySweepThrottle _sweepThrottle;
     private readonly BlueskyAuthenticationMetrics _metrics;
     private readonly ILogger _logger;
 
@@ -40,22 +45,37 @@ public class MySqlIdentityStore : IIdentityStore
     /// <param name="refreshLockLength">The time to live for refresh locks.</param>
     /// <param name="meterFactory">An optional meter factory used to record identity store metrics.</param>
     /// <param name="loggerFactory">An optional logger factory used to report refresh lock contention.</param>
+    /// <param name="expiredEntrySweepInterval">
+    /// How often expired identities and abandoned refresh locks are deleted, or <see cref="TimeSpan.Zero"/> to never
+    /// delete them. Defaults to five minutes.
+    /// </param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is empty or invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive.
+    /// Thrown when <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive, or when
+    /// <paramref name="expiredEntrySweepInterval"/> is negative.
     /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   An expired identity or refresh lock is already unreadable, as every read filters on expiry, so sweeping only
+    ///   reclaims the storage it occupies and changes no behaviour. Disable it when an operator reclaims the rows themselves.
+    /// </para>
+    /// </remarks>
     public MySqlIdentityStore(
         string connectionString,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockLength = null,
         IMeterFactory? meterFactory = null,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        TimeSpan? expiredEntrySweepInterval = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
         _connectionString = new MySqlConnectionStringBuilder(connectionString).ConnectionString;
         _entryTimeToLive = ValidateTimeToLive(entryTimeToLive ?? s_defaultEntryTimeToLive, nameof(entryTimeToLive));
         _refreshLockLength = ValidateTimeToLive(refreshLockLength ?? s_defaultRefreshLockLength, nameof(refreshLockLength));
+        _sweepThrottle = new ExpiredEntrySweepThrottle(
+            expiredEntrySweepInterval ?? s_defaultExpiredEntrySweepInterval,
+            nameof(expiredEntrySweepInterval));
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
         _logger = loggerFactory?.CreateLogger<MySqlIdentityStore>() ?? NullLogger<MySqlIdentityStore>.Instance;
     }
@@ -350,6 +370,8 @@ public class MySqlIdentityStore : IIdentityStore
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
+        await SweepExpiredEntries(cancellationToken).ConfigureAwait(false);
+
         return did;
     }
 
@@ -424,6 +446,75 @@ public class MySqlIdentityStore : IIdentityStore
         {
             await connection.DisposeAsync().ConfigureAwait(false);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Deletes expired identities and abandoned refresh locks, at most once per configured sweep interval.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Sweeping is housekeeping for the write which triggered it, and that write has already committed by the time this
+    ///   runs, so a failure here is logged and swallowed rather than surfaced. Failing a sign in because a table could not
+    ///   be tidied would trade a storage problem for an availability one.
+    /// </para>
+    /// <para>
+    ///   A refresh lock is normally released by the caller which took it, so the locks collected here are the ones
+    ///   abandoned by an application server which stopped mid refresh. They already grant nobody the lock, as taking one
+    ///   overwrites an expired row.
+    /// </para>
+    /// <para>
+    ///   A cancelled sweep is abandoned rather than retried. The sweep interval has already been claimed, so the rows it
+    ///   would have removed are simply collected by the next sweep.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Sweeping is best effort housekeeping, failures are logged and the triggering operation continues.")]
+    private async Task SweepExpiredEntries(CancellationToken cancellationToken)
+    {
+        if (!_sweepThrottle.TryClaimSweep())
+        {
+            return;
+        }
+
+        string table = IdentitiesTable;
+
+        try
+        {
+            using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
+
+            using (MySqlCommand command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    DELETE FROM `idunno_bluesky_identities`
+                    WHERE `ExpiresAtUtc` <= UTC_TIMESTAMP(6);
+                    """;
+
+                int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                _logger.ExpiredEntriesSwept(rowsDeleted, IdentitiesTable);
+            }
+
+            table = RefreshLocksTable;
+
+            using (MySqlCommand command = connection.CreateCommand())
+            {
+                command.CommandText = """
+                    DELETE FROM `idunno_bluesky_refresh_locks`
+                    WHERE `ExpiresAtUtc` <= UTC_TIMESTAMP(6);
+                    """;
+
+                int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                _logger.ExpiredEntriesSwept(rowsDeleted, RefreshLocksTable);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The caller walked away. The sweep is housekeeping, so there is nothing to report and nothing to undo.
+        }
+        catch (Exception ex)
+        {
+            _logger.ExpiredEntrySweepFailed(table, ex);
         }
     }
 

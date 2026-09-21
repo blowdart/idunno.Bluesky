@@ -29,4 +29,10 @@ internal static partial class Logger
 
     [LoggerMessage(270, LogLevel.Debug, "StartRefresh entered for {did}")]
     public static partial void StartRefreshEntered(this ILogger logger, Did did);
+
+    [LoggerMessage(273, LogLevel.Debug, "Swept {rowsDeleted} expired rows from {table}.")]
+    public static partial void ExpiredEntriesSwept(this ILogger logger, int rowsDeleted, string table);
+
+    [LoggerMessage(274, LogLevel.Warning, "Sweeping expired rows from {table} failed. The operation which triggered the sweep was unaffected, but expired rows remain in the table.")]
+    public static partial void ExpiredEntrySweepFailed(this ILogger logger, string table, Exception exception);
 }

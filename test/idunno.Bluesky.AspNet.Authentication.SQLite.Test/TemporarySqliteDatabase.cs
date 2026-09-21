@@ -39,6 +39,20 @@ public sealed class TemporarySqliteDatabase : IDisposable
 
     public string ConnectionString { get; }
 
+    /// <summary>
+    /// Counts the rows in <paramref name="table"/>, including any which have expired.
+    /// </summary>
+    public long CountRows(string table)
+    {
+        using SqliteConnection connection = new(ConnectionString);
+        connection.Open();
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = $"SELECT COUNT(*) FROM \"{table}\";";
+
+        return (long)command.ExecuteScalar()!;
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
