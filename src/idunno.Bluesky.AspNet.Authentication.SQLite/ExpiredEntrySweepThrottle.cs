@@ -21,7 +21,6 @@ namespace idunno.Bluesky.AspNet.Authentication.SQLite;
 internal sealed class ExpiredEntrySweepThrottle
 {
     private readonly long _intervalMilliseconds;
-    private readonly Func<long> _now;
     private long _nextSweepAt;
 
     /// <summary>
@@ -31,27 +30,14 @@ internal sealed class ExpiredEntrySweepThrottle
     /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
     internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName)
-        : this(interval, paramName, static () => Environment.TickCount64)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="ExpiredEntrySweepThrottle"/> with an injectable time source.
-    /// </summary>
-    /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
-    /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
-    /// <param name="now">A function returning the current time as milliseconds, used in place of <see cref="Environment.TickCount64"/>.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
-    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, Func<long> now)
     {
         if (interval < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(paramName, interval, "The sweep interval cannot be negative.");
         }
 
-        _now = now;
         _intervalMilliseconds = (long)interval.TotalMilliseconds;
-        _nextSweepAt = _now() + _intervalMilliseconds;
+        _nextSweepAt = Environment.TickCount64 + _intervalMilliseconds;
     }
 
     /// <summary>
@@ -78,7 +64,7 @@ internal sealed class ExpiredEntrySweepThrottle
             return false;
         }
 
-        long now = _now();
+        long now = Environment.TickCount64;
         long nextSweepAt = Interlocked.Read(ref _nextSweepAt);
 
         if (now < nextSweepAt)
