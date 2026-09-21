@@ -25,9 +25,8 @@ public class SqliteExpiredEntrySweepTests
     private const string RefreshLocksTable = "idunno_bluesky_refresh_locks";
     private const string CorrelationStatesTable = "idunno_bluesky_correlation_states";
 
-    private static readonly TimeSpan s_shortTimeToLive = TimeSpan.FromMilliseconds(100);
     private static readonly TimeSpan s_shortSweepInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan s_afterBothElapse = TimeSpan.FromMilliseconds(400);
+    private static readonly TimeSpan s_afterSweepIntervalElapses = TimeSpan.FromMilliseconds(250);
 
     [Fact]
     public async Task WritingAnIdentitySweepsIdentitiesWhichHaveExpired()
@@ -37,13 +36,13 @@ public class SqliteExpiredEntrySweepTests
         using TemporarySqliteDatabase database = new();
         SqliteIdentityStore store = new(
             database.ConnectionString,
-            entryTimeToLive: s_shortTimeToLive,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
         Assert.Equal(1, database.CountRows(IdentitiesTable));
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        database.ExpireRows(IdentitiesTable);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -63,7 +62,7 @@ public class SqliteExpiredEntrySweepTests
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -78,13 +77,13 @@ public class SqliteExpiredEntrySweepTests
         using TemporarySqliteDatabase database = new();
         SqliteIdentityStore store = new(
             database.ConnectionString,
-            refreshLockLength: s_shortTimeToLive,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         Assert.NotNull(await store.StartRefresh(NewDid(), cancellationToken));
         Assert.Equal(1, database.CountRows(RefreshLocksTable));
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        database.ExpireRows(RefreshLocksTable);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -104,7 +103,7 @@ public class SqliteExpiredEntrySweepTests
 
         Assert.NotNull(await store.StartRefresh(NewDid(), cancellationToken));
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -119,12 +118,11 @@ public class SqliteExpiredEntrySweepTests
         using TemporarySqliteDatabase database = new();
         SqliteIdentityStore store = new(
             database.ConnectionString,
-            entryTimeToLive: s_shortTimeToLive,
             expiredEntrySweepInterval: TimeSpan.Zero);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        database.ExpireRows(IdentitiesTable);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -139,13 +137,13 @@ public class SqliteExpiredEntrySweepTests
         using TemporarySqliteDatabase database = new();
         SqliteCorrelationStateCache cache = new(
             database.ConnectionString,
-            entryTimeToLive: s_shortTimeToLive,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
         Assert.Equal(1, database.CountRows(CorrelationStatesTable));
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        database.ExpireRows(CorrelationStatesTable);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
@@ -165,7 +163,7 @@ public class SqliteExpiredEntrySweepTests
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
@@ -180,12 +178,11 @@ public class SqliteExpiredEntrySweepTests
         using TemporarySqliteDatabase database = new();
         SqliteCorrelationStateCache cache = new(
             database.ConnectionString,
-            entryTimeToLive: s_shortTimeToLive,
             expiredEntrySweepInterval: TimeSpan.Zero);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
-        await Task.Delay(s_afterBothElapse, cancellationToken);
+        database.ExpireRows(CorrelationStatesTable);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 

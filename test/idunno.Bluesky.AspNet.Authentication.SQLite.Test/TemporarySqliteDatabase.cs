@@ -53,6 +53,20 @@ public sealed class TemporarySqliteDatabase : IDisposable
         return (long)command.ExecuteScalar()!;
     }
 
+    /// <summary>
+    /// Marks every row in <paramref name="table"/> as expired.
+    /// </summary>
+    public void ExpireRows(string table)
+    {
+        using SqliteConnection connection = new(ConnectionString);
+        connection.Open();
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = $"UPDATE \"{table}\" SET \"ExpiresAtUtcTicks\" = @expiresAtUtcTicks;";
+        command.Parameters.AddWithValue("@expiresAtUtcTicks", DateTime.UtcNow.AddMinutes(-1).Ticks);
+        command.ExecuteNonQuery();
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
