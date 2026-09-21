@@ -22,7 +22,6 @@ public static partial class BlueskyServer
     /// </summary>
     /// <param name="limit">The maximum number of notifications to return. If specified this should be greater than 1 and less than or equal to 100.</param>
     /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
-    /// <param name="seenAt">The date and time notifications were last checked.</param>
     /// <param name="reasons">An optional collection of <see cref="NotificationReason"/>s to limit the results to.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -46,7 +45,6 @@ public static partial class BlueskyServer
     public static async Task<AtProtoHttpResult<NotificationCollection>> ListNotifications(
         int? limit,
         string? cursor,
-        DateTimeOffset? seenAt,
         IEnumerable<NotificationReason>? reasons,
         Uri service,
         AccessCredentials accessCredentials,
@@ -89,11 +87,6 @@ public static partial class BlueskyServer
 
                 queryString.Append(CultureInfo.InvariantCulture, $"reasons={Uri.EscapeDataString(reason.ToNotificationReasonValue())}&");
             }
-        }
-
-        if (seenAt is not null)
-        {
-            queryString.Append(CultureInfo.InvariantCulture, $"seenAt={Uri.EscapeDataString(seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))}");
         }
 
         if (queryString.Length > 0 && queryString[queryString.Length - 1] == '&')

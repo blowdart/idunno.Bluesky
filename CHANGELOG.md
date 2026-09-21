@@ -208,6 +208,8 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.ListNotifications()` and `BlueskyServer.ListNotifications()` no longer take a `seenAt` parameter, as it has been removed from the lexicon
+  and causes an error - see [APP-3082: deprecate notification seenAt parameter- #5538](https://github.com/bluesky-social/atproto/pull/5538).
 * `BlueskyAgent.GetTrends()` and `BlueskyServer.GetTrends()` now return a `RecommendationReadOnlyCollection<TrendView>` rather than an `ICollection<TrendView>`.
 * `BlueskyAgent.GetSuggestedUsers()` and `BlueskyServer.GetSuggestedUsers()` now return a `RecommendationReadOnlyCollection<ProfileView>` rather than an `ICollection<ProfileView>`.
 * `BlueskyAgent.GetPopularFeedGenerators()`, `GetSuggestedStarterPacks()`, `GetTaggedSuggestions()`, `GetTrendingTopics()` and `GetTrends()` now take an optional `subscribedLabelers` parameter before their cancellation token.

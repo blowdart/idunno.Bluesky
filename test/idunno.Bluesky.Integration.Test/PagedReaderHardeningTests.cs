@@ -38,7 +38,6 @@ public class PagedReaderHardeningTests
         BlueskyServer.ListNotifications(
             limit: 25,
             cursor: null,
-            seenAt: null,
             reasons: null,
             subscribedLabelers: null,
             service: TestServerBuilder.DefaultUri,

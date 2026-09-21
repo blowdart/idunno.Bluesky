@@ -158,30 +158,6 @@ public class NotificationRequestTests
     }
 
     [Fact]
-    public async Task ListNotificationsSendsSeenAtEscaped()
-    {
-        string queryString = string.Empty;
-
-        using TestServer testServer = CreateCapturingServer(
-            "/xrpc/app.bsky.notification.listNotifications",
-            EmptyNotificationsResponse,
-            q => queryString = q);
-
-        BlueskyAgent agent = CreateAgent(testServer);
-
-        DateTimeOffset seenAt = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-        AtProtoHttpResult<NotificationCollection> result = await agent.ListNotifications(
-            seenAt: seenAt,
-            cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.True(result.Succeeded);
-
-        string expected = Uri.EscapeDataString(seenAt.UtcDateTime.ToString("o", CultureInfo.InvariantCulture));
-        Assert.Contains($"seenAt={expected}", queryString, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task ListNotificationsThrowsWhenAReasonIsUnknown()
     {
         using TestServer testServer = CreateCapturingServer(
