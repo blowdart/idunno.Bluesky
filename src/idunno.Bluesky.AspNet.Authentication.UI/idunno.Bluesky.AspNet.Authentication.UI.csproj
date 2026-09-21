@@ -6,6 +6,8 @@
     <PackageTags>atproto;bluesky;aspnetcore;authentication;security;razorpages</PackageTags>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <StaticWebAssetBasePath>Bluesky</StaticWebAssetBasePath>
+    <IsTrimmable>false</IsTrimmable>
+    <IsAotCompatible>false</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup>

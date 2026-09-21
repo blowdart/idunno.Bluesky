@@ -2,43 +2,31 @@
 
 <#
 .SYNOPSIS
-    Checks idunno.AtProto and idunno.Bluesky for trimming and native AOT problems.
+    Checks supported idunno packages for trimming and Native AOT problems.
 
 .DESCRIPTION
-    Publishes the trimming test project with trimming and native AOT enabled. The publish itself is the test:
-    ILLink and ILC walk everything the test project touches and report an IL diagnostic for any call which is
-    not safe to trim or to compile ahead of time. TreatWarningsAsErrors turns those diagnostics into errors.
+    Runs three complementary checks:
 
-    Producing the native binary needs a platform linker, which the .NET SDK does not carry. Analysis does not.
-    ILLink and ILC ship as NuGet packages, run before the linker is invoked, and report every diagnostic
-    whether or not a linker is available, so a machine with only the .NET SDK still gets complete trimming and
-    AOT coverage. It just cannot produce a runnable binary.
+    * Whole-assembly trimming and Native AOT analysis for every package which claims compatibility.
+    * Offline execution of trimmed and Native AOT binaries which call public, unauthenticated AT Protocol and Bluesky APIs.
+    * The same offline smoke test against locally packed NuGet packages.
 
-    The two failures are therefore reported differently. A diagnostic is a problem with the libraries and fails
-    this script. A linker which is absent or cannot be found leaves the analysis results intact, and is reported
-    as a warning rather than a failure unless -RequireNativeBinary is passed.
+    The Razor Pages UI package is explicitly excluded because ASP.NET Core Razor Pages do not support trimming or Native AOT.
 
 .PARAMETER Rid
     The runtime identifier to publish for. Defaults to the runtime identifier of the machine running the script.
 
 .PARAMETER RequireNativeBinary
-    Treat the native binary as part of the test, so that a missing or unusable platform linker fails the script
-    rather than warning. Continuous integration builds, where the toolchain is expected to be present and a
-    missing one indicates a broken agent, should pass this.
+    Treat a missing or unusable platform linker as a failure. CI should pass this because its native toolchain is provisioned.
 
 .PARAMETER Diagnostic
-    Raise MSBuild output to diagnostic verbosity. The binary log is written whether or not this is specified,
-    and is the better starting point, so this is rarely needed.
+    Raise MSBuild output to diagnostic verbosity. Binary logs are always written beneath trimming/artifacts/logs.
 
 .EXAMPLE
     ./trimTest.ps1
 
-    Publishes for the current machine's runtime identifier, reporting a missing linker as a warning.
-
 .EXAMPLE
     ./trimTest.ps1 -Rid linux-x64 -RequireNativeBinary
-
-    Publishes for linux-x64 and requires the native binary to be produced.
 #>
 
 [CmdletBinding()]
@@ -51,25 +39,62 @@ param (
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$projectPath = Join-Path -Path $PSScriptRoot -ChildPath 'trimming' | Join-Path -ChildPath 'idunno.TrimmingTest.csproj'
-$binaryLogPath = Join-Path -Path $PSScriptRoot -ChildPath 'trimming' | Join-Path -ChildPath 'trimmingTest.binlog'
+$trimmingPath = Join-Path -Path $PSScriptRoot -ChildPath 'trimming'
+$artifactsPath = Join-Path -Path $trimmingPath -ChildPath 'artifacts'
+$logsPath = Join-Path -Path $artifactsPath -ChildPath 'logs'
+$publishPath = Join-Path -Path $artifactsPath -ChildPath 'publish'
+$packageFeedPath = Join-Path -Path $artifactsPath -ChildPath 'packages'
+$packageCachePath = Join-Path -Path $artifactsPath -ChildPath 'package-cache'
+$packageNuGetConfigPath = Join-Path -Path $artifactsPath -ChildPath 'package-consumer.nuget.config'
+$sizeReportPath = Join-Path -Path $artifactsPath -ChildPath 'size-report.md'
+
+$coreAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'CoreAnalysis' |
+    Join-Path -ChildPath 'idunno.Trimming.CoreAnalysis.csproj'
+$authenticationAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'AuthenticationAnalysis' |
+    Join-Path -ChildPath 'idunno.Trimming.AuthenticationAnalysis.csproj'
+$publicApiSmokeProject = Join-Path -Path $trimmingPath -ChildPath 'PublicApiSmoke' |
+    Join-Path -ChildPath 'idunno.Trimming.PublicApiSmoke.csproj'
+$packageConsumerSmokeProject = Join-Path -Path $trimmingPath -ChildPath 'PackageConsumerSmoke' |
+    Join-Path -ChildPath 'idunno.Trimming.PackageConsumerSmoke.csproj'
+$packageAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'PackageAnalysis' |
+    Join-Path -ChildPath 'idunno.Trimming.PackageAnalysis.csproj'
+
+$analysisProjects = @(
+    @{
+        Name = 'core'
+        Path = $coreAnalysisProject
+    },
+    @{
+        Name = 'authentication'
+        Path = $authenticationAnalysisProject
+    }
+)
+
+$supportedProjects = @(
+    'src/idunno.AtProto.Types/idunno.AtProto.Types.csproj',
+    'src/idunno.AtProto/idunno.AtProto.csproj',
+    'src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj',
+    'src/idunno.Bluesky/idunno.Bluesky.csproj',
+    'src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj',
+    'src/idunno.Bluesky.AspNet.Authentication.MySQL/idunno.Bluesky.AspNet.Authentication.MySQL.csproj',
+    'src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj',
+    'src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj'
+)
+
+$excludedProjects = @{
+    'src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj' =
+        'Razor Pages do not support trimming or Native AOT.'
+}
 
 if ([string]::IsNullOrWhiteSpace($Rid))
 {
     $Rid = [System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier
 }
 
-# The ILCompiler targets find the MSVC linker by running findvcvarsall.bat, which calls Visual Studio's
-# vcvarsall.bat and redirects only its standard output. vcvarsall.bat runs vswhere.exe without qualifying it,
-# and vswhere.exe installs under the 32 bit program files directory on the system drive even when Visual Studio
-# itself does not, so on a machine where Visual Studio is installed elsewhere that call fails and cmd reports it
-# on standard error, which the redirect does not cover. MSBuild captures both streams as the console output, so
-# the error text ends up prefixed to the linker directory the targets parse out of it, and the build then tries
-# to run a linker whose path is an error message. Putting vswhere.exe on the path lets that internal lookup
-# succeed, so nothing is written to standard error and the output stays parseable.
 if ($IsWindows)
 {
-    $vsInstallerDirectory = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'Microsoft Visual Studio' | Join-Path -ChildPath 'Installer'
+    $vsInstallerDirectory = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'Microsoft Visual Studio' |
+        Join-Path -ChildPath 'Installer'
 
     if ((Test-Path -Path (Join-Path -Path $vsInstallerDirectory -ChildPath 'vswhere.exe')) -and
         (($env:PATH -split [System.IO.Path]::PathSeparator) -notcontains $vsInstallerDirectory))
@@ -78,105 +103,420 @@ if ($IsWindows)
     }
 }
 
-$arguments = @(
-    'publish'
-    $projectPath
-    '--configuration', 'Release'
-    '--runtime', $Rid
-    "-bl:$binaryLogPath"
+if (Test-Path -Path $artifactsPath)
+{
+    Remove-Item -Path $artifactsPath -Recurse -Force
+}
+
+New-Item -Path $logsPath -ItemType Directory -Force | Out-Null
+New-Item -Path $publishPath -ItemType Directory -Force | Out-Null
+New-Item -Path $packageFeedPath -ItemType Directory -Force | Out-Null
+New-Item -Path $packageCachePath -ItemType Directory -Force | Out-Null
+
+$escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($packageFeedPath)
+@"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="trimming-packages" value="$escapedPackageFeedPath" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="trimming-packages">
+      <package pattern="idunno.AtProto" />
+      <package pattern="idunno.AtProto.Types" />
+      <package pattern="idunno.AtProto.OAuthCallback" />
+      <package pattern="idunno.Bluesky" />
+      <package pattern="idunno.Bluesky.AspNet.Authentication" />
+      <package pattern="idunno.Bluesky.AspNet.Authentication.MySQL" />
+      <package pattern="idunno.Bluesky.AspNet.Authentication.Redis" />
+      <package pattern="idunno.Bluesky.AspNet.Authentication.SQLite" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+"@ | Set-Content -Path $packageNuGetConfigPath
+
+function ConvertTo-RepositoryPath
+{
+    param (
+        [Parameter(Mandatory)]
+        [string] $Path
+    )
+
+    return [System.IO.Path]::GetRelativePath($PSScriptRoot, $Path).Replace('\', '/')
+}
+
+function Assert-SetEqual
+{
+    param (
+        [Parameter(Mandatory)]
+        [string] $Description,
+        [Parameter(Mandatory)]
+        [string[]] $Expected,
+        [Parameter(Mandatory)]
+        [string[]] $Actual
+    )
+
+    $difference = @(Compare-Object -ReferenceObject $Expected -DifferenceObject $Actual)
+
+    if ($difference.Count -ne 0)
+    {
+        Write-Host "$Description is out of date." -ForegroundColor Red
+        $difference | Format-Table -AutoSize | Out-Host
+        exit 1
+    }
+}
+
+function Invoke-DotNet
+{
+    param (
+        [Parameter(Mandatory)]
+        [string] $Description,
+        [Parameter(Mandatory)]
+        [string[]] $Arguments,
+        [switch] $AllowMissingNativeLinker
+    )
+
+    Write-Host ''
+    Write-Host $Description -ForegroundColor Cyan
+
+    $previousErrorActionPreference = $ErrorActionPreference
+
+    if (Test-Path -Path 'variable:PSNativeCommandUseErrorActionPreference')
+    {
+        $previousNativeCommandUseErrorActionPreference = $PSNativeCommandUseErrorActionPreference
+        $PSNativeCommandUseErrorActionPreference = $false
+    }
+
+    try
+    {
+        $ErrorActionPreference = 'Continue'
+
+        & dotnet @Arguments 2>&1 |
+            Tee-Object -Variable commandOutput |
+            ForEach-Object { Write-Host $_ }
+        $commandExitCode = $LASTEXITCODE
+    }
+    finally
+    {
+        $ErrorActionPreference = $previousErrorActionPreference
+
+        if (Test-Path -Path 'variable:previousNativeCommandUseErrorActionPreference')
+        {
+            $PSNativeCommandUseErrorActionPreference = $previousNativeCommandUseErrorActionPreference
+        }
+    }
+
+    $outputLines = @($commandOutput | ForEach-Object { $_.ToString() })
+    $diagnostics = @($outputLines | Where-Object { $_ -match '\bIL\d{4}\b' })
+
+    if ($diagnostics.Count -ne 0)
+    {
+        Write-Host ''
+        Write-Host "Trimming and Native AOT analysis reported $($diagnostics.Count) diagnostics." -ForegroundColor Red
+        $diagnostics | ForEach-Object { Write-Host $_ }
+        exit 1
+    }
+
+    if ($commandExitCode -eq 0)
+    {
+        return $true
+    }
+
+    $commandText = $outputLines -join [Environment]::NewLine
+
+    if ($AllowMissingNativeLinker -and
+        (($commandText -match 'Platform linker.*not found') -or ($commandText -match 'MSB3073')))
+    {
+        Write-Host 'Native analysis passed, but a platform linker was not available.' -ForegroundColor Yellow
+        return $false
+    }
+
+    Write-Host "$Description failed with exit code $commandExitCode." -ForegroundColor Red
+    exit $commandExitCode
+}
+
+function Invoke-Publish
+{
+    param (
+        [Parameter(Mandatory)]
+        [string] $Name,
+        [Parameter(Mandatory)]
+        [string] $Project,
+        [Parameter(Mandatory)]
+        [string] $Framework,
+        [Parameter(Mandatory)]
+        [bool] $Aot,
+        [string[]] $AdditionalArguments = @()
+    )
+
+    $mode = if ($Aot) { 'aot' } else { 'trimmed' }
+    $outputPath = Join-Path -Path $publishPath -ChildPath "$Name-$Framework-$mode"
+    $binaryLogPath = Join-Path -Path $logsPath -ChildPath "$Name-$Framework-$mode.binlog"
+
+    $arguments = @(
+        'publish',
+        $Project,
+        '--configuration', 'Release',
+        '--framework', $Framework,
+        '--runtime', $Rid,
+        '--self-contained', 'true',
+        '--output', $outputPath,
+        "-bl:$binaryLogPath",
+        '-p:PublishTrimmed=true',
+        "-p:PublishAot=$($Aot.ToString().ToLowerInvariant())",
+        '-p:TrimmerSingleWarn=false'
+    )
+
+    if ($Diagnostic)
+    {
+        $arguments += '--verbosity'
+        $arguments += 'diagnostic'
+    }
+
+    $arguments += $AdditionalArguments
+
+    $allowMissingNativeLinker = $Aot -and -not $RequireNativeBinary
+    $published = Invoke-DotNet `
+        -Description "Publishing $Name for $Framework in $mode mode." `
+        -Arguments $arguments `
+        -AllowMissingNativeLinker:$allowMissingNativeLinker
+
+    return @{
+        Name = "$Name $Framework $mode"
+        OutputPath = $outputPath
+        Published = $published
+    }
+}
+
+function Invoke-SmokeExecutable
+{
+    param (
+        [Parameter(Mandatory)]
+        [hashtable] $PublishResult,
+        [Parameter(Mandatory)]
+        [string] $ExecutableName
+    )
+
+    if (-not $PublishResult.Published)
+    {
+        return
+    }
+
+    $executableFileName = if ($IsWindows) { "$ExecutableName.exe" } else { $ExecutableName }
+    $executablePath = Join-Path -Path $PublishResult.OutputPath -ChildPath $executableFileName
+
+    if (-not (Test-Path -Path $executablePath -PathType Leaf))
+    {
+        Write-Host "Expected smoke executable $executablePath was not produced." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host ''
+    Write-Host "Running $($PublishResult.Name)." -ForegroundColor Cyan
+    & $executablePath
+
+    if ($LASTEXITCODE -ne 0)
+    {
+        exit $LASTEXITCODE
+    }
+}
+
+function Get-PackageVersion
+{
+    $packages = @(
+        Get-ChildItem -Path $packageFeedPath -Filter 'idunno.Bluesky.*.nupkg' |
+            Where-Object { $_.Name -match '^idunno\.Bluesky\.\d' }
+    )
+
+    if ($packages.Count -ne 1)
+    {
+        Write-Host "Expected one idunno.Bluesky package, but found $($packages.Count)." -ForegroundColor Red
+        exit 1
+    }
+
+    $prefix = 'idunno.Bluesky.'
+    return $packages[0].Name.Substring(
+        $prefix.Length,
+        $packages[0].Name.Length - $prefix.Length - '.nupkg'.Length)
+}
+
+$actualProjects = @(
+    Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'src') -Filter '*.csproj' -Recurse |
+        ForEach-Object { ConvertTo-RepositoryPath -Path $_.FullName } |
+        Sort-Object
 )
+$classifiedProjects = @($supportedProjects + $excludedProjects.Keys | Sort-Object)
+Assert-SetEqual -Description 'The trimming package classification' -Expected $actualProjects -Actual $classifiedProjects
 
-if ($Diagnostic)
+$expectedRootAssemblies = @(
+    $supportedProjects |
+        ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) } |
+        Sort-Object
+)
+$actualRootAssemblies = @(
+    $analysisProjects |
+        ForEach-Object {
+            [xml] $project = Get-Content -Path $_.Path
+            $project.Project.ItemGroup.TrimmerRootAssembly |
+                ForEach-Object { $_.Include }
+        } |
+        Sort-Object
+)
+Assert-SetEqual -Description 'The whole-assembly analysis roots' -Expected $expectedRootAssemblies -Actual $actualRootAssemblies
+
+foreach ($excludedProject in $excludedProjects.GetEnumerator())
 {
-    $arguments += '-v:diag'
+    $projectPath = Join-Path -Path $PSScriptRoot -ChildPath $excludedProject.Key
+
+    foreach ($property in @('IsTrimmable', 'IsAotCompatible'))
+    {
+        $propertyValue = (& dotnet msbuild $projectPath "-getProperty:$property" '-p:TargetFramework=net10.0' -nologo).Trim()
+
+        if ($LASTEXITCODE -ne 0 -or $propertyValue -ne 'false')
+        {
+            Write-Host "$($excludedProject.Key) must set $property to false. $($excludedProject.Value)" -ForegroundColor Red
+            exit 1
+        }
+    }
 }
 
-Write-Host "Publishing $projectPath for $Rid."
+$publishResults = [System.Collections.Generic.List[hashtable]]::new()
 
-# dotnet is expected to fail here, and the exit code and the output are the results this script interprets, so
-# neither a non zero exit code nor anything written to standard error may raise a terminating error. Native
-# command exit codes honour $ErrorActionPreference from PowerShell 7.4 onwards.
-$previousErrorActionPreference = $ErrorActionPreference
-
-if (Test-Path -Path 'variable:PSNativeCommandUseErrorActionPreference')
+foreach ($framework in @('net9.0', 'net10.0'))
 {
-    $previousNativeCommandUseErrorActionPreference = $PSNativeCommandUseErrorActionPreference
-    $PSNativeCommandUseErrorActionPreference = $false
+    foreach ($analysisProject in $analysisProjects)
+    {
+        $publishResults.Add((Invoke-Publish `
+            -Name "$($analysisProject.Name)-analysis" `
+            -Project $analysisProject.Path `
+            -Framework $framework `
+            -Aot $false))
+    }
+
+    $smokeResult = Invoke-Publish `
+        -Name 'public-api-smoke' `
+        -Project $publicApiSmokeProject `
+        -Framework $framework `
+        -Aot $false
+    $publishResults.Add($smokeResult)
+    Invoke-SmokeExecutable -PublishResult $smokeResult -ExecutableName 'idunno.Trimming.PublicApiSmoke'
 }
+
+foreach ($analysisProject in $analysisProjects)
+{
+    $publishResults.Add((Invoke-Publish `
+        -Name "$($analysisProject.Name)-analysis" `
+        -Project $analysisProject.Path `
+        -Framework 'net10.0' `
+        -Aot $true))
+}
+
+$nativeSmokeResult = Invoke-Publish `
+    -Name 'public-api-smoke' `
+    -Project $publicApiSmokeProject `
+    -Framework 'net10.0' `
+    -Aot $true
+$publishResults.Add($nativeSmokeResult)
+Invoke-SmokeExecutable -PublishResult $nativeSmokeResult -ExecutableName 'idunno.Trimming.PublicApiSmoke'
+
+foreach ($packageProject in $supportedProjects)
+{
+    $packLogName = [System.IO.Path]::GetFileNameWithoutExtension($packageProject)
+    $packArguments = @(
+        'pack',
+        (Join-Path -Path $PSScriptRoot -ChildPath $packageProject),
+        '--configuration', 'Release',
+        '--output', $packageFeedPath,
+        "-bl:$(Join-Path -Path $logsPath -ChildPath "$packLogName-pack.binlog")"
+    )
+
+    [void](Invoke-DotNet -Description "Packing $packLogName." -Arguments $packArguments)
+}
+
+$packageVersion = Get-PackageVersion
+$previousNuGetPackages = $env:NUGET_PACKAGES
+$env:NUGET_PACKAGES = $packageCachePath
 
 try
 {
-    $ErrorActionPreference = 'Continue'
+    $packageArguments = @(
+        '-p:UsePackedPackages=true',
+        "-p:IdunnoPackageVersion=$packageVersion",
+        '--configfile', $packageNuGetConfigPath
+    )
 
-    & dotnet @arguments 2>&1 | Tee-Object -Variable publishOutput
-    $publishExitCode = $LASTEXITCODE
+    foreach ($framework in @('net9.0', 'net10.0'))
+    {
+        $packageAnalysisResult = Invoke-Publish `
+            -Name 'package-analysis' `
+            -Project $packageAnalysisProject `
+            -Framework $framework `
+            -Aot $false `
+            -AdditionalArguments $packageArguments
+        $publishResults.Add($packageAnalysisResult)
+
+        $packageSmokeResult = Invoke-Publish `
+            -Name 'package-consumer-smoke' `
+            -Project $packageConsumerSmokeProject `
+            -Framework $framework `
+            -Aot $false `
+            -AdditionalArguments $packageArguments
+        $publishResults.Add($packageSmokeResult)
+        Invoke-SmokeExecutable -PublishResult $packageSmokeResult -ExecutableName 'idunno.Trimming.PackageConsumerSmoke'
+    }
+
+    $nativePackageAnalysisResult = Invoke-Publish `
+        -Name 'package-analysis' `
+        -Project $packageAnalysisProject `
+        -Framework 'net10.0' `
+        -Aot $true `
+        -AdditionalArguments $packageArguments
+    $publishResults.Add($nativePackageAnalysisResult)
+
+    $nativePackageSmokeResult = Invoke-Publish `
+        -Name 'package-consumer-smoke' `
+        -Project $packageConsumerSmokeProject `
+        -Framework 'net10.0' `
+        -Aot $true `
+        -AdditionalArguments $packageArguments
+    $publishResults.Add($nativePackageSmokeResult)
+    Invoke-SmokeExecutable -PublishResult $nativePackageSmokeResult -ExecutableName 'idunno.Trimming.PackageConsumerSmoke'
 }
 finally
 {
-    $ErrorActionPreference = $previousErrorActionPreference
-
-    if (Test-Path -Path 'variable:previousNativeCommandUseErrorActionPreference')
-    {
-        $PSNativeCommandUseErrorActionPreference = $previousNativeCommandUseErrorActionPreference
-    }
+    $env:NUGET_PACKAGES = $previousNuGetPackages
 }
 
-$publishText = ($publishOutput | Out-String)
-$diagnostics = @($publishOutput | ForEach-Object { $_.ToString() } | Where-Object { $_ -match 'IL\d{4}' })
+$sizeReport = @(
+    '## Trimming and Native AOT output sizes',
+    '',
+    '| Output | Files | Size |',
+    '|---|---:|---:|'
+)
 
-if ($diagnostics.Count -gt 0)
+foreach ($publishResult in $publishResults | Where-Object { $_.Published })
 {
-    Write-Host ''
-    Write-Host "Trimming and AOT analysis reported $($diagnostics.Count) diagnostics." -ForegroundColor Red
-    Write-Host "A binary log has been written to $binaryLogPath."
-    Write-Host ''
-    Write-Host 'If a diagnostic is a false positive, suppress it with UnconditionalSuppressMessage, not with'
-    Write-Host 'SuppressMessage, which is conditional on CODE_ANALYSIS and so is never written into the assembly'
-    Write-Host 'for the trimmer to read. Apply it to the member whose IL the diagnostic names. A static field'
-    Write-Host 'initializer is compiled into the generated static constructor, so a suppression on the field'
-    Write-Host 'itself is never consulted and belongs on the declaring type.'
-
-    exit 1
-}
-
-if ($publishExitCode -eq 0)
-{
-    Write-Host ''
-    Write-Host 'Trimming and AOT analysis reported no diagnostics, and the native binary was produced.' -ForegroundColor Green
-
-    exit 0
-}
-
-# A platform linker which is missing or unusable leaves the analysis results intact, so it is reported
-# separately from a diagnostic. The ILCompiler targets report it in one of two ways. Both Windows and Unix raise
-# a "Platform linker not found" error when no linker can be located at all. When a linker path is produced but
-# cannot be run, the Exec task which invokes it reports MSB3073 instead, which is what the redirection problem
-# described above produces.
-if ((($publishText -match 'Platform linker.*not found') -or ($publishText -match 'MSB3073')) -and -not $RequireNativeBinary)
-{
-    Write-Host ''
-    Write-Host 'Trimming and AOT analysis reported no diagnostics, so the libraries are trimming and AOT clean.' -ForegroundColor Green
-    Write-Host 'The native binary could not be linked because a platform linker was not available.' -ForegroundColor Yellow
-
-    if ($IsWindows)
+    $files = @(Get-ChildItem -Path $publishResult.OutputPath -File -Recurse)
+    $totalBytes = ($files | Measure-Object -Property Length -Sum).Sum
+    $size = if ($totalBytes -ge 1MB)
     {
-        Write-Host 'Install the Desktop development with C++ workload, either through Visual Studio or through the'
-        Write-Host 'standalone Visual Studio Build Tools, to produce a runnable binary.'
-    }
-    elseif ($IsMacOS)
-    {
-        Write-Host 'Install the Xcode command line tools, with xcode-select --install, to produce a runnable binary.'
+        '{0:N2} MB' -f ($totalBytes / 1MB)
     }
     else
     {
-        Write-Host 'Install clang and zlib1g-dev to produce a runnable binary.'
+        '{0:N2} KB' -f ($totalBytes / 1KB)
     }
 
-    exit 0
+    $sizeReport += "| $($publishResult.Name) | $($files.Count) | $size |"
 }
 
-Write-Host ''
-Write-Host "Publish failed with exit code $publishExitCode." -ForegroundColor Red
-Write-Host "A binary log has been written to $binaryLogPath."
+$sizeReport | Set-Content -Path $sizeReportPath
 
-exit $publishExitCode
+Write-Host ''
+Write-Host 'All trimming and Native AOT checks passed.' -ForegroundColor Green
+Write-Host "Output sizes were written to $sizeReportPath."

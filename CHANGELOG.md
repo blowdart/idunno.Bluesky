@@ -151,6 +151,8 @@
 * `AtProtoAgent.CreateOAuthClient()` is now `public virtual`, so the transport an agent uses for OAuth can be replaced.
 * `AtProtoAgent.RefreshCredentials()` now throws `SecurityTokenValidationException` when the authorization server issues a token for an account other
   than the one being refreshed.
+* The `AddAtProtoAgentOptions()` overloads which bind configuration are now annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`, matching
+  their use of the runtime configuration binder.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -160,6 +162,10 @@
   rather than returning a task cancelled with a token which was never cancelled.
 * The documentation for `CallbackServer.SuccessTitle` and `CallbackServer.ResponseStyleSheet` now says that the value is written into the `head` of the
   page verbatim, so it has to carry its own `title` or `style` element.
+
+#### idunno.Bluesky.AspNet.Authentication.UI
+
+* The package now explicitly reports that it is not trimming or Native AOT compatible, because its Razor Pages require runtime code generation.
 
 #### idunno.Bluesky
 

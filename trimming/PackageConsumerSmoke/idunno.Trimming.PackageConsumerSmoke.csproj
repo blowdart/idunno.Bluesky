@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <Configurations>Debug;Release;CodeQL</Configurations>
+    <UsePackedPackages Condition="'$(UsePackedPackages)' == ''">false</UsePackedPackages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\PublicApiSmoke\Program.cs" Link="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UsePackedPackages)' != 'true'">
+    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UsePackedPackages)' == 'true'">
+    <PackageReference Include="idunno.AtProto" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky" VersionOverride="$(IdunnoPackageVersion)" />
+  </ItemGroup>
+
+</Project>
