@@ -32,18 +32,16 @@ or through the agent builder
 ```c#
 var service = new Uri("https://pds.example.com");
 
-var builder = AtProtoAgent.CreateBuilder();
+var builder = AtProtoAgent.CreateBuilder()
     .ForService(service)
-    .ConfigureJsonOptions(options =>
+    .ConfigureHttpJsonOptions(options =>
     {
         options.SerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
     });
 
-using var agent = agent.Build()
-{
-    // Your code to use the agent
-};
+using var agent = builder.Build();
 
+// Your code to use the agent
 ```
 
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.

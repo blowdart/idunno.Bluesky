@@ -43,8 +43,6 @@ using (var agent = new BlueskyAgent(
             callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
             await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
-
-            await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
         }
     }
 ```

@@ -9,7 +9,7 @@ Each sample uses the `limit` and `cursor` parameters to get their results one pa
 For example, to page through notifications, with each page containing a maximum of five results you would write the following:.
 
 ```c#
-HttpResult<NotificationsView> notifications = 
+AtProtoHttpResult<NotificationsView> notifications = 
      await agent.ListNotifications(5);
 ```
 The first call to `ListNotifications()` uses the limit parameter to control how many notifications are returned from the API.
@@ -30,10 +30,10 @@ if (notifications.Succeeded && notifications.Result.Count != 0)
         notifications = 
             await agent.ListNotifications(
                 limit: 5, 
-                cursor: notifications.Result.Cursor));
+                cursor: notifications.Result.Cursor);
 
-    } while (notificationsListResult.Succeeded &&
-             !string.IsNullOrEmpty(notificationsListResult.Result.Cursor))
+    } while (notifications.Succeeded &&
+             !string.IsNullOrEmpty(notifications.Result.Cursor));
 }
 ```
 

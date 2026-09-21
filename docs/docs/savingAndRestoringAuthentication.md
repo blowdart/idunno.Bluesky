@@ -22,17 +22,16 @@ described in more detail [below](#credentialsUpdatedAsync).
 You can subscribe to these events by adding a handler to the event. For example:
 
 ```c#
-var agent = new BlueskyAgent()
+var agent = new BlueskyAgent();
+
+agent.Authenticated += (sender, args) =>
 {
-    agent.Authenticated += (sender, args) =>
-    {
-        Console.WriteLine("Authenticated");
-        // Now persist the refresh token and any DPoPKey and DPopNonce, along with the service URI and DID
-        // it belongs to somewhere secure.
-        //
-        // Optionally you can also persist the handle as an indexer to support multiple accounts within the same application.
-    };
-}
+    Console.WriteLine("Authenticated");
+    // Now persist the refresh token and any DPoPKey and DPopNonce, along with the service URI and DID
+    // it belongs to somewhere secure.
+    //
+    // Optionally you can also persist the handle as an indexer to support multiple accounts within the same application.
+};
 ```
 
 The `Authenticated` event is raised when a login is successful and a new session is created.The `CredentialsUpdated` event is raised when the background

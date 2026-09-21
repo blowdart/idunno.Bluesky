@@ -58,7 +58,7 @@ use the DraftEmbedRecord class which takes a `StrongReference` to the post (or l
 
 ## Retrieving and manipulating drafts
 
-To retrieve a draft, use the `GetDrafts` method, which will return a collection of `Draft`s. This returns a pageable view which 
+To retrieve a draft, use the `GetDrafts` method, which will return a collection of `DraftView`s. This returns a pageable view which 
 you can then present the list to your user and allow them to pick which one to reload into your UI.
 
 If the user edits and draft and wants to resave it as a draft, use the `UpdateDraft` method, which takes a `DraftWithId` instance.

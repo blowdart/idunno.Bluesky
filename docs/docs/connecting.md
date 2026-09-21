@@ -61,7 +61,7 @@ if (!loginResult.Succeeded &&
 Some users run their own Personal Data Servers, and/or have an [decentralized identifier](https://www.w3.org/TR/did-core/) (DID) that isn't part
 of the [directory](https://web.plc.directory/) Bluesky runs. Whilst you can simply ask a user for their PDS location
 you can also use the `ResolveHandle` method in the `AtProtoAgent` class to resolve a handle to a DID, and then use the
-`ResolveDIDDocument` method in the `DirectoryServer` to discover the location of their PDS. Once you have a user's PDS all write, update and delete operations
+`ResolveDidDocument` method in the `DirectoryServer` to discover the location of their PDS. Once you have a user's PDS all write, update and delete operations
 should be performed against that PDS. The `AtProtoAgent` `Login` method does this behind the scenes so you don't have to.
 
 ## <a name="oauth">Authenticating with OAuth</a>
@@ -106,7 +106,7 @@ Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, handle, cancellation
 
 // Save the state, and persist it in whatever way is suitable for your application,
 // to be used when the response comes back from the OAuth server.
-OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
+OAuthLoginState oAuthLoginState = oAuthClient.State;
 
 // Send the user to the startUri in a way suitable for your application,
 // a redirection for web application or spawning a browser for a desktop application.
@@ -167,16 +167,15 @@ var agent = new BlueskyAgent(new BlueskyAgentOptions()
     });
 
 string callbackData;
+OAuthClient oAuthClient = agent.CreateOAuthClient();
 
 await using var callbackServer = new CallbackServer(
     CallbackServer.GetRandomUnusedPort(),
     loggerFactory: loggerFactory);
 {
-    OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
-
     // We dynamically set the return URI as the callback server will listen on a random free port.
     Uri startUri = await agent.BuildOAuth2LoginUri(
-        uriBuilderOAuthClient,
+        oAuthClient,
         handle,
         returnUri: callbackServer.Uri,
         cancellationToken: cancellationToken);
@@ -264,7 +263,7 @@ using (var agent = new BlueskyAgent(new BlueskyAgentOptions()
 
 ### <a name="disablingTokenRefresh">Disabling token refresh</a>
 
-If you want to disable automatic authentication token refresh in an agent you can do that by the `EnableTokenRefresh` property in options to false.
+If you want to disable automatic authentication token refresh in an agent you can do that by setting the `EnableBackgroundTokenRefresh` property in options to `false`.
 Eventually the access token will expire and APIs will start returning errors. You can call `RefreshCredentials()` to refresh the access token manually.
 
 ```c#

@@ -20,15 +20,14 @@ using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
     configure.SetMinimumLevel(LogLevel.Debug);
 });
 
-using var agent = new BlueSkyAgent(
+using var agent = new BlueskyAgent(
     options: new BlueskyAgentOptions()
     {
         LoggerFactory = loggerFactory
-    }))
-{
-    await agent.Login(handle, password);
-    await agent.Logout();
-}
+    });
+
+await agent.Login(handle, password);
+await agent.Logout();
 ```
 
 > [!IMPORTANT]

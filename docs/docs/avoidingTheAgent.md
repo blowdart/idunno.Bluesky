@@ -16,7 +16,7 @@ record types as C# records, so you can work with strongly typed records.
 To discover the PDS endpoint for a user you first resolve the DID from the user handle, then resolve the PDS for the DID.
 
 ```c#
-sring userHandle = "example.bsky.social";
+string userHandle = "example.bsky.social";
 
 var did = await idunno.AtProto.Resolution.ResolveHandle(userHandle, cancellationToken: cancellationToken);
 if (did is null)
@@ -78,7 +78,6 @@ var createSessionResult = await AtProtoServer.CreateSession(
                 identifier: userHandle,
                 password: password,
                 authFactorToken: null,
-                authFactorToken: authCode,
                 httpClient: httpClient);
 
 if (createSessionResult.Succeeded)
@@ -92,7 +91,7 @@ else
 ```
 
 You must check the `CreateSessionResult` to ensure the session was created successfully. If a user has 2FA enabled
-the `CreateSession` call will fail and the `AtErrorDetails` property will have an `Error` value of `AuthFactorCodeRequired`.
+the `CreateSession` call will fail and the `AtErrorDetail` property will have an `Error` value of `AuthFactorCodeRequired`.
 If that is returned you will need prompt the user for, and provide the MFA token in the `authFactorToken` parameter.
 
 Once you have the access credentials you perform create, update and delete operations. For example, to create a new
@@ -149,7 +148,8 @@ var putRecordResult = await AtProtoServer.PutRecord(
     swapCommit: null,
     swapRecord: getRecordResult.Result.Cid,
     service: pds,
-    accessCredentials: accessCredentials);
+    accessCredentials: accessCredentials,
+    httpClient: httpClient);
 ```
 
 Here you can use the `swapRecord` parameter to ensure you are updating the version of the record you think you are. If
@@ -161,7 +161,7 @@ Finally, to delete the record you just created you would do:
 var deleteRecordResult = await AtProtoServer.DeleteRecord(
     repo: did,
     collection: StatusphereConstants.Collection,
-    rKey: createResult.Result.Uri.RecordKey!,
+    rKey: createRecordResult.Result.Uri.RecordKey!,
     swapCommit: null,
     swapRecord: null,
     service: pds,

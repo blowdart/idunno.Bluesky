@@ -147,7 +147,7 @@ This time around we're going to have an setting, `WatchWords`, which will be wor
    [!code-csharp[](code/WatcherBot/Step4/ValidateBotOptions.cs)]
 1. Open `WatcherBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
    [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L17-L21)]
-1. Still in `BlueskyBot.csproj` add the following lines before the closing `</project>`
+1. Still in `WatcherBot.csproj` add the following lines before the closing `</project>`
    [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L23-L26)]
 1. Click on `Program.cs` and make the following changes
    [!code-xml[](code/WatcherBot/Step4/Program.cs?highlight=17-22,31-92)]

@@ -11,8 +11,8 @@ For small video uploads you can use the `UploadVideo()` method.
 
 // Read the video from a file into a byte array
 byte[] videoAsBytes;
-using (FileStream fs = File.OpenRead(pathToImage))
-using (MemoryStream ms = new())
+using (FileStream fs = File.OpenRead(pathToVideo))
+using (MemoryStream memoryStream = new())
 {
     fs.CopyTo(memoryStream);
     videoAsBytes = memoryStream.ToArray();
@@ -20,7 +20,7 @@ using (MemoryStream ms = new())
 
 // Upload the video
 var videoUploadResult = await agent.UploadVideo(
-    fileName:Path.GetFileName(pathToImage),
+    fileName:Path.GetFileName(pathToVideo),
     video:videoAsBytes,
     mimeType: "video/mp4");
 
@@ -287,15 +287,15 @@ if you have captions in different languages.
 ```c#
 // Read the captions from a file into a byte array
 byte[] captionsAsBytes;
-using (FileStream fs = File.OpenRead(pathToImage))
-using (MemoryStream ms = new())
+using (FileStream fs = File.OpenRead(pathToCaptions))
+using (MemoryStream memoryStream = new())
 {
     fs.CopyTo(memoryStream);
     captionsAsBytes = memoryStream.ToArray();
 }
 
 var captionUploadResult =
-  await agent.UploadCaptions(captionsAsBytes, "en")
+  await agent.UploadCaptions(captionsAsBytes, "en");
 
 // Quick fail - you'd want to be more graceful in handling errors.
 captionUploadResult.EnsureSucceeded();

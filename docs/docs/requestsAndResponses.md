@@ -21,7 +21,7 @@ the `StatusCode` property will be `HttpStatusCode.OK`.
 
 If a request has **failed**, either at the HTTP or the API layer then the `Succeeded` property on the returned result will be `false`, and
 the `Result` property will likely be `null`. The `StatusCode` property will contain the HTTP status code that returned by API call, and,
-if the API call reached the API endpoint the `Error` property will probably contain any error message returned by the endpoint.
+if the API call reached the API endpoint the `AtErrorDetail` property will probably contain any error message returned by the endpoint.
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the login succeeded you would
 
@@ -30,7 +30,7 @@ For example, a login call returns an `AtProtoHttpResult<bool>`. To check the log
 
    If `Succeeded` is `false` you use the `StatusCode` property to examine the HTTP status code returned by the API, then
    1. If the `StatusCode` property is `HttpStatusCode.OK` then the API call succeeded but no result was returned.
-   2. If the `Error` property to view any extended error information returned by the API, which may have an `Error` and a `Message` set.
+   2. Use the `AtErrorDetail` property to view any extended error information returned by the API, which may have an `Error` and a `Message` set.
 
 Let's add some basic error checking to the Hello World code you wrote in [getting started.](../index.md)
 
