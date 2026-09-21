@@ -86,7 +86,7 @@ To add an image, or images to a post, you first upload the image(s) as a byte ar
 ```c#
 // Read the image from the file specified by pathToImage
 
-var pathToImage = "D:\beans1000x1000.jpg";
+var pathToImage = @"D:\beans1000x1000.jpg";
 byte[] imageAsBytes;
 using (FileStream fs = File.OpenRead(pathToImage))
 using (MemoryStream ms = new())

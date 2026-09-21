@@ -59,11 +59,11 @@ await agent.Post("New gated post",
 Bluesky allows the users to set a default preference for post. and thread gates. You can retrieve these preferences with `agent.GetPreferences()`.
 
 ```c#
-InteractionPreferences? interactionPreferences = null;
+PostInteractionSettingsPreferences? interactionPreferences = null;
 var userPreferences = await agent.GetPreferences(cancellationToken: cancellationToken);
 if (userPreferences.Succeeded)
 {
-    interactionPreferences = userPreferences.Result.InteractionPreferences;
+    interactionPreferences = userPreferences.Result.PostInteractionSettingsPreferences;
 }
 ```
 

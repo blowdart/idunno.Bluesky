@@ -2,17 +2,17 @@
 
 ## <a name="timeline">Reading your timeline</a>
 
-To get the timeline for a logged in account you call `agent.GetTimeLine()`.
+To get the timeline for a logged in account you call `agent.GetTimeline()`.
 
 ```c#
-HttpResult<Timeline> timelineResult = await agent.GetTimeline();
+AtProtoHttpResult<Timeline> timelineResult = await agent.GetTimeline();
 if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
 {
     foreach (FeedViewPost timelineView in timelineResult.Result)
     {
         if (timelineView.Post.Record is Post postRecord && !string.IsNullOrEmpty(postRecord.Text))
         {
-            Console.WriteLine($"{feedView.Post.Record.Text}";
+            Console.WriteLine(postRecord.Text);
         }
         Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
         Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
@@ -51,7 +51,7 @@ When browsing timelines and feeds you will need to understand how AtProto implem
 
 A timeline is a well known feed. A feed is a view created by a feed generator over collections of posts, the criteria for which the feed controls.
 
-A feed is referenced by its [at:// uri](commonTerms.md#uri), loaded with `GetFeed()` rather than `GetTimeLine()` and then paginated in exactly the same way. 
+A feed is referenced by its [at:// uri](commonTerms.md#uri), loaded with `GetFeed()` rather than `GetTimeline()` and then paginated in exactly the same way. 
 
 ```c#
 AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");

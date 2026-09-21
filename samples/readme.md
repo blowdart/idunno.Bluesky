@@ -16,7 +16,7 @@ If you use an Bluesky app password you don't need to worry about authorization c
 ## Sample List
 
 * `Samples.ConsoleShell` - a skeleton console application which authenticates with a handle and password that you can use as a starting point for experimentation.
-* `Samples.ConsoleShell.OAuth` - a skeleton console application which authenticates with OAuth that you can use as a starting point for experimentation.
+* `Samples.ConsoleShellOAuth` - a skeleton console application which authenticates with OAuth that you can use as a starting point for experimentation.
 * `Samples.Common` - helper functions used in the sample applications.
 
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.

@@ -3,7 +3,7 @@
 Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#
-HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
+AtProtoHttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
 ```
 
 `GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge.
@@ -15,7 +15,7 @@ To retrieve your notifications, read or unread, call `ListNotifications()`.
 var notifications = 
     await agent.ListNotifications().ConfigureAwait(false);
 ```
-From there, you would perform the `.Succeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
+From there, you would perform the `.Succeeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
 
 Each type of notification, for example `Follow`, `Mention` or `Quote`, have varying types of information used to supplement the notification with appropriate information for its type.
 
@@ -72,7 +72,7 @@ foreach (Notification notification in notifications.Result!.Notifications)
 Then finally, once you've displayed all the unread (and/or previously read) notifications you would tell Bluesky that they've been read with `UpdateNotificationSeenAt()`.
 
 ```c#
-HttpResult<EmptyResponse> updateSeen = 
+AtProtoHttpResult<EmptyResponse> updateSeen = 
     await agent.UpdateNotificationSeenAt();
 ```
 
@@ -92,7 +92,7 @@ The [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/
 one page at a time, consisting of five notifications per page.
 
 ```c#
-HttpResult<NotificationsView> notifications = 
+AtProtoHttpResult<NotificationsView> notifications = 
      await agent.ListNotifications(5);
 ```
 
@@ -112,10 +112,10 @@ if (notifications.Succeeded && notifications.Result.Count != 0)
         notifications = 
             await agent.ListNotifications(
                 limit: 5, 
-                cursor: notifications.Result.Cursor));
+                cursor: notifications.Result.Cursor);
 
-    } while (notificationsListResult.Succeeded &&
-             !string.IsNullOrEmpty(notificationsListResult.Result.Cursor))
+    } while (notifications.Succeeded &&
+             !string.IsNullOrEmpty(notifications.Result.Cursor));
 }
 ```
 

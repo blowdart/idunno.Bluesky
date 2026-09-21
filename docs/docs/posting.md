@@ -36,7 +36,7 @@ await agent.Post("G'day world!", language: "en-au");
 Or if you have multiple languages
 
 ```C#
-await agent.Post("สวัสดีชาวโลก!\nHello World!"", languages: new string[] {"th", "en-US"});
+await agent.Post("สวัสดีชาวโลก!\nHello World!", languages: new string[] {"th", "en-US"});
 ```
 
 ### Setting the creation date on a post
@@ -110,11 +110,11 @@ var replyCreatePostResult =
 
 // Reply to the reply using the reply's StrongReference
 var replyToReplyStrongReference = 
-  await agent.ReplyTo(replyCreatePostResult.StrongReference, "This is a reply to the reply.");
+  await agent.ReplyTo(replyCreatePostResult.Result.StrongReference, "This is a reply to the reply.");
 ```
 
 Replying to a post creates a new record, and it may not surprise you to see that the `ReplyTo()`
-methods returns an `HttpResult<CreateRecordResult>` just like creating a post does.
+methods returns an `AtProtoHttpResult<CreateRecordResult>` just like creating a post does.
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
@@ -197,7 +197,7 @@ adding/appending to the `PostBuilder` until you're ready to create a post from i
 instance of `PostBuilder` you have been building on.
 
 If you want to auto-extract facets from text for use with a `PostBuilder` the `BlueskyAgent` class has a property, `FacetExtractor`
-which will extract facets from a string, which you can use when setting up your `PostBuiilder`
+which will extract facets from a string, which you can use when setting up your `PostBuilder`
 
 ```c#
 var postText = "Hello @sinclairinat0r.com, I hear you love beans! #beans";
@@ -214,9 +214,9 @@ Then create a `Mention` instance and add it to your `PostBuilder`, then finally 
 ```c#
 string userToTagHandle = "userHandle.test";
 var userToTagDid = await agent.ResolveHandle(userToTagHandle);
-if (did is null)
+if (userToTagDid is null)
 {
-  // handle did not resolve to a did, react accordindly.
+  // handle did not resolve to a did, react accordingly.
 }
 
 var builder = new PostBuilder("Hello ") + new Mention(userToTagDid, $"@{userToTagHandle}");
@@ -246,10 +246,10 @@ var linkPostResult = await agent.Post(builder);
 
 #### HashTags
 
-To insert a hashtag you create a new `Hashtag` instance:
+To insert a hashtag you create a new `HashTag` instance:
 
 ```c#
-PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new Hashtag("test");
+PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new HashTag("test");
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
@@ -362,8 +362,7 @@ var imageUploadResult = await agent.UploadImage(
     cancellationToken: cancellationToken);
 if (imageUploadResult.Succeeded)
 {
-    postBuilder += 
-        new EmbeddedImage(replyImageBlobLink.Result!, "Image alttext", new AspectRatio(1000, 1000));
+    postBuilder += imageUploadResult.Result!;
 }
 ```
 

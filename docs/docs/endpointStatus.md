@@ -19,7 +19,7 @@
 | | [app.bsky.draft.getDrafts](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/GET/xrpc/app.bsky.draft.getDrafts) | `BlueskyAgent.GetDrafts()` | ✔ |
 | | [app.bsky.draft.updateDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.updateDraft) | `BlueskyAgent.UpdateDraft()` | ✔ |
 | **Embed** | [app.bsky.embed.getEmbedExternalView](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/getEmbedExternalView.json) | `BlueskyAgent.GetEmbedExternalView()` | ✔ |
-| **Feed** | [app.bsky.feed.describeFeedGenerator](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.describeFeedGenerator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |
+| **Feed** | [app.bsky.feed.describeFeedGenerator](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.describeFeedGenerator) | `BlueskyAgent.GetFeedGeneratorDescription()` | ✔ |
 | | [app.bsky.feed.getActorFeeds](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getActorFeeds) | `BlueskyAgent.GetActorFeeds()` | ✔ |
 | | [app.bsky.feed.getActorLikes](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getActorLikes) | `BlueskyAgent.GetActorLikes()` | ✔ |
 | | [app.bsky.feed.getAuthorFeed](https://endpoints.bsky.app/#bluesky-app/tag/appbskyfeed/GET/xrpc/app.bsky.feed.getAuthorFeed) | `BlueskyAgent.GetAuthorFeed()` | ✔ |
