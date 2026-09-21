@@ -1,6 +1,8 @@
 # Using idunno.Bluesky with ASP.NET
 
-<a name="agentFactory></a>## The Bluesky Agent client factory
+<a name="agentFactory"></a>
+
+## The Bluesky Agent client factory
 
 The `BlueskyAgentFactory` allows you to request a configured `BlueskyAgent` through ASP.NET's dependency injection.
 
@@ -23,8 +25,8 @@ If you use the `idunno.Bluesky.AspNet.Authentication` to authenticate against Bl
 
 ## Authenticating with Bluesky
 
-`idunno.Bluesky.AspNet.Authentication` provides an ASP.NET Core authentication handler for Bluesky, which is based on OAuth. Accompaning this is a Razor Pages default
-UI package, `idunno.Bluesky.AspNet.Authentication.UI` which provide login and logout pages, as well as code to process the OAuth callback.
+`idunno.Bluesky.AspNet.Authentication` provides an ASP.NET Core authentication handler for Bluesky, which is based on OAuth. Accompanying this is a Razor Pages default
+UI package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides login and logout pages, as well as code to process the OAuth callback.
 
 `Samples.AspNetAuthentication` is a Razor Pages sample application that demonstrates how to use the authentication handler, and how an injected agent can be used to
 perform authenticated operations.
@@ -43,8 +45,7 @@ builder.Services
 
 builder.Services
     .AddBlueskyClaimsTransformer()
-    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
-    .AddBlueskyAgentFactory()
+    .AddBlueskyAgentFactory();
 ```
 
 This configures Bluesky authentication with in-memory stores, suitable for development use.
@@ -57,7 +58,7 @@ Next, in your `appsettings.json` or `appsettings.Development.json` add configura
 
         "OAuthOptions": {
             "ClientId": "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20transition:generic",
-            "ReturnUri": "http://127.0.0.1/Bluesky/Callback"
+            "ReturnUri": "http://127.0.0.1/Bluesky/Callback",
             "Scopes": [ "atproto", "transition:generic" ]
         }
     }
@@ -66,7 +67,7 @@ Next, in your `appsettings.json` or `appsettings.Development.json` add configura
 Note that the client ID and return URI are both http. When you run the application you should use the http profile, or edit the URIs to match your HTTPS configuration.
 In production these will be configured with your production values.
 
-Now add login and logout links. In the standard ASP.NET Razor Pages templates these are addined in `_LoginPartial.cshtml`. For example,
+Now add login and logout links. In the standard ASP.NET Razor Pages templates these are defined in `_LoginPartial.cshtml`. For example,
 
 ```html
 @using idunno.Bluesky.AspNet.Authentication
@@ -108,35 +109,92 @@ Now add login and logout links. In the standard ASP.NET Razor Pages templates th
 
 Note the default area for the authentication pages is `Bluesky`.
 
-Decorate a page with `[Authorize]`, or make your entire app require authentication, and run it. When you hit an endpoint that requires an authenticated users you should be
-sent to the login page, where you enter your handle, bounced through the Bluesky OAuth login page, and back to you application where authentication will happen.
+Decorate a page with `[Authorize]`, or make your entire app require authentication, and run it. When you hit an endpoint that requires an authenticated user you should be
+sent to the login page, where you enter your handle, bounced through the Bluesky OAuth login page, and back to your application where authentication will happen.
 
 If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
 
 ### Stores
 
-Bluesky Authentication requires two different stores, an identity store and a correlation state store. The identity store keeps a the tokens issued by Bluesky for authentication.
-The correlation state store keeps the information needed during the oauth login flow.
+Bluesky authentication requires two different stores, an identity store and a correlation state store. The identity store keeps the tokens issued by Bluesky for
+authentication. The correlation state store keeps the information needed during the OAuth login flow.
 
-By default two ephemeral, in memory, stores are used to allow you to developer your application , however these stores are not suitable for production use as they store a limtied
-number of identities and are not persistent, so when your application restarts any authenticated users will be logged out. For production you should implement your own stores using the
-`IIdentityStore` and `ICorrelationStateCache` interfaces, and configure them in your application configuration in `Program.cs`
+By default two ephemeral, in memory, stores are used, so you can develop your application without standing up any extra infrastructure. These stores are not
+suitable for production use as they store a limited number of identities and are not persistent, so when your application restarts any authenticated users will
+be logged out.
 
-Store implementations are provided for MySql, SQLite and Redis, in the `idunno.Bluesky.AspNet.Authentication.MySql`, `idunno.Bluesky.AspNet.Authentication.Sqlite` and `idunno.Bluesky.AspNet.Authentication.Redis` packages.
-These can be used to store the identity and correlation state in a persistent store and can be added to your application during configuration.
-For example, to use SQLite you would add the following to your `Program.cs` file
+Persistent store implementations are provided for SQLite, MySQL and Redis, in the `idunno.Bluesky.AspNet.Authentication.SQLite`,
+`idunno.Bluesky.AspNet.Authentication.MySQL` and `idunno.Bluesky.AspNet.Authentication.Redis` packages. If none of those suit your deployment you can implement
+your own using the `IIdentityStore` and `ICorrelationStateCache` interfaces.
+
+> [!IMPORTANT]
+> The SQL stores do not create their own schema. You must create the database and its tables before your application starts, otherwise the first request which
+> touches a store will fail.
+>
+> The `idunno.Bluesky.AspNet.Authentication.SQLite` package includes `New-AuthenticationDatabase.ps1`, which creates an empty database named
+> `idunno.Bluesky.AspNet.Authentication.db` in the directory you give it. It needs `sqlite3` on your `PATH`.
+>
+> ```powershell
+> ./New-AuthenticationDatabase.ps1 -OutputDirectory ./App_Data
+> ```
+>
+> The `idunno.Bluesky.AspNet.Authentication.MySQL` package includes `schema.sql`, which you apply to an existing database with the MySQL client of your choice.
+>
+> Both files are added to your project as content when you install the package. Redis needs no schema.
+
+To use a persistent store configure it during authentication configuration in `Program.cs`. For example, to use SQLite,
 
 ```c#
+using idunno.Bluesky.AspNet.Authentication;
+using idunno.Bluesky.AspNet.Authentication.SQLite;
+
 string connectionString = builder.Configuration.GetConnectionString("BlueskyAuthentication")!;
 
 builder.Services
-    .AddAuthentication()
+    .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
     .AddBluesky(options =>
     {
         options.IdentityStore = new SqliteIdentityStore(connectionString);
         options.CorrelationCache = new SqliteCorrelationStateCache(connectionString);
     });
 ```
+
+MySQL and Redis are configured the same way, using `MySqlIdentityStore` and `MySqlCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.MySQL` namespace, or `RedisIdentityStore` and `RedisCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.Redis` namespace.
+
+#### Expiry and housekeeping
+
+Entries in both stores expire. Expiry is applied as a filter when an entry is read, so an expired entry is never returned, and the SQL stores also delete
+expired rows so the tables do not grow without limit. Each store constructor takes optional settings which control this.
+
+| Setting | Applies to | Default | Purpose |
+| --- | --- | --- | --- |
+| `entryTimeToLive` | Identity stores | 7 days | How long a stored identity lives before it is treated as expired. |
+| `refreshLockLength` | Identity stores | 90 seconds | How long a token refresh lock is held before another instance may take it over. |
+| `entryTimeToLive` | Correlation state caches | 15 minutes | How long a login in flight may take before its state is discarded. |
+| `expiredEntrySweepInterval` | SQLite and MySQL stores | 5 minutes | How often expired rows are deleted. |
+
+For example,
+
+```c#
+options.IdentityStore = new SqliteIdentityStore(
+    connectionString,
+    entryTimeToLive: TimeSpan.FromDays(30),
+    expiredEntrySweepInterval: TimeSpan.FromMinutes(15));
+```
+
+Deletion of expired rows happens as part of a write, throttled to no more than once per `expiredEntrySweepInterval`, so a store which is never written to is
+never swept. Setting `expiredEntrySweepInterval` to `TimeSpan.Zero` turns deletion off completely. Expired entries are still never returned, but removing them
+becomes your responsibility. The Redis stores have no sweep setting, as Redis expires keys itself.
+
+> [!NOTE]
+> The `IdentityStoreEntryTimeToLive` and `RefreshLockLength` properties on `BlueskyAuthenticationOptions` apply to the default in memory store and to
+> `DistributedCacheIdentityStore`. The SQLite, MySQL and Redis stores take their lifetimes from their own constructors, so if you supply one of those these
+> properties are ignored and you should set the lifetimes on the constructor instead.
+>
+> `IdentityStoreEntryTimeToLive` defaults to the authentication cookie's `ExpireTimeSpan`. If you shorten a lifetime so that stored credentials expire before
+> the cookie does, users will be signed out early, and a warning is logged.
 
 Note that information persisted in the identity store is sensitive and is, by default, protected using the ASP.NET Core Data Protection API.
 This means that if you run your application on multiple servers you must configure data protection to use a common key store, and
@@ -147,15 +205,15 @@ To configure data protection see the [Microsoft documentation](https://learn.mic
 ### Using claims transformation to supplement the identity
 
 `BlueskyClaimsTransformer` is provided to enhance the `ClaimsIdentity` issued during authentication. It requests the profile for the authenticated user, and caches it, adding
-claims from the profile to the identity. The potential claims are defined in `Bluesky.ClaimTypes`. They include
+claims from the profile to the identity. The potential claims are defined in `idunno.Bluesky.ClaimTypes`. They include
 
-* `Bluesky.ClaimTypes.Handle` - the user's Bluesky handle,
-* `Bluesky.ClaimTypes.DisplayName` - the user's display name,
-* `Bluesky.ClaimTypes.Description` - the user's description, from their profile,
-* `Bluesky.ClaimTypes.Pronouns` - the user's pronounces, from their profile,
-* `Bluesky.ClaimTypes.Website` - the user's website, from their profile,
-* `Bluesky.ClaimTypes.Avatar` - a URI to the user's uploaded avatar and
-* `Bluesky.ClaimTypes.Banner` - a URI to the user's profile banner.
+* `idunno.Bluesky.ClaimTypes.Handle` - the user's Bluesky handle,
+* `idunno.Bluesky.ClaimTypes.DisplayName` - the user's display name,
+* `idunno.Bluesky.ClaimTypes.Description` - the user's description, from their profile,
+* `idunno.Bluesky.ClaimTypes.Pronouns` - the user's pronouns, from their profile,
+* `idunno.Bluesky.ClaimTypes.Website` - the user's website, from their profile,
+* `idunno.Bluesky.ClaimTypes.Avatar` - a URI to the user's uploaded avatar and
+* `idunno.Bluesky.ClaimTypes.Banner` - a URI to the user's profile banner.
 
 > [!WARNING]
 > You should validate, and protect against XSS when rendering these values on a web page, as they are freeform text (except for avatar and banner).
@@ -164,29 +222,34 @@ To use the transformer configure it in your application in `Program.cs` like so;
 
 ```c#
 builder.Services
-    .AddBlueskyClaimsTransformer()
-    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
+    .AddBlueskyClaimsTransformer();
 ```
 
-### OAuth and DPop
+`AddBlueskyClaimsTransformer()` registers the transformer as an `IClaimsTransformation` for you, so you do not need to register it yourself.
+
+### OAuth and DPoP
 
 Bluesky authentication is OAuth authentication with some extra layers, including a version of
 dynamic client registration requiring a [client metadata document](https://atproto.com/specs/oauth#client-id-metadata-document),
 and [DPoP](https://datatracker.ietf.org/doc/html/rfc9449) to allow for protection against token theft.
 This does mean you can't use the in-box OAuth authentication handlers for ASP.NET Core.
 
-The implementation of Bluesky authentication in `idunno.Bluesky` needs a
-[distributed cache](https://learn.microsoft.com/en-us/aspnet/core/performance/caching/distributed). It is used to store
-the following items:
+DPoP and the OAuth flow both need state to be kept on the server, and that state is held in the two stores described in [Stores](#stores):
 
-* **DPoP keys**. It's recommended that DPoP keys are stored on the server, rather than in the client browser,
-  the distributed cache enables that.
-* **OAuth State** that is needed to complete the OAuth flow.
+* The **identity store** holds the access token, the refresh token and the DPoP proof key for an authenticated user.
+* The **correlation state cache** holds the PKCE verifier and the DPoP private key for a login which is still in flight.
+
+Both are encrypted at rest with the ASP.NET Core Data Protection API. If you run on more than one server, choose store implementations which every instance can
+reach, and configure data protection with a shared key store, otherwise a login which starts on one server cannot be completed on another.
+
+> [!TIP]
+> If your application already has an `IDistributedCache` you can use it for either store, with `DistributedCacheIdentityStore` and
+> `DistributedCacheCorrelationStateCache`, rather than adding SQLite, MySQL or Redis specifically for authentication.
 
 > [!TIP]
 > Bluesky special cases the `http://localhost` ClientId, to allow for local development of client applications, including
 > web clients. If you want to test your application whilst running as `localhost`, for example, within Visual Studio,
-> you you must set the `ReturnUri` to "http://127.0.0.1" in configuration. For example
+> you must set the `ReturnUri` to "http://127.0.0.1" in configuration. For example
 > ```json
 >"BlueskyAgent": {
 >  "OAuthOptions": {
@@ -194,6 +257,7 @@ the following items:
 >    "ReturnUri": "http://127.0.0.1",
 >    "Scopes": [ "transition:generic" ]
 >  }
+>}
 > ```
 > You should also change your `applicationUrl` in `launchSettings.json` from `localhost` to `127.0.0.1`. For example
 > ```json
@@ -215,7 +279,7 @@ the following items:
 
 ### Debugging OAuth Pushed Authorization Requests
 
-Bluesky uses Pushed Authorization Requests ([PAR](https://datatracker.ietf.org/doc/html/rfc9126) as a security measure.
+Bluesky uses Pushed Authorization Requests ([PAR](https://datatracker.ietf.org/doc/html/rfc9126)) as a security measure.
 PAR works by pushing the authorization via a back channel to the authorization server rather than using the browser.
 
 You can intercept and monitor PAR requests by using a proxy like [Fiddler](https://www.telerik.com/fiddler).
@@ -251,22 +315,24 @@ You should then pass this into the `BlueskyAgent` constructor.
 For example, with Razor Pages this could look like the following
 
 ```c#
-
 public class MyPage_Model(ILoggerFactory loggerFactory) : PageModel
 {
     /// Code removed
 
     public async Task<IActionResult> OnPost()
     {
-        /// After validating the model and then create a BlueskyAgent to do something
+        /// After validating the model, create a BlueskyAgent to do something
 
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {
                 LoggerFactory = loggerFactory,
-            }));
+            }))
+        {
+            /// Now do what you need to do with agent.
+        }
 
-        /// Now do what you need to do with agent.
+        return Page();
     }
 }
 ```
@@ -308,8 +374,7 @@ An example `appsettings.json` file might look like the following:
     },
 
     "BlueskyAgent": {
-        "EnableBackgroundTokenRefresh": false,
-        }
+        "EnableBackgroundTokenRefresh": false
     }
 }
 ```
