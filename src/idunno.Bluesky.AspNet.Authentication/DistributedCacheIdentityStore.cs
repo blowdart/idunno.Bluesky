@@ -300,7 +300,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc/>
-    public virtual async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    public virtual async Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         string refreshLockKey = $"{RefreshStorePrefix}{did}";
 
@@ -311,19 +311,21 @@ public class DistributedCacheIdentityStore : IIdentityStore
             // The lock already expired, so there is nothing of ours to release. Removing the key anyway would delete a
             // lock another caller acquired between this read and that removal.
             Logger.EndRefreshLockNotOwned(did);
-            return;
+            return false;
         }
 
         if (!CryptographicOperations.FixedTimeEquals(current, Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
         {
             // The lock expired and someone else acquired it, so it is not ours to release.
             Logger.EndRefreshLockNotOwned(did);
-            return;
+            return false;
         }
 
         await Cache.RemoveAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
 
         Logger.EndRefreshFinished(did);
+
+        return true;
     }
 
     /// <inheritdoc/>

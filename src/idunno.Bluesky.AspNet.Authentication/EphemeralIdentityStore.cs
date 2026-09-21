@@ -290,7 +290,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     /// <inheritdoc />
     /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
     /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-    public Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    public Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
@@ -301,7 +301,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
             {
                 // The lock already expired, so there is nothing of ours to release.
                 Logger.EndRefreshLockNotOwned(did);
-                return Task.CompletedTask;
+                return Task.FromResult(false);
             }
 
             if (!CryptographicOperations.FixedTimeEquals(
@@ -310,7 +310,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
             {
                 // The lock expired and someone else acquired it, so it is not ours to release.
                 Logger.EndRefreshLockNotOwned(did);
-                return Task.CompletedTask;
+                return Task.FromResult(false);
             }
 
             RefreshCache.Remove($"{did}");
@@ -318,7 +318,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
             Logger.EndRefreshFinished(did);
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     /// <inheritdoc />

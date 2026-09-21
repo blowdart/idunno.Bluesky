@@ -107,6 +107,8 @@
 * Contains ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
   `AuthenticationBuilder.AddBluesky()`, and a `ProfileClaimsTransformer` which can be registered with `IServiceCollection.AddProfileClaimsTransformer()`.
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
+* Added `IIdentityStore.UpdateIfNewer()`, which writes credentials unless the store already holds a set which expires later. `IIdentityStore.EndRefresh()`
+  now reports whether the caller still held the refresh lock it released.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 
@@ -116,15 +118,18 @@
 #### idunno.Bluesky.AspNet.Authentication.MySQL
 
 * Contains MySQL implementations of `IIdentityStore` and `ICorrelationStateCache`.
+* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
 
 #### idunno.Bluesky.AspNet.Authentication.Redis
 
 * Contains Redis implementations of `IIdentityStore` and `ICorrelationStateCache`.
+* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
 
 * Contains SQLite implementations of `IIdentityStore` and `ICorrelationStateCache`.
 * Contains a PowerShell script which creates a new SQLite authentication database from the packaged schema.
+* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
 
 ### Changed
 
@@ -688,6 +693,25 @@
 * An agent built from a principal issued by a scheme other than a registered Bluesky one now writes credential updates to the identity store of the scheme
   the agent factory was registered for, rather than to a fresh store nothing reads.
 * The identity store refresh lock token is now compared in constant time.
+* A refresh whose advisory lock had expired no longer silently overwrites credentials another request refreshed in the meantime. The race is now resolved on
+  credential expiry, and the handler logs both when its own write was superseded and when it lost the lock it was refreshing under.
+* Two log event IDs no longer collide.
+
+#### idunno.Bluesky.AspNet.Authentication.MySQL
+
+* The refresh lock expiry is now computed from the database clock rather than the clock of the application server taking the lock, so a lock's lifetime no
+  longer depends on clock skew between application servers.
+* Releasing a refresh lock is now a single conditional delete rather than a select for update inside a transaction. A caller which no longer holds the lock
+  cannot release it, and releasing a lock which has already gone no longer takes a gap lock on the missing row.
+
+#### idunno.Bluesky.AspNet.Authentication.Redis
+
+* Releasing a refresh lock now compares the caller's lock token, rather than comparing the value the script read back against itself, which matched whatever
+  token was stored.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Releasing a refresh lock is now a single conditional delete, so a caller which no longer holds the lock cannot release it.
 
 ## 6.0.0 - 2026-09-05
 
