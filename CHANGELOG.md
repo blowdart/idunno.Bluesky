@@ -109,6 +109,8 @@
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
 * Added `IIdentityStore.UpdateIfNewer()`, which writes credentials unless the store already holds a set which expires later. `IIdentityStore.EndRefresh()`
   now reports whether the caller still held the refresh lock it released.
+* `ICorrelationStateCache.GetOAuthLoginState()` is now named `PeekOAuthLoginState()`, as it reads login state without consuming it and so must not be used to
+  validate an OAuth callback. `TakeOAuthLoginState()` remains the method for that.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 

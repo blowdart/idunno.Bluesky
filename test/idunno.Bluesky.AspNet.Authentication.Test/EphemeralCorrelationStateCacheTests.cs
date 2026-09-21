@@ -40,7 +40,7 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
 
             await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
 
-            Assert.NotNull(await cache.GetOAuthLoginState(correlationId));
+            Assert.NotNull(await cache.PeekOAuthLoginState(correlationId));
         }
     }
 
@@ -53,8 +53,8 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         Guid correlationId = Guid.NewGuid();
         await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
 
-        Assert.NotNull(await first.GetOAuthLoginState(correlationId));
-        Assert.Null(await second.GetOAuthLoginState(correlationId));
+        Assert.NotNull(await first.PeekOAuthLoginState(correlationId));
+        Assert.Null(await second.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         List<Func<Task>> operations =
         [
             () => cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId)),
-            () => cache.GetOAuthLoginState(correlationId),
+            () => cache.PeekOAuthLoginState(correlationId),
             () => cache.TakeOAuthLoginState(correlationId),
             () => cache.RemoveCorrelationState(correlationId),
         ];
@@ -125,6 +125,6 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
 
         await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 }

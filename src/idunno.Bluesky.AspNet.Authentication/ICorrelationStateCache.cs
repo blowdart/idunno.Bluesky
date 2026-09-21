@@ -44,12 +44,12 @@ public interface ICorrelationStateCache
     /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
     /// <remarks>
     /// <para>
-    ///   This does not consume the state, so it must not be used to validate an OAuth callback. Login state is single use,
-    ///   and reading it without removing it allows a correlation identifier to be replayed. Use
+    ///   This peeks at the state rather than consuming it, so it must not be used to validate an OAuth callback. Login state is
+    ///   single use, and reading it without removing it allows a correlation identifier to be replayed. Use
     ///   <see cref="TakeOAuthLoginState(Guid)"/> for that, which reads and removes the state as one operation.
     /// </para>
     /// </remarks>
-    Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId);
+    Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId);
 
     /// <summary>
     /// Retrieves the <see cref="OAuthLoginState"/> for the <paramref name="correlationId"/> from the authentication
@@ -59,7 +59,7 @@ public interface ICorrelationStateCache
     /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
     /// <remarks>
     /// <para>
-    ///   Login state is single use. Calling <see cref="GetOAuthLoginState(Guid)"/> and then
+    ///   Login state is single use. Calling <see cref="PeekOAuthLoginState(Guid)"/> and then
     ///   <see cref="RemoveCorrelationState(Guid)"/> leaves a window in which two callbacks carrying the same correlation
     ///   identifier can both be given the state, so callers consuming a callback should use this instead.
     /// </para>

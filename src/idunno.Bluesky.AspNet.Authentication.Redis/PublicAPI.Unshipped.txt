@@ -3,7 +3,7 @@ idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.Events.set -> void
-idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.GetOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.PeekOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.RedisCorrelationStateCache(StackExchange.Redis.IConnectionMultiplexer! connectionMultiplexer, int database = -1, string? instanceName = null, System.TimeSpan? entryTimeToLive = null) -> void
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.RemoveCorrelationState(System.Guid correlationId) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.Redis.RedisCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!

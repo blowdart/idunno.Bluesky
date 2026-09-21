@@ -3,8 +3,8 @@ idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.Events.set -> void
-idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.GetOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.MySqlCorrelationStateCache(string! connectionString, System.TimeSpan? entryTimeToLive = null) -> void
+idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.PeekOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.RemoveCorrelationState(System.Guid correlationId) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.MySQL.MySqlIdentityStore
