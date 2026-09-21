@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 
 namespace idunno.AtProto.OAuthCallback.Test;
@@ -11,6 +12,31 @@ namespace idunno.AtProto.OAuthCallback.Test;
 public class CallbackServerTests
 {
     private static readonly TimeSpan s_completionBudget = TimeSpan.FromSeconds(15);
+
+    // GetRandomUnusedPort has a time of check to time of use window: the port it returns can be claimed by another
+    // process before the server binds it, which faults the listener and surfaces as an unexpected exception rather
+    // than the one under test. Probing a path which does not consume the single callback confirms the listener bound
+    // the port; a lost race is retried with a fresh port.
+    private static async Task<CallbackServer> StartServerAsync(CancellationToken cancellationToken)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+
+            try
+            {
+                using HttpClient client = new();
+                using HttpResponseMessage response =
+                    await client.GetAsync(new Uri(server.Uri, "robots.txt"), cancellationToken);
+
+                return server;
+            }
+            catch (HttpRequestException) when (attempt < 5)
+            {
+                await server.DisposeAsync();
+            }
+        }
+    }
 
     [Fact]
     public async Task WaitForCallbackAsyncCompletesWhenTheCallersTokenIsCancelled()
@@ -36,7 +62,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await StartServerAsync(testToken);
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();

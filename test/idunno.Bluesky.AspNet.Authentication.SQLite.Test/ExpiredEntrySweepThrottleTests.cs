@@ -40,9 +40,14 @@ public class ExpiredEntrySweepThrottleTests
     [Fact]
     public async Task OnlyOneOfManyConcurrentCallersClaimsTheSameInterval()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
+        long intervalMilliseconds = (long)s_shortInterval.TotalMilliseconds;
+        long now = 0;
 
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", now: () => Volatile.Read(ref now));
+
+        // Advance the clock past the first interval so the sweep is claimable, then hold it steady
+        // so exactly one of the concurrent callers can win the interval.
+        Volatile.Write(ref now, intervalMilliseconds);
 
         using Barrier barrier = new(32);
         bool[] claims = new bool[32];
