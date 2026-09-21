@@ -111,6 +111,7 @@
   now reports whether the caller still held the refresh lock it released.
 * `ICorrelationStateCache.GetOAuthLoginState()` is now named `PeekOAuthLoginState()`, as it reads login state without consuming it and so must not be used to
   validate an OAuth callback. `TakeOAuthLoginState()` remains the method for that.
+* Every `ICorrelationStateCache` method now accepts an optional `CancellationToken`, as every `IIdentityStore` method already did.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 
@@ -703,6 +704,9 @@
 
 * The refresh lock expiry is now computed from the database clock rather than the clock of the application server taking the lock, so a lock's lifetime no
   longer depends on clock skew between application servers.
+* Stored identity expiry and correlation state expiry are now computed from the database clock as well. The expiry of a row was previously written from the
+  application server's clock and then compared against the database clock when read, so a stored identity or an OAuth login state could expire early or late
+  depending on the skew between the two.
 * Releasing a refresh lock is now a single conditional delete rather than a select for update inside a transaction. A caller which no longer holds the lock
   cannot release it, and releasing a lock which has already gone no longer takes a gap lock on the missing row.
 

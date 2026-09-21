@@ -61,11 +61,13 @@ public class RedisCorrelationStateCache : ICorrelationStateCache
     /// </summary>
     /// <param name="correlationId">The correlation identifier used as the key.</param>
     /// <param name="state">The state to store.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
-    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state)
+    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(state);
+        cancellationToken.ThrowIfCancellationRequested();
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);
@@ -80,15 +82,18 @@ public class RedisCorrelationStateCache : ICorrelationStateCache
     /// Peeks at unexpired OAuth login state without removing it.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to retrieve.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The stored state, or <see langword="null"/> when it is missing, expired, or unreadable.</returns>
     /// <remarks>
     /// <para>
     ///   This does not consume the state, so it must not be used to validate an OAuth callback. Use
-    ///   <see cref="TakeOAuthLoginState(Guid)"/> for that.
+    ///   <see cref="TakeOAuthLoginState(Guid, CancellationToken)"/> for that.
     /// </para>
     /// </remarks>
-    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         RedisValue storedState =
             await _database.StringGetAsync(CorrelationStateKey(correlationId)).ConfigureAwait(false);
 
@@ -99,9 +104,12 @@ public class RedisCorrelationStateCache : ICorrelationStateCache
     /// Atomically gets and removes unexpired OAuth login state.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to consume.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The stored state, or <see langword="null"/> when it is missing, expired, or unreadable.</returns>
-    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         RedisValue storedState =
             await _database.StringGetDeleteAsync(CorrelationStateKey(correlationId)).ConfigureAwait(false);
 
@@ -112,9 +120,12 @@ public class RedisCorrelationStateCache : ICorrelationStateCache
     /// Removes OAuth login state from the cache.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to remove.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task RemoveCorrelationState(Guid correlationId)
+    public async Task RemoveCorrelationState(Guid correlationId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         await _database.KeyDeleteAsync(CorrelationStateKey(correlationId)).ConfigureAwait(false);
     }
 

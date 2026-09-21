@@ -51,45 +51,47 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
     /// </summary>
     /// <param name="correlationId">The correlation identifier used as the key.</param>
     /// <param name="state">The state to store.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
-    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state)
+    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(state);
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);
 
-        using MySqlConnection connection = await OpenConnection().ConfigureAwait(false);
+        using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
         using MySqlCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO `idunno_bluesky_correlation_states` (`CorrelationId`, `State`, `ExpiresAtUtc`)
-            VALUES (@correlationId, @state, @expiresAtUtc)
+            VALUES (@correlationId, @state, UTC_TIMESTAMP(6) + INTERVAL @entryTimeToLiveMicroseconds MICROSECOND)
             ON DUPLICATE KEY UPDATE
                 `State` = @state,
-                `ExpiresAtUtc` = @expiresAtUtc;
+                `ExpiresAtUtc` = UTC_TIMESTAMP(6) + INTERVAL @entryTimeToLiveMicroseconds MICROSECOND;
             """;
         command.Parameters.Add("@correlationId", MySqlDbType.Binary).Value = correlationId.ToByteArray();
         command.Parameters.Add("@state", MySqlDbType.LongText).Value = context.State;
-        command.Parameters.Add("@expiresAtUtc", MySqlDbType.DateTime).Value = DateTime.UtcNow.Add(_entryTimeToLive);
+        command.Parameters.Add("@entryTimeToLiveMicroseconds", MySqlDbType.Int64).Value = _entryTimeToLive.Ticks / TimeSpan.TicksPerMicrosecond;
 
-        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Peeks at unexpired OAuth login state without removing it.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to retrieve.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The stored state, or <see langword="null"/> when it is missing, expired, or unreadable.</returns>
     /// <remarks>
     /// <para>
     ///   This does not consume the state, so it must not be used to validate an OAuth callback. Use
-    ///   <see cref="TakeOAuthLoginState(Guid)"/> for that.
+    ///   <see cref="TakeOAuthLoginState(Guid, CancellationToken)"/> for that.
     /// </para>
     /// </remarks>
-    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
-        using MySqlConnection connection = await OpenConnection().ConfigureAwait(false);
+        using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
         using MySqlCommand command = connection.CreateCommand();
         command.CommandText = """
             SELECT `State`
@@ -99,7 +101,7 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
             """;
         command.Parameters.Add("@correlationId", MySqlDbType.Binary).Value = correlationId.ToByteArray();
 
-        string? encodedState = (string?)await command.ExecuteScalarAsync().ConfigureAwait(false);
+        string? encodedState = (string?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return await Decode(encodedState).ConfigureAwait(false);
     }
 
@@ -107,11 +109,12 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
     /// Atomically gets and removes unexpired OAuth login state.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to consume.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The stored state, or <see langword="null"/> when it is missing, expired, or unreadable.</returns>
-    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
-        using MySqlConnection connection = await OpenConnection().ConfigureAwait(false);
-        using MySqlTransaction transaction = await connection.BeginTransactionAsync().ConfigureAwait(false);
+        using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
+        using MySqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         string? encodedState;
         using (MySqlCommand command = connection.CreateCommand())
@@ -126,7 +129,7 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
                 """;
             command.Parameters.Add("@correlationId", MySqlDbType.Binary).Value = correlationId.ToByteArray();
 
-            encodedState = (string?)await command.ExecuteScalarAsync().ConfigureAwait(false);
+            encodedState = (string?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         }
 
         using (MySqlCommand command = connection.CreateCommand())
@@ -138,10 +141,10 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
                 """;
             command.Parameters.Add("@correlationId", MySqlDbType.Binary).Value = correlationId.ToByteArray();
 
-            await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
-        await transaction.CommitAsync().ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
         return await Decode(encodedState).ConfigureAwait(false);
     }
@@ -150,10 +153,11 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
     /// Removes OAuth login state from the cache.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to remove.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task RemoveCorrelationState(Guid correlationId)
+    public async Task RemoveCorrelationState(Guid correlationId, CancellationToken cancellationToken = default)
     {
-        using MySqlConnection connection = await OpenConnection().ConfigureAwait(false);
+        using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
         using MySqlCommand command = connection.CreateCommand();
         command.CommandText = """
             DELETE FROM `idunno_bluesky_correlation_states`
@@ -161,7 +165,7 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
             """;
         command.Parameters.Add("@correlationId", MySqlDbType.Binary).Value = correlationId.ToByteArray();
 
-        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<OAuthLoginState?> Decode(string? encodedState)
@@ -188,13 +192,13 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
         }
     }
 
-    private async Task<MySqlConnection> OpenConnection()
+    private async Task<MySqlConnection> OpenConnection(CancellationToken cancellationToken)
     {
         MySqlConnection connection = new(_connectionString);
 
         try
         {
-            await connection.OpenAsync().ConfigureAwait(false);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
             return connection;
         }
         catch

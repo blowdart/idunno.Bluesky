@@ -339,14 +339,14 @@ public class MySqlIdentityStore : IIdentityStore
         using MySqlCommand command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO `idunno_bluesky_identities` (`Did`, `Identity`, `ExpiresAtUtc`)
-            VALUES (@did, @identity, @expiresAtUtc)
+            VALUES (@did, @identity, UTC_TIMESTAMP(6) + INTERVAL @entryTimeToLiveMicroseconds MICROSECOND)
             ON DUPLICATE KEY UPDATE
                 `Identity` = @identity,
-                `ExpiresAtUtc` = @expiresAtUtc;
+                `ExpiresAtUtc` = UTC_TIMESTAMP(6) + INTERVAL @entryTimeToLiveMicroseconds MICROSECOND;
             """;
         command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
         command.Parameters.Add("@identity", MySqlDbType.LongBlob).Value = context.Identity.ToArray();
-        command.Parameters.Add("@expiresAtUtc", MySqlDbType.DateTime).Value = DateTime.UtcNow.Add(_entryTimeToLive);
+        command.Parameters.Add("@entryTimeToLiveMicroseconds", MySqlDbType.Int64).Value = _entryTimeToLive.Ticks / TimeSpan.TicksPerMicrosecond;
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
@@ -433,11 +433,11 @@ public class MySqlIdentityStore : IIdentityStore
         using MySqlCommand command = connection.CreateCommand();
         command.CommandText = """
             UPDATE `idunno_bluesky_identities`
-            SET `ExpiresAtUtc` = @expiresAtUtc
+            SET `ExpiresAtUtc` = UTC_TIMESTAMP(6) + INTERVAL @entryTimeToLiveMicroseconds MICROSECOND
             WHERE `Did` = @did
                 AND `ExpiresAtUtc` > UTC_TIMESTAMP(6);
             """;
-        command.Parameters.Add("@expiresAtUtc", MySqlDbType.DateTime).Value = DateTime.UtcNow.Add(_entryTimeToLive);
+        command.Parameters.Add("@entryTimeToLiveMicroseconds", MySqlDbType.Int64).Value = _entryTimeToLive.Ticks / TimeSpan.TicksPerMicrosecond;
         command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
 
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
