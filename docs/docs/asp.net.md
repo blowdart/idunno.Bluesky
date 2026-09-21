@@ -1,6 +1,6 @@
 # Using idunno.Bluesky with ASP.NET
 
-## Using the Bluesky Agent client factory
+<a name="agentFactory></a>## The Bluesky Agent client factory
 
 The `BlueskyAgentFactory` allows you to request a configured `BlueskyAgent` through ASP.NET's dependency injection.
 
@@ -111,7 +111,7 @@ Note the default area for the authentication pages is `Bluesky`.
 Decorate a page with `[Authorize]`, or make your entire app require authentication, and run it. When you hit an endpoint that requires an authenticated users you should be
 sent to the login page, where you enter your handle, bounced through the Bluesky OAuth login page, and back to you application where authentication will happen.
 
-If you have injected a Bluesky agent you will see that it is now authenticated.
+If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
 
 ### Stores
 
@@ -121,6 +121,28 @@ The correlation state store keeps the information needed during the oauth login 
 By default two ephemeral, in memory, stores are used to allow you to developer your application , however these stores are not suitable for production use as they store a limtied
 number of identities and are not persistent, so when your application restarts any authenticated users will be logged out. For production you should implement your own stores using the
 `IIdentityStore` and `ICorrelationStateCache` interfaces, and configure them in your application configuration in `Program.cs`
+
+Store implementations are provided for MySql, SQLite and Redis, in the `idunno.Bluesky.AspNet.Authentication.MySql`, `idunno.Bluesky.AspNet.Authentication.Sqlite` and `idunno.Bluesky.AspNet.Authentication.Redis` packages.
+These can be used to store the identity and correlation state in a persistent store and can be added to your application during configuration.
+For example, to use SQLite you would add the following to your `Program.cs` file
+
+```c#
+string connectionString = builder.Configuration.GetConnectionString("BlueskyAuthentication")!;
+
+builder.Services
+    .AddAuthentication()
+    .AddBluesky(options =>
+    {
+        options.IdentityStore = new SqliteIdentityStore(connectionString);
+        options.CorrelationCache = new SqliteCorrelationStateCache(connectionString);
+    });
+```
+
+Note that information persisted in the identity store is sensitive and is, by default, protected using the ASP.NET Core Data Protection API.
+This means that if you run your application on multiple servers you must configure data protection to use a common key store, and
+if you change the key store or run your application on a different server all previously persisted identities will be invalidated.
+
+To configure data protection see the [Microsoft documentation](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview).
 
 ### Using claims transformation to supplement the identity
 
