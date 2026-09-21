@@ -724,6 +724,15 @@
 #### idunno.Bluesky.AspNet.Authentication.SQLite
 
 * Releasing a refresh lock is now a single conditional delete, so a caller which no longer holds the lock cannot release it.
+* `New-AuthenticationDatabase.ps1` now resolves a relative `-OutputDirectory` against the caller's current location. PowerShell keeps its own
+  location, which .NET does not share, so a relative path previously created the database, and the directory to hold it, under whichever directory
+  the PowerShell process happened to start in.
+* `New-AuthenticationDatabase.ps1` now uses the first `sqlite3` on the path rather than every match. A machine carrying more than one, a package
+  manager shim alongside an installation for example, previously failed reporting every match joined together as a single command name.
+* `New-AuthenticationDatabase.ps1` now tells sqlite3 to stop at the first error. A statement which failed part way through the schema was reported
+  but the remaining statements, and the commit, still ran, so the surrounding transaction did not make applying the schema all or nothing.
+* `New-AuthenticationDatabase.ps1` now creates the database file itself rather than checking for it and leaving sqlite3 to create it, so two
+  concurrent runs cannot both decide that no database existed.
 
 ## 6.0.0 - 2026-09-05
 
