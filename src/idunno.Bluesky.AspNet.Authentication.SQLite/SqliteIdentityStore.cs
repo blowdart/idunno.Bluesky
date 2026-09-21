@@ -12,6 +12,8 @@ using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.AspNet.Authentication.SQLite;
 
@@ -27,6 +29,7 @@ public class SqliteIdentityStore : IIdentityStore
     private readonly TimeSpan _entryTimeToLive;
     private readonly TimeSpan _refreshLockLength;
     private readonly BlueskyAuthenticationMetrics _metrics;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Creates a new instance of <see cref="SqliteIdentityStore"/>.
@@ -35,6 +38,7 @@ public class SqliteIdentityStore : IIdentityStore
     /// <param name="entryTimeToLive">The sliding time to live for stored identities.</param>
     /// <param name="refreshLockLength">The time to live for refresh locks.</param>
     /// <param name="meterFactory">An optional meter factory used to record identity store metrics.</param>
+    /// <param name="loggerFactory">An optional logger factory used to report refresh lock contention.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is empty or invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive.
@@ -43,7 +47,8 @@ public class SqliteIdentityStore : IIdentityStore
         string connectionString,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockLength = null,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null,
+        ILoggerFactory? loggerFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
@@ -51,6 +56,7 @@ public class SqliteIdentityStore : IIdentityStore
         _entryTimeToLive = ValidateTimeToLive(entryTimeToLive ?? s_defaultEntryTimeToLive, nameof(entryTimeToLive));
         _refreshLockLength = ValidateTimeToLive(refreshLockLength ?? s_defaultRefreshLockLength, nameof(refreshLockLength));
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
+        _logger = loggerFactory?.CreateLogger<SqliteIdentityStore>() ?? NullLogger<SqliteIdentityStore>.Instance;
     }
 
     /// <summary>
@@ -169,7 +175,16 @@ public class SqliteIdentityStore : IIdentityStore
         command.Parameters.Add("@now", SqliteType.Integer).Value = now;
 
         int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        return rowsAffected == 1 ? refreshLockToken : null;
+
+        if (rowsAffected != 1)
+        {
+            _logger.StartRefreshDenied(did);
+            return null;
+        }
+
+        _logger.StartRefreshEntered(did);
+
+        return refreshLockToken;
     }
 
     /// <summary>
@@ -178,43 +193,48 @@ public class SqliteIdentityStore : IIdentityStore
     /// <param name="did">The DID whose refresh lock should be released.</param>
     /// <param name="refreshLockToken">The ownership token returned by <see cref="StartRefresh(Did, CancellationToken)"/>.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns><see langword="true"/> when the caller still owned the lock and it was released; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-    public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <para>
+    ///   The token comparison is part of the <c>DELETE</c> rather than a separate read, so the check and the release cannot be
+    ///   interleaved with another caller acquiring the lock. <c>LockToken</c> is declared <c>COLLATE BINARY</c>, so the comparison
+    ///   is byte exact.
+    /// </para>
+    /// </remarks>
+    public async Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
 
+        if (string.IsNullOrEmpty(refreshLockToken))
+        {
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
         using SqliteConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
-
-        string? storedToken;
-        using (SqliteCommand command = connection.CreateCommand())
-        {
-            command.CommandText = """
-                SELECT "LockToken"
-                FROM "idunno_bluesky_refresh_locks"
-                WHERE "Did" = @did;
-                """;
-            command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
-            storedToken = (string?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        if (storedToken is null ||
-            !CryptographicOperations.FixedTimeEquals(
-                System.Text.Encoding.UTF8.GetBytes(storedToken),
-                System.Text.Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
-        {
-            return;
-        }
 
         using SqliteCommand deleteCommand = connection.CreateCommand();
         deleteCommand.CommandText = """
             DELETE FROM "idunno_bluesky_refresh_locks"
             WHERE "Did" = @did
-                AND "LockToken" = @storedToken;
+                AND "LockToken" = @refreshLockToken;
             """;
         deleteCommand.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
-        deleteCommand.Parameters.Add("@storedToken", SqliteType.Text).Value = storedToken;
-        await deleteCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        deleteCommand.Parameters.Add("@refreshLockToken", SqliteType.Text).Value = refreshLockToken;
+
+        int rowsAffected = await deleteCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        if (rowsAffected == 0)
+        {
+            // The lock expired, and may since have been acquired by another caller, so it is not ours to release.
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
+        _logger.EndRefreshFinished(did);
+
+        return true;
     }
 
     /// <summary>

@@ -13,6 +13,9 @@ using idunno.Bluesky.AspNet.Authentication.Events;
 
 using MySqlConnector;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace idunno.Bluesky.AspNet.Authentication.MySQL;
 
 /// <summary>
@@ -27,6 +30,7 @@ public class MySqlIdentityStore : IIdentityStore
     private readonly TimeSpan _entryTimeToLive;
     private readonly TimeSpan _refreshLockLength;
     private readonly BlueskyAuthenticationMetrics _metrics;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Creates a new instance of <see cref="MySqlIdentityStore"/>.
@@ -35,6 +39,7 @@ public class MySqlIdentityStore : IIdentityStore
     /// <param name="entryTimeToLive">The sliding time to live for stored identities.</param>
     /// <param name="refreshLockLength">The time to live for refresh locks.</param>
     /// <param name="meterFactory">An optional meter factory used to record identity store metrics.</param>
+    /// <param name="loggerFactory">An optional logger factory used to report refresh lock contention.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is empty or invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive.
@@ -43,7 +48,8 @@ public class MySqlIdentityStore : IIdentityStore
         string connectionString,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockLength = null,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null,
+        ILoggerFactory? loggerFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 
@@ -51,6 +57,7 @@ public class MySqlIdentityStore : IIdentityStore
         _entryTimeToLive = ValidateTimeToLive(entryTimeToLive ?? s_defaultEntryTimeToLive, nameof(entryTimeToLive));
         _refreshLockLength = ValidateTimeToLive(refreshLockLength ?? s_defaultRefreshLockLength, nameof(refreshLockLength));
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
+        _logger = loggerFactory?.CreateLogger<MySqlIdentityStore>() ?? NullLogger<MySqlIdentityStore>.Instance;
     }
 
     /// <summary>
@@ -152,25 +159,34 @@ public class MySqlIdentityStore : IIdentityStore
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>An ownership token when the lock was acquired; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The expiry is derived from the database clock rather than this server's clock, so that the value written and the value
+    ///   every expiry comparison is made against come from the same source. Mixing the two would make the effective lock length
+    ///   depend on the skew between an application server and the database, which at worst lets a second caller acquire a lock
+    ///   the first still believes it holds.
+    /// </para>
+    /// </remarks>
     public async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
 
         string refreshLockToken = Guid.NewGuid().ToString("N");
+        long refreshLockMicroseconds = _refreshLockLength.Ticks / TimeSpan.TicksPerMicrosecond;
 
         using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
         using (MySqlCommand command = connection.CreateCommand())
         {
             command.CommandText = """
                 INSERT INTO `idunno_bluesky_refresh_locks` (`Did`, `LockToken`, `ExpiresAtUtc`)
-                VALUES (@did, @lockToken, @expiresAtUtc)
+                VALUES (@did, @lockToken, UTC_TIMESTAMP(6) + INTERVAL @refreshLockMicroseconds MICROSECOND)
                 ON DUPLICATE KEY UPDATE
                     `LockToken` = IF(`ExpiresAtUtc` <= UTC_TIMESTAMP(6), @lockToken, `LockToken`),
-                    `ExpiresAtUtc` = IF(`ExpiresAtUtc` <= UTC_TIMESTAMP(6), @expiresAtUtc, `ExpiresAtUtc`);
+                    `ExpiresAtUtc` = IF(`ExpiresAtUtc` <= UTC_TIMESTAMP(6), UTC_TIMESTAMP(6) + INTERVAL @refreshLockMicroseconds MICROSECOND, `ExpiresAtUtc`);
                 """;
             command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
             command.Parameters.Add("@lockToken", MySqlDbType.VarChar).Value = refreshLockToken;
-            command.Parameters.Add("@expiresAtUtc", MySqlDbType.DateTime).Value = DateTime.UtcNow.Add(_refreshLockLength);
+            command.Parameters.Add("@refreshLockMicroseconds", MySqlDbType.Int64).Value = refreshLockMicroseconds;
 
             await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -192,9 +208,12 @@ public class MySqlIdentityStore : IIdentityStore
                     System.Text.Encoding.UTF8.GetBytes(storedToken),
                     System.Text.Encoding.UTF8.GetBytes(refreshLockToken)))
             {
+                _logger.StartRefreshDenied(did);
                 return null;
             }
         }
+
+        _logger.StartRefreshEntered(did);
 
         return refreshLockToken;
     }
@@ -205,47 +224,48 @@ public class MySqlIdentityStore : IIdentityStore
     /// <param name="did">The DID whose refresh lock should be released.</param>
     /// <param name="refreshLockToken">The ownership token returned by <see cref="StartRefresh(Did, CancellationToken)"/>.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns><see langword="true"/> when the caller still owned the lock and it was released; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-    public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <para>
+    ///   The token comparison is part of the <c>DELETE</c> rather than a preceding <c>SELECT ... FOR UPDATE</c>, so no transaction
+    ///   is needed to make the check and the release atomic. It also avoids taking a gap lock when no row exists for
+    ///   <paramref name="did"/>, which under REPEATABLE READ can deadlock concurrent callers. <c>LockToken</c> is declared
+    ///   <c>COLLATE ascii_bin</c>, so the comparison is byte exact.
+    /// </para>
+    /// </remarks>
+    public async Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
 
+        if (string.IsNullOrEmpty(refreshLockToken))
+        {
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
         using MySqlConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
-        using MySqlTransaction transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        using MySqlCommand command = connection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM `idunno_bluesky_refresh_locks`
+            WHERE `Did` = @did
+                AND `LockToken` = @refreshLockToken;
+            """;
+        command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
+        command.Parameters.Add("@refreshLockToken", MySqlDbType.VarChar).Value = refreshLockToken;
 
-        string? storedToken;
-        using (MySqlCommand command = connection.CreateCommand())
+        int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+        if (rowsAffected == 0)
         {
-            command.Transaction = transaction;
-            command.CommandText = """
-                SELECT `LockToken`
-                FROM `idunno_bluesky_refresh_locks`
-                WHERE `Did` = @did
-                FOR UPDATE;
-                """;
-            command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
-
-            storedToken = (string?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            // The lock expired, and may since have been acquired by another caller, so it is not ours to release.
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
         }
 
-        if (storedToken is not null &&
-            CryptographicOperations.FixedTimeEquals(
-                System.Text.Encoding.UTF8.GetBytes(storedToken),
-                System.Text.Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
-        {
-            using MySqlCommand command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = """
-                DELETE FROM `idunno_bluesky_refresh_locks`
-                WHERE `Did` = @did;
-                """;
-            command.Parameters.Add("@did", MySqlDbType.VarChar).Value = did.ToString();
+        _logger.EndRefreshFinished(did);
 
-            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return true;
     }
 
     /// <summary>

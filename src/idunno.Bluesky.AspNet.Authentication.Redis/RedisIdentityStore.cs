@@ -11,6 +11,9 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 using StackExchange.Redis;
 
 namespace idunno.Bluesky.AspNet.Authentication.Redis;
@@ -30,6 +33,7 @@ public class RedisIdentityStore : IIdentityStore
     private readonly TimeSpan _entryTimeToLive;
     private readonly TimeSpan _refreshLockLength;
     private readonly BlueskyAuthenticationMetrics _metrics;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Creates a new instance of <see cref="RedisIdentityStore"/>.
@@ -40,6 +44,7 @@ public class RedisIdentityStore : IIdentityStore
     /// <param name="entryTimeToLive">The sliding time to live for stored identities.</param>
     /// <param name="refreshLockLength">The time to live for refresh locks.</param>
     /// <param name="meterFactory">An optional meter factory used to record identity store metrics.</param>
+    /// <param name="loggerFactory">An optional logger factory used to report refresh lock contention.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="connectionMultiplexer"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Thrown when <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive.
@@ -50,7 +55,8 @@ public class RedisIdentityStore : IIdentityStore
         string? instanceName = null,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockLength = null,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null,
+        ILoggerFactory? loggerFactory = null)
     {
         ArgumentNullException.ThrowIfNull(connectionMultiplexer);
 
@@ -59,6 +65,7 @@ public class RedisIdentityStore : IIdentityStore
         _entryTimeToLive = ValidateTimeToLive(entryTimeToLive ?? s_defaultEntryTimeToLive, nameof(entryTimeToLive));
         _refreshLockLength = ValidateTimeToLive(refreshLockLength ?? s_defaultRefreshLockLength, nameof(refreshLockLength));
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
+        _logger = loggerFactory?.CreateLogger<RedisIdentityStore>() ?? NullLogger<RedisIdentityStore>.Instance;
     }
 
     /// <summary>
@@ -158,7 +165,15 @@ public class RedisIdentityStore : IIdentityStore
             _refreshLockLength,
             When.NotExists).ConfigureAwait(false);
 
-        return acquired ? refreshLockToken : null;
+        if (!acquired)
+        {
+            _logger.StartRefreshDenied(did);
+            return null;
+        }
+
+        _logger.StartRefreshEntered(did);
+
+        return refreshLockToken;
     }
 
     /// <summary>
@@ -167,37 +182,46 @@ public class RedisIdentityStore : IIdentityStore
     /// <param name="did">The DID whose refresh lock should be released.</param>
     /// <param name="refreshLockToken">The ownership token returned by <see cref="StartRefresh(Did, CancellationToken)"/>.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns><see langword="true"/> when the caller still owned the lock and it was released; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-    public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <para>
+    ///   The script compares the caller's own token, so the comparison and the release are a single atomic operation and the
+    ///   result reflects whether this caller still held the lock. Reading the value back first and comparing it in the client
+    ///   would leave a window in which the lock expired and was reacquired between the read and the delete.
+    /// </para>
+    /// </remarks>
+    public async Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
         cancellationToken.ThrowIfCancellationRequested();
 
-        RedisKey key = RefreshLockKey(did);
-        RedisValue current = await _database.StringGetAsync(key).ConfigureAwait(false);
-        if (current.IsNull)
+        if (string.IsNullOrEmpty(refreshLockToken))
         {
-            return;
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
         }
 
-        string storedToken = current.ToString();
-        if (!CryptographicOperations.FixedTimeEquals(
-            System.Text.Encoding.UTF8.GetBytes(storedToken),
-            System.Text.Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
-        {
-            return;
-        }
-
-        await _database.ScriptEvaluateAsync(
+        RedisResult result = await _database.ScriptEvaluateAsync(
             """
             if redis.call('GET', KEYS[1]) == ARGV[1] then
                 return redis.call('DEL', KEYS[1])
             end
             return 0
             """,
-            [key],
-            [storedToken]).ConfigureAwait(false);
+            [RefreshLockKey(did)],
+            [refreshLockToken]).ConfigureAwait(false);
+
+        if ((long)result == 0)
+        {
+            // The lock expired, and may since have been acquired by another caller, so it is not ours to release.
+            _logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
+        _logger.EndRefreshFinished(did);
+
+        return true;
     }
 
     /// <summary>

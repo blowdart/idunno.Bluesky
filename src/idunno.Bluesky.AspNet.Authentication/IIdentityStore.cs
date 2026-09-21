@@ -121,14 +121,22 @@ public interface IIdentityStore
     /// <param name="did">The <see cref="Did"/> to remove from the list of DIDs being refreshed.</param>
     /// <param name="refreshLockToken">The token returned by <see cref="StartRefresh(Did, CancellationToken)"/> when the lock was acquired.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <returns>
+    ///   The task object representing the asynchronous operation. The task result contains <see langword="true"/> if the caller still owned the lock and it
+    ///   was released; otherwise <see langword="false"/>.
+    /// </returns>
     /// <remarks>
     /// <para>
     ///   Implementations must only release the lock if <paramref name="refreshLockToken"/> matches the token currently held against <paramref name="did"/>,
     ///   otherwise a caller whose lock expired mid refresh would release a lock another caller has since acquired.
     /// </para>
+    /// <para>
+    ///   A <see langword="false"/> result means the caller's lock expired while it was refreshing and, if the refresh itself succeeded, that another caller
+    ///   may have been refreshing the same <see cref="Did"/> at the same time. Implementations should perform the comparison and the release as a single
+    ///   atomic operation, so that the result reflects what actually happened rather than what was the case when the token was last read.
+    /// </para>
     /// </remarks>
-    Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default);
+    Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines if the specified <paramref name="did"/> is currently being refreshed. This is used to prevent multiple refreshes from occurring at the same time.
@@ -167,17 +175,48 @@ public interface IIdentityStore
             return;
         }
 
-        ClaimsIdentity? storedIdentity = await GetIdentity(e.AccessCredentials.Did, cancellationToken).ConfigureAwait(false);
+        await UpdateIfNewer(e.AccessCredentials, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the specified <paramref name="credentials"/> in the identity store, unless the store already holds credentials which expire later.
+    /// </summary>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to update.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>
+    ///   The task object representing the asynchronous operation. The task result contains <see langword="true"/> if the credentials were written;
+    ///   otherwise <see langword="false"/>, meaning the store already held a later set of credentials which were left in place.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The refresh lock is advisory. It stops two callers starting a refresh at the same time, but nothing revalidates it at the point the resulting
+    ///   credentials are written, so a caller whose lock expired mid refresh can still reach the write. This resolves that race on expiry rather than on
+    ///   lock ownership, so the newest credentials win regardless of which caller produced them.
+    /// </para>
+    /// <para>
+    ///   Refusing the write instead would be worse than allowing it. AT Proto refresh tokens are single use, so once a refresh has succeeded the tokens it
+    ///   returned are the only usable ones and the tokens they replaced are already spent. Discarding them because a lock had expired would throw away the
+    ///   only credentials which still work and sign the user out.
+    /// </para>
+    /// </remarks>
+    async Task<bool> UpdateIfNewer(AccessCredentials credentials, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(credentials);
+
+        ClaimsIdentity? storedIdentity = await GetIdentity(credentials.Did, cancellationToken).ConfigureAwait(false);
 
         if (storedIdentity is not null &&
             AtProtoCredential.TryCreate(storedIdentity, out DPoPAccessCredentials? storedCredentials) &&
             storedCredentials is not null &&
-            storedCredentials.ExpiresOn > e.AccessCredentials.ExpiresOn)
+            storedCredentials.ExpiresOn > credentials.ExpiresOn)
         {
-            return;
+            return false;
         }
 
-        await Update(e.AccessCredentials, cancellationToken).ConfigureAwait(false);
+        await Update(credentials, cancellationToken).ConfigureAwait(false);
+
+        return true;
     }
 
     /// <summary>

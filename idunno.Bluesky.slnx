@@ -314,6 +314,9 @@
     <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
+    <Project Path="test/idunno.Bluesky.AspNet.Authentication.SQLite.Test/idunno.Bluesky.AspNet.Authentication.SQLite.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>

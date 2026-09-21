@@ -821,7 +821,10 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                             }
                             else
                             {
-                                await IdentityStore.Update(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                                if (!await IdentityStore.UpdateIfNewer(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                                {
+                                    Logger.RefreshedCredentialsSupersededByStore(refreshingFor);
+                                }
 
                                 // Update the ticket with the new credentials
                                 ClaimsIdentity? updatedIdentity = await IdentityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
@@ -849,7 +852,13 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                         }
                         finally
                         {
-                            await IdentityStore.EndRefresh(refreshingFor, refreshLockToken, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                            if (!await IdentityStore.EndRefresh(refreshingFor, refreshLockToken, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                            {
+                                // The lock expired while the refresh was running, so another request may have been refreshing the
+                                // same DID at the same time. The store resolves the resulting write on expiry, so the credentials
+                                // are not lost, but the contention is worth surfacing.
+                                Logger.RefreshLockLostDuringRefresh(refreshingFor);
+                            }
                         }
                     }
 
