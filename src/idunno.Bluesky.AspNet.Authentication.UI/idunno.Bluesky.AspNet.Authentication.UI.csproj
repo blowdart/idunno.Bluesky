@@ -40,8 +40,12 @@
     <WarningLevel>8</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="wwwroot\.gitkeep" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
+    <None Include="wwwroot\.gitkeep" />
   </ItemGroup>
   
   <ItemGroup>
@@ -54,10 +58,6 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

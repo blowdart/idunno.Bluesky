@@ -4,6 +4,10 @@
     <BuildType Name="Debug" />
     <BuildType Name="Release" />
   </Configurations>
+  <Folder Name="/.artifacts/">
+    <File Path=".artifacts/Start-MySqlContainer.ps1" />
+    <File Path=".artifacts/Start-RedisContainer.ps1" />
+  </Folder>
   <Folder Name="/.build/">
     <File Path=".build/CoherenceChecks.cs" />
     <File Path=".build/Directory.Build.Props" />
