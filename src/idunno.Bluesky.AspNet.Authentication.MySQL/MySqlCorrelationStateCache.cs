@@ -77,11 +77,17 @@ public class MySqlCorrelationStateCache : ICorrelationStateCache
     }
 
     /// <summary>
-    /// Gets unexpired OAuth login state without removing it.
+    /// Peeks at unexpired OAuth login state without removing it.
     /// </summary>
     /// <param name="correlationId">The correlation identifier to retrieve.</param>
     /// <returns>The stored state, or <see langword="null"/> when it is missing, expired, or unreadable.</returns>
-    public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
+    /// <remarks>
+    /// <para>
+    ///   This does not consume the state, so it must not be used to validate an OAuth callback. Use
+    ///   <see cref="TakeOAuthLoginState(Guid)"/> for that.
+    /// </para>
+    /// </remarks>
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId)
     {
         using MySqlConnection connection = await OpenConnection().ConfigureAwait(false);
         using MySqlCommand command = connection.CreateCommand();

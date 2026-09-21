@@ -56,7 +56,7 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     }
 
     /// <inheritdoc/>
-    public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId)
     {
         string? encodedState = await Cache.GetStringAsync($"{CorrelationPrefix}{correlationId}").ConfigureAwait(false);
 

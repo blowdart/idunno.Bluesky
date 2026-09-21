@@ -125,7 +125,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">Thrown when the cache has been disposed.</exception>
-    public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 

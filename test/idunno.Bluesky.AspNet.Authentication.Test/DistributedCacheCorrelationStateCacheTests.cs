@@ -17,8 +17,8 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
         Guid correlationId = Guid.NewGuid();
         await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
 
-        Assert.NotNull(await first.GetOAuthLoginState(correlationId));
-        Assert.Null(await second.GetOAuthLoginState(correlationId));
+        Assert.NotNull(await first.PeekOAuthLoginState(correlationId));
+        Assert.Null(await second.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -33,6 +33,6 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
 
         await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 }

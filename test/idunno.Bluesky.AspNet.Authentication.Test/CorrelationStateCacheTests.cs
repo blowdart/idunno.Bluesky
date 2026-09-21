@@ -16,7 +16,7 @@ public abstract class CorrelationStateCacheTests
     protected abstract ICorrelationStateCache CreateCache();
 
     [Fact]
-    public async Task AddThenGetRoundTripsTheLoginState()
+    public async Task AddThenPeekRoundTripsTheLoginState()
     {
         ICorrelationStateCache cache = CreateCache();
         Guid correlationId = Guid.NewGuid();
@@ -24,7 +24,7 @@ public abstract class CorrelationStateCacheTests
         OAuthLoginState state = TestData.LoginState(correlationId, codeVerifier: "the-code-verifier");
         await cache.AddOAuthLoginState(correlationId, state);
 
-        OAuthLoginState? retrieved = await cache.GetOAuthLoginState(correlationId);
+        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId);
 
         Assert.NotNull(retrieved);
         Assert.Equal(state, retrieved);
@@ -40,11 +40,11 @@ public abstract class CorrelationStateCacheTests
     }
 
     [Fact]
-    public async Task GetReturnsNullForACorrelationIdWhichWasNeverStored()
+    public async Task PeekReturnsNullForACorrelationIdWhichWasNeverStored()
     {
         ICorrelationStateCache cache = CreateCache();
 
-        Assert.Null(await cache.GetOAuthLoginState(Guid.NewGuid()));
+        Assert.Null(await cache.PeekOAuthLoginState(Guid.NewGuid()));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public abstract class CorrelationStateCacheTests
 
         // Login state is single use, so a replayed callback must not be given the same state again.
         Assert.Null(await cache.TakeOAuthLoginState(correlationId));
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public abstract class CorrelationStateCacheTests
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
         await cache.RemoveCorrelationState(correlationId);
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public abstract class CorrelationStateCacheTests
 
         cache.Events = readable;
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
-        Assert.NotNull(await cache.GetOAuthLoginState(correlationId));
+        Assert.NotNull(await cache.PeekOAuthLoginState(correlationId));
 
         // A different provider means a different key ring, which is what a rolled or lost key looks like to the cache.
         cache.Events = new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
@@ -102,7 +102,7 @@ public abstract class CorrelationStateCacheTests
         // An entry which could not be read must still have been consumed, so it cannot be presented a second time,
         // even by a caller whose key ring could read it a moment ago.
         cache.Events = readable;
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public abstract class CorrelationStateCacheTests
 
         cache.Events = new CorrelationStateCacheEvents();
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
         Assert.Null(await cache.TakeOAuthLoginState(correlationId));
     }
 
@@ -140,7 +140,7 @@ public abstract class CorrelationStateCacheTests
         // A different provider means a different key ring, which is what a rolled or lost key looks like to the cache.
         cache.Events = new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
     }
 
     [Fact]
@@ -180,10 +180,10 @@ public abstract class CorrelationStateCacheTests
                 return Task.CompletedTask;
             }
         };
-        await cache.GetOAuthLoginState(correlationId);
+        await cache.PeekOAuthLoginState(correlationId);
 
         cache.Events = protectingEvents;
-        OAuthLoginState? retrieved = await cache.GetOAuthLoginState(correlationId);
+        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId);
 
         Assert.NotNull(retrieved);
         Assert.Equal(state, retrieved);
