@@ -22,9 +22,9 @@ public abstract class CorrelationStateCacheTests
         Guid correlationId = Guid.NewGuid();
 
         OAuthLoginState state = TestData.LoginState(correlationId, codeVerifier: "the-code-verifier");
-        await cache.AddOAuthLoginState(correlationId, state);
+        await cache.AddOAuthLoginState(correlationId, state, TestContext.Current.CancellationToken);
 
-        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId);
+        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken);
 
         Assert.NotNull(retrieved);
         Assert.Equal(state, retrieved);
@@ -36,7 +36,7 @@ public abstract class CorrelationStateCacheTests
     {
         ICorrelationStateCache cache = CreateCache();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => cache.AddOAuthLoginState(Guid.NewGuid(), null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => cache.AddOAuthLoginState(Guid.NewGuid(), null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public abstract class CorrelationStateCacheTests
     {
         ICorrelationStateCache cache = CreateCache();
 
-        Assert.Null(await cache.PeekOAuthLoginState(Guid.NewGuid()));
+        Assert.Null(await cache.PeekOAuthLoginState(Guid.NewGuid(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -53,13 +53,13 @@ public abstract class CorrelationStateCacheTests
         ICorrelationStateCache cache = CreateCache();
         Guid correlationId = Guid.NewGuid();
 
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-        Assert.NotNull(await cache.TakeOAuthLoginState(correlationId));
+        Assert.NotNull(await cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
 
         // Login state is single use, so a replayed callback must not be given the same state again.
-        Assert.Null(await cache.TakeOAuthLoginState(correlationId));
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
+        Assert.Null(await cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public abstract class CorrelationStateCacheTests
     {
         ICorrelationStateCache cache = CreateCache();
 
-        Assert.Null(await cache.TakeOAuthLoginState(Guid.NewGuid()));
+        Assert.Null(await cache.TakeOAuthLoginState(Guid.NewGuid(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -76,10 +76,10 @@ public abstract class CorrelationStateCacheTests
         ICorrelationStateCache cache = CreateCache();
         Guid correlationId = Guid.NewGuid();
 
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
-        await cache.RemoveCorrelationState(correlationId);
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
+        await cache.RemoveCorrelationState(correlationId, TestContext.Current.CancellationToken);
 
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -92,17 +92,17 @@ public abstract class CorrelationStateCacheTests
             new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
 
         cache.Events = readable;
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
-        Assert.NotNull(await cache.PeekOAuthLoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
+        Assert.NotNull(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
 
         // A different provider means a different key ring, which is what a rolled or lost key looks like to the cache.
         cache.Events = new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
-        Assert.Null(await cache.TakeOAuthLoginState(correlationId));
+        Assert.Null(await cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
 
         // An entry which could not be read must still have been consumed, so it cannot be presented a second time,
         // even by a caller whose key ring could read it a moment ago.
         cache.Events = readable;
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -120,12 +120,12 @@ public abstract class CorrelationStateCacheTests
             }
         };
 
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         cache.Events = new CorrelationStateCacheEvents();
 
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
-        Assert.Null(await cache.TakeOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+        Assert.Null(await cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -135,12 +135,12 @@ public abstract class CorrelationStateCacheTests
         Guid correlationId = Guid.NewGuid();
 
         cache.Events = new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         // A different provider means a different key ring, which is what a rolled or lost key looks like to the cache.
         cache.Events = new DataProtectingCorrelationStateCacheEvents(new EphemeralDataProtectionProvider());
 
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public abstract class CorrelationStateCacheTests
         };
 
         OAuthLoginState state = TestData.LoginState(correlationId, codeVerifier: "a-very-secret-verifier");
-        await cache.AddOAuthLoginState(correlationId, state);
+        await cache.AddOAuthLoginState(correlationId, state, TestContext.Current.CancellationToken);
 
         // Capture what actually went into the cache by reading it back without the protecting events in place.
         CorrelationStateCacheEvents protectingEvents = cache.Events;
@@ -180,10 +180,10 @@ public abstract class CorrelationStateCacheTests
                 return Task.CompletedTask;
             }
         };
-        await cache.PeekOAuthLoginState(correlationId);
+        await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken);
 
         cache.Events = protectingEvents;
-        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId);
+        OAuthLoginState? retrieved = await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken);
 
         Assert.NotNull(retrieved);
         Assert.Equal(state, retrieved);
@@ -195,5 +195,31 @@ public abstract class CorrelationStateCacheTests
         // What was actually stored is protected, so the code verifier is not sitting in the cache in the clear.
         Assert.NotNull(persisted);
         Assert.DoesNotContain("a-very-secret-verifier", persisted, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EveryOperationHonoursACancelledToken()
+    {
+        // A cache backed by a database does its work over a connection, so a request which has gone away should not
+        // leave the operation running. The in process caches have nothing to cancel, but they are held to the same
+        // contract so a caller can rely on it whichever store is registered.
+        ICorrelationStateCache cache = CreateCache();
+        Guid correlationId = Guid.NewGuid();
+
+        using CancellationTokenSource cancellationTokenSource = new();
+        await cancellationTokenSource.CancelAsync();
+        CancellationToken cancelled = cancellationTokenSource.Token;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), cancelled));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cache.PeekOAuthLoginState(correlationId, cancelled));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cache.TakeOAuthLoginState(correlationId, cancelled));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => cache.RemoveCorrelationState(correlationId, cancelled));
     }
 }

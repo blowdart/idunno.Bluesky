@@ -31,16 +31,16 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         for (int state = 0; state < 8; state++)
         {
             Guid filler = Guid.NewGuid();
-            await cache.AddOAuthLoginState(filler, TestData.LoginState(filler));
+            await cache.AddOAuthLoginState(filler, TestData.LoginState(filler), TestContext.Current.CancellationToken);
         }
 
         for (int state = 0; state < 8; state++)
         {
             Guid correlationId = Guid.NewGuid();
 
-            await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+            await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-            Assert.NotNull(await cache.PeekOAuthLoginState(correlationId));
+            Assert.NotNull(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
         }
     }
 
@@ -51,10 +51,10 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         using EphemeralCorrelationStateCache second = new(NullLoggerFactory.Instance);
 
         Guid correlationId = Guid.NewGuid();
-        await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-        Assert.NotNull(await first.PeekOAuthLoginState(correlationId));
-        Assert.Null(await second.PeekOAuthLoginState(correlationId));
+        Assert.NotNull(await first.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+        Assert.Null(await second.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -67,10 +67,10 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         EphemeralCorrelationStateCache cache = new(NullLoggerFactory.Instance);
         Guid correlationId = Guid.NewGuid();
 
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         OAuthLoginState?[] results = await Task.WhenAll(
-            Enumerable.Range(0, 64).Select(_ => Task.Run(() => cache.TakeOAuthLoginState(correlationId), cancellationToken)));
+            Enumerable.Range(0, 64).Select(_ => Task.Run(() => cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken), cancellationToken)));
 
         Assert.Single(results, state => state is not null);
     }
@@ -81,16 +81,16 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
         EphemeralCorrelationStateCache cache = new(NullLoggerFactory.Instance);
 
         Guid correlationId = Guid.NewGuid();
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         cache.Dispose();
 
         List<Func<Task>> operations =
         [
-            () => cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId)),
-            () => cache.PeekOAuthLoginState(correlationId),
-            () => cache.TakeOAuthLoginState(correlationId),
-            () => cache.RemoveCorrelationState(correlationId),
+            () => cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken),
+            () => cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken),
+            () => cache.TakeOAuthLoginState(correlationId, TestContext.Current.CancellationToken),
+            () => cache.RemoveCorrelationState(correlationId, TestContext.Current.CancellationToken),
         ];
 
         foreach (Func<Task> operation in operations)
@@ -121,10 +121,10 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
             entryTimeToLive: TimeSpan.FromMilliseconds(50));
 
         Guid correlationId = Guid.NewGuid();
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
 
-        Assert.Null(await cache.PeekOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 }

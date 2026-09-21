@@ -1,12 +1,12 @@
 #nullable enable
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache
-idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.Events.set -> void
-idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.PeekOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
-idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.RemoveCorrelationState(System.Guid correlationId) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.PeekOAuthLoginState(System.Guid correlationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.RemoveCorrelationState(System.Guid correlationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.SqliteCorrelationStateCache(string! connectionString, System.TimeSpan? entryTimeToLive = null) -> void
-idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+idunno.Bluesky.AspNet.Authentication.SQLite.SqliteCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteIdentityStore
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.SQLite.SqliteIdentityStore.EndRefresh(idunno.AtProto.Did! did, string? refreshLockToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
