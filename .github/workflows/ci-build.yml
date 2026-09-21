@@ -149,6 +149,14 @@ jobs:
           9.0.x
           10.0.x
 
+    - name: 'Cache NuGet packages'
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-trimming-${{ hashFiles('global.json', 'nuget.config', 'Directory.Packages.props', 'Directory.Build.props', 'src/**/*.props', 'src/**/*.csproj', 'trimming/**/*.props', 'trimming/**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-trimming-
+
     - name: 'Report SDK versions'
       run : dotnet --info
 
