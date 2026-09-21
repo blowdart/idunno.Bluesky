@@ -104,14 +104,27 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
-* Added a new package, `idunno.Bluesky.AspNet.Authentication`, which provides ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
+* Contains ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
   `AuthenticationBuilder.AddBluesky()`, and a `ProfileClaimsTransformer` which can be registered with `IServiceCollection.AddProfileClaimsTransformer()`.
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 
-* Added a new package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides a default UI for the Bluesky ASP.NET Core authentication handler.
+* Contains a default UI for the Bluesky ASP.NET Core authentication handler.
   It includes Razor Pages for login and logout, and can be added to an application with `services.AddBlueskyAuthenticationUI()`.
+
+#### idunno.Bluesky.AspNet.Authentication.MySQL
+
+* Contains MySQL implementations of `IIdentityStore` and `ICorrelationStateCache`.
+
+#### idunno.Bluesky.AspNet.Authentication.Redis
+
+* Contains Redis implementations of `IIdentityStore` and `ICorrelationStateCache`.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Contains SQLite implementations of `IIdentityStore` and `ICorrelationStateCache`.
+* Contains a PowerShell script which creates a new SQLite authentication database from the packaged schema.
 
 ### Changed
 
@@ -1905,4 +1918,3 @@ for custom `AtProtoRecord` classes.
 * Following and unfollowing users.
 * Muting and blocking users.
 * Sending, receiving, and deleting messages.
-

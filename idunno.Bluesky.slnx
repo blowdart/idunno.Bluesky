@@ -286,6 +286,9 @@
     <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
     <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.MySQL/idunno.Bluesky.AspNet.Authentication.MySQL.csproj" Id="2fe1e43a-b4ac-4aff-851e-83fc5d7c6b35" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj" Id="3fc9d41e-099d-461b-92f6-30275b1d8b43" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />

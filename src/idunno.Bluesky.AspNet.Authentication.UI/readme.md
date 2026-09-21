@@ -1,13 +1,8 @@
-# idunno.Bluesky
+# idunno.Bluesky.AspNet.Authentication.UI
 
 ## About
 
-ASP.NET Core authentication using the [Bluesky social network](https://bsky.social/).
-
-## Key Features
-
-* ASP.NET authentication using the Bluesky OAuth flow.
-* Claims transformation to read enhanced user information from their Bluesky profile.
+A default UI for ASP.NET Core authentication using the [Bluesky social network](https://bsky.social/).
 
 ## Version History
 
@@ -21,11 +16,6 @@ builder.Services
     .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
     .AddBluesky()
     .AddBlueskyAuthenticationUI();
-
-builder.Services
-    .AddBlueskyClaimsTransformer()
-    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
-    .AddBlueskyAgentFactory()
 ```
 
 ## Documentation

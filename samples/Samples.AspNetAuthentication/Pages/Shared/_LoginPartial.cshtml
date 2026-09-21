@@ -4,18 +4,20 @@
     @if (User.Identity?.IsAuthenticated ?? false)
     {
         <li class="nav-item">
-            @if (User.GetAvatar() is not null)
-            {
-                <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />
-            }
-            else if (User.GetDisplayName() is not null)
-            {
-                <span>Hello @User.GetDisplayName()!</span>
-            }
-            else
-            {
-                <span>Hello @User.Identity?.Name!</span>
-            }
+            <a class="nav-link text-dark" asp-page="/Manage/Index" title="Manage Profile">
+                @if (User.GetAvatar() is not null)
+                {
+                    <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />
+                }
+                else if (User.GetDisplayName() is not null)
+                {
+                    <span>Hello @User.GetDisplayName()!</span>
+                }
+                else
+                {
+                    <span>Hello @User.Identity?.Name!</span>
+                }
+            </a>
         </li>
         <li class="nav-item">
             @{

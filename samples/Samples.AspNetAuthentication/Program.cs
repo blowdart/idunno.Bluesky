@@ -9,10 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
-    .AddBluesky(options => {
-        options.LoginPath = "/Bluesky/Login";
-        options.LogoutPath = "/Bluesky/Logout";
-    })
+    .AddBluesky()
     .AddBlueskyAuthenticationUI();
 
 builder.Services
@@ -43,7 +40,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseRouting();
 
-app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();

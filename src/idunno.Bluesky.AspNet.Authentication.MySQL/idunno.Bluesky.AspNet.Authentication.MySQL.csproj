@@ -1,16 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>idunno.Bluesky.AspNet.Authentication.UI is the default Razor Pages UI for Bluesky authentication.</Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageTags>atproto;bluesky;aspnetcore;authentication;security;razorpages</PackageTags>
-    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
-    <StaticWebAssetBasePath>Bluesky</StaticWebAssetBasePath>
+    <Description>MySQL providers for idunno.Bluesky.AspNet.Authentication.</Description>
+    <PackageTags>atproto;bluesky;aspnetcore;authentication;security;mysql</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
   </PropertyGroup>
 
   <!-- Nuget package properties -->
@@ -38,24 +36,22 @@
     <WarningLevel>8</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
+    <None Include="schema.sql" Pack="true" PackagePath="contentFiles\any\any" />
+    <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <PackageReference Include="MySqlConnector" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <SupportedPlatform Include="browser" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\" />
   </ItemGroup>
 
 </Project>

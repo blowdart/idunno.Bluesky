@@ -171,10 +171,13 @@ where the `$type` property is not the first property in the JSON object.
 
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
+* [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) - used in SQLite implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [Duende.IdentityModel.OidcClient](https://github.com/DuendeSoftware/foss/tree/main/identity-model-oidc-client) - used to do the OAuth heavy lifting.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
+* [MySqlConnector](https://mysqlconnector.net/) - used in MySQL implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [PeterO.CBor](https://github.com/peteroupc/CBOR) - used in Fire Hose decoding.
 * [SimpleBase](https://github.com/ssg/SimpleBase) - used in decoding CIDs.
+* [StackExchange.Redis](https://stackexchange.github.io/StackExchange.Redis/) - used in Redis implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [ZstdSharp](https://github.com/oleg-st/ZstdSharp) - used in Jetstream decompression.
 
 ### External analyzers used during builds
