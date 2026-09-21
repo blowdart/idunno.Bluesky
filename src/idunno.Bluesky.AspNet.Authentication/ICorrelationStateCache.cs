@@ -33,27 +33,37 @@ public interface ICorrelationStateCache
     /// </summary>
     /// <param name="correlationId">The key to use</param>
     /// <param name="state">The state to store.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task that represents the asynchronous addoperation.</returns>
-    Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state);
+    Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the <see cref="OAuthLoginState"/> from the authentication state cache
-    /// for the <paramref name="correlationId"/>.
+    /// for the <paramref name="correlationId"/>, leaving it in the cache.
     /// </summary>
     /// <param name="correlationId">The key to retrieve the <see cref="OAuthLoginState"/> for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
-    Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId);
+    /// <remarks>
+    /// <para>
+    ///   This peeks at the state rather than consuming it, so it must not be used to validate an OAuth callback. Login state is
+    ///   single use, and reading it without removing it allows a correlation identifier to be replayed. Use
+    ///   <see cref="TakeOAuthLoginState(Guid, CancellationToken)"/> for that, which reads and removes the state as one operation.
+    /// </para>
+    /// </remarks>
+    Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves the <see cref="OAuthLoginState"/> for the <paramref name="correlationId"/> from the authentication
     /// state cache and removes it, so it can only be consumed once.
     /// </summary>
     /// <param name="correlationId">The key to take the <see cref="OAuthLoginState"/> for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
     /// <remarks>
     /// <para>
-    ///   Login state is single use. Calling <see cref="GetOAuthLoginState(Guid)"/> and then
-    ///   <see cref="RemoveCorrelationState(Guid)"/> leaves a window in which two callbacks carrying the same correlation
+    ///   Login state is single use. Calling <see cref="PeekOAuthLoginState(Guid, CancellationToken)"/> and then
+    ///   <see cref="RemoveCorrelationState(Guid, CancellationToken)"/> leaves a window in which two callbacks carrying the same correlation
     ///   identifier can both be given the state, so callers consuming a callback should use this instead.
     /// </para>
     /// <para>
@@ -61,12 +71,13 @@ public interface ICorrelationStateCache
     ///   unprotected does not survive to be presented again.
     /// </para>
     /// </remarks>
-    Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId);
+    Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes the correlation state for the specified <paramref name="correlationId"/> from the cache.
     /// </summary>
     /// <param name="correlationId">The key to remove the <see cref="OAuthLoginState"/> for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A task that represents the asynchronous remove operation.</returns>
-    Task RemoveCorrelationState(Guid correlationId);
+    Task RemoveCorrelationState(Guid correlationId, CancellationToken cancellationToken = default);
 }

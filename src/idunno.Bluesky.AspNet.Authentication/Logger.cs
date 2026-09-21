@@ -121,7 +121,7 @@ internal static partial class Logger
     [LoggerMessage(254, LogLevel.Debug, "Entry for {did} removed from cache")]
     public static partial void CachedIdentityRemoved(this ILogger logger, Did did);
 
-    [LoggerMessage(260, LogLevel.Debug, "StartRefresh entered for {did}")]
+    [LoggerMessage(270, LogLevel.Debug, "StartRefresh entered for {did}")]
     public static partial void StartRefreshEntered(this ILogger logger, Did did);
 
     [LoggerMessage(261, LogLevel.Debug, "StartRefresh denied for {did}, refresh already in progress.")]
@@ -150,6 +150,12 @@ internal static partial class Logger
 
     [LoggerMessage(269, LogLevel.Warning, "The identity store time to live for the '{scheme}' authentication scheme is {identityStoreEntryTimeToLive}, which is shorter than the ExpireTimeSpan of {expireTimeSpan}. Users will be signed out when their stored credentials expire, before their authentication cookie does.")]
     public static partial void IdentityStoreTimeToLiveShorterThanCookieLifetime(this ILogger logger, string scheme, TimeSpan identityStoreEntryTimeToLive, TimeSpan expireTimeSpan);
+
+    [LoggerMessage(271, LogLevel.Warning, "The refresh lock for {did} expired while its credentials were being refreshed, so another caller may have refreshed the same DID concurrently. Consider raising RefreshLockLength.")]
+    public static partial void RefreshLockLostDuringRefresh(this ILogger logger, Did did);
+
+    [LoggerMessage(272, LogLevel.Debug, "Refreshed credentials for {did} were not stored because the identity store already held credentials which expire later.")]
+    public static partial void RefreshedCredentialsSupersededByStore(this ILogger logger, Did did);
 
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);

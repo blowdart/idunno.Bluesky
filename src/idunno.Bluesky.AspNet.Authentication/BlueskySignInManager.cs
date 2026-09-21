@@ -361,7 +361,7 @@ public class BlueskySignInManager
         }
 
         // Login state is single use, so take it rather than reading it and removing it separately.
-        OAuthLoginState? loginState = await CorrelationCache.TakeOAuthLoginState(correlationId!.Value).ConfigureAwait(false);
+        OAuthLoginState? loginState = await CorrelationCache.TakeOAuthLoginState(correlationId!.Value, HttpContext.RequestAborted).ConfigureAwait(false);
 
         if (loginState is null)
         {
@@ -461,7 +461,7 @@ public class BlueskySignInManager
 
         correlationId ??= Guid.NewGuid();
 
-        await CorrelationCache.AddOAuthLoginState(correlationId.Value, state).ConfigureAwait(false);
+        await CorrelationCache.AddOAuthLoginState(correlationId.Value, state, HttpContext.RequestAborted).ConfigureAwait(false);
 
         return correlationId.Value;
     }

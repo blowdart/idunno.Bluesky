@@ -71,7 +71,7 @@ public class TokenRefreshTests
             return Task.FromResult<string?>(null);
         }
 
-        public Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default) => Task.FromResult(true);
 
         public Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default) =>
             Task.FromResult(ReportRefreshInProgress);

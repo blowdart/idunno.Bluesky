@@ -467,4 +467,61 @@ public abstract class IdentityStoreTests
         Assert.Equal(refreshed.AccessJwt, stored.FindFirst(AtProtoClaims.AccessToken)?.Value);
         Assert.Equal(refreshed.DPoPNonce, stored.FindFirst(AtProtoClaims.DPoPNonce)?.Value);
     }
+
+    [Fact]
+    public async Task UpdateIfNewerReportsThatItStoredCredentialsWhichSupersedeTheStoredIdentity()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        IIdentityStore store = CreateStore();
+        Did did = TestData.NewDid();
+        Uri service = new("https://bsky.social");
+
+        DPoPAccessCredentials stale = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(1)),
+            refreshToken: "refresh-token-about-to-be-spent",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce");
+
+        await store.Add(IIdentityStore.BuildClaimsIdentity(stale), cancellationToken);
+
+        DPoPAccessCredentials refreshed = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(2)),
+            refreshToken: "refresh-token-from-the-refresh",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-from-the-refresh");
+
+        Assert.True(await store.UpdateIfNewer(refreshed, cancellationToken));
+    }
+
+    [Fact]
+    public async Task UpdateIfNewerReportsThatItLeftCredentialsWhichTheStoredIdentitySupersedes()
+    {
+        // The handler reports this, as a write losing to a concurrent refresh means two requests refreshed the same DID.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        IIdentityStore store = CreateStore();
+        Did did = TestData.NewDid();
+        Uri service = new("https://bsky.social");
+
+        DPoPAccessCredentials refreshed = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(2)),
+            refreshToken: "refresh-token-from-the-refresh",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-from-the-refresh");
+
+        await store.Add(IIdentityStore.BuildClaimsIdentity(refreshed), cancellationToken);
+
+        DPoPAccessCredentials superseded = new(
+            service: service,
+            accessJwt: TestData.Jwt(did, TimeSpan.FromHours(1)),
+            refreshToken: "refresh-token-the-service-has-spent",
+            dPoPProofKey: "proof-key",
+            dPoPNonce: "nonce-rotated-on-the-in-flight-request");
+
+        Assert.False(await store.UpdateIfNewer(superseded, cancellationToken));
+    }
 }

@@ -78,10 +78,11 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the cache has been disposed.</exception>
-    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state)
+    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(state);
         ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         DateTime absoluteExpiration = DateTime.UtcNow.Add(EntryTTL);
 
@@ -125,9 +126,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">Thrown when the cache has been disposed.</exception>
-    public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         string? encodedState = Cache.Get($"{correlationId}") as string;
 
@@ -136,9 +138,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">Thrown when the cache has been disposed.</exception>
-    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         string? encodedState;
 
@@ -224,9 +227,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">Thrown when the cache has been disposed.</exception>
-    public Task RemoveCorrelationState(Guid correlationId)
+    public Task RemoveCorrelationState(Guid correlationId, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         Cache.Remove($"{correlationId}");
         return Task.CompletedTask;

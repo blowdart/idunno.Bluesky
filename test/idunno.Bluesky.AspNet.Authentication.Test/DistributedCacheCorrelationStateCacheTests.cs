@@ -15,10 +15,10 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
         DistributedCacheCorrelationStateCache second = new(TestData.DistributedCache());
 
         Guid correlationId = Guid.NewGuid();
-        await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-        Assert.NotNull(await first.GetOAuthLoginState(correlationId));
-        Assert.Null(await second.GetOAuthLoginState(correlationId));
+        Assert.NotNull(await first.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+        Assert.Null(await second.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -29,10 +29,10 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
             entryTimeToLive: TimeSpan.FromMilliseconds(50));
 
         Guid correlationId = Guid.NewGuid();
-        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
 
-        Assert.Null(await cache.GetOAuthLoginState(correlationId));
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
 }

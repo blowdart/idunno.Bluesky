@@ -42,9 +42,13 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
-    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state)
+    public async Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(state);
+
+        // An IDistributedCache is not required to observe the token, so the contract is enforced here rather than
+        // left to depend on which implementation happens to be registered.
+        cancellationToken.ThrowIfCancellationRequested();
 
         DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
             .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
@@ -52,13 +56,15 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);
 
-        await Cache.SetStringAsync($"{CorrelationPrefix}{correlationId}", context.State, options).ConfigureAwait(false);
+        await Cache.SetStringAsync($"{CorrelationPrefix}{correlationId}", context.State, options, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
+    public async Task<OAuthLoginState?> PeekOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
-        string? encodedState = await Cache.GetStringAsync($"{CorrelationPrefix}{correlationId}").ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string? encodedState = await Cache.GetStringAsync($"{CorrelationPrefix}{correlationId}", cancellationToken).ConfigureAwait(false);
 
         return await Decode(encodedState).ConfigureAwait(false);
     }
@@ -75,13 +81,15 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     ///   override this method to use it.
     /// </para>
     /// </remarks>
-    public virtual async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    public virtual async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         string key = $"{CorrelationPrefix}{correlationId}";
 
-        string? encodedState = await Cache.GetStringAsync(key).ConfigureAwait(false);
+        string? encodedState = await Cache.GetStringAsync(key, cancellationToken).ConfigureAwait(false);
 
-        await Cache.RemoveAsync(key).ConfigureAwait(false);
+        await Cache.RemoveAsync(key, cancellationToken).ConfigureAwait(false);
 
         return await Decode(encodedState).ConfigureAwait(false);
     }
@@ -113,8 +121,10 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     }
     
     /// <inheritdoc/>
-    public async Task RemoveCorrelationState(Guid correlationId)
+    public async Task RemoveCorrelationState(Guid correlationId, CancellationToken cancellationToken = default)
     {
-        await Cache.RemoveAsync($"{CorrelationPrefix}{correlationId}").ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        await Cache.RemoveAsync($"{CorrelationPrefix}{correlationId}", cancellationToken).ConfigureAwait(false);
     }
 }

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test against the schema the package ships, so that a change to one which is not matched in the other fails here. -->
+    <None Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\schema.sql" Link="schema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
+  </ItemGroup>
+
+</Project>
