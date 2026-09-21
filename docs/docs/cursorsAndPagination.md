@@ -16,7 +16,7 @@ The first call to `ListNotifications()` uses the limit parameter to control how 
 
 If you don't pass a limit Bluesky uses a default page size limit, which can vary by API.
 
-Then the code loops until either the the call to `ListNotifications()` returns an empty cursor, or it fails.
+Then the code loops until either the call to `ListNotifications()` returns an empty cursor, or it fails.
 
 ```c#
 if (notifications.Succeeded && notifications.Result.Count != 0)

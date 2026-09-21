@@ -52,7 +52,7 @@ If you don't provide `createdAt` the current date and time will be used.
 
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 
-The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResult>`
+The `Post()` method creates a record in your Bluesky repo and returns an `AtProtoHttpResult<CreateRecordResult>`
 This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation,
 if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you,
 which can be useful for making sure you don't flood the servers and get locked by a rate limiter.

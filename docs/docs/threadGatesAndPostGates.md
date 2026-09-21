@@ -25,7 +25,7 @@ await agent.AddThreadGate(
 
 The four types of thread gate rules are `FollowerRule`, `FollowingRule`, `MentionRule` and `ListRule`. Note that adding,
 or updating a thread gate replaces any gate already in place. If you want to update rules or hidden posts first get any existing rule
-with `GetThreadGate()`, if that is successful update the returned`ThreadGate` class then apply it with with `UpdateThreadGate()`.
+with `GetThreadGate()`, if that is successful update the returned `ThreadGate` class then apply it with `UpdateThreadGate()`.
 
 You can use `GetPostThread()` to see a view over a thread, including replies.
 

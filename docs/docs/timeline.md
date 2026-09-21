@@ -1,4 +1,4 @@
-﻿# Timelines and Feeds
+# Timelines and Feeds
 
 ## <a name="timeline">Reading your timeline</a>
 
@@ -78,7 +78,7 @@ if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0)
 > [!TIP]
 > Some feeds, like the Discover feed use a specialized cursor, rather than the more typical timestamp.
 > This can grow with each page, to the point when it is too large to send back to the server, hence the code above,
-> taken from the The [Feed sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Feed) limiting the do while loop not just until
+> taken from the [Feed sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Feed) limiting the do while loop not just until
 > data runs out but also to a maximum number of pages.
 
 ## <a name="searching">Searching</a>

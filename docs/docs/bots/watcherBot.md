@@ -1,4 +1,4 @@
-﻿# Writing a watcher bot
+# Writing a watcher bot
 
 Watcher bots monitor actions performed in the Bluesky network and take action based upon those actions. For example a bot might
 watch for a new post containing a particular hashtag and flag that post in a CRM system so a support team could monitor them
@@ -9,7 +9,7 @@ For this example we're going to write a bot that watches for posts that contains
 > [!NOTE]
 > You must already have created an account for your bot to run as, and generated a [app password](https://bsky.app/settings/app-passwords) for that account.
 
-## Create a .NET project and add the idunno.Bluesky nuget package
+## Create a .NET project and add the idunno.Bluesky NuGet package
 
 Let's start by creating a .NET project for our bot and adding the idunno.Bluesky package.
 
@@ -28,8 +28,8 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `WatcherBot` and click Next.
 1. In the "**Additional information**" dialog choose the Framework as .NET 9.0, uncheck the "Do not use top level statements" check box then click **Create**.
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
+1. Close the **Manage NuGet packages** dialog.
 
 # [Visual Studio Code](#tab/vsCode)
 
@@ -98,9 +98,9 @@ us to use configuration, application startup and shutdown and dependency injecti
 
 # [Visual Studio](#tab/apphost/visualStudio)
 
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab, ensure that the Include prelease checkbox is unchecked.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab, ensure that the Include prelease checkbox is unchecked.
    Search for `Microsoft.Extensions.Hosting`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Close the **Manage NuGet packages** dialog.
 1. Click on `Program.cs` and replace its contents with the following
    [!code-csharp[](code/WatcherBot/Step3/Program.cs)]
 1. Press `f5` to compile and run the program to start watching the jetstream.
@@ -141,9 +141,9 @@ This time around we're going to have an setting, `WatchWords`, which will be wor
 
 1. Open `appsettings.json` in your editor of choice and add the following with the editor of your choice
    [!code-json[](code/WatcherBot/Step4/appsettings.json)]
-1. Open `BotOptions.cs` in your editor of choice and and change the contents to the following
+1. Open `BotOptions.cs` in your editor of choice and change the contents to the following
    [!code-csharp[](code/WatcherBot/Step4/BotOptions.cs)]
-1. Open `ValidateBotOptions.cs` in your editor of choice and and change the contents to the following
+1. Open `ValidateBotOptions.cs` in your editor of choice and change the contents to the following
    [!code-csharp[](code/WatcherBot/Step4/ValidateBotOptions.cs)]
 1. Open `WatcherBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
    [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L17-L21)]
@@ -174,7 +174,7 @@ This time around we're going to have an setting, `WatchWords`, which will be wor
 1. Click on `Program.cs` and make the following changes
    [!code-xml[](code/WatcherBot/Step4/Program.cs?highlight=17-22,31-92)]
 1. Choose **File ▶ Save All**
-1. In the main VS menu choose choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
+1. In the main VS menu choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
 
 # [Visual Studio Code](#tab/settings/vsCode)
 

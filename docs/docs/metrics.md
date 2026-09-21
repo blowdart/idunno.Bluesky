@@ -20,41 +20,41 @@ This is a reference for metrics built-in for .NET, produced using the [System.Di
 
 The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.AtProto.AtProtoHttpClient`.
 
-### Metric : requests.total
+### Metric: requests.total
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made by an instance of `idunno.AtProto.AtProtoHttpClient`.|
+| `requests.total` | Counter&lt;long&gt; | {requests} | Total number of requests made by an instance of `idunno.AtProto.AtProtoHttpClient`.|
 
 ### Metric: responses.total
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `responses.total` | Counter&lt;long&gt; | Responses | Total number of responses received by an instance of `idunno.AtProto.AtProtoHttpClient`. |
+| `responses.total` | Counter&lt;long&gt; | {responses} | Total number of responses received by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.successful
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.successful` | Counter&lt;long&gt; | Requests | Total number of successful requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.successful` | Counter&lt;long&gt; | {requests} | Total number of successful requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.failure
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.failure` | Counter&lt;long&gt; | Requests | Total number of failed requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.failure` | Counter&lt;long&gt; | {requests} | Total number of failed requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.dpop_retry
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.dpop_retry` | Counter&lt;long&gt; | Requests | Total number of requests retried due to DPoP nonce rotation or other DPoP related issues by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.dpop_retry` | Counter&lt;long&gt; | {requests} | Total number of requests retried due to DPoP nonce rotation or other DPoP related issues by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: responses.total.deserialization_failure
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `responses.total.deserialization_failure` | Counter&lt;long&gt; | Requests | Total number of responses that could not be deserialized from JSON by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
+| `responses.total.deserialization_failure` | Counter&lt;long&gt; | {requests} | Total number of responses that could not be deserialized from JSON by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: request.duration
 
@@ -66,65 +66,65 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.xrpc_request` | Counter&lt;long&gt; | Requests | Total number of xRPC requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`, tagged with the xrpc_endpoint. |
+| `requests.total.xrpc_request` | Counter&lt;long&gt; | {requests} | Total number of xRPC requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`, tagged with the xrpc_endpoint. |
 
-## idunno.AtProto.JetStream
+## idunno.AtProto.Jetstream
 
-The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.JetStream.AtProtoJetstream` client.
+The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.Jetstream.AtProtoJetstream` client.
 
 ### Metric: total.messages
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.messages` | Counter&lt;long&gt; | Messages | Total number of messages received from the JetStream by a `AtProtoJetstream` instance. |
+| `total.messages` | Counter&lt;long&gt; | {messages} | Total number of messages received from the JetStream by a `AtProtoJetstream` instance. |
 
 ### Metric: total.message_parsing_failures
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.message_parsing_failures` | Counter&lt;long&gt; | Messages | Total number of messages that failed to parse after receipt by a `AtProtoJetstream` instance. |
+| `total.message_parsing_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to parse after receipt by a `AtProtoJetstream` instance. |
 
 ### Metric: total.message_decompression_failures
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.message_decompression_failures` | Counter&lt;long&gt; | Messages | Total number of messages that failed to decompress after receipt by a `AtProtoJetstream` instance. |
+| `total.message_decompression_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to decompress after receipt by a `AtProtoJetstream` instance. |
 
 ### Metric: total.events_parsed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.events_parsed` | Counter&lt;long&gt; | Events | Total number of events parsed from received messages by a `AtProtoJetstream` instance. |
+| `total.events_parsed` | Counter&lt;long&gt; | {events} | Total number of events parsed from received messages by a `AtProtoJetstream` instance. |
 
 ### Metric: total.unknown_events
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.unknown_events` | Counter&lt;long&gt; | Events | Total number of events with unknown type received in messages by a `AtProtoJetstream` instance. |
+| `total.unknown_events` | Counter&lt;long&gt; | {events} | Total number of events with unknown type received in messages by a `AtProtoJetstream` instance. |
 
 ### Metric: total.faults
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.faults` | Counter&lt;long&gt; | Faults | Total number of WebSocket faults that occurred by a `AtProtoJetstream` instance. |
+| `total.faults` | Counter&lt;long&gt; | {faults} | Total number of WebSocket faults that occurred by a `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_opened
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_opened` | Counter&lt;long&gt; | Connections | Total number of WebSocket connections to the JetStream opened by a `AtProtoJetstream` instance. |
+| `total.connections_opened` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream opened by a `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_closed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_closed` | Counter&lt;long&gt; | Connections | Total number of WebSocket connections to the JetStream closed by a `AtProtoJetstream` instance. |
+| `total.connections_closed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream closed by a `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_failed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_failed` | Counter&lt;long&gt; | Connections | Total number of WebSocket connections to the JetStream that failed by a `AtProtoJetstream` instance. |
+| `total.connections_failed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream that failed by a `AtProtoJetstream` instance. |
 
 ## idunno.AtProto.Directory
 
@@ -134,25 +134,25 @@ The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDir
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents.|
+| `requests.total` | Counter&lt;long&gt; | {requests} | Total number of requests made for DID documents.|
 
 ### Metric: idunno.atproto.directory.requests.total.failed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.failed` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that failed. |
+| `requests.total.failed` | Counter&lt;long&gt; | {requests} | Total number of requests made for DID documents that failed. |
 
 ### Metric: idunno.atproto.directory.requests.total.succeeded
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.succeeded` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that succeeded. |
+| `requests.total.succeeded` | Counter&lt;long&gt; | {requests} | Total number of requests made for DID documents that succeeded. |
 
-### Metric: idunno.atproto.directory.requests.duration
+### Metric: idunno.atproto.directory.request.duration
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made for DID documents. |
+| `request.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made for DID documents. |
 
 ## idunno.Bluesky.AspNet.Authentication
 
@@ -272,6 +272,12 @@ Tagged with `operation`, one of `add`, `get`, `remove` or `update`.
 Tagged with `phase`, either `authentication` when the identity was missing as the authentication cookie was read,
 or `token_refresh` when it disappeared while its access token was being refreshed.
 
+### Metric: idunno.bluesky.aspnet.authentication.identitystore.writefailures.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `identitystore.writefailures.total` | Counter&lt;long&gt; | {failures} | Total identities which could not be written to the identity store. A write failure leaves the store without an identity the session depends on, so the user is signed out on their next request. |
+
 ### Metric: idunno.bluesky.aspnet.authentication.identitystore.evictions.total
 
 | Name | Instrument Type | Unit | Description |
@@ -293,6 +299,12 @@ or `token_refresh` when it disappeared while its access token was being refreshe
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `profilecache.misses.total` | Counter&lt;long&gt; | {misses} | Total profile cache misses. A miss makes a call out to the PDS, so the hit rate against these two counters is a measure of how much request latency the profile cache is saving. |
+
+### Metric: idunno.bluesky.aspnet.authentication.handleverification.failures.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `handleverification.failures.total` | Counter&lt;long&gt; | {failures} | Total handles returned by a profile which did not resolve back to the DID they were returned for. A handle is only as trustworthy as the resolution which confirms it, so a failure means the handle was discarded rather than surfaced as a claim. |
 
 ### Metric: idunno.bluesky.aspnet.authentication.dataprotection.failures.total
 

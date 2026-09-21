@@ -47,7 +47,7 @@ Let's add some basic error checking to the Hello World code you wrote in [gettin
 ## Handling errors
 
 The `AtProtoHttpResult<T>` class provides a way to handle errors returned by the API. You can use the `AtErrorDetail` property to access detailed error information,
-if an error occured at the API layer.
+if an error occurred at the API layer.
 
 `AtErrorDetail` is a base class for errors, and the API may return a more specific error type, such as `AuthenticationRequired` or `RecordNotFound`.
 You can check for these types using [pattern matching](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/patterns).

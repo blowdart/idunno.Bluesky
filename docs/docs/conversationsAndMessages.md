@@ -15,7 +15,7 @@ var listConversationsResult = await agent.ListConversations();
 ```
 
 This returns a [pageable list](cursorsAndPagination.md) of all your conversations, direct and group conversations.
-The type of conversation is indicated by the `Kind` property, which will either be a instance of `DirectConversation` or `GroupConversation`.
+The type of conversation is indicated by the `Kind` property, which will either be an instance of `DirectConversation` or `GroupConversation`.
 The `ConversationView` also supplies the conversation ID, members, a flag indicating whether the user has opened the conversation,the number of unread messages and
 a view of the last message in the conversation.
 
