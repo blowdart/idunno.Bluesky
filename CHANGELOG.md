@@ -122,6 +122,9 @@
 
 * Contains MySQL implementations of `IIdentityStore` and `ICorrelationStateCache`.
 * The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
+* Both stores delete the rows they have allowed to expire, at most once every five minutes per store instance, so the tables no longer grow without bound.
+  The interval is configurable with the `expiredEntrySweepInterval` constructor parameter, and `TimeSpan.Zero` disables it for operators who reclaim the rows
+  themselves. The correlation state cache constructor now also accepts an `ILoggerFactory`, which it uses to report sweep activity and failures.
 
 #### idunno.Bluesky.AspNet.Authentication.Redis
 
@@ -133,6 +136,9 @@
 * Contains SQLite implementations of `IIdentityStore` and `ICorrelationStateCache`.
 * Contains a PowerShell script which creates a new SQLite authentication database from the packaged schema.
 * The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
+* Both stores delete the rows they have allowed to expire, at most once every five minutes per store instance, so the tables no longer grow without bound.
+  The interval is configurable with the `expiredEntrySweepInterval` constructor parameter, and `TimeSpan.Zero` disables it for operators who reclaim the rows
+  themselves. The correlation state cache constructor now also accepts an `ILoggerFactory`, which it uses to report sweep activity and failures.
 
 ### Changed
 
