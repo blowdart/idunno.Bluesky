@@ -1,11 +1,18 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using Microsoft.AspNetCore.Authentication;
 using idunno.Bluesky.AspNet.Authentication;
+
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+
 using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddDataProtection()
+    .SetApplicationName("Bluesky.AspNetAuthentication");
 
 builder.Services
     .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
