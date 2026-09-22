@@ -47,7 +47,7 @@ public sealed record ChatPreference
 /// <summary>
 /// The type of chats that should be included in notifications
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<ChatNotificationsFrom>))]
+[JsonConverter(typeof(ChatNotificationsFromConverter))]
 public enum ChatNotificationsFrom
 {
     /// <summary>
@@ -60,5 +60,15 @@ public enum ChatNotificationsFrom
     /// Only accepted chats
     /// </summary>
     [JsonStringEnumMemberName("accepted")]
-    Accepted
+    Accepted,
+
+    /// <summary>
+    /// The value is not one this library recognizes.
+    /// </summary>
+    /// <remarks>
+    /// <para>The set of values is decided by the service, not by this library, so a value added upstream is
+    /// surfaced as <see cref="Unknown"/> rather than causing the preferences to fail to deserialize. It cannot
+    /// be sent to the service.</para>
+    /// </remarks>
+    Unknown
 }

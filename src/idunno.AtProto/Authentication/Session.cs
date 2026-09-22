@@ -38,6 +38,7 @@ public record Session
                     break;
 
                 default:
+                    Status = AccountStatus.Unknown;
                     break;
             }
         }
@@ -75,6 +76,7 @@ public record Session
                     break;
 
                 default:
+                    Status = AccountStatus.Unknown;
                     break;
             }
         }

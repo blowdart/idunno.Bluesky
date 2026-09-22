@@ -77,6 +77,9 @@
 
 #### idunno.Bluesky
 
+* Added `Actor.SuggestedProfiles`, the result type for `GetSuggestions()`. It extends `PagedViewReadOnlyCollection<ProfileView>` with `RecIdStr`,
+  the snowflake identifying the recommendation which produced the suggestions. `app.bsky.actor.getSuggestions` returns this value, to be quoted when
+  submitting recommendation events, but it was previously discarded.
 * Added `Chat.Messages.RelatedProfiles`, which carries the profiles of every member who authored or reacted to the messages returned by
   `GetMessages()`, including the members referred to by any system message. `chat.bsky.convo.getMessages` returns these profiles, but they were
   previously discarded. A `SystemMessageView` refers to the users it concerns by `Did` only, so this collection was the only way to resolve them.
@@ -273,6 +276,11 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.GetSuggestions()` and `BlueskyServer.GetSuggestions()` now return an `Actor.SuggestedProfiles` rather than a
+  `PagedViewReadOnlyCollection<ProfileView>`, so that the recommendation identifier the service returns can be surfaced. `SuggestedProfiles`
+  derives from `PagedViewReadOnlyCollection<ProfileView>`, so the results are still enumerated and paged in exactly the same way.
+* `Feed.FeedGeneratorDescription.Links` is now `Links?`. `app.bsky.feed.describeFeedGenerator` requires only `did` and `feeds`, so a generator
+  which supplies no links previously produced a null in a non-nullable property.
 * `Chat.Actor.Declaration.AllowGroupInvites` is now `string?` and defaults to `null`, and the `allowGroupInvites` parameter on
   `BlueskyAgent.SetConversationDeclaration()` is now `string?`. `chat.bsky.actor.declaration` only requires `allowIncoming`, so a declaration
   record which omits `allowGroupInvites` is valid; it previously produced a null in a non-nullable property, and could not be created at all.
@@ -409,6 +417,10 @@
 
 #### idunno.AtProto
 
+* An `AccountStatus` the library does not recognize now deserializes to the new `AccountStatus.Unknown` rather than throwing. The account status
+  values in `com.atproto.server.getSession` and `com.atproto.sync` are an open list decided by the service, so a status added upstream previously
+  made every Jetstream account event carrying it fail to deserialize. `Session` also silently discarded an unrecognised status, leaving `Status`
+  null and indistinguishable from a response which supplied no status at all.
 * `SelfLabels.Values` now reads its backing collection under the same lock its mutators write it under. The unsynchronised read
   carried no memory barrier, so a caller on another thread could keep observing the collection as it was before an `AddLabel()`.
 * `AtProtoAgent.ApplyWrites()` no longer throws a `NullReferenceException` when a service returns no commit, and no longer fails to deserialize a
@@ -710,6 +722,11 @@
 
 #### idunno.Bluesky
 
+* `NotificationAllowedFrom`, `ChatNotificationsFrom`, `LimitTo` and `AgeAssuranceStatus` now deserialize a value the library does not recognize to
+  their new `Unknown` member rather than throwing. Each of these is an open list of known values decided by the service, so a value added upstream
+  previously made the entire preferences or age assurance response fail to deserialize. `Unknown` cannot be sent back to the service.
+* `Feed.GeneratorFeed.Uri` is now marked as required for serialization, so a feed which omits its `uri` is rejected rather than deserializing to a
+  null in a non-nullable property. `app.bsky.feed.describeFeedGenerator` requires `uri` on every feed it returns.
 * Reading a conversation whose `members` collection is empty no longer throws. `chat.bsky.convo.defs#convoView` places no lower bound on `members`,
   but `ConversationView` rejected an empty collection from inside its JSON constructor, so a valid response threw out of deserialization.
 * `Chat.Actor.Declaration.AllowIncoming` is now marked as required for serialization, so a declaration record which omits it is rejected rather than

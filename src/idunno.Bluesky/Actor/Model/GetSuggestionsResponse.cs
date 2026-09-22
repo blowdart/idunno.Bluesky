@@ -10,10 +10,11 @@ namespace idunno.Bluesky.Actor.Model;
 internal sealed record GetSuggestionsResponse
 {
     [JsonConstructor]
-    public GetSuggestionsResponse(string? cursor, IReadOnlyCollection<ProfileView> actors)
+    public GetSuggestionsResponse(string? cursor, IReadOnlyCollection<ProfileView> actors, string? recIdStr)
     {
         Cursor = cursor;
         Actors = actors;
+        RecIdStr = recIdStr;
     }
 
     [JsonInclude]
@@ -22,4 +23,7 @@ internal sealed record GetSuggestionsResponse
     [JsonInclude]
     [JsonRequired]
     public IReadOnlyCollection<ProfileView> Actors { get; init; }
+
+    [JsonInclude]
+    public string? RecIdStr { get; init; }
 }

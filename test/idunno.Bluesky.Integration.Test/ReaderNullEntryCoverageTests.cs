@@ -54,7 +54,7 @@ public class ReaderNullEntryCoverageTests
     [Fact]
     public async Task GetSuggestionsSkipsANullActorRatherThanReturningIt()
     {
-        AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>> result = await BlueskyServer.GetSuggestions(
+        AtProtoHttpResult<SuggestedProfiles> result = await BlueskyServer.GetSuggestions(
             limit: 25,
             cursor: null,
             service: TestServerBuilder.DefaultUri,
