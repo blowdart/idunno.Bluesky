@@ -55,15 +55,15 @@ public class ActorPreferenceSerializationTests
     [InlineData("app.bsky.actor.defs#personalDetailsPref", typeof(PersonalDetailsPreference))]
     [InlineData("app.bsky.actor.defs#declaredAgePref", typeof(DeclaredAgePreference))]
     [InlineData("app.bsky.actor.defs#threadViewPref", typeof(ThreadViewPreference))]
-    [InlineData("app.bsky.actor.defs#mutedWordsPref", typeof(MutedWordPreferences))]
-    [InlineData("app.bsky.actor.defs#hiddenPostsPref", typeof(HiddenPostsPreferences))]
+    [InlineData("app.bsky.actor.defs#mutedWordsPref", typeof(MutedWordPreferences), ""","items":[]""")]
+    [InlineData("app.bsky.actor.defs#hiddenPostsPref", typeof(HiddenPostsPreferences), ""","items":[]""")]
     [InlineData("app.bsky.actor.defs#bskyAppStatePref", typeof(BlueskyAppStatePreference))]
     [InlineData("app.bsky.actor.defs#postInteractionSettingsPref", typeof(PostInteractionSettingsPreferences))]
     [InlineData("app.bsky.actor.defs#verificationPrefs", typeof(VerificationPreferences))]
     [InlineData("app.bsky.actor.defs#liveEventPreferences", typeof(LiveEventPreferences))]
-    public void RecognizedPreferenceDeserializesToItsTypeAndKeepsItsDiscriminator(string discriminator, Type expectedType)
+    public void RecognizedPreferenceDeserializesToItsTypeAndKeepsItsDiscriminator(string discriminator, Type expectedType, string body = "")
     {
-        Preference? preference = JsonSerializer.Deserialize<Preference>($$"""{"$type":"{{discriminator}}"}""", s_options);
+        Preference? preference = JsonSerializer.Deserialize<Preference>($$"""{"$type":"{{discriminator}}"{{body}}}""", s_options);
 
         Assert.NotNull(preference);
         Assert.Equal(expectedType, preference.GetType());

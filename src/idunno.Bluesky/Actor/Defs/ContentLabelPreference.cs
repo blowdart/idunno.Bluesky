@@ -21,14 +21,32 @@ public sealed record ContentLabelPreference : Preference
     /// <param name="labelerDid">The <see cref="Did"/> of the labeler. If <see langword="null"/> this preference applies globally.</param>
     /// <param name="visibility">How the label should be treated in a UI.</param>
     /// <exception cref="ArgumentException">Thrown if <paramref name="label"/> is <see langword="null"/> or white space.</exception>
-    [JsonConstructor]
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="visibility"/> is <see cref="LabelVisibility.Unknown"/>.</exception>
     public ContentLabelPreference(string label, Did? labelerDid, LabelVisibility visibility)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
 
         Label = label;
         LabelerDid = labelerDid;
-        Visibility = visibility;
+        VisibilityValue = ActorWireValues.FromLabelVisibility(visibility, nameof(visibility));
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="ContentLabelPreference"/> from the values the service sent.
+    /// </summary>
+    /// <param name="label">The label name.</param>
+    /// <param name="labelerDid">The <see cref="Did"/> of the labeler. If <see langword="null"/> this preference applies globally.</param>
+    /// <param name="visibilityValue">How the label should be treated in a UI, as the service expresses it.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="label"/> or <paramref name="visibilityValue"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    internal ContentLabelPreference(string label, Did? labelerDid, string visibilityValue)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(visibilityValue);
+
+        Label = label;
+        LabelerDid = labelerDid;
+        VisibilityValue = visibilityValue;
     }
 
     /// <summary>
@@ -47,16 +65,31 @@ public sealed record ContentLabelPreference : Preference
     public Did? LabelerDid { get; init; }
 
     /// <summary>
+    /// Gets the desired visibility for the label, as the service expresses it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Label visibility is an open union, so the value the service sent is kept verbatim and
+    /// <see cref="Visibility"/> is projected from it. A visibility this library does not recognize survives a read,
+    /// modify and write cycle rather than being discarded.</para>
+    /// </remarks>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("visibility")]
+    internal string VisibilityValue { get; init; }
+
+    /// <summary>
     /// The desired visibility for the label.
     /// </summary>
-    [JsonRequired]
-    public LabelVisibility Visibility { get; init; }
+    /// <remarks>
+    /// <para>A visibility this library does not recognize is reported as <see cref="LabelVisibility.Unknown"/>.</para>
+    /// </remarks>
+    [JsonIgnore]
+    public LabelVisibility Visibility => ActorWireValues.ToLabelVisibility(VisibilityValue);
 }
 
 /// <summary>
 /// Label effect values.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<LabelVisibility>))]
 public enum LabelVisibility
 {
     /// <summary>
@@ -77,5 +110,14 @@ public enum LabelVisibility
     /// <summary>
     /// The content should be hidden from the user.
     /// </summary>
-    Hide
+    Hide,
+
+    /// <summary>
+    /// The visibility is one this library does not recognize.
+    /// </summary>
+    /// <remarks>
+    /// <para>This value only ever comes from the service. It cannot be used to build a
+    /// <see cref="ContentLabelPreference"/>, as it carries no visibility the service would understand.</para>
+    /// </remarks>
+    Unknown
 }

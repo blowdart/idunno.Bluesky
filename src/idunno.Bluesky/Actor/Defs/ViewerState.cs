@@ -27,11 +27,11 @@ public record ViewerState
     /// <param name="mutedOnlyReposts">Flag indicating whether the actor's reposts are muted by the current user.</param>
     /// <param name="mutedOnlyQuotePosts">Flag indicating whether the actor's quoteposts are muted by the current user.</param>
     /// <param name="mutedByList">A <see cref="ListViewBasic"/> of the list the current user subscribes to which has muted the actor, if any.</param>
-    /// <param name="blockedBy">Flag indicating whether the actor is blocked by the current user.</param>
-    /// <param name="blocking">An <see cref="AtUri"/> reference to the block record of the actor, if they are blocking the current user.</param>
-    /// <param name="blockingByList">A <see cref="ListViewBasic"/> of the list the current user subscribes to which has muted the actor, if any.</param>
+    /// <param name="blockedBy">Flag indicating whether the actor is blocking the current user.</param>
+    /// <param name="blocking">An <see cref="AtUri"/> reference to the current user's block record, if they are blocking the actor.</param>
+    /// <param name="blockingByList">A <see cref="ListViewBasic"/> of the list the current user subscribes to which is blocking the actor, if any.</param>
     /// <param name="following">An <see cref="AtUri"/> reference to the follow record, if the current user is following the actor.</param>
-    /// <param name="followedBy">An <see cref="AtUri"/> reference to the actor's follow record, if the the actor is following the current user.</param>
+    /// <param name="followedBy">An <see cref="AtUri"/> reference to the actor's follow record, if the actor is following the current user.</param>
     /// <param name="knownFollowers">A <see cref="KnownFollowers"/> record of mutual followers shared between the actor and the current user, if any.</param>
     /// <param name="activitySubscription">Any <see cref="ActivitySubscription" /> the current user has to the subject's activity.</param>
     [JsonConstructor]
@@ -63,40 +63,30 @@ public record ViewerState
         KnownFollowers = knownFollowers;
 
         ActivitySubscription = activitySubscription;
-
-        if (muted is null)
-        {
-            Muted = false;
-        }
-
-        if (mutedOnlyReposts is null)
-        {
-            MutedOnlyReposts = false;
-        }
-
-        if (mutedOnlyQuotePosts is null)
-        {
-            MutedOnlyQuotePosts = false;
-        }
-
-        if (blockedBy is null)
-        {
-            BlockedBy = false;
-        }
     }
 
     /// <summary>
     /// Gets a flag indicating the account is fully muted, directly or via a mutelist. <see langword="false" /> when the mute is scoped to specific kinds; see mutedOnlyReposts and mutedOnlyQuoteposts.
     /// </summary>
     [NotNull]
-    public bool? Muted { get; init; }
+    public bool? Muted
+    {
+        get;
+
+        init => field = value ?? false;
+    }
 
     /// <summary>
     /// Gets a flag indicating whether the account's reposts are muted. Scoped mutes are exclusive with muted: this can be <see langword="true" /> while muted is <see langword="false" />.
     /// If muted is <see langword="true" />, this will be <see langword="false" />.
     /// </summary>
     [NotNull]
-    public bool? MutedOnlyReposts { get; init; }
+    public bool? MutedOnlyReposts
+    {
+        get;
+
+        init => field = value ?? false;
+    }
 
     /// <summary>
     /// Gets a flag indicating whether the account's quoteposts are muted. Scoped mutes are exclusive with muted: this can be <see langword="true" /> while muted is <see langword="false" />.
@@ -104,7 +94,12 @@ public record ViewerState
     /// </summary>
     [NotNull]
     [JsonPropertyName("mutedOnlyQuoteposts")]
-    public bool? MutedOnlyQuotePosts { get; init; }
+    public bool? MutedOnlyQuotePosts
+    {
+        get;
+
+        init => field = value ?? false;
+    }
 
     /// <summary>
     /// Gets a <see cref="ListViewBasic"/> of the list the current user subscribes to which has muted the actor, if any.
@@ -112,18 +107,23 @@ public record ViewerState
     public ListViewBasic? MutedByList { get; init; }
 
     /// <summary>
-    /// Gets a flag indicating whether the actor is blocked by the current user.
+    /// Gets a flag indicating whether the actor is blocking the current user.
     /// </summary>
     [NotNull]
-    public bool? BlockedBy { get; init; }
+    public bool? BlockedBy
+    {
+        get;
+
+        init => field = value ?? false;
+    }
 
     /// <summary>
-    /// Gets an <see cref="AtUri"/> reference to the block record of the actor, if they are blocking the current user.
+    /// Gets an <see cref="AtUri"/> reference to the current user's block record, if they are blocking the actor.
     /// </summary>
     public AtUri? Blocking { get; init; }
 
     /// <summary>
-    /// Gets a <see cref="ListViewBasic"/> of the list the current user subscribes to which has muted the actor, if any.
+    /// Gets a <see cref="ListViewBasic"/> of the list the current user subscribes to which is blocking the actor, if any.
     /// </summary>
     public ListViewBasic? BlockingByList { get; init; }
 
@@ -133,7 +133,7 @@ public record ViewerState
     public AtUri? Following { get; init; }
 
     /// <summary>
-    /// Gets an <see cref="AtUri"/> reference to the actor's follow record, if the the actor is following the current user
+    /// Gets an <see cref="AtUri"/> reference to the actor's follow record, if the actor is following the current user.
     /// </summary>
     public AtUri? FollowedBy { get; init; }
 

@@ -320,6 +320,23 @@
 * The properties of `Relationship` are now `init` only rather than settable.
 * `StarterPackViewBasic` now validates its `uri`, `cid`, `record` and `creator` arguments, and takes a defensive copy of the labels it is given rather
   than storing the caller's collection by reference.
+* `ThreadSortingMode`, `LabelVisibility`, `SavedFeedPreferenceType`, `MutedWordTarget`, `MutedWordActorTarget` and `AllowIncomingChat` have each gained an
+  `Unknown` member, so a value added to the service after this library shipped now deserializes to `Unknown` rather than throwing and failing the entire
+  response it arrived in. `Unknown` was appended to each enum, so the existing members keep their numeric values. `Unknown` cannot be written back, and
+  the public constructors reject it, so these types can still only be created with a value the service understands.
+* `ThreadViewPreference.SortingMode`, `ContentLabelPreference.Visibility`, `SavedFeed.Type`, `MutedWord.Targets` and `MutedWord.ActorTarget` are now
+  projected from the value the service sent and can no longer be set directly. Use the constructors, which take the enumerations as before.
+* `ThreadViewPreference` reads and writes `sort` rather than `sortingMode`. Code which reached into `ExtensionData` for `sort` will no longer find it
+  there.
+* `StatusView` now takes an `isDisabled` argument, and its `uri` and `cid` properties are now named `Uri` and `Cid`. Its `Labels` are now an
+  `IReadOnlyCollection<Label>`.
+* `SavedFeedsPreference.Saved` and `Pinned` now return read only collections. They are still typed as `ICollection<AtUri>`, so code which mutated them in
+  place will now throw a `NotSupportedException`. Build a new `SavedFeedsPreference` instead.
+* `ProfileViewBasic`, and therefore `ProfileView` and `ProfileViewDetailed`, no longer validate the length of `DisplayName`. A view is a projection of
+  whatever the service returned, so validating it turned a single out of spec profile into an exception which failed the whole response it arrived in.
+  That limit still applies to `Profile`, which is the record actually written.
+* `Maximum.PronounLengthInBytes` is now 200 and `Maximum.PronounLengthInGraphemes` is now 20, as the lexicon declares. Pronouns which were accepted
+  before, and which the service would have rejected, are now rejected here.
 
 ### Fixed
 
@@ -776,6 +793,30 @@
 * `BlueskyAgent.Post()` now numbers the posts in its validation exceptions and log entries from zero rather than one.
 * `Draft`, `DraftPost`, `DraftEmbedCaption` and `DraftEmbedLocalRef` now measure their string properties in UTF-8 bytes, as the lexicon does, rather than in
   UTF-16 characters.
+* `ThreadViewPreference` now reads and writes its sorting mode under the `sort` property name the lexicon declares. It previously used `sortingMode`, so a
+  sorting mode set through this library was never applied, and one set anywhere else was silently discarded on the next write.
+* `ThreadSortingMode` now includes `Hotness`, which the lexicon has declared since the thread sorting modes were expanded.
+* `ContentLabelPreference`, `SavedFeed`, `MutedWord` and `ThreadViewPreference` now keep the value the service sent for each of their open union
+  properties verbatim, so a value this library does not recognize survives the read, modify and write cycle `putPreferences` requires rather than being
+  discarded. `putPreferences` replaces the entire preference set, so discarding a value silently corrupted the preferences it was not asked to change.
+* The pronoun limits in `Maximum` are now the 200 bytes and 20 graphemes the lexicon declares, rather than the description limits of 2560 and 256 they
+  were copied from.
+* `BlueskyAgent.GetSuggestions()`, `SearchActors()` and `SearchActorsTypeahead()` now send the limit they document when none is supplied. The limit was
+  interpolated from a variable which was never assigned, so the query string carried no limit at all and the service applied its own default.
+* `BlueskyAgent.GetSuggestions()` and `SearchActors()` no longer send an empty `cursor` parameter when no cursor is supplied.
+* The content visibility declaration methods on `BlueskyAgent` now use `CollectionNsid.ContentVisibilityDeclaration` rather than five copies of a string
+  literal.
+* `BlueskyServer.PutPreferences()` now validates that the preferences it is given are not null, and the agent overloads now reject an empty collection,
+  which they already documented.
+* `StatusView` now exposes the `isDisabled` property the lexicon declares.
+* `Status.DurationMinutes` now rejects a duration below the lexicon minimum of one minute.
+* `ProfileViewBasic.SelfLabels` and the `VerificationState` status properties are now projected from the values their record currently holds, rather than
+  snapshotted in the constructor, so they are no longer stale after a `with` expression changes the values they are derived from.
+* `KnownFollowers`, `MutedWordPreferences`, `HiddenPostsPreferences`, `SavedFeedPreferencesV2`, `SavedFeedsPreference`, `ProfileViewBasic`, `StatusView` and
+  `VerificationState` now take a defensive copy of the collections they are given, and validate them, whichever way the collection is set.
+* `InterestsPreference.Tags` and the `Status`, `ViewerState` and `ProfileAssociatedGerm` properties now validate whatever is assigned to them, rather than
+  only what is passed to the constructor.
+* The `Blocking` and `BlockedBy` documentation on `ViewerState` was the wrong way round, and `BlockingByList` described muting rather than blocking.
 
 #### idunno.Bluesky.AspNet.Authentication
 

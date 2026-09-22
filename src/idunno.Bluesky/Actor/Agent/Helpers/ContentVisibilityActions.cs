@@ -27,7 +27,7 @@ public partial class BlueskyAgent
 
         return await DeleteRecord(
             repo: Did,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             swapCommit: swapCommit,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -66,7 +66,7 @@ public partial class BlueskyAgent
 
         AtProtoHttpResult<AtProtoRepositoryRecord<ContentVisibilityDeclaration>> getRecordResult = await GetBlueskyRecord<ContentVisibilityDeclaration>(
             repo: did.Value,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             cid: null,
             serviceProxy: null,
@@ -149,7 +149,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,
@@ -196,7 +196,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,
@@ -246,7 +246,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration.Value,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,

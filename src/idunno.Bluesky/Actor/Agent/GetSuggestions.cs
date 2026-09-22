@@ -24,19 +24,19 @@ public partial class BlueskyAgent
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
+        int limitValue = limit ?? 50;
+
+        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.SuggestedActors);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        int limitValue = limit ?? 50;
-
-        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
-        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
-
         return await BlueskyServer.GetSuggestions(
-            limit,
+            limitValue,
             cursor,
             Service,
             accessCredentials: Credentials,

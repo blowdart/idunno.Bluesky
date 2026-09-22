@@ -10,9 +10,9 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Updates the current users profile.
+    /// Updates the current user's profile.
     /// </summary>
-    /// <param name="profile">The profile update to</param>
+    /// <param name="profile">The profile to create or update.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/>, or its Value is <see langword="null"/>.</exception>
@@ -22,7 +22,6 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        ArgumentNullException.ThrowIfNull(profile.Value);
 
         if (!IsAuthenticated)
         {
@@ -33,9 +32,9 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Updates the current users profile.
+    /// Updates the current user's profile.
     /// </summary>
-    /// <param name="profile">The profile update to</param>
+    /// <param name="profile">The profile to create or update.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
         AtProtoRepositoryRecord<Profile> profile)
@@ -44,7 +43,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates or updates the current users profile.
+    /// Creates or updates the current user's profile.
     /// </summary>
     /// <param name="profile">The profile to create from or update to</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -66,7 +65,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates or updates the current users profile.
+    /// Creates or updates the current user's profile.
     /// </summary>
     /// <param name="profile">The profile to create from or update to</param>
     /// <returns>The task object representing the asynchronous operation.</returns>

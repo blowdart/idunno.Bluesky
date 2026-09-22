@@ -166,7 +166,7 @@ public class LengthValidationTests
     [Fact]
     public void ProfilePronounsThrowWhenTheyExceedTheMaximumNumberOfBytes()
     {
-        string pronouns = Families(232);
+        string pronouns = Families(9);
 
         AssertOnlyExceedsTheByteLimit(pronouns, Maximum.PronounLengthInBytes, Maximum.PronounLengthInGraphemes);
 

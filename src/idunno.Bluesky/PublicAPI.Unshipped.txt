@@ -37,7 +37,21 @@
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTaggedSuggestions(System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<string!, object!>>? parameters, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.Suggestion!>!>!>!
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTrendingTopics(int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.TrendingTopics!>!>!
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTrends(int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendView!>!>!>!
+*REMOVED*idunno.Bluesky.Actor.ContentLabelPreference.Visibility.init -> void
+*REMOVED*idunno.Bluesky.Actor.MutedWord.ActorTarget.init -> void
+*REMOVED*idunno.Bluesky.Actor.MutedWord.Targets.init -> void
 *REMOVED*idunno.Bluesky.Actor.Preferences.MutedWords.get -> System.Collections.Generic.IList<idunno.Bluesky.Actor.MutedWord!>!
+*REMOVED*idunno.Bluesky.Actor.SavedFeed.Type.init -> void
+*REMOVED*idunno.Bluesky.Actor.SavedFeedsPreference.Deconstruct(out System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Saved, out System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Pinned, out int? TimelineIndex) -> void
+*REMOVED*idunno.Bluesky.Actor.SavedFeedsPreference.SavedFeedsPreference(System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Saved, System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Pinned, int? TimelineIndex) -> void
+*REMOVED*idunno.Bluesky.Actor.StatusView.cid.get -> idunno.AtProto.Cid?
+*REMOVED*idunno.Bluesky.Actor.StatusView.cid.init -> void
+*REMOVED*idunno.Bluesky.Actor.StatusView.Deconstruct(out string! Status, out System.Text.Json.Nodes.JsonNode! Record, out idunno.Bluesky.Embed.EmbeddedView? Embed, out System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>? Labels, out System.DateTimeOffset? ExpiresAt, out bool? IsActive, out idunno.AtProto.AtUri? uri, out idunno.AtProto.Cid? cid) -> void
+*REMOVED*idunno.Bluesky.Actor.StatusView.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>?
+*REMOVED*idunno.Bluesky.Actor.StatusView.StatusView(string! Status, System.Text.Json.Nodes.JsonNode! Record, idunno.Bluesky.Embed.EmbeddedView? Embed, System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>? Labels, System.DateTimeOffset? ExpiresAt, bool? IsActive, idunno.AtProto.AtUri? uri, idunno.AtProto.Cid? cid) -> void
+*REMOVED*idunno.Bluesky.Actor.StatusView.uri.get -> idunno.AtProto.AtUri?
+*REMOVED*idunno.Bluesky.Actor.StatusView.uri.init -> void
+*REMOVED*idunno.Bluesky.Actor.ThreadViewPreference.SortingMode.init -> void
 *REMOVED*idunno.Bluesky.BlueskyAgent.DeleteBlock(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
 *REMOVED*idunno.Bluesky.BlueskyAgent.DeleteBlock(idunno.AtProto.Repo.StrongReference! strongReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
 *REMOVED*idunno.Bluesky.BlueskyAgent.DeleteContentVisibilityDeclaration(idunno.AtProto.Cid? swapCommit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
@@ -281,7 +295,23 @@ const idunno.Bluesky.ClaimTypes.Handle = "urn:bluesky:handle" -> string!
 const idunno.Bluesky.ClaimTypes.Pronouns = "urn:bluesky:pronouns" -> string!
 const idunno.Bluesky.ClaimTypes.Website = "urn:bluesky:website" -> string!
 const idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DefaultMaximumPageSize = 1048576 -> int
+idunno.Bluesky.Actor.AllowIncomingChat.Unknown = 3 -> idunno.Bluesky.Actor.AllowIncomingChat
+idunno.Bluesky.Actor.LabelVisibility.Unknown = 4 -> idunno.Bluesky.Actor.LabelVisibility
+idunno.Bluesky.Actor.MutedWordActorTarget.Unknown = 2 -> idunno.Bluesky.Actor.MutedWordActorTarget
+idunno.Bluesky.Actor.MutedWordTarget.Unknown = 2 -> idunno.Bluesky.Actor.MutedWordTarget
 idunno.Bluesky.Actor.Preferences.MutedWords.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.MutedWord!>!
+idunno.Bluesky.Actor.SavedFeedPreferenceType.Unknown = 3 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
+idunno.Bluesky.Actor.SavedFeedsPreference.SavedFeedsPreference(System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! saved, System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! pinned, int? timelineIndex) -> void
+idunno.Bluesky.Actor.StatusView.Cid.get -> idunno.AtProto.Cid?
+idunno.Bluesky.Actor.StatusView.Cid.init -> void
+idunno.Bluesky.Actor.StatusView.IsDisabled.get -> bool?
+idunno.Bluesky.Actor.StatusView.IsDisabled.init -> void
+idunno.Bluesky.Actor.StatusView.Labels.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>!
+idunno.Bluesky.Actor.StatusView.StatusView(string! status, System.Text.Json.Nodes.JsonNode! record, idunno.Bluesky.Embed.EmbeddedView? embed, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? expiresAt, bool? isActive, bool? isDisabled, idunno.AtProto.AtUri? uri, idunno.AtProto.Cid? cid) -> void
+idunno.Bluesky.Actor.StatusView.Uri.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Actor.StatusView.Uri.init -> void
+idunno.Bluesky.Actor.ThreadSortingMode.Hotness = 4 -> idunno.Bluesky.Actor.ThreadSortingMode
+idunno.Bluesky.Actor.ThreadSortingMode.Unknown = 5 -> idunno.Bluesky.Actor.ThreadSortingMode
 idunno.Bluesky.BlueskyAgent.BlockModList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal? principal, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.DeleteBlock(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.DeleteResult!>!>!
@@ -526,6 +556,7 @@ static idunno.Bluesky.BlueskyServer.UpdateRead(string! conversationId, string? m
 static idunno.Bluesky.BlueskyServer.UploadPart(string! jobId, long part, byte[]! bytes, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.UploadPartResponse!>!>!
 static idunno.Bluesky.BlueskyServer.UploadVideo(idunno.AtProto.Did! did, string! fileName, string! mimeType, byte[]! media, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 static idunno.Bluesky.BlueskyServer.WithdrawJoinGroupRequest(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.Bluesky.CollectionNsid.ContentVisibilityDeclaration.get -> idunno.AtProto.Nsid!
 static idunno.Bluesky.Moderation.WellKnown.ReportOptions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Moderation.ReportOption!>!>!
 static readonly idunno.Bluesky.Maximum.ActorSearchResults -> int
 static readonly idunno.Bluesky.Maximum.ActorTypeaheadSearchResults -> int

@@ -23,18 +23,18 @@ public class ActorRecordValidationTests
     private static readonly Handle s_handle = new("test.invalid");
 
     [Fact]
-    public void ProfileViewBasicRejectsADisplayNameOverTheByteLimitEvenWhenItsCharacterLengthIsUnder()
+    public void ProfileViewBasicAcceptsADisplayNameOverTheByteLimitBecauseItIsServerData()
     {
-        // 50 family emoji is 1250 UTF-8 bytes but only 550 UTF-16 code units and 50 graphemes, so it is within
-        // the grapheme limit and within a .Length check against the byte limit, and is only rejected when the
-        // byte limit is measured in actual UTF-8 bytes.
+        // 50 family emoji is 1250 UTF-8 bytes but only 550 UTF-16 code units and 50 graphemes.
+        // A view carries whatever the service sent, so it must not reject a value that is over a limit
+        // the service itself chose not to enforce, otherwise the whole response fails to deserialize.
         string displayName = string.Concat(Enumerable.Repeat(FamilyEmoji, 50));
 
-        Assert.True(displayName.Length <= Maximum.DisplayNameLengthInBytes);
-        Assert.True(displayName.GetGraphemeLength() <= Maximum.DisplayNameLengthInGraphemes);
         Assert.True(displayName.GetUtf8Length() > Maximum.DisplayNameLengthInBytes);
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => CreateProfileViewBasic(displayName));
+        ProfileViewBasic profile = CreateProfileViewBasic(displayName);
+
+        Assert.Equal(displayName, profile.DisplayName);
     }
 
     [Fact]

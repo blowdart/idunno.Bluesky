@@ -13,33 +13,32 @@ public sealed record VerificationState
     [JsonConstructor]
     internal VerificationState(ICollection<VerificationView> verifications, string verifiedStatusString, string trustedVerifierStatusString)
     {
+        ArgumentNullException.ThrowIfNull(verifications);
+        ArgumentNullException.ThrowIfNull(verifiedStatusString);
+        ArgumentNullException.ThrowIfNull(trustedVerifierStatusString);
+
         Verifications = verifications;
         VerifiedStatusString = verifiedStatusString;
         TrustedVerifierStatusString = trustedVerifierStatusString;
-
-        VerifiedStatus = verifiedStatusString.ToUpperInvariant() switch
-        {
-            "VALID" => VerificationStatus.Valid,
-            "INVALID" => VerificationStatus.Invalid,
-            "NONE" => VerificationStatus.None,
-            _ => VerificationStatus.Unknown
-        };
-
-        TrustedVerifierStatus = trustedVerifierStatusString.ToUpperInvariant() switch
-        {
-            "VALID" => VerificationStatus.Valid,
-            "INVALID" => VerificationStatus.Invalid,
-            "NONE" => VerificationStatus.None,
-            _ => VerificationStatus.Unknown
-        };
     }
 
     /// <summary>
     /// All verifications issued by trusted verifiers on behalf of this user. Verifications by untrusted verifiers are not included.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
     [JsonInclude]
     [JsonRequired]
-    public ICollection<VerificationView> Verifications { get; init; }
+    public ICollection<VerificationView> Verifications
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = new List<VerificationView>(value).AsReadOnly();
+        }
+    }
 
     [JsonInclude]
     [JsonPropertyName("verifiedStatus")]
@@ -54,16 +53,28 @@ public sealed record VerificationState
     /// <summary>
     /// Gets the user's status as a verified account.
     /// </summary>
-    [JsonPropertyName("verifiedStatusEnum")]
+    /// <remarks>
+    /// <para>A status this library does not recognize is reported as <see cref="VerificationStatus.Unknown"/>.</para>
+    /// </remarks>
     [JsonIgnore]
-    public VerificationStatus VerifiedStatus { get; }
+    public VerificationStatus VerifiedStatus => ToVerificationStatus(VerifiedStatusString);
 
     /// <summary>
     /// Gets the user's status as a trusted verifier.
     /// </summary>
-    [JsonPropertyName("trustedVerifierStatusEnum")]
+    /// <remarks>
+    /// <para>A status this library does not recognize is reported as <see cref="VerificationStatus.Unknown"/>.</para>
+    /// </remarks>
     [JsonIgnore]
-    public VerificationStatus TrustedVerifierStatus { get; }
+    public VerificationStatus TrustedVerifierStatus => ToVerificationStatus(TrustedVerifierStatusString);
+
+    private static VerificationStatus ToVerificationStatus(string status) => status switch
+    {
+        "valid" => VerificationStatus.Valid,
+        "invalid" => VerificationStatus.Invalid,
+        "none" => VerificationStatus.None,
+        _ => VerificationStatus.Unknown
+    };
 }
 
 /// <summary>

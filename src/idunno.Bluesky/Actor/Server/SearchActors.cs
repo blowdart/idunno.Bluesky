@@ -18,7 +18,7 @@ public static partial class BlueskyServer
     /// Find actors (profiles) matching search criteria. Does not require authentication.
     /// </summary>
     /// <param name="q">The search query string. Syntax, phrase, Boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
-    /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
+    /// <param name="limit">The number of suggested actors to return. Defaults to 25 if <see langword="null"/>.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -63,9 +63,17 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorSearchResults);
 
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
+
+        string requestUri = $"/xrpc/app.bsky.actor.searchActors?q={Uri.EscapeDataString(q)}&limit={limitValue}";
+
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            requestUri += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.searchActors?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={Uri.EscapeDataString(cursor ?? string.Empty)}",
+            requestUri,
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

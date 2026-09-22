@@ -32,16 +32,17 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(status);
-        ArgumentNullException.ThrowIfNull(status.Value);
+
+        if (status.Uri.Authority is not Did recordDid)
+        {
+            throw new ArgumentException("Uri authority is not a DID", nameof(status));
+        }
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
-        if (status.Uri.Authority is not Did recordDid)
-        {
-            throw new ArgumentException("Uri authority is not a DID", nameof(status));
-        }
+
         if (recordDid != Did)
         {
             throw new ArgumentException("Uri authority does not match the current user", nameof(status));

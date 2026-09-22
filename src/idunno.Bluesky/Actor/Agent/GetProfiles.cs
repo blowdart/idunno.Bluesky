@@ -29,7 +29,7 @@ public partial class BlueskyAgent
         if (actorList.Count == 0 || actorList.Count > 25)
         {
             ArgumentOutOfRangeException.ThrowIfZero(actorList.Count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, Maximum.ProfilesToGet);
         }
 
         return await BlueskyServer.GetProfiles(

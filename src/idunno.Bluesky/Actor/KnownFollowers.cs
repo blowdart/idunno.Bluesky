@@ -15,11 +15,14 @@ public sealed record KnownFollowers
     /// </summary>
     /// <param name="count">The count of known followers.</param>
     /// <param name="followers">The list of known followers the authenticated user shares with another actor.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="followers"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     public KnownFollowers(int count, IReadOnlyList<ProfileViewBasic> followers)
     {
+        ArgumentNullException.ThrowIfNull(followers);
+
         Count = count;
-        Followers = new List<ProfileViewBasic>(followers).AsReadOnly();
+        Followers = followers;
     }
 
     /// <summary>
@@ -31,7 +34,18 @@ public sealed record KnownFollowers
     /// <summary>
     /// The list of known followers the authenticated user shares with another actor.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
     [JsonInclude]
     [JsonRequired]
-    public IReadOnlyList<ProfileViewBasic> Followers { get; init; }
+    public IReadOnlyList<ProfileViewBasic> Followers
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = new List<ProfileViewBasic>(value).AsReadOnly();
+        }
+    }
 }

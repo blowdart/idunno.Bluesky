@@ -16,23 +16,25 @@ public record SavedFeedPreferencesV2 : Preference
     /// Creates a new instance of <see cref="SavedFeedPreferencesV2"/>.
     /// </summary>
     /// <param name="items">A list of feed preferences.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
-    public SavedFeedPreferencesV2(IReadOnlyList<SavedFeed> items)
-    {
-        if (items is null)
-        {
-            Items = new List<SavedFeed>().AsReadOnly();
-        }
-        else
-        {
-            Items = new List<SavedFeed>(items).AsReadOnly();
-        }
-    }
+    public SavedFeedPreferencesV2(IReadOnlyList<SavedFeed> items) => Items = items;
 
     /// <summary>
     /// Gets a readonly list of an actors saved feed preferences.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
     [JsonRequired]
-    public IReadOnlyList<SavedFeed> Items { get; init; }
+    public IReadOnlyList<SavedFeed> Items
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = new List<SavedFeed>(value).AsReadOnly();
+        }
+    }
 }
 

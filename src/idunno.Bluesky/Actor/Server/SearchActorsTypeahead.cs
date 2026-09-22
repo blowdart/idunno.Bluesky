@@ -18,7 +18,7 @@ public static partial class BlueskyServer
     /// Find actor suggestions for a prefix search term. Expected use is for auto-completion during text field entry. Does not require authentication.
     /// </summary>
     /// <param name="q">"Search query prefix; not a full query string.</param>
-    /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
+    /// <param name="limit">The number of suggested actors to return. Defaults to 10 if <see langword="null"/>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -63,7 +63,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.searchActorsTypeahead?q={Uri.EscapeDataString(q)}&limit={limit}",
+            $"/xrpc/app.bsky.actor.searchActorsTypeahead?q={Uri.EscapeDataString(q)}&limit={limitValue}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

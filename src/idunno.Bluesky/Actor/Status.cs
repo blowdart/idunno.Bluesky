@@ -27,7 +27,6 @@ public record Status : BlueskyTimestampedRecord
         durationMinutes: null,
         createdAt: DateTimeOffset.UtcNow)
     {
-        ArgumentNullException.ThrowIfNull(accountStatus);
     }
 
     /// <summary>
@@ -42,7 +41,6 @@ public record Status : BlueskyTimestampedRecord
         durationMinutes: null,
         createdAt: createdAt)
     {
-        ArgumentNullException.ThrowIfNull(accountStatus);
     }
 
     /// <summary>
@@ -52,6 +50,7 @@ public record Status : BlueskyTimestampedRecord
     /// <param name="embed">An optional embed associated with the status.</param>
     /// <param name="durationMinutes">"The duration of the status in minutes. Applications can choose to impose minimum and maximum limits.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="accountStatus"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="durationMinutes"/> is less than one.</exception>
     public Status(
         string accountStatus,
         EmbeddedBase? embed,
@@ -61,13 +60,7 @@ public record Status : BlueskyTimestampedRecord
             durationMinutes: durationMinutes,
             createdAt: DateTimeOffset.UtcNow)
     {
-        ArgumentNullException.ThrowIfNull(accountStatus);
-
-        AccountStatus = accountStatus;
-        Embed = embed;
-        DurationMinutes = durationMinutes;
     }
-
 
     /// <summary>
     /// Creates a new instance of <see cref="Status"/>.
@@ -77,6 +70,7 @@ public record Status : BlueskyTimestampedRecord
     /// <param name="durationMinutes">"The duration of the status in minutes. Applications can choose to impose minimum and maximum limits.</param>
     /// <param name="createdAt">The date and time when the status was created. Defaults to <see cref="DateTimeOffset.UtcNow"/></param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="accountStatus"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="durationMinutes"/> is less than one.</exception>
     [JsonConstructor]
     public Status(
         string accountStatus,
@@ -84,22 +78,31 @@ public record Status : BlueskyTimestampedRecord
         int? durationMinutes,
         DateTimeOffset createdAt) : base(createdAt)
     {
-        ArgumentNullException.ThrowIfNull(accountStatus);
-
         AccountStatus = accountStatus;
         Embed = embed;
         DurationMinutes = durationMinutes;
     }
 
     /// <summary>
-    /// Gets the status for the account.
+    /// Gets or sets the status for the account.
     /// </summary>
-    /// <remakes>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    /// <remarks>
     /// <para>Known values are contained in <see cref="KnownStatusValues"/>.</para>
-    /// </remakes>
+    /// </remarks>
     [JsonPropertyName("status")]
     [JsonRequired]
-    public string AccountStatus { get; set; }
+    public string AccountStatus
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Any embedded record for the status.
@@ -108,10 +111,24 @@ public record Status : BlueskyTimestampedRecord
     public EmbeddedBase? Embed { get; set; }
 
     /// <summary>
-    /// Gets the duration of the status in minutes. Applications can choose to impose minimum and maximum limits.
+    /// Gets or sets the duration of the status in minutes. Applications can choose to impose minimum and maximum limits.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value set is less than one.</exception>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? DurationMinutes { get; set; }
+    public int? DurationMinutes
+    {
+        get;
+
+        set
+        {
+            if (value is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfLessThan(value.Value, 1);
+            }
+
+            field = value;
+        }
+    }
 }
 
 /// <summary>
