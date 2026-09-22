@@ -2,25 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using System.Runtime.Serialization;
 
 namespace idunno.AtProto;
 
 /// <summary>
 /// The exception that is thrown when a problem occurs parsing abandoning an authenticated session on a service.
 /// </summary>
-[Serializable]
 public class LogoutException : Exception
 {
-    /// <summary>
-    /// Creates a new instance of the <see cref="LogoutException"/> class for serialization.
-    /// </summary>
-    /// <param name="info">The data needed to serialize or deserialize.</param>
-    /// <param name="context">the source and destination of serialized stream.</param>
-    protected LogoutException(SerializationInfo info, StreamingContext context) : base()
-    {
-    }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="LogoutException"/> class.
     /// </summary>
@@ -42,18 +31,18 @@ public class LogoutException : Exception
         : base(message, inner) { }
 
     /// <summary>
-    /// Gets or sets The HTTP status returned when the session was abandoned.
+    /// Gets the HTTP status returned when the session was abandoned.
     /// </summary>
     /// <value>
     /// The HTTP status returned when the session was abandoned.
     /// </value>
-    public HttpStatusCode StatusCode { get; set; }
+    public HttpStatusCode StatusCode { get; init; }
 
     /// <summary>
-    /// Gets or sets the error details, if any, returned when the session was abandoned.
+    /// Gets the error details, if any, returned when the session was abandoned.
     /// </summary>
     /// <value>
     /// The error details, if any, returned when the session was abandoned.
     /// </value>
-    public AtErrorDetail? Error { get; set; }
+    public AtErrorDetail? Error { get; init; }
 }

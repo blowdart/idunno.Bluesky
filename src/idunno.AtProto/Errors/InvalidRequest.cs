@@ -16,7 +16,7 @@ public sealed class InvalidRequest : AtProtoError
     /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> instance containing error details.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atErrorDetail"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atErrorDetail"/> does not have the expected error title.</exception>
-    internal InvalidRequest(AtErrorDetail atErrorDetail) : base(atErrorDetail)
+    public InvalidRequest(AtErrorDetail atErrorDetail) : base(atErrorDetail)
     {
         ArgumentNullException.ThrowIfNull(atErrorDetail);
 

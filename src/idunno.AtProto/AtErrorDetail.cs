@@ -10,7 +10,6 @@ namespace idunno.AtProto;
 /// <summary>
 /// Represents a detailed error response from an atproto endpoint.
 /// </summary>
-[Serializable]
 public class AtErrorDetail
 {
     /// <summary>
@@ -44,7 +43,7 @@ public class AtErrorDetail
         Error = other.Error;
         Message = other.Message;
         RawContent = other.RawContent;
-        ExtensionData = other.ExtensionData;
+        ExtensionData = other.ExtensionData is null ? null : new Dictionary<string, JsonElement>(other.ExtensionData);
         Instance = other.Instance;
         HttpMethod = other.HttpMethod;
     }

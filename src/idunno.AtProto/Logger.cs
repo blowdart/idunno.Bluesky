@@ -288,6 +288,9 @@ internal static partial class Logger
     [LoggerMessage(203, LogLevel.Debug, "DPoP nonce changed on {method} call to {requestUri}")]
     internal static partial void AtProtoClientDetectedDPoPNonceChanged(ILogger logger, Uri requestUri, HttpMethod method);
 
+    [LoggerMessage(207, LogLevel.Error, "AtProtoHttpClient could not deserialize the error body from a {method} call to {requestUri}. The error will be reported without its title or message.")]
+    internal static partial void AtProtoClientErrorBodyDeserializationFailed(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
+
     [LoggerMessage(204, LogLevel.Error, "AtProtoHttpClient threw when deserializing the response from {method} call to {requestUri}")]
     internal static partial void AtProtoClientResponseDeserializationThrew(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
 

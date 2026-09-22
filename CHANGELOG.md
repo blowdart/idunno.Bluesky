@@ -58,6 +58,11 @@
   than the synchronous `Dispose()` aborting the socket underneath the server.
 * Added `JetstreamCommitOperation`, the enumeration `AtJetstreamCommit.Operation` now returns. An operation the library does not know about is reported
   as `JetstreamCommitOperation.Unknown` rather than making the commit unreadable.
+* Added the `Forbidden`, `NotAcceptable`, `PayloadTooLarge`, `UnsupportedMediaType`, `RateLimitExceeded`, `InternalServerError`, `UpstreamFailure`,
+  `NotEnoughResources` and `UpstreamTimeout` errors, which cover the XRPC protocol errors a service can return for any endpoint, and the `InvalidHandle`
+  and `InvalidPassword` errors declared by `com.atproto.server.createSession`. These were previously reported as a plain `AtErrorDetail`.
+* The constructors on the `AtProtoError` subclasses are now public, so an error can be constructed directly from an `AtErrorDetail`, matching the
+  `BlueskyError` subclasses.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -112,6 +117,9 @@
 * Added `BaseEmbeddedCardGenerator.DefaultMaximumThumbnailSize` and `BaseEmbeddedCardGenerator.DefaultThumbnailDownloadBufferSize`.
 * Added `EmbeddedViewTypeDiscriminators.ImagesView`, `EmbeddedViewTypeDiscriminators.ExternalView`, `EmbeddedViewTypeDiscriminators.VideoView`,
   `EmbeddedViewTypeDiscriminators.RecordWithMediaView` and `EmbeddedViewTypeDiscriminators.GalleryView`.
+* Added the `BlockedByActor`, `UnknownFeed`, `UnknownList`, `NotFound`, `ConvoLockedByModeration`, `ReplyTargetNotFound`, `InvalidJoinRequest`,
+  `LinkAlreadyEnabled` and `UnsupportedCollection` errors, which are declared by the Bluesky lexicons but were previously reported as a plain
+  `AtErrorDetail`. Note that `BlockedByActor`, returned by `app.bsky.feed.sendInteractions`, is a different error to the existing `BlockedActor`.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -193,6 +201,10 @@
   instead. `AtUri.TryParse()` is unaffected. `RecordKey` itself still raises `RecordKeyFormatException` for callers parsing a record key in isolation.
 * `RecordKey.Value` is now read only. Previously it had an `init` accessor, which allowed object initializer syntax to replace a validated record key
   with an arbitrary string, for example `new RecordKey("self") { Value = "../../../etc/passwd" }`.
+* The `protected AtIdentifierException(SerializationInfo, StreamingContext)`, `AtUriFormatException(SerializationInfo, StreamingContext)`,
+  `NsidFormatException(SerializationInfo, StreamingContext)` and `RecordKeyFormatException(SerializationInfo, StreamingContext)` constructors have been
+  removed. They chained to the parameterless base constructor and discarded both arguments, so an exception deserialized through them lost its message,
+  stack trace and inner exception. Binary serialization of exceptions is obsolete from .NET 8 onwards.
 
 #### idunno.AtProto
 
@@ -238,6 +250,19 @@
   caller change an event another handler was already reading. Use a `with` expression to produce a changed copy.
 * `AtJetstreamAccount` and `AtJetStreamIdentity` no longer serialize a `$type` discriminator. A jetstream carries no such property, so writing one
   produced JSON no jetstream would emit. Deserialization is unaffected.
+* Removed `AtProtoHttpClient.MapError`. It was never read, so adding a mapper to it had no effect. Pass error mappers to the `AtProtoHttpClient`
+  constructor instead.
+* Removed the `InvalidPasscode` error. No AT Protocol lexicon declares an error with that name, so it could never be returned by a service. The error
+  `com.atproto.server.createSession` actually declares is `AuthFactorTokenRequired`, which is unchanged.
+* Removed the `protected X(SerializationInfo, StreamingContext)` constructors from `AccessTokenException`, `AtProtoException`,
+  `AtProtoHttpRequestException`, `AuthenticationRequiredException`, `InvalidResponseTypeException`, `LogoutException`, `RecordException`,
+  `ResponseParseException`, `SecurityTokenValidationException`, `SessionRestorationFailedException`, `CredentialException` and `OAuthException`.
+  They chained to the parameterless base constructor and discarded both arguments, so an exception deserialized through them lost its message, stack
+  trace and inner exception. Binary serialization of exceptions is obsolete from .NET 8 onwards.
+* `LogoutException.StatusCode`, `LogoutException.Error`, `SessionRestorationFailedException.StatusCode` and `SessionRestorationFailedException.Error`
+  are now `init` only, so an exception cannot have its state rewritten after it has been thrown. Object initializers are unaffected.
+* `AtErrorDetail` is no longer marked `[Serializable]`. It has no serialization constructor and is only ever transported as JSON, so the attribute
+  advertised a capability it did not have.
 
 #### idunno.Bluesky
 
@@ -364,6 +389,9 @@
   `maxSize` the `app.bsky.embed.external` lexicon declares, rather than 2,000,000, and defaults its buffer size to 81,920 bytes rather than 1,000,000.
 * `Embed.ViewBlocked.Blocked`, `Embed.ViewDetached.Detached` and `Embed.ViewNotFound.NotFound` are now instance properties rather than static
   properties, so they can be reached through an instance and through pattern matching.
+* Removed the `protected X(SerializationInfo, StreamingContext)` constructors from `BlueskyException`, `HandleResolutionException`,
+  `PostBuilderException` and `DraftException`. They chained to the parameterless base constructor and discarded both arguments, so an exception
+  deserialized through them lost its message, stack trace and inner exception. Binary serialization of exceptions is obsolete from .NET 8 onwards.
 
 ### Fixed
 
@@ -586,6 +614,12 @@
   caller holding a reference cannot change a compression dictionary whilst native code is reading it.
 * Corrected the documentation for `AtProtoJetstreamBuilder.CollectionsToFilterOn`, which described itself as a collection of DIDs, and the return
   documentation on both `AtProtoJetstreamBuilder.FilterTo()` overloads.
+* Passing error mappers to an `AtProtoHttpClient` no longer adds the base error mapper to the caller's list. The list was mutated in place, so a caller
+  which reused it across clients accumulated duplicate mappers, and a caller which passed a read only list got a `NotSupportedException`.
+* Copying an `AtErrorDetail` no longer shares its `ExtensionData` dictionary with the original, so mapping an error to a typed error and then adding to
+  either dictionary no longer changes the other.
+* An error body which cannot be deserialized because of a serialization misconfiguration is now logged rather than silently discarded. The error is
+  still reported with its raw content.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -898,6 +932,8 @@
 * `InterestsPreference.Tags` and the `Status`, `ViewerState` and `ProfileAssociatedGerm` properties now validate whatever is assigned to them, rather than
   only what is passed to the constructor.
 * The `Blocking` and `BlockedBy` documentation on `ViewerState` was the wrong way round, and `BlockingByList` described muting rather than blocking.
+* `ApproveJoinGroupRequest()` mapped the errors on its result a second time. The mapping is already applied by the client, so the extra call was
+  redundant.
 
 #### idunno.Bluesky.AspNet.Authentication
 

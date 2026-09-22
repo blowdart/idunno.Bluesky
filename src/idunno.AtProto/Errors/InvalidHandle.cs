@@ -6,17 +6,17 @@ namespace idunno.AtProto;
 #pragma warning restore IDE0130
 
 /// <summary>
-/// Represents an error indicating an invalid passcode.
+/// Represents an error indicating that the handle supplied when creating an account is not a valid handle.
 /// </summary>
-public sealed class InvalidPasscode : AtProtoError
+public sealed class InvalidHandle : AtProtoError
 {
     /// <summary>
-    /// Creates a new instance of the <see cref="InvalidPasscode"/>.
+    /// Creates a new instance of the <see cref="InvalidHandle"/>.
     /// </summary>
     /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> instance containing error details.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atErrorDetail"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atErrorDetail"/> does not have the expected error title.</exception>
-    internal InvalidPasscode(AtErrorDetail atErrorDetail) : base(atErrorDetail)
+    public InvalidHandle(AtErrorDetail atErrorDetail) : base(atErrorDetail)
     {
         ArgumentNullException.ThrowIfNull(atErrorDetail);
 
@@ -26,5 +26,5 @@ public sealed class InvalidPasscode : AtProtoError
         }
     }
 
-    internal const string ErrorTitle = "InvalidPasscode";
+    internal const string ErrorTitle = "InvalidHandle";
 }

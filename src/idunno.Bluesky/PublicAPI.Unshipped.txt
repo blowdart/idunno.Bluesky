@@ -93,6 +93,7 @@
 *REMOVED*idunno.Bluesky.BlueskyAgent.UpdatePostGate(idunno.Bluesky.Feed.Gates.PostGate! postGate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 *REMOVED*idunno.Bluesky.BlueskyAgent.UpdateThreadGate(idunno.Bluesky.Feed.Gates.ThreadGate! threadGate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 *REMOVED*idunno.Bluesky.BlueskyAgent.UploadPart(string! jobId, int part, byte[]! bytes, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.UploadPartResponse!>!>!
+*REMOVED*idunno.Bluesky.BlueskyException.BlueskyException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 *REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.set -> void
 *REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberCount.set -> void
 *REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberLimit.set -> void
@@ -128,6 +129,7 @@
 *REMOVED*idunno.Bluesky.Drafts.DraftEmbedVideo.Captions.get -> System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedCaption!>?
 *REMOVED*idunno.Bluesky.Drafts.DraftEmbedVideo.Captions.init -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftEmbedVideo.DraftEmbedVideo(idunno.Bluesky.Drafts.DraftEmbedLocalRef! localRef, string? altText = null, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedCaption!>? captions = null) -> void
+*REMOVED*idunno.Bluesky.Drafts.DraftException.DraftException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels? labels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>! embedImages) -> void
@@ -157,6 +159,7 @@
 *REMOVED*idunno.Bluesky.Graph.Relationship.Did.set -> void
 *REMOVED*idunno.Bluesky.Graph.Relationship.FollowedBy.set -> void
 *REMOVED*idunno.Bluesky.Graph.Relationship.Following.set -> void
+*REMOVED*idunno.Bluesky.HandleResolutionException.HandleResolutionException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 *REMOVED*idunno.Bluesky.Labeler.LabelerView.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>!
 *REMOVED*idunno.Bluesky.Labeler.LabelerViewDetailed.Policies.set -> void
 *REMOVED*idunno.Bluesky.Notifications.Notification.Author.get -> idunno.Bluesky.Actor.ProfileViewBasic!
@@ -165,6 +168,7 @@
 *REMOVED*idunno.Bluesky.Notifications.SubjectActivitySubscription.ActivitySubscription.get -> idunno.Bluesky.Notifications.ActivitySubscription!
 *REMOVED*idunno.Bluesky.Notifications.SubjectActivitySubscription.Deconstruct(out idunno.AtProto.Did! Subject, out idunno.Bluesky.Notifications.ActivitySubscription! ActivitySubscription) -> void
 *REMOVED*idunno.Bluesky.Notifications.SubjectActivitySubscription.SubjectActivitySubscription(idunno.AtProto.Did! Subject, idunno.Bluesky.Notifications.ActivitySubscription! ActivitySubscription) -> void
+*REMOVED*idunno.Bluesky.PostBuilderException.PostBuilderException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 *REMOVED*idunno.Bluesky.Unspecced.ThreadItemBlocked.ThreadItemBlocked() -> void
 *REMOVED*idunno.Bluesky.Video.StartUploadResponse.Deconstruct(out string! JobId, out int PartSize, out int PartCount, out System.DateTimeOffset ExpiresAt) -> void
 *REMOVED*idunno.Bluesky.Video.StartUploadResponse.PartCount.get -> int
@@ -333,6 +337,8 @@ idunno.Bluesky.Actor.StatusView.Uri.get -> idunno.AtProto.AtUri?
 idunno.Bluesky.Actor.StatusView.Uri.init -> void
 idunno.Bluesky.Actor.ThreadSortingMode.Hotness = 4 -> idunno.Bluesky.Actor.ThreadSortingMode
 idunno.Bluesky.Actor.ThreadSortingMode.Unknown = 5 -> idunno.Bluesky.Actor.ThreadSortingMode
+idunno.Bluesky.BlockedByActor
+idunno.Bluesky.BlockedByActor.BlockedByActor(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.BlueskyAgent.BlockModList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal? principal, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.DeleteBlock(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.DeleteResult!>!>!
@@ -400,6 +406,8 @@ idunno.Bluesky.Chat.MessageInput.Facets.init -> void
 idunno.Bluesky.Chat.MessageInput.ReplyTo.init -> void
 idunno.Bluesky.Chat.MessageView.MessageView(string! id, string! revision, string! text, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>? facets, idunno.Bluesky.Embed.EmbeddedRecordView? embed, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Chat.ReactionView!>? reactions, idunno.Bluesky.Chat.MessageViewSender! sender, System.DateTimeOffset sentAt) -> void
 idunno.Bluesky.ClaimTypes
+idunno.Bluesky.ConvoLockedByModeration
+idunno.Bluesky.ConvoLockedByModeration.ConvoLockedByModeration(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.Drafts.Draft.DeviceId.get -> string?
 idunno.Bluesky.Drafts.Draft.Draft(idunno.Bluesky.Drafts.DraftPost! post, string? deviceId, string? deviceName) -> void
 idunno.Bluesky.Drafts.Draft.Draft(string! text, string? deviceId, string? deviceName) -> void
@@ -449,9 +457,15 @@ idunno.Bluesky.Graph.Relationship.BlockingByList.init -> void
 idunno.Bluesky.Graph.Relationship.Did.init -> void
 idunno.Bluesky.Graph.Relationship.FollowedBy.init -> void
 idunno.Bluesky.Graph.Relationship.Following.init -> void
+idunno.Bluesky.InvalidJoinRequest
+idunno.Bluesky.InvalidJoinRequest.InvalidJoinRequest(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.Labeler.LabelerView.Labels.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>!
 idunno.Bluesky.Labeler.LabelerView.Labels.init -> void
 idunno.Bluesky.Labeler.LabelerViewDetailed.Policies.init -> void
+idunno.Bluesky.LinkAlreadyEnabled
+idunno.Bluesky.LinkAlreadyEnabled.LinkAlreadyEnabled(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.NotFound
+idunno.Bluesky.NotFound.NotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.Notifications.Notification.Author.get -> idunno.Bluesky.Actor.ProfileView!
 idunno.Bluesky.Notifications.Preferences.Deconstruct(out idunno.Bluesky.Notifications.PreferenceTypes.ChatPreference! Chat, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Follow, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Like, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! LikeViaRepost, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Mention, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Quote, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Reply, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! Repost, out idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference! RepostViaRepost, out idunno.Bluesky.Notifications.PreferenceTypes.NonFilterablePreference! StarterPackJoined, out idunno.Bluesky.Notifications.PreferenceTypes.NonFilterablePreference! SubscribedPost, out idunno.Bluesky.Notifications.PreferenceTypes.NonFilterablePreference! Unverified, out idunno.Bluesky.Notifications.PreferenceTypes.NonFilterablePreference! Verified) -> void
 idunno.Bluesky.Notifications.Preferences.Like.get -> idunno.Bluesky.Notifications.PreferenceTypes.FilterablePreference!
@@ -460,11 +474,19 @@ idunno.Bluesky.Notifications.Preferences.Preferences(idunno.Bluesky.Notification
 idunno.Bluesky.Notifications.SubjectActivitySubscription.ActivitySubscription.get -> idunno.Bluesky.Notifications.ActivitySubscription?
 idunno.Bluesky.Notifications.SubjectActivitySubscription.Deconstruct(out idunno.AtProto.Did! Subject, out idunno.Bluesky.Notifications.ActivitySubscription? ActivitySubscription) -> void
 idunno.Bluesky.Notifications.SubjectActivitySubscription.SubjectActivitySubscription(idunno.AtProto.Did! Subject, idunno.Bluesky.Notifications.ActivitySubscription? ActivitySubscription) -> void
+idunno.Bluesky.ReplyTargetNotFound
+idunno.Bluesky.ReplyTargetNotFound.ReplyTargetNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.RichText.LinkFacetFeature.LinkFacetFeature(string! uri) -> void
 idunno.Bluesky.RichText.LinkFacetFeature.Uri.get -> string!
 idunno.Bluesky.RichText.LinkFacetFeature.Uri.init -> void
+idunno.Bluesky.UnknownFeed
+idunno.Bluesky.UnknownFeed.UnknownFeed(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.UnknownList
+idunno.Bluesky.UnknownList.UnknownList(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.Unspecced.ThreadItemBlocked.Author.get -> idunno.Bluesky.Feed.BlockedAuthor!
 idunno.Bluesky.Unspecced.ThreadItemBlocked.Author.init -> void
+idunno.Bluesky.UnsupportedCollection
+idunno.Bluesky.UnsupportedCollection.UnsupportedCollection(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.Video.AbortUploadResponse.RawState.get -> string?
 idunno.Bluesky.Video.AbortUploadResponse.RawState.init -> void
 idunno.Bluesky.Video.StartUploadResponse.Deconstruct(out string! JobId, out long PartSize, out long PartCount, out System.DateTimeOffset ExpiresAt) -> void

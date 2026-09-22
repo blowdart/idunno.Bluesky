@@ -64,8 +64,6 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        response.MapError(BlueskyError.Map);
-
         return response;
     }
 }

@@ -195,11 +195,6 @@ public class AtProtoHttpClient(
     }
 
     /// <summary>
-    /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
-    /// </summary>
-    public IList<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
-
-    /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
     /// </summary>
     /// <param name="service">The <see cref="Uri"/> of service to send the request to.</param>
@@ -670,14 +665,17 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         if (errorMappers is not null)
         {
+            // Copied before the base mapper is added, so the caller's list is not modified. Adding to the caller's
+            // list would also throw for a caller which passed a read only one.
+            List<Func<AtErrorDetail?, AtErrorDetail?>> mappers = [.. errorMappers];
+
             // Ensure the base error mapper is always present, so that it can handle any errors not handled by the other mappers.
-            if (!errorMappers.Contains(AtProtoError.Map))
+            if (!mappers.Contains(AtProtoError.Map))
             {
-                errorMappers.Add(AtProtoError.Map);
+                mappers.Add(AtProtoError.Map);
             }
 
-            // Copy the error mappers to a new list to ensure that the list is not modified after being passed in.
-            ErrorMapperChain = new ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>>(list: [.. errorMappers]);
+            ErrorMapperChain = new ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>>(mappers);
         }
         else
         {
@@ -1408,7 +1406,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
-    [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
+    [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "A malformed error body is still reported with its raw content, so as to return as much as can be returned.")]
     private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
         HttpRequestMessage request,
         HttpResponseMessage responseMessage,
@@ -1444,12 +1442,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
                 }
             }
-            catch (NotSupportedException) { }
             catch (JsonException) { }
-            catch (ArgumentNullException) { }
+            catch (NotSupportedException ex)
+            {
+                // Only reachable if the serialization context is misconfigured, which is a bug in this library rather
+                // than something a service did, so it is logged rather than silently discarded.
+                Logger.AtProtoClientErrorBodyDeserializationFailed(_logger, request.RequestUri!, request.Method, ex);
+            }
         }
 
-        if (ErrorMapperChain is not null && errorDetail.Error is not null)
+        if (errorDetail.Error is not null)
         {
             foreach (Func<AtErrorDetail?, AtErrorDetail?> mapper in ErrorMapperChain)
             {
@@ -1931,6 +1933,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 retry &&
                                 containsDPoPHeader)
                             {
+                                // use_dpop_nonce is an OAuth error code (RFC 9449), not an atproto lexicon error name, so it is
+                                // matched leniently here whilst AtProtoError.Map matches lexicon names ordinally. Being lenient
+                                // can only ever cause an extra nonce-carrying retry, which is the correct response anyway.
                                 bool isAuthorizationServerNonceError = httpResponseMessage.StatusCode == HttpStatusCode.BadRequest &&
                                     string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase);
 
