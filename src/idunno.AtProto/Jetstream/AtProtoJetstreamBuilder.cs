@@ -69,16 +69,21 @@ public sealed class AtProtoJetstreamBuilder
     /// Gets or sets the compression dictionary used by zst decompression when <see cref="EnableCompression"/> is <see langword="true"/>.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
-    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "zst expects a dictionary and we're not concerned about mutability.")]
+    /// <remarks>
+    /// <para>Copied on the way in and on the way out, so a caller which holds on to the array it supplied cannot change
+    /// what the decompressor reads after the jetstream has been built.</para>
+    /// </remarks>
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "zst expects a dictionary.")]
+    [SuppressMessage("Major Code Smell", "S2365:Properties should not make collection or array copies", Justification = "The copies are what stop a caller changing the dictionary whilst native code is reading it.")]
     public byte[] CompressionDictionary
     {
-        get;
+        get => (byte[])field.Clone();
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            field = value;
+            field = (byte[])value.Clone();
         }
     } = Resource.zstDictionary;
 
@@ -201,7 +206,7 @@ public sealed class AtProtoJetstreamBuilder
     public ICollection<Did>? DidsToFilterOn { get; set; }
 
     /// <summary>
-    /// Gets or sets any <see cref="Did"/>s to limit commit events to.
+    /// Gets or sets the <see cref="Nsid"/>s of any collections to limit commit events to.
     /// </summary>
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "This is meant to be settable.")]
     public ICollection<Nsid>? CollectionsToFilterOn { get; set; }
@@ -423,7 +428,7 @@ public sealed class AtProtoJetstreamBuilder
     /// Configures a filter for commit events to only raise events for the specified <paramref name="dids"/>.
     /// </summary>
     /// <param name="dids">The <see cref="Did"/>s to filter on.</param>
-    /// <returns>A collection of <see cref="Did"/>s to limit commit events for.</returns>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Can be combined with <see cref="FilterTo(Nsid[])"/>.</para></remarks>
     public AtProtoJetstreamBuilder FilterTo(Did[] dids)
@@ -439,7 +444,7 @@ public sealed class AtProtoJetstreamBuilder
     /// Configures a filter for commit events to only raise events for the specified <paramref name="collections"/>.
     /// </summary>
     /// <param name="collections">The <see cref="Nsid"/> of any collections to filter on.</param>
-    /// <returns>A collection of <see cref="Nsid"/>s to limit commit events for.</returns>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="collections"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Can be combined with <see cref="FilterTo(Did[])"/>.</para></remarks>
     public AtProtoJetstreamBuilder FilterTo(Nsid[] collections)

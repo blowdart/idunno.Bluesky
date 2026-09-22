@@ -76,4 +76,10 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(29, LogLevel.Error, "A message parser could not be started, so the message was dropped")]
     internal static partial void CouldNotStartMessageParser(ILogger logger, Exception ex);
+
+    [LoggerMessage(30, LogLevel.Error, "The receive loop failed {maximumConsecutiveFailures} times in a row, ending the connection")]
+    internal static partial void TooManyConsecutiveReceiveFailures(ILogger logger, int maximumConsecutiveFailures);
+
+    [LoggerMessage(31, LogLevel.Warning, "Connecting to {uri} without transport security. The dids and collections being subscribed to will be sent in plain text.")]
+    internal static partial void ConnectingWithoutTransportSecurity(ILogger logger, Uri uri);
 }

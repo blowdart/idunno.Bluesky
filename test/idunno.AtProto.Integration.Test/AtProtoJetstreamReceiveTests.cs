@@ -319,6 +319,43 @@ public class AtProtoJetstreamReceiveTests
         Assert.Equal("value", collectionFilterException.ParamName);
     }
 
+    [Fact]
+    public async Task AReconnectionDoesNotInheritThePreviousConnectionsLastMessageTimestamp()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(), serverCancellationToken);
+        });
+
+        TaskCompletionSource recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1) });
+
+        jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult();
+
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        Assert.NotNull(jetstream.MessageLastReceived);
+
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+        await jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        // A stale timestamp from the previous connection would make a watchdog think the new connection had already
+        // delivered something.
+        Assert.Null(jetstream.MessageLastReceived);
+    }
+
     private static async Task<AtJetstreamEvent> Receive(
         TestJetstreamServer server,
         bool useCompression,

@@ -31,8 +31,19 @@ public record JetstreamOptions
     /// <summary>
     /// Gets the dictionary to use for zst decompression.
     /// </summary>
+    /// <remarks>
+    /// <para>Copied on the way in and on the way out. The dictionary is handed to native code each time a message is
+    /// decompressed, so a caller which held on to the array it supplied could otherwise change what that code reads
+    /// whilst it is reading it.</para>
+    /// </remarks>
     [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Used as an array by zst")]
-    public byte[]? Dictionary { get; init; } = Resource.zstDictionary;
+    [SuppressMessage("Major Code Smell", "S2365:Properties should not make collection or array copies", Justification = "The copies are what stop a caller changing the dictionary whilst native code is reading it.")]
+    public byte[]? Dictionary
+    {
+        get => field is null ? null : (byte[])field.Clone();
+
+        init => field = value is null ? null : (byte[])value.Clone();
+    } = Resource.zstDictionary;
 
     /// <summary>
     /// Gets the TaskFactory to use when creating new tasks.

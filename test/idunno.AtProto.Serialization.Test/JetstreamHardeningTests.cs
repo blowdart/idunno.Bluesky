@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json;
 
 using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Models;
 namespace idunno.AtProto.Serialization.Test;
 
 [ExcludeFromCodeCoverage]
@@ -143,5 +144,176 @@ public class JetstreamHardeningTests
 
         Assert.NotNull(derived.Commit.Record);
         Assert.Equal("app.bsky.feed.like", derived.Commit.Record.Value.GetProperty("$type").GetString());
+    }
+    [Theory]
+    [InlineData("collection")]
+    [InlineData("rkey")]
+    [InlineData("rev")]
+    public void AnExplicitNullForAGuardedCommitPropertyIsRejected(string property)
+    {
+        string json = $$"""
+            {
+              "did": "{{TestDid}}",
+              "time_us": 1725911162329308,
+              "kind": "commit",
+              "commit": {
+                "rev": "3l3qo2vutsw2b",
+                "operation": "create",
+                "collection": "app.bsky.feed.like",
+                "rkey": "3l3qo2vuowo2b"
+              }
+            }
+            """.Replace($"\"{property}\": \"3l3qo2vutsw2b\"", $"\"{property}\": null", StringComparison.Ordinal)
+               .Replace($"\"{property}\": \"app.bsky.feed.like\"", $"\"{property}\": null", StringComparison.Ordinal)
+               .Replace($"\"{property}\": \"3l3qo2vuowo2b\"", $"\"{property}\": null", StringComparison.Ordinal);
+
+        // Marking a property required only makes the serializer insist it is present, so an explicit null would
+        // otherwise be written straight into a non-nullable property.
+        Assert.ThrowsAny<ArgumentNullException>(
+            () => JsonSerializer.Deserialize<AtJetstreamCommitEvent>(json, SourceGenerationContext.Default.AtJetstreamCommitEvent));
+    }
+
+    [Fact]
+    public void AnExplicitNullForTheEventDidIsRejected()
+    {
+        string json = """
+            {"did":null,"time_us":1725911162329308,"kind":"identity"}
+            """;
+
+        Assert.ThrowsAny<ArgumentNullException>(
+            () => JsonSerializer.Deserialize<AtJetstreamEvent>(json, SourceGenerationContext.Default.AtJetstreamEvent));
+    }
+
+    [Theory]
+    [InlineData("create", JetstreamCommitOperation.Create)]
+    [InlineData("update", JetstreamCommitOperation.Update)]
+    [InlineData("delete", JetstreamCommitOperation.Delete)]
+    [InlineData("truncate", JetstreamCommitOperation.Unknown)]
+    [InlineData("Create", JetstreamCommitOperation.Unknown)]
+    public void ACommitOperationDeserializesToItsValueOrToUnknown(string operation, JetstreamCommitOperation expected)
+    {
+        string json = $$"""
+            {
+              "did": "{{TestDid}}",
+              "time_us": 1725911162329308,
+              "kind": "commit",
+              "commit": {
+                "rev": "3l3qo2vutsw2b",
+                "operation": "{{operation}}",
+                "collection": "app.bsky.feed.like",
+                "rkey": "3l3qo2vuowo2b"
+              }
+            }
+            """;
+
+        AtJetstreamCommitEvent? actual = JsonSerializer.Deserialize<AtJetstreamCommitEvent>(
+            json,
+            SourceGenerationContext.Default.AtJetstreamCommitEvent);
+
+        Assert.NotNull(actual);
+        Assert.Equal(expected, actual.Commit.Operation);
+    }
+
+    [Theory]
+    [InlineData(JetstreamCommitOperation.Create, "create")]
+    [InlineData(JetstreamCommitOperation.Update, "update")]
+    [InlineData(JetstreamCommitOperation.Delete, "delete")]
+    public void ACommitOperationSerializesToTheValueTheJetstreamUses(JetstreamCommitOperation operation, string expected)
+    {
+        string json = JsonSerializer.Serialize(operation, SourceGenerationContext.Default.JetstreamCommitOperation);
+
+        Assert.Equal($"\"{expected}\"", json);
+    }
+
+    [Fact]
+    public void AnOptionsUpdateUsesThePropertyNameTheJetstreamReadsForTheDidFilter()
+    {
+        OptionsUpdateMessage message = new()
+        {
+            Payload = new OptionsUpdatePayload
+            {
+                MaxMessageSizeBytes = 0,
+                WantedDIDs = [new Did(TestDid)]
+            }
+        };
+
+        string json = JsonSerializer.Serialize(message, SourceGenerationContext.Default.OptionsUpdateMessage);
+
+        // The camel case naming policy produces "wantedDIDs" from the property name, which a server matching names
+        // exactly would read as no did filter at all, which is a subscription to everything.
+        Assert.Contains("\"wantedDids\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"wantedDIDs\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AnAccountDoesNotSerializeATypeDiscriminatorTheJetstreamDoesNotUse()
+    {
+        AtJetstreamAccountEvent accountEvent = new()
+        {
+            Did = new Did(TestDid),
+            TimeStamp = 1725911162329308,
+            Kind = JetStreamEventKind.Account,
+            Account = new AtJetstreamAccount
+            {
+                Active = true,
+                Did = new Did(TestDid),
+                Sequence = 1
+            }
+        };
+
+        string json = JsonSerializer.Serialize(accountEvent, SourceGenerationContext.Default.AtJetstreamAccountEvent);
+
+        Assert.DoesNotContain("$type", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AnIdentityDoesNotSerializeATypeDiscriminatorTheJetstreamDoesNotUse()
+    {
+        AtJetstreamIdentityEvent identityEvent = new()
+        {
+            Did = new Did(TestDid),
+            TimeStamp = 1725911162329308,
+            Kind = JetStreamEventKind.Identity,
+            Identity = new AtJetStreamIdentity
+            {
+                Did = new Did(TestDid),
+                Sequence = 1
+            }
+        };
+
+        string json = JsonSerializer.Serialize(identityEvent, SourceGenerationContext.Default.AtJetstreamIdentityEvent);
+
+        Assert.DoesNotContain("$type", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DerivingAnEventKeepsExtensionDataOtherThanTheKeyItConsumed()
+    {
+        string json = $$"""
+            {
+              "did": "{{TestDid}}",
+              "time_us": 1725911162329308,
+              "kind": "commit",
+              "unknownFromAFutureServer": "keep me",
+              "commit": {
+                "rev": "3l3qo2vutsw2b",
+                "operation": "create",
+                "collection": "app.bsky.feed.like",
+                "rkey": "3l3qo2vuowo2b"
+              }
+            }
+            """;
+
+        AtJetstreamEvent? actual = JsonSerializer.Deserialize<AtJetstreamEvent>(json, SourceGenerationContext.Default.AtJetstreamEvent);
+        Assert.NotNull(actual);
+
+        using var jetstream = new AtProtoJetstream();
+
+        AtJetstreamCommitEvent derived = Assert.IsType<AtJetstreamCommitEvent>(jetstream.DeriveEvent(actual));
+
+        Assert.NotNull(derived.ExtensionData);
+        Assert.False(derived.ExtensionData.ContainsKey("commit"));
+        Assert.True(derived.ExtensionData.TryGetValue("unknownFromAFutureServer", out JsonElement unknown));
+        Assert.Equal("keep me", unknown.GetString());
     }
 }
