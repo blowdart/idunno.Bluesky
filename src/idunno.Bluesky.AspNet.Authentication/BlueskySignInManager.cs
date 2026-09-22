@@ -343,9 +343,7 @@ public class BlueskySignInManager
 
             // Delete with the options the cookie was written with, otherwise a correlation cookie written with a
             // path or domain from the CookieBuilder would not be matched and so would not be removed.
-            HttpContext.Response.Cookies.Delete(
-                CorrelationCookieName,
-                BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
+            DeleteCorrelationCookie();
 
             // An expired or unreadable cookie has now been deleted, so it cannot be presented again.
             if (rejectionReason is not null)
@@ -413,6 +411,21 @@ public class BlueskySignInManager
         HttpContext.Response.Cookies.Append(CorrelationCookieName, cookieValue, cookieOptions);
 
         return correlationId.Value;
+    }
+
+    /// <summary>
+    /// Deletes the correlation cookie, if the browser presented one.
+    /// </summary>
+    /// <remarks>
+    /// <para>The cookie is deleted using the name and options it was written with, taken from
+    /// <see cref="BlueskyAuthenticationOptions.CorrelationCookie"/>. Deleting it with default options would not match a
+    /// cookie written with a configured name, path or domain, and so would leave it in place.</para>
+    /// </remarks>
+    public void DeleteCorrelationCookie()
+    {
+        HttpContext.Response.Cookies.Delete(
+            CorrelationCookieName,
+            BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
     }
 
     private static string FormatCorrelationCookiePayload(Guid correlationId, DateTimeOffset expiration) =>

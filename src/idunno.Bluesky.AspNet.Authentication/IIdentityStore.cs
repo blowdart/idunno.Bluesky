@@ -88,10 +88,24 @@ public interface IIdentityStore
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
-    Task Update(AccessCredentials credentials, CancellationToken cancellationToken)
+    /// <remarks>
+    /// <para>The stored identity is built against <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>. Use the overload which takes a
+    /// scheme when the credentials belong to an authentication scheme configured under a different name.</para>
+    /// </remarks>
+    Task Update(AccessCredentials credentials, CancellationToken cancellationToken) => Update(credentials, null, cancellationToken);
+
+    /// <summary>
+    /// Updates the specified <paramref name="credentials"/> in the identity store, building the stored identity against the specified <paramref name="scheme"/>.
+    /// </summary>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to update</param>
+    /// <param name="scheme">The authentication scheme the credentials belong to, or <see langword="null" /> to use <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
+    Task Update(AccessCredentials credentials, string? scheme, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
-        return Update(BuildClaimsIdentity(credentials), cancellationToken);
+        return Update(BuildClaimsIdentity(credentials, scheme), cancellationToken);
     }
 
     /// <summary>
