@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 using idunno.AtProto;
@@ -19,7 +20,8 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(uri.Collection);
@@ -36,7 +38,7 @@ public partial class BlueskyAgent
 
         if (postViewResult.StatusCode != HttpStatusCode.OK)
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 statusCode: postViewResult.StatusCode,
                 httpResponseHeaders: postViewResult.HttpResponseHeaders,
@@ -46,7 +48,7 @@ public partial class BlueskyAgent
 
         if (postViewResult.Result is null)
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 statusCode: HttpStatusCode.BadRequest,
                 httpResponseHeaders: postViewResult.HttpResponseHeaders,
@@ -56,7 +58,7 @@ public partial class BlueskyAgent
         else if (postViewResult.Result.Viewer is null ||
             postViewResult.Result.Viewer.Like is null)
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 statusCode: HttpStatusCode.NotFound,
                 httpResponseHeaders: postViewResult.HttpResponseHeaders,
@@ -78,7 +80,8 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteLike(StrongReference strongReference, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteLike(StrongReference strongReference, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
 

@@ -18,7 +18,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteContentVisibilityDeclaration(Cid? swapCommit = null, CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteContentVisibilityDeclaration(Cid? swapCommit = null, CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {

@@ -25,7 +25,7 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
     }
 
     /// <summary>
-    /// Gets or sets the value of the record.
+    /// Gets the value of the record.
     /// </summary>
     public JsonObject? Value { get; }
 
@@ -35,6 +35,51 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
     [JsonExtensionData]
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
+
+    /// <summary>
+    /// Determines whether the specified <see cref="AtProtoRepositoryRecord"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="AtProtoRepositoryRecord"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="ExtensionData"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(AtProtoRepositoryRecord? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return Uri == other.Uri &&
+            Cid == other.Cid &&
+            JsonNode.DeepEquals(Value, other.Value) &&
+            ExtensionDataComparer.Equals(ExtensionData, other.ExtensionData);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>The hash code is derived from the keys of <see cref="ExtensionData"/> rather than from its identity.</para>
+    /// </remarks>
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(EqualityContract);
+        hashCode.Add(Uri);
+        hashCode.Add(Cid);
+        hashCode.Add(ExtensionDataComparer.GetHashCode(ExtensionData));
+
+        return hashCode.ToHashCode();
+    }
 }
 
 /// <summary>
@@ -66,4 +111,50 @@ public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where T
     [JsonExtensionData]
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
+
+    /// <summary>
+    /// Determines whether the specified <see cref="AtProtoRepositoryRecord{TRecord}"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="AtProtoRepositoryRecord{TRecord}"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="ExtensionData"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(AtProtoRepositoryRecord<TRecord>? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return Uri == other.Uri &&
+            Cid == other.Cid &&
+            EqualityComparer<TRecord>.Default.Equals(Value, other.Value) &&
+            ExtensionDataComparer.Equals(ExtensionData, other.ExtensionData);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>The hash code is derived from the keys of <see cref="ExtensionData"/> rather than from its identity.</para>
+    /// </remarks>
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(EqualityContract);
+        hashCode.Add(Uri);
+        hashCode.Add(Cid);
+        hashCode.Add(Value);
+        hashCode.Add(ExtensionDataComparer.GetHashCode(ExtensionData));
+
+        return hashCode.ToHashCode();
+    }
 }

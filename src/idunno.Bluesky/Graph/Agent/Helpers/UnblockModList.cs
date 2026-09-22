@@ -21,7 +21,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="listUri"/> does not point to a list record.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> UnblockModList(
+    public async Task<AtProtoHttpResult<DeleteResult>> UnblockModList(
         AtUri listUri,
         CancellationToken cancellationToken = default)
     {
@@ -44,7 +44,7 @@ public partial class BlueskyAgent
         {
             Logger.UnblockModListFailedAsListCouldNotBeRead(_logger, listUri);
 
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 listResult.StatusCode,
                 listResult.HttpResponseHeaders,
@@ -56,7 +56,7 @@ public partial class BlueskyAgent
         {
             Logger.UnblockModListFailedAsUserIsNotBlocking(_logger, listUri);
 
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 HttpStatusCode.NotFound,
                 listResult.HttpResponseHeaders,

@@ -137,7 +137,7 @@ public class GraphPagingAndFilteringTests
         using TestServer testServer = CreatePagedListServer(cursorsSeen, deleteBodies);
         using BlueskyAgent agent = CreateAgent(testServer);
 
-        AtProtoHttpResult<Commit> result = await agent.DeleteFromList(
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
             s_list,
             new Did("did:plc:pagetwo"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -157,7 +157,7 @@ public class GraphPagingAndFilteringTests
         using TestServer testServer = CreatePagedListServer(cursorsSeen, deleteBodies);
         using BlueskyAgent agent = CreateAgent(testServer);
 
-        AtProtoHttpResult<Commit> result = await agent.DeleteFromList(
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
             s_list,
             new Handle("pagetwo.invalid"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -176,7 +176,7 @@ public class GraphPagingAndFilteringTests
         using TestServer testServer = CreatePagedListServer(cursorsSeen, deleteBodies);
         using BlueskyAgent agent = CreateAgent(testServer);
 
-        AtProtoHttpResult<Commit> result = await agent.DeleteFromList(
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
             s_list,
             new Did("did:plc:absent"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -203,7 +203,7 @@ public class GraphPagingAndFilteringTests
 
         using BlueskyAgent agent = CreateAgent(testServer);
 
-        AtProtoHttpResult<Commit> result = await agent.DeleteFromList(
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
             s_list,
             new Did("did:plc:absent"),
             cancellationToken: TestContext.Current.CancellationToken);

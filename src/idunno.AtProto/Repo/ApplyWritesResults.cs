@@ -12,10 +12,12 @@ public sealed record ApplyWritesResults
 {
     internal ApplyWritesResults(ApplyWritesResponse response)
     {
+        ArgumentNullException.ThrowIfNull(response);
+
         Commit = response.Commit;
 
         List<IApplyWritesResult> results = [];
-        foreach (ApplyWritesResponseBase commitResponse in response.Results)
+        foreach (ApplyWritesResponseBase commitResponse in response.Results ?? [])
         {
             switch (commitResponse)
             {
@@ -40,12 +42,24 @@ public sealed record ApplyWritesResults
     }
 
     /// <summary>
-    /// Gets the commit for the applyWrites operation.
+    /// Gets the commit for the applyWrites operation, if the server returned one.
     /// </summary>
-    public Commit Commit { get; }
+    /// <remarks>
+    /// <para>
+    ///   The lexicon declares the commit as optional, so a server is free to apply the writes without reporting the
+    ///   commit they landed in.
+    /// </para>
+    /// </remarks>
+    public Commit? Commit { get; }
 
     /// <summary>
     /// Gets the results of the applyWrites operation.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The lexicon declares the results as optional, so this is empty rather than <see langword="null"/> when a server
+    ///   applies the writes without reporting them individually.
+    /// </para>
+    /// </remarks>
     public IReadOnlyCollection<IApplyWritesResult> Results { get; }
 }

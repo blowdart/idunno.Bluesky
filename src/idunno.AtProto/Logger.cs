@@ -198,7 +198,7 @@ internal static partial class Logger
     internal static partial void DeleteRecordFailedAsSessionIsAnonymous(ILogger logger);
 
     [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rKey} on {service}. Commit: {commit}")]
-    internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service, Commit commit);
+    internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service, Commit? commit);
 
     [LoggerMessage(102, LogLevel.Error, "DeleteRecord failed with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
     internal static partial void DeleteRecordFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
@@ -244,6 +244,9 @@ internal static partial class Logger
 
     [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
     internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
+
+    [LoggerMessage(1123, LogLevel.Debug, "ApplyWrites succeeded on {service}, but the service did not return the commit the writes landed in")]
+    internal static partial void ApplyWritesSucceededWithNoCommit(ILogger logger, Uri service);
 
     [LoggerMessage(151, LogLevel.Error, "ApplyWrites failed as current session is not authenticated.")]
     internal static partial void ApplyWritesFailedAsSessionIsAnonymous(ILogger logger);

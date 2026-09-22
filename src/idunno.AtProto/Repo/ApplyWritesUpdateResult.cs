@@ -12,9 +12,10 @@ public sealed record ApplyWritesUpdateResult : IApplyWritesResult
 {
     internal ApplyWritesUpdateResult(ApplyWritesUpdateResponse applyWritesUpdateResponse)
     {
+        ArgumentNullException.ThrowIfNull(applyWritesUpdateResponse);
+
         Uri = applyWritesUpdateResponse.Uri;
         Cid = applyWritesUpdateResponse.Cid;
-        StrongReference = new(Uri, Cid);
     }
 
     /// <summary>
@@ -30,5 +31,9 @@ public sealed record ApplyWritesUpdateResult : IApplyWritesResult
     /// <summary>
     /// Gets the <see cref="StrongReference"/> of the record the write operation updated.
     /// </summary>
-    public StrongReference StrongReference { get; }
+    /// <remarks>
+    /// <para>Calculated from the current <see cref="Uri"/> and <see cref="Cid"/>, so it stays correct when either is
+    /// changed by a <see langword="with"/> expression.</para>
+    /// </remarks>
+    public StrongReference StrongReference => new(Uri, Cid);
 }

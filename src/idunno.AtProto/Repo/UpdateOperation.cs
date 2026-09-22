@@ -31,5 +31,5 @@ public sealed record UpdateOperation : WriteOperation
     /// <summary>
     /// Gets the value of the record to get updated or created.
     /// </summary>
-    public object RecordValue { get; init; }
+    public object RecordValue { get; }
 }

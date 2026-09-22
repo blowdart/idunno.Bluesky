@@ -600,7 +600,16 @@ public partial class AtProtoAgent : Agent
 
         if (applyWritesResult.Succeeded)
         {
-            Logger.ApplyWritesSucceeded(_logger, applyWritesResult.Result.Commit.Cid, applyWritesResult.Result.Commit.Rev, Service);
+            // The lexicon declares the commit as optional, so a server which applies the writes without reporting the
+            // commit they landed in must not turn a successful call into a NullReferenceException out of the logger.
+            if (applyWritesResult.Result.Commit is Commit commit)
+            {
+                Logger.ApplyWritesSucceeded(_logger, commit.Cid, commit.Rev, Service);
+            }
+            else
+            {
+                Logger.ApplyWritesSucceededWithNoCommit(_logger, Service);
+            }
         }
         else
         {
@@ -764,7 +773,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection or the uri record key is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtUri uri,
         string? serviceProxy = null,
         CancellationToken cancellationToken = default)
@@ -793,7 +803,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> or <paramref name="rKey"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         Nsid collection,
         RecordKey rKey,
         Cid? swapRecord = null,
@@ -823,7 +834,8 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>, </exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> is not valid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         StrongReference strongReference,
         Cid? swapRecord = null,
         Cid? swapCommit = null,
@@ -863,7 +875,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Throw when the current session is not an authenticated session.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> is <see langword="null"/>, <paramref name="collection"/> or <paramref name="rKey"/> are <see langword="null"/> or empty.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtIdentifier repo,
         Nsid collection,
         RecordKey rKey,
@@ -882,7 +895,7 @@ public partial class AtProtoAgent : Agent
             throw new AuthenticationRequiredException();
         }
 
-        AtProtoHttpResult<Commit> response =
+        AtProtoHttpResult<DeleteResult> response =
             await AtProtoServer.DeleteRecord(
                 repo,
                 collection,
@@ -900,7 +913,7 @@ public partial class AtProtoAgent : Agent
 
         if (response.Succeeded)
         {
-            Logger.DeleteRecordSucceeded(_logger, repo, collection, rKey, Service, response.Result);
+            Logger.DeleteRecordSucceeded(_logger, repo, collection, rKey, Service, response.Result.Commit);
         }
         else
         {
@@ -909,7 +922,7 @@ public partial class AtProtoAgent : Agent
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<Commit>
+            return new AtProtoHttpResult<DeleteResult>
             {
                 Result = response.Result,
                 AtErrorDetail = response.AtErrorDetail,
@@ -920,7 +933,7 @@ public partial class AtProtoAgent : Agent
         }
         else
         {
-            return new AtProtoHttpResult<Commit>
+            return new AtProtoHttpResult<DeleteResult>
             {
                 Result = null,
                 AtErrorDetail = response.AtErrorDetail,

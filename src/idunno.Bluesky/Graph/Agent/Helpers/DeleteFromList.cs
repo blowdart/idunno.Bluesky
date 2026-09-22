@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 using idunno.AtProto;
@@ -29,7 +30,8 @@ public partial class BlueskyAgent
     ///      </example>
     ///     </para>
     /// </remarks>
-    public async Task<AtProtoHttpResult<Commit>> DeleteFromList(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteFromList(
         AtUri uri,
         CancellationToken cancellationToken = default)
     {
@@ -61,7 +63,8 @@ public partial class BlueskyAgent
     ///    <para>This method iterates through the list members search for the specified <see cref="Did"/>. This may result in multiple API calls
     ///    depending on the size of the list.</para>
     /// </remarks>
-    public async Task<AtProtoHttpResult<Commit>> DeleteFromList(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteFromList(
         AtUri uri,
         Did did,
         CancellationToken cancellationToken = default)
@@ -98,7 +101,8 @@ public partial class BlueskyAgent
     ///    <para>This method iterates through the list members search for the specified <see cref="Did"/>. This may result in multiple API calls
     ///    depending on the size of the list.</para>
     /// </remarks>
-    public async Task<AtProtoHttpResult<Commit>> DeleteFromList(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteFromList(
         AtUri uri,
         Handle handle,
         CancellationToken cancellationToken = default)
@@ -129,7 +133,7 @@ public partial class BlueskyAgent
     /// <param name="subject">A description of the subject being searched for, used in the error detail when no entry matches.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    private async Task<AtProtoHttpResult<Commit>> DeleteFromList(
+    private async Task<AtProtoHttpResult<DeleteResult>> DeleteFromList(
         AtUri uri,
         Func<ListItemView, bool> predicate,
         string subject,
@@ -150,7 +154,7 @@ public partial class BlueskyAgent
 
             if (!listEntriesResult.Succeeded)
             {
-                return new AtProtoHttpResult<Commit>(
+                return new AtProtoHttpResult<DeleteResult>(
                     result: null,
                     statusCode: listEntriesResult.StatusCode,
                     httpResponseHeaders: listEntriesResult.HttpResponseHeaders,
@@ -169,7 +173,7 @@ public partial class BlueskyAgent
         }
         while (!string.IsNullOrEmpty(cursor));
 
-        return new AtProtoHttpResult<Commit>(
+        return new AtProtoHttpResult<DeleteResult>(
             result: null,
             statusCode: HttpStatusCode.NotFound,
             httpResponseHeaders: listEntriesResult.HttpResponseHeaders,

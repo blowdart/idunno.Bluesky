@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 
@@ -16,7 +17,8 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteQuote(AtUri uri, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteQuote(AtUri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
@@ -39,7 +41,8 @@ public partial class BlueskyAgent
     /// <remarks>
     /// <para>A quote record is really a post record, so DeletePost() would also work. This method is just here for ease of discover and consistency.</para>
     /// </remarks>
-    public async Task<AtProtoHttpResult<Commit>> DeleteQuote(StrongReference strongReference, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteQuote(StrongReference strongReference, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
 

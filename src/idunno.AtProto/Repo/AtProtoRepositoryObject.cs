@@ -23,8 +23,6 @@ public abstract record AtProtoRepositoryObject : AtProtoObject
 
         Uri = uri;
         Cid = cid;
-
-        StrongReference = new StrongReference(Uri, cid);
     }
 
     /// <summary>
@@ -42,5 +40,9 @@ public abstract record AtProtoRepositoryObject : AtProtoObject
     /// <summary>
     /// Gets a <see cref="StrongReference"/> for the record.
     /// </summary>
-    public StrongReference StrongReference { get; }
+    /// <remarks>
+    /// <para>Calculated from the current <see cref="Uri"/> and <see cref="Cid"/>, so it stays correct when either is
+    /// changed by a <see langword="with"/> expression.</para>
+    /// </remarks>
+    public StrongReference StrongReference => new(Uri, Cid);
 }

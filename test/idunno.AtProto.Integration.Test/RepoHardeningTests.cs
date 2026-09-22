@@ -396,7 +396,7 @@ public class RepoHardeningTests
 
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        AtProtoHttpResult<Commit> response = await AtProtoServer.DeleteRecord(
+        AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
             repo: TestDid,
             collection: TestCollection,
             rKey: "rkey1",
@@ -437,5 +437,143 @@ public class RepoHardeningTests
 
         Assert.Equal("limit", exception.ParamName);
         Assert.Contains($"{limit} must be between 1 and 100.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("""{"commit":{"cid":"bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy","rev":"3jx4mnqhtpm2b"}}""")]
+    [InlineData("""{"commit":{"cid":"bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy","rev":"3jx4mnqhtpm2b"},"results":null}""")]
+    [InlineData("{}")]
+    public async Task ServerCallToApplyWritesSucceedsWhenTheServiceOmitsResults(string responseBody)
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.Headers.ContentType = "application/json";
+            await context.Response.WriteAsync(responseBody);
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<ApplyWritesResults> response = await AtProtoServer.ApplyWrites(
+            operations: [new DeleteOperation(TestCollection, "rkey1")],
+            repo: TestDid,
+            validate: true,
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        Assert.Empty(response.Result.Results);
+    }
+
+    [Fact]
+    public async Task ServerCallToApplyWritesSucceedsWithANullCommitWhenTheServiceOmitsTheCommit()
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.Headers.ContentType = "application/json";
+            await context.Response.WriteAsync("""{"results":[]}""");
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<ApplyWritesResults> response = await AtProtoServer.ApplyWrites(
+            operations: [new DeleteOperation(TestCollection, "rkey1")],
+            repo: TestDid,
+            validate: true,
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        Assert.Null(response.Result.Commit);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"commit":null}""")]
+    public async Task ServerCallToDeleteRecordSucceedsWithANullCommitWhenTheServiceOmitsTheCommit(string responseBody)
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.Headers.ContentType = "application/json";
+            await context.Response.WriteAsync(responseBody);
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
+            repo: TestDid,
+            collection: TestCollection,
+            rKey: "rkey1",
+            swapRecord: null,
+            swapCommit: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        Assert.Null(response.Result.Commit);
+    }
+
+    [Fact]
+    public async Task ServerCallToDeleteRecordSucceedsWhenTheServiceReturnsNoContent()
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, context =>
+        {
+            context.Response.StatusCode = 204;
+            return Task.CompletedTask;
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
+            repo: TestDid,
+            collection: TestCollection,
+            rKey: "rkey1",
+            swapRecord: null,
+            swapCommit: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        Assert.Null(response.Result.Commit);
+    }
+
+    [Fact]
+    public async Task ServerCallToDeleteRecordReturnsTheCommitWhenTheServiceSuppliesOne()
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.Headers.ContentType = "application/json";
+            await context.Response.WriteAsync("""{"commit":{"cid":"bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy","rev":"3jx4mnqhtpm2b"}}""");
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
+            repo: TestDid,
+            collection: TestCollection,
+            rKey: "rkey1",
+            swapRecord: null,
+            swapCommit: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal("3jx4mnqhtpm2b", response.Result.Commit.Rev, StringComparer.Ordinal);
     }
 }
