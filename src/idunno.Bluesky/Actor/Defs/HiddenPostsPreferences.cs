@@ -18,21 +18,23 @@ public sealed record HiddenPostsPreferences : Preference
     /// Creates a new instance of <see cref="HiddenPostsPreferences"/>.
     /// </summary>
     /// <param name="items">A list of URIs of posts the account owner has hidden.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
-    public HiddenPostsPreferences(IReadOnlyList<AtUri> items)
-    {
-        if (items is null)
-        {
-            Items = new List<AtUri>().AsReadOnly();
-        }
-        else
-        {
-            Items = new List<AtUri>(items).AsReadOnly();
-        }
-    }
+    public HiddenPostsPreferences(IReadOnlyList<AtUri> items) => Items = items;
 
     /// <summary>
     /// A list of URIs of posts the account owner has hidden.
     /// </summary>
-    public IReadOnlyList<AtUri> Items { get; init; }
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    public IReadOnlyList<AtUri> Items
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = new List<AtUri>(value).AsReadOnly();
+        }
+    }
 }

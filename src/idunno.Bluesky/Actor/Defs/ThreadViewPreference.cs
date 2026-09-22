@@ -17,19 +17,47 @@ public record ThreadViewPreference : Preference
     /// </summary>
     /// <param name="sortingMode">The user's preferred sorting mode for threads.</param>
     /// <param name="prioritizeFollowedUsers">Flag indicating whether to show followed users at the top of all replies.</param>
-    [JsonConstructor]
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sortingMode"/> is <see cref="ThreadSortingMode.Unknown"/>.</exception>
     public ThreadViewPreference(ThreadSortingMode? sortingMode = null, bool? prioritizeFollowedUsers = null)
+        : this(
+            sortingMode is null ? null : ActorWireValues.FromThreadSortingMode(sortingMode.Value, nameof(sortingMode)),
+            prioritizeFollowedUsers)
     {
-        SortingMode = sortingMode;
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="ThreadViewPreference"/> from the values the service sent.
+    /// </summary>
+    /// <param name="sort">The user's preferred sorting mode for threads, as the service expresses it.</param>
+    /// <param name="prioritizeFollowedUsers">Flag indicating whether to show followed users at the top of all replies.</param>
+    [JsonConstructor]
+    internal ThreadViewPreference(string? sort, bool? prioritizeFollowedUsers)
+    {
+        Sort = sort;
         PrioritizeFollowedUsers = prioritizeFollowedUsers;
     }
 
     /// <summary>
+    /// Gets the user's preferred sorting mode for threads, as the service expresses it.
+    /// </summary>
+    /// <remarks>
+    /// <para>The sorting mode is an open union, so the value the service sent is kept verbatim and
+    /// <see cref="SortingMode"/> is projected from it. A mode this library does not recognize survives a read,
+    /// modify and write cycle rather than being discarded.</para>
+    /// </remarks>
+    [JsonInclude]
+    [JsonPropertyName("sort")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    internal string? Sort { get; init; }
+
+    /// <summary>
     /// The user's preferred sorting mode for threads.
     /// </summary>
-    [JsonInclude]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ThreadSortingMode? SortingMode { get; init; }
+    /// <remarks>
+    /// <para>A sorting mode this library does not recognize is reported as <see cref="ThreadSortingMode.Unknown"/>.</para>
+    /// </remarks>
+    [JsonIgnore]
+    public ThreadSortingMode? SortingMode => Sort is null ? null : ActorWireValues.ToThreadSortingMode(Sort);
 
     /// <summary>
     /// Flag indicating whether to show followed users at the top of all replies.
@@ -37,13 +65,11 @@ public record ThreadViewPreference : Preference
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? PrioritizeFollowedUsers { get; init; }
-
 }
 
 /// <summary>
-/// Groups of users to apply the muted word to.
+/// The sorting mode for the replies in a thread.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<ThreadSortingMode>))]
 public enum ThreadSortingMode
 {
     /// <summary>
@@ -59,11 +85,24 @@ public enum ThreadSortingMode
     /// <summary>
     /// Show the replies with the most likes first.
     /// </summary>
-    [JsonStringEnumMemberName("most-likes")]
     MostLikes,
 
     /// <summary>
     /// Randomize the thread replies.
     /// </summary>
-    Random
+    Random,
+
+    /// <summary>
+    /// Show the replies the service considers hottest first.
+    /// </summary>
+    Hotness,
+
+    /// <summary>
+    /// The sorting mode is one this library does not recognize.
+    /// </summary>
+    /// <remarks>
+    /// <para>This value only ever comes from the service. It cannot be used to build a
+    /// <see cref="ThreadViewPreference"/>, as it carries no mode the service would understand.</para>
+    /// </remarks>
+    Unknown
 }

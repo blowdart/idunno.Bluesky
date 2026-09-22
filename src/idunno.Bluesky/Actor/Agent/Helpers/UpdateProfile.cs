@@ -31,16 +31,15 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
-        ArgumentNullException.ThrowIfNull(profile.Value);
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
 
         if (profile.Uri.Authority is not Did recordDid)
         {
             throw new ArgumentException("Uri authority is not a DID", nameof(profile));
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
         }
 
         if (recordDid != Did)

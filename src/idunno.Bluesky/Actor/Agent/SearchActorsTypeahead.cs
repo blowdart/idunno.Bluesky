@@ -32,7 +32,7 @@ public partial class BlueskyAgent
 
             ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorTypeaheadSearchResults);
         }
 
         return await BlueskyServer.SearchActorsTypeahead(

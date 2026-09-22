@@ -18,8 +18,8 @@ public sealed record class FeedViewPreference : Preference
     /// Creates a new instance of <see cref="FeedViewPreference"/>.
     /// </summary>
     /// <param name="feed">The URI of the feed, or an identifier which describes the feed.</param>
-    /// <param name="hideReplies">Flag indicating whether to hide replies in the feed.s</param>
-    /// <param name="hideRepliesByUnfollowed">Flag indicating whether to replies in the feed if they are not by followed users.</param>
+    /// <param name="hideReplies">Flag indicating whether to hide replies in the feed.</param>
+    /// <param name="hideRepliesByUnfollowed">Flag indicating whether to hide replies in the feed if they are not by followed users.</param>
     /// <param name="hideRepliesByLikeCount">Minimum number of likes a reply must have in the feed before being shown.</param>
     /// <param name="hideReposts">Flag indicating whether to hide reposts in the feed.</param>
     /// <param name="hideQuotePosts">Flag indicating whether to hide quote posts in the feed.</param>
@@ -47,7 +47,7 @@ public sealed record class FeedViewPreference : Preference
     public bool HideReplies { get; init; }
 
     /// <summary>
-    /// Flag indicating whether to replies in the feed if they are not by followed users.
+    /// Flag indicating whether to hide replies in the feed if they are not by followed users.
     /// </summary>
     [JsonInclude]
     public bool HideRepliesByUnfollowed { get; init; }

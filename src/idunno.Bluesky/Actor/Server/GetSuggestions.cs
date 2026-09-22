@@ -17,7 +17,7 @@ public static partial class BlueskyServer
     /// <summary>
     /// Get a list of suggested actors for the authenticated user. The expected use is discovery of accounts to follow during new account onboarding.
     /// </summary>
-    /// <param name="limit">The maximum number of suggested actors to return.</param>
+    /// <param name="limit">The maximum number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -61,9 +61,16 @@ public static partial class BlueskyServer
 
         BlueskyHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
+        string requestUri = $"/xrpc/app.bsky.actor.getSuggestions?limit={limitValue}";
+
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            requestUri += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
         AtProtoHttpResult<GetSuggestionsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.getSuggestions?cursor={Uri.EscapeDataString(cursor ?? string.Empty)}&limit={limit}",
+            requestUri,
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

@@ -188,7 +188,7 @@ public record Profile : BlueskyRecord
     /// <summary>
     /// Gets the pronouns for the account, if any.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the pronouns exceed 2560 UTF-8 bytes or 256 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the pronouns exceed 200 UTF-8 bytes or 20 graphemes.</exception>
     [JsonInclude]
     public string? Pronouns
     {

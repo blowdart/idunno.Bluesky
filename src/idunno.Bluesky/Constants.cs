@@ -361,12 +361,12 @@ public static class Maximum
     /// <see cref="string"/>.
     /// </para>
     /// </remarks>
-    public static readonly int PronounLengthInBytes = 2560;
+    public static readonly int PronounLengthInBytes = 200;
 
     /// <summary>
     /// The maximum length of a profile pronoun, in graphemes.
     /// </summary>
-    public static readonly int PronounLengthInGraphemes = 256;
+    public static readonly int PronounLengthInGraphemes = 20;
 
     /// <summary>
     /// The maximum length of a profile display name, in UTF-8 bytes.
@@ -653,6 +653,11 @@ public static class CollectionNsid
     /// The NSID for an actor's status record.
     /// </summary>
     public static Nsid Status => new("app.bsky.actor.status");
+
+    /// <summary>
+    /// The NSID for an actor's content visibility declaration record.
+    /// </summary>
+    public static Nsid ContentVisibilityDeclaration => new("app.bsky.actor.contentVisibilityDeclaration");
 
     /// <summary>
     /// The NSID for an actor's notification declaration record.
