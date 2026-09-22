@@ -63,6 +63,7 @@
   and `InvalidPassword` errors declared by `com.atproto.server.createSession`. These were previously reported as a plain `AtErrorDetail`.
 * The constructors on the `AtProtoError` subclasses are now public, so an error can be constructed directly from an `AtErrorDetail`, matching the
   `BlueskyError` subclasses.
+* `SelfLabels.MaximumLabels` exposes the maximum number of self labels a record may carry, which was previously a magic number.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -208,6 +209,9 @@
 
 #### idunno.AtProto
 
+* `SelfLabels.AddLabel()` now throws an `ArgumentOutOfRangeException` when adding a label would take the collection past
+  `SelfLabels.MaximumLabels`. It previously enforced no maximum at all, while the constructor and the `Values` setter both did,
+  so labels added one at a time could exceed the limit and be rejected by the service.
 * `AtProtoAgent.DeleteRecord()`, `AtProtoServer.DeleteRecord()` and the `BlueskyAgent` helpers built on them
   (`DeletePost()`, `DeleteLike()`, `DeleteRepost()`, `DeleteQuote()`, `DeleteBlock()`, `DeleteFollow()`, `DeleteList()`, `DeleteFromList()`,
   `DeleteReferenceListOptOut()`, `DeleteStatus()`, `DeleteThreadGate()`, `DeletePostGate()`, `DeleteContentVisibilityDeclaration()`, `Unblock()`,
@@ -397,6 +401,8 @@
 
 #### idunno.AtProto
 
+* `SelfLabels.Values` now reads its backing collection under the same lock its mutators write it under. The unsynchronised read
+  carried no memory barrier, so a caller on another thread could keep observing the collection as it was before an `AddLabel()`.
 * `AtProtoAgent.ApplyWrites()` no longer throws a `NullReferenceException` when a service returns no commit, and no longer fails to deserialize a
   response which returns no results. The `applyWrites` lexicon declares neither as required.
 * The record retrieval overloads of `AtProtoAgent` now name the uri they were given in the exception thrown when it carries no collection or record key.
@@ -696,6 +702,9 @@
 
 #### idunno.Bluesky
 
+* `PostBuilder.Equals()` no longer throws an `InvalidOperationException` when the builder it is comparing against is being mutated
+  on another thread. It took its own lock but read the other builder's images, gallery images and gate rules without taking that
+  builder's lock. Both builders are now snapshotted under their own locks and compared outside them.
 * `MessageInput.Text` now validates the maximum message length when it is assigned in an object initializer or a `with` expression, rather than only in the constructor.
 * `EmbeddedGallery` can now deserialize a gallery containing more than `Maximum.GalleryItems` items, or no items at all. The authoring limit is a client
   limit, not a schema limit, so applying it when reading rejected galleries the service is entitled to send.
@@ -937,6 +946,12 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* `BlueskyAgentFactory` no longer writes a logger factory onto the `BlueskyAgentOptions` instance the options system owns and hands
+  to every agent it creates. The logger factory is applied by `PostConfigureBlueskyAgentOptions` instead, which is where the rest of
+  the agent option defaults are applied.
+* `EphemeralIdentityStore`, `EphemeralProfileCache` and `EphemeralCorrelationStateCache` now mark themselves disposed before disposing
+  the caches they hold, and their disposal flags are `volatile`. A caller racing a dispose could pass the disposal guard and then use a
+  cache which had already been disposed.
 * The authentication cookie re-issued by a renewal now carries only the DID claim, as the cookie written at sign in does, rather than the hydrated identity.
   A renewal previously protected the access token, the refresh token and the DPoP proof key into the cookie, putting them in the browser.
 * The identity store and the correlation state cache are now protected with data protection unless the application configures

@@ -1458,6 +1458,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns><see langword="true"/> if the specified <see cref="PostBuilder"/> is equal to the current instance; otherwise, <see langword="false"/>.</returns>
     /// <remarks>
     /// <para>Two builders are equal when they would produce equal posts. Collections are compared by their contents rather than by reference.</para>
+    /// <para>
+    ///   Each builder is snapshotted under its own lock and the snapshots are compared outside both, so a builder being
+    ///   mutated on another thread cannot make this throw. The two snapshots are not taken atomically with respect to
+    ///   each other, so the result describes the builders as they were, not as they are once this returns.
+    /// </para>
     /// </remarks>
     public bool Equals(PostBuilder? other)
     {
@@ -1471,19 +1476,21 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             return true;
         }
 
-        // Only this instance's lock is taken. Acquiring both would introduce a lock ordering
-        // deadlock between two threads comparing the same pair of builders in opposite orders.
-        lock (_syncLock)
-        {
-            return EqualityComparer<Post>.Default.Equals(_post, other._post) &&
-                CollectionComparison.SequenceEquals(_embeddedImages, other._embeddedImages) &&
-                CollectionComparison.SequenceEquals(_embeddedGalleryImages, other._embeddedGalleryImages) &&
-                CollectionComparison.SequenceEquals(_threadGateRules, other._threadGateRules) &&
-                CollectionComparison.SequenceEquals(_postGateRules, other._postGateRules) &&
-                EqualityComparer<EmbeddedVideo?>.Default.Equals(_embeddedVideo, other._embeddedVideo) &&
-                _disableReplies == other._disableReplies &&
-                DisableEmbedding == other.DisableEmbedding;
-        }
+        // The snapshots are taken one lock at a time rather than under both locks at once. Holding both would
+        // introduce a lock ordering deadlock between two threads comparing the same pair of builders in opposite
+        // orders, and reading the other builder's collections without its lock would let a concurrent mutation
+        // throw out of the enumeration.
+        EqualityState thisState = CaptureEqualityState();
+        EqualityState otherState = other.CaptureEqualityState();
+
+        return EqualityComparer<Post>.Default.Equals(thisState.Post, otherState.Post) &&
+            CollectionComparison.SequenceEquals(thisState.EmbeddedImages, otherState.EmbeddedImages) &&
+            CollectionComparison.SequenceEquals(thisState.EmbeddedGalleryImages, otherState.EmbeddedGalleryImages) &&
+            CollectionComparison.SequenceEquals(thisState.ThreadGateRules, otherState.ThreadGateRules) &&
+            CollectionComparison.SequenceEquals(thisState.PostGateRules, otherState.PostGateRules) &&
+            EqualityComparer<EmbeddedVideo?>.Default.Equals(thisState.EmbeddedVideo, otherState.EmbeddedVideo) &&
+            thisState.DisableReplies == otherState.DisableReplies &&
+            thisState.DisableEmbedding == otherState.DisableEmbedding;
     }
 
     /// <summary>
@@ -1492,6 +1499,32 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="obj">The object to compare with the current object.</param>
     /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
     public override bool Equals(object? obj) => obj is PostBuilder other && Equals(other);
+
+    private EqualityState CaptureEqualityState()
+    {
+        lock (_syncLock)
+        {
+            return new EqualityState(
+                _post,
+                [.. _embeddedImages],
+                [.. _embeddedGalleryImages],
+                _threadGateRules is null ? null : [.. _threadGateRules],
+                _postGateRules is null ? null : [.. _postGateRules],
+                _embeddedVideo,
+                _disableReplies,
+                DisableEmbedding);
+        }
+    }
+
+    private sealed record EqualityState(
+        Post Post,
+        List<EmbeddedImage> EmbeddedImages,
+        List<GalleryImage> EmbeddedGalleryImages,
+        List<ThreadGateRule>? ThreadGateRules,
+        List<PostGateRule>? PostGateRules,
+        EmbeddedVideo? EmbeddedVideo,
+        bool DisableReplies,
+        bool DisableEmbedding);
 
     /// <summary>
     /// Determines whether two specified <see cref="PostBuilder"/>s the same value.

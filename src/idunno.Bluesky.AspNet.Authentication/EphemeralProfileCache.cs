@@ -34,7 +34,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
     private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
 
-    private bool _disposed;
+    private volatile bool _disposed;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
@@ -182,7 +182,9 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
             return;
         }
 
-        _cache.Dispose();
+        // Set before the cache is disposed so a concurrent caller fails its disposal guard rather than reaching a
+        // half disposed cache.
         _disposed = true;
+        _cache.Dispose();
     }
 }
