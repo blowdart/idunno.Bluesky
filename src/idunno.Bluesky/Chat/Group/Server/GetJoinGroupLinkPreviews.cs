@@ -53,6 +53,11 @@ public partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
+        if (codes.Any(code => string.IsNullOrEmpty(code)))
+        {
+            throw new ArgumentException("Codes cannot contain null or empty values.", nameof(codes));
+        }
+
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
 
         BlueskyHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };

@@ -11,9 +11,9 @@ namespace idunno.Bluesky.Chat.Actor;
 /// A declaration of a Bluesky chat account.
 /// </summary>
 /// <param name="AllowIncoming">Indicates which actors are allowed to send chat messages to the account. Known values are defined in <see cref="Actor.AllowIncoming"/>.</param>
-/// <param name="AllowGroupInvites">Indicates which actors are allowed to send group invites to the account. Known values are defined in <see cref="Actor.AllowGroupInvites"/>.</param>
+/// <param name="AllowGroupInvites">Indicates which actors are allowed to send group invites to the account, if specified. Known values are defined in <see cref="Actor.AllowGroupInvites"/>.</param>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(Declaration), "chat.bsky.actor.declaration")]
-public record Declaration(string AllowIncoming, string AllowGroupInvites) : BlueskyRecord
+public record Declaration([property: JsonRequired] string AllowIncoming, string? AllowGroupInvites = null) : BlueskyRecord
 {
 }

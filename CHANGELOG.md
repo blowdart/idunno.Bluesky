@@ -77,6 +77,9 @@
 
 #### idunno.Bluesky
 
+* Added `Chat.Messages.RelatedProfiles`, which carries the profiles of every member who authored or reacted to the messages returned by
+  `GetMessages()`, including the members referred to by any system message. `chat.bsky.convo.getMessages` returns these profiles, but they were
+  previously discarded. A `SystemMessageView` refers to the users it concerns by `Did` only, so this collection was the only way to resolve them.
 * Added `BlockModList()` and `UnblockModList()`, which block and unblock every actor in a moderation list by creating and deleting an
   `app.bsky.graph.listblock` record. They sit alongside the existing `MuteModList()` and `UnmuteModList()`; blocks are public, mutes are private.
 * Added `RecommendationReadOnlyCollection<T>`, returned by `GetSuggestedUsers()` and `GetTrends()`, exposing the recommendation identifier the service returns for feedback events.
@@ -270,6 +273,11 @@
 
 #### idunno.Bluesky
 
+* `Chat.Actor.Declaration.AllowGroupInvites` is now `string?` and defaults to `null`, and the `allowGroupInvites` parameter on
+  `BlueskyAgent.SetConversationDeclaration()` is now `string?`. `chat.bsky.actor.declaration` only requires `allowIncoming`, so a declaration
+  record which omits `allowGroupInvites` is valid; it previously produced a null in a non-nullable property, and could not be created at all.
+* `Chat.ConversationAvailability.CanChat` is now `bool` rather than `bool?`. `canChat` is required by `chat.bsky.convo.getConvoAvailability`,
+  so callers no longer have to null-check a value the service always sends.
 * `BlueskyAgent.ListNotifications()` and `BlueskyServer.ListNotifications()` no longer take a `seenAt` parameter, as it has been removed from the lexicon
   and causes an error - see [APP-3082: deprecate notification seenAt parameter- #5538](https://github.com/bluesky-social/atproto/pull/5538).
 * `BlueskyAgent.GetTrends()` and `BlueskyServer.GetTrends()` now return a `RecommendationReadOnlyCollection<TrendView>` rather than an `ICollection<TrendView>`.
@@ -702,6 +710,16 @@
 
 #### idunno.Bluesky
 
+* Reading a conversation whose `members` collection is empty no longer throws. `chat.bsky.convo.defs#convoView` places no lower bound on `members`,
+  but `ConversationView` rejected an empty collection from inside its JSON constructor, so a valid response threw out of deserialization.
+* `Chat.Actor.Declaration.AllowIncoming` is now marked as required for serialization, so a declaration record which omits it is rejected rather than
+  deserializing to a null in a non-nullable property. The same applies to `Chat.ConversationAvailability.CanChat`.
+* `BlueskyAgent.CreateGroup()` and `BlueskyServer.CreateGroup()` now reject an empty group name, which `chat.bsky.group.createGroup` disallows,
+  rather than sending it to the service. They now throw an `ArgumentException` rather than an `ArgumentNullException` when the name is null.
+* `BlueskyAgent.GetJoinGroupLinkPreviews()` and `BlueskyServer.GetJoinGroupLinkPreviews()` now reject a null or empty join link code with an
+  `ArgumentException` naming the `codes` parameter, rather than failing while building the query string.
+* The chat group request models now copy the collection of members they are given, so a change to the caller's collection can no longer alter a
+  request after it has been validated.
 * `BlueskyAgent.DeleteLike()` now works. The `AtUri` overload required a like record uri, then looked that uri up as a post, so it could
   never find the like to delete; the `StrongReference` overload passed a post uri into it and always threw an `ArgumentOutOfRangeException`.
   Both overloads now accept either a post uri or a like record uri and resolve the like accordingly, matching `DeleteRepost()`. A uri which is

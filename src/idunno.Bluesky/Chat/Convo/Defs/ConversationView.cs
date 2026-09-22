@@ -28,7 +28,6 @@ public sealed record ConversationView : ConversationViewBase
     /// <param name="kind">The kind of conversation, if any.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty.</exception>
     [JsonConstructor]
     public ConversationView(
         string id,
@@ -45,8 +44,6 @@ public sealed record ConversationView : ConversationViewBase
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
         ArgumentNullException.ThrowIfNull(members);
-
-        ArgumentOutOfRangeException.ThrowIfZero(members.Count);
 
         Id = id;
         Revision = revision;
