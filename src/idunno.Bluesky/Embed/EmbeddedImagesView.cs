@@ -14,9 +14,12 @@ public sealed record EmbeddedImagesView : EmbeddedView
     /// Creates a new instance of <see cref="EmbeddedImagesView"/>.
     /// </summary>
     /// <param name="images">The collection of embedded images in a post.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     internal EmbeddedImagesView(IReadOnlyList<EmbeddedImageView> images)
     {
+        ArgumentNullException.ThrowIfNull(images);
+
         Images = images;
     }
 
@@ -25,5 +28,9 @@ public sealed record EmbeddedImagesView : EmbeddedView
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public IReadOnlyList<EmbeddedImageView> Images { get; init; }
+    public IReadOnlyList<EmbeddedImageView> Images
+    {
+        get;
+        init => field = [.. value];
+    }
 }

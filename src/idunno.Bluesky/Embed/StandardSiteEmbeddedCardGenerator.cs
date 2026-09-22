@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.RegularExpressions;
 
 using idunno.AtProto;
@@ -17,8 +18,11 @@ namespace idunno.Bluesky.Embed;
 /// </summary>
 public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbeddedCardGenerator
 {
-    [GeneratedRegex("<link rel=\"site.standard.([^\"]+)\" href=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex s_SiteStandardLinkRegex();
+    [GeneratedRegex("<link\\s[^>]*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex s_LinkElementRegex();
+
+    [GeneratedRegex("(?<name>[a-z0-9:_.-]+)\\s*=\\s*(?:\"(?<value>[^\"]*)\"|'(?<value>[^']*)'|(?<value>[^\\s\"'>]+))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex s_LinkAttributeRegex();
 
     /// <summary>
     /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
@@ -27,7 +31,6 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
     {
-        ArgumentNullException.ThrowIfNull(agent);
     }
 
     /// <summary>
@@ -39,9 +42,6 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
         : base(agent: agent)
     {
-        ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(agent.HttpClient);
-
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
@@ -56,9 +56,6 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
         : base(agent, httpClient, loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
@@ -73,10 +70,6 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
         : base(agent, httpClient, logger)
     {
-        ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(logger);
-
         ILogger = logger;
     }
 
@@ -126,16 +119,38 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
             return result;
         }
 
-        Dictionary<string, string> siteStandardLinks = [];
+        Dictionary<string, string> siteStandardLinks = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (Match match in s_SiteStandardLinkRegex().Matches(pageContent))
+        foreach (Match linkElement in s_LinkElementRegex().Matches(pageContent))
         {
-            string property = match.Groups[1].Value;
-            string content = match.Groups[2].Value;
+            string? rel = null;
+            string? href = null;
+
+            foreach (Match attribute in s_LinkAttributeRegex().Matches(linkElement.Value))
+            {
+                string attributeName = attribute.Groups["name"].Value;
+
+                // rel and href may appear in either order, in any casing, and with either quoting style.
+                if (rel is null && attributeName.Equals("rel", StringComparison.OrdinalIgnoreCase))
+                {
+                    rel = attribute.Groups["value"].Value;
+                }
+                else if (href is null && attributeName.Equals("href", StringComparison.OrdinalIgnoreCase))
+                {
+                    href = attribute.Groups["value"].Value;
+                }
+            }
+
+            if (rel is null || href is null || !rel.StartsWith("site.standard.", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string property = rel["site.standard.".Length..];
 
             if (!string.IsNullOrEmpty(property) && !siteStandardLinks.ContainsKey(property))
             {
-                siteStandardLinks.Add(property, content);
+                siteStandardLinks.Add(property, WebUtility.HtmlDecode(href));
             }
         }
 
@@ -168,9 +183,9 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
             // A publication record is one short AT URI, so it is read with the well known budget rather than the budget
             // for a whole web page.
-            publicationMetadata = await GetPageContent(
+            publicationMetadata = await GetPlainTextContent(
                 publicationMetaDataPathBuilder.Uri,
-                maxPageSize: AtProtoServer.DefaultMaximumWellKnownResponseSize,
+                maxDocumentSize: AtProtoServer.DefaultMaximumWellKnownResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 

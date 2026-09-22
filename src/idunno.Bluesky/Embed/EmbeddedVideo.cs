@@ -85,7 +85,11 @@ public record EmbeddedVideo : EmbeddedMediaBase
     /// Gets a collection of <see cref="Caption"/>s for the video, if any.
     /// </summary>
     [JsonInclude]
-    public ICollection<Caption>? Captions { get; init; }
+    public ICollection<Caption>? Captions
+    {
+        get;
+        init => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// Gets the alternative text for the video, if any.
@@ -184,9 +188,14 @@ public record Caption
     /// </summary>
     /// <param name="lang">The language for the caption file.</param>
     /// <param name="file">The blob containing the caption file.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lang"/> is <see langword="null" /> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     public Caption(string lang, Blob file)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lang);
+        ArgumentNullException.ThrowIfNull(file);
+
         Lang = lang;
         File = file;
     }
@@ -195,11 +204,13 @@ public record Caption
     /// Gets the language for the caption file.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public string Lang { get; init; }
 
     /// <summary>
     /// Gets the blob containing the caption file.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public Blob File { get; init; }
 }

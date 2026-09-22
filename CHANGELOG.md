@@ -104,6 +104,10 @@
   `Maximum.DraftPostGateEmbeddingRules`, `Maximum.DraftThreadGateAllowRules`, `Maximum.DraftEmbedImages`, `Maximum.DraftEmbedVideos`,
   `Maximum.DraftEmbedExternals`, `Maximum.DraftEmbedRecords`, `Maximum.DraftEmbedCaptions`, `Maximum.DraftEmbedAltTextLengthInGraphemes`,
   `Maximum.DraftEmbedCaptionContentLengthInBytes` and `Maximum.DraftEmbedLocalRefPathLengthInBytes`, replacing the hard coded limits used by the draft types.
+* Added `Maximum.EmbedExternalViewUris` and `Maximum.EmbedVideoCaptions`, replacing the hard coded limits used by the embed APIs.
+* Added `BaseEmbeddedCardGenerator.DefaultMaximumThumbnailSize` and `BaseEmbeddedCardGenerator.DefaultThumbnailDownloadBufferSize`.
+* Added `EmbeddedViewTypeDiscriminators.ImagesView`, `EmbeddedViewTypeDiscriminators.ExternalView`, `EmbeddedViewTypeDiscriminators.VideoView`,
+  `EmbeddedViewTypeDiscriminators.RecordWithMediaView` and `EmbeddedViewTypeDiscriminators.GalleryView`.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -337,6 +341,19 @@
   That limit still applies to `Profile`, which is the record actually written.
 * `Maximum.PronounLengthInBytes` is now 200 and `Maximum.PronounLengthInGraphemes` is now 20, as the lexicon declares. Pronouns which were accepted
   before, and which the service would have rejected, are now rejected here.
+* `EmbeddedGallery.Items` is now an `IReadOnlyList<GalleryImage>` rather than an `ICollection<GalleryImage>`, and takes a copy of the collection it is
+  given, so callers can no longer mutate a gallery's contents behind its back or bypass its authoring limits. Use `Add()`, `Remove()` and `Clear()`.
+* `EmbeddedVideoView.ThumbnailUri` and `EmbeddedVideoView.AltText` are now nullable. The `app.bsky.embed.video#view` lexicon requires only `cid` and
+  `playlist`, so a view without a thumbnail or alt text is valid and could not previously be deserialized.
+* `External.View.Uri` is now a `string` rather than a `Uri`, matching `External.Properties.Uri`, because the Bluesky web app can create link cards
+  whose URI is not a legal `Uri`.
+* `BlueskyServer.GetEmbedExternalView()` and `BlueskyAgent.GetEmbedExternalView()` now report a resolvable but empty response as a result whose
+  `StatusCode` is `NoContent` and whose `Result` is `null`, rather than throwing or reporting a success carrying a null view. The `PostView`
+  overloads no longer throw an `ArgumentException` when the post has no `AssociatedRefs`; they report `NoContent` too.
+* `BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob()` now defaults its maximum download size to 1,000,000 bytes, matching the `thumb` blob
+  `maxSize` the `app.bsky.embed.external` lexicon declares, rather than 2,000,000, and defaults its buffer size to 81,920 bytes rather than 1,000,000.
+* `Embed.ViewBlocked.Blocked`, `Embed.ViewDetached.Detached` and `Embed.ViewNotFound.NotFound` are now instance properties rather than static
+  properties, so they can be reached through an instance and through pattern matching.
 
 ### Fixed
 
@@ -611,6 +628,35 @@
 #### idunno.Bluesky
 
 * `MessageInput.Text` now validates the maximum message length when it is assigned in an object initializer or a `with` expression, rather than only in the constructor.
+* `EmbeddedGallery` can now deserialize a gallery containing more than `Maximum.GalleryItems` items, or no items at all. The authoring limit is a client
+  limit, not a schema limit, so applying it when reading rejected galleries the service is entitled to send.
+* `EmbeddedGallery` copied with a `with` expression no longer shares its items with the instance it was copied from.
+* `EmbeddedGallery.Add()` now rejects a null item, an item with no image and an item whose image is not an image MIME type before it checks the maximum
+  number of items, so the same validation applies whether items are supplied to a constructor or added afterwards.
+* `EmbeddedGallery.Items`, `Gallery.View.Items`, `EmbeddedImagesView.Images`, `EmbeddedVideo.Captions`, `External.View.Labels`,
+  `External.View.AssociatedRefs`, `External.View.AssociatedProfiles`, `External.Properties.AssociatedRefs` and `ViewRecord.Labels` and `ViewRecord.Embeds`
+  now take a defensive copy of the collection they are given, so the caller can no longer change them afterwards.
+* `ViewRecord.StrongReference` is now derived from the current `Uri` and `Cid` rather than being built once in the constructor and stored, so a record
+  copied with a `with` expression which changes either no longer points at the record the original came from.
+* `AspectRatio.Width` and `AspectRatio.Height` now validate that they are at least 1, as the lexicon declares, when assigned in an object initializer or a
+  `with` expression, rather than only in the constructor.
+* `Gallery.ViewImage` no longer requires its thumbnail and full size URIs to be absolute. The lexicon does not require it, so a view the service sent
+  could fail to deserialize.
+* `OpenGraphEmbeddedCardGenerator` and `StandardSiteEmbeddedCardGenerator` now find `meta` and `link` elements whatever order their attributes are in,
+  whatever case they are written in, and whether their values are double quoted, single quoted or unquoted. They also HTML decode the values they read,
+  so a title containing an entity such as `&amp;` is no longer surfaced with the entity in it.
+* `StandardSiteEmbeddedCardGenerator` now asks for `text/plain` when reading `/.well-known/site.standard.publication`.
+* `GalleryImage`, `EmbeddedImage`, `EmbeddedImageView`, `EmbeddedRecord`, `EmbeddedRecordView`, `EmbeddedRecordWithMediaView`, `EmbeddedImagesView`,
+  `EmbeddedVideo.Caption`, `EmbeddedVideoView` and `ViewRecord` now reject null arguments rather than storing a null in a property their callers may
+  assume is never null.
+* The polymorphic type discriminators on `EmbeddedBase` and `EmbeddedView` now use the constants in `EmbeddedRecordTypeDiscriminators` and
+  `EmbeddedViewTypeDiscriminators` rather than repeating the NSIDs as literals.
+* `EmbeddedViewTypeDiscriminators.EmbedViewBlocked` and `EmbeddedViewTypeDiscriminators.EmbedViewDetached` are now `app.bsky.embed.record#viewBlocked`
+  and `app.bsky.embed.record#viewDetached`, as the lexicon declares, rather than `#Blocked` and `#Detached`. A blocked or detached embedded record
+  never deserialized into `Embed.ViewBlocked` or `Embed.ViewDetached` before.
+* `Embed.ViewBlocked`, `Embed.ViewDetached` and `Embed.ViewNotFound` can now be deserialized. None of them declared a `[JsonConstructor]`, so the first
+  blocked, detached or not found record view to arrive threw a `NotSupportedException` which failed the whole response it arrived in.
+* `Embed.ViewBlocked.BlockedAuthor` now reads and writes `author` rather than `blockedAuthor`, as the lexicon declares.
 * `StarterPackViewBasic.StrongReference` is now derived from the current `Uri` and `Cid` rather than being built once in the constructor and stored, so a
   view copied with a `with` expression which changes either no longer points at the record the original came from.
 * `BlueskyServer.GetActorStarterPacks()` now validates `limit` against the 1 to 100 range the lexicon declares, matching every other graph endpoint,

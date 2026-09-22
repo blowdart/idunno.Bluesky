@@ -37,6 +37,8 @@
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTaggedSuggestions(System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<string!, object!>>? parameters, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.Suggestion!>!>!>!
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTrendingTopics(int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.TrendingTopics!>!>!
 *REMOVED*[BSKYUnspecced]static idunno.Bluesky.BlueskyServer.GetTrends(int? limit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendView!>!>!>!
+*REMOVED*const idunno.Bluesky.EmbeddedViewTypeDiscriminators.EmbedViewBlocked = "app.bsky.embed.record#Blocked" -> string!
+*REMOVED*const idunno.Bluesky.EmbeddedViewTypeDiscriminators.EmbedViewDetached = "app.bsky.embed.record#Detached" -> string!
 *REMOVED*idunno.Bluesky.Actor.ContentLabelPreference.Visibility.init -> void
 *REMOVED*idunno.Bluesky.Actor.MutedWord.ActorTarget.init -> void
 *REMOVED*idunno.Bluesky.Actor.MutedWord.Targets.init -> void
@@ -138,6 +140,13 @@
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedRecords.init -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedVideos.get -> System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>?
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedVideos.init -> void
+*REMOVED*idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(string! uri, string? imageMimeType = null, long maxDownloadSize = 2000000, int bufferSize = 1000000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
+*REMOVED*idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(System.Uri! uri, string? imageMimeType = null, long maxDownloadSize = 2000000, int bufferSize = 1000000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
+*REMOVED*idunno.Bluesky.Embed.EmbeddedGallery.EmbeddedGallery(idunno.Bluesky.Embed.EmbeddedGallery! original) -> void
+*REMOVED*idunno.Bluesky.Embed.EmbeddedGallery.Items.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>!
+*REMOVED*idunno.Bluesky.Embed.EmbeddedVideoView.AltText.get -> string!
+*REMOVED*idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.get -> System.Uri!
+*REMOVED*idunno.Bluesky.Embed.External.View.Uri.get -> System.Uri!
 *REMOVED*idunno.Bluesky.Graph.ListPurpose.CurateList = 1 -> idunno.Bluesky.Graph.ListPurpose
 *REMOVED*idunno.Bluesky.Graph.ListPurpose.ModList = 0 -> idunno.Bluesky.Graph.ListPurpose
 *REMOVED*idunno.Bluesky.Graph.ListPurpose.ReferenceList = 2 -> idunno.Bluesky.Graph.ListPurpose
@@ -275,6 +284,9 @@
 *REMOVED*static idunno.Bluesky.BlueskyServer.UploadPart(string! jobId, int part, byte[]! bytes, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.UploadPartResponse!>!>!
 *REMOVED*static idunno.Bluesky.BlueskyServer.UploadVideo(idunno.AtProto.Did! did, string! fileName, string! mimeType, byte[]! media, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 *REMOVED*static idunno.Bluesky.BlueskyServer.WithdrawJoinGroupRequest(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+*REMOVED*static idunno.Bluesky.Embed.ViewBlocked.Blocked.get -> bool
+*REMOVED*static idunno.Bluesky.Embed.ViewDetached.Detached.get -> bool
+*REMOVED*static idunno.Bluesky.Embed.ViewNotFound.NotFound.get -> bool
 *REMOVED*static idunno.Bluesky.Moderation.WellKnown.ReportOptions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.List<idunno.Bluesky.Moderation.ReportOption!>!>!
 *REMOVED*static readonly idunno.Bluesky.Maximum.DescriptionLength -> int
 *REMOVED*static readonly idunno.Bluesky.Maximum.DisplayNameLength -> int
@@ -295,6 +307,15 @@ const idunno.Bluesky.ClaimTypes.Handle = "urn:bluesky:handle" -> string!
 const idunno.Bluesky.ClaimTypes.Pronouns = "urn:bluesky:pronouns" -> string!
 const idunno.Bluesky.ClaimTypes.Website = "urn:bluesky:website" -> string!
 const idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DefaultMaximumPageSize = 1048576 -> int
+const idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DefaultMaximumThumbnailSize = 1000000 -> long
+const idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DefaultThumbnailDownloadBufferSize = 81920 -> int
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.EmbedViewBlocked = "app.bsky.embed.record#viewBlocked" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.EmbedViewDetached = "app.bsky.embed.record#viewDetached" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.ExternalView = "app.bsky.embed.external#view" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.GalleryView = "app.bsky.embed.gallery#view" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.ImagesView = "app.bsky.embed.images#view" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.RecordWithMediaView = "app.bsky.embed.recordWithMedia#view" -> string!
+const idunno.Bluesky.EmbeddedViewTypeDiscriminators.VideoView = "app.bsky.embed.video#view" -> string!
 idunno.Bluesky.Actor.AllowIncomingChat.Unknown = 3 -> idunno.Bluesky.Actor.AllowIncomingChat
 idunno.Bluesky.Actor.LabelVisibility.Unknown = 4 -> idunno.Bluesky.Actor.LabelVisibility
 idunno.Bluesky.Actor.MutedWordActorTarget.Unknown = 2 -> idunno.Bluesky.Actor.MutedWordActorTarget
@@ -404,9 +425,19 @@ idunno.Bluesky.Drafts.DraftPost.EmbedExternals.get -> System.Collections.Generic
 idunno.Bluesky.Drafts.DraftPost.EmbedImages.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Drafts.DraftEmbedImage!>?
 idunno.Bluesky.Drafts.DraftPost.EmbedRecords.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Drafts.DraftEmbedRecord!>?
 idunno.Bluesky.Drafts.DraftPost.EmbedVideos.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Drafts.DraftEmbedVideo!>?
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(string! uri, string? imageMimeType = null, long maxDownloadSize = 1000000, int bufferSize = 81920, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(System.Uri! uri, string? imageMimeType = null, long maxDownloadSize = 1000000, int bufferSize = 81920, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, idunno.AtProto.Repo.StrongReference![]? associatedRefs = null) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.EmbeddedGallery(idunno.Bluesky.Embed.EmbeddedGallery! other) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.Items.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Embed.Gallery.GalleryImage!>!
+idunno.Bluesky.Embed.EmbeddedVideoView.AltText.get -> string?
+idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.get -> System.Uri?
 idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
 idunno.Bluesky.Embed.External.Properties.Uri.get -> string!
+idunno.Bluesky.Embed.External.View.Uri.get -> string!
+idunno.Bluesky.Embed.ViewBlocked.Blocked.get -> bool
+idunno.Bluesky.Embed.ViewDetached.Detached.get -> bool
+idunno.Bluesky.Embed.ViewNotFound.NotFound.get -> bool
 idunno.Bluesky.Graph.ListPurpose.CurateList = 2 -> idunno.Bluesky.Graph.ListPurpose
 idunno.Bluesky.Graph.ListPurpose.ModList = 1 -> idunno.Bluesky.Graph.ListPurpose
 idunno.Bluesky.Graph.ListPurpose.ReferenceList = 3 -> idunno.Bluesky.Graph.ListPurpose
@@ -579,6 +610,8 @@ static readonly idunno.Bluesky.Maximum.DraftPostGateEmbeddingRules -> int
 static readonly idunno.Bluesky.Maximum.DraftPosts -> int
 static readonly idunno.Bluesky.Maximum.DraftTextLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.DraftThreadGateAllowRules -> int
+static readonly idunno.Bluesky.Maximum.EmbedExternalViewUris -> int
+static readonly idunno.Bluesky.Maximum.EmbedVideoCaptions -> int
 static readonly idunno.Bluesky.Maximum.FeedsInStarterPack -> int
 static readonly idunno.Bluesky.Maximum.GroupMembers -> int
 static readonly idunno.Bluesky.Maximum.GroupNameLengthInBytes -> int
@@ -613,3 +646,4 @@ static readonly idunno.Bluesky.Maximum.VideoMimeTypeLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoMimeTypeMinimumLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.VideoUploadNameLengthInBytes -> int
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.GetPageContent(System.Uri! uri, int maxPageSize = 1048576, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
+virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.GetPlainTextContent(System.Uri! uri, int maxDocumentSize = 1048576, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
