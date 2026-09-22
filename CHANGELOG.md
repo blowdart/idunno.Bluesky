@@ -1,8 +1,12 @@
 # Version History
 
-## 7.0.0-aspnet - ** unreleased **
+## 7.0.0-aspnet - **unreleased**
 
 ### Added
+
+#### idunno.AtProto.Types
+
+* Added `Cid.TryParse(string, out Cid?)` which attempts to parse a string into a `Cid` instance, returning a boolean indicating success or failure.
 
 #### idunno.AtProto
 
@@ -22,8 +26,7 @@
 * Added `AtProtoAgentOptions.MaximumResponseSize`, an optional `maximumResponseSize` parameter on every `AtProtoServer` and `BlueskyServer` endpoint
   method, and the `AtProtoHttpClient.DefaultMaximumResponseSize` constant, which cap the number of bytes read from an XRPC response body. A response
   larger than the maximum fails with an `AtErrorDetail` whose `Error` is `ResponseTooLarge`. The default is 32MB. An agent applies its configured value
-  to every request it makes; the process wide `AtProtoHttpClient.MaximumResponseSize` static property added earlier in this release has been removed in
-  favour of the per agent option.
+  to every request it makes.
 * Added `DirectoryAgentOptions.MaximumResponseSize` and an optional `maximumResponseSize` parameter on the `DirectoryServer.ResolveDidDocument()`,
   `Resolution.ResolveDidDocument()` and `Resolution.ResolvePds()` overloads, which cap the number of bytes read from a DID document response.
   An `AtProtoAgent` applies its `MaximumResponseSize` to the DID documents it resolves. A `did:web` DID names the host its document is resolved
@@ -61,8 +64,6 @@
 * Added the `Forbidden`, `NotAcceptable`, `PayloadTooLarge`, `UnsupportedMediaType`, `RateLimitExceeded`, `InternalServerError`, `UpstreamFailure`,
   `NotEnoughResources` and `UpstreamTimeout` errors, which cover the XRPC protocol errors a service can return for any endpoint, and the `InvalidHandle`
   and `InvalidPassword` errors declared by `com.atproto.server.createSession`. These were previously reported as a plain `AtErrorDetail`.
-* The constructors on the `AtProtoError` subclasses are now public, so an error can be constructed directly from an `AtErrorDetail`, matching the
-  `BlueskyError` subclasses.
 * `SelfLabels.MaximumLabels` exposes the maximum number of self labels a record may carry, which was previously a magic number.
 
 #### idunno.AtProto.OAuthCallback
@@ -70,10 +71,6 @@
 * Added `CallbackServer.ContentSecurityPolicy`, which sets the `Content-Security-Policy` header sent with every response. It defaults to a policy which
   allows only what the built in page needs.
 * Added `CallbackServer.FailureTitle` and `CallbackServer.FailureBody`, the page rendered when a callback arrives without an authorization code.
-
-#### idunno.AtProto.Types
-
-* Added `Cid.TryParse(string, out Cid?)` which attempts to parse a string into a `Cid` instance, returning a boolean indicating success or failure.
 
 #### idunno.Bluesky
 
@@ -133,41 +130,29 @@
 * Contains ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with
   `AuthenticationBuilder.AddBluesky()`, and a `ProfileClaimsTransformer` which can be registered with `IServiceCollection.AddProfileClaimsTransformer()`.
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
-* Added `IIdentityStore.UpdateIfNewer()`, which writes credentials unless the store already holds a set which expires later. `IIdentityStore.EndRefresh()`
-  now reports whether the caller still held the refresh lock it released.
-* `ICorrelationStateCache.GetOAuthLoginState()` is now named `PeekOAuthLoginState()`, as it reads login state without consuming it and so must not be used to
-  validate an OAuth callback. `TakeOAuthLoginState()` remains the method for that.
-* Every `ICorrelationStateCache` method now accepts an optional `CancellationToken`, as every `IIdentityStore` method already did.
-* Added `BlueskySignInManager.DeleteCorrelationCookie()`, which deletes the correlation cookie using the name and options it was written with.
-* Added `IIdentityStore.Update(AccessCredentials, string?, CancellationToken)`, so credentials belonging to an authentication scheme registered under a name
-  other than the default can be stored against that scheme.
+  Credentials and OAuth login state are held through the `IIdentityStore` and `ICorrelationStateCache` extension points, protected with data protection
+  by default, and the authentication cookie is a reference to the stored identity which carries only the DID claim.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 
 * Contains a default UI for the Bluesky ASP.NET Core authentication handler.
   It includes Razor Pages for login and logout, and can be added to an application with `services.AddBlueskyAuthenticationUI()`.
+  The package is not trimming or Native AOT compatible, because its Razor Pages require runtime code generation.
 
 #### idunno.Bluesky.AspNet.Authentication.MySQL
 
-* Contains MySQL implementations of `IIdentityStore` and `ICorrelationStateCache`.
-* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
-* Both stores delete the rows they have allowed to expire, at most once every five minutes per store instance, so the tables no longer grow without bound.
-  The interval is configurable with the `expiredEntrySweepInterval` constructor parameter, and `TimeSpan.Zero` disables it for operators who reclaim the rows
-  themselves. The correlation state cache constructor now also accepts an `ILoggerFactory`, which it uses to report sweep activity and failures.
+* Contains MySQL implementations of `IIdentityStore` and `ICorrelationStateCache`. Expiry is computed from the database clock, and the rows which have been
+  allowed to expire are swept periodically, on an interval configurable through the `expiredEntrySweepInterval` constructor parameter.
 
 #### idunno.Bluesky.AspNet.Authentication.Redis
 
 * Contains Redis implementations of `IIdentityStore` and `ICorrelationStateCache`.
-* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
 
-* Contains SQLite implementations of `IIdentityStore` and `ICorrelationStateCache`.
-* Contains a PowerShell script which creates a new SQLite authentication database from the packaged schema.
-* The identity store constructor accepts an `ILoggerFactory`, and the store logs refresh lock activity, including a warning when a lock it did not hold was released.
-* Both stores delete the rows they have allowed to expire, at most once every five minutes per store instance, so the tables no longer grow without bound.
-  The interval is configurable with the `expiredEntrySweepInterval` constructor parameter, and `TimeSpan.Zero` disables it for operators who reclaim the rows
-  themselves. The correlation state cache constructor now also accepts an `ILoggerFactory`, which it uses to report sweep activity and failures.
+* Contains SQLite implementations of `IIdentityStore` and `ICorrelationStateCache`, and `New-AuthenticationDatabase.ps1`, a PowerShell script which creates
+  a new SQLite authentication database from the packaged schema. The rows which have been allowed to expire are swept periodically, on an interval
+  configurable through the `expiredEntrySweepInterval` constructor parameter.
 
 ### Changed
 
@@ -175,6 +160,8 @@
 
 * `AtProtoJetstream` no longer builds a `ServiceCollection`, a `ServiceProvider` and a `SocketsHttpHandler` of its own when an `IHttpClientFactory` is
   supplied, and now shares the single definition of the SSRF protected handler an agent uses rather than carrying a second copy of it.
+* The constructors on the `AtProtoError` subclasses are now public, so an error can be constructed directly from an `AtErrorDetail`, matching the
+  `BlueskyError` subclasses.
 * `OAuthClient.OpenBrowser()` now throws an `ArgumentException` for a relative uri, or one whose scheme is not `http` or `https`, rather than handing it
   to the platform shell and launching whichever handler is registered for it.
 * `AtProtoAgent.CreateOAuthClient()` is now `public virtual`, so the transport an agent uses for OAuth can be replaced.
@@ -191,10 +178,6 @@
   rather than returning a task cancelled with a token which was never cancelled.
 * The documentation for `CallbackServer.SuccessTitle` and `CallbackServer.ResponseStyleSheet` now says that the value is written into the `head` of the
   page verbatim, so it has to carry its own `title` or `style` element.
-
-#### idunno.Bluesky.AspNet.Authentication.UI
-
-* The package now explicitly reports that it is not trimming or Native AOT compatible, because its Razor Pages require runtime code generation.
 
 #### idunno.Bluesky
 
@@ -308,7 +291,6 @@
 * `Notification.Author` is now a `ProfileView` rather than a `ProfileViewBasic`.
 * `SubjectActivitySubscription.ActivitySubscription` is now nullable, as the API omits it from `PutActivitySubscription()` responses.
 * `ListNotificationsResponse.SeenAt` is now nullable, as the lexicon marks it optional.
-* `BlueskyServer.ListNotifications()` and `BlueskyAgent.ListNotifications()` gain a `reasons` parameter.
 * `NotificationCollection.Priority` and `NotificationCollection.SeenAt` no longer have internal setters.
 * `Preferences.MutedWords` now returns `IReadOnlyList<MutedWord>` rather than `IList<MutedWord>`.
 * `Preference` polymorphism is now handled by a `JsonConverter` rather than `JsonPolymorphicAttribute`, so an unrecognized preference round-trips unchanged. Any new preference type must be registered with the converter.
@@ -322,7 +304,6 @@
 * `Post`, `EmbeddedImages`, `EmbeddedGallery`, `EmbeddedVideo` and `Embed.External.Properties` now compare their collection properties by contents rather than by reference. `Post` equality still includes `CreatedAt`, so two posts created at different times are never equal.
 * `EmbeddedImages` now copies the collection it is constructed from instead of holding on to the caller's collection.
 * The `imageMimeType` parameter on `BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob()` is now only a hint; the type recorded on the uploaded blob is always the sniffed one.
-
 * The `Maximum` constants which carry a lexicon `maxLength` have been renamed to end in `InBytes`, because a lexicon `maxLength` is counted in UTF-8
   bytes rather than in characters. `PostLengthInCharacters`, `TagLengthInCharacters`, `MessageLengthInCharacters` and `DraftTextLengthInCharacters`
   become `PostLengthInBytes`, `TagLengthInBytes`, `MessageLengthInBytes` and `DraftTextLengthInBytes`, and `DisplayNameLength`, `DescriptionLength`
@@ -417,6 +398,32 @@
   deserialized through them lost its message, stack trace and inner exception. Binary serialization of exceptions is obsolete from .NET 8 onwards.
 
 ### Fixed
+
+#### idunno.AtProto.Types
+
+* `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently.
+* `Nsid.TryParse` now returns `false` for `null`, empty or whitespace input rather than throwing an `ArgumentException` or `ArgumentNullException`.
+* `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException` to escape.
+* `Did.Method` now returns the correct method for DIDs containing more than three colon separated segments. Previously `did:web:example.com:user:alice`
+  and `did:web:localhost:3000` reported a method of `INVALID`.
+* `new Handle(null)` now throws an `ArgumentNullException` rather than a `NullReferenceException`. This also applies to the implicit conversion from
+  `string` to `Handle`.
+* `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
+  normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
+  continues to be normalized to lower case.
+* An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
+* `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
+  paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
+* `TimestampIdentifier.Next()` now generates a clock identifier over the full 10 bit range required by the specification, rather than only 5 bits.
+* `TimestampIdentifier` now rejects hyphenated identifiers rather than trimming the hyphens and accepting them.
+* `Cid` now rejects truncated, over-long and missing multihash byte sequences rather than producing a `Cid` with an empty hash.
+* `Cid` now reports the offending version number when a CID version is unsupported.
+* `Cid(byte, ulong, byte[])` now validates its arguments and takes a copy of the supplied hash.
+* `AtUri` and `Nsid` now check the length of their input before scanning, splitting or matching it.
+* `AtIdentifier` now quotes the offending value in the exception message thrown when it cannot be parsed, matching `Did` and `Handle`. The message was
+  written without its interpolation prefix, so it read `{s} is not a valid AtIdentifier` regardless of the value supplied.
+* `AtUri.Equals()` and `AtUri.ToString()` no longer test `Authority` for `null`. `Authority` is not nullable, so the checks could never fire and
+  `ToString()` could not return the empty string those checks implied.
 
 #### idunno.AtProto
 
@@ -697,32 +704,6 @@
   rooted to a long lived token until it is disposed.
 * `CallbackServer` no longer logs that it is awaiting a callback with a timeout it will not use when `WaitForCallbackAsync()` is called a second time.
 
-#### idunno.AtProto.Types
-
-* `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently.
-* `Nsid.TryParse` now returns `false` for `null`, empty or whitespace input rather than throwing an `ArgumentException` or `ArgumentNullException`.
-* `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException` to escape.
-* `Did.Method` now returns the correct method for DIDs containing more than three colon separated segments. Previously `did:web:example.com:user:alice`
-  and `did:web:localhost:3000` reported a method of `INVALID`.
-* `new Handle(null)` now throws an `ArgumentNullException` rather than a `NullReferenceException`. This also applies to the implicit conversion from
-  `string` to `Handle`.
-* `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
-  normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
-  continues to be normalized to lower case.
-* An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
-* `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
-  paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
-* `TimestampIdentifier.Next()` now generates a clock identifier over the full 10 bit range required by the specification, rather than only 5 bits.
-* `TimestampIdentifier` now rejects hyphenated identifiers rather than trimming the hyphens and accepting them.
-* `Cid` now rejects truncated, over-long and missing multihash byte sequences rather than producing a `Cid` with an empty hash.
-* `Cid` now reports the offending version number when a CID version is unsupported.
-* `Cid(byte, ulong, byte[])` now validates its arguments and takes a copy of the supplied hash.
-* `AtUri` and `Nsid` now check the length of their input before scanning, splitting or matching it.
-* `AtIdentifier` now quotes the offending value in the exception message thrown when it cannot be parsed, matching `Did` and `Handle`. The message was
-  written without its interpolation prefix, so it read `{s} is not a valid AtIdentifier` regardless of the value supplied.
-* `AtUri.Equals()` and `AtUri.ToString()` no longer test `Authority` for `null`. `Authority` is not nullable, so the checks could never fire and
-  `ToString()` could not return the empty string those checks implied.
-
 #### idunno.Bluesky
 
 * `NotificationAllowedFrom`, `ChatNotificationsFrom`, `LimitTo` and `AgeAssuranceStatus` now deserialize a value the library does not recognize to
@@ -989,64 +970,6 @@
 * The `Blocking` and `BlockedBy` documentation on `ViewerState` was the wrong way round, and `BlockingByList` described muting rather than blocking.
 * `ApproveJoinGroupRequest()` mapped the errors on its result a second time. The mapping is already applied by the client, so the extra call was
   redundant.
-
-#### idunno.Bluesky.AspNet.Authentication
-
-* `BlueskyAgentFactory` no longer writes a logger factory onto the `BlueskyAgentOptions` instance the options system owns and hands
-  to every agent it creates. The logger factory is applied by `PostConfigureBlueskyAgentOptions` instead, which is where the rest of
-  the agent option defaults are applied.
-* `EphemeralIdentityStore`, `EphemeralProfileCache` and `EphemeralCorrelationStateCache` now mark themselves disposed before disposing
-  the caches they hold, and their disposal flags are `volatile`. A caller racing a dispose could pass the disposal guard and then use a
-  cache which had already been disposed.
-* The authentication cookie re-issued by a renewal now carries only the DID claim, as the cookie written at sign in does, rather than the hydrated identity.
-  A renewal previously protected the access token, the refresh token and the DPoP proof key into the cookie, putting them in the browser.
-* The identity store and the correlation state cache are now protected with data protection unless the application configures
-  `BlueskyAuthenticationOptions.IdentityStoreEvents` or `CorrelationStateCacheEvents` itself, so credentials and login state are no longer written to shared
-  storage in the clear by default.
-* The handle a profile carries is now verified against the directory before it becomes a `ClaimTypes.Name` or handle claim, and is dropped when it does not
-  resolve back to the DID it was returned for.
-* A stored identity whose credentials cannot be read no longer authenticates the request. It previously skipped the expiry check and was handed to the application.
-* An expired ticket now revokes the credentials it referred to at the authorization server rather than only dropping the local record of them.
-* Signing in as a different DID now revokes and removes the session it replaces, rather than leaving live credentials in the store until they age out.
-* An agent built from a principal issued by a scheme other than a registered Bluesky one now writes credential updates to the identity store of the scheme
-  the agent factory was registered for, rather than to a fresh store nothing reads.
-* The identity store refresh lock token is now compared in constant time.
-* A refresh whose advisory lock had expired no longer silently overwrites credentials another request refreshed in the meantime. The race is now resolved on
-  credential expiry, and the handler logs both when its own write was superseded and when it lost the lock it was refreshing under.
-* Two log event IDs no longer collide.
-
-#### idunno.Bluesky.AspNet.Authentication.UI
-
-* The login page now deletes the correlation cookie using the configured cookie name and options. A correlation cookie written with a customised name, path
-  or domain was previously not matched, and so was left in place.
-
-#### idunno.Bluesky.AspNet.Authentication.MySQL
-
-* The refresh lock expiry is now computed from the database clock rather than the clock of the application server taking the lock, so a lock's lifetime no
-  longer depends on clock skew between application servers.
-* Stored identity expiry and correlation state expiry are now computed from the database clock as well. The expiry of a row was previously written from the
-  application server's clock and then compared against the database clock when read, so a stored identity or an OAuth login state could expire early or late
-  depending on the skew between the two.
-* Releasing a refresh lock is now a single conditional delete rather than a select for update inside a transaction. A caller which no longer holds the lock
-  cannot release it, and releasing a lock which has already gone no longer takes a gap lock on the missing row.
-
-#### idunno.Bluesky.AspNet.Authentication.Redis
-
-* Releasing a refresh lock now compares the caller's lock token, rather than comparing the value the script read back against itself, which matched whatever
-  token was stored.
-
-#### idunno.Bluesky.AspNet.Authentication.SQLite
-
-* Releasing a refresh lock is now a single conditional delete, so a caller which no longer holds the lock cannot release it.
-* `New-AuthenticationDatabase.ps1` now resolves a relative `-OutputDirectory` against the caller's current location. PowerShell keeps its own
-  location, which .NET does not share, so a relative path previously created the database, and the directory to hold it, under whichever directory
-  the PowerShell process happened to start in.
-* `New-AuthenticationDatabase.ps1` now uses the first `sqlite3` on the path rather than every match. A machine carrying more than one, a package
-  manager shim alongside an installation for example, previously failed reporting every match joined together as a single command name.
-* `New-AuthenticationDatabase.ps1` now tells sqlite3 to stop at the first error. A statement which failed part way through the schema was reported
-  but the remaining statements, and the commit, still ran, so the surrounding transaction did not make applying the schema all or nothing.
-* `New-AuthenticationDatabase.ps1` now creates the database file itself rather than checking for it and leaving sqlite3 to create it, so two
-  concurrent runs cannot both decide that no database existed.
 
 ## 6.0.0 - 2026-09-05
 
