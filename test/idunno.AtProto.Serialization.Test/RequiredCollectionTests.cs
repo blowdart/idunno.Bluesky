@@ -28,9 +28,22 @@ public class RequiredCollectionTests
     [Theory]
     [InlineData($$"""{"commit":{{Commit}}}""")]
     [InlineData($$"""{"commit":{{Commit}},"results":null}""")]
-    public void MissingOrNullResultsThrowsJsonException(string json)
+    public void MissingOrNullResultsDeserializesToNull(string json)
     {
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ApplyWritesResponse>(json, Options));
+        ApplyWritesResponse? response = JsonSerializer.Deserialize<ApplyWritesResponse>(json, Options);
+
+        Assert.NotNull(response);
+        Assert.Null(response.Results);
+    }
+
+    [Fact]
+    public void MissingCommitDeserializesToNull()
+    {
+        ApplyWritesResponse? response = JsonSerializer.Deserialize<ApplyWritesResponse>("""{"results":[]}""", Options);
+
+        Assert.NotNull(response);
+        Assert.Null(response.Commit);
+        Assert.NotNull(response.Results);
     }
 
     [Fact]
@@ -41,6 +54,7 @@ public class RequiredCollectionTests
             Options);
 
         Assert.NotNull(response);
+        Assert.NotNull(response.Results);
         Assert.Empty(response.Results);
     }
 }

@@ -23,12 +23,12 @@ public record AtProtoRecord
     /// Creates a new instance of <see cref="AtProtoRecord"/> from the specified <paramref name="record"/>.
     /// </summary>
     /// <param name="record">The <see cref="AtProtoRecord"/> to create the new instance from.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> is <see langword="null"/>.</exception>
     public AtProtoRecord(AtProtoRecord record)
     {
-        if (record is not null)
-        {
-            ExtensionData = new Dictionary<string, JsonElement>(record.ExtensionData);
-        }
+        ArgumentNullException.ThrowIfNull(record);
+
+        ExtensionData = new Dictionary<string, JsonElement>(record.ExtensionData);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public record AtProtoRecord
             return false;
         }
 
-        return ExtensionDataEquals(ExtensionData, other.ExtensionData);
+        return ExtensionDataComparer.Equals(ExtensionData, other.ExtensionData);
     }
 
     /// <summary>
@@ -75,66 +75,8 @@ public record AtProtoRecord
         HashCode hashCode = new();
 
         hashCode.Add(EqualityContract);
-        hashCode.Add(ExtensionData is null ? 0 : ExtensionData.Count);
-
-        int keyHashCode = 0;
-
-        if (ExtensionData is not null)
-        {
-            foreach (string key in ExtensionData.Keys)
-            {
-                keyHashCode ^= StringComparer.Ordinal.GetHashCode(key);
-            }
-        }
-
-        hashCode.Add(keyHashCode);
+        hashCode.Add(ExtensionDataComparer.GetHashCode(ExtensionData));
 
         return hashCode.ToHashCode();
-    }
-
-    private static bool ExtensionDataEquals(IDictionary<string, JsonElement>? left, IDictionary<string, JsonElement>? right)
-    {
-        if (ReferenceEquals(left, right))
-        {
-            return true;
-        }
-
-        int leftCount = left is null ? 0 : left.Count;
-        int rightCount = right is null ? 0 : right.Count;
-
-        if (leftCount != rightCount)
-        {
-            return false;
-        }
-
-        if (leftCount == 0)
-        {
-            return true;
-        }
-
-        foreach (KeyValuePair<string, JsonElement> entry in left!)
-        {
-            if (!right!.TryGetValue(entry.Key, out JsonElement rightValue) ||
-                !JsonElementEquals(entry.Value, rightValue))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool JsonElementEquals(JsonElement left, JsonElement right)
-    {
-        if (left.ValueKind != right.ValueKind)
-        {
-            return false;
-        }
-
-        return left.ValueKind switch
-        {
-            JsonValueKind.Undefined or JsonValueKind.Null or JsonValueKind.True or JsonValueKind.False => true,
-            _ => string.Equals(left.GetRawText(), right.GetRawText(), StringComparison.Ordinal)
-        };
     }
 }

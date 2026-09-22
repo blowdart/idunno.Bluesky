@@ -17,7 +17,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its collection property is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteList(
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteList(
         AtUri uri,
         CancellationToken cancellationToken = default)
     {

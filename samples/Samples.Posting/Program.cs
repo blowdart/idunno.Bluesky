@@ -118,7 +118,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -149,7 +149,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -178,7 +178,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;

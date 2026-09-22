@@ -120,7 +120,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteThreadGate(
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteThreadGate(
         AtUri post,
         CancellationToken cancellationToken = default)
     {
@@ -469,7 +469,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeletePostGate(
+    public async Task<AtProtoHttpResult<DeleteResult>> DeletePostGate(
         AtUri post,
         CancellationToken cancellationToken = default)
     {

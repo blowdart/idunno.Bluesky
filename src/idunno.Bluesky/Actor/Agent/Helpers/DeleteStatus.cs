@@ -14,7 +14,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteStatus(
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteStatus(
         CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
@@ -23,7 +23,7 @@ public partial class BlueskyAgent
         }
 
         AtUri statusUri = new($"at://{Did}/{CollectionNsid.Status}/self");
-        AtProtoHttpResult<Commit> deleteResult = await DeleteRecord(
+        AtProtoHttpResult<DeleteResult> deleteResult = await DeleteRecord(
             uri: statusUri,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 

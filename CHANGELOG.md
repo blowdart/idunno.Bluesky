@@ -6,6 +6,7 @@
 
 #### idunno.AtProto
 
+* Added `DeleteResult`, the result type returned by the record deletion APIs, which carries the optional commit a record was deleted in.
 * Added `OAuthOptions.AllowInsecureProtocols` and `OAuthOptions.AllowLoopback`, which allow an OAuth flow to reach an authorization server or personal data
   server over HTTP, or on a loopback address, without the OAuth return uri having to use one itself. Both default to `false`, and apply to the validation of a
   discovered endpoint as well as to the transport, so a single setting now covers local development against a server on the local machine.
@@ -187,7 +188,23 @@
 
 #### idunno.AtProto
 
+* `AtProtoAgent.DeleteRecord()`, `AtProtoServer.DeleteRecord()` and the `BlueskyAgent` helpers built on them
+  (`DeletePost()`, `DeleteLike()`, `DeleteRepost()`, `DeleteQuote()`, `DeleteBlock()`, `DeleteFollow()`, `DeleteList()`, `DeleteFromList()`,
+  `DeleteReferenceListOptOut()`, `DeleteStatus()`, `DeleteThreadGate()`, `DeletePostGate()`, `DeleteContentVisibilityDeclaration()`, `Unblock()`,
+  `UnblockModList()` and `Unfollow()`) now return an `AtProtoHttpResult<DeleteResult>` rather than an `AtProtoHttpResult<Commit>`. The
+  `deleteRecord` lexicon declares no required output properties, so a service may delete a record without reporting the commit it was deleted in.
+  Carrying the commit inside a result type means such a delete is now reported as a success with a `null` `DeleteResult.Commit`, where previously
+  it was reported as a failure. Read `result.Result.Commit` where you previously read `result.Result`.
 * `AtProtoRecord` and its derived record types now compare `ExtensionData` by its contents rather than by reference, so two records carrying the same extension data are now equal.
+* `AtProtoRepositoryRecord` and `AtProtoRepositoryRecord<TRecord>` now have value equality, comparing `Uri`, `Cid`, `Value` and the contents of
+  `ExtensionData`. Previously both redeclared `ExtensionData`, which meant they fell back to reference equality.
+* `ApplyWritesResults.Commit` is now nullable. The `applyWrites` lexicon declares no required output properties, so a service is free to return
+  neither the commit nor the results.
+* `WriteOperation.Collection`, `WriteOperation.RecordKey`, `CreateOperation.RecordValue` and `UpdateOperation.RecordValue` are now read only.
+  Previously they had `init` accessors, which allowed object initializer and `with` syntax to bypass the validation their constructors perform,
+  for example replacing the record key of an `UpdateOperation` with `null`.
+* `AtProtoRecord`'s copy constructor now throws an `ArgumentNullException` when the record it is given is `null`, rather than silently producing
+  an empty record.
 * `SelfLabels` now has value equality, comparing its labels by their contents rather than by reference.
 * Renamed `AtProtoJetstreamBuilder.MaximumMessageSize` to `ReadBufferSize` and `AtProtoJetstreamBuilder.SetMaximumMessageSize()` to `SetReadBufferSize()`, as they configure the size of each block read from the web socket rather than a limit on a message. Use `SetMaximumTotalMessageSize()` to limit how large a message may be.
 * `AtProtoJetstream.ConnectAsync()` now throws `WebSocketException` when a connection cannot be made, instead of returning normally.
@@ -298,6 +315,16 @@
 
 #### idunno.AtProto
 
+* `AtProtoAgent.ApplyWrites()` no longer throws a `NullReferenceException` when a service returns no commit, and no longer fails to deserialize a
+  response which returns no results. The `applyWrites` lexicon declares neither as required.
+* Both public `CreateRecordResult` constructors now validate their `uri` and `cid` arguments. Their `ArgumentNullException.ThrowIfNull()` guards
+  were passing a string literal rather than the argument, so they could never throw.
+* `AtProtoRepositoryObject.StrongReference` and `ApplyWritesUpdateResult.StrongReference` are now calculated from the current `Uri` and `Cid`.
+  Both were computed once in the constructor, so a `with` expression which changed either left a stale strong reference behind.
+* `AtProtoServer.CreateRecord()`, `PutRecord()`, `GetRecord()` and `ListRecords()` now validate their `jsonSerializerOptions` argument, rather than
+  failing later with a `NullReferenceException`.
+* `ApplyWritesUpdateResult` now validates the response it is constructed from, as its sibling result types already did.
+* `AtProtoServer.ListRecords()` now formats the `limit` query string parameter using the invariant culture.
 * A credential refresh which is in flight when the agent's credentials are replaced no longer publishes what it was issued over the replacement.
   A background refresh which started before a `Logout()` could re-establish the session that logout ended, with tokens the revocation never saw,
   and one which started before a `Login()` could leave the agent running as the previous account. `Login()` and `Logout()` are now serialised

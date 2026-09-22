@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -499,6 +500,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -582,7 +584,7 @@ public static partial class AtProtoServer
         "AOT",
         "IL3050:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    public static async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtIdentifier repo,
         Nsid collection,
         RecordKey rKey,
@@ -632,10 +634,12 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (response.Succeeded)
+        // The lexicon declares no required output properties, and a service may answer with no body at all, so a delete
+        // which the service accepted is reported as a success carrying whatever commit, if any, came back with it.
+        if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NoContent)
         {
-            return new AtProtoHttpResult<Commit>(
-                response.Result.Commit,
+            return new AtProtoHttpResult<DeleteResult>(
+                new DeleteResult(response.Result?.Commit),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -643,7 +647,7 @@ public static partial class AtProtoServer
         }
         else
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -890,6 +894,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -977,6 +982,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -990,7 +996,6 @@ public static partial class AtProtoServer
         PutRecordRequest request = new(serializedRecord, collection, creator, rKey, validate, swapCommit, swapRecord);
 
         AtProtoHttpClient<PutRecordResponse> client;
-        jsonSerializerOptions ??= AtProtoJsonSerializerOptions;
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
@@ -1154,6 +1159,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(rKey);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         AtProtoHttpClient<AtProtoRepositoryRecord<TRecord>> client;
 
@@ -1332,7 +1338,7 @@ public static partial class AtProtoServer
 
         if (limit is not null)
         {
-            queryString += $"&limit={limit}";
+            queryString += string.Create(CultureInfo.InvariantCulture, $"&limit={limit}");
         }
 
         if (cursor is not null)
@@ -1473,6 +1479,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(collection);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (limit is not null &&
            (limit < 1 || limit > 100))
@@ -1489,7 +1496,7 @@ public static partial class AtProtoServer
 
         if (limit is not null)
         {
-            queryString += $"&limit={limit}";
+            queryString += string.Create(CultureInfo.InvariantCulture, $"&limit={limit}");
         }
 
         if (cursor is not null)
@@ -1528,7 +1535,6 @@ public static partial class AtProtoServer
         PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>> result;
         if (response.Succeeded)
         {
-            jsonSerializerOptions ??= DefaultJsonSerializerOptionsWithNoTypeResolution;
 
             List<AtProtoRepositoryRecord<TRecord>> records = [];
 
@@ -1589,7 +1595,7 @@ public static partial class AtProtoServer
     }
 
     /// <summary>
-    /// Upload a new blob, to be referenced from a repository record.Requires authentication.
+    /// Upload a new blob, to be referenced from a repository record. Requires authentication.
     /// </summary>
     /// <param name="blob">The blob to upload.</param>
     /// <param name="mimeType">The mime type of the blob to upload.</param>
@@ -1602,7 +1608,7 @@ public static partial class AtProtoServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="mimeType"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty, or is not a valid media type in the type/subtype format.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>

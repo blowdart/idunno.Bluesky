@@ -44,5 +44,5 @@ public record CreateOperation : WriteOperation
     /// <summary>
     /// Gets the value of the record to get created.
     /// </summary>
-    public object RecordValue { get; init; }
+    public object RecordValue { get; }
 }

@@ -3,6 +3,6 @@
 
 namespace idunno.AtProto.Repo.Models;
 
-internal record DeleteRecordResponse(Commit Commit)
+internal record DeleteRecordResponse(Commit? Commit)
 {
 }
