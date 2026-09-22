@@ -199,3 +199,5 @@ idunno.AtProto.Jetstream.JetstreamOptions.SendTimeout.init -> void
 idunno.AtProto.Labels.SelfLabels.Equals(idunno.AtProto.Labels.SelfLabels? other) -> bool
 override idunno.AtProto.Labels.SelfLabels.Equals(object? obj) -> bool
 override idunno.AtProto.Labels.SelfLabels.GetHashCode() -> int
+*REMOVED*static idunno.AtProto.Authentication.OAuthLoginState.implicit operator Duende.IdentityModel.OidcClient.AuthorizeState?(idunno.AtProto.Authentication.OAuthLoginState! state) -> Duende.IdentityModel.OidcClient.AuthorizeState?
+static idunno.AtProto.Authentication.OAuthLoginState.implicit operator Duende.IdentityModel.OidcClient.AuthorizeState?(idunno.AtProto.Authentication.OAuthLoginState? state) -> Duende.IdentityModel.OidcClient.AuthorizeState?

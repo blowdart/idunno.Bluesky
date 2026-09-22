@@ -298,6 +298,24 @@
 
 #### idunno.AtProto
 
+* A credential refresh which is in flight when the agent's credentials are replaced no longer publishes what it was issued over the replacement.
+  A background refresh which started before a `Logout()` could re-establish the session that logout ended, with tokens the revocation never saw,
+  and one which started before a `Login()` could leave the agent running as the previous account. `Login()` and `Logout()` are now serialised
+  against credential refreshes, and a refresh whose credentials moved on whilst it ran discards its result and reports failure.
+* `AtProtoCredential.TryCreate(ClaimsIdentity, out DPoPAccessCredentials?)` now returns `false` for an access token claim which cannot be parsed,
+  or for empty or whitespace DPoP claims, rather than throwing `ArgumentException`. The claims come from whatever persisted the identity, so a
+  corrupted or tampered with cookie or identity store entry must read as an identity which cannot be used rather than as an exception out of the
+  middleware which reads it.
+* `OAuthOptions.Scopes` now copies the collection assigned to it. It previously stored a deferred `Distinct()` query over the caller's collection,
+  so later changes to that collection silently changed the scopes requested, and every read re-enumerated it.
+* A second OAuth login on an `OAuthClient` no longer inherits the first login's correlation id, and no longer inherits its extra properties when
+  the second login supplies none. The extra properties supplied are also copied rather than aliased.
+* `OAuthClient.ProcessOAuth2LoginResponse` now reads the correlation id once, with the rest of the login state, rather than re-reading the field
+  after the state has been cleared.
+* The access token subject is now compared to the expected DID using an ordinal, case sensitive comparison. DIDs are case sensitive, so a token
+  issued for a DID differing only in case was previously accepted.
+* `DPoPAccessCredentials` now rejects a whitespace only DPoP proof key or nonce, as its documentation said it did.
+* The HTTP message handler used by an OAuth credential refresh is no longer disposed twice.
 * `AtProtoJsonSerializerOptions.Options` did not set `AllowOutOfOrderMetadataProperties`, so deserializing a polymorphic AT Protocol type threw `NotSupportedException`
   when the server placed the `$type` discriminator after the other properties, which it is free to do. The same options are used by
   `idunno.Bluesky.AspNet.Authentication`, so the authentication handlers were affected too.

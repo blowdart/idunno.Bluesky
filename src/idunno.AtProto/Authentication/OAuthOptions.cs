@@ -154,6 +154,12 @@ public sealed class OAuthOptions
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to an empty collection.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The value supplied is copied, so later changes to the collection assigned are not reflected here, and reading
+    ///   this does not re-enumerate the caller's collection.
+    /// </para>
+    /// </remarks>
     public IEnumerable<string> Scopes
     {
         get;
@@ -161,9 +167,12 @@ public sealed class OAuthOptions
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            ArgumentOutOfRangeException.ThrowIfZero(value.Count());
 
-            field = value.Distinct();
+            string[] scopes = [.. value.Distinct(StringComparer.Ordinal)];
+
+            ArgumentOutOfRangeException.ThrowIfZero(scopes.Length);
+
+            field = scopes;
         }
     } = ["atproto"];
 }

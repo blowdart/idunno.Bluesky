@@ -235,9 +235,9 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     /// <summary>
     /// Converts this instance of <see cref="OAuthLoginState"/> to a new instance of <see cref="AuthorizeState"/>.
     /// </summary>
-    /// <param name="state">The <see cref="OAuthLoginState"/> to convert.</param>
-    /// <returns>An instance of <see cref="AuthorizeState"/> representing this instance.</returns>
-    public static implicit operator AuthorizeState?(OAuthLoginState state) => state?.ToAuthorizeState();
+    /// <param name="state">The <see cref="OAuthLoginState"/> to convert, or <see langword="null"/>.</param>
+    /// <returns>An instance of <see cref="AuthorizeState"/> representing this instance, or <see langword="null"/> when <paramref name="state"/> is <see langword="null"/>.</returns>
+    public static implicit operator AuthorizeState?(OAuthLoginState? state) => state?.ToAuthorizeState();
 
     /// <summary>
     /// Returns the hash code for this <see cref="OAuthLoginState"/>.
@@ -348,7 +348,6 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
               string.Equals(ExpectedAuthority, other.ExpectedAuthority, StringComparison.Ordinal) &&
               string.Equals(ExpectedService, other.ExpectedService, StringComparison.Ordinal) &&
               string.Equals(ProofKey, other.ProofKey, StringComparison.Ordinal) &&
-              string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
               string.Equals(StartUrl, other.StartUrl, StringComparison.Ordinal) &&
               string.Equals(State, other.State, StringComparison.Ordinal);
     }
