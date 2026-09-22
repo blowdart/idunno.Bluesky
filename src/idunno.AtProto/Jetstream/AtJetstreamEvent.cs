@@ -15,9 +15,25 @@ public record AtJetstreamEvent
     /// <summary>
     /// The <see cref="AtProto.Did"/> of the account the event refers to.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Guarded because the property is declared non-nullable and a jetstream is remote input. Marking a property
+    /// as required makes the serializer insist the property is present, not that its value is not <see langword="null" />, so
+    /// without this a message carrying an explicit <see langword="null" /> leaves a <see langword="null" /> behind a non-nullable annotation.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public required Did Did { get; init; }
+    public required Did Did
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets the timestamp for the record, in Unix microseconds.
@@ -36,7 +52,6 @@ public record AtJetstreamEvent
     /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    [JsonConverter(typeof(JetStreamEventKindConverter))]
     public required JetStreamEventKind Kind { get; init; }
 
     /// <summary>

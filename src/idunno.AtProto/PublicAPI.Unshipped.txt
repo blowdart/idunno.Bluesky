@@ -21,7 +21,11 @@
 *REMOVED*idunno.AtProto.AtProtoHttpClient<TResult>.PostBlob(System.Uri! service, string! endpoint, byte[]! blob, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? contentHeaders, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
 *REMOVED*idunno.AtProto.AtProtoHttpClient<TResult>.PostBlob(System.Uri! service, string! endpoint, System.ReadOnlyMemory<byte> blob, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? contentHeaders, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
 *REMOVED*idunno.AtProto.Authentication.AccessCredentials.ExtractJwtProperties(string! jwt) -> void
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamAccount.Active.set -> void
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Account.set -> void
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommit.Operation.get -> string!
 *REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommit.Record.get -> System.Text.Json.JsonDocument?
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Commit.set -> void
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumMessageSize.get -> int
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumMessageSize.set -> void
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetMaximumMessageSize(int maximumMessageSize) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
@@ -121,8 +125,13 @@ idunno.AtProto.Authentication.OAuthOptions.AllowLoopback.get -> bool
 idunno.AtProto.Authentication.OAuthOptions.AllowLoopback.set -> void
 idunno.AtProto.Authentication.OAuthOptions.ClockSkew.get -> System.TimeSpan
 idunno.AtProto.Authentication.OAuthOptions.ClockSkew.set -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount.Active.init -> void
+idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Account.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.Operation.get -> idunno.AtProto.Jetstream.JetstreamCommitOperation
 idunno.AtProto.Jetstream.AtJetstreamCommit.Record.get -> System.Text.Json.JsonElement?
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Commit.init -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Net.Http.IHttpClientFactory! httpClientFactory, System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.DisposeAsync() -> System.Threading.Tasks.ValueTask
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CloseTimeout.get -> System.TimeSpan
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CloseTimeout.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ConfigureHttpClientOptions(System.Action<idunno.AtProto.HttpClientOptions!>! configure) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
@@ -147,6 +156,11 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WebSocketOptions.get -> idunno.
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WebSocketOptions.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithHttpClientFactory(System.Net.Http.IHttpClientFactory! httpClientFactory) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithWebSocketOptions(idunno.AtProto.WebSocketOptions! webSocketOptions) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommitOperation.Create = 1 -> idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommitOperation.Delete = 3 -> idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommitOperation.Unknown = 0 -> idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommitOperation.Update = 2 -> idunno.AtProto.Jetstream.JetstreamCommitOperation
 idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.get -> System.TimeSpan
 idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.init -> void
 idunno.AtProto.Jetstream.JetstreamOptions.MaximumConcurrentMessageParsers.get -> int
@@ -228,4 +242,5 @@ static readonly idunno.AtProto.Authentication.OAuthOptions.DefaultClockSkew -> S
 virtual idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!
 virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
 virtual idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Equals(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>? other) -> bool

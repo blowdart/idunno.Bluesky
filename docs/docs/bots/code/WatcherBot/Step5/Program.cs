@@ -37,7 +37,7 @@ internal sealed class Worker(IOptionsMonitor<BotOptions> optionsDelegate) : Back
         switch (e.ParsedEvent)
         {
             case AtJetstreamCommitEvent commitEvent:
-                if (string.Equals(commitEvent.Commit.Operation, "create", StringComparison.OrdinalIgnoreCase) &&
+                if (commitEvent.Commit.Operation == JetstreamCommitOperation.Create &&
                     commitEvent.Commit.Record is not null)
                 {
                     // A new record has been created in the monitored collections.

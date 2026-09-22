@@ -54,6 +54,10 @@
   silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
 * Added `JetstreamOptions.SendTimeout` and `AtProtoJetstreamBuilder.SetSendTimeout()`, which bound how long a jetstream waits to send a message to the
   server. The default is 30 seconds.
+* `AtProtoJetstream` now implements `IAsyncDisposable`, so an `await using` closes the connection with a handshake and waits for it to complete, rather
+  than the synchronous `Dispose()` aborting the socket underneath the server.
+* Added `JetstreamCommitOperation`, the enumeration `AtJetstreamCommit.Operation` now returns. An operation the library does not know about is reported
+  as `JetstreamCommitOperation.Unknown` rather than making the commit unreadable.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -228,6 +232,12 @@
   nothing. Replace `Record.RootElement` with `Record.Value`, and remove any `using` or `Dispose()` around the record.
 * The `idunno.atproto.jetstream.total_connections_failed` counter has been renamed to `idunno.atproto.jetstream.total.connections_failed`, matching the
   documented name and every other counter the jetstream publishes. Dashboards and alerts using the old name need updating.
+* `AtJetstreamCommit.Operation` is now a `JetstreamCommitOperation` rather than a `string`. Comparing it against `"create"`, `"update"` or `"delete"`
+  should become a comparison against `JetstreamCommitOperation.Create`, `Update` or `Delete`.
+* `AtJetstreamAccountEvent.Account`, `AtJetstreamCommitEvent.Commit` and `AtJetstreamAccount.Active` are now init only. They were settable, which let a
+  caller change an event another handler was already reading. Use a `with` expression to produce a changed copy.
+* `AtJetstreamAccount` and `AtJetStreamIdentity` no longer serialize a `$type` discriminator. A jetstream carries no such property, so writing one
+  produced JSON no jetstream would emit. Deserialization is unaffected.
 
 #### idunno.Bluesky
 
@@ -551,6 +561,31 @@
 * `UploadBlob()` and `DescribeRepo()` now use the same `JsonSerializerOptions` as every other endpoint, rather than the source generation context's own options.
 * `QueryLabels()` now skips and logs a `null` entry inside an otherwise well formed `labels` collection rather than handing that `null` to the caller. Neither
   `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type.
+* Disposing an `AtProtoJetstream` whilst a compressed message was being decompressed could free the zstd decompression context underneath the native
+  call reading it. The decompressor is now disposed under the same lock the receive loop decompresses under, and a receive loop which finds the
+  jetstream disposed abandons the message and exits rather than decompressing into freed memory.
+* An `options_update` message now names the DID filter `wantedDids`, the name a jetstream reads. The camel case naming policy produced `wantedDIDs`,
+  which a server matching property names exactly would read as no DID filter at all, subscribing the connection to every DID.
+* `AtJetstreamEvent.Did`, `AtJetstreamCommit.Collection`, `AtJetstreamCommit.Rev`, `AtJetstreamCommit.RKey`, `AtJetstreamAccount.Did`,
+  `AtJetStreamIdentity.Did`, `AtJetstreamAccountEvent.Account`, `AtJetstreamCommitEvent.Commit` and `AtJetstreamIdentityEvent.Identity` now reject an
+  explicit JSON `null`. Marking a property required makes the serializer insist the property is present, not that its value is not `null`, so a message
+  carrying an explicit `null` left a `null` behind a non-nullable annotation.
+* A jetstream receive loop which fails repeatedly now backs off between attempts and gives up after sixteen consecutive failures, rather than spinning
+  on a socket which cannot be read from.
+* Disposing an `AtProtoJetstream` now waits, bounded by `JetstreamOptions.CloseTimeout`, for an in-flight connection attempt to finish before disposing
+  the `HttpClient` and service provider that attempt is using.
+* `AtProtoJetstream.MessageLastReceived` is now reset when the jetstream connects, so a reconnection no longer reports a timestamp from the connection
+  before it.
+* Text taken from a server is now stripped of control characters before it is logged, as well as being truncated, so a hostile message cannot forge
+  entries in a plain text log.
+* Deriving a typed event from an `AtJetstreamEvent` now carries over any extension data other than the key it consumed, rather than dropping properties
+  a newer jetstream sends.
+* `AtProtoJetstream.ConnectAsync()` now throws an `ArgumentException` for a relative URI, or one whose scheme is not `ws`, `wss`, `http` or `https`,
+  and logs a warning when connecting without transport security.
+* `JetstreamOptions.Dictionary` and `AtProtoJetstreamBuilder.CompressionDictionary` now copy the array they are given and the array they return, so a
+  caller holding a reference cannot change a compression dictionary whilst native code is reading it.
+* Corrected the documentation for `AtProtoJetstreamBuilder.CollectionsToFilterOn`, which described itself as a collection of DIDs, and the return
+  documentation on both `AtProtoJetstreamBuilder.FilterTo()` overloads.
 
 #### idunno.AtProto.OAuthCallback
 
