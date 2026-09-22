@@ -15,7 +15,7 @@ public sealed class ConversationAvailability
     /// </summary>
     /// <param name="canChat">A flag indicating whether the user can chat with the other user.</param>
     /// <param name="conversation">The conversation between the user and the other user, if it exists.</param>
-    public ConversationAvailability(bool? canChat, ConversationView? conversation)
+    public ConversationAvailability(bool canChat, ConversationView? conversation)
     {
         CanChat = canChat;
         Conversation = conversation;
@@ -24,7 +24,8 @@ public sealed class ConversationAvailability
     /// <summary>
     /// Gets a flag indicating whether the user can chat with the other user.
     /// </summary>
-    public bool? CanChat { get; init; }
+    [JsonRequired]
+    public bool CanChat { get; init; }
 
     /// <summary>
     /// Gets the conversation between the user and the other user, if it exists.

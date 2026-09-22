@@ -14,11 +14,11 @@ internal record CreateGroupRequest
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.GroupMembers);
-        ArgumentNullException.ThrowIfNull(name);
+        ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.GroupNameLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
 
-        Members = members;
+        Members = new List<Did>(members);
         Name = name;
     }
 

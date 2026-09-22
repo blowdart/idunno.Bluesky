@@ -15,7 +15,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty or contains a <see langword="null"/> or empty code.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
     public async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
@@ -25,6 +25,11 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(codes);
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
+
+        if (codes.Any(code => string.IsNullOrEmpty(code)))
+        {
+            throw new ArgumentException("Codes cannot contain null or empty values.", nameof(codes));
+        }
 
         if (!IsAuthenticated)
         {

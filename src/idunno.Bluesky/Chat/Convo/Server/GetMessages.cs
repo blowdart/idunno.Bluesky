@@ -96,7 +96,12 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Messages>(
-                new Messages(WithoutNullEntries(response.Result.Messages, service, nameof(response.Result.Messages), loggerFactory), response.Result.Cursor),
+                new Messages(
+                    WithoutNullEntries(response.Result.Messages, service, nameof(response.Result.Messages), loggerFactory),
+                    response.Result.Cursor,
+                    response.Result.RelatedProfiles is null
+                        ? null
+                        : WithoutNullEntries(response.Result.RelatedProfiles, service, nameof(response.Result.RelatedProfiles), loggerFactory).AsReadOnly()),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
