@@ -57,7 +57,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/>, <paramref name="uri"/> or the uri collection property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list item collection.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list collection.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>
     ///    <para>This method iterates through the list members search for the specified <see cref="Did"/>. This may result in multiple API calls
@@ -95,7 +95,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/>, <paramref name="uri"/> or the uri collection property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list item collection.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list collection.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>
     ///    <para>This method iterates through the list members search for the specified <see cref="Did"/>. This may result in multiple API calls

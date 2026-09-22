@@ -67,7 +67,7 @@ public record List : BlueskyTimestampedRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the list was created at. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> is &gt; 64 UTF-8 bytes, or <paramref name="description"/> is &gt; 300 graphemes or &gt; 3000 UTF-8 bytes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="purpose"/> is <see cref="ListPurpose.Unknown"/>, or <paramref name="name"/> is &gt; 64 UTF-8 bytes, or <paramref name="description"/> is &gt; 300 graphemes or &gt; 3000 UTF-8 bytes.</exception>
     public List(
         string name,
         ListPurpose purpose,
@@ -79,6 +79,11 @@ public record List : BlueskyTimestampedRecord
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.ListNameLengthInBytes);
+
+        if (purpose == ListPurpose.Unknown)
+        {
+            throw new ArgumentOutOfRangeException(nameof(purpose), $"{nameof(ListPurpose)}.{nameof(ListPurpose.Unknown)} is not a purpose a list can be created with.");
+        }
 
         if (description is not null)
         {

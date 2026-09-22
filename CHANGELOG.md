@@ -310,6 +310,16 @@
   constructors and the property initializers take a defensive copy. They previously stored the caller's collection by reference, so it could be mutated
   after construction, and `init` allowed the constructor's validation to be bypassed entirely.
 * `DraftEmbedGallery.Items` is now required and non-nullable, and `DraftEmbedGallery` is no longer a positional record.
+* `ListPurpose` has a new `Unknown` member, declared first, so it is the default value of the enum. The `listPurpose` lexicon definition is an open union,
+  so a purpose added to the service after this library shipped now deserializes to `Unknown` rather than throwing and failing the entire response it
+  arrived in. The other members have been renumbered as a result, so code which persisted or transmitted the underlying numeric values must be updated.
+  `Unknown` cannot be serialized, and the public `List` constructor rejects it, so a list can still only be created with a purpose the service understands.
+* `ListViewBasic` no longer validates the length of, or rejects a whitespace only, `Name`. A view is a projection of whatever the service returned, so
+  validating it turned a single out of spec list into an exception which failed the whole page it arrived on. Those limits still apply to `List`, which is
+  the record actually written. The `uri`, `cid` and `name` null guards remain.
+* The properties of `Relationship` are now `init` only rather than settable.
+* `StarterPackViewBasic` now validates its `uri`, `cid`, `record` and `creator` arguments, and takes a defensive copy of the labels it is given rather
+  than storing the caller's collection by reference.
 
 ### Fixed
 
@@ -317,6 +327,9 @@
 
 * `AtProtoAgent.ApplyWrites()` no longer throws a `NullReferenceException` when a service returns no commit, and no longer fails to deserialize a
   response which returns no results. The `applyWrites` lexicon declares neither as required.
+* The record retrieval overloads of `AtProtoAgent` now name the uri they were given in the exception thrown when it carries no collection or record key.
+  The messages were written without their interpolation prefixes, so they read `{uri} does not have a collection.` regardless of the uri supplied. The
+  same overloads no longer test `AtUri.Repo` for `null`, which is not nullable, so the check could never fire.
 * Both public `CreateRecordResult` constructors now validate their `uri` and `cid` arguments. Their `ArgumentNullException.ThrowIfNull()` guards
   were passing a string literal rather than the argument, so they could never throw.
 * `AtProtoRepositoryObject.StrongReference` and `ApplyWritesUpdateResult.StrongReference` are now calculated from the current `Uri` and `Cid`.
@@ -573,10 +586,28 @@
 * `Cid` now reports the offending version number when a CID version is unsupported.
 * `Cid(byte, ulong, byte[])` now validates its arguments and takes a copy of the supplied hash.
 * `AtUri` and `Nsid` now check the length of their input before scanning, splitting or matching it.
+* `AtIdentifier` now quotes the offending value in the exception message thrown when it cannot be parsed, matching `Did` and `Handle`. The message was
+  written without its interpolation prefix, so it read `{s} is not a valid AtIdentifier` regardless of the value supplied.
+* `AtUri.Equals()` and `AtUri.ToString()` no longer test `Authority` for `null`. `Authority` is not nullable, so the checks could never fire and
+  `ToString()` could not return the empty string those checks implied.
 
 #### idunno.Bluesky
 
 * `MessageInput.Text` now validates the maximum message length when it is assigned in an object initializer or a `with` expression, rather than only in the constructor.
+* `StarterPackViewBasic.StrongReference` is now derived from the current `Uri` and `Cid` rather than being built once in the constructor and stored, so a
+  view copied with a `with` expression which changes either no longer points at the record the original came from.
+* `BlueskyServer.GetActorStarterPacks()` now validates `limit` against the 1 to 100 range the lexicon declares, matching every other graph endpoint,
+  rather than sending it on and letting the service answer with an opaque error.
+* `BlueskyAgent.AddToList()` now checks that the uri it is given points at a list, so a list item can no longer be created against any other collection.
+* `BlueskyAgent.DeleteReferenceListOptOut()` now validates its arguments before checking whether the agent is authenticated, so an unauthenticated caller
+  passing a bad uri is told which argument is wrong. The `ArgumentException` it throws now also carries a parameter name.
+* `BlueskyAgent.Like(StrongReference, CancellationToken)` now validates the collection of the reference before checking whether the agent is authenticated.
+* `BlueskyAgent.Repost()`, `BlueskyAgent.DeleteRepost()` and `BlueskyAgent.DeleteLike()` now name the collections and uris they expected in the errors they
+  report. The messages were written without their interpolation prefixes, so the placeholders reached the caller verbatim, and the one thrown by `Repost()`
+  named a type which does not exist.
+* Corrected the documentation of `BlueskyAgent.UpdateList()`, which declared `ArgumentException` where it throws `ArgumentOutOfRangeException`,
+  `BlueskyAgent.DeleteFromList()`, which named the list item collection where it requires the list collection, `BlueskyServer.GetListsWithMembership()`,
+  which declared an `ArgumentException` for a non string parameter, and `BlueskyAgent.Like()`, whose remarks pointed at `Repost()`.
 * `ConversationView.Members`, `MessageView.Facets` and `MessageView.Reactions` now take defensive copies of the collections assigned in an object initializer or a `with` expression, so a caller can no longer mutate them after the fact. `MessageView.Facets` and `MessageView.Reactions` normalize a `null` to an empty collection, matching the constructor.
 * The `embed` parameter on the `MessageView` constructor is now nullable, matching the `Embed` property and the lexicon, which does not require an embed.
 * `BlueskyServer.GetJoinGroupLinkPreviews()` now declares `accessCredentials` as non nullable, matching every other chat endpoint and the `ArgumentNullException` it already threw, and checks its arguments before building the query string.

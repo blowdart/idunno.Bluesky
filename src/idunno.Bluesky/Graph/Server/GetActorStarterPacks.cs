@@ -31,6 +31,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown any of <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null" />.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -51,6 +52,13 @@ public static partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
+
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
+        }
+
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -58,7 +66,7 @@ public static partial class BlueskyServer
         queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
         if (limit is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit.Value}");
         }
         if (cursor is not null)
         {

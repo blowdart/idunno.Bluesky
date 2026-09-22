@@ -124,6 +124,16 @@
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedRecords.init -> void
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedVideos.get -> System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>?
 *REMOVED*idunno.Bluesky.Drafts.DraftPost.EmbedVideos.init -> void
+*REMOVED*idunno.Bluesky.Graph.ListPurpose.CurateList = 1 -> idunno.Bluesky.Graph.ListPurpose
+*REMOVED*idunno.Bluesky.Graph.ListPurpose.ModList = 0 -> idunno.Bluesky.Graph.ListPurpose
+*REMOVED*idunno.Bluesky.Graph.ListPurpose.ReferenceList = 2 -> idunno.Bluesky.Graph.ListPurpose
+*REMOVED*idunno.Bluesky.Graph.Relationship.BlockedBy.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.BlockedByList.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.Blocking.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.BlockingByList.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.Did.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.FollowedBy.set -> void
+*REMOVED*idunno.Bluesky.Graph.Relationship.Following.set -> void
 *REMOVED*idunno.Bluesky.Labeler.LabelerView.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>!
 *REMOVED*idunno.Bluesky.Labeler.LabelerViewDetailed.Policies.set -> void
 *REMOVED*idunno.Bluesky.Notifications.Notification.Author.get -> idunno.Bluesky.Actor.ProfileViewBasic!
@@ -367,6 +377,17 @@ idunno.Bluesky.Drafts.DraftPost.EmbedVideos.get -> System.Collections.Generic.IR
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, idunno.AtProto.Repo.StrongReference![]? associatedRefs = null) -> void
 idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
 idunno.Bluesky.Embed.External.Properties.Uri.get -> string!
+idunno.Bluesky.Graph.ListPurpose.CurateList = 2 -> idunno.Bluesky.Graph.ListPurpose
+idunno.Bluesky.Graph.ListPurpose.ModList = 1 -> idunno.Bluesky.Graph.ListPurpose
+idunno.Bluesky.Graph.ListPurpose.ReferenceList = 3 -> idunno.Bluesky.Graph.ListPurpose
+idunno.Bluesky.Graph.ListPurpose.Unknown = 0 -> idunno.Bluesky.Graph.ListPurpose
+idunno.Bluesky.Graph.Relationship.BlockedBy.init -> void
+idunno.Bluesky.Graph.Relationship.BlockedByList.init -> void
+idunno.Bluesky.Graph.Relationship.Blocking.init -> void
+idunno.Bluesky.Graph.Relationship.BlockingByList.init -> void
+idunno.Bluesky.Graph.Relationship.Did.init -> void
+idunno.Bluesky.Graph.Relationship.FollowedBy.init -> void
+idunno.Bluesky.Graph.Relationship.Following.init -> void
 idunno.Bluesky.Labeler.LabelerView.Labels.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>!
 idunno.Bluesky.Labeler.LabelerView.Labels.init -> void
 idunno.Bluesky.Labeler.LabelerViewDetailed.Policies.init -> void

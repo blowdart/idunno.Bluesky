@@ -32,8 +32,13 @@ public record ListViewBasic : View
     /// <param name="labels">Labels applied to the list</param>
     /// <param name="viewer">A view of the relationship between the view and the current user.</param>
     /// <param name="indexedAt">The date and time the list was last indexed at.</param>
-    /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Throws if <paramref name="name"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/>, <paramref name="cid"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The <paramref name="name"/> is not validated against the length limits the lexicon places on
+    /// <see cref="List.Name"/>. A view is a projection of whatever the service returned, so validating it here would
+    /// turn an unexpected value from the service into an exception which fails the whole response rather than the
+    /// single list it came from. Limits are enforced on <see cref="List"/>, the record which is actually written.</para>
+    /// </remarks>
     [JsonConstructor]
     public ListViewBasic(
         AtUri uri,
@@ -48,8 +53,7 @@ public record ListViewBasic : View
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 64);
+        ArgumentNullException.ThrowIfNull(name);
 
         Uri = uri;
         Cid = cid;
@@ -101,7 +105,7 @@ public record ListViewBasic : View
     public StrongReference StrongReference => new(Uri, Cid);
 
     /// <summary>
-    /// Gets the the name of the list.
+    /// Gets the name of the list.
     /// </summary>
     [JsonRequired]
     public string Name { get; init; }

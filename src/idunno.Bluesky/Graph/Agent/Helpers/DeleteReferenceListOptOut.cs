@@ -20,16 +20,16 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null" />.</exception>
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtUri uri, CancellationToken cancellationToken)
     {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         ArgumentNullException.ThrowIfNull(uri);
 
         if (uri.Collection != CollectionNsid.ReferenceListOptOut)
         {
-            throw new ArgumentException($"{uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.");
+            throw new ArgumentException($"{uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.", nameof(uri));
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
         }
 
         return await DeleteRecord(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -56,16 +56,16 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> is <see langword="null" />.</exception>
     public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtProtoRepositoryRecord<ReferenceListOptOut> record, CancellationToken cancellationToken)
     {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         ArgumentNullException.ThrowIfNull(record);
 
         if (record.Uri.Collection != CollectionNsid.ReferenceListOptOut)
         {
             throw new ArgumentException($"record {record.Uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.", nameof(record));
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
         }
 
         return await DeleteReferenceListOptOut(record.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);

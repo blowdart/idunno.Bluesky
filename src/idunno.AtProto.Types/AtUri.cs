@@ -143,15 +143,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
             return false;
         }
 
-        if (Authority is null && other.Authority is not null)
-        {
-            return false;
-        }
-        else if (Authority is not null && other.Authority is null)
-        {
-            return false;
-        }
-        else if (!Authority!.Equals(other.Authority))
+        if (!Authority.Equals(other.Authority))
         {
             return false;
         }
@@ -202,10 +194,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
             atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Scheme}://");
         }
 
-        if (Authority is not null)
-        {
-            atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
-        }
+        atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
 
         if (!string.IsNullOrEmpty(AbsolutePath))
         {

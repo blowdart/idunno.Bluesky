@@ -221,4 +221,74 @@ public class ListTests
         GetListsWithMembershipResponse? actual = JsonSerializer.Deserialize<GetListsWithMembershipResponse>(json, BlueskyServer.BlueskyJsonSerializerOptions);
         Assert.NotNull(actual);
     }
+
+    /// <summary>
+    /// The lexicon definition of a list purpose is an open union, so a purpose added by the service after this
+    /// library shipped must not fail the whole response.
+    /// </summary>
+    [Fact]
+    public void AnUnrecognizedListPurposeDeserializesToUnknown()
+    {
+        string json = """
+            {
+                "name": "Super Bean Fans",
+                "$type": "app.bsky.graph.list",
+                "purpose": "app.bsky.graph.defs#somethingwhichpostdatesthislibrary",
+                "createdAt": "2025-05-01T03:50:05.7760765+00:00"
+            }
+            """;
+
+        List? actual = JsonSerializer.Deserialize<List>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+        Assert.Equal(ListPurpose.Unknown, actual.Purpose);
+    }
+
+    [Theory]
+    [InlineData(ListPurpose.ModList, "app.bsky.graph.defs#modlist")]
+    [InlineData(ListPurpose.CurateList, "app.bsky.graph.defs#curatelist")]
+    [InlineData(ListPurpose.ReferenceList, "app.bsky.graph.defs#referencelist")]
+    public void KnownListPurposesRoundTrip(ListPurpose purpose, string expected)
+    {
+        string json = JsonSerializer.Serialize(purpose, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Equal($"\"{expected}\"", json);
+        Assert.Equal(purpose, JsonSerializer.Deserialize<ListPurpose>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Fact]
+    public void SerializingAnUnknownListPurposeThrows()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize(ListPurpose.Unknown, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Fact]
+    public void ANonStringListPurposeThrows()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ListPurpose>("42", BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    /// <summary>
+    /// A view is a projection of whatever the service returned. Validating the list name while deserializing turned a
+    /// single unexpected list into an exception which failed the entire page it arrived on.
+    /// </summary>
+    [Theory]
+    [InlineData("\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466")]
+    [InlineData("   ")]
+    public void AListViewBasicDeserializesANameTheLexiconWouldReject(string name)
+    {
+        string json = $$"""
+            {
+                "uri": "at://did:plc:test/app.bsky.graph.list/1",
+                "cid": "bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy",
+                "name": {{JsonSerializer.Serialize(name)}},
+                "purpose": "app.bsky.graph.defs#curatelist"
+            }
+            """;
+
+        ListViewBasic? actual = JsonSerializer.Deserialize<ListViewBasic>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+        Assert.Equal(name, actual.Name);
+    }
 }

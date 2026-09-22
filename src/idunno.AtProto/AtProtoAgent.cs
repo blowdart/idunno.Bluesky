@@ -1285,19 +1285,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1404,19 +1399,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1511,19 +1501,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1552,19 +1537,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1596,11 +1576,6 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(pds);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1627,11 +1602,6 @@ public partial class AtProtoAgent : Agent
         Cid cid)
     {
         ArgumentNullException.ThrowIfNull(uri);
-
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
 
         if (uri.Collection is null)
         {
@@ -1671,19 +1641,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1717,11 +1682,6 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
         ArgumentNullException.ThrowIfNull(pds);
-
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
 
         if (uri.Collection is null)
         {
