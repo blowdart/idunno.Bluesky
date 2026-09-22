@@ -138,6 +138,9 @@
 * `ICorrelationStateCache.GetOAuthLoginState()` is now named `PeekOAuthLoginState()`, as it reads login state without consuming it and so must not be used to
   validate an OAuth callback. `TakeOAuthLoginState()` remains the method for that.
 * Every `ICorrelationStateCache` method now accepts an optional `CancellationToken`, as every `IIdentityStore` method already did.
+* Added `BlueskySignInManager.DeleteCorrelationCookie()`, which deletes the correlation cookie using the name and options it was written with.
+* Added `IIdentityStore.Update(AccessCredentials, string?, CancellationToken)`, so credentials belonging to an authentication scheme registered under a name
+  other than the default can be stored against that scheme.
 
 #### idunno.Bluesky.AspNet.Authentication.UI
 
@@ -1011,6 +1014,11 @@
 * A refresh whose advisory lock had expired no longer silently overwrites credentials another request refreshed in the meantime. The race is now resolved on
   credential expiry, and the handler logs both when its own write was superseded and when it lost the lock it was refreshing under.
 * Two log event IDs no longer collide.
+
+#### idunno.Bluesky.AspNet.Authentication.UI
+
+* The login page now deletes the correlation cookie using the configured cookie name and options. A correlation cookie written with a customised name, path
+  or domain was previously not matched, and so was left in place.
 
 #### idunno.Bluesky.AspNet.Authentication.MySQL
 
