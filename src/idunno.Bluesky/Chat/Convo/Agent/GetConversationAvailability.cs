@@ -10,7 +10,7 @@ public partial class BlueskyAgent
 {
     /// <summary>
     /// Gets the availability of a conversation between the authenticated user, and the user identified by <paramref name="member"/>.
-    /// If an existing conversationg is found for these members, it is returned.
+    /// If an existing conversation is found for these members, it is returned.
     /// </summary>
     /// <param name="member">The <see cref="Did"/> of the actor to check availability for.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>

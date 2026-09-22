@@ -42,9 +42,29 @@ public sealed record MessageInput
     /// <summary>
     /// Gets the text of the message
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value set exceeds the maximum allowed length.</exception>
+    /// <remarks>
+    /// <para>
+    /// The value supplied is validated against the same limits the constructor applies, so the limits cannot be
+    /// bypassed by assigning in an object initializer or a <see langword="with"/> expression.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public string Text { get; init; }
+    public string Text
+    {
+        get => _text;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.MessageLengthInBytes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
+
+            _text = value;
+        }
+    }
 
     /// <summary>
     /// Gets the rich text <see cref="Facet"/>s of the message, if any.
@@ -76,6 +96,8 @@ public sealed record MessageInput
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ReplyReference? ReplyTo { get; init; }
+
+    private readonly string _text = null!;
 
     private readonly IReadOnlyCollection<Facet>? _facets;
 }

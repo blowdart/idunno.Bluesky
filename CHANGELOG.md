@@ -531,6 +531,10 @@
 
 #### idunno.Bluesky
 
+* `MessageInput.Text` now validates the maximum message length when it is assigned in an object initializer or a `with` expression, rather than only in the constructor.
+* `ConversationView.Members`, `MessageView.Facets` and `MessageView.Reactions` now take defensive copies of the collections assigned in an object initializer or a `with` expression, so a caller can no longer mutate them after the fact. `MessageView.Facets` and `MessageView.Reactions` normalize a `null` to an empty collection, matching the constructor.
+* The `embed` parameter on the `MessageView` constructor is now nullable, matching the `Embed` property and the lexicon, which does not require an embed.
+* `BlueskyServer.GetJoinGroupLinkPreviews()` now declares `accessCredentials` as non nullable, matching every other chat endpoint and the `ArgumentNullException` it already threw, and checks its arguments before building the query string.
 * `AgeAssuranceState` is now registered for JSON source generation, so it can be serialized and deserialized by callers, and rejects a response without a `status` rather than silently reading it as `Unknown`.
 * `AgeAssuranceStatus` now serializes as the lowercase values the lexicon declares rather than as its .NET member names.
 * `GetTrendingTopics()` now sends the authenticated user as the `viewer` query string parameter, as the lexicon requires, rather than as `did`, and percent encodes it. Follower boosted ranking previously never applied.
