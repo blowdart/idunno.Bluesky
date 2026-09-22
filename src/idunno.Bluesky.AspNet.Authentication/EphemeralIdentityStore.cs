@@ -56,7 +56,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     private readonly int _sizeLimit;
     private readonly BlueskyAuthenticationMetrics _metrics;
 
-    private bool _disposed;
+    private volatile bool _disposed;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
@@ -453,13 +453,15 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
             return;
         }
 
+        // Set before the caches are disposed so a concurrent caller fails its disposal guard rather than reaching a
+        // half disposed cache.
+        _disposed = true;
+
         if (disposing)
         {
             _cache.Dispose();
             _refreshCache.Dispose();
         }
-
-        _disposed = true;
     }
 
     /// <summary>

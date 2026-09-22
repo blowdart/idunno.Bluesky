@@ -73,7 +73,6 @@ public sealed class BlueskyAgentFactory
         ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
 
         BlueskyAgentOptions = agentOptionsMonitor.CurrentValue;
-        BlueskyAgentOptions.LoggerFactory = loggerFactory;
 
         _authenticationOptionsMonitor = authenticationOptionsMonitor;
         _authenticationScheme = authenticationScheme;
@@ -140,6 +139,10 @@ public sealed class BlueskyAgentFactory
             return false;
         }
 
+        // CreateAgent is synchronous, so the task has to be unwrapped here. The scheme provider's contract is a lookup
+        // over schemes registered at startup, and every implementation in ASP.NET Core returns an already completed
+        // task, so this does not block. Only a principal whose authentication type is not the scheme the factory was
+        // registered for reaches this at all.
         AuthenticationScheme? scheme = schemeProvider.GetSchemeAsync(authenticationScheme).GetAwaiter().GetResult();
 
         return scheme is not null && typeof(BlueskyAuthenticationHandler).IsAssignableFrom(scheme.HandlerType);

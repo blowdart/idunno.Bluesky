@@ -48,31 +48,42 @@ public class SelfLabels : IEquatable<SelfLabels>
     /// </summary>
     /// <param name="values">The collection of labels applied to the record.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more than 10 items.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more than <see cref="MaximumLabels"/> items.</exception>
     [JsonConstructor]
     public SelfLabels(IReadOnlyList<SelfLabel> values)
     {
         ArgumentNullException.ThrowIfNull(values);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(values.Count, 10);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(values.Count, MaximumLabels);
 
         _values = [.. values];
     }
 
     /// <summary>
+    /// The maximum number of labels a record may carry.
+    /// </summary>
+    public const int MaximumLabels = 10;
+
+    /// <summary>
     /// The collection of self labels applied to the record.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to a collection with more than 10 items.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to a collection with more than <see cref="MaximumLabels"/> items.</exception>
     [JsonInclude]
     [JsonRequired]
     public IReadOnlyList<SelfLabel> Values
     {
-        get => _values.AsReadOnly();
+        get
+        {
+            lock (_syncLock)
+            {
+                return _values.AsReadOnly();
+            }
+        }
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Count, 10);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Count, MaximumLabels);
             lock (_syncLock)
             {
                 _values = [.. value];
@@ -111,12 +122,15 @@ public class SelfLabels : IEquatable<SelfLabels>
     /// Adds a <see cref="SelfLabel"/> with the specified <paramref name="name"/> if one does not already exist.
     /// </summary>
     /// <param name="name">The name of the <see cref="SelfLabel"/> to add.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the instance already holds <see cref="MaximumLabels"/> labels.</exception>
     public void AddLabel(string name)
     {
         lock (_syncLock)
         {
             if (!Contains(name))
             {
+                ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(_values.Count, MaximumLabels);
+
                 List<string> values = [.. from existingLabel in _values select existingLabel.Value, name];
 
                 List<SelfLabel> updatedLabels = [];
@@ -135,6 +149,7 @@ public class SelfLabels : IEquatable<SelfLabels>
     /// </summary>
     /// <param name="label">The <see cref="SelfLabel"/> to add.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="label"/> or the label's value is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the instance already holds <see cref="MaximumLabels"/> labels.</exception>
     public void AddLabel(SelfLabel label)
     {
         ArgumentNullException.ThrowIfNull(label);

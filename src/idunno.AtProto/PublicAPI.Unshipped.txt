@@ -97,6 +97,7 @@ const idunno.AtProto.Authentication.AtProtoClaims.Did = "urn:atproto:did" -> str
 const idunno.AtProto.Authentication.AtProtoClaims.DPoPNonce = "urn:atproto:dpop:nonce" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.DPoPProof = "urn:atproto:dpop:proof" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.RefreshToken = "urn:atproto:token:refresh" -> string!
+const idunno.AtProto.Labels.SelfLabels.MaximumLabels = 10 -> int
 idunno.AtProto.AccountNotFound.AccountNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.AtProto.AccountTakedown.AccountTakedown(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity? identity, System.Uri! service, idunno.AtProto.AtProtoAgentOptions? options = null) -> void

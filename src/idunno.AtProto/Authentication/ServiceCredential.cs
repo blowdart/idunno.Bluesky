@@ -83,8 +83,10 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
     /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>
     /// <para>
-    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
-    ///   expiry of one token alongside another.
+    ///   The token, its subject and its expiry are published together by the <see cref="AccessJwt"/> setter, so this
+    ///   never returns a value part written by a refresh running on another thread. Each property takes the lock
+    ///   separately, so reading this alongside <see cref="AccessJwt"/> can still straddle a refresh and pair the
+    ///   expiry of one token with another.
     /// </para>
     /// </remarks>
     public DateTimeOffset ExpiresOn
@@ -103,8 +105,10 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   Read under the same lock the <see cref="AccessJwt"/> setter writes it under, so a caller cannot observe the
-    ///   audience of one token alongside another.
+    ///   The token, its subject and its expiry are published together by the <see cref="AccessJwt"/> setter, so this
+    ///   never returns a value part written by a refresh running on another thread. Each property takes the lock
+    ///   separately, so reading this alongside <see cref="AccessJwt"/> can still straddle a refresh and pair the
+    ///   audience of one token with another.
     /// </para>
     /// </remarks>
     public Did Did

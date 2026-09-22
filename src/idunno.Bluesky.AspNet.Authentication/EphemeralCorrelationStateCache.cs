@@ -27,7 +27,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
     private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
 
-    private bool _disposed;
+    private volatile bool _disposed;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
@@ -37,7 +37,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
     private readonly object _takeLock = new();
 #endif
 
-    private static readonly TimeSpan s_defaultSlidingExpiration = new(0, 0, 15, 0);
+    private static readonly TimeSpan s_defaultEntryTimeToLive = new(0, 0, 15, 0);
 
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralCorrelationStateCache(
@@ -48,7 +48,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
 
         Logger = loggerFactory.CreateLogger<EphemeralCorrelationStateCache>();
-        EntryTTL = entryTimeToLive ?? s_defaultSlidingExpiration;
+        EntryTTL = entryTimeToLive ?? s_defaultEntryTimeToLive;
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
         _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
@@ -68,7 +68,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     private MemoryCache Cache => _cache;
 
-    private TimeSpan EntryTTL { get; } = new(0, 15, 0);
+    private TimeSpan EntryTTL { get; }
 
     private ILogger<EphemeralCorrelationStateCache> Logger { get; set; }
 
@@ -195,8 +195,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
             return;
         }
 
-        _cache.Dispose();
+        // Set before the cache is disposed so a concurrent caller fails its disposal guard rather than reaching a
+        // half disposed cache.
         _disposed = true;
+        _cache.Dispose();
     }
 
     private async Task<OAuthLoginState?> Decode(string? encodedState)
