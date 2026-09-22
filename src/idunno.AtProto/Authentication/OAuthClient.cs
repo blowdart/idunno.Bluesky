@@ -276,6 +276,8 @@ public class OAuthClient
         {
             // Nothing on the instance has been touched until this point, so a login which fails to prepare leaves any
             // previously prepared login intact rather than pairing its authorize state with a new proof key.
+            Guid correlationId = Guid.NewGuid();
+
             lock (_stateLock)
             {
                 _oidcClient = oidcClient;
@@ -286,16 +288,18 @@ public class OAuthClient
                 _expectedAuthority = authority;
                 _expectedService = service;
                 _authorizeState = authorizeState;
+                _correlationId = correlationId;
 
-                if (stateExtraProperties is not null)
-                {
-                    _stateExtraProperties = stateExtraProperties;
-                }
+                // Replaced rather than merged, and copied rather than aliased, so a second login on this instance neither
+                // inherits the extra properties of the first nor tracks later changes to the caller's dictionary.
+                _stateExtraProperties = stateExtraProperties is null
+                    ? null
+                    : new Dictionary<string, string>(stateExtraProperties, StringComparer.Ordinal);
             }
 
             Uri startUri = new(authorizeState.StartUrl);
 
-            Logger.OAuthLoginUriGenerated(_logger, authority, startUri, _correlationId);
+            Logger.OAuthLoginUriGenerated(_logger, authority, startUri, correlationId);
 
             return startUri;
         }
@@ -337,6 +341,7 @@ public class OAuthClient
         AuthorizeState authorizeState;
         Uri expectedService;
         Uri expectedAuthority;
+        Guid correlationId;
 
         // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
         // another thread starts a new one part way through.
@@ -354,6 +359,7 @@ public class OAuthClient
             authorizeState = _authorizeState;
             expectedService = _expectedService;
             expectedAuthority = _expectedAuthority;
+            correlationId = _correlationId;
         }
 
         // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
@@ -367,7 +373,7 @@ public class OAuthClient
 
             if (loginResult.IsError)
             {
-                Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
+                Logger.OAuthLoginFailed(_logger, correlationId, loginResult.Error, loginResult.ErrorDescription);
                 return null;
             }
 
@@ -383,9 +389,9 @@ public class OAuthClient
 
             JsonWebToken accessToken = new(loginResult.AccessToken);
 
-            ValidateAccessToken(accessToken, expectedAuthority, _correlationId);
+            ValidateAccessToken(accessToken, expectedAuthority, correlationId);
 
-            WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, _correlationId);
+            WarnOnScopesNotGranted(requestedScopes, loginResult.TokenResponse.Scope, correlationId);
 
             AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
@@ -404,7 +410,7 @@ public class OAuthClient
                 throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
             }
 
-            Logger.OAuthLoginCompleted(_logger, _correlationId);
+            Logger.OAuthLoginCompleted(_logger, correlationId);
 
             return new(
                 expectedService,
@@ -624,8 +630,7 @@ public class OAuthClient
                 }
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
-                using (HttpMessageHandler handler = _innerFactoryHandler())
-                using (var httpClient = new HttpClient(handler))
+                using (var httpClient = new HttpClient(_innerFactoryHandler()))
                 {
                     _clientConfigurationHandler(httpClient);
                     serverDescriptionResult = await AtProtoServer.DescribeServer(refreshCredential.Service, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);

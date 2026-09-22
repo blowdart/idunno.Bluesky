@@ -46,6 +46,15 @@ public partial class AtProtoAgent
     private AccessCredentials? _credentials;
 
     /// <summary>
+    /// Incremented every time the agent credentials are published or cleared, so an operation which started against one
+    /// set of credentials can tell that they have been replaced whilst it was running.
+    /// </summary>
+    /// <remarks>
+    /// <para>Guarded by <see cref="_credentialLock"/>.</para>
+    /// </remarks>
+    private long _credentialGeneration;
+
+    /// <summary>
     /// The number of recently exchanged refresh tokens remembered by <see cref="HasRefreshTokenAlreadyBeenExchanged(string, string)"/>.
     /// </summary>
     /// <remarks>
@@ -108,6 +117,8 @@ public partial class AtProtoAgent
             lock (_credentialLock)
             {
                 _credentials = value;
+                _credentialGeneration++;
+
                 if (_credentials is not null)
                 {
                     Service = _credentials.Service;
@@ -117,6 +128,58 @@ public partial class AtProtoAgent
                     Service = OriginalService;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Gets the generation of the agent credentials, which changes every time they are published or cleared.
+    /// </summary>
+    private long CredentialGeneration
+    {
+        get
+        {
+            lock (_credentialLock)
+            {
+                return _credentialGeneration;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Publishes <paramref name="refreshedCredentials"/> as the agent credentials, but only if the agent credentials have
+    /// not been replaced since <paramref name="expectedGeneration"/> was read.
+    /// </summary>
+    /// <param name="refreshedCredentials">The credentials a refresh produced.</param>
+    /// <param name="expectedGeneration">The <see cref="CredentialGeneration"/> read when the refresh started.</param>
+    /// <returns><see langword="true"/> if the credentials were published, otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A refresh spans a call to the authorization server, and a logout or a login can complete whilst it is in flight.
+    ///   Publishing unconditionally would let a refresh which started before a logout re-establish the session the logout
+    ///   ended, with tokens the revocation never saw, or overwrite the credentials a login had just installed, leaving the
+    ///   agent running as the previous account.
+    /// </para>
+    /// <para>
+    ///   The check and the write happen under the same lock the generation is incremented under, so a refresh cannot
+    ///   observe an unchanged generation and then publish over a change made immediately afterwards.
+    /// </para>
+    /// </remarks>
+    private bool TryPublishRefreshedCredentials(AccessCredentials refreshedCredentials, long expectedGeneration)
+    {
+        ArgumentNullException.ThrowIfNull(refreshedCredentials);
+
+        lock (_credentialLock)
+        {
+            if (_atProtoAgentDisposed || _credentialGeneration != expectedGeneration)
+            {
+                return false;
+            }
+
+            _credentials = refreshedCredentials;
+            _credentialGeneration++;
+            Service = refreshedCredentials.Service;
+
+            return true;
         }
     }
 
@@ -1116,6 +1179,28 @@ public partial class AtProtoAgent
     /// <exception cref="CredentialException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
     /// <exception cref="LogoutException">Thrown when the DeleteSession API call fails.</exception>
     /// <exception cref="OAuthException">Thrown if the OAuth configuration on the agent is not specified or is not configured on the agent options.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The logout runs whilst the refresh semaphore is held, so a credential refresh cannot revoke one set of tokens and
+    ///   then have another set published over the cleared credentials, leaving the agent authenticated against a session the
+    ///   logout ended. A refresh which is already in flight when the logout starts finds the credentials have moved on and
+    ///   discards what it was issued.
+    /// </para>
+    /// </remarks>
+    public async Task Logout(CancellationToken cancellationToken = default)
+    {
+        await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await InternalLogout(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _credentialRefreshSemaphore.Release();
+        }
+    }
+
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -1123,7 +1208,7 @@ public partial class AtProtoAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public async Task Logout(CancellationToken cancellationToken = default)
+    private async Task InternalLogout(CancellationToken cancellationToken = default)
     {
         // The agent credentials are read once. Logout spans several awaits, and re-reading the property would let a
         // concurrent logout, or a background refresh landing part way through, revoke one credential having checked
@@ -1533,6 +1618,19 @@ public partial class AtProtoAgent
         return validityPeriod;
     }
 
+    /// <summary>
+    /// Publishes <paramref name="accessCredentials"/> as the agent credentials and starts background refresh for them.
+    /// </summary>
+    /// <param name="accessCredentials">The credentials the agent has just been authenticated with.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, or any of the properties it is read for, is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The credentials are published whilst the refresh semaphore is held, so a refresh of the previous credentials
+    ///   cannot land between them being installed and the refresh timer being started for them. A refresh which is
+    ///   already past that point when this runs is discarded when it finds the credentials have moved on.
+    /// </para>
+    /// </remarks>
     private async Task InternalLogin(AccessCredentials accessCredentials)
     {
         ArgumentNullException.ThrowIfNull(accessCredentials);
@@ -1541,17 +1639,25 @@ public partial class AtProtoAgent
         ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
         ArgumentNullException.ThrowIfNull(accessCredentials.Service);
 
-        Service = accessCredentials.Service;
-        Credentials = accessCredentials;
+        await _credentialRefreshSemaphore.WaitAsync().ConfigureAwait(false);
 
-        StartTokenRefreshTimer();
+        try
+        {
+            Service = accessCredentials.Service;
+            Credentials = accessCredentials;
 
+            StartTokenRefreshTimer();
+        }
+        finally
+        {
+            _credentialRefreshSemaphore.Release();
+        }
+
+        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
         OnAuthenticated(new AuthenticatedEventArgs(
             accessCredentials.Did,
             accessCredentials.Service,
             accessCredentials));
-
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     internal async Task<bool> RefreshOAuthIssuedCredentials(DPoPRefreshCredential refreshCredential, Did? expectedDid = null, CancellationToken cancellationToken = default)
@@ -1581,6 +1687,8 @@ public partial class AtProtoAgent
         bool succeeded = false;
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        long credentialGeneration = CredentialGeneration;
 
         try
         {
@@ -1648,7 +1756,12 @@ public partial class AtProtoAgent
 
                 Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                Credentials = refreshedCredentials;
+                if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration))
+                {
+                    Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                    return false;
+                }
 
                 StartTokenRefreshTimer();
                 succeeded = true;
@@ -1712,6 +1825,8 @@ public partial class AtProtoAgent
         bool succeeded = false;
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        long credentialGeneration = CredentialGeneration;
 
         try
         {
@@ -1784,7 +1899,12 @@ public partial class AtProtoAgent
 
                 Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                Credentials = refreshedCredentials;
+                if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration))
+                {
+                    Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                    return false;
+                }
 
                 StartTokenRefreshTimer();
                 succeeded = true;
@@ -1958,6 +2078,7 @@ public partial class AtProtoAgent
         lock (_credentialLock)
         {
             _credentials = null;
+            _credentialGeneration++;
         }
     }
 
@@ -2198,8 +2319,9 @@ public partial class AtProtoAgent
 
         if (validationResult.IsValid)
         {
-            // Validate the subject matches the expected DID.
-            isValid = string.Equals((string?)validationResult.Claims.FirstOrDefault(c => c.Key == "sub").Value, did.ToString(), StringComparison.OrdinalIgnoreCase);
+            // Validate the subject matches the expected DID. DIDs are case sensitive, so the comparison is ordinal
+            // rather than case insensitive, which would accept a token issued for a different identifier.
+            isValid = string.Equals((string?)validationResult.Claims.FirstOrDefault(c => c.Key == "sub").Value, did.ToString(), StringComparison.Ordinal);
         }
 
         return isValid;

@@ -112,7 +112,7 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// <returns><see langword="true"/> if the <see cref="DPoPAccessCredentials"/> was successfully created; otherwise, <see langword="false"/>.</returns>
     public static bool TryCreate(ClaimsPrincipal principal, out DPoPAccessCredentials? credentials)
     {
-        if (principal == null || principal.Identity == null || principal.Identities.Count() != 1)
+        if (principal is null || principal.Identity is null || principal.Identities.Count() != 1)
         {
             credentials = null;
             return false;
@@ -139,9 +139,6 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// <param name="claimsIdentity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
     /// <param name="credentials">When this method returns, contains the <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="claimsIdentity"/>, or <see langword="null"/> if the creation failed.</param>
     /// <returns><see langword="true"/> if the <see cref="DPoPAccessCredentials"/> was successfully created; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when the subject of the access token claim in <paramref name="claimsIdentity"/> is not a valid <see cref="AtProto.Did"/>.
-    /// </exception>
     /// <remarks>
     /// <para>
     ///   The <see cref="AtProtoClaims.Did"/> claim is required to agree with the subject of the access token the credentials
@@ -151,6 +148,12 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// <para>
     ///   The service <see cref="Uri"/> is taken from the issuer of the did claim and is required to be an absolute http or
     ///   https <see cref="Uri"/>, so that a hostile issuer cannot direct requests at another scheme.
+    /// </para>
+    /// <para>
+    ///   An access token claim which cannot be parsed as a JWT, or whose subject is not a DID, is reported by returning
+    ///   <see langword="false"/> rather than by throwing. The claims come from whatever persisted the identity, so a
+    ///   corrupted or tampered with cookie or identity store entry must read as an identity which cannot be used rather
+    ///   than as an exception out of the middleware which reads it.
     /// </para>
     /// </remarks>
     public static bool TryCreate(ClaimsIdentity claimsIdentity, out DPoPAccessCredentials? credentials)
@@ -203,12 +206,24 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
             return false;
         }
 
-        DPoPAccessCredentials createdCredentials = new(
-            service: service,
-            accessJwt: accessJwt,
-            refreshToken: refreshToken,
-            dPoPProofKey: dPoPProofKey,
-            dPoPNonce: dPoPNonce);
+        DPoPAccessCredentials createdCredentials;
+
+        try
+        {
+            createdCredentials = new(
+                service: service,
+                accessJwt: accessJwt,
+                refreshToken: refreshToken,
+                dPoPProofKey: dPoPProofKey,
+                dPoPNonce: dPoPNonce);
+        }
+        catch (ArgumentException)
+        {
+            // The claim values are whatever persisted the identity wrote, so a value the credential constructor rejects
+            // is an identity which cannot be used rather than a programming error on the part of the caller.
+            credentials = null;
+            return false;
+        }
 
         if (createdCredentials.Did != did)
         {

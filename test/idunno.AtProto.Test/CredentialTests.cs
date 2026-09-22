@@ -130,18 +130,60 @@ public class CredentialTests
     private static ClaimsIdentity CreateClaimsIdentity(
         string didClaim = FirstDid,
         string? accessTokenSubject = FirstDid,
-        string issuer = "https://service.test/")
+        string issuer = "https://service.test/",
+        string? accessToken = null,
+        string dPoPProofKey = "proof",
+        string dPoPNonce = "nonce")
     {
         List<Claim> claims =
         [
             new Claim(AtProtoClaims.Did, didClaim, ClaimValueTypes.String, issuer),
-            new Claim(AtProtoClaims.AccessToken, CreateJwt(subject: accessTokenSubject), ClaimValueTypes.String, issuer),
+            new Claim(AtProtoClaims.AccessToken, accessToken ?? CreateJwt(subject: accessTokenSubject), ClaimValueTypes.String, issuer),
             new Claim(AtProtoClaims.RefreshToken, "refresh", ClaimValueTypes.String, issuer),
-            new Claim(AtProtoClaims.DPoPProof, "proof", ClaimValueTypes.String, issuer),
-            new Claim(AtProtoClaims.DPoPNonce, "nonce", ClaimValueTypes.String, issuer),
+            new Claim(AtProtoClaims.DPoPProof, dPoPProofKey, ClaimValueTypes.String, issuer),
+            new Claim(AtProtoClaims.DPoPNonce, dPoPNonce, ClaimValueTypes.String, issuer),
         ];
 
         return new ClaimsIdentity(claims, "Test");
+    }
+
+    [Theory]
+    [InlineData("notAJwt")]
+    [InlineData("one.two")]
+    [InlineData("one.two.three.four.five.six")]
+    public void AClaimsIdentityWhoseAccessTokenClaimIsNotAJwtIsRejectedRatherThanThrowing(string accessToken)
+    {
+        Assert.False(
+            AtProtoCredential.TryCreate(CreateClaimsIdentity(accessToken: accessToken), out DPoPAccessCredentials? credentials));
+
+        Assert.Null(credentials);
+    }
+
+    [Theory]
+    [InlineData("notADid")]
+    [InlineData("did:")]
+    [InlineData("https://service.test/")]
+    public void AClaimsIdentityWhoseAccessTokenSubjectIsNotADidIsRejectedRatherThanThrowing(string subject)
+    {
+        Assert.False(
+            AtProtoCredential.TryCreate(CreateClaimsIdentity(accessTokenSubject: subject), out DPoPAccessCredentials? credentials));
+
+        Assert.Null(credentials);
+    }
+
+    [Theory]
+    [InlineData("", "nonce")]
+    [InlineData("   ", "nonce")]
+    [InlineData("proof", "")]
+    [InlineData("proof", "   ")]
+    public void AClaimsIdentityWhoseDPoPClaimsAreEmptyOrWhitespaceIsRejectedRatherThanThrowing(string dPoPProofKey, string dPoPNonce)
+    {
+        Assert.False(
+            AtProtoCredential.TryCreate(
+                CreateClaimsIdentity(dPoPProofKey: dPoPProofKey, dPoPNonce: dPoPNonce),
+                out DPoPAccessCredentials? credentials));
+
+        Assert.Null(credentials);
     }
 
     [Fact]

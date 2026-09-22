@@ -211,6 +211,74 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task CredentialsReplacedWhilstARefreshIsInFlightAreNotOverwrittenByThatRefresh()
+    {
+        RefreshTestServer refreshTestServer = new(this) { GateRefresh = true };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials originalCredentials = agent.Credentials!;
+
+            Task<bool> refresh = Task.Run(
+                () => agent.RefreshCredentials(originalCredentials, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+
+            await refreshTestServer.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            AccessCredentials replacementCredentials = new(
+                new Uri($"https://{DomainName}"),
+                AuthenticationType.UsernamePassword,
+                JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}"),
+                "replacementRefreshToken");
+
+            agent.Credentials = replacementCredentials;
+
+            refreshTestServer.ReleaseRefresh.TrySetResult();
+
+            // The refresh started against credentials which have since been replaced, so what it was issued is discarded
+            // rather than published over whatever replaced them.
+            Assert.False(await refresh);
+            Assert.Same(replacementCredentials, agent.Credentials);
+        }
+    }
+
+    [Fact]
+    public async Task ALogoutDoesNotRunWhilstARefreshIsInFlight()
+    {
+        RefreshTestServer refreshTestServer = new(this) { GateRefresh = true };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            Task<bool> refresh = Task.Run(
+                () => agent.RefreshCredentials(agent.Credentials!, TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+
+            await refreshTestServer.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            Task logout = Task.Run(() => agent.Logout(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+
+            Task firstToComplete = await Task.WhenAny(logout, Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken));
+
+            // A logout which revoked the tokens whilst a refresh was mid exchange could have the refreshed credentials
+            // published over the cleared ones, leaving the agent authenticated against a session the logout ended.
+            Assert.NotSame(logout, firstToComplete);
+
+            refreshTestServer.ReleaseRefresh.TrySetResult();
+
+            Assert.True(await refresh);
+
+            await logout;
+
+            Assert.False(agent.IsAuthenticated);
+            Assert.Null(agent.Credentials);
+        }
+    }
+
+    [Fact]
     public async Task AFailedUserInitiatedRefreshRestartsTheRefreshTimerSoTheRefreshIsRetried()
     {
         RefreshTestServer refreshTestServer = new(this);
@@ -530,6 +598,18 @@ public class CredentialRefreshTests
 
         internal bool IssueUnvalidatableAccessJwtOnRefresh { get; set; }
 
+        internal bool GateRefresh { get; set; }
+
+        /// <summary>
+        /// Completed once a refresh has reached the server and is waiting on <see cref="ReleaseRefresh"/>.
+        /// </summary>
+        internal TaskCompletionSource RefreshEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>
+        /// Completing this lets a gated refresh finish, so a test can do work whilst the refresh is in flight.
+        /// </summary>
+        internal TaskCompletionSource ReleaseRefresh { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         internal TimeSpan AccessJwtLifetime { get; set; } = TimeSpan.FromMinutes(15);
 
         internal int RefreshCount => Volatile.Read(ref _refreshCount);
@@ -566,6 +646,12 @@ public class CredentialRefreshTests
             }
             else if (request.Path == "/xrpc/com.atproto.server.refreshSession" && request.Method == HttpMethod.Post.Method)
             {
+                if (GateRefresh)
+                {
+                    RefreshEntered.TrySetResult();
+                    await ReleaseRefresh.Task.ConfigureAwait(false);
+                }
+
                 if (FailRefresh)
                 {
                     Interlocked.Increment(ref _refreshAttemptCount);

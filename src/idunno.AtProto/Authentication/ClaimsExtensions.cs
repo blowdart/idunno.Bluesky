@@ -23,12 +23,12 @@ public static class ClaimsExtensions
         {
             get
             {
-                if (principal == null)
+                if (principal is null)
                 {
                     return null;
                 }
 
-                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == AtProtoClaims.Did);
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal));
                 if (claim is null)
                 {
                     return null;

@@ -117,6 +117,9 @@ internal static partial class Logger
     [LoggerMessage(62, LogLevel.Error, "Refresh token #{tokenHash} was exchanged but the agent credentials did not change, so the exchange did not complete")]
     internal static partial void RefreshTokenExchangedButCredentialsUnchanged(ILogger logger, string tokenHash);
 
+    [LoggerMessage(1122, LogLevel.Warning, "Credentials refreshed for {did} on {service} were discarded because the agent credentials were replaced whilst the refresh was in flight")]
+    internal static partial void RefreshedCredentialsDiscardedAsAgentCredentialsChanged(ILogger logger, Did did, Uri service);
+
     [LoggerMessage(49, LogLevel.Error, "Background token refresh failed, the refresh timer has been restarted to retry in {retryIn}ms")]
     internal static partial void BackgroundTokenRefreshFailed(ILogger logger, double retryIn, Exception? ex);
 

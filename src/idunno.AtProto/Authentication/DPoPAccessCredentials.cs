@@ -39,8 +39,8 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
-        ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-        ArgumentException.ThrowIfNullOrEmpty(dPoPNonce);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPProofKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPNonce);
 
         _dPoPProofKey = dPoPProofKey;
         _dPoPNonce = dPoPNonce;
@@ -73,7 +73,7 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     }
 
     /// <summary>
-    /// Gets a string representation of the DPoP nonce to use when signing requests.
+    /// Gets or sets a string representation of the DPoP nonce to use when signing requests.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
     public string DPoPNonce
