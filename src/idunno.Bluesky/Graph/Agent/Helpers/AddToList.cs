@@ -20,7 +20,8 @@ public partial class BlueskyAgent
     /// <param name="did">The <see cref="Did"/> of the actor to add to the list.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, its collection property, or <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> AddToList(
         AtUri uri,
@@ -28,6 +29,9 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(uri.Collection);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.List);
+
         ArgumentNullException.ThrowIfNull(did);
 
         if (!IsAuthenticated)
@@ -50,7 +54,8 @@ public partial class BlueskyAgent
     /// <param name="handle">The <see cref="Did"/> of the actor to add to the list.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, its collection property, or <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -65,6 +70,9 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(uri.Collection);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.List);
+
         ArgumentNullException.ThrowIfNull(handle);
 
         if (!IsAuthenticated)

@@ -20,7 +20,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -91,7 +91,7 @@ public partial class BlueskyAgent
     /// <param name="list">The <see cref="AtProtoRepositoryRecord{TRecord}"/> referenced <see cref="List"/> to update.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="list"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="list"/> Uri does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
         AtProtoRepositoryRecord<List> list)
@@ -121,7 +121,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="list"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="list"/> Uri does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
         AtProtoRepositoryRecord<List> list,
@@ -152,7 +152,7 @@ public partial class BlueskyAgent
     /// <param name="list">The <see cref="List"/> to update the record with</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",

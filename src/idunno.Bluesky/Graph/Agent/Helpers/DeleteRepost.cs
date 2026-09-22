@@ -61,7 +61,7 @@ public partial class BlueskyAgent
                     null,
                     statusCode: HttpStatusCode.BadRequest,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
+                    atErrorDetail: new AtErrorDetail("RecordNotFound", $"Could not locate record {uri}."),
                     rateLimit: postViewResult.RateLimit);
             }
             else if (postViewResult.Result.Viewer is null ||
@@ -71,12 +71,12 @@ public partial class BlueskyAgent
                     null,
                     statusCode: HttpStatusCode.NotFound,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("RepostNotFound", "No repost record for the was found in {uri}."),
+                    atErrorDetail: new AtErrorDetail("RepostNotFound", $"No repost record was found in {uri}."),
                     rateLimit: postViewResult.RateLimit);
             }
             else if (postViewResult.Result.Viewer.Repost.RecordKey is null)
             {
-                throw new BlueskyException("Repost RecordKey is null in post view result for uri:{uri}");
+                throw new BlueskyException($"Repost RecordKey is null in post view result for uri {uri}.");
             }
 
             rKey = postViewResult.Result.Viewer.Repost.RecordKey;

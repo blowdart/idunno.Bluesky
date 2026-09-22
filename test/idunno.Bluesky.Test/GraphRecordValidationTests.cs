@@ -178,4 +178,24 @@ public class GraphRecordValidationTests
         Assert.Equal("description", starterPack.Description);
         Assert.Equal(s_list, starterPack.List);
     }
+
+    /// <summary>
+    /// <see cref="ListPurpose.Unknown"/> only exists to carry a purpose this library does not recognize, so a list
+    /// must not be created with it. Without this guard it is the default value of the enum and would fail later,
+    /// when the record is serialized.
+    /// </summary>
+    [Fact]
+    public void AListCannotBeCreatedWithAnUnknownPurpose()
+    {
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
+            () => new List("name", ListPurpose.Unknown, description: null));
+
+        Assert.Equal("purpose", exception.ParamName);
+    }
+
+    [Fact]
+    public void AListCannotBeCreatedWithTheDefaultPurpose()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new List("name", default, description: null));
+    }
 }

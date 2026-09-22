@@ -52,7 +52,7 @@ public partial class BlueskyAgent
                 null,
                 statusCode: HttpStatusCode.BadRequest,
                 httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
+                atErrorDetail: new AtErrorDetail("RecordNotFound", $"Could not locate record {uri}."),
                 rateLimit: postViewResult.RateLimit);
         }
         else if (postViewResult.Result.Viewer is null ||
@@ -62,7 +62,7 @@ public partial class BlueskyAgent
                 null,
                 statusCode: HttpStatusCode.NotFound,
                 httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                atErrorDetail: new AtErrorDetail("LikeNotFound", "No like record was found in {uri}."),
+                atErrorDetail: new AtErrorDetail("LikeNotFound", $"No like record was found in {uri}."),
                 rateLimit: postViewResult.RateLimit);
         }
 

@@ -22,23 +22,21 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="strongReference"/> does not point to a post.</exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     /// <remarks>
-    /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+    /// <para>You should prefer to use <see cref="Like(FeedViewPost, CancellationToken)"/> as this will ensure likes of reposted posts create the right notifications.</para>
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
+        ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
-        ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
-
         Feed.Like likeRecord = new(strongReference);
 
-        // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
         return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
     }
 
@@ -53,7 +51,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     /// <remarks>
-    /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+    /// <para>You should prefer to use <see cref="Like(FeedViewPost, CancellationToken)"/> as this will ensure likes of reposted posts create the right notifications.</para>
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
     {

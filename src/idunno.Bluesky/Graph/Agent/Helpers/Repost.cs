@@ -30,7 +30,7 @@ public partial class BlueskyAgent
 
         if (post.Uri.Collection != CollectionNsid.Post)
         {
-            throw new ArgumentException("post uri does not point to an {RecordCollections.Post} record.", nameof(post));
+            throw new ArgumentException($"post uri does not point to an {CollectionNsid.Post} record.", nameof(post));
         }
 
         if (!IsAuthenticated)

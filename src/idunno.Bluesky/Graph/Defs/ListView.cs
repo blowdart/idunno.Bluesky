@@ -81,7 +81,7 @@ public sealed record ListView : ListViewBasic
             }
             else
             {
-                return '{' + $"{Name} ({Uri}" + "}";
+                return '{' + $"{Name} ({Uri})" + "}";
             }
         }
     }
