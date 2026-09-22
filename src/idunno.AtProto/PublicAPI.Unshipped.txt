@@ -323,3 +323,4 @@ virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.
 virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual idunno.AtProto.Jetstream.AtProtoJetstream.DisposeAsyncCore() -> System.Threading.Tasks.ValueTask
 virtual idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Equals(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>? other) -> bool
+idunno.AtProto.AccountStatus.Unknown = 5 -> idunno.AtProto.AccountStatus

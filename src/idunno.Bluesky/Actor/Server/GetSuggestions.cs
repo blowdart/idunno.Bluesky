@@ -37,7 +37,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetSuggestions(
+    public static async Task<AtProtoHttpResult<SuggestedProfiles>> GetSuggestions(
         int? limit,
         string? cursor,
         Uri service,
@@ -80,8 +80,11 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                new PagedViewReadOnlyCollection<ProfileView>(WithoutNullEntries(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory).AsReadOnly(), response.Result.Cursor),
+            return new AtProtoHttpResult<SuggestedProfiles>(
+                new SuggestedProfiles(
+                    WithoutNullEntries(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory).AsReadOnly(),
+                    response.Result.Cursor,
+                    response.Result.RecIdStr),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -89,7 +92,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
+            return new AtProtoHttpResult<SuggestedProfiles>(
                 default,
                 response.StatusCode,
                 response.HttpResponseHeaders,

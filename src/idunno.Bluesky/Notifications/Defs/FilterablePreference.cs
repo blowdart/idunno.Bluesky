@@ -50,7 +50,7 @@ public sealed record FilterablePreference
 /// <summary>
 /// The type of users that should be included in a filterable notifications
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<LimitTo>))]
+[JsonConverter(typeof(LimitToConverter))]
 public enum LimitTo
 {
     /// <summary>
@@ -63,5 +63,15 @@ public enum LimitTo
     /// Only accounts you follow
     /// </summary>
     [JsonStringEnumMemberName("follows")]
-    Follows
+    Follows,
+
+    /// <summary>
+    /// The value is not one this library recognizes.
+    /// </summary>
+    /// <remarks>
+    /// <para>The set of values is decided by the service, not by this library, so a value added upstream is
+    /// surfaced as <see cref="Unknown"/> rather than causing the preferences to fail to deserialize. It cannot
+    /// be sent to the service.</para>
+    /// </remarks>
+    Unknown
 }

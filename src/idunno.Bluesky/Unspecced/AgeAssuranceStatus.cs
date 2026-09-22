@@ -8,7 +8,7 @@ namespace idunno.Bluesky.Unspecced;
 /// <summary>
 /// An accounts age assurance status.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<AgeAssuranceStatus>))]
+[JsonConverter(typeof(AgeAssuranceStatusConverter))]
 public enum AgeAssuranceStatus
 {
     /// <summary>
