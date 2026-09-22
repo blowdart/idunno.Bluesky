@@ -702,6 +702,14 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.DeleteLike()` now works. The `AtUri` overload required a like record uri, then looked that uri up as a post, so it could
+  never find the like to delete; the `StrongReference` overload passed a post uri into it and always threw an `ArgumentOutOfRangeException`.
+  Both overloads now accept either a post uri or a like record uri and resolve the like accordingly, matching `DeleteRepost()`. A uri which is
+  neither now throws an `ArgumentException` naming both accepted collections rather than an `ArgumentOutOfRangeException`.
+* The notification and chat preference responses, and the notification response itself, now reject a response which omits a property the
+  lexicon declares required, rather than silently deserializing it as null. A missing `preferences` previously surfaced as a failed result
+  carrying an OK status code and no error detail, and a notification missing its `uri`, `cid`, `author`, `reason` or `record` was handed to
+  the caller with those properties null.
 * `PostBuilder.Equals()` no longer throws an `InvalidOperationException` when the builder it is comparing against is being mutated
   on another thread. It took its own lock but read the other builder's images, gallery images and gate rules without taking that
   builder's lock. Both builders are now snapshotted under their own locks and compared outside them.
