@@ -31,14 +31,34 @@ public sealed record AspectRatio
     /// <summary>
     /// Gets the width of this instance 
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than 1.</exception>
     [JsonInclude]
     [JsonRequired]
-    public int Width { get; init; }
+    public int Width
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets the height of this instance 
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than 1.</exception>
     [JsonInclude]
     [JsonRequired]
-    public int Height { get; init; }
+    public int Height
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+            field = value;
+        }
+    }
 }

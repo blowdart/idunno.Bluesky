@@ -23,7 +23,7 @@ public partial class BlueskyAgent
     /// <param name="aspectRatio">The image's aspect ratio.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> or <paramref name="altText"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="imageAsBytes"/> is empty.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
@@ -37,6 +37,7 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(imageAsBytes);
         ArgumentOutOfRangeException.ThrowIfZero(imageAsBytes.Length);
         ArgumentException.ThrowIfNullOrEmpty(mimeType);
+        ArgumentNullException.ThrowIfNull(altText);
 
         if (!IsAuthenticated)
         {

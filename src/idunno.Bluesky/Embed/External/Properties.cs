@@ -109,7 +109,11 @@ public record Properties
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyCollection<StrongReference>? AssociatedRefs { get; set; }
+    public IReadOnlyCollection<StrongReference>? AssociatedRefs
+    {
+        get;
+        set => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// Determines whether the specified <see cref="Properties"/> is equal to the current instance.

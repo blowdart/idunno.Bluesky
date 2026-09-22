@@ -21,9 +21,13 @@ public record EmbeddedVideoView : EmbeddedView
     /// <param name="altText">The alt text description of the video, for accessibility.</param>
     /// <param name="presentation">An optional hint to the client about how to present the video.</param>
     /// <param name="aspectRatio">An optional aspect ratio for the video.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="cid"/> or <paramref name="playlistUri"/> is <see langword="null" />.</exception>
     [JsonConstructor]
-    internal EmbeddedVideoView(Cid cid, Uri playlistUri, Uri thumbnailUri, string altText, AspectRatio? aspectRatio, string? presentation)
+    internal EmbeddedVideoView(Cid cid, Uri playlistUri, Uri? thumbnailUri, string? altText, AspectRatio? aspectRatio, string? presentation)
     {
+        ArgumentNullException.ThrowIfNull(cid);
+        ArgumentNullException.ThrowIfNull(playlistUri);
+
         Cid = cid;
         PlaylistUri = playlistUri;
         ThumbnailUri = thumbnailUri;
@@ -48,18 +52,18 @@ public record EmbeddedVideoView : EmbeddedView
     public Uri PlaylistUri { get; init; }
 
     /// <summary>
-    /// Gets the <see cref="Uri"/> for the video thumbnail.
+    /// Gets the <see cref="Uri"/> for the video thumbnail, if the service provided one.
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("thumbnail")]
-    public Uri ThumbnailUri { get; init; }
+    public Uri? ThumbnailUri { get; init; }
 
     /// <summary>
-    /// Gets the alt text description of the video, for accessibility.
+    /// Gets the alt text description of the video, for accessibility, if the service provided one.
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("alt")]
-    public string AltText { get; init; }
+    public string? AltText { get; init; }
 
     /// <summary>
     /// Gets an optional aspect ratio for the video.

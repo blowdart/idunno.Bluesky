@@ -18,7 +18,10 @@ public record ViewImage
     /// <param name="altText">Alt text description of the image, for accessibility.</param>
     /// <param name="aspectRatio">The aspect ratio of the image.</param>
     /// <exception cref="ArgumentNullException">Thrown when any of the parameters are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="thumbnail" /> or <paramref name="fullSize"/> are not absolute URIs.</exception>
+    /// <remarks>
+    /// <para>The lexicon declares <paramref name="thumbnail"/> and <paramref name="fullSize"/> as <c>uri</c> formatted strings,
+    /// and does not require them to be absolute, so no absolute URI validation is performed.</para>
+    /// </remarks>
     [JsonConstructor]
     public ViewImage(Uri thumbnail, Uri fullSize, string altText, AspectRatio aspectRatio)
     {
@@ -26,16 +29,6 @@ public record ViewImage
         ArgumentNullException.ThrowIfNull(fullSize);
         ArgumentNullException.ThrowIfNull(altText);
         ArgumentNullException.ThrowIfNull(aspectRatio);
-
-        if (!thumbnail.IsAbsoluteUri)
-        {
-            throw new ArgumentException("Uri must be absolute.", nameof(thumbnail));
-        }
-
-        if (!fullSize.IsAbsoluteUri)
-        {
-            throw new ArgumentException("Uri must be absolute.", nameof(fullSize));
-        }
 
         Thumbnail = thumbnail;
         FullSize = fullSize;

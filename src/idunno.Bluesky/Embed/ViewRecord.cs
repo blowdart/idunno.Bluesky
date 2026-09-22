@@ -35,6 +35,7 @@ public sealed record ViewRecord : View
     /// <param name="quoteCount">The number of quotes this post has.</param>
     /// <param name="embeds">The views over any embeds the record has.</param>
     /// <param name="indexedAt">The <see cref="DateTimeOffset"/> the record was indexed on.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="cid"/>, <paramref name="author"/> or <paramref name="value"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     public ViewRecord(
         AtUri uri,
@@ -49,17 +50,21 @@ public sealed record ViewRecord : View
         IReadOnlyCollection<EmbeddedView>? embeds,
         DateTimeOffset indexedAt)
     {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(cid);
+        ArgumentNullException.ThrowIfNull(author);
+        ArgumentNullException.ThrowIfNull(value);
+
         Uri = uri;
         Cid = cid;
-        StrongReference = new StrongReference(uri, cid);
 
         Author = author;
-        Labels = labels ?? new List<Label>().AsReadOnly();
+        Labels = labels;
         ReplyCount = replyCount;
         RepostCount = repostCount;
         LikeCount = likeCount;
         QuoteCount = quoteCount;
-        Embeds = embeds ?? new List<EmbeddedView>().AsReadOnly();
+        Embeds = embeds;
         IndexedAt = indexedAt;
 
         Value = value;
@@ -82,8 +87,11 @@ public sealed record ViewRecord : View
     /// <summary>
     /// Gets a <see cref="StrongReference"/> for the record.
     /// </summary>
+    /// <remarks>
+    /// <para>The reference is derived from <see cref="Uri"/> and <see cref="Cid"/>, so it stays correct when either is changed by a <see langword="with" /> expression.</para>
+    /// </remarks>
     [JsonIgnore]
-    public StrongReference StrongReference { get; }
+    public StrongReference StrongReference => new(Uri, Cid);
 
     /// <summary>
     /// Gets the record author.
@@ -95,13 +103,20 @@ public sealed record ViewRecord : View
     /// <summary>
     /// Gets the record itself.
     /// </summary>
+    [JsonInclude]
+    [JsonRequired]
     public BlueskyRecord Value { get; init; }
 
     /// <summary>
     /// Gets any labels applied to the record.
     /// </summary>
+    [NotNull]
     [JsonInclude]
-    public IReadOnlyCollection<Label>? Labels { get; init; }
+    public IReadOnlyCollection<Label>? Labels
+    {
+        get;
+        init => field = value is null ? [] : [.. value];
+    }
 
     /// <summary>
     /// Gets the number of replies to this post.
@@ -132,7 +147,11 @@ public sealed record ViewRecord : View
     /// </summary>
     [NotNull]
     [JsonInclude]
-    public IReadOnlyCollection<EmbeddedView>? Embeds { get; init; }
+    public IReadOnlyCollection<EmbeddedView>? Embeds
+    {
+        get;
+        init => field = value is null ? [] : [.. value];
+    }
 
     /// <summary>
     /// Gets the <see cref="DateTimeOffset"/> the record was indexed on.

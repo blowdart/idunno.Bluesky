@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -19,12 +20,8 @@ public static partial class BlueskyServer
 
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested <paramref name="url"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
-    /// <param name="url">The canonical web URL the embed represents (typically the URL the user pasted into the composer). Used as the returned view's `uri`. May be used for validation in the future.</param>
+    /// <param name="url">The canonical web URL the embed represents (typically the URL the user pasted into the composer). Used as the returned view's uri. May be used for validation in the future.</param>
     /// <param name="uris">An array of AT-URIs to resolve into the data needed for the embed.</param>
     /// <param name="service">The service URI to use for the request.</param>
     /// <param name="accessCredentials">Optional access credentials for authentication.</param>
@@ -36,7 +33,18 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uris"/> has &lt;1 or &gt;4 elements.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    ///   Thrown when <paramref name="uris"/> is empty or has more than <see cref="Maximum.EmbedExternalViewUris"/> elements.
+    /// </exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The associated references the service echoes back are the ones supplied in <paramref name="uris"/>,
+    /// and the raw associated records are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested <paramref name="url"/>. That case is reported as an unsuccessful result whose
+    /// <see cref="AtProtoHttpResult{T}.StatusCode"/> is <see cref="HttpStatusCode.NoContent"/> and whose
+    /// <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall back to their own link card rendering in that
+    /// case and skip writing strong references to the post.</para>
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -59,7 +67,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(url);
         ArgumentNullException.ThrowIfNull(uris);
         ArgumentOutOfRangeException.ThrowIfLessThan(uris.Length, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Length, 4);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Length, Maximum.EmbedExternalViewUris);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
@@ -81,6 +89,18 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
+            if (response.Result.View is null)
+            {
+                // The service returned an empty response, which the lexicon documents as meaning nothing resolved, or the resolved records did not
+                // back the requested url. Report that as NoContent so it can be told apart from a failure.
+                return new AtProtoHttpResult<EmbeddedExternalView>(
+                    null,
+                    statusCode: HttpStatusCode.NoContent,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+
             return new AtProtoHttpResult<EmbeddedExternalView>(
                 response.Result.View,
                 statusCode: response.StatusCode,

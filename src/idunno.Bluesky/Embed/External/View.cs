@@ -33,9 +33,12 @@ public record View
     /// <param name="source">The source view for the external link, if available</param>
     /// <param name="associatedRefs">The optional associated references for the external link.</param>
     /// <param name="associatedProfiles"> Profiles of the owners of the Atmosphere records that backed this view, if available.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is <see langword="null" /> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> or <paramref name="description"/> is <see langword="null" />.</exception>
     [JsonConstructor]
+    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create records with illegal URIs, so a string is used to accommodate them.")]
     internal View(
-        Uri uri,
+        string uri,
         string title,
         string description,
         Uri? thumbnailUri,
@@ -47,6 +50,10 @@ public record View
         IReadOnlyCollection<StrongReference>? associatedRefs,
         IReadOnlyCollection<ProfileViewBasic>? associatedProfiles) : base()
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(uri);
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(description);
+
         Uri = uri;
         Title = title;
         Description = description;
@@ -61,11 +68,15 @@ public record View
     }
 
     /// <summary>
-    /// Gets the external <see cref="Uri"/>.
+    /// Gets the external uri, as a string.
     /// </summary>
+    /// <remarks>
+    /// <para>This property is a string to accommodate illegal URIs that the Bluesky web app can create, matching <see cref="Properties.Uri"/>. Validate the URI before using it.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public Uri Uri { get; init; }
+    [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "The Bluesky web app can create records with illegal URIs, so this property is a string to accommodate those cases.")]
+    public string Uri { get; init; }
 
     /// <summary>
     /// The title for the external link.
@@ -110,7 +121,11 @@ public record View
     /// Gets the labels for the source, if any.
     /// </summary>
     [JsonInclude]
-    public IReadOnlyCollection<Label>? Labels { get; init; }
+    public IReadOnlyCollection<Label>? Labels
+    {
+        get;
+        init => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// Gets the view over the source of the external embed, if available.
@@ -122,13 +137,21 @@ public record View
     /// Gets the <see cref="AtUri"/> of the Atmosphere records that backed this view, if any.
     /// </summary>
     [JsonInclude]
-    public IReadOnlyCollection<StrongReference>? AssociatedRefs { get; init; }
+    public IReadOnlyCollection<StrongReference>? AssociatedRefs
+    {
+        get;
+        init => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// Gets the <see cref="ProfileViewBasic"/> of the owners of the Atmosphere records that backed this view, if any.
     /// </summary>
     [JsonInclude]
-    public IReadOnlyCollection<ProfileViewBasic>? AssociatedProfiles { get; init; }
+    public IReadOnlyCollection<ProfileViewBasic>? AssociatedProfiles
+    {
+        get;
+        init => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// A list of keys and element data that do not map to any strongly typed properties.

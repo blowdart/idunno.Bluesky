@@ -523,7 +523,24 @@ public static class Maximum
     /// <summary>
     /// The maximum number of items in a gallery.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the client authoring limit documented by
+    /// <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json">app.bsky.embed.gallery</see>,
+    /// not the schema limit, which is twenty. Galleries read from the service are not held to this limit.
+    /// </para>
+    /// </remarks>
     public static readonly int GalleryItems = 10;
+
+    /// <summary>
+    /// The maximum number of AT URIs which can be resolved in a single call to app.bsky.embed.getEmbedExternalView.
+    /// </summary>
+    public static readonly int EmbedExternalViewUris = 4;
+
+    /// <summary>
+    /// The maximum number of captions which can be attached to a video embed.
+    /// </summary>
+    public static readonly int EmbedVideoCaptions = 20;
 
     /// <summary>
     /// The minimum length of the declared MIME type of a video upload, in UTF-8 bytes.
@@ -866,12 +883,37 @@ public static class EmbeddedViewTypeDiscriminators
     /// <summary>
     /// The json type discriminator for a view over a record that is blocked
     /// </summary>
-    public const string EmbedViewBlocked = "app.bsky.embed.record#Blocked";
+    public const string EmbedViewBlocked = "app.bsky.embed.record#viewBlocked";
 
     /// <summary>
     /// The json type discriminator for a view over a record that is detached
     /// </summary>
-    public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
+    public const string EmbedViewDetached = "app.bsky.embed.record#viewDetached";
+
+    /// <summary>
+    /// The json type discriminator for a view over embedded images
+    /// </summary>
+    public const string ImagesView = "app.bsky.embed.images#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded external link
+    /// </summary>
+    public const string ExternalView = "app.bsky.embed.external#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded video
+    /// </summary>
+    public const string VideoView = "app.bsky.embed.video#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded record with media
+    /// </summary>
+    public const string RecordWithMediaView = "app.bsky.embed.recordWithMedia#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded gallery
+    /// </summary>
+    public const string GalleryView = "app.bsky.embed.gallery#view";
 
     /// <summary>
     /// The json type discriminator for a view over a feed generator

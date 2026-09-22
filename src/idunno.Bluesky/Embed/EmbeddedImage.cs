@@ -18,9 +18,13 @@ public record EmbeddedImage
     /// <param name="image">A <see cref="Blob"/> containing details of the uploaded image.</param>
     /// <param name="altText">The AltText (for accessibility) for the image.</param>
     /// <param name="aspectRatio">The image's aspect ratio.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> or <paramref name="altText"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     public EmbeddedImage(Blob image, string altText, AspectRatio? aspectRatio = null)
     {
+        ArgumentNullException.ThrowIfNull(image);
+        ArgumentNullException.ThrowIfNull(altText);
+
         Image = image;
         AltText = altText;
         AspectRatio = aspectRatio;

@@ -14,12 +14,14 @@ namespace idunno.Bluesky.Embed;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Matches Bluesky lexicon")]
 public record EmbeddedGallery : EmbeddedMediaBase
 {
+    private List<GalleryImage> _items;
+
     /// <summary>
     /// Creates a new instance of the <see cref="EmbeddedGallery"/> class.
     /// </summary>
     /// <param name="items">The collection of <see cref="EmbeddedImage"/> items to include in the gallery.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentException">Thrown when the items collection contains <see langword="null" /> values or items with invalid properties.</exception>
-    [JsonConstructor]
     public EmbeddedGallery(ICollection<GalleryImage> items)
     {
         ArgumentNullException.ThrowIfNull(items);
@@ -36,30 +38,47 @@ public record EmbeddedGallery : EmbeddedMediaBase
 
         foreach (GalleryImage? item in items)
         {
-            if (item is null)
-            {
-                throw new ArgumentException("Items collection cannot contain null values.", nameof(items));
-            }
-
-            if (item.Image is null)
-            {
-                throw new ArgumentException("Items collection cannot contain items with null Image property.", nameof(items));
-            }
-
-            if (item.Image.MimeType is null || !item.Image.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ArgumentException("Items collection cannot contain items with non-image MIME types.", nameof(items));
-            }
+            ValidateItem(item, nameof(items));
         }
 
-        Items = [.. items];
+        _items = [.. items];
     }
 
+    /// <summary>
+    /// Creates a new instance of the <see cref="EmbeddedGallery"/> class when deserializing.
+    /// </summary>
+    /// <remarks>
+    /// <para><see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json">app.bsky.embed.gallery</see>
+    /// allows up to twenty items, places no lower bound on the number of items, and places no maximum at all on the items in a gallery view.
+    /// The limit of <see cref="Maximum.GalleryItems"/> is a client authoring limit, not a schema limit, so none of the validation the public
+    /// constructors perform may be applied when reading, otherwise a valid gallery sent by the service would fail to deserialize.</para>
+    /// </remarks>
+    [JsonConstructor]
+    internal EmbeddedGallery()
+    {
+        _items = [];
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="EmbeddedGallery"/> class from an existing instance.
+    /// </summary>
+    /// <param name="other">The instance to copy.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is <see langword="null" />.</exception>
+    /// <remarks>
+    /// <para>The items are copied, so a gallery produced by a <see langword="with" /> expression does not share its items with the instance it was copied from.</para>
+    /// </remarks>
+    protected EmbeddedGallery(EmbeddedGallery other) : base(other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        _items = [.. other._items];
+    }
 
     /// <summary>
     /// Creates a new instance of the <see cref="EmbeddedGallery"/> class.
     /// </summary>
     /// <param name="items">The collection of <see cref="EmbeddedImage"/> items to include in the gallery.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="items"/> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentException">Thrown when the items collection contains <see langword="null" /> values or items with invalid properties.</exception>
     public EmbeddedGallery(ICollection<EmbeddedImage> items)
     {
@@ -102,62 +121,99 @@ public record EmbeddedGallery : EmbeddedMediaBase
             galleryItems.Add(new GalleryImage(item.Image, item.AltText, item.AspectRatio));
         }
 
-        Items = [.. galleryItems];
+        _items = galleryItems;
     }
 
     /// <summary>
-    /// Gets a read-only collection of the <see cref="EmbeddedImage"/> items in the gallery.
+    /// Gets the collection of <see cref="GalleryImage"/> items in the gallery.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null" />.</exception>
+    /// <remarks>
+    /// <para>The collection is read-only. Use <see cref="Add(GalleryImage)"/>, <see cref="Remove(GalleryImage)"/> and <see cref="Clear()"/> to change its contents,
+    /// so that the gallery's authoring limits are applied.</para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public ICollection<GalleryImage> Items { get; internal set; }
+    public IReadOnlyList<GalleryImage> Items
+    {
+        get => _items;
+
+        internal set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            _items = [.. value];
+        }
+    }
 
     /// <summary>
     /// Gets the number of elements contained in the gallery.
     /// </summary>
     [JsonIgnore]
-    public int Count => Items.Count;
+    public int Count => _items.Count;
 
     /// <summary>
     /// Adds an <see cref="GalleryImage"/> item to the gallery.
     /// </summary>
     /// <param name="item">The <see cref="GalleryImage"/> item to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="item"/> has no image, or its image is not an image MIME type.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the gallery already contains the maximum number of items.</exception>
     public void Add(GalleryImage item)
     {
-        if (Items.Count >= Maximum.GalleryItems)
+        ValidateItem(item, nameof(item));
+
+        if (_items.Count >= Maximum.GalleryItems)
         {
             throw new InvalidOperationException($"Cannot add more than {Maximum.GalleryItems} items to the gallery.");
         }
 
-        Items.Add(item);
+        _items.Add(item);
     }
 
     /// <summary>
     /// Removes all items from the gallery.
     /// </summary>
-    public void Clear() => Items.Clear();
+    public void Clear() => _items.Clear();
 
     /// <summary>
     /// Determines whether the gallery contains a specific <see cref="EmbeddedImage"/> item.
     /// </summary>
     /// <param name="item">The <see cref="EmbeddedImage"/> item to locate in the gallery.</param>
     /// <returns><see langword="true"/> if the item is found; otherwise, <see langword="false"/>.</returns>
-    public bool Contains(GalleryImage item) => Items.Contains(item);
+    public bool Contains(GalleryImage item) => _items.Contains(item);
 
     /// <summary>
     /// Copies the elements of the gallery to an array, starting at a particular array index.
     /// </summary>
     /// <param name="array">The destination array.</param>
     /// <param name="arrayIndex">The zero-based index in the array at which copying begins.</param>
-    public void CopyTo(GalleryImage[] array, int arrayIndex) => Items.CopyTo(array, arrayIndex);
+    public void CopyTo(GalleryImage[] array, int arrayIndex) => _items.CopyTo(array, arrayIndex);
 
     /// <summary>
     /// Removes a specific <see cref="GalleryImage"/> item from the gallery.
     /// </summary>
     /// <param name="item">The <see cref="GalleryImage"/> item to remove.</param>
     /// <returns><see langword="true"/> if the item was successfully removed; otherwise, <see langword="false"/>.</returns>
-    public bool Remove(GalleryImage item) => Items.Remove(item);
+    public bool Remove(GalleryImage item) => _items.Remove(item);
+
+    private static void ValidateItem([NotNull] GalleryImage? item, string paramName)
+    {
+        if (item is null)
+        {
+            throw new ArgumentNullException(paramName, "Gallery items cannot be null.");
+        }
+
+        if (item.Image is null)
+        {
+            throw new ArgumentException("Gallery items cannot have a null Image property.", paramName);
+        }
+
+        if (item.Image.MimeType is null || !item.Image.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Gallery items cannot have a non-image MIME type.", paramName);
+        }
+    }
 
     /// <summary>
     /// Determines whether the specified <see cref="EmbeddedGallery"/> is equal to the current instance.
