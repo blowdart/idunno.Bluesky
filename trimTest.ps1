@@ -48,12 +48,6 @@ $packageCachePath = Join-Path -Path $artifactsPath -ChildPath 'package-cache'
 $packageNuGetConfigPath = Join-Path -Path $artifactsPath -ChildPath 'package-consumer.nuget.config'
 $sizeReportPath = Join-Path -Path $artifactsPath -ChildPath 'size-report.md'
 
-# Nerdbank.GitVersioning appends its version variables to $GITHUB_ENV once per MSBuild inner build.
-# This script runs many multi-targeted builds, whose parallel MSBuild nodes append concurrently and
-# can tear a line, leaving a fragment the runner rejects with "Unable to process file command 'env'".
-# Nothing in CI consumes those variables, so suppress them for every build this script performs.
-$nbgvCloudBuildSuppression = @('-p:NBGV_SetCloudBuildVersionVars=false')
-
 $coreAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'CoreAnalysis' |
     Join-Path -ChildPath 'idunno.Trimming.CoreAnalysis.csproj'
 $authenticationAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'AuthenticationAnalysis' |
@@ -202,7 +196,7 @@ function Invoke-DotNet
     {
         $ErrorActionPreference = 'Continue'
 
-        & dotnet @Arguments @nbgvCloudBuildSuppression 2>&1 |
+        & dotnet @Arguments 2>&1 |
             Tee-Object -Variable commandOutput |
             ForEach-Object { Write-Host $_ }
         $commandExitCode = $LASTEXITCODE
@@ -381,7 +375,7 @@ foreach ($excludedProject in $excludedProjects.GetEnumerator())
 
     foreach ($property in @('IsTrimmable', 'IsAotCompatible'))
     {
-        $propertyValue = (& dotnet msbuild $projectPath "-getProperty:$property" '-p:TargetFramework=net10.0' -nologo @nbgvCloudBuildSuppression).Trim()
+        $propertyValue = (& dotnet msbuild $projectPath "-getProperty:$property" '-p:TargetFramework=net10.0' -nologo).Trim()
 
         if ($LASTEXITCODE -ne 0 -or $propertyValue -ne 'false')
         {
