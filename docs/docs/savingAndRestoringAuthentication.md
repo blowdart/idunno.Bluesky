@@ -12,7 +12,7 @@ your application starts.
 An agent provides four authentication related events that you can subscribe to:
 
 1. `Authenticated`
-1. `CredentialsUpdated` - ⚠️ Prefer `CredentialsUpdatedAsync` instead, as it can be awaited and any exception it throws surfaces to the caller.
+1. `CredentialsUpdated` - ⚠️ Use [`CredentialsUpdatedAsync`](#credentialsUpdatedAsync) when storing credentials, as it can be awaited and any exception it throws surfaces to the caller.
 1. `TokenRefreshFailed`
 1. `Unauthenticated`
 
