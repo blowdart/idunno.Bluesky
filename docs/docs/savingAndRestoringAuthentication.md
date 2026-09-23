@@ -12,7 +12,7 @@ your application starts.
 An agent provides four authentication related events that you can subscribe to:
 
 1. `Authenticated`
-1. `CredentialsUpdated`
+1. `CredentialsUpdated` - ⚠️ Prefer `CredentialsUpdatedAsync` instead, as it can be awaited and any exception it throws surfaces to the caller.
 1. `TokenRefreshFailed`
 1. `Unauthenticated`
 
@@ -34,9 +34,11 @@ agent.Authenticated += (sender, args) =>
 };
 ```
 
-The `Authenticated` event is raised when a login is successful and a new session is created. The `CredentialsUpdated` event is raised, and the
-`CredentialsUpdatedAsync` callback invoked, when the background token refresh occurs or you call `RefreshSession()`. A `TokenRefreshFailed` event is
-raised when the background refresh fails, or your manual call to `RefreshCredentials()` fails. `Unauthenticated` is raised when you call `Logout()`.
+The `Authenticated` event is raised when a login is successful and a new session is created.
+The `CredentialsUpdated` event is raised, and the `CredentialsUpdatedAsync` callback invoked, when the background token refresh occurs
+or you call `RefreshSession()`, use the `CredentialsUpdatedAsync` callback to access the tokens for saving state.
+A `TokenRefreshFailed` event is raised when the background refresh fails, or you manually call `RefreshCredentials()` fails.
+`Unauthenticated` is raised when you call `Logout()`.
 
 > [!IMPORTANT]
 > When you handle `Authenticated`, and when credentials are updated,
@@ -65,7 +67,7 @@ agent.CredentialsUpdatedAsync = async (args, cancellationToken) =>
 If your handler has nothing to await, return `Task.CompletedTask` from it.
 
 > [!WARNING]
-> Prefer `CredentialsUpdatedAsync` over the `CredentialsUpdated` event whenever storing credentials is asynchronous.
+> Prefer `CredentialsUpdatedAsync` over the `CredentialsUpdated` event whenever storing credentials.
 > Events cannot be awaited, so an `async void` handler, or one which discards the task it starts, runs unobserved. The agent will
 > carry on without waiting for your store to be written, and any exception it throws is silently swallowed. As AT Proto refresh
 > tokens are single use, a persist which fails or does not complete leaves you holding a stale refresh token and the user is

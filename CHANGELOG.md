@@ -4,6 +4,8 @@
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
 
+⚠️ **Important ** If saving authentication state migrate to `CredentialsUpdatedAsync` from `OnCredentialsUpdated`, as it can be awaited and any exception it throws surfaces to the caller.
+
 ### Added
 
 #### idunno.AtProto.Types

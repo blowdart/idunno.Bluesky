@@ -306,6 +306,7 @@ public sealed class Program
                 if (!await agent.RefreshCredentials(restoredCredential, cancellationToken) || !agent.IsAuthenticated)
                 {
                     Console.WriteLine("❌\tRestore failed for access/refresh pair");
+                    return -1;
                 }
 
                 if (savedState.Equals(persistedLoginState))
@@ -323,6 +324,7 @@ public sealed class Program
                 if (!await agent.RefreshCredentials(restoredCredential, cancellationToken) || !agent.IsAuthenticated)
                 {
                     Console.WriteLine("❌\tRestore failed for refresh only");
+                    return -1;
                 }
             }
 
