@@ -43,7 +43,7 @@ public sealed class Program
         // Change the log level in the ConfigureConsoleLogging() to enable logging
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {
@@ -60,9 +60,11 @@ public sealed class Program
                 Console.WriteLine($"EVENT: {e.AccessCredentials.Did} authenticated on {e.AccessCredentials.Service}");
             };
 
-            agent.CredentialsUpdated += (sender, e) =>
+            agent.CredentialsUpdatedAsync = (e, cancellationToken) =>
             {
                 Console.WriteLine($"EVENT: Credentials updated for : {e.Did}");
+
+                return Task.CompletedTask;
             };
 
             agent.Unauthenticated += (sender, e) =>

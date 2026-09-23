@@ -1,6 +1,6 @@
 # <a name="makingRequests">Making requests to Bluesky</a>
 
-Making requests to Bluesky is done though the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via [OAuth](connecting.md#oauth),
+Making requests to Bluesky is done through the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via [OAuth](connecting.md#oauth),
 the agent manages your "session", the tokens necessary to make authenticated requests are stored, refreshed automatically
 and added to any authenticated API requests.
 
@@ -25,7 +25,7 @@ if the API call reached the API endpoint the `AtErrorDetail` property will proba
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the login succeeded you would
 
-1. Check the that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and an available result.
+1. Check that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and an available result.
 2. If `Succeeded` is `true` you can continue on your way
 
    If `Succeeded` is `false` you use the `StatusCode` property to examine the HTTP status code returned by the API, then
@@ -66,6 +66,7 @@ Supported error types for AtProto API calls include:
 * `DidNotFound`
 * `DuplicateCreate`
 * `ExpiredToken`
+* `Forbidden`
 * `FutureCursor`
 * `HandleNotAvailable`
 * `HandleNotFound`
@@ -73,13 +74,19 @@ Supported error types for AtProto API calls include:
 * `HostBanned`
 * `HostNotFound`
 * `IncompatibleDidDoc`
+* `InternalServerError`
 * `InvalidEmail`
+* `InvalidHandle`
 * `InvalidInviteCode`
-* `InvalidPasscode`
+* `InvalidPassword`
 * `InvalidRequest`
 * `InvalidSwap`
 * `InvalidToken`
 * `MethodNotImplemented`
+* `NotAcceptable`
+* `NotEnoughResources`
+* `PayloadTooLarge`
+* `RateLimitExceeded`
 * `RecordNotFound`
 * `RepoDeactivated`
 * `RepoNotFound`
@@ -88,34 +95,63 @@ Supported error types for AtProto API calls include:
 * `TokenRequired`
 * `UnresolvableDid`
 * `UnsupportedDomain`
+* `UnsupportedMediaType`
+* `UpstreamFailure`
+* `UpstreamTimeout`
 * `XrpcNotSupported`
 
 Supported error types for Bluesky API calls include:
 
 * `AccountSuspended`
 * `ActorNotFound`
+* `BadAspectRatio`
 * `BadQueryString`
 * `BlockedActor`
+* `BlockedByActor`
 * `BlockedSubject`
-* `BlueskyError`
 * `ConversationLocked`
+* `ConvoLockedByModeration`
+* `DailyLimitExceeded`
+* `DraftLimitReached`
 * `EnabledJoinLinkAlreadyExists`
 * `FollowRequired`
 * `InsufficientRole`
 * `InvalidCode`
 * `InvalidConversation`
+* `InvalidJoinRequest`
+* `InvalidPartNumber`
+* `LinkAlreadyEnabled`
 * `LinkDisabled`
 * `MemberLimitReached`
 * `MessageDeleteNotAllowed`
 * `MessagesDisabled`
+* `MissingParts`
 * `NewAccountCannotCreateGroup`
-* `OwnerCannotLeave`
 * `NoJoinLink`
 * `NotFollowedBySender`
+* `NotFound`
+* `OwnerCannotLeave`
+* `PartSizeMismatch`
 * `ReactionInvalidValue`
 * `ReactionLimitReached`
 * `ReactionMessageDeleted`
 * `ReactionNotAllowed`
 * `RecipientNotFound`
+* `ReplyTargetNotFound`
+* `ServiceOverloaded`
+* `TooManyOpenUploads`
+* `UnknownFeed`
+* `UnknownList`
+* `UnsupportedCollection`
+* `UnsupportedContentType`
+* `UploadAborted`
+* `UploadAlreadyCompleted`
+* `UploadExpired`
+* `UploadFailed`
+* `UploadForbidden`
+* `UploadNotFound`
+* `UploadNotReady`
 * `UserForbidsGroups`
 * `UserKicked`
+* `VideoTooLarge`
+* `VideoTooLong`

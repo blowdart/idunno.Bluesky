@@ -45,7 +45,7 @@ public sealed class Program
         // Change the log level in the ConfigureConsoleLogging() to enable logging
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             new BlueskyAgentOptions(
                 loggerFactory,

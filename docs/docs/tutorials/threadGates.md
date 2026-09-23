@@ -42,7 +42,7 @@ await agent.AddThreadGate(
 
 ## Deleting a thread gate
 
-To delete a thread gate one of your posts use `agent.DeleteThreadGate();`
+To delete a thread gate on one of your posts, use `agent.DeleteThreadGate();`
 
 `DeleteThreadGate(post)`
 

@@ -15,14 +15,14 @@ if (postResult.Succeeded)
 }
 ```
 
-The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
+The result from creating a post contains, amongst other things, a strong reference to the new record. This `StrongReference` consists of an
 [at:// uri](commonTerms.md#uri) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
 
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
 
 A CID is a way to identify the contents of a record using a fingerprint hash. 
 
-The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records, for example,
+The AT URI, or a record's complete `StrongReference` is used as a parameter in methods which deal with existing Bluesky records, for example,
 liking or deleting a post.
 
 ### Setting the language on a post
@@ -58,7 +58,7 @@ if the operation was successful, any error messages the API returned, and inform
 which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
 
 To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded.
-If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any
+If it's false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any
 error information the API returned.
 
 ```c#

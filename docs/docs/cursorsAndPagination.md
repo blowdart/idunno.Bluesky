@@ -1,12 +1,12 @@
 # Cursors & Pagination
 
 If you've looked at the source code for the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) or
-[Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) samples you may have noticed they through notifications
+[Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) samples you may have noticed they page through notifications
 rather than get all the notifications at once.
 
 Each sample uses the `limit` and `cursor` parameters to get their results one page at a time.
 
-For example, to page through notifications, with each page containing a maximum of five results you would write the following:.
+For example, to page through notifications, with each page containing a maximum of five results you would write the following:
 
 ```c#
 AtProtoHttpResult<NotificationsView> notifications = 

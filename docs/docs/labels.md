@@ -4,7 +4,7 @@ A label is published by a moderation service, which a user or an application can
 
 Once subscribed to a labeler requests to a Bluesky API can request the labeler's labels to be applied to posts or actors,
 and the labels will be applied to records underneath the labels key. When an application encounters a label it should act on it based on
-the users preferences for that labeler.
+the user's preferences for that labeler.
 
 ## <a name="labelSubscriptions">Getting a user's labeler subscriptions</a>
 A user's labeler subscriptions are part of a user's preferences, and can be loaded through the Bluesky agent's GetPreferences method once
@@ -53,7 +53,7 @@ foreach (Notification notification in notificationsList.Result)
 }
 ```
 
-Many APIs will take a `subscribedLabelers` parameters, including `GetProfile`, `GetSuggestions`, `SearchActors`, `GetFeed`, `GetTimeline` and so on.
+Many APIs will take a `subscribedLabelers` parameter, including `GetProfile`, `GetSuggestions`, `SearchActors`, `GetFeed`, `GetTimeline` and so on.
 It is recommended you cache the user's subscribed labelers and provide them to any API that accepts them.
 
 By default idunno.Bluesky will return the Bluesky moderation labeler as part of a user's labeler subscriptions. This can be controlled

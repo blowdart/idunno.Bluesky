@@ -3,7 +3,7 @@
 Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#
-AtProtoHttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
+AtProtoHttpResult<int?> unreadCount = await agent.GetNotificationUnreadCount();
 ```
 
 `GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge.
@@ -78,7 +78,7 @@ AtProtoHttpResult<EmptyResponse> updateSeen =
 
 `UpdateNotificationSeenAt()` takes an optional `DateTimeOffset seenAt` parameter, so you can, and probably should, save a timestamp before you start working through notifications,
 and then use the saved timestamp once you've finished, so that notifications that happen after you retrieved the notification list don't get marked as seen.
-`UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky things you last saw notifications, which is very handy
+`UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky thinks you last saw notifications, which is very handy
 for testing any notification viewer you've written.
 
 A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) project in the
@@ -146,7 +146,7 @@ then check the `ActivitySubscription` property on `Viewer`.
 ## Controlling who can subscribe to your activities
 
 You can control who has the ability to subscribe to the current user's activity using `SetNotificationDeclaration()`. This takes a `NotificationAllowedFrom` enum, which allows you to choose
-`None`, `Followers` or `Mutals`.
+`None`, `Followers` or `Mutuals`.
 
 ## <a name="preferences">Getting and setting notification preferences</a>
 

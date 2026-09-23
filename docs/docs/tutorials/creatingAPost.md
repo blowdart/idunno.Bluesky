@@ -1,4 +1,4 @@
-﻿# Creating a post
+# Creating a post
 
 The following code will login to Bluesky and create a simple post.
 

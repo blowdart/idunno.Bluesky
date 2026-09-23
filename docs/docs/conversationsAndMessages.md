@@ -27,7 +27,7 @@ To retrieve the messages in a conversation use `GetMessages`:
 var getMessagesResult = await agent.GetMessages(conversationId);
 ```
 
-The returns a [pageable list](cursorsAndPagination.md) of either `MessageView` or `DeletedMessageView` for each message in the conversation, as well
+This returns a [pageable list](cursorsAndPagination.md) of either `MessageView` or `DeletedMessageView` for each message in the conversation, as well
 as the DID of the sender, which you can match up to the `ConversationView` to get the sender information, for example
 
 ```c#
@@ -137,7 +137,7 @@ foreach (MessageViewBase message in getMessages.Result)
 }
 ```
 
-To add a reaction to a message call `AddReaction()`. This requires the conversation id and the message id, and the reaction you want to add. A reaction is an single emoji grapheme.
+To add a reaction to a message call `AddReaction()`. This requires the conversation id and the message id, and the reaction you want to add. A reaction is a single emoji grapheme.
 To delete a reaction call `RemoveReaction()` with the same parameters with which you added a reaction.
 
 ## <a name="creating">Starting a direct conversation</a>
@@ -158,7 +158,7 @@ To start a group conversation you will need the DIDs of the conversation members
 
 ## Group Conversations
 
-Group conversations have additional APIs, adding members, appoving or rejecting join requests to a group conversation, requesting to join a group conversation,
+Group conversations have additional APIs, adding members, approving or rejecting join requests to a group conversation, requesting to join a group conversation,
 creating, generating and disabling join links, changing group metadata.
 
 To start a group conversation you will need the DIDs of the conversation members, yourself and the other parties, which you pass a collection to `CreateGroup()`.
@@ -166,7 +166,7 @@ To add new members to a group conversation you own use `AddMembersToGroup()`. To
 
 You can make a group conversation joinable through a group link. To create a group link use `CreateJoinGroupLink()`. You can set a group link so approval is required to
 join the conversation, and, using the `joinRule` parameter, set conditions on who can join, anyone or only users followed by the group owner. You can edit
-the link configuration with `EditJoinGroupLink()` and disable the link with `DisableJoinGroupLink()`. To renable the join link use `EnableJoinGroupLink()`. Join requests
+the link configuration with `EditJoinGroupLink()` and disable the link with `DisableJoinGroupLink()`. To re-enable the join link use `EnableJoinGroupLink()`. Join requests
 can be approved or rejected with `ApproveJoinGroupRequest()` and `RejectJoinGroupRequest()`. Finally, to mark join requests as read use `UpdateJoinGroupRequestsRead()`.
 
 To request to join a group conversation use `RequestJoinGroup()` with the link code, to withdraw a request use `WithdrawJoinGroupRequest()`.

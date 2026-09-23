@@ -1,4 +1,4 @@
-﻿# Sending raw AT Protocol requests
+# Sending raw AT Protocol requests
 
 Whilst the agents make it easy to interact with the Bluesky APIs, generating the requests and parsing the responses into typed classes, 
 there may be times when you want to send "raw" JSON requests and receive "raw" JSON responses, for example, you may want to send a
@@ -13,7 +13,7 @@ to send requests to the endpoint.
 ## Making GET requests
 
 For example, if you wanted to call the [getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) endpoint,
-which is an HTTP GET operation, to retrieve a Bluesky post record on the on the PDS hosted at `gomphidius.us-west.host.bsky.network`
+which is an HTTP GET operation, to retrieve a Bluesky post record on the PDS hosted at `gomphidius.us-west.host.bsky.network`
 you would do:
 
 ```csharp

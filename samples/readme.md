@@ -11,7 +11,7 @@ Most console samples uses the same command line arguments:
 
 If you don't supply a handle or a password samples will check the `_BlueskyHandle` and `_BlueskyPassword` environment variables.
 
-If you use an Bluesky app password you don't need to worry about authorization codes.
+If you use a Bluesky app password you don't need to worry about authorization codes.
 
 ## Sample List
 

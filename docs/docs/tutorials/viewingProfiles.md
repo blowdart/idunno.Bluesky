@@ -21,7 +21,7 @@ var getProfileResult = await agent.GetProfile(actor);
 
 ## Fetching multiple profiles at once
 
-Fetching multiple profiles is as easy as fetching a single profile, you use the `agent.GetProfiles()` method.
+Fetching multiple profiles is as easy as fetching a single profile; use the `agent.GetProfiles()` method.
 
 `GetProfiles([actors])`
 

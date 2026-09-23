@@ -1,4 +1,4 @@
-﻿# <a name="profileEditing">Changing a user's profile</a>
+# <a name="profileEditing">Changing a user's profile</a>
 
 A user's profile consists of the user's title, a description, a profile picture and a banner picture, all of which can be left empty, as
 well as other settings like a pinned post that is shown when someone views the account's profile page, a setting to discourage applications
@@ -79,7 +79,7 @@ var createLiveStatusResult = await agent.CreateLiveStatus(
     durationMinutes: 5);
 ```
 
-You can include a thumbnail preview for your stream with the `PreviewBlob` parameter, using an blob reference
+You can include a thumbnail preview for your stream with the `PreviewBlob` parameter, using a blob reference
 you previously uploaded with [UploadImage](posting.md#images).
 
 To delete a status before it expires use `DeleteStatus`.
