@@ -133,6 +133,7 @@ or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tool
       <package pattern="idunno.AtProto" />
       <package pattern="idunno.AtProto.*" />
       <package pattern="idunno.Bluesky" />
+      <package pattern="idunno.Bluesky.*" />
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />
