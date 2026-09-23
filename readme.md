@@ -60,6 +60,7 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 * Multipart uploads for videos
 * Jetstream support for simple firehose consumption
 * Automatic session management with background token refreshes
+* ASP.NET authentication, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
 
 Trimming is supported for applications targeting .NET 9.0 or later.
 
