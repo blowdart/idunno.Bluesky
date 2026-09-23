@@ -78,7 +78,7 @@ Currently Bluesky has three different resources, or "[scopes](https://atproto.co
 * `transition:chat.bsky`: which gives your application direct message access.
 
 Your application must have a client id and publish a metadata document in the format required by the [ATProto OAuth specification](https://atproto.com/specs/oauth#clients).
-For development a client it of `http://localhost` is special cased by the specification, allowing you to develop your application without the need to have
+For development a client ID of `http://localhost` is special cased by the specification, allowing you to develop your application without the need to have
 published your application metadata file.
 
 To use OAuth first configure the OAuth options for your agent. The options require the application `ClientId` and the `Scopes` your application requires,
@@ -124,7 +124,7 @@ OAuthLoginState oAuthLoginState = oAuthClient.State;
 >
 > `AtProtoAgent.BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
 > are both callback methods which you can use to validate the URIs discovered during the building of an OAuth2
-> login URI. You can use this methods to mitigate against
+> login URI. You can use these methods to mitigate against
 > [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
 > the authorization server is one you expect.
 >
@@ -237,7 +237,7 @@ You should set the `HttpClientOptions` `HttpUserAgent` property to be a value in
 
 ### <a name="usingAProxy">Using a proxy server</a>
 
-The `HttpClientOptions` `ProxyUri` property allows you to set an proxy to be used by the agent when making outgoing HTTP requests.
+The `HttpClientOptions` `ProxyUri` property allows you to set a proxy to be used by the agent when making outgoing HTTP requests.
 If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
 likely may also need to set the `CheckCertificateRevocationList` property to `false`, 
 

@@ -1,12 +1,12 @@
-﻿# Avoiding the Agent
+# Avoiding the Agent
 
 The agents are meant as the main way to interact with Bluesky. However, there are scenarios where you might want to avoid
 using agents, and talk to the PDS directly, bypassing an app view or other intermediate API.
 
-The `AtProtoServer` class has methods to get, list create, update and delete records directly on a PDS, given appropriate credentials.
+The `AtProtoServer` class has methods to get, list, create, update and delete records directly on a PDS, given appropriate credentials.
 
 This approach entails you discovering the resolve a user handle to a DID, then discovering the PDS endpoint for a user. At that point
-you can read and list records directly from that PDS. To create, update and delete records you will need to handle you must
+you can read and list records directly from that PDS. To create, update and delete records you must
 authenticate with that PDS to get a session, create access credentials from the session, then using the access credentials
 you can create, update and delete directly records on the PDS. You will also need to manually refresh sessions as they expire.
 
@@ -50,7 +50,7 @@ If you want to use raw JSON please see the [Sending raw AT Protocol requests](ra
 For these examples we will use the [statusphere.xyz](https://statusphere.xyz) sample records,
 which are defined in the [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexicons) library.
 
-Assuming you have adding the `idunno.AtProto.Lexicons` nupkg, and added the appropriate `using` statements you could
+Assuming you have added the `idunno.AtProto.Lexicons` NuGet package, and added the appropriate `using` statements you could
 list the statusphere status for a user like this:
 
 ```c#

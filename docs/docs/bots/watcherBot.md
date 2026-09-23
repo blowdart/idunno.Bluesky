@@ -121,7 +121,7 @@ You get the `CTRL-C` close functionality for free with a `HostApplicationBuilder
 
 ## Add a settings file to contain watch words
 
-This time around we're going to have an setting, `WatchWords`, which will be words that the bot will watch for and react to.
+This time around we're going to have a setting, `WatchWords`, which will be words that the bot will watch for and react to.
 
 # [Command Line](#tab/settings/commandLine)
 

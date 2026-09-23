@@ -1,11 +1,11 @@
-﻿# Saving and Restoring Sessions
+# Saving and Restoring Sessions
 
 If you're writing an app you probably don't want to ask your user to authenticate every time your app starts, or to store their login
 credentials somewhere on disk. The Agent class provides a way to restore, or authenticate from a stored refresh token
 and the URI of the server that issued it.
 
-Events are provided so you can react to background token refresh operations and store the updated refresh token for the next time
-your application app starts.
+Events and an awaitable callback are provided so you can react to background token refresh operations and store the updated refresh token for the next time
+your application starts.
 
 ## <a name="authenticationEvents">Authentication Events</a>
 
@@ -16,8 +16,8 @@ An agent provides four authentication related events that you can subscribe to:
 1. `TokenRefreshFailed`
 1. `Unauthenticated`
 
-There is also a `CredentialsUpdatedAsync` callback, an awaitable counterpart to the `CredentialsUpdated` event, which is
-described in more detail [below](#credentialsUpdatedAsync).
+There is also a `CredentialsUpdatedAsync` callback, an awaitable counterpart to the `CredentialsUpdated` event. It is the callback you should
+use to persist credentials, for the reasons described [below](#credentialsUpdatedAsync).
 
 You can subscribe to these events by adding a handler to the event. For example:
 
@@ -34,12 +34,12 @@ agent.Authenticated += (sender, args) =>
 };
 ```
 
-The `Authenticated` event is raised when a login is successful and a new session is created.The `CredentialsUpdated` event is raised when the background
-token refresh occurs or you call `RefreshSession()`. A `TokenRefreshFailed` event is raised when the background refresh fails, or your manual call to
-`RefreshCredentials()` fails. `Unauthenticated` is raised when you call `Logout()`.
+The `Authenticated` event is raised when a login is successful and a new session is created. The `CredentialsUpdated` event is raised, and the
+`CredentialsUpdatedAsync` callback invoked, when the background token refresh occurs or you call `RefreshSession()`. A `TokenRefreshFailed` event is
+raised when the background refresh fails, or your manual call to `RefreshCredentials()` fails. `Unauthenticated` is raised when you call `Logout()`.
 
 > [!IMPORTANT]
-> In your handler for `Authenticated` and `CredentialsUpdated`
+> When you handle `Authenticated`, and when credentials are updated,
 > it is suggested you store the refresh token, any DPoPKey and DPopNonce, the URI that issued it and the DID it belongs to securely,
 > in whatever way is appropriate for your platform (for example the
 > [Windows Credential Store](https://learn.microsoft.com/en-us/samples/microsoft/windows-universal-samples/passwordvault/),
@@ -49,25 +49,27 @@ token refresh occurs or you call `RefreshSession()`. A `TokenRefreshFailed` even
 
 Storing the access token is optional, it is meant to be short lived and may no longer be valid when your application restarts.
 
-You should update these your stored values in your handler for `CredentialsUpdated`.
+## <a name="credentialsUpdatedAsync">Persisting updated credentials</a>
 
-> [!TIP]
-> <a name="credentialsUpdatedAsync"></a>
-> If storing credentials is asynchronous, use the `CredentialsUpdatedAsync` callback rather than the `CredentialsUpdated` event.
+Use the `CredentialsUpdatedAsync` callback to store your updated values. Unlike the `CredentialsUpdated` event it can be awaited, so the agent waits
+for your store to be written before it continues, and any exception it throws surfaces to the caller which triggered the refresh.
+
+```c#
+agent.CredentialsUpdatedAsync = async (args, cancellationToken) =>
+{
+    await credentialStore.SaveAsync(args.AccessCredentials, cancellationToken);
+};
+```
+
+`CredentialsUpdatedAsync` is a property rather than an event, so assigning to it replaces any callback already set, and only one can be set at a time.
+If your handler has nothing to await, return `Task.CompletedTask` from it.
+
+> [!WARNING]
+> Prefer `CredentialsUpdatedAsync` over the `CredentialsUpdated` event whenever storing credentials is asynchronous.
 > Events cannot be awaited, so an `async void` handler, or one which discards the task it starts, runs unobserved. The agent will
 > carry on without waiting for your store to be written, and any exception it throws is silently swallowed. As AT Proto refresh
 > tokens are single use, a persist which fails or does not complete leaves you holding a stale refresh token and the user is
 > signed out on their next request.
->
-> ```c#
-> agent.CredentialsUpdatedAsync = async (args, cancellationToken) =>
-> {
->     await credentialStore.SaveAsync(args.AccessCredentials, cancellationToken);
-> };
-> ```
->
-> The agent awaits this callback before continuing, and exceptions it throws surface to the caller which triggered the refresh.
-> Only one `CredentialsUpdatedAsync` callback can be set at a time; it is a property, not an event.
 
 Finally in the handlers for `TokenRefreshFailed` and `Unauthenticated` events you should remove any stored values you have for the DID and the service.
 
@@ -95,5 +97,5 @@ if (!resumeResult.Succeeded)
 ```
 
 If the resume is successful the agent will be populated with the current access and refresh tokens and the session will be valid for authenticated
-calls.If the tokens were refreshed during restoration (which happens if you have a refresh token, but no access token, or the access token is expired)
-the `CredentialsUpdated` event will be raised, where you should store the newly refresh credentials.
+calls. If the tokens were refreshed during restoration (which happens if you have a refresh token, but no access token, or the access token is expired)
+the `CredentialsUpdatedAsync` callback will be invoked, where you should store the newly refreshed credentials.

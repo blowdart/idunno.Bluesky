@@ -237,7 +237,7 @@ Tagged with `outcome`, either `self` when the request performed the refresh itse
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `tokenrefreshfailures.total` | Counter&lt;long&gt; | {refreshes} | Total access tokens refresh failures. |
+| `tokenrefreshfailures.total` | Counter&lt;long&gt; | {refreshes} | Total access token refresh failures. |
 
 ### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshwaits.total
 

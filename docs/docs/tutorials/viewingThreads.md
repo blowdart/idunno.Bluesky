@@ -81,4 +81,4 @@ if (getPostThreadResult.Succeeded)
 }
 ```
 
-These posts types are included in the response so that a complete tree can be constructed. It's up to the you to decide how to render these different states.
+These post types are included in the response so that a complete tree can be constructed. It's up to you to decide how to render these different states.

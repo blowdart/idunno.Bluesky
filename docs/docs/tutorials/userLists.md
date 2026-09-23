@@ -22,7 +22,7 @@ the number of items in the list.
 
 ## Viewing a list's details and members.
 
-To view a lists details and its members call `GetList()` with the `at://` [uri](../commonTerms.md#uri) of the list.
+To view a list's details and its members call `GetList()` with the `at://` [uri](../commonTerms.md#uri) of the list.
 `GetList(did)`. This returns the list details and a paginated collection of members.
 
 `GetList(did)`
@@ -90,14 +90,14 @@ You can also supply the user's handle.
 
 [!code-csharp[](code/manageLists.cs#L32-L34)]
 
-Removing a user from a list requires calling `DeleteFromList()` with the same information required to a user to a list.
+Removing a user from a list requires calling `DeleteFromList()` with the same information required to add a user to a list.
 
 `DeleteFromList(uri, did)`
 
-| Parameter | Type  | Description                               | Required   | Default   |
-|-----------|-------|-------------------------------------------|:----------:|:---------:|
-| uri       | AtUri | The AtUri of the list to add the user to. | Yes        |           |
-| did       | Did   | The Did of the user to add.               | Yes        |           |
+| Parameter | Type  | Description                                    | Required   | Default   |
+|-----------|-------|------------------------------------------------|:----------:|:---------:|
+| uri       | AtUri | The AtUri of the list to remove the user from. | Yes        |           |
+| did       | Did   | The Did of the user to remove.                 | Yes        |           |
 
 [!code-csharp[](code/manageLists.cs#L38-L40)]
 
@@ -105,16 +105,16 @@ You can also supply the user's handle.
 
 `DeleteFromList(uri, handle)`
 
-| Parameter | Type     | Description                               | Required   | Default   |
-|-----------|----------|-------------------------------------------|:----------:|:---------:|
-| uri       | AtUri    | The AtUri of the list to add the user to. | Yes        |           |
-| handle    | Handle   | The Handle of the user to add.            | Yes        |           |
+| Parameter | Type     | Description                                    | Required   | Default   |
+|-----------|----------|------------------------------------------------|:----------:|:---------:|
+| uri       | AtUri    | The AtUri of the list to remove the user from. | Yes        |           |
+| handle    | Handle   | The Handle of the user to remove.              | Yes        |           |
 
 [!code-csharp[](code/manageLists.cs#L42-L44)]
 
 ### Deleting a list
 
-To delete a list to call `DeleteList()` with the list's `at://` [uri](../commonTerms.md#uri)
+To delete a list, call `DeleteList()` with the list's `at://` [uri](../commonTerms.md#uri)
 
 `DeleteList()`
 

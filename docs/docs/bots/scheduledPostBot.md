@@ -3,7 +3,7 @@
 Bots are accounts on the network that post automatically. Popular ones include bots that post the magnitude of recent earthquakes, traffic alerts, etc.
 
 Let's write a simple bot that posts every fifteen minutes. We're choosing to implement the bot as a command line application, so it could eventually live inside a docker container,
-or ran in something like a Digital Ocean droplet easily.
+or run easily in something like a DigitalOcean droplet.
 
 > [!NOTE]
 > You must already have created an account for your bot to run as, and generated a [app password](https://bsky.app/settings/app-passwords) for that account.
@@ -160,7 +160,7 @@ Now we'll use the [User Secret Manager](https://learn.microsoft.com/en-us/aspnet
 > [!TIP]
 > Secret Manager is a developer resource, it does not exist on production servers. If you moved the bot to a production server
 > you could use [environment variables](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=windows#environment-variables)
-> to store the bot password, or something like> Azure KeyVault with its
+> to store the bot password, or something like Azure Key Vault with its
 > [.NET configuration provider](https://learn.microsoft.com/en-us/aspnet/core/security/key-vault-configuration).
 > Refer to your hosting providers documentation to discover your options.
 

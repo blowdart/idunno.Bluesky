@@ -14,7 +14,7 @@ to like
 | post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to like. | Yes        |
 
 >[!Tip]
->It is recommended use the `Like()` overload that takes a `FeedViewPost` where possible as this will check if you are liking a repost, and ensures the correct notification is send to the
+>It is recommended to use the `Like()` overload that takes a `FeedViewPost` where possible as this will check if you are liking a repost, and ensures the correct notification is sent to the
 >repost author.
 
 `Like(strongReference)`
@@ -43,7 +43,7 @@ var likeResult = await agent.Like(uri, cid);
 
 ## Un-liking a post
 
-Un-liking a post requires calling `agent.DeleteLike()` with original post's [at:// uri](../commonTerms.md#uri).
+Un-liking a post requires calling `agent.DeleteLike()` with the original post's [at:// uri](../commonTerms.md#uri).
 
 | Parameter    | Type   | Description                                                                | Required   |
 |--------------|--------|----------------------------------------------------------------------------|:----------:|
@@ -55,7 +55,7 @@ var deleteLikeResult = await agent.DeleteLike(uri);
 
 ## Reposting a post
 
-Reposting and un-reposting looks almost exactly the same as liking and un-liking.
+Reposting and un-reposting look almost exactly the same as liking and un-liking.
 
 `Repost(post)`
 
@@ -64,7 +64,7 @@ Reposting and un-reposting looks almost exactly the same as liking and un-liking
 | post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to repost. | Yes        |
 
 >[!Tip]
->It is recommended use the Repost() overload that takes a `FeedViewPost` where possible as this will check if you are reposting a repost, and ensures the correct notification is send to the
+>It is recommended to use the `Repost()` overload that takes a `FeedViewPost` where possible as this will check if you are reposting a repost, and ensures the correct notification is sent to the
 >repost author.
 
 `Repost(strongReference)`

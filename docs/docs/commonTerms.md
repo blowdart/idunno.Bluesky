@@ -73,7 +73,7 @@ an account is referenced by its `DID`.
 ### <a name="dids">Distributed Identifier (DID)</a>
 
 A `DID` is your unique key on the atproto network. Under the covers Bluesky uses `DID`s, not handles for pretty much everything, sometimes accepting both and doing the
-work behind the scenes to resolve a handle into a `DID``.
+work behind the scenes to resolve a handle into a `DID`.
 
 A `DID` looks something like this: `did:plc:hfgp6pj3akhqxntgqwramlbg`. The first part of the `DID` is the prefix declaring it's a `DID`,
 the second part is an identifier for the issuer (`plc` is a `DID` issued by Bluesky, `web` is another common identifier indicating an independently issued `DID`),
@@ -85,7 +85,7 @@ For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/ap
 When you login via an agent the authenticated user's `DID` is available via the `Did` property on the agent instance.
 
 Bluesky's `DID` directory is available at https://web.plc.directory/. It serves up a `DidDoc` for a plc `DID` which allows discovery of things like a `DID`'s personal data
-server where authenticated API calls should go. The `BlueskyAgent` class take care of PDS discovery automatically,
+server where authenticated API calls should go. The `BlueskyAgent` class takes care of PDS discovery automatically,
 but you can retrieve a `DidDoc` yourself using the `DirectoryAgent` `ResolveDidDocument` method.
 
 ### <a name="resolvingHandles">Resolving a Handle to a DID</a>
@@ -94,7 +94,7 @@ The `AtProto` and `Bluesky` agents provide a method to resolve a `DID` for a `Ha
 
 ## <a name="views">Views</a>
 
-As you explore the APIs you while you write records you don't get records, instead you get views of records. You create a `Post` but what you see in your timeline is a `PostView`.
+As you explore the APIs you will notice that while you write records you don't get records, instead you get views of records. You create a `Post` but what you see in your timeline is a `PostView`.
 
 A view is how Bluesky aggregates information from multiple records into a single entity. For example a `PostView` takes information from not only the `Post` record,
 but also information about the post author via a `ProfileView`, and things like reply and like counts.

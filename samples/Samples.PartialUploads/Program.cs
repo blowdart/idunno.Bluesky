@@ -44,7 +44,7 @@ public sealed class Program
         // TODO put back to debug
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {

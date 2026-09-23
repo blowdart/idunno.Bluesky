@@ -381,5 +381,5 @@ An example `appsettings.json` file might look like the following:
 
 > [!TIP]
 > You cannot set the `IFacetExtractor` or `JsonSerializerOptions` from an appsettings file.
-> If you want to override either of these manually create and instance `BlueskyAgentOptions`
+> If you want to override either of these manually, create an instance of `BlueskyAgentOptions`
 > and pass it to `builder.Services.AddBlueskyAgentOptions()`.
