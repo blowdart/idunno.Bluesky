@@ -387,3 +387,6 @@ TemplateEngineHost
 
 # Sleet tooling
 sleet/
+
+# NuGet packages output folder
+.assets/*.nupkg

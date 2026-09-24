@@ -1,0 +1,3 @@
+This directory holds nupkg packages that are built from this solution.
+The packages are not checked in to source control, but are generated to ensure validation of the nuspec files and to allow for local testing of the packages.
+The packages are generated to the `.assets` directory, and are specifically ignored by git.

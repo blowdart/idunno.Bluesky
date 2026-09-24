@@ -41,6 +41,18 @@ foreach ($folderName in $folderNames) {
     }
 }
 
+if (Test-Path '.assets')
+{
+    $packageNames = Get-ChildItem -Path .assets -File -Filter *.nupkg
+    foreach ($packageName in $packageNames) {
+        if (Test-Path $packageName.FullName)
+        {
+          Write-Host '📄 Deleting ' $packageName.FullName;
+          Remove-Item -Path $packageName.FullName -Force
+        }
+    }
+}
+
 if (Test-Path 'docs')
 {
     # Delete docs generated directories

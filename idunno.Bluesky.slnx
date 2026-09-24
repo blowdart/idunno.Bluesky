@@ -8,6 +8,9 @@
     <File Path=".artifacts/Start-MySqlContainer.ps1" />
     <File Path=".artifacts/Start-RedisContainer.ps1" />
   </Folder>
+  <Folder Name="/.assets/">
+    <File Path=".assets/.gitkeep" />
+  </Folder>
   <Folder Name="/.build/">
     <File Path=".build/CoherenceChecks.cs" />
     <File Path=".build/Directory.Build.Props" />
@@ -315,10 +318,10 @@
     <Project Path="test/idunno.AtProto.Types.Test/idunno.AtProto.Types.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
-    <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
+    <Project Path="test/idunno.Bluesky.AspNet.Authentication.SQLite.Test/idunno.Bluesky.AspNet.Authentication.SQLite.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
-    <Project Path="test/idunno.Bluesky.AspNet.Authentication.SQLite.Test/idunno.Bluesky.AspNet.Authentication.SQLite.Test.csproj">
+    <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">

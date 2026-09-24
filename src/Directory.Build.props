@@ -19,11 +19,17 @@
     <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
+  <!-- NuGet -->
   <PropertyGroup>
     <PackageProjectUrl>https://github.com/blowdart/idunno.Bluesky</PackageProjectUrl>
     <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' AND '$(SolutionDir)' != ''">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageOutputPath>$([MSBuild]::NormalizeDirectory('$(SolutionDir)', '.assets'))</PackageOutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
