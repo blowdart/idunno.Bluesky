@@ -33,11 +33,26 @@ public class TokenRefreshTests
     {
         private readonly ConcurrentDictionary<string, ClaimsIdentity> _identities = new(StringComparer.Ordinal);
 
+        private readonly TaskCompletionSource _refreshDecisionReached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         /// <summary>
         /// Whether <see cref="IsRefreshing"/> reports a refresh is under way. When <see langword="false"/> the handler
         /// will try to take the refresh lock, which <see cref="StartRefresh"/> then denies.
         /// </summary>
         internal bool ReportRefreshInProgress { get; set; } = true;
+
+        /// <summary>
+        /// Completes once the handler has asked whether a refresh is under way.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   The handler only asks after it has read the identity out of the store and found its credentials expired,
+        ///   so a test which waits for this before changing the store cannot race that first lookup. Sleeping instead
+        ///   leaves the change landing first on a loaded machine, which turns a refresh the request never reached into
+        ///   an authentication phase miss.
+        /// </para>
+        /// </remarks>
+        internal Task RefreshDecisionReached => _refreshDecisionReached.Task;
 
         internal int StartRefreshCallCount => _startRefreshCallCount;
 
@@ -73,8 +88,16 @@ public class TokenRefreshTests
 
         public Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default) => Task.FromResult(true);
 
-        public Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default) =>
-            Task.FromResult(ReportRefreshInProgress);
+        public Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
+        {
+            // Read the flag before releasing anyone waiting on it, so a test which flips it the moment it is released
+            // cannot change the answer this call is in the middle of giving.
+            bool isRefreshing = ReportRefreshInProgress;
+
+            _refreshDecisionReached.TrySetResult();
+
+            return Task.FromResult(isRefreshing);
+        }
     }
 
     private static ClaimsIdentity IdentityWithExpiredCredentials(Did did)
@@ -224,10 +247,10 @@ public class TokenRefreshTests
 
         await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
 
-        // Let the request enter the wait loop, then complete the refresh underneath it.
+        // Let the request reach the point where it decides to wait, then complete the refresh underneath it.
         Task<HttpResponseMessage> authenticate = host.GetWithCookie("/test/authenticate", cookie);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(30), TestContext.Current.CancellationToken);
+        await store.RefreshDecisionReached.WaitAsync(TestContext.Current.CancellationToken);
 
         await store.Add(TestData.AuthenticatedClaimsIdentity(did), TestContext.Current.CancellationToken);
         store.ReportRefreshInProgress = false;
@@ -263,7 +286,7 @@ public class TokenRefreshTests
 
         Task<HttpResponseMessage> authenticate = host.GetWithCookie("/test/authenticate", cookie);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(30), TestContext.Current.CancellationToken);
+        await store.RefreshDecisionReached.WaitAsync(TestContext.Current.CancellationToken);
 
         // The refresh finishes, but the identity it should have stored is gone.
         await store.Remove(did, TestContext.Current.CancellationToken);
