@@ -126,26 +126,26 @@ If you create your own `CancellationTokenSource` and token and pass it to `Conne
 CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-await jetStream.ConnectAsync();
+await jetStream.ConnectAsync(cancellationToken);
 
 /// Processing happens in the background.
 
 /// Time to close
-cancellationTokenSource.Cancel()
+cancellationTokenSource.Cancel();
 ```
 
 The [Jetstream sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Jetstream) shows subscribing to both raw messages and events,
-writing the raw message and a break down of the event to the console.type.
+writing the raw message and a breakdown of the event to the console.
 
 ## Filtering commit events
 
 You can limit the commit events you receive by [DID](commonTerms.md#dids) or [Collection](commonTerms.md#records). You can configure the filters
-when creating of `AtProtoJetstream`:
+when creating an `AtProtoJetstream`:
 
 ```c#
 using (var jetStream = new AtProtoJetstream(
     collections: ["app.bsky.feed.post"],
-    dids: ["did:plc:ec72yg6n2sydzjvtovvdlxrk"])
+    dids: ["did:plc:ec72yg6n2sydzjvtovvdlxrk"]))
 {
 }
 ```
@@ -219,7 +219,7 @@ await jetStream.CloseAsync();
 The `options` parameter on the constructor allows you to configure
 
 * `LoggerFactory` - The `ILoggerFactory` to use for logging
-* `UseCompression` - a flag indication whether compression should be used. This defaults to `true`.
+* `UseCompression` - a flag indicating whether compression should be used. This defaults to `true`.
 * `Dictionary` - the zst compression/decompression dictionary to use if compression is enabled. This defaults to a generated dictionary specific to the jetstream.
 * `TaskFactory` - the `TaskFactory` to use when creating new tasks. This allows you to configure `TaskScheduler` settings if needed.
 * `BufferSize` - the size, in bytes, of each block read from the web socket. This is the size of the buffer a single read fills, not a limit on anything; a larger message is read in several blocks and reassembled. This defaults to 8096.

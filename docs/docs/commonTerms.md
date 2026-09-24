@@ -59,7 +59,7 @@ but also a [CID](#cid) which refers to an individual revision of a record.
 
 ## <a name="actorsHandlesDids">Actors, handles and DIDs</a>
 
-The Bluesky API documentation refers to a user or bot account as an `Actor`. Actors can be identified in one of two ways, a handle and a Distributed Identifier (`DID`)
+The Bluesky API documentation refers to a user or bot account as an `Actor`. Actors can be identified in one of two ways, by a handle or by a Distributed Identifier (`DID`).
 
 ### <a name="handles">Handles</a>
 
@@ -79,7 +79,7 @@ A `DID` looks something like this: `did:plc:hfgp6pj3akhqxntgqwramlbg`. The first
 the second part is an identifier for the issuer (`plc` is a `DID` issued by Bluesky, `web` is another common identifier indicating an independently issued `DID`),
 and the final part is a unique reference issued by the issuer.
 
-For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID` or a handle
+For example, the API to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID` or a handle
 (this either/or combination is represented as an At-Identifier), but things like [updateAccountPassword](https://docs.bsky.app/docs/api/com-atproto-admin-update-subject-status) take just a `DID`.
 
 When you login via an agent the authenticated user's `DID` is available via the `Did` property on the agent instance.

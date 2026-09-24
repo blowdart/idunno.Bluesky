@@ -174,7 +174,7 @@ At the command line run the following commands, replacing **<yourAppPassword>** 
 
 # [Visual Studio](#tab/appPassword/visualStudio)
 
-1. Right click on the `BluseskyBot` project and select **Manage User Secrets**
+1. Right click on the `BlueskyBot` project and select **Manage User Secrets**
 1. Add the following on a new line between the {} brackets, replacing **<yourAppPassword>** with an app password for your bot account.
    ```json
    "Bot:AppPassword": "<yourAppPassword>"

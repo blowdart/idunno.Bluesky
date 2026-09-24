@@ -2,14 +2,15 @@
 
 ## About
 
-Common .NET types for [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api),
-[Data Model](https://atproto.com/specs/data-model).
+Common .NET types for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and its
+[data model](https://atproto.com/specs/data-model).
 
 ## Version History
 
 A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/CHANGELOG.md) can be found on the project's
 [GitHub](https://github.com/blowdart/idunno.Bluesky/) repository.
 
+## Related Packages
 
 * [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto) for interacting with the [AtProto](https://atproto.com/) network.
 * [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).

@@ -2,7 +2,7 @@
 
 ## About
 
-OAuth libraries for the [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto).
+OAuth libraries for [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto).
 
 ## Key Features
 

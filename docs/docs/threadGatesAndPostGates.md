@@ -7,7 +7,7 @@ people the author is following to reply, replies from actors in a list or allow 
 A thread gate can have up to five rules, but allowing no replies is an exclusive rule, no other rules can be applied.
 A thread gate can also be used to hide replies in a thread.
 
-You can apply a thread gate to an existing using `AddThreadGate()`. This method requires the `AtUri` of the post to be gated,
+You can apply a thread gate to an existing post using `AddThreadGate()`. This method requires the `AtUri` of the post to be gated,
 and, optionally a collection of gate rules and/or a collection of `AtUri`s of thread replies to be hidden.
 If you provide no rules then the post will not allow any replies at all.
 

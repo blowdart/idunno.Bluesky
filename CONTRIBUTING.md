@@ -18,7 +18,7 @@ You will also need NPM installed to build the ASP.NET Core Authentication sample
 
 Issues will be marked stale after 14 days of inactivity, and closed 14 days after they have been marked stale.
 
-_If an issue has been closed and you still feel it's relevant, feel a maintainer or and a comment to the closed issue._
+_If an issue has been closed and you still feel it's relevant, feel free to ping a maintainer or add a comment to the closed issue._
 
 ## Pull requests
 

@@ -36,8 +36,8 @@ agent.Authenticated += (sender, args) =>
 
 The `Authenticated` event is raised when a login is successful and a new session is created.
 The `CredentialsUpdated` event is raised, and the `CredentialsUpdatedAsync` callback invoked, when the background token refresh occurs
-or you call `RefreshSession()`, use the `CredentialsUpdatedAsync` callback to access the tokens for saving state.
-A `TokenRefreshFailed` event is raised when the background refresh fails, or you manually call `RefreshCredentials()` fails.
+or you call `RefreshCredentials()`, use the `CredentialsUpdatedAsync` callback to access the tokens for saving state.
+A `TokenRefreshFailed` event is raised when the background refresh fails, or when a manual call to `RefreshCredentials()` fails.
 `Unauthenticated` is raised when you call `Logout()`.
 
 > [!IMPORTANT]
@@ -92,7 +92,7 @@ AtProtoCredential restoredCredential = AtProtoCredential.Create(
 bool resumeResult = await agent.RefreshCredentials(
     credential: restoredCredential);
 
-if (!resumeResult.Succeeded)
+if (!resumeResult)
 {
     Console.WriteLine($"Restore failed.");
 }

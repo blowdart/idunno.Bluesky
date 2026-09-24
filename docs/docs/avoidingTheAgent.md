@@ -5,12 +5,12 @@ using agents, and talk to the PDS directly, bypassing an app view or other inter
 
 The `AtProtoServer` class has methods to get, list, create, update and delete records directly on a PDS, given appropriate credentials.
 
-This approach entails you discovering the resolve a user handle to a DID, then discovering the PDS endpoint for a user. At that point
+This approach entails you resolving a user handle to a DID, then discovering the PDS endpoint for that user. At that point
 you can read and list records directly from that PDS. To create, update and delete records you must
 authenticate with that PDS to get a session, create access credentials from the session, then using the access credentials
 you can create, update and delete directly records on the PDS. You will also need to manually refresh sessions as they expire.
 
-The [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexcions) library aims to provide common third party
+The [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexicons) library aims to provide common third party
 record types as C# records, so you can work with strongly typed records.
 
 To discover the PDS endpoint for a user you first resolve the DID from the user handle, then resolve the PDS for the DID.
@@ -68,7 +68,7 @@ var listResult = await AtProtoServer.ListRecords<StatusphereStatus>(
 You'll note that the AtProtoServer methods require you to specify a lot of parameters, and very few are optional. This is deliberate,
 the assumption is if you are using the `AtProtoServer` class directly you are likely building your own higher level abstraction on top of it.
 
-To retrieve an individual record you use `GetRecord`. This required credentials. So you would first need to authenticate with the PDS,
+To retrieve an individual record you use `GetRecord`. This requires credentials. So you would first need to authenticate with the PDS,
 via the `CreateSession` method, then create access credentials from the session.
 
 ```c#

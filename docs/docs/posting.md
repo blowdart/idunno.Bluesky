@@ -83,7 +83,7 @@ else
 "Hello world" isn't exactly the most engaging post, so now is a good time to look at how to delete posts.
 
 To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone.
-For example, to delete the post you just made using the first code snippet above you would pass the an AT URI returned as part of the strong reference
+For example, to delete the post you just made using the first code snippet above you would pass the AT URI returned as part of the strong reference
 you got from creating the post, or the strong reference itself.
 
 ```c#
@@ -114,7 +114,7 @@ var replyToReplyStrongReference =
 ```
 
 Replying to a post creates a new record, and it may not surprise you to see that the `ReplyTo()`
-methods returns an `AtProtoHttpResult<CreateRecordResult>` just like creating a post does.
+method returns an `AtProtoHttpResult<CreateRecordResult>` just like creating a post does.
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
@@ -137,7 +137,7 @@ var repostResult = await agent.Repost(postStrongReference);
 var undoRepostResult = await agent.DeleteRepost(postUri);
 ```
 
-Quoting a post requires both the post strong reference, and the text you the quote post to contain.
+Quoting a post requires both the post strong reference, and the text you want the quote post to contain.
 Deleting a post quoting another post is like deleting a regular post, you call `DeletePost` with the AT-URI of the quote post that was created;
 
 ```c#
@@ -185,7 +185,7 @@ specifically add facets as you build your post, see [Building facets with a Post
 
 ### <a name="postBuilder">Building facets with a PostBuilder</a>
 
-While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
+While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record. Another option is available, a `PostBuilder`.
 
 You can use the `PostBuilder` class to create facets, each facet has its own class, `HashTag`, `Link`, and `Mention`,
 in the `idunno.Bluesky.RichText` namespace which you can add to a `PostBuilder`
@@ -295,7 +295,7 @@ var facetedCreatePostResult =
 > 
 > `postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));`
 > 
-> C# will call `ToString()` on the `Link`` as it is being appended to a string and your post will look something like this:
+> C# will call `ToString()` on the `Link` as it is being appended to a string and your post will look something like this:
 >
 > `Link { Text = Read More, Uri = https://en.wikipedia.org/wiki/Heinz_Baked_Bean }`
 > 

@@ -6,7 +6,7 @@ The available rules are
 
 * **idunno.Bluesky.Feed.Gates.MentionRule** : Allow replies from actors mentioned in your post.
 * **idunno.Bluesky.Feed.Gates.FollowingRule**: Allow replies from actors you follow.
-* **idunno.Bluesky.Feed.Gates.FollowerRule**: Allow replies from actors you follow you.
+* **idunno.Bluesky.Feed.Gates.FollowerRule**: Allow replies from actors who follow you.
 * **idunno.Bluesky.Feed.Gates.ListRule**: Allow replies from actors in a list.
 
 A thread gate may have up to 5 rules.

@@ -18,7 +18,7 @@ To create a profile call `agent.CreateProfile()` with a profile record value.
 await agent.CreateProfile(
     new Profile(
         displayName: "display name",
-        description: "description");
+        description: "description"));
 ```
 
 To edit a profile get the user's existing profile with `agent.GetProfile()`, edit the profile,
@@ -35,7 +35,7 @@ var getProfileResult = await agent.GetProfile();
 if (getProfileResult.Succeeded)
 {
     getProfileResult.Result.Profile.Description = "The idunno.Bluesky Test Bot";
-    agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
+    await agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
 }
 ```
 
@@ -52,6 +52,6 @@ if (getProfileResult.Succeeded &&
 {
     getProfileResult.Result.Profile.Description = "The idunno.Bluesky Test Bot";
     getProfileResult.Result.Profile.Avatar = avatarUploadBlobResult.Result;
-    agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
+    await agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
 }
 ```

@@ -209,7 +209,7 @@ becomes your responsibility. The Redis stores have no sweep setting, as Redis ex
 > To configure data protection see the [Microsoft documentation](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview).
 >
 > You can turn off [data protection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/) by overriding the identity store
-> and correlation state cache events. This is not recommended as your users' access, refresh and DPoP tokens will no longer protected at rest.
+> and correlation state cache events. This is not recommended as your users' access, refresh and DPoP tokens will no longer be protected at rest.
 > ```c#
 > 
 > using idunno.Bluesky.AspNet.Authentication.Events;

@@ -1,4 +1,4 @@
-# idunno.Bluesky
+# idunno.Bluesky.AspNet.Authentication
 
 ## About
 
@@ -24,8 +24,7 @@ builder.Services
 
 builder.Services
     .AddBlueskyClaimsTransformer()
-    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
-    .AddBlueskyAgentFactory()
+    .AddBlueskyAgentFactory();
 ```
 
 ## Documentation

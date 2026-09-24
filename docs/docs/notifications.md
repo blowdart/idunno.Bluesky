@@ -1,6 +1,6 @@
 # <a name="checkingNotifications">Checking your notifications</a>
 
-Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
+Like the [timeline](timeline.md), notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#
 AtProtoHttpResult<int?> unreadCount = await agent.GetNotificationUnreadCount();
@@ -17,7 +17,7 @@ var notifications =
 ```
 From there, you would perform the `.Succeeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
 
-Each type of notification, for example `Follow`, `Mention` or `Quote`, have varying types of information used to supplement the notification with appropriate information for its type.
+Each type of notification, for example `Follow`, `Mention` or `Quote`, has varying types of information used to supplement the notification with appropriate information for its type.
 
 ```c#
 foreach (Notification notification in notifications.Result!.Notifications)
@@ -122,8 +122,8 @@ if (notifications.Succeeded && notifications.Result.Count != 0)
 You can see that there's a difference between the first call to `ListNotifications()` and the second, the addition of the `cursor` parameter.
 This parameter is how Bluesky APIs implement paging. If there are no more results then the cursor returned from the API call will be null.
 
-For more details see [Cursors and Pagination](cursorsAndPagination.md).
-or AT Proto documentation section on [Cursors and Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
+For more details see [Cursors and Pagination](cursorsAndPagination.md),
+or the AT Proto documentation section on [Cursors and  Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
 
 ## <a name="activity">Subscribing to and viewing subscriptions of activity notifications</a>
 
