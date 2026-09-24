@@ -72,4 +72,81 @@ public class PostBuilderConcurrencyTests
             Assert.Null(comparerException);
         }
     }
+
+    [Fact]
+    public void ValidationErrorsDoesNotTearWhileTheBuilderIsBeingMutated()
+    {
+        // ValidationErrors used to read HasText, Text, HasImages, HasVideo and the rest one property at a time, taking
+        // a separate snapshot under the lock for each. Text going away between the HasText check and the Text read
+        // dereferenced null, and any pair of rules could be judged against a combination the builder never held. The
+        // window is too narrow to reproduce on demand, so this is a guard against the property-at-a-time shape coming
+        // back rather than a reproduction of the fault.
+        Exception? mutatorException = null;
+        Exception? validatorException = null;
+
+        for (int iteration = 0; iteration < 200 && mutatorException is null && validatorException is null; iteration++)
+        {
+            PostBuilder builder = new("hello");
+            builder.Add(CreateImage("alt"));
+
+            using ManualResetEventSlim start = new(false);
+
+            Thread mutator = new(() =>
+            {
+                start.Wait();
+
+                try
+                {
+                    for (int i = 0; i < 500; i++)
+                    {
+                        builder.Text = null;
+                        builder.Text = "hello";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    mutatorException = ex;
+                }
+            });
+
+            Thread validator = new(() =>
+            {
+                start.Wait();
+
+                try
+                {
+                    for (int i = 0; i < 500; i++)
+                    {
+                        // The builder always carries an image, so it is valid whether or not it currently has text.
+                        Assert.Empty(builder.ValidationErrors());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    validatorException = ex;
+                }
+            });
+
+            mutator.Start();
+            validator.Start();
+            start.Set();
+            mutator.Join();
+            validator.Join();
+        }
+
+        Assert.Null(mutatorException);
+        Assert.Null(validatorException);
+    }
+
+    [Fact]
+    public void ValidationErrorsAreProducedWhenItIsCalledRatherThanWhenItIsEnumerated()
+    {
+        PostBuilder builder = new();
+
+        IEnumerable<string> errors = builder.ValidationErrors();
+
+        builder.Text = "this makes the builder valid";
+
+        Assert.NotEmpty(errors);
+    }
 }

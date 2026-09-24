@@ -22,48 +22,79 @@ public sealed partial class PostBuilder
     /// Returns a list of validation errors, if any, for this instance of <see cref="PostBuilder"/>.
     /// </summary>
     /// <returns>An enumeration of validation errors, if any.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The builder is snapshotted once under its lock and the rules are applied to that snapshot, so the errors
+    ///   describe a state the builder actually had. The errors are produced before this returns, so they describe the
+    ///   builder as it was when this was called, not as it is when the result is enumerated.
+    /// </para>
+    /// </remarks>
     public IEnumerable<string> ValidationErrors()
     {
-        if (!HasText && !HasImages && !HasEmbed && !HasVideo)
-        {
-            yield return Properties.Resources.EmptyPostTextValidationError;
-        }
-
-        if (HasVideo && HasImages)
-        {
-            yield return Properties.Resources.PostCannotHaveImagesAndVideoValidationError;
-        }
-
-        if (HasImages && Images.Count > Maximum.GalleryItems)
-        {
-            yield return string.Format(null, s_postHasTooManyImages, Maximum.GalleryItems);
-        }
-
-        if (HasImages && HasGalleryImages)
-        {
-            yield return Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages;
-        }
-
-        if (HasText && Length > MaxCapacity)
-        {
-            yield return string.Format(null, s_postTextExceedsMaxLengthValidationError, MaxCapacity);
-        }
-
-        if (HasText && Text.GetGraphemeLength() > MaxCapacityGraphemes)
-        {
-            yield return string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, MaxCapacityGraphemes);
-        }
-
+        // Every value the rules depend on is read in a single pass. Reading the properties one at a time would take a
+        // separate snapshot for each rule, so a builder being mutated on another thread could be judged against a
+        // combination of values it never actually held, and text going away between the HasText check and the Text
+        // read would dereference null.
+        bool hasText;
+        bool hasImages;
+        bool hasGalleryImages;
+        bool hasEmbed;
+        bool hasVideo;
         bool hasLabels;
+        int imageCount;
+        int length;
+        string text;
 
         lock (_syncLock)
         {
+            text = _post.Text ?? string.Empty;
+            hasText = text.Length != 0;
+            length = _post.Length;
+            imageCount = _embeddedImages.Count;
+            hasImages = imageCount > 0;
+            hasGalleryImages = _embeddedGalleryImages.Count > 0;
+            hasEmbed = _post.EmbeddedRecord is not null;
+            hasVideo = _embeddedVideo is not null;
             hasLabels = _post.Labels is not null;
         }
 
-        if (!HasImages && !HasVideo && hasLabels)
+        List<string> errors = [];
+
+        if (!hasText && !hasImages && !hasEmbed && !hasVideo)
         {
-            yield return Properties.Resources.PostHasLabelsButNoMediaValidationError;
+            errors.Add(Properties.Resources.EmptyPostTextValidationError);
         }
+
+        if (hasVideo && hasImages)
+        {
+            errors.Add(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
+        }
+
+        if (hasImages && imageCount > Maximum.GalleryItems)
+        {
+            errors.Add(string.Format(null, s_postHasTooManyImages, Maximum.GalleryItems));
+        }
+
+        if (hasImages && hasGalleryImages)
+        {
+            errors.Add(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+        }
+
+        if (hasText && length > MaxCapacity)
+        {
+            errors.Add(string.Format(null, s_postTextExceedsMaxLengthValidationError, MaxCapacity));
+        }
+
+        if (hasText && text.GetGraphemeLength() > MaxCapacityGraphemes)
+        {
+            errors.Add(string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, MaxCapacityGraphemes));
+        }
+
+        if (!hasImages && !hasVideo && hasLabels)
+        {
+            errors.Add(Properties.Resources.PostHasLabelsButNoMediaValidationError);
+        }
+
+        return errors;
     }
 }
