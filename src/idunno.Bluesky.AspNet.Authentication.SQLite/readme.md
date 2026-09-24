@@ -11,6 +11,8 @@ A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/CH
 
 ## How to Use
 
+Create the required tables by running the `schema.sql` file included in the package, then configure the authentication options with stores that use your SQLite connection string.
+
 ```c#
 string connectionString = builder.Configuration.GetConnectionString("BlueskyAuthentication")!;
 
@@ -28,8 +30,6 @@ The identity store uses a seven-day sliding expiration by default. Refresh locks
 Expired rows are deleted by the store which wrote them, at most once every five minutes per store instance, so the tables stay bounded without an operator scheduling anything. Pass `expiredEntrySweepInterval` to change how often that happens, or `TimeSpan.Zero` to turn it off and reclaim the rows yourself. Expiry is enforced on read either way, so an unswept row authenticates nobody.
 
 Use a file-backed database for application storage. In-memory SQLite databases do not persist across the separate connections used for store operations.
-
-You can create the required tables by running the `schema.sql` file included in the package, then configure the authentication options with stores that use your SQLite connection string.
 
 The package also includes a PowerShell script that creates a new database and applies the schema. The database is created in the current directory unless `-OutputDirectory` is specified.
 
