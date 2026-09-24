@@ -99,3 +99,10 @@ if (draftPost.Text.GetUtf8Length() > Maximum.PostLengthInBytes ||
 >
 > Use the `deviceId` to give your client devices a consistent identity
 > and only post drafts with media from the device they were created on.
+>
+> Validate the path of media in a draft before posting to ensure it exists on the device and inform the user if it does not.
+
+>[!WARNING]
+> The path to media in a draft is a device local path controlled by the server you are connecting to. A breach of that server could
+> result in a malicious actor being able to read arbitrary files from your device if you post a draft with media from that device.
+> Validate media paths are safe before posting.
