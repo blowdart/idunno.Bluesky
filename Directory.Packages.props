@@ -3,6 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="AspNetCore.DataProtection.MySql" Version="1.2.0" />
     <PackageVersion Include="CommentSense" Version="1.0.1" />
     <PackageVersion Include="Coravel" Version="6.0.2" />
     <PackageVersion Include="coverlet.MTP" Version="10.0.1" />

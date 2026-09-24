@@ -101,7 +101,7 @@ public class PostConfigureBlueskyAuthenticationOptions(
         // constructor, which only ever sees the unnamed options instance. They are pushed onto the store here instead.
         options.IdentityStore.Events = options.IdentityStoreEvents;
 
-        options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
-        options.CorrelationCache.Events = options.CorrelationStateCacheEvents;
+        options.CorrelationStateCache ??= new EphemeralCorrelationStateCache(loggerFactory);
+        options.CorrelationStateCache.Events = options.CorrelationStateCacheEvents;
     }
 }

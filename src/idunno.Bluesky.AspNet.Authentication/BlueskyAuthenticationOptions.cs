@@ -42,7 +42,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>
     /// The correlation cache to use to store OAuth2 correlation state. If not provided a default in-memory store will be used.
     /// </summary>
-    public ICorrelationStateCache? CorrelationCache { get; set; } = default!;
+    public ICorrelationStateCache? CorrelationStateCache { get; set; } = default!;
 
     /// <summary>
     /// Gets or sets a value for how long entries are kept in the identity store.
@@ -228,7 +228,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <exception cref="ArgumentNullException">Thrown if the value being set is <see langword="null" />.</exception>
     /// <remarks>
     /// <para>
-    ///   This is applied to <see cref="CorrelationCache"/> when the options for the scheme are built, so it takes effect
+    ///   This is applied to <see cref="CorrelationStateCache"/> when the options for the scheme are built, so it takes effect
     ///   whether the cache is the default one or one the application supplied.
     /// </para>
     /// <para>

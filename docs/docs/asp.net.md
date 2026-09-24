@@ -155,7 +155,7 @@ builder.Services
     .AddBluesky(options =>
     {
         options.IdentityStore = new SqliteIdentityStore(connectionString);
-        options.CorrelationCache = new SqliteCorrelationStateCache(connectionString);
+        options.CorrelationStateCache = new SqliteCorrelationStateCache(connectionString);
     });
 ```
 

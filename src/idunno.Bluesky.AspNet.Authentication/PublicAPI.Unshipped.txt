@@ -75,10 +75,10 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.Cookie.get -> 
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.Cookie.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CookieManager.get -> Microsoft.AspNetCore.Authentication.Cookies.ICookieManager!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CookieManager.set -> void
-idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationCache.get -> idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache?
-idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationCache.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationCookie.get -> Microsoft.AspNetCore.Http.CookieBuilder!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationCookie.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCache.get -> idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache?
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCache.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCacheEvents.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCacheEvents.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.DataProtectionProvider.get -> Microsoft.AspNetCore.DataProtection.IDataProtectionProvider?

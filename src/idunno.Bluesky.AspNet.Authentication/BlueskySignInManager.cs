@@ -117,7 +117,7 @@ public class BlueskySignInManager
     public OAuthOptions OAuthOptions { get; init; }
 
     internal ICorrelationStateCache CorrelationCache =>
-        BlueskyAuthenticationOptions.CorrelationCache ??
+        BlueskyAuthenticationOptions.CorrelationStateCache ??
         throw new InvalidOperationException($"No CorrelationCache is configured for the '{AuthenticationScheme}' authentication scheme.");
 
     /// <summary>

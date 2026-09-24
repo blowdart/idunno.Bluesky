@@ -84,9 +84,9 @@ public class BlueskyAuthenticationOptionsConfigurationTests
         BlueskyAuthenticationOptions options = monitor.Get("CustomScheme");
 
         Assert.NotNull(options.IdentityStore);
-        Assert.NotNull(options.CorrelationCache);
+        Assert.NotNull(options.CorrelationStateCache);
         Assert.Same(identityStoreEvents, options.IdentityStore.Events);
-        Assert.Same(correlationStateCacheEvents, options.CorrelationCache.Events);
+        Assert.Same(correlationStateCacheEvents, options.CorrelationStateCache.Events);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class BlueskyAuthenticationOptionsConfigurationTests
         IOptionsMonitor<BlueskyAuthenticationOptions> monitor = BuildOptions("CustomScheme", options =>
         {
             options.IdentityStore = identityStore;
-            options.CorrelationCache = correlationCache;
+            options.CorrelationStateCache = correlationCache;
             options.IdentityStoreEvents = identityStoreEvents;
             options.CorrelationStateCacheEvents = correlationStateCacheEvents;
         });
@@ -109,7 +109,7 @@ public class BlueskyAuthenticationOptionsConfigurationTests
         BlueskyAuthenticationOptions options = monitor.Get("CustomScheme");
 
         Assert.Same(identityStore, options.IdentityStore);
-        Assert.Same(correlationCache, options.CorrelationCache);
+        Assert.Same(correlationCache, options.CorrelationStateCache);
         Assert.Same(identityStoreEvents, identityStore.Events);
         Assert.Same(correlationStateCacheEvents, correlationCache.Events);
     }
@@ -206,7 +206,7 @@ public class BlueskyAuthenticationOptionsConfigurationTests
         Assert.NotNull(options.TicketDataFormat);
         Assert.NotNull(options.CookieManager);
         Assert.NotNull(options.IdentityStore);
-        Assert.NotNull(options.CorrelationCache);
+        Assert.NotNull(options.CorrelationStateCache);
         Assert.Equal(CookieAuthenticationDefaults.LoginPath, options.LoginPath);
         Assert.Equal(CookieAuthenticationDefaults.LogoutPath, options.LogoutPath);
         Assert.Equal(CookieAuthenticationDefaults.AccessDeniedPath, options.AccessDeniedPath);
