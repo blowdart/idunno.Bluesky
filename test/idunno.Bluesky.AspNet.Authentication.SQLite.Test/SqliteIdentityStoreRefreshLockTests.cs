@@ -118,9 +118,14 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(database.ConnectionString, refreshLockLength: s_shortLockLength);
 
-        string? expiredLockToken = await store.StartRefresh(s_did, cancellationToken);
+        // Only the lock which is meant to expire is taken with a short lock length. The lock which takes over is taken
+        // through a store using the default length, so the assertions which follow cannot race its expiry on a loaded
+        // machine and see the takeover lock disappear rather than the behaviour under test.
+        SqliteIdentityStore expiringStore = new(database.ConnectionString, refreshLockLength: s_shortLockLength);
+        SqliteIdentityStore store = new(database.ConnectionString);
+
+        string? expiredLockToken = await expiringStore.StartRefresh(s_did, cancellationToken);
         Assert.NotNull(expiredLockToken);
 
         await Task.Delay(s_afterShortLockExpires, cancellationToken);
