@@ -107,7 +107,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
     /// The protector the sign in manager writes and reads correlation cookies with, so a test can forge one.
     /// </summary>
     internal IDataProtector CorrelationProtector =>
-        Options.DataProtectionProvider!.CreateProtector(Constants.CorrelationPurpose, "v2");
+        Options.DataProtectionProvider!.CreateProtector(Constants.CorrelationPurpose, Scheme, "v2");
 
     /// <summary>
     /// Writes a correlation cookie value in the format the sign in manager reads, so a test can present one whose
@@ -126,7 +126,9 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         IIdentityStore? identityStore = null,
         Action<BlueskyAuthenticationOptions>? configureOptions = null,
         bool authenticateByDefault = true,
-        IHttpClientFactory? httpClientFactory = null)
+        IHttpClientFactory? httpClientFactory = null,
+        OAuthOptions? oAuthOptions = null,
+        string? environmentName = null)
     {
         PendingSignIn pendingSignIn = new();
 
@@ -134,6 +136,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         {
             webHostBuilder
                 .UseTestServer()
+                .UseEnvironment(environmentName ?? Environments.Production)
                 .ConfigureServices(services =>
                 {
                     services.AddMetrics();
@@ -141,7 +144,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                     services.AddDataProtection();
 
                     services.Configure<BlueskyAgentOptions>(options =>
-                        options.OAuthOptions = new OAuthOptions("https://localhost/client-metadata.json")
+                        options.OAuthOptions = oAuthOptions ?? new OAuthOptions("https://localhost/client-metadata.json")
                         {
                             ReturnUri = new Uri("https://localhost/signin-bluesky")
                         });
@@ -274,18 +277,64 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Issues a request to <paramref name="path"/> carrying <paramref name="value"/> as the correlation cookie.
+    /// Issues a request to <paramref name="path"/> carrying <paramref name="value"/> as the correlation cookie
+    /// named <paramref name="name"/>.
     /// </summary>
-    internal async Task<HttpResponseMessage> GetWithCorrelationCookie(string path, string? value)
+    internal async Task<HttpResponseMessage> GetWithCorrelationCookie(string path, string name, string? value)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(path, UriKind.Relative));
 
         if (value is not null)
         {
-            request.Headers.Add("Cookie", $"{Constants.CorrelationCookieName}={value}");
+            request.Headers.Add("Cookie", $"{name}={value}");
         }
 
         return await Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// Asks the host for the name the correlation cookie of the login whose OAuth state parameter is
+    /// <paramref name="oauthState"/> is written with.
+    /// </summary>
+    internal async Task<string> CorrelationCookieName(string oauthState = TestData.OAuthState)
+    {
+        using HttpResponseMessage response = await Client.GetAsync(
+            new Uri($"/test/correlation/name?state={Uri.EscapeDataString(oauthState)}", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        return await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the whole Set-Cookie header of the correlation cookie on <paramref name="response"/>, whatever the
+    /// per login part of its name is, or <see langword="null"/> if the response did not set one.
+    /// </summary>
+    internal static string? CorrelationSetCookieHeader(HttpResponseMessage response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        if (!response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? setCookieHeaders))
+        {
+            return null;
+        }
+
+        return setCookieHeaders.FirstOrDefault(
+            header => header.StartsWith($"{Constants.CorrelationCookieName}.", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Reads the name and value of the correlation cookie out of the Set-Cookie headers on <paramref name="response"/>.
+    /// </summary>
+    internal static (string Name, string Value)? ExtractCorrelationCookie(HttpResponseMessage response)
+    {
+        if (CorrelationSetCookieHeader(response) is not string header)
+        {
+            return null;
+        }
+
+        string[] nameAndValue = header.Split(';')[0].Split('=', 2);
+
+        return (nameAndValue[0], nameAndValue[1]);
     }
 
     /// <summary>
@@ -440,13 +489,31 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         {
             BlueskySignInManager signInManager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
             Guid correlationId = Guid.NewGuid();
+            string oauthState = context.Request.Query["state"].FirstOrDefault() ?? TestData.OAuthState;
 
             await signInManager.SaveStateAndCreateCorrelationCookie(
-                TestData.LoginState(correlationId),
+                TestData.LoginState(correlationId, oauthState: oauthState),
                 correlationId,
                 markCookieAsSecure: !context.Request.Query.ContainsKey("insecure"));
 
             await context.Response.WriteAsync(correlationId.ToString());
+        });
+
+        // Correlation cookies are named per login, from the OAuth state parameter of that login, so a test which
+        // forges a cookie needs the production naming rather than a copy of it.
+        endpoints.MapGet("/test/returnuri", async context =>
+        {
+            BlueskySignInManager signInManager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
+
+            await context.Response.WriteAsync(signInManager.CreateReturnUri().ToString());
+        });
+
+        endpoints.MapGet("/test/correlation/name", async context =>
+        {
+            BlueskySignInManager signInManager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
+            string oauthState = context.Request.Query["state"].FirstOrDefault() ?? TestData.OAuthState;
+
+            await context.Response.WriteAsync(signInManager.CorrelationCookieNameFor(oauthState));
         });
 
         endpoints.MapGet("/test/correlation/load", async context =>

@@ -73,11 +73,20 @@ internal static class TestData
         return new ClaimsIdentity(claims, authenticationType);
     }
 
-    internal static OAuthLoginState LoginState(Guid correlationId, string codeVerifier = "code-verifier") =>        new(
+    /// <summary>
+    /// The OAuth state parameter the login state returned by <see cref="LoginState"/> carries. A callback has to carry
+    /// the same value for the correlation cookie belonging to that login to be found.
+    /// </summary>
+    internal const string OAuthState = "oauth-state";
+
+    internal static OAuthLoginState LoginState(
+        Guid correlationId,
+        string codeVerifier = "code-verifier",
+        string oauthState = OAuthState) =>        new(
             state: new AuthorizeState
             {
                 StartUrl = "https://bsky.social/oauth/authorize?client_id=test",
-                State = "oauth-state",
+                State = oauthState,
                 CodeVerifier = codeVerifier,
                 RedirectUri = "https://localhost/signin-bluesky",
                 Error = string.Empty,

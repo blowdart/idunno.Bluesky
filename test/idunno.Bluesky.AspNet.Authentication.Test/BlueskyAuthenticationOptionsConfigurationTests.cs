@@ -189,10 +189,21 @@ public class BlueskyAuthenticationOptionsConfigurationTests
 
         BlueskyAuthenticationOptions options = monitor.Get("CustomScheme");
 
-        Assert.Equal(Constants.CorrelationCookieName, options.CorrelationCookie.Name);
+        // The correlation cookie is named per scheme, like the authentication cookie, so two Bluesky schemes in one
+        // application cannot overwrite each other's logins.
+        Assert.Equal($"{Constants.CorrelationCookieName}.CustomScheme", options.CorrelationCookie.Name);
         Assert.True(options.CorrelationCookie.HttpOnly);
         Assert.True(options.CorrelationCookie.IsEssential);
         Assert.Equal(Microsoft.AspNetCore.Http.SameSiteMode.Lax, options.CorrelationCookie.SameSite);
+    }
+
+    [Fact]
+    public void AConfiguredCorrelationCookieNameIsLeftAlone()
+    {
+        IOptionsMonitor<BlueskyAuthenticationOptions> monitor =
+            BuildOptions("CustomScheme", options => options.CorrelationCookie.Name = "my-correlation-cookie");
+
+        Assert.Equal("my-correlation-cookie", monitor.Get("CustomScheme").CorrelationCookie.Name);
     }
 
     [Fact]

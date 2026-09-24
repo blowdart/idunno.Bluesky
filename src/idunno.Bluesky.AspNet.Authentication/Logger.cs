@@ -66,6 +66,9 @@ internal static partial class Logger
     [LoggerMessage(28, LogLevel.Warning, "Correlation cookie was unprotected but its contents could not be parsed.")]
     public static partial void MalformedCorrelationCookie(this ILogger logger);
 
+    [LoggerMessage(31, LogLevel.Debug, "Request did not carry exactly one OAuth state parameter, so no correlation cookie could be named.")]
+    public static partial void MissingOAuthStateParameter(this ILogger logger);
+
     [LoggerMessage(24, LogLevel.Warning, "SignIn failed due to missing query string on the request.")]
     public static partial void SignInFailedNoQueryString(this ILogger logger);
 

@@ -76,8 +76,6 @@ public class LoginModel(BlueskySignInManager blueskySignInManager, ILogger<Login
     {
         returnUrl ??= Url.Content("~/");
 
-        blueskySignInManager.DeleteCorrelationCookie();
-
         if (!string.IsNullOrEmpty(ErrorMessage))
         {
             ModelState.AddModelError(string.Empty, ErrorMessage);

@@ -3,6 +3,7 @@ const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.Authenti
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie = "expired_cookie" -> string!
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionMalformedCookie = "malformed_cookie" -> string!
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionMissingCookie = "missing_cookie" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionMissingState = "missing_state" -> string!
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName = "reason" -> string!
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionStateNotFound = "state_not_found" -> string!
 const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionUnprotectFailed = "unprotect_failed" -> string!

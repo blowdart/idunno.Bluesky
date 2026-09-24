@@ -280,6 +280,15 @@ DPoP and the OAuth flow both need state to be kept on the server, and that state
 * The **identity store** holds the access token, the refresh token and the DPoP proof key for an authenticated user.
 * The **correlation state cache** holds the PKCE verifier and the DPoP private key for a login which is still in flight.
 
+A login in flight is tied to its correlation state by a short lived cookie. That cookie is named per authentication scheme and per login, so a user can have
+more than one login in flight at once, in two browser tabs for example, without one overwriting another. The name of a login's cookie is derived from the OAuth
+`state` parameter, which is why a callback which does not carry exactly one `state` parameter is rejected. The cookie's contents, not its name, decide which
+correlation state is used, so the name being derived from the request does not let a caller reach a login it did not start.
+
+> [!NOTE]
+> Cookies for abandoned logins are not deleted when a new login starts, as deleting them would break any login still in flight. They expire on their own,
+> at the same time as the correlation state they point at, controlled by the correlation state cache's `entryTimeToLive`.
+
 Both are encrypted at rest with the ASP.NET Core Data Protection API. If you run on more than one server, choose store implementations which every instance can
 reach, and configure data protection with a shared key store, otherwise a login which starts on one server cannot be completed on another.
 

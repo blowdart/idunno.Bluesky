@@ -220,6 +220,7 @@ Tagged with `reason`.
 | `reason` | Meaning |
 | --- | --- |
 | `missing_cookie` | The callback carried no correlation cookie, so it could not be tied to a login this application started. |
+| `missing_state` | The callback did not carry exactly one OAuth `state` parameter, so it could not say which login in flight it belonged to. |
 | `expired_cookie` | The correlation cookie was readable but had passed the expiry it was written with. |
 | `unprotect_failed` | The correlation cookie could not be unprotected. This also counts against `dataprotection.failures.total`. |
 | `malformed_cookie` | The correlation cookie was unprotected successfully but its contents could not be parsed. |

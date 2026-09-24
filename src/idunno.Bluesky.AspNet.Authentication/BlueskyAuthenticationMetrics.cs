@@ -151,6 +151,12 @@ public class BlueskyAuthenticationMetrics
     public const string CorrelationStateRejectionMissingCookie = "missing_cookie";
 
     /// <summary>
+    /// The value of the <see cref="CorrelationStateRejectionReasonTagName"/> tag when the callback did not carry
+    /// exactly one OAuth state parameter, so the correlation cookie for the login it belongs to could not be named.
+    /// </summary>
+    public const string CorrelationStateRejectionMissingState = "missing_state";
+
+    /// <summary>
     /// The value of the <see cref="CorrelationStateRejectionReasonTagName"/> tag when the correlation cookie was
     /// unprotected successfully but its contents could not be parsed.
     /// </summary>
@@ -490,7 +496,8 @@ public class BlueskyAuthenticationMetrics
     /// <remarks>
     /// <para>
     ///   Tagged with <see cref="CorrelationStateRejectionReasonTagName"/>, whose value is
-    ///   <see cref="CorrelationStateRejectionMissingCookie"/>, <see cref="CorrelationStateRejectionExpiredCookie"/>,
+    ///   <see cref="CorrelationStateRejectionMissingCookie"/>, <see cref="CorrelationStateRejectionMissingState"/>,
+    ///   <see cref="CorrelationStateRejectionExpiredCookie"/>,
     ///   <see cref="CorrelationStateRejectionUnprotectFailed"/>, <see cref="CorrelationStateRejectionMalformedCookie"/>
     ///   or <see cref="CorrelationStateRejectionStateNotFound"/>. Correlation state is what ties a login callback to the
     ///   login which started it, so a sustained count is either users taking too long to log in or callbacks arriving

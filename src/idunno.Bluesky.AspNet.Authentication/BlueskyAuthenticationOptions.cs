@@ -136,8 +136,14 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
-    /// If an explicit <see cref="CookieBuilder.Name"/> is not provided the correlation cookie is named
-    /// <c>_idunno_bluesky_Correlation</c>.
+    /// If an explicit <see cref="CookieBuilder.Name"/> is not provided the correlation cookie name is
+    /// <c>_idunno_bluesky_Correlation</c> followed by the name of the authentication scheme, so that two Bluesky
+    /// schemes in the same application do not share a cookie.
+    /// </para>
+    /// <para>
+    /// The name is a prefix rather than the name a cookie is written with. Each login in flight writes its own
+    /// correlation cookie, named from the OAuth state parameter of that login, so that logins started in two tabs of
+    /// the same browser do not overwrite one another.
     /// </para>
     /// <list type="bullet">
     /// <item><description><see cref="CookieBuilder.SameSite"/> defaults to <see cref="SameSiteMode.Lax"/>.</description></item>
@@ -153,7 +159,6 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     } = new RequestPathBaseCookieBuilder()
     {
-        Name = Constants.CorrelationCookieName,
         HttpOnly = true,
         SameSite = SameSiteMode.Lax,
         SecurePolicy = CookieSecurePolicy.SameAsRequest,

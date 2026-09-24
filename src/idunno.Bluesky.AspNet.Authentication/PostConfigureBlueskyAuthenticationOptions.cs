@@ -44,6 +44,13 @@ public class PostConfigureBlueskyAuthenticationOptions(
             options.Cookie.Name = BlueskyAuthenticationDefaults.CookiePrefix + Uri.EscapeDataString(name);
         }
 
+        // The correlation cookie is named per scheme for the same reason as the authentication cookie. Two Bluesky
+        // schemes in one application which shared a correlation cookie name would overwrite each other's logins.
+        if (string.IsNullOrEmpty(options.CorrelationCookie.Name))
+        {
+            options.CorrelationCookie.Name = Constants.CorrelationCookieName + "." + Uri.EscapeDataString(name);
+        }
+
         if (options.TicketDataFormat == null)
         {
             IDataProtector dataProtector = options.DataProtectionProvider.CreateProtector("idunno.Bluesky.AspNet.Authentication", name, "v1");
