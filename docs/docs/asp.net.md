@@ -196,11 +196,31 @@ becomes your responsibility. The Redis stores have no sweep setting, as Redis ex
 > `IdentityStoreEntryTimeToLive` defaults to the authentication cookie's `ExpireTimeSpan`. If you shorten a lifetime so that stored credentials expire before
 > the cookie does, users will be signed out early, and a warning is logged.
 
-Note that information persisted in the identity store is sensitive and is, by default, protected using the ASP.NET Core Data Protection API.
-This means that if you run your application on multiple servers you must configure data protection to use a common key store, and
-if you change the key store or run your application on a different server all previously persisted identities will be invalidated.
-
-To configure data protection see the [Microsoft documentation](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview).
+> [!IMPORTANT]
+> Information persisted in the identity store is sensitive and is, by default, protected using the ASP.NET Core Data Protection API.
+> This means that if you run your application on multiple servers you must configure data protection to use a common key store, a static
+> application name and if you change the key store or run your application on a different server all previously persisted identities will be invalidated,
+> causing your users to be logged out.
+> 
+> In addition you should use data protection providers that match the authentication persistence providers such as the generic
+> [Entity Framework](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview) provider or a more specific
+> provider such as [AspNetCore.DataProtection.MySql](https://www.nuget.org/packages/AspNetCore.DataProtection.MySql).
+> 
+> To configure data protection see the [Microsoft documentation](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/configuration/overview).
+>
+> You can turn off [data protection](https://learn.microsoft.com/en-us/aspnet/core/security/data-protection/) by overriding the identity store
+> and correlation state cache events. This is not recommended as your users' access, refresh and DPoP tokens will no longer protected at rest.
+> ```c#
+> 
+> using idunno.Bluesky.AspNet.Authentication.Events;
+> 
+> builder.Services.AddAuthentication()
+>     .AddBluesky(options =>
+>     {
+>         options.IdentityStoreEvents = new IdentityStoreEvents();
+>         options.CorrelationStateCacheEvents = new CorrelationStateCacheEvents();
+>     });
+>```
 
 ### Using claims transformation to supplement the identity
 
