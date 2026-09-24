@@ -28,3 +28,4 @@ jobs:
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           allow-licenses: Apache-2.0, MIT, BSD-3-Clause, CC-BY-SA-4.0, LicenseRef-scancode-sonar-sal-1.0, CC-BY-3.0
+          allow-dependencies-licenses: 'pkg:nuget/idunno.AtProto, pkg:nuget/idunno.AtProto.OAuthCallback, pkg:nuget/idunno.AtProto.Types, pkg:nuget/idunno.Bluesky, pkg:nuget/idunno.Bluesky.AspNet.Authentication, pkg:nuget/idunno.Bluesky.Authentication.MySql, pkg:nuget/idunno.Bluesky.Authentication.Redis, pkg:nuget/idunno.Bluesky.Authentication.SQLite, pkg:nuget/idunno.Bluesky.AspNet.Authentication.UI'
