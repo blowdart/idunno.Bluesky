@@ -8,64 +8,58 @@
 
     bool setFocusToSubmit = Model.Input is not null && Model.Input.RememberHandle && Model.Input.UserHandle is not null;
 }
-@section scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
-
-<body>
-    <div class="container py-lg-5">
-        <div class="row align-items-baseline">
-            <div class="col-sm-4">
-                <h1 class="h3 mb-3 font-weight-normal ">Sign in with Bluesky</h1>
-            </div>
-            <div class="col-sm-8">
-                <form method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                    <div class="form-group row mb-3">
-                        <div class="col-sm-4">
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text">@@</span>
-                                </div>
-                                <input asp-for="Input.UserHandle"
-                                       class="form-control"
-                                       aria-label="@Html.DisplayNameFor(m => m.Input.UserHandle)"
-                                       aria-required="true"
-                                       required
-                                       autofocus="@(!setFocusToSubmit)"
-                                       spellcheck="false"
-                                       autocorrect="off"
-                                       autocomplete="username" 
-                                       tabindex="@(++tabIndex)" />
-                            </div>
-                            <small><span asp-validation-for="Input.UserHandle" class="text-danger"></span></small>
+<div class="py-lg-5">
+    <div class="row align-items-baseline">
+        <div class="col-sm-4">
+            <h1 class="h3 mb-3 fw-normal">Sign in with Bluesky</h1>
+        </div>
+        <div class="col-sm-8">
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                <div class="row mb-3">
+                    <div class="col-sm-4">
+                        <div class="input-group">
+                            <span class="input-group-text">@@</span>
+                            <input asp-for="Input.UserHandle"
+                                   class="form-control"
+                                   aria-label="@Html.DisplayNameFor(m => m.Input.UserHandle)"
+                                   aria-required="true"
+                                   required
+                                   autofocus="@(!setFocusToSubmit)"
+                                   spellcheck="false"
+                                   autocorrect="off"
+                                   autocomplete="username"
+                                   tabindex="@(++tabIndex)" />
                         </div>
+                        <small><span asp-validation-for="Input.UserHandle" class="text-danger"></span></small>
                     </div>
-                    <div class="form-group form-inline row mb-3">
-                        <div class="col-sm-4 checkbox">
-                            <label asp-for="Input.RememberHandle">
-                                <input asp-for="Input.RememberHandle"
-                                       aria-label="@Html.DisplayNameFor(m => m.Input.RememberHandle)"
-                                       class="form-check-input"
-                                       tabindex="@(++tabIndex)" />
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4">
+                        <div class="form-check">
+                            <input asp-for="Input.RememberHandle"
+                                   aria-label="@Html.DisplayNameFor(m => m.Input.RememberHandle)"
+                                   class="form-check-input"
+                                   tabindex="@(++tabIndex)" />
+                            <label asp-for="Input.RememberHandle" class="form-check-label">
                                 @Html.DisplayNameFor(m => m.Input.RememberHandle)
                             </label>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <div class="col-sm-4">
-                            <button 
-                                class="btn btn-primary" 
-                                type="submit" 
-                                autofocus="@(setFocusToSubmit)"
-                                aria-label="Sign In"
-                                tabindex="@(++tabIndex)">
-                                Sign in
-                            </button>
-                        </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-4">
+                        <button
+                            class="btn btn-primary"
+                            type="submit"
+                            autofocus="@(setFocusToSubmit)"
+                            aria-label="Sign In"
+                            tabindex="@(++tabIndex)">
+                            Sign in
+                        </button>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
-</body>
+</div>

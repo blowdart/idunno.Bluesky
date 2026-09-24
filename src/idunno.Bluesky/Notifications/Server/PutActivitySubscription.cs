@@ -26,6 +26,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="subscriptionSettings"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <see cref="SubjectActivitySubscription.ActivitySubscription"/> property of <paramref name="subscriptionSettings"/> is <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -47,6 +48,13 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+
+        if (subscriptionSettings.ActivitySubscription is null)
+        {
+            throw new ArgumentException(
+                $"{nameof(subscriptionSettings.ActivitySubscription)} cannot be null when creating or updating a subscription.",
+                nameof(subscriptionSettings));
+        }
 
         BlueskyHttpClient<SubjectActivitySubscription> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         return await request.Post(

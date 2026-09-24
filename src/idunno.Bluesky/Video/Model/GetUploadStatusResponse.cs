@@ -9,7 +9,7 @@ internal record GetUploadStatusResponse(
     [property: JsonRequired] string JobId,
     [property: JsonRequired, JsonPropertyName("partSizeBytes")] long PartSize,
     [property: JsonRequired] long PartCount,
-    [property: JsonRequired] IReadOnlyCollection<int> ReceivedParts,
+    [property: JsonRequired] IReadOnlyCollection<long> ReceivedParts,
     [property: JsonRequired] DateTimeOffset ExpiresAt,
     [property: JsonRequired] string State,
     string? CompletedJobId,

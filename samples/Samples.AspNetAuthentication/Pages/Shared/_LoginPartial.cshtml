@@ -23,7 +23,7 @@
             @{
                 var logoutReturnUrl = Url.Page("/Index", new { area = "" });
             }
-            <form class="form-inline" asp-area="Bluesky" asp-page="/Logout" asp-route-returnUrl="@logoutReturnUrl" method="post">
+            <form class="d-inline" asp-area="Bluesky" asp-page="/Logout" asp-route-returnUrl="@logoutReturnUrl" method="post">
                 <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
             </form>
         </li>

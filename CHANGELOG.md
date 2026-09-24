@@ -295,6 +295,8 @@
 * `Preferences` gains a `Like` positional parameter, changing its constructor and `Deconstruct` signatures.
 * `Notification.Author` is now a `ProfileView` rather than a `ProfileViewBasic`.
 * `SubjectActivitySubscription.ActivitySubscription` is now nullable, as the API omits it from `PutActivitySubscription()` responses.
+  `BlueskyServer.PutActivitySubscription()` now throws an `ArgumentException` when it is passed a `SubjectActivitySubscription` whose `ActivitySubscription`
+  is `null`, as the lexicon requires it on input. Previously the request was sent and rejected by the server.
 * `ListNotificationsResponse.SeenAt` is now nullable, as the lexicon marks it optional.
 * `NotificationCollection.Priority` and `NotificationCollection.SeenAt` no longer have internal setters.
 * `Preferences.MutedWords` now returns `IReadOnlyList<MutedWord>` rather than `IList<MutedWord>`.
@@ -349,8 +351,9 @@
 * `BlueskyServer.MuteActorList()` now declares its `accessCredentials` parameter as non-nullable. It always required credentials, and threw when passed
   a `null`.
 * `BlueskyAgent.StartUpload()`, `BlueskyServer.StartUpload()`, `BlueskyAgent.UploadPart()` and `BlueskyServer.UploadPart()` now take their `size` and `part`
-  parameters as `long` rather than `int`, and `StartUploadResponse.PartSize` and `StartUploadResponse.PartCount` are now `long`. The AT Protocol `integer`
-  type is a signed 64 bit value, and a `partSizeBytes` or `partCount` over `int.MaxValue` threw a `JsonException` rather than deserializing.
+  parameters as `long` rather than `int`, and `StartUploadResponse.PartSize`, `StartUploadResponse.PartCount` and `UploadStatus.ReceivedParts` are now
+  `long` based. The AT Protocol `integer` type is a signed 64 bit value, and a `partSizeBytes` or `partCount` over `int.MaxValue` threw a `JsonException`
+  rather than deserializing.
 * `BlueskyAgent.Post()` now validates the local file paths a draft carries against `BlueskyAgent.DraftMediaRoots` before reading them. A draft is fetched from a server, so its paths are untrusted input; previously any path the server supplied was read off disk and uploaded. A draft containing media can no longer be posted unless media roots are configured, or the overload taking `DraftMediaPathValidation.Trust` is used.
 * `Draft.DeviceId` is now a `string?` rather than a `Guid?`. The lexicon declares it as a string of up to 100 bytes, and a device id that was not a GUID
   threw a `JsonException` rather than deserializing.

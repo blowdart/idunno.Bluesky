@@ -572,6 +572,11 @@ public sealed class CallbackServer : IAsyncDisposable
         // Second half of the same defence, and the reason a bare request to the callback address no longer reports a
         // successful login. A request which carries none of the parameters an authorization server sends cannot be the
         // callback, so answering it as one would be wrong even if it were not a way to end the wait early.
+        //
+        // CodeQL reports cs/user-controlled-bypass against this condition. The branch it guards is the rejection, not
+        // an authorization decision, so a request which satisfies the condition gains nothing beyond being passed to
+        // the waiting caller. This server validates no part of the response it receives; the caller checks the OAuth
+        // state parameter and the single use PKCE code verifier before any token exchange happens.
         if (!context.Request.QueryString.HasValue ||
             (!context.Request.Query.ContainsKey("code") &&
              !context.Request.Query.ContainsKey("state") &&

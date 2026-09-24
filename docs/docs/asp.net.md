@@ -93,7 +93,7 @@ Now add login and logout links. In the standard ASP.NET Razor Pages templates th
             @{
                 var logoutReturnUrl = Url.Page("/Index", new { area = "" });
             }
-            <form class="form-inline" asp-area="Bluesky" asp-page="/Logout" asp-route-returnUrl="@logoutReturnUrl" method="post">
+            <form class="d-inline" asp-area="Bluesky" asp-page="/Logout" asp-route-returnUrl="@logoutReturnUrl" method="post">
                 <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
             </form>
         </li>
@@ -113,6 +113,27 @@ Decorate a page with `[Authorize]`, or make your entire app require authenticati
 sent to the login page, where you enter your handle, bounced through the Bluesky OAuth login page, and back to your application where authentication will happen.
 
 If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
+
+### Changing the appearance of the UI pages
+
+The pages in `idunno.Bluesky.AspNet.Authentication.UI` render inside a plain, self contained layout that the package ships, styled by a small stylesheet the package
+also ships. This means the pages work in any application, including a minimal one with no layout of its own. The stylesheet is served as a static web asset, so your
+application must call `app.MapStaticAssets()`, or `app.UseStaticFiles()` on earlier versions of ASP.NET Core, for the pages to pick up their styling.
+
+Most applications will want the authentication pages to look like the rest of the site. Files in your application take precedence over identically pathed files in a
+Razor Class Library, so you can replace the package's layout by adding your own `_ViewStart.cshtml` at `Areas/Bluesky/Pages/_ViewStart.cshtml`, pointing at whichever
+layout you want to use.
+
+```c#
+@{
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+```
+
+`Samples.AspNetAuthentication` does exactly this, which is why its login and logout pages carry the same navigation bar as the rest of the sample.
+
+The markup in the pages uses Bootstrap class names, so an application whose layout loads Bootstrap will style them without any further work. The package's own
+stylesheet is only referenced by the package's layout, so once you supply your own layout it is never loaded and cannot conflict with your styles.
 
 ### Stores
 

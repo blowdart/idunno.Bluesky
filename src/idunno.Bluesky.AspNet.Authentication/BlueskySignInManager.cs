@@ -485,6 +485,11 @@ public class BlueskySignInManager
     /// <returns>A <see cref="SignInResult"/> containing the result of the parsing.</returns>
     public async Task<SignInResult> SignIn()
     {
+        // CodeQL reports cs/user-controlled-bypass against this condition. The branch it guards is the failure return,
+        // not an authorization decision. A request carrying a query string is only allowed to continue to LoadState,
+        // which reads a data protected correlation cookie rather than anything from the query string, and then to
+        // ProcessOAuth2Response, which checks the OAuth state parameter and the single use PKCE code verifier, and
+        // validates the issuer, audience and DPoP binding of the token before any credentials are returned.
         if (!HttpContext.Request.QueryString.HasValue)
         {
             Logger.SignInFailedNoQueryString();

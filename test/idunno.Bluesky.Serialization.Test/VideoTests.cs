@@ -503,7 +503,7 @@ public class VideoTests
     [Fact]
     public void UploadStatusReceivedPartsIsNotTheCollectionPassedToTheConstructor()
     {
-        List<int> receivedParts = [1, 2, 3];
+        List<long> receivedParts = [1, 2, 3];
 
         UploadStatus uploadStatus = new(
             jobId: "da26a5b74lec73akn0b0",
@@ -517,7 +517,7 @@ public class VideoTests
             failureReason: null);
 
         Assert.NotSame(receivedParts, uploadStatus.ReceivedParts);
-        Assert.IsNotType<List<int>>(uploadStatus.ReceivedParts);
+        Assert.IsNotType<List<long>>(uploadStatus.ReceivedParts);
 
         receivedParts.Add(4);
 
@@ -545,7 +545,7 @@ public class VideoTests
         UploadStatus uploadStatus = new(getUploadStatusResponse);
 
         Assert.NotSame(getUploadStatusResponse.ReceivedParts, uploadStatus.ReceivedParts);
-        Assert.IsNotType<List<int>>(uploadStatus.ReceivedParts);
+        Assert.IsNotType<List<long>>(uploadStatus.ReceivedParts);
         Assert.Equal([1, 2, 3], uploadStatus.ReceivedParts);
     }
 

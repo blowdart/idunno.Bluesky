@@ -16,7 +16,7 @@ public sealed record UploadStatus
         string jobId,
         long partSize,
         long partCount,
-        IReadOnlyCollection<int> receivedParts,
+        IReadOnlyCollection<long> receivedParts,
         DateTimeOffset expiresAt,
         string state,
         string? completedJobId,
@@ -26,7 +26,7 @@ public sealed record UploadStatus
         JobId = jobId;
         PartSize = partSize;
         PartCount = partCount;
-        ReceivedParts = new List<int>(receivedParts).AsReadOnly();
+        ReceivedParts = new List<long>(receivedParts).AsReadOnly();
         ExpiresAt = expiresAt;
         State = state.ToUploadState();
         RawState = state;
@@ -40,7 +40,7 @@ public sealed record UploadStatus
         JobId = getUploadStatusResponse.JobId;
         PartSize = getUploadStatusResponse.PartSize;
         PartCount = getUploadStatusResponse.PartCount;
-        ReceivedParts = new List<int>(getUploadStatusResponse.ReceivedParts).AsReadOnly();
+        ReceivedParts = new List<long>(getUploadStatusResponse.ReceivedParts).AsReadOnly();
         ExpiresAt = getUploadStatusResponse.ExpiresAt;
         State = getUploadStatusResponse.State.ToUploadState();
         RawState = getUploadStatusResponse.State;
@@ -76,7 +76,7 @@ public sealed record UploadStatus
     /// <summary>
     /// Gets the list of part numbers that have been received by the server. This can be used to determine which parts still need to be uploaded.
     /// </summary>
-    public IReadOnlyCollection<int> ReceivedParts { get; init; }
+    public IReadOnlyCollection<long> ReceivedParts { get; init; }
 
     /// <summary>
     /// Gets the expiration date and time of the upload session.
