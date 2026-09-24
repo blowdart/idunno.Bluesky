@@ -75,7 +75,7 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          src/**/idunno.*.nupkg
+          .assets/idunno.*.nupkg
           src/**/idunno.*.dll
           src/**/idunno.*.deps.json
           src/**/idunno.*.xml
