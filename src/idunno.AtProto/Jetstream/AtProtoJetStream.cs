@@ -1465,7 +1465,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
     private Task ParseMessage(string json, ILogger logger)
-    {        try
+    {
+        try
         {
             ArgumentException.ThrowIfNullOrEmpty(json);
         }

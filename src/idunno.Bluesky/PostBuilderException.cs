@@ -1,14 +1,14 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-
 namespace idunno.Bluesky;
 
 /// <summary>
 /// Thrown when a PostBuilder has an internal consistency problem.
 /// </summary>
 public class PostBuilderException : Exception
-{    /// <summary>
+{
+    /// <summary>
     /// Initializes a new instance of the <see cref="PostBuilderException"/> class.
     /// </summary>
     public PostBuilderException() : base() { }
