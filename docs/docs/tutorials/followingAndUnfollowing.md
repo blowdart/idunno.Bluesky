@@ -14,12 +14,53 @@ To follow a user call `agent.Follow()` with the [DID](../commonTerms.md#dids) of
 await agent.Follow(did);
 ```
 
-> [!TIP]
-> If you only know the [handle](../commonTerms.md#handles) of a user you can get their DID with `agent.ResolveHandle()`.
+If you only know the [handle](../commonTerms.md#handles) of the user you can pass that instead, and the agent will resolve it to a DID for you.
+
+`Follow(handle)`
+
+| Parameter    | Type   | Description                       | Required   |
+|--------------|--------|-----------------------------------|:----------:|
+| handle       | Handle | The handle of the user to follow. | Yes        |
+
+```c#
+await agent.Follow(handle);
+```
 
 ## Unfollowing
 
-To unfollow a user call `agent.DeleteFollow()` with the [at:// uri](../commonTerms.md#uri) of the follow record you want to delete.
+To unfollow a user call `agent.Unfollow()` with the [DID](../commonTerms.md#dids) of the user you want to unfollow.
+`Unfollow()` looks up the follow record for you and deletes it.
+
+`Unfollow(did)`
+
+| Parameter    | Type | Description                      | Required   |
+|--------------|------|----------------------------------|:----------:|
+| did          | Did  | The DID of the user to unfollow. | Yes        |
+
+```c#
+await agent.Unfollow(did);
+```
+
+As with `Follow()` you can pass a [handle](../commonTerms.md#handles) instead of a DID.
+
+`Unfollow(handle)`
+
+| Parameter    | Type   | Description                         | Required   |
+|--------------|--------|-------------------------------------|:----------:|
+| handle       | Handle | The handle of the user to unfollow. | Yes        |
+
+```c#
+await agent.Unfollow(handle);
+```
+
+> [!NOTE]
+> `Unfollow()` returns an `AtProtoHttpResult<DeleteResult>` whose `StatusCode` is `NotFound` if the handle could not be resolved,
+> or if the current user is not following the specified user.
+
+### Deleting a follow record directly
+
+If you already have the follow record's [at:// uri](../commonTerms.md#uri) or its `StrongReference` you can delete it directly with
+`agent.DeleteFollow()`, which saves the profile lookup `Unfollow()` performs.
 
 `DeleteFollow(atUri)`
 
@@ -31,13 +72,11 @@ To unfollow a user call `agent.DeleteFollow()` with the [at:// uri](../commonTer
 await agent.DeleteFollow(atUri);
 ```
 
-You can also pass the `StrongReference` of the follow record to `DeleteFollow()`.
-
 `DeleteFollow(strongReference)`
 
-| Parameter       | Type            | Description                                       | Required   |
-|-----------------|-----------------|---------------------------------------------------|:----------:|
-| strongReference | StrongReference | The StrongReference of the follow record to delete. | Yes      |
+| Parameter       | Type            | Description                                         | Required   |
+|-----------------|-----------------|-----------------------------------------------------|:----------:|
+| strongReference | StrongReference | The StrongReference of the follow record to delete. | Yes        |
 
 ```c#
 await agent.DeleteFollow(strongReference);

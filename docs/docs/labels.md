@@ -11,7 +11,7 @@ A user's labeler subscriptions are part of a user's preferences, and can be load
 the agent has authenticated.
 
 ```c#
-using idunno.Bluesky;
+using idunno.Bluesky.Actor;
 
 Preferences userPreferences;
 var userPreferencesResult = await agent.GetPreferences();
