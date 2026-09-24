@@ -11,7 +11,7 @@ avoids the use of exceptions should the HTTP call fail, and allows you to view a
 
 `AtProtoHttpResult<T>` has properties to help you determine the success or failure of the call. These include
 
-* The `Succeeded` property, a `boolean` indicated whether the API call was successful or not,
+* The `Succeeded` property, a `boolean` indicating whether the API call was successful or not,
 * The `StatusCode` property containing the HTTP status code from the API call,
 * The `Result` property, containing the result of the API call. This may be null if a call was unsuccessful,
 * The `AtErrorDetail` property, containing any detailed error messages from the API if any were returned.
@@ -20,7 +20,7 @@ If a request is **successful** the `Succeeded` property on the returned result i
 the `StatusCode` property will be `HttpStatusCode.OK`.
 
 If a request has **failed**, either at the HTTP or the API layer then the `Succeeded` property on the returned result will be `false`, and
-the `Result` property will likely be `null`. The `StatusCode` property will contain the HTTP status code that returned by API call, and,
+the `Result` property will likely be `null`. The `StatusCode` property will contain the HTTP status code that was returned by the API call, and,
 if the API call reached the API endpoint the `AtErrorDetail` property will probably contain any error message returned by the endpoint.
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the login succeeded you would

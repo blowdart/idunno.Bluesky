@@ -1,6 +1,6 @@
 # Creating a post
 
-The following code will login to Bluesky and create a simple post.
+The following code will log in to Bluesky and create a simple post.
 
 [!code-csharp[](code/helloWorld.cs#L1-L5)]
 
@@ -27,12 +27,12 @@ Setting the post's language helps custom feeds or other services filter and pars
 ```c#
 await agent.Post(
   text: "Hello World",
-  langs: "en-US")
+  langs: "en-US");
 
 
 await agent.Post(
   text: "สวัสดีชาวโลก\nHello World",
-  langs: ["th", "en-US"])
+  langs: ["th", "en-US"]);
 ```
 
 You can include multiple values in langs if there are multiple languages present in the post.

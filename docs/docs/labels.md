@@ -11,7 +11,7 @@ A user's labeler subscriptions are part of a user's preferences, and can be load
 the agent has authenticated.
 
 ```c#
-using Bluesky.Agent;
+using idunno.Bluesky;
 
 Preferences userPreferences;
 var userPreferencesResult = await agent.GetPreferences();
@@ -23,7 +23,7 @@ else
 {
     userPreferences = new Preferences();
 }
-````
+```
 
 From there, you use the `SubscribedLabelers` property and pass that into any API that takes a `subscribedLabelers` parameter.
 For example, to get a user's notifications with labels applied:

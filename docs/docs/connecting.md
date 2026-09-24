@@ -206,7 +206,7 @@ if the agent was authenticated via OAuth, the access token), and clears the now 
 
 ## Configuring the agent's HTTP settings
 
-The constructor for the Bluesky agents take an instance of `BlueskyOptions` which allows for configuration of the agents. The `BlueskyOptions` class
+The constructor for the Bluesky agents takes an instance of `BlueskyAgentOptions` which allows for configuration of the agents. The `BlueskyAgentOptions` class
 contains an `HttpClientOptions` property which allows you to specify options for the underlying
 [HttpClient](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient)s used to make requests and receive responses.
 
@@ -239,7 +239,7 @@ You should set the `HttpClientOptions` `HttpUserAgent` property to be a value in
 
 The `HttpClientOptions` `ProxyUri` property allows you to set a proxy to be used by the agent when making outgoing HTTP requests.
 If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
-likely may also need to set the `CheckCertificateRevocationList` property to `false`, 
+likely you may also need to set the `CheckCertificateRevocationList` property to `false`.
 
 > [!CAUTION]
 > Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous,
@@ -269,7 +269,7 @@ Eventually the access token will expire and APIs will start returning errors. Yo
 ```c#
 var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false };
 
-using (BlueskyAgent agent = new (options)
+using (BlueskyAgent agent = new (options))
 {   
     // No token refresh will occur, so eventually API calls will fail.
 }

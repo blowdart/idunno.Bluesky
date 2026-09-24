@@ -14,9 +14,9 @@ The `Bluesky.Actor.Preferences` class is both a list of user preferences, but al
 * `ContentLabelPreferences` - a list of preferences for content labelling, the DID of the labeler that produces it and the visibility of content that is labeled.
 * `SavedFeedsPreferenceV2` - a list of saved feeds.
 * `HiddenPosts` - a list of AT URIs for posts the user has hidden.
-* `AdultContentPreference` - the users preferences for the display of adult content.
-* `FeedViewPreferences` - how the user wants to view their feeds, include settings for hiding replies, hiding replies by actors they don't follow etc.
-* `MutedWords` - a list of words the user does not want to see, including settings for expiry of the mute, whether if applies to everyone or just actors they don't follow, etc.
+* `AdultContentPreference` - the user's preferences for the display of adult content.
+* `FeedViewPreferences` - how the user wants to view their feeds, including settings for hiding replies, hiding replies by actors they don't follow etc.
+* `MutedWords` - a list of words the user does not want to see, including settings for expiry of the mute, whether it applies to everyone or just actors they don't follow, etc.
 * `ThreadViewPreference` - how the user would like threads to be displayed in a client.
 * `PostInteractionSettingsPreferences` - the [thread gates](threadGatesAndPostGates.md#threadGates) and [post gates](threadGatesAndPostGates.md#postGates) the user would like applied to new threads or posts they create.
 

@@ -46,15 +46,15 @@ using var agent = builder.Build();
 
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.
 
-If you are using the generic static server methods which a `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.
-The `jsonSerializationOptions` value must be a chained instance which adds the type resolver for your classes to the type resolved for the classes `AtProtoServer` uses internally.
-To create a chained instance of `JsonSerializationOptions` call `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions()`
-and passing in the `JsonSerializerOptions.Default` from your code where you have JSON source generation configured
+If you are using the generic static server methods which take an `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.
+The `jsonSerializerOptions` value must be a chained instance which adds the type resolver for your classes to the type resolver for the classes `AtProtoServer` uses internally.
+To create a chained instance of `JsonSerializerOptions` call `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions()`,
+passing in the `SourceGenerationContext.Default` from your code where you have JSON source generation configured.
 
 ### Annotating your own classes for json source generation
 
 The reference `AtProto` implementation is quite laissez faire about where the `$type` property appears in serialized JSON. Make sure that the
-`AllowOutOfOrderMetadataProperties` is set to `true`` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
+`AllowOutOfOrderMetadataProperties` is set to `true` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
 
 ```c#
     [JsonSourceGenerationOptions(

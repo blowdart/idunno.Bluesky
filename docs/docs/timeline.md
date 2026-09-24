@@ -63,15 +63,18 @@ var getFeedResult = await agent.GetFeed(feedUri, limit: pageSize);
 
 if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0)
 {
+    int page = 1;
+
     do
     {
         // Display the feed data
 
-        await agent.GetFeed(feedUri,limit: pageSize, cursor: getFeedResult.Result.Cursor);
+        getFeedResult = await agent.GetFeed(feedUri, limit: pageSize, cursor: getFeedResult.Result.Cursor);
+        page++;
 
     } while (getFeedResult.Succeeded &&
              !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-             page < maxPagesToIterate) ;
+             page < maxPagesToIterate);
 }
 ```
 
@@ -91,17 +94,20 @@ const int maxPagesToIterate = 10;
 
 var searchResult = await agent.SearchPosts("#beans", limit: pageSize);
 
-if (searchResult.Succeeded && getFeedResult.Result.Count != 0)
+if (searchResult.Succeeded && searchResult.Result.Count != 0)
 {
+    int page = 1;
+
     do
     {
         // Display the feed data
 
-        await agent.GetFeed(feedUri,limit: pageSize, cursor: searchResult.Result.Cursor);
+        searchResult = await agent.SearchPosts("#beans", limit: pageSize, cursor: searchResult.Result.Cursor);
+        page++;
 
     } while (searchResult.Succeeded &&
-             !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-             page < maxPagesToIterate) ;
+             !string.IsNullOrEmpty(searchResult.Result.Cursor) &&
+             page < maxPagesToIterate);
 }
 ```
 

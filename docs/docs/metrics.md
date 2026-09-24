@@ -76,55 +76,55 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.messages` | Counter&lt;long&gt; | {messages} | Total number of messages received from the JetStream by a `AtProtoJetstream` instance. |
+| `total.messages` | Counter&lt;long&gt; | {messages} | Total number of messages received from the JetStream by an `AtProtoJetstream` instance. |
 
 ### Metric: total.message_parsing_failures
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.message_parsing_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to parse after receipt by a `AtProtoJetstream` instance. |
+| `total.message_parsing_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to parse after receipt by an `AtProtoJetstream` instance. |
 
 ### Metric: total.message_decompression_failures
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.message_decompression_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to decompress after receipt by a `AtProtoJetstream` instance. |
+| `total.message_decompression_failures` | Counter&lt;long&gt; | {messages} | Total number of messages that failed to decompress after receipt by an `AtProtoJetstream` instance. |
 
 ### Metric: total.events_parsed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.events_parsed` | Counter&lt;long&gt; | {events} | Total number of events parsed from received messages by a `AtProtoJetstream` instance. |
+| `total.events_parsed` | Counter&lt;long&gt; | {events} | Total number of events parsed from received messages by an `AtProtoJetstream` instance. |
 
 ### Metric: total.unknown_events
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.unknown_events` | Counter&lt;long&gt; | {events} | Total number of events with unknown type received in messages by a `AtProtoJetstream` instance. |
+| `total.unknown_events` | Counter&lt;long&gt; | {events} | Total number of events with unknown type received in messages by an `AtProtoJetstream` instance. |
 
 ### Metric: total.faults
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.faults` | Counter&lt;long&gt; | {faults} | Total number of WebSocket faults that occurred by a `AtProtoJetstream` instance. |
+| `total.faults` | Counter&lt;long&gt; | {faults} | Total number of WebSocket faults that occurred by an `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_opened
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_opened` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream opened by a `AtProtoJetstream` instance. |
+| `total.connections_opened` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream opened by an `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_closed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_closed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream closed by a `AtProtoJetstream` instance. |
+| `total.connections_closed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream closed by an `AtProtoJetstream` instance. |
 
 ### Metric: total.connections_failed
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `total.connections_failed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream that failed by a `AtProtoJetstream` instance. |
+| `total.connections_failed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream that failed by an `AtProtoJetstream` instance. |
 
 ## idunno.AtProto.Directory
 

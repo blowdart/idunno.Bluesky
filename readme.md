@@ -15,7 +15,7 @@ A .NET 8, 9 and 10 library and SDK for [Bluesky](https://bsky.social/) and the [
 
 ## Getting Started
 
-Add the `idunno.Bluesky` package to your project, and then 
+Add the `idunno.Bluesky` package to your project, and then:
 
 ```c#
 BlueskyAgent agent = new ();
@@ -55,7 +55,7 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 * Muting and blocking users
 * Sending, receiving, and deleting direct messages
 * Creating, joining and leaving group conversations
-* Create, deleting and listing a user's bookmarks
+* Creating, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
 * Multipart uploads for videos
 * Jetstream support for simple firehose consumption
@@ -151,7 +151,7 @@ To match a pre-release for a specific commit, if a build was produced for that c
 1. The pre-release package will have the first 10 digits of the commit sha, prefixed with a `g` as the build number.
 
 For example, commit [190d63e](https://github.com/blowdart/idunno.Bluesky/commit/190d63e20d3d59e86912fd8cfe315915d101f6a8)
-produced a nightly build and packages. The package build number is be 1.1.0-prerelease.`g190d63e20d`
+produced a nightly build and packages. The package build number is 1.1.0-prerelease.`g190d63e20d`
 
 Please note that nightly builds are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing),
 the signing certificate chain will not match the signing chain of a release build. The subject name remains the same.

@@ -22,7 +22,7 @@ this in reality). A listening record might need the following information.
 * Album Name
 * Date and Time listening started
 
-This could be represented as lexicon like this:
+This could be represented as a lexicon like this:
 
 ```json
 {
@@ -181,7 +181,7 @@ var createResult = await agent.CreateRecord(
 ```
 
 > [!TIP]
-> You can use [atp.tools](https://atp.tools) to browse your own (and other's) collections for debugging.
+> You can use [atp.tools](https://atp.tools) to browse your own (and others') collections for debugging.
 
 The result from `CreateRecord`, an `AtProtoHttpResult<CreateRecordResult>` allows you to check for success with the `Succeeded` property,
 and the `Result` property includes a `StrongReference` to the newly created record.
@@ -198,7 +198,7 @@ Each of these endpoints has the equivalent method on `AtProtoAgent` that you can
 
 ## A note on lexicon unions
 
-AtProto lexicons can uses unions to mingle record types, for example,
+AtProto lexicons can use unions to mingle record types, for example,
 the [rich text facet definition](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/richtext/facet.json) for Bluesky posts
 has a part that looks like this
 
@@ -239,7 +239,7 @@ namespace idunno.Bluesky.RichText
 }
 ```
 
-The base class, shown above uses the c# `[JsonPolymorphic]` and `[JsonDerivedType]` attributes to map `$type` declarations in JSON to individual classes. For example,
+The base class, shown above, uses the C# `[JsonPolymorphic]` and `[JsonDerivedType]` attributes to map `$type` declarations in JSON to individual classes. For example,
 the `MentionFacetFeature` class, inheriting from `FacetFeature` looks as follows;
 
 ```c#
