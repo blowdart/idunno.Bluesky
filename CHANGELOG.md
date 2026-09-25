@@ -1,6 +1,6 @@
 # Version History
 
-## 7.0.0 - **unreleased**
+## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
 
