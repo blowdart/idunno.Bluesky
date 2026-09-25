@@ -24,9 +24,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="actors"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -43,9 +44,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actors);
@@ -54,15 +56,15 @@ public static partial class BlueskyServer
 
         var actorList = new List<AtIdentifier>(actors);
 
-        if (actorList.Count == 0 || actorList.Count > 25)
+        if (actorList.Count == 0 || actorList.Count > Maximum.ProfilesToGet)
         {
             ArgumentOutOfRangeException.ThrowIfZero(actorList.Count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, Maximum.ProfilesToGet);
         }
 
         string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
 
-        BlueskyHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetProfilesResponse> response = await request.Get(
             service,
             $"/xrpc/app.bsky.actor.getProfiles?{queryString}",
@@ -76,7 +78,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
-                new Collection<ProfileViewDetailed>(response.Result.Profiles).AsReadOnly(),
+                WithoutNullEntries(response.Result.Profiles, service, nameof(response.Result.Profiles), loggerFactory).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -85,7 +87,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
-                new Collection<ProfileViewDetailed>().AsReadOnly(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

@@ -57,6 +57,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -71,6 +72,8 @@ public partial class BlueskyAgent
     public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preferences preferences)
     {
         ArgumentNullException.ThrowIfNull(preferences);
+        ArgumentOutOfRangeException.ThrowIfZero(preferences.Count);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
@@ -83,6 +86,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: default).ConfigureAwait(false);
     }
 
@@ -98,6 +102,8 @@ public partial class BlueskyAgent
     public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preferences preferences, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(preferences);
+        ArgumentOutOfRangeException.ThrowIfZero(preferences.Count);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
@@ -110,6 +116,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

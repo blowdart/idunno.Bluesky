@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using idunno.Bluesky.Unspecced.Model;
 
 namespace idunno.Bluesky.Unspecced;
@@ -14,9 +15,30 @@ namespace idunno.Bluesky.Unspecced;
 public sealed record TrendingTopics(IReadOnlyCollection<TrendingTopic> Topics, IReadOnlyCollection<TrendingTopic> Suggested)
 {
     internal TrendingTopics(GetTrendingTopicsResponse getTrendingTopicsResponse)
-        : this(
-            getTrendingTopicsResponse is not null && getTrendingTopicsResponse.Topics is not null ? getTrendingTopicsResponse.Topics : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)),
-            getTrendingTopicsResponse.Suggested is not null ? getTrendingTopicsResponse.Suggested : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)))
+        : this(getTrendingTopicsResponse.Topics, getTrendingTopicsResponse.Suggested)
     {
+    }
+
+    /// <summary>
+    /// A collection of trending topics.
+    /// </summary>
+    public IReadOnlyCollection<TrendingTopic> Topics
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Topics);
+
+    /// <summary>
+    /// A collection of suggested topics.
+    /// </summary>
+    public IReadOnlyCollection<TrendingTopic> Suggested
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Suggested);
+
+    private static ReadOnlyCollection<TrendingTopic> AsReadOnlyCopy(IReadOnlyCollection<TrendingTopic>? value)
+    {
+        return value is null ? new List<TrendingTopic>().AsReadOnly() : new List<TrendingTopic>(value).AsReadOnly();
     }
 }

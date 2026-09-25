@@ -27,10 +27,10 @@ public partial class BlueskyAgent
         string? cursor = null,
         CancellationToken cancellationToken = default)
     {
-        if (limit.HasValue)
+        if (limit is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.ConversationRequestsToList);
         }
 
         if (!IsAuthenticated)
@@ -46,6 +46,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result;

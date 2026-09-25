@@ -35,9 +35,12 @@ public record ProfileViewBasic : View
     /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
     /// <param name="status">The <see cref="StatusView"/> of the actor, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">
-    ///   Thrown when <paramref name="displayName"/> is not <see langword="null"/> and has a character length greater than 640 or a grapheme length greater than 64.
-    /// </exception>
+    /// <remarks>
+    /// <para>A display name the service sends is not validated against <see cref="Maximum.DisplayNameLengthInBytes"/>
+    /// or <see cref="Maximum.DisplayNameLengthInGraphemes"/>. A view is a report of what the service holds, and
+    /// rejecting an out of specification display name would make an entire page of profiles unreadable because of
+    /// one actor.</para>
+    /// </remarks>
     [JsonConstructor]
     public ProfileViewBasic(
         Did did,
@@ -56,12 +59,6 @@ public record ProfileViewBasic : View
         ArgumentNullException.ThrowIfNull(did);
         ArgumentNullException.ThrowIfNull(handle);
 
-        if (displayName is not null)
-        {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(displayName.Length, 640);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(displayName.GetGraphemeLength(), 64);
-        }
-
         Did = did;
         Handle = handle;
         DisplayName = displayName;
@@ -73,15 +70,7 @@ public record ProfileViewBasic : View
         CreatedAt = createdAt;
         Verification = verification;
         Status = status;
-
-        if (labels is null)
-        {
-            Labels = new List<Label>().AsReadOnly();
-        }
-        else
-        {
-            Labels = new List<Label>(labels).AsReadOnly();
-        }
+        Labels = labels ?? [];
     }
 
     /// <summary>
@@ -137,7 +126,12 @@ public record ProfileViewBasic : View
     /// is passed into an API which returns this class.
     ///</para>
     /// </remarks>
-    public IReadOnlyCollection<Label> Labels { get; init; }
+    public IReadOnlyCollection<Label> Labels
+    {
+        get;
+
+        init => field = value is null ? [] : new List<Label>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// Gets the date and time the actor was created at.
@@ -159,23 +153,15 @@ public record ProfileViewBasic : View
     /// </summary>
     /// <remarks>
     /// <para>Known Bluesky label values can be found in <see cref="SelfLabelValues"/>.</para>
+    /// <para>This is computed from <see cref="Labels"/> on every call, so that a copy made with a different set of
+    /// labels reports the self labels of those labels rather than those of the record it was copied from.</para>
     /// </remarks>
     [JsonIgnore]
-    public IReadOnlyList<string> SelfLabels
-    {
-        get
-        {
-            field ??= Labels
-                .Where(l => (l.Source == Did &&
-                             l.Uri == $"at://{Did}/app.bsky.actor.profile/self"))
-                .Select(v => v.Value)
-                .Distinct().ToList().AsReadOnly();
-
-            return field;
-        }
-
-        private set;
-    }
+    public IReadOnlyList<string> SelfLabels =>
+        [.. Labels
+            .Where(label => label.Source == Did && label.Uri == $"at://{Did}/app.bsky.actor.profile/self")
+            .Select(label => label.Value)
+            .Distinct()];
 
     /// <summary>
     /// Gets a string representation of the <see cref="ProfileView"/>.

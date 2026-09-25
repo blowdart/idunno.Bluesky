@@ -38,6 +38,7 @@ public static partial class AtProtoServer
     /// <param name="service">The service to authenticate against.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Throw if <paramref name="identifier"/> or <paramref name="password"/> is <see langword="null"/>.</exception>
@@ -56,6 +57,7 @@ public static partial class AtProtoServer
         Uri service,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
@@ -64,7 +66,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<CreateSessionResponse> request = new(loggerFactory);
+        AtProtoHttpClient<CreateSessionResponse> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         CreateSessionRequest loginRequestRecord = new() { Identifier = identifier, Password = password, AuthFactorToken = authFactorToken };
 
@@ -102,6 +104,7 @@ public static partial class AtProtoServer
     /// <param name="refreshCredential">The refresh credentials to delete the session for.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request`.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s refresh token is <see langword="null"/> or whitespace.</exception>
@@ -118,6 +121,7 @@ public static partial class AtProtoServer
         RefreshCredential refreshCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(refreshCredential);
@@ -125,7 +129,7 @@ public static partial class AtProtoServer
 
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
-        AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
+        AtProtoHttpClient<EmptyResponse> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<EmptyResponse> response = await request.Post(
             service: refreshCredential.Service,
@@ -143,8 +147,9 @@ public static partial class AtProtoServer
     /// </summary>
     /// <param name="refreshCredential">The access credentials to use.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="refreshCredential"/>'s service.</param>
-    /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="credentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/> has a <see langword="null"/> or whitespace refresh token.</exception>
@@ -159,8 +164,9 @@ public static partial class AtProtoServer
     public static async Task<AtProtoHttpResult<Session>> RefreshSession(
         RefreshCredential refreshCredential,
         HttpClient httpClient,
-        Action<AtProtoCredential>? credentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(refreshCredential);
@@ -168,7 +174,7 @@ public static partial class AtProtoServer
 
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
-        AtProtoHttpClient<RefreshSessionResponse> request = new(loggerFactory);
+        AtProtoHttpClient<RefreshSessionResponse> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<RefreshSessionResponse> refreshSessionResponse = await request.Post(
             service: refreshCredential.Service,
@@ -207,8 +213,9 @@ public static partial class AtProtoServer
     /// </summary>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making the API request.</param>
-    /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="credentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -223,15 +230,16 @@ public static partial class AtProtoServer
     public static async Task<AtProtoHttpResult<Session>> GetSession(
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? credentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentException.ThrowIfNullOrEmpty(accessCredentials.AccessJwt);
 
-        AtProtoHttpClient<GetSessionResponse> request = new(loggerFactory);
+        AtProtoHttpClient<GetSessionResponse> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetSessionResponse> getSessionResponse = await request.Get(
             accessCredentials.Service,
@@ -271,8 +279,9 @@ public static partial class AtProtoServer
     /// <param name="service">The service to get a signed token from.</param>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="credentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -295,8 +304,9 @@ public static partial class AtProtoServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? credentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(audience);
@@ -324,7 +334,7 @@ public static partial class AtProtoServer
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"&lxm={lxm}");
         string endpoint = endpointBuilder.ToString();
 
-        AtProtoHttpClient<ServiceToken> client = new(loggerFactory);
+        AtProtoHttpClient<ServiceToken> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<ServiceToken> result = await client.Get(
             service,
             endpoint,

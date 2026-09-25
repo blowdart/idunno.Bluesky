@@ -1,6 +1,6 @@
 # <a name="makingRequests">Making requests to Bluesky</a>
 
-Making requests to Bluesky is done though the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via [OAuth](connecting.md#oauth),
+Making requests to Bluesky is done through the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via [OAuth](connecting.md#oauth),
 the agent manages your "session", the tokens necessary to make authenticated requests are stored, refreshed automatically
 and added to any authenticated API requests.
 
@@ -11,7 +11,7 @@ avoids the use of exceptions should the HTTP call fail, and allows you to view a
 
 `AtProtoHttpResult<T>` has properties to help you determine the success or failure of the call. These include
 
-* The `Succeeded` property, a `boolean` indicated whether the API call was successful or not,
+* The `Succeeded` property, a `boolean` indicating whether the API call was successful or not,
 * The `StatusCode` property containing the HTTP status code from the API call,
 * The `Result` property, containing the result of the API call. This may be null if a call was unsuccessful,
 * The `AtErrorDetail` property, containing any detailed error messages from the API if any were returned.
@@ -20,17 +20,17 @@ If a request is **successful** the `Succeeded` property on the returned result i
 the `StatusCode` property will be `HttpStatusCode.OK`.
 
 If a request has **failed**, either at the HTTP or the API layer then the `Succeeded` property on the returned result will be `false`, and
-the `Result` property will likely be `null`. The `StatusCode` property will contain the HTTP status code that returned by API call, and,
-if the API call reached the API endpoint the `Error` property will probably contain any error message returned by the endpoint.
+the `Result` property will likely be `null`. The `StatusCode` property will contain the HTTP status code that was returned by the API call, and,
+if the API call reached the API endpoint the `AtErrorDetail` property will probably contain any error message returned by the endpoint.
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the login succeeded you would
 
-1. Check the that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and an available result.
+1. Check that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and an available result.
 2. If `Succeeded` is `true` you can continue on your way
 
    If `Succeeded` is `false` you use the `StatusCode` property to examine the HTTP status code returned by the API, then
    1. If the `StatusCode` property is `HttpStatusCode.OK` then the API call succeeded but no result was returned.
-   2. If the `Error` property to view any extended error information returned by the API, which may have an `Error` and a `Message` set.
+   2. Use the `AtErrorDetail` property to view any extended error information returned by the API, which may have an `Error` and a `Message` set.
 
 Let's add some basic error checking to the Hello World code you wrote in [getting started.](../index.md)
 
@@ -47,7 +47,7 @@ Let's add some basic error checking to the Hello World code you wrote in [gettin
 ## Handling errors
 
 The `AtProtoHttpResult<T>` class provides a way to handle errors returned by the API. You can use the `AtErrorDetail` property to access detailed error information,
-if an error occured at the API layer.
+if an error occurred at the API layer.
 
 `AtErrorDetail` is a base class for errors, and the API may return a more specific error type, such as `AuthenticationRequired` or `RecordNotFound`.
 You can check for these types using [pattern matching](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/patterns).
@@ -66,6 +66,7 @@ Supported error types for AtProto API calls include:
 * `DidNotFound`
 * `DuplicateCreate`
 * `ExpiredToken`
+* `Forbidden`
 * `FutureCursor`
 * `HandleNotAvailable`
 * `HandleNotFound`
@@ -73,13 +74,19 @@ Supported error types for AtProto API calls include:
 * `HostBanned`
 * `HostNotFound`
 * `IncompatibleDidDoc`
+* `InternalServerError`
 * `InvalidEmail`
+* `InvalidHandle`
 * `InvalidInviteCode`
-* `InvalidPasscode`
+* `InvalidPassword`
 * `InvalidRequest`
 * `InvalidSwap`
 * `InvalidToken`
 * `MethodNotImplemented`
+* `NotAcceptable`
+* `NotEnoughResources`
+* `PayloadTooLarge`
+* `RateLimitExceeded`
 * `RecordNotFound`
 * `RepoDeactivated`
 * `RepoNotFound`
@@ -88,34 +95,63 @@ Supported error types for AtProto API calls include:
 * `TokenRequired`
 * `UnresolvableDid`
 * `UnsupportedDomain`
+* `UnsupportedMediaType`
+* `UpstreamFailure`
+* `UpstreamTimeout`
 * `XrpcNotSupported`
 
 Supported error types for Bluesky API calls include:
 
 * `AccountSuspended`
 * `ActorNotFound`
+* `BadAspectRatio`
 * `BadQueryString`
 * `BlockedActor`
+* `BlockedByActor`
 * `BlockedSubject`
-* `BlueskyError`
 * `ConversationLocked`
+* `ConvoLockedByModeration`
+* `DailyLimitExceeded`
+* `DraftLimitReached`
 * `EnabledJoinLinkAlreadyExists`
 * `FollowRequired`
 * `InsufficientRole`
 * `InvalidCode`
 * `InvalidConversation`
+* `InvalidJoinRequest`
+* `InvalidPartNumber`
+* `LinkAlreadyEnabled`
 * `LinkDisabled`
 * `MemberLimitReached`
 * `MessageDeleteNotAllowed`
 * `MessagesDisabled`
+* `MissingParts`
 * `NewAccountCannotCreateGroup`
-* `OwnerCannotLeave`
 * `NoJoinLink`
 * `NotFollowedBySender`
+* `NotFound`
+* `OwnerCannotLeave`
+* `PartSizeMismatch`
 * `ReactionInvalidValue`
 * `ReactionLimitReached`
 * `ReactionMessageDeleted`
 * `ReactionNotAllowed`
 * `RecipientNotFound`
+* `ReplyTargetNotFound`
+* `ServiceOverloaded`
+* `TooManyOpenUploads`
+* `UnknownFeed`
+* `UnknownList`
+* `UnsupportedCollection`
+* `UnsupportedContentType`
+* `UploadAborted`
+* `UploadAlreadyCompleted`
+* `UploadExpired`
+* `UploadFailed`
+* `UploadForbidden`
+* `UploadNotFound`
+* `UploadNotReady`
 * `UserForbidsGroups`
 * `UserKicked`
+* `VideoTooLarge`
+* `VideoTooLong`

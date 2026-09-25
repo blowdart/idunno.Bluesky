@@ -18,12 +18,17 @@ public record ThreadViewPost : PostViewBase
     /// <param name="replies">The collection of <see cref="PostViewBase"/> of replies to the <paramref name="post"/>, if any.</param>
     /// <param name="threadGate">The <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.</param>
     /// <param name="threadContext">The <see cref="ThreadContext"/> for the post, if any.</param>
+    /// <remarks>
+    /// <para>A <see langword="null"/> entry in <paramref name="replies"/> is dropped. Neither
+    /// <see cref="JsonRequiredAttribute"/> nor <see cref="System.Text.Json.JsonSerializerOptions.RespectNullableAnnotations"/>
+    /// applies to a collection's element type, so a service can return one inside an otherwise well formed thread.</para>
+    /// </remarks>
     [JsonConstructor]
     internal ThreadViewPost(PostView post, PostViewBase? parent, IReadOnlyList<PostViewBase>? replies, ThreadGateView? threadGate, ThreadContext? threadContext)
     {
         Post = post;
         Parent = parent;
-        Replies = replies;
+        Replies = replies is null ? null : [.. replies.Where(reply => reply is not null)];
         ThreadGate = threadGate;
         ThreadContext = threadContext;
     }

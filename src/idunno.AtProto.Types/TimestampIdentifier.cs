@@ -25,6 +25,9 @@ public sealed partial class TimestampIdentifier :
 
     private const int TidLength = 13;
 
+    // The final 10 bits of a TID are a random clock identifier, giving 1024 possible values.
+    private const int ClockIdentifierRange = 1024;
+
     private static double? s_clockId;
 
     private static readonly Random s_random = new();
@@ -57,8 +60,6 @@ public sealed partial class TimestampIdentifier :
     public TimestampIdentifier(string s)
     {
         ArgumentNullException.ThrowIfNull(s);
-
-        s = s.Trim('-');
 
         if (s.Length != TidLength ||
             !s_Validator().IsMatch(s))
@@ -108,22 +109,24 @@ public sealed partial class TimestampIdentifier :
     [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographic function.")]
     public static TimestampIdentifier Next()
     {
-        lock (s_syncLock)
-        {
-            s_clockId ??= Math.Floor(s_random.NextSingle() * 32);
-        }
-
         TimeSpan duration = DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch;
         double microsecondsSinceEpoch = Math.Round(duration.TotalMicroseconds);
 
-        // - monotonically increasing time
-        double timeStamp = Math.Max(microsecondsSinceEpoch, s_lastTimeStamp);
+        double timeStamp;
+        double clockId;
+
         lock (s_syncLock)
         {
+            s_clockId ??= s_random.Next(0, ClockIdentifierRange);
+            clockId = s_clockId.Value;
+
+            // Monotonically increasing time. Reading s_lastTimeStamp, comparing it and writing it back must happen
+            // as one atomic step, otherwise concurrent callers observe the same value and generate the same identifier.
+            timeStamp = Math.Max(microsecondsSinceEpoch, s_lastTimeStamp);
             s_lastTimeStamp = timeStamp + 1;
         }
 
-        return FromTime(timeStamp, (long)s_clockId.Value);
+        return FromTime(timeStamp, (long)clockId);
     }
 
     /// <summary>
@@ -225,7 +228,6 @@ public sealed partial class TimestampIdentifier :
     {
         ArgumentNullException.ThrowIfNull(s);
 
-        s = s.Trim('-');
         if (s.Length != TidLength ||
             !s_Validator().IsMatch(s))
         {

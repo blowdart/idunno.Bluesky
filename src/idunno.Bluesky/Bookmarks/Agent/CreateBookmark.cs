@@ -11,12 +11,12 @@ public partial class BlueskyAgent
     /// <summary>
     /// Creates a bookmark on the specified account from the specified <paramref name="uri"/> and <paramref name="cid"/>. Requires authentication.
     /// </summary>
-    /// <param name="uri">The <see cref="AtUri"/> of the post to bookmark</param>
-    /// <param name="cid">The <see cref="Cid"/> of the post to bookmark</param>
+    /// <param name="uri">The <see cref="AtUri"/> of the post to bookmark.</param>
+    /// <param name="cid">The <see cref="Cid"/> of the post to bookmark.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/>are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a post</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a post.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<EmptyResponse>> CreateBookmark(
         AtUri uri,
@@ -42,13 +42,14 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Creates a bookmark on the specified account from the specified <paramref name="strongReference"/>. Requires authentication.
     /// </summary>
-    /// <param name="strongReference">The <see cref="StrongReference"/> of the post to bookmark</param>
+    /// <param name="strongReference">The <see cref="StrongReference"/> of the post to bookmark.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
@@ -72,6 +73,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

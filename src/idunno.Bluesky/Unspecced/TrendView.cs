@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
@@ -20,14 +21,28 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="Actors">A collection of actors contributing to the <paramref name="Topic" />.</param>
 /// <param name="Description">An optional description of the trend.</param>
 public sealed record TrendView(
-    [field: JsonRequired] string Topic,
-    [field: JsonRequired] string DisplayName,
-    [field: JsonRequired] string Link,
-    [field: JsonRequired] DateTimeOffset StartedAt,
-    [field: JsonRequired] int PostCount,
+    [property: JsonRequired] string Topic,
+    [property: JsonRequired] string DisplayName,
+    [property: JsonRequired] string Link,
+    [property: JsonRequired] DateTimeOffset StartedAt,
+    [property: JsonRequired] int PostCount,
     string? Status,
     string? Category,
-    [field: JsonRequired] IReadOnlyCollection<ProfileViewBasic> Actors,
+    IReadOnlyCollection<ProfileViewBasic> Actors,
     string? Description) : View
 {
+    /// <summary>
+    /// A collection of actors contributing to the <see cref="Topic" />.
+    /// </summary>
+    [JsonRequired]
+    public IReadOnlyCollection<ProfileViewBasic> Actors
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Actors);
+
+    private static ReadOnlyCollection<ProfileViewBasic> AsReadOnlyCopy(IReadOnlyCollection<ProfileViewBasic>? value)
+    {
+        return value is null ? new List<ProfileViewBasic>().AsReadOnly() : new List<ProfileViewBasic>(value).AsReadOnly();
+    }
 }

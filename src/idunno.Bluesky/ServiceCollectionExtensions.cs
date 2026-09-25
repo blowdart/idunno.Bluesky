@@ -15,7 +15,7 @@ namespace idunno.Bluesky;
 public static class ServiceCollectionExtensions
 {
     internal const string RequiresDynamicCodeMessage = "Binding strongly typed objects to configuration values may require generating dynamic code at runtime.";
-    internal const string TrimmingRequiredUnreferencedCodeMessage = "BlueskyAgentOptions instances may their members trimmed. Ensure all required members are preserved.";
+    internal const string TrimmingRequiredUnreferencedCodeMessage = "BlueskyAgentOptions members may be trimmed. Ensure all required members are preserved.";
 
     /// <summary>
     /// Binds configuration for <see cref="BlueskyAgent"/> to the specified <paramref name="configuration"/>.

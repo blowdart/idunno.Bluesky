@@ -3,8 +3,10 @@
 
 using idunno.Bluesky.Graph;
 
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal sealed record GetSuggestedStarterPacksResponse(ICollection<StarterPackView> StarterPacks)
+internal sealed record GetSuggestedStarterPacksResponse([property: JsonRequired] ICollection<StarterPackView> StarterPacks)
 {
 }

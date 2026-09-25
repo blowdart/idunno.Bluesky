@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+
 using idunno.AtProto;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
@@ -11,10 +13,6 @@ partial class BlueskyAgent
 {
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested <paramref name="url"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="url">The canonical web URL the embed represents (typically the URL the user pasted into the composer). Used as the returned view's `uri`. May be used for validation in the future.</param>
     /// <param name="uris">An array of AT-URIs to resolve into the data needed for the embed.</param>
@@ -22,6 +20,13 @@ partial class BlueskyAgent
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is <see langword="null" />.</exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The raw associated records the service returns are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested <paramref name="url" />. That case is reported as an unsuccessful result whose <see cref="AtProtoHttpResult{T}.StatusCode"/> is
+    /// <see cref="HttpStatusCode.NoContent"/> and whose <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall
+    /// back to their own link card rendering in that case and skip writing strong references to the post.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<EmbeddedExternalView>> GetEmbedExternalView(
         Uri url,
         AtUri[] uris,
@@ -37,20 +42,24 @@ partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested URL in the <paramref name="postView"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="postView">The <see cref="PostView"/> containing the external embed to resolve.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a <paramref name="postView"/> or its Embed property is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain a valid <see cref="EmbeddedExternalView"/> or its associated properties.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain an <see cref="EmbeddedExternalView"/>.</exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The raw associated records the service returns are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested link. That case is reported as an unsuccessful result whose <see cref="AtProtoHttpResult{T}.StatusCode"/> is
+    /// <see cref="HttpStatusCode.NoContent"/> and whose <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall
+    /// back to their own link card rendering in that case and skip writing strong references to the post.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<EmbeddedExternalView>> GetEmbedExternalView(
         PostView postView)
     {
@@ -59,16 +68,19 @@ partial class BlueskyAgent
 
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested URL in the <paramref name="postView"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="postView">The <see cref="PostView"/> containing the external embed to resolve.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a <paramref name="postView"/> or its Embed property is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain a valid <see cref="EmbeddedExternalView"/> or its associated properties.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain an <see cref="EmbeddedExternalView"/>.</exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The raw associated records the service returns are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested link. That case is reported as an unsuccessful result whose <see cref="AtProtoHttpResult{T}.StatusCode"/> is
+    /// <see cref="HttpStatusCode.NoContent"/> and whose <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall
+    /// back to their own link card rendering in that case and skip writing strong references to the post.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<EmbeddedExternalView>> GetEmbedExternalView(
         PostView postView,
         CancellationToken cancellationToken)
@@ -78,16 +90,19 @@ partial class BlueskyAgent
 
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested URL in the <paramref name="postView"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="postView">The <see cref="PostView"/> containing the external embed to resolve.</param>
     /// <param name="subscribedLabelers">Optional list of subscribed labelers.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a <paramref name="postView"/> or its Embed property is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain a valid <see cref="EmbeddedExternalView"/> or its associated properties.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain an <see cref="EmbeddedExternalView"/>.</exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The raw associated records the service returns are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested link. That case is reported as an unsuccessful result whose <see cref="AtProtoHttpResult{T}.StatusCode"/> is
+    /// <see cref="HttpStatusCode.NoContent"/> and whose <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall
+    /// back to their own link card rendering in that case and skip writing strong references to the post.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<EmbeddedExternalView>> GetEmbedExternalView(
         PostView postView,
         IEnumerable<Did>? subscribedLabelers)
@@ -97,17 +112,20 @@ partial class BlueskyAgent
 
     /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
-    /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
-    /// the raw `associatedRecords`, and a hydrated `view`.
-    /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested URL in the <paramref name="postView"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="postView">The <see cref="PostView"/> containing the external embed to resolve.</param>
     /// <param name="subscribedLabelers">Optional list of subscribed labelers.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a <paramref name="postView"/> or its Embed property is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain a valid <see cref="EmbeddedExternalView"/> or its associated properties.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="postView"/> does not contain an <see cref="EmbeddedExternalView"/>.</exception>
+    /// <remarks>
+    /// <para>Only the hydrated view is returned. The raw associated records the service returns are not surfaced.</para>
+    /// <para>The service returns an empty response when no records were resolvable, or when validation determined the resolved records do not actually
+    /// back the requested link. That case is reported as an unsuccessful result whose <see cref="AtProtoHttpResult{T}.StatusCode"/> is
+    /// <see cref="HttpStatusCode.NoContent"/> and whose <see cref="AtProtoHttpResult{T}.AtErrorDetail"/> is <see langword="null" />. Callers should fall
+    /// back to their own link card rendering in that case and skip writing strong references to the post.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<EmbeddedExternalView>> GetEmbedExternalView(
         PostView postView,
         IEnumerable<Did>? subscribedLabelers,
@@ -121,19 +139,23 @@ partial class BlueskyAgent
             throw new ArgumentException($"The post view does not contain an {nameof(EmbeddedExternalView)}.", nameof(postView));
         }
 
-        if (embeddedExternalView.External is null)
+        if (embeddedExternalView.External.AssociatedRefs is null ||
+            embeddedExternalView.External.AssociatedRefs.Count == 0 ||
+            !Uri.TryCreate(embeddedExternalView.External.Uri, UriKind.Absolute, out Uri? url))
         {
-            throw new ArgumentException($"The post view does not contain an {nameof(EmbeddedExternalView.External)}.", nameof(postView));
+            // A post with no associated references, or whose external uri is not a legal absolute uri, cannot have an enhanced embed resolved for it.
+            // That is ordinary data rather than a programming error, so it is reported the same way as an empty response from the service.
+            return new AtProtoHttpResult<EmbeddedExternalView>(
+                null,
+                statusCode: HttpStatusCode.NoContent,
+                httpResponseHeaders: null,
+                atErrorDetail: null,
+                rateLimit: null);
         }
 
-        if (embeddedExternalView.External.AssociatedRefs is null || embeddedExternalView.External.AssociatedRefs.Count == 0)
-        {
-            throw new ArgumentException($"The post view does not contain any {nameof(EmbeddedExternalView.External.AssociatedRefs)}.", nameof(postView));
-        }
+        AtUri[] atUris = [.. embeddedExternalView.External.AssociatedRefs.Select(r => r.Uri).Take(Maximum.EmbedExternalViewUris)];
 
-        var atUris = embeddedExternalView.External.AssociatedRefs.Select(r => r.Uri).ToList();
-
-        return await GetEmbedExternalView(embeddedExternalView.External.Uri, [.. atUris], subscribedLabelers, cancellationToken).ConfigureAwait(false);
+        return await GetEmbedExternalView(url, atUris, subscribedLabelers, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

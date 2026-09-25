@@ -5,6 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal record GetPostThreadOtherV2Response([field: JsonRequired] IReadOnlyCollection<ThreadItem> Thread)
+internal record GetPostThreadOtherV2Response([property: JsonRequired] IReadOnlyCollection<ThreadItem> Thread)
 {
 }

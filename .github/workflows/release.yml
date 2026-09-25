@@ -82,6 +82,12 @@ jobs:
           9.0.x
           10.0.x
 
+    - name: 'Setup Node'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: '22.x'
+        package-manager-cache: false
+
     - name: 'Build'
       run: dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
 
@@ -231,12 +237,14 @@ jobs:
         user: ${{secrets.NUGET_USERNAME}}
 
       # Use --skip-duplicate to prevent errors if a package with the same version already exists.
-      # This allows a retory of a failed workflow, already published packages will be skipped without error.
+      # This allows a retry of a failed workflow, already published packages will be skipped without error.
     - name: Publish NuGet packages
       shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ steps.nugetlogin.outputs.NUGET_API_KEY }}
       run: >
         foreach($file in (Get-ChildItem "${env:BUILD_OUTPUT}" -Recurse -Filter *.nupkg)) {
-          dotnet nuget push $file --api-key "${{ steps.nugetlogin.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push $file --api-key "${env:NUGET_API_KEY}" --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
 
     - name: Setup MyGet and GitHub Packages as NuGet Sources
@@ -268,6 +276,7 @@ jobs:
     environment: release
     permissions:
       contents: write
+      discussions: write
     steps:
     - name: 'Harden Runner'
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -280,11 +289,21 @@ jobs:
         name: signed-artifacts
         path : ${{ env.BUILD_OUTPUT }}
 
-    - name: Draft release
-      uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-      with:
-        body_path: ${{ env.BUILD_OUTPUT }}/release-notes.md
-        working_directory: ${{ env.BUILD_OUTPUT }}
-        files: |
-          *.nupkg
-        draft: true
+      # The release is published rather than drafted because the GitHub API ignores
+      # discussion_category_name on draft releases, so a drafted release never gets
+      # its announcement discussion.
+    - name: Create release
+      shell: bash
+      working-directory: ${{ env.BUILD_OUTPUT }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: >
+        gh release create "${RELEASE_TAG}"
+        --title "${RELEASE_TAG}"
+        --notes-file release-notes.md
+        --discussion-category "Announcements"
+        --verify-tag
+        *.nupkg
+

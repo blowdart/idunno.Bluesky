@@ -54,4 +54,28 @@ public sealed class DirectoryAgentOptions
     /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
     /// </summary>
     public IMeterFactory? MeterFactory { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of bytes read from a DID document response body. Defaults to <see cref="AtProtoHttpClient.DefaultMaximumResponseSize"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   A <c>did:web</c> DID names the host its document is resolved from, so that response is untrusted and the amount read from it is limited.
+    /// </para>
+    /// <para>
+    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// </remarks>
+    public int MaximumResponseSize
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = AtProtoHttpClient.DefaultMaximumResponseSize;
 }

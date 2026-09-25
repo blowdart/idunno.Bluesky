@@ -103,7 +103,7 @@ public sealed class Program
 
             DateTimeOffset notificationCheckDateTime = DateTimeOffset.UtcNow;
 
-            AtProtoHttpResult<int> unreadCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
+            AtProtoHttpResult<int?> unreadCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
             if (unreadCount.Succeeded)
             {
                 Console.WriteLine($"You have {unreadCount.Result} unread notification{(unreadCount.Result != 1 ? "s" : "")}.");

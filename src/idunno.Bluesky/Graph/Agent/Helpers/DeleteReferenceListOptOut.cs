@@ -18,18 +18,18 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is not in the correct collection.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null" />.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteReferenceListOptOut(AtUri uri, CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtUri uri, CancellationToken cancellationToken)
     {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         ArgumentNullException.ThrowIfNull(uri);
 
         if (uri.Collection != CollectionNsid.ReferenceListOptOut)
         {
-            throw new ArgumentException($"{uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.");
+            throw new ArgumentException($"{uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.", nameof(uri));
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
         }
 
         return await DeleteRecord(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -40,7 +40,7 @@ public partial class BlueskyAgent
     /// </summary>
     /// <param name="uri">The <see cref="AtUri"/> of the reference list opt-out record.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    public async Task<AtProtoHttpResult<Commit>> DeleteReferenceListOptOut(AtUri uri)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtUri uri)
     {
         return await DeleteReferenceListOptOut(uri, cancellationToken: default).ConfigureAwait(false);
     }
@@ -54,18 +54,18 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> is not in the correct collection.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> is <see langword="null" />.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteReferenceListOptOut(AtProtoRepositoryRecord<ReferenceListOptOut> record, CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtProtoRepositoryRecord<ReferenceListOptOut> record, CancellationToken cancellationToken)
     {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         ArgumentNullException.ThrowIfNull(record);
 
         if (record.Uri.Collection != CollectionNsid.ReferenceListOptOut)
         {
             throw new ArgumentException($"record {record.Uri} is not in the {CollectionNsid.ReferenceListOptOut} collection.", nameof(record));
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
         }
 
         return await DeleteReferenceListOptOut(record.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -76,7 +76,7 @@ public partial class BlueskyAgent
     /// </summary>
     /// <param name="record">The <see cref="AtProtoRepositoryRecord{ReferenceListOptOut}"/> of the reference list opt-out record.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    public async Task<AtProtoHttpResult<Commit>> DeleteReferenceListOptOut(AtProtoRepositoryRecord<ReferenceListOptOut> record)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteReferenceListOptOut(AtProtoRepositoryRecord<ReferenceListOptOut> record)
     {
         return await DeleteReferenceListOptOut(record, cancellationToken: default).ConfigureAwait(false);
     }

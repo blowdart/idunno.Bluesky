@@ -5,6 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Chat.Convo.Model;
 
-internal record ListConvoRequestsResponse(string? Cursor, [field: JsonRequired] ICollection<ConversationViewBase> Requests)
+internal record ListConvoRequestsResponse(string? Cursor, [property: JsonRequired] ICollection<ConversationViewBase> Requests)
 {
 }

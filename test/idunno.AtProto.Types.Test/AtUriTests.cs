@@ -226,4 +226,65 @@ public class AtUriTests
         Assert.Equal("test.idunno.lexiconType", atUri.Collection);
         Assert.Equal("rkey", atUri.RecordKey);
     }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra/more")]
+    public void AtUriTryParseReturnsFalseWhenThereAreTooManySegments(string value)
+    {
+        Assert.False(AtUri.TryParse(value, out AtUri? actual));
+        Assert.Null(actual);
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra/more")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenThereAreTooManySegments(string value)
+    {
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/.")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/..")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenTheRecordKeyIsInvalid(string value)
+    {
+        // Every way an AT URI can be malformed is reported the same way, so a caller does not have to know which
+        // segment failed to know which exception to catch. RecordKeyFormatException belongs to callers parsing a
+        // record key in isolation.
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/-test.idunno.lexiconType/rkey")]
+    [InlineData("at://did:plc:identifier/999.999.999/rkey")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType-/rkey")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenTheCollectionIsInvalid(string value)
+    {
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/.")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/..")]
+    [InlineData("at://did:plc:identifier/-test.idunno.lexiconType/rkey")]
+    [InlineData("at://did:plc:identifier/999.999.999/rkey")]
+    public void AtUriTryParseReturnsFalseWhenAPathSegmentIsInvalid(string value)
+    {
+        Assert.False(AtUri.TryParse(value, out AtUri? actual));
+        Assert.Null(actual);
+    }
+
+    [Fact]
+    public void AtUriConstructorReportsAUriThatIsTooLongAsTooLongEvenWhenItsCollectionIsAlsoInvalid()
+    {
+        // Both complaints are true of this value and both raise an AtUriFormatException, so only the message
+        // distinguishes them. The length check deliberately runs before the path segments are parsed, as the
+        // URI is rejected on length whatever its collection says.
+        string value = "at://did:plc:identifier/-test.idunno.lexiconType/" + new string('o', 8200);
+
+        AtUriFormatException actual = Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+
+        Assert.Contains("is too long", actual.Message, StringComparison.Ordinal);
+    }
 }

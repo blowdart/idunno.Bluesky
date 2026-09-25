@@ -12,10 +12,10 @@ namespace idunno.Bluesky.Graph;
 /// </summary>
 public sealed class SearchStarterPacksV2Result : PagedViewReadOnlyCollection<StarterPackView>
 {
-    internal SearchStarterPacksV2Result(SearchStarterPacksV2Response response)
-        : base(response.StarterPacks, response.Cursor)
+    internal SearchStarterPacksV2Result(IList<StarterPackView> starterPacks, int? hitsTotal, string? cursor)
+        : base(starterPacks, cursor)
     {
-        HitsTotal = response.HitsTotal;
+        HitsTotal = hitsTotal;
     }
 
     internal SearchStarterPacksV2Result(PagedViewReadOnlyCollection<StarterPackView> data, int? hitsTotal, string? cursor)

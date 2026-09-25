@@ -4,6 +4,6 @@
 namespace idunno.Bluesky.Video.Model;
 
 internal record FinishUploadRequest(
-    string jobId)
+    string JobId)
 {
 }

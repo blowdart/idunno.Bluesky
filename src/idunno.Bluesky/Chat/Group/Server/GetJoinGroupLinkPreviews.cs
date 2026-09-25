@@ -20,13 +20,14 @@ public partial class BlueskyServer
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to the service.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to use when making a request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the service.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than 50 items.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -36,20 +37,30 @@ public partial class BlueskyServer
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
         ICollection<string> codes,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         Uri service,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(codes);
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
+
+        if (codes.Any(code => string.IsNullOrEmpty(code)))
+        {
+            throw new ArgumentException("Codes cannot contain null or empty values.", nameof(codes));
+        }
 
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
 
-        BlueskyHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetJoinLinkPreviewsResponse> response = await client.Get(
             service,
             $"/xrpc/chat.bsky.group.getJoinLinkPreviews?{queryString}",

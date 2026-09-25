@@ -1,25 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Runtime.Serialization;
-
 namespace idunno.AtProto.Authentication;
 
 /// <summary>
 /// An exception thrown when an operation that requires a particular type of exception has been passed the wrong type.
 /// </summary>
-[Serializable]
 public class CredentialException : AtProtoException
 {
-    /// <summary>
-    /// Creates a new instance of the <see cref="CredentialException"/> class for serialization.
-    /// </summary>
-    /// <param name="info">The data needed to serialize or deserialize.</param>
-    /// <param name="context">the source and destination of serialized stream.</param>
-    protected CredentialException(SerializationInfo info, StreamingContext context) : base()
-    {
-    }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialException"/> class with a specified error message.
     /// </summary>
@@ -72,6 +60,5 @@ public class CredentialException : AtProtoException
     /// <summary>
     /// Gets the credential that caused the exception.
     /// </summary>
-    [field: NonSerialized]
     public AtProtoCredential? Credential { get; init; }
 }

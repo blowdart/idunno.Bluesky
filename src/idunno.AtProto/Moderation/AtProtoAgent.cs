@@ -21,7 +21,9 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="labelerDid"/>, <paramref name="reportSubject"/>, <paramref name="reasonType"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="reason"/> is not <see langword="null"/> and is longer than 20000 UTF-8 bytes or 2000 graphemes.
+    /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>
     /// <para>
@@ -42,7 +44,8 @@ public partial class AtProtoAgent : Agent
 
         if (reason is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetUtf8Length(), 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetGraphemeLength(), 2000);
         }
 
         if (!IsAuthenticated)
@@ -61,6 +64,7 @@ public partial class AtProtoAgent : Agent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

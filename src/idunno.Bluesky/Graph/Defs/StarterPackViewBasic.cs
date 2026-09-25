@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -30,6 +29,7 @@ public record StarterPackViewBasic : View
     /// <param name="joinedAllTimeCount">The overall number of users who joined using the list.</param>
     /// <param name="labels">Labels applied to the list.</param>
     /// <param name="indexedAt">The <see cref="DateTimeOffset"/> the list was indexed at.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="cid"/>, <paramref name="record"/> or <paramref name="creator"/> is <see langword="null"/>.</exception>
     public StarterPackViewBasic(
         AtUri uri,
         Cid cid,
@@ -41,9 +41,13 @@ public record StarterPackViewBasic : View
         IReadOnlyCollection<Label>? labels,
         DateTimeOffset indexedAt)
     {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(cid);
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(creator);
+
         Uri = uri;
         Cid = cid;
-        StrongReference = new StrongReference(Uri, Cid);
 
         Record = record;
         Creator = creator;
@@ -53,7 +57,7 @@ public record StarterPackViewBasic : View
 
         if (labels is not null)
         {
-            Labels = labels;
+            Labels = new List<Label>(labels).AsReadOnly();
         }
         else
         {
@@ -81,8 +85,7 @@ public record StarterPackViewBasic : View
     /// Gets the <see cref="StrongReference"/> of the starter pack.
     /// </summary>
     [JsonIgnore]
-    [NotNull]
-    public StrongReference StrongReference { get; }
+    public StrongReference StrongReference => new(Uri, Cid);
 
     /// <summary>
     /// Gets the record for the starter pack.

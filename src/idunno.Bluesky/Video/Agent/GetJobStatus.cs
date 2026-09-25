@@ -28,6 +28,7 @@ public partial class BlueskyAgent
                 _videoServer,
                 HttpClient,
                 LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)

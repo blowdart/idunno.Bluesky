@@ -20,16 +20,17 @@ public static partial class BlueskyServer
     ///  Get additional posts under a thread e.g. replies hidden by threadgate.
     ///  Based on an anchor post at any depth of the tree, returns top-level replies below that anchor.
     ///  It does not include ancestors nor the anchor itself.
-    ///  This should be called after exhausting <see cref="GetPostThreadV2(AtUri, bool?, int?, int?, string?, Uri, AccessCredentials, HttpClient, Action{AtProtoCredential}?, ILoggerFactory?, IEnumerable{Did}?, CancellationToken)"/>.
+    ///  This should be called after exhausting <see cref="GetPostThreadV2(AtUri, bool?, int?, int?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>.
     ///  Does not require authentication, but additional metadata and filtering will be applied for authed requests.
     /// </summary>
     /// <param name="anchor">Reference <see cref="AtUri"/> to post record. This is the anchor post, and the thread will be built around it. It can be any post in the tree, not necessarily a root post.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="anchor"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -40,15 +41,16 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
-    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "javascript require lowercase")]
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The AT Protocol API requires lowercase boolean values in query strings.")]
     public static async Task<AtProtoHttpResult<IReadOnlyCollection<ThreadItem>>> GetPostThreadOtherV2(
         AtUri anchor,
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(anchor);
@@ -58,7 +60,7 @@ public static partial class BlueskyServer
 
         string queryString = $"anchor={Uri.EscapeDataString(anchor.ToString())}";
 
-        BlueskyHttpClient<GetPostThreadOtherV2Response> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPostThreadOtherV2Response> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetPostThreadOtherV2Response> result = await request.Get(
             service,
@@ -73,7 +75,7 @@ public static partial class BlueskyServer
         if (result.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ThreadItem>>(
-                result.Result.Thread,
+                WithoutNullEntries(result.Result.Thread, service, nameof(result.Result.Thread), loggerFactory),
                 statusCode: result.StatusCode,
                 httpResponseHeaders: result.HttpResponseHeaders,
                 atErrorDetail: result.AtErrorDetail,

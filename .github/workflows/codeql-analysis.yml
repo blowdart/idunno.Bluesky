@@ -58,6 +58,12 @@ jobs:
         dotnet-version: | 
           10.0.x
 
+    - name: 'Setup Node'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: '22.x'
+        package-manager-cache: false
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0

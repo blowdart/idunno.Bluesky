@@ -11,6 +11,7 @@ using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky;
 
@@ -21,17 +22,19 @@ public static partial class BlueskyServer
     /// </summary>
     /// <param name="limit">The maximum number of notifications to return. If specified this should be greater than 1 and less than or equal to 100.</param>
     /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
-    /// <param name="seenAt">The date and time notifications were last checked.</param>
+    /// <param name="reasons">An optional collection of <see cref="NotificationReason"/>s to limit the results to.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reasons"/> contains <see cref="NotificationReason.Unknown"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -42,13 +45,14 @@ public static partial class BlueskyServer
     public static async Task<AtProtoHttpResult<NotificationCollection>> ListNotifications(
         int? limit,
         string? cursor,
-        DateTimeOffset? seenAt,
+        IEnumerable<NotificationReason>? reasons,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -72,9 +76,17 @@ public static partial class BlueskyServer
             queryString.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}&");
         }
 
-        if (seenAt is not null)
+        if (reasons is not null)
         {
-            queryString.Append(CultureInfo.InvariantCulture, $"seenAt={seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}");
+            foreach (NotificationReason reason in reasons)
+            {
+                if (reason == NotificationReason.Unknown)
+                {
+                    throw new ArgumentException($"cannot contain {nameof(NotificationReason.Unknown)}.", nameof(reasons));
+                }
+
+                queryString.Append(CultureInfo.InvariantCulture, $"reasons={Uri.EscapeDataString(reason.ToNotificationReasonValue())}&");
+            }
         }
 
         if (queryString.Length > 0 && queryString[queryString.Length - 1] == '&')
@@ -82,7 +94,7 @@ public static partial class BlueskyServer
             queryString.Remove(queryString.Length - 1, 1);
         }
 
-        BlueskyHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
             service: service,
             endpoint: $"/xrpc/app.bsky.notification.listNotifications?{queryString}",
@@ -96,9 +108,19 @@ public static partial class BlueskyServer
         // Transform from DTO and flatten
         if (response.Succeeded)
         {
+            ILogger logger = loggerFactory?.CreateLogger(nameof(BlueskyServer)) ?? NullLogger.Instance;
+
             List<Notification> notifications = [];
             foreach (NotificationResponse notificationResponse in response.Result.Notifications)
             {
+                // A null entry is a protocol violation. Skip it rather than throwing, so a single bad
+                // notification does not make the entire page unreadable.
+                if (notificationResponse is null)
+                {
+                    Logger.ListNotificationsSkippedNullNotification(logger, service);
+                    continue;
+                }
+
                 notifications.Add(new Notification(notificationResponse));
             }
 
@@ -112,7 +134,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<NotificationCollection>(
-                new(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

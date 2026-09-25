@@ -9,8 +9,15 @@ namespace idunno.Bluesky.Video;
 public enum JobState
 {
     /// <summary>
-    /// The job state returned cannot be mapped.
+    /// The job state returned by the service is not a value this library knows about.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon states that any value which is not a known value indicates the job is still in process, so this
+    /// should be treated as "still processing" and polled again, rather than as a failure. The value the service
+    /// actually returned is available in <see cref="JobStatus.RawState"/>.
+    /// </para>
+    /// </remarks>
     Unknown = 0,
 
     /// <summary>

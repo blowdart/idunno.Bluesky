@@ -1,8 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Graph.Model;
 
-internal sealed record GetListsWithMembershipResponse(IList<ListWithMembership> ListsWithMembership, string? Cursor)
+internal sealed record GetListsWithMembershipResponse([property: JsonRequired] IList<ListWithMembership> ListsWithMembership, string? Cursor)
 {
 }

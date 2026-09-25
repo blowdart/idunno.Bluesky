@@ -95,7 +95,7 @@ public partial class BlueskyAgent
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         return await BlueskyServer.SearchPostsV2(
@@ -134,6 +134,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

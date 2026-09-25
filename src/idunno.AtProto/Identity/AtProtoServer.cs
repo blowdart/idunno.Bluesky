@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 using DnsClient;
 using DnsClient.Protocol;
 
@@ -15,25 +17,26 @@ namespace idunno.AtProto;
 public static partial class AtProtoServer
 {
     /// <summary>
-    /// Resolves a handle (domain name) to a DID.
+    /// The default maximum number of bytes read from a <c>/.well-known/atproto-did</c> response.
     /// </summary>
-    /// <param name="handle">The handle to resolve.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is empty or whitespace.</exception>"
-    public static async Task<Did?> ResolveHandle(
-        string handle,
-        HttpClient httpClient,
-        ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handle);
-        ArgumentNullException.ThrowIfNull(httpClient);
+    public const int DefaultMaximumWellKnownResponseSize = 4096;
 
-        return await ResolveHandle(new Handle(handle), httpClient, loggerFactory, cancellationToken).ConfigureAwait(false);
+    private static readonly AsyncLocal<Func<string, CancellationToken, Task<IReadOnlyList<string>>>?> s_dnsTextRecordResolver = new();
+
+    /// <summary>
+    /// Gets or sets the function used to read the text records for a host, replacing the DNS lookup <see cref="ResolveHandle(Handle, HttpClient, ILoggerFactory?, int, CancellationToken)"/>
+    /// would otherwise perform. This exists so tests can resolve handles without depending on a working DNS server.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The value is held in an <see cref="AsyncLocal{T}"/>, so a resolver installed by a test flows into the work that
+    ///   test starts and is invisible to tests running alongside it.
+    /// </para>
+    /// </remarks>
+    internal static Func<string, CancellationToken, Task<IReadOnlyList<string>>>? DnsTextRecordResolver
+    {
+        get => s_dnsTextRecordResolver.Value;
+        set => s_dnsTextRecordResolver.Value = value;
     }
 
     /// <summary>
@@ -42,21 +45,64 @@ public static partial class AtProtoServer
     /// <param name="handle">The handle to resolve.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="handle"/> is not a valid DNS name.</exception>"
+    /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The host a handle is resolved through is chosen by whoever owns the handle, so its response is untrusted and the
+    ///   amount read from it is limited to <paramref name="maximumWellKnownResponseSize"/> bytes.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
+    public static async Task<Did?> ResolveHandle(
+        string handle,
+        HttpClient httpClient,
+        ILoggerFactory? loggerFactory = default,
+        int maximumWellKnownResponseSize = DefaultMaximumWellKnownResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(handle);
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumWellKnownResponseSize);
+
+        return await ResolveHandle(new Handle(handle), httpClient, loggerFactory, maximumWellKnownResponseSize, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves a handle (domain name) to a DID.
+    /// </summary>
+    /// <param name="handle">The handle to resolve.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="handle"/> is not a valid DNS name, or when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The host a handle is resolved through is chosen by whoever owns the handle, so its response is untrusted and the
+    ///   amount read from it is limited to <paramref name="maximumWellKnownResponseSize"/> bytes.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catching all for logging purposes.")]
     public static async Task<Did?> ResolveHandle(
         Handle handle,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumWellKnownResponseSize = DefaultMaximumWellKnownResponseSize,
         CancellationToken cancellationToken = default)
     {
         Did? did = null;
 
         ArgumentNullException.ThrowIfNull(handle);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumWellKnownResponseSize);
 
         if (Uri.CheckHostName(handle.Value) != UriHostNameType.Dns)
         {
@@ -66,15 +112,6 @@ public static partial class AtProtoServer
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger logger = loggerFactory.CreateLogger(typeof(AtProtoServer));
 
-        LookupClient lookupClient = new(new LookupClientOptions()
-        {
-            ContinueOnDnsError = true,
-            ContinueOnEmptyResponse = true,
-            ThrowDnsErrors = false,
-            Timeout = TimeSpan.FromSeconds(15),
-            UseCache = true
-        });
-
         using (logger.BeginScope($"Resolving {handle}"))
         {
             // First try DNS lookup
@@ -83,18 +120,40 @@ public static partial class AtProtoServer
 
             Logger.ResolvingHandleViaDNS(logger, handle, didTxtRecordHost);
 
+            // Set when DNS gives an answer which is ambiguous rather than absent. The handle is then unresolvable, so
+            // the well known fallback below is skipped as well, rather than letting the host the handle points at pick
+            // which of the conflicting records wins.
+            bool ambiguousDnsRecords = false;
+
             try
             {
+                IReadOnlyList<string> textRecords = await QueryTextRecords(didTxtRecordHost, cancellationToken).ConfigureAwait(false);
 
-                IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(didTxtRecordHost, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
-                if (!cancellationToken.IsCancellationRequested && !dnsLookupResult.HasError)
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    foreach (TxtRecord? textRecord in dnsLookupResult.Answers.TxtRecords())
+                    List<string> didTextRecords =
+                        [.. textRecords
+                            .Where(text => text.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture))
+                            .Distinct(StringComparer.Ordinal)];
+
+                    if (didTextRecords.Count > 1)
                     {
-                        foreach (string? text in textRecord.Text.Where(t => t.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture)))
+                        // The specification requires that a handle with more than one did text record is treated as unresolvable,
+                        // rather than an arbitrary record being chosen. Records which agree with each other are removed by the
+                        // Distinct() above, so reaching here means the records disagree.
+                        ambiguousDnsRecords = true;
+                        Logger.MultipleDidTextRecordsFound(logger, handle, didTxtRecordHost, didTextRecords.Count);
+                    }
+                    else if (didTextRecords.Count == 1)
+                    {
+                        if (Did.TryParse(didTextRecords[0][didTextRecordPrefix.Length..], out Did? didFromDns))
                         {
-                            did = new Did(text.Substring(didTextRecordPrefix.Length));
+                            did = didFromDns;
                             Logger.ResolvedHandleToDidViaDNS(logger, handle, did);
+                        }
+                        else
+                        {
+                            Logger.DnsHandleResolutionParseFailed(logger, handle, didTxtRecordHost);
                         }
                     }
                 }
@@ -104,7 +163,7 @@ public static partial class AtProtoServer
                 Logger.ErrorResolvingHandleViaDNS(logger, handle, ex);
             }
 
-            if (!cancellationToken.IsCancellationRequested && did is null)
+            if (!cancellationToken.IsCancellationRequested && did is null && !ambiguousDnsRecords)
             {
                 // Fall back to /well-known/did.json
                 Uri didUri = new($"https://{handle}/.well-known/atproto-did");
@@ -115,23 +174,37 @@ public static partial class AtProtoServer
                 {
                     using (HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, didUri) { Headers = { Accept = { new("text/plain") } } })
                     {
-                        using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                        // Read the response headers only, so an over-long body is rejected by the bounded read below
+                        // rather than being buffered into memory in its entirety first.
+                        using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                         {
                             if (httpResponseMessage.IsSuccessStatusCode)
                             {
-                                string lookupResult = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                string? lookupResult = await HttpContentReader.ReadAsString(
+                                    httpResponseMessage.Content,
+                                    maximumWellKnownResponseSize,
+                                    cancellationToken).ConfigureAwait(false);
 
-                                Logger.HttpHandleResolutionReturned(logger, handle, lookupResult);
-
-                                if (!string.IsNullOrEmpty(lookupResult))
+                                if (lookupResult is null)
                                 {
-                                    if (Did.TryParse(lookupResult, out did))
+                                    Logger.HttpHandleResolutionResponseTooLarge(logger, handle, didUri, maximumWellKnownResponseSize);
+                                }
+                                else
+                                {
+                                    lookupResult = lookupResult.Trim();
+
+                                    Logger.HttpHandleResolutionReturned(logger, handle, lookupResult);
+
+                                    if (!string.IsNullOrEmpty(lookupResult))
                                     {
-                                        Logger.ResolvedHandleToDidViaHttp(logger, handle, did);
-                                    }
-                                    else
-                                    {
-                                        Logger.HttpHandleResolutionParseFailed(logger, handle, didUri);
+                                        if (Did.TryParse(lookupResult, out did))
+                                        {
+                                            Logger.ResolvedHandleToDidViaHttp(logger, handle, did);
+                                        }
+                                        else
+                                        {
+                                            Logger.HttpHandleResolutionParseFailed(logger, handle, didUri);
+                                        }
                                     }
                                 }
                             }
@@ -150,5 +223,40 @@ public static partial class AtProtoServer
         }
 
         return did;
+    }
+
+    /// <summary>
+    /// Reads the text records for <paramref name="host"/>, through <see cref="DnsTextRecordResolver"/> if one is installed,
+    /// and through DNS if not.
+    /// </summary>
+    /// <param name="host">The host whose text records should be read.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private static async Task<IReadOnlyList<string>> QueryTextRecords(string host, CancellationToken cancellationToken)
+    {
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? resolver = DnsTextRecordResolver;
+
+        if (resolver is not null)
+        {
+            return await resolver(host, cancellationToken).ConfigureAwait(false);
+        }
+
+        LookupClient lookupClient = new(new LookupClientOptions()
+        {
+            ContinueOnDnsError = true,
+            ContinueOnEmptyResponse = true,
+            ThrowDnsErrors = false,
+            Timeout = TimeSpan.FromSeconds(15),
+            UseCache = true
+        });
+
+        IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(host, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
+
+        if (dnsLookupResult.HasError)
+        {
+            return [];
+        }
+
+        return [.. dnsLookupResult.Answers.TxtRecords().SelectMany(textRecord => textRecord.Text)];
     }
 }

@@ -18,7 +18,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteContentVisibilityDeclaration(Cid? swapCommit = null, CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteContentVisibilityDeclaration(Cid? swapCommit = null, CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {
@@ -27,7 +27,7 @@ public partial class BlueskyAgent
 
         return await DeleteRecord(
             repo: Did,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             swapCommit: swapCommit,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -66,7 +66,7 @@ public partial class BlueskyAgent
 
         AtProtoHttpResult<AtProtoRepositoryRecord<ContentVisibilityDeclaration>> getRecordResult = await GetBlueskyRecord<ContentVisibilityDeclaration>(
             repo: did.Value,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             cid: null,
             serviceProxy: null,
@@ -149,7 +149,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,
@@ -175,6 +175,7 @@ public partial class BlueskyAgent
     /// <param name="declaration">The declaration record.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -185,7 +186,9 @@ public partial class BlueskyAgent
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration, CancellationToken cancellationToken)
-            {
+    {
+        ArgumentNullException.ThrowIfNull(declaration);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
@@ -193,7 +196,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,
@@ -207,6 +210,7 @@ public partial class BlueskyAgent
     /// </summary>
     /// <param name="declaration">The declaration record.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration)
     {
@@ -242,7 +246,7 @@ public partial class BlueskyAgent
 
         return await PutRecord(
             record: declaration.Value,
-            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            collection: CollectionNsid.ContentVisibilityDeclaration,
             rKey: "self",
             validate: null,
             swapCommit: null,

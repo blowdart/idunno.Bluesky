@@ -45,16 +45,13 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
 
         if (validate)
         {
-            if (Parse(s, validate, out Did? did))
+            if (!Parse(s, validate, out Did? did))
             {
-                Value = s;
-                Method = did!.Method;
+                throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
             }
-            else
-            {
-                Value = string.Empty;
-                Method = InvalidMethod;
-            }
+
+            Value = s;
+            Method = did!.Method;
         }
         else
         {
@@ -285,13 +282,15 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
     {
         string[] segments = s.Split(':');
 
-        if (segments.Length == 3)
+        // A DID may contain more than three colon separated segments. did:web uses them for path segments and
+        // for ports, so anything from three upwards is valid and the method is always the second segment.
+        if (segments.Length >= 3)
         {
             return segments[1];
         }
         else
         {
-            return "INVALID";
+            return InvalidMethod;
         }
     }
 

@@ -1,4 +1,4 @@
-﻿# Using the JetStream
+# Using the JetStream
 
 The [Jetstream](https://github.com/bluesky-social/jetstream) is a streaming service that provides information on activity on the ATProto network.
 You can consume the Jetstream using the `AtProtoJetstream` class.
@@ -62,8 +62,51 @@ If you want the raw messages from the jetstream subscribe to the `MessageReceive
 
 > [!WARNING]
 > The Jetstream covers all ATProto events. The Commit events cover not only Bluesky record commits but any commits from a registered PDS, such as [WhiteWind](https://whtwnd.com)
-> blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages.  This is why the `Record` property in `AtJetstreamCommit` is presented as a `JsonDocument`.
+> blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages.  This is why the `Record` property in `AtJetstreamCommit` is presented as a `JsonElement`.
 > When deserializing this property to, for example, a `BlueskyRecord` you will encounter exceptions if you attempt it on a non-Bluesky defined record 
+
+> [!IMPORTANT]
+> In version 7.0.0 `AtJetstreamCommit.Record` changed from a `JsonDocument?` to a `JsonElement?`.
+>
+> Reading the record directly changes from
+>
+> ```c#
+> JsonDocument? record = commitEvent.Commit.Record;
+>
+> if (record is not null)
+> {
+>     Console.WriteLine(record.RootElement.GetProperty("text").GetString());
+> }
+> ```
+>
+> to
+>
+> ```c#
+> JsonElement? record = commitEvent.Commit.Record;
+>
+> if (record is not null)
+> {
+>     Console.WriteLine(record.Value.GetProperty("text").GetString());
+> }
+> ```
+>
+> Deserializing it changes from
+>
+> ```c#
+> Post? post = JsonSerializer.Deserialize<Post>(
+>     commitEvent.Commit.Record.RootElement,
+>     BlueskyServer.BlueskyJsonSerializerOptions);
+> ```
+>
+> to
+>
+> ```c#
+> Post? post = JsonSerializer.Deserialize<Post>(
+>     commitEvent.Commit.Record.Value,
+>     BlueskyServer.BlueskyJsonSerializerOptions);
+> ```
+>
+> In short, replace `.RootElement` with `.Value`, and delete any `using` or `Dispose()` you had wrapped around the record.
 
 Once you have a configured instance of `AtProtoJetstream` call `ConnectAsync` and processing will begin in the background, raising events as appropriate.
 When you are finished with the Jetstream call `CloseAsync`
@@ -83,26 +126,26 @@ If you create your own `CancellationTokenSource` and token and pass it to `Conne
 CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
 CancellationToken cancellationToken = cancellationTokenSource.Token;
 
-await jetStream.ConnectAsync();
+await jetStream.ConnectAsync(cancellationToken);
 
 /// Processing happens in the background.
 
 /// Time to close
-cancellationTokenSource.Cancel()
+cancellationTokenSource.Cancel();
 ```
 
 The [Jetstream sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Jetstream) shows subscribing to both raw messages and events,
-writing the raw message and a break down of the event to the console.type.
+writing the raw message and a breakdown of the event to the console.
 
 ## Filtering commit events
 
 You can limit the commit events you receive by [DID](commonTerms.md#dids) or [Collection](commonTerms.md#records). You can configure the filters
-when creating of `AtProtoJetstream`:
+when creating an `AtProtoJetstream`:
 
 ```c#
 using (var jetStream = new AtProtoJetstream(
     collections: ["app.bsky.feed.post"],
-    dids: ["did:plc:ec72yg6n2sydzjvtovvdlxrk"])
+    dids: ["did:plc:ec72yg6n2sydzjvtovvdlxrk"]))
 {
 }
 ```
@@ -176,10 +219,12 @@ await jetStream.CloseAsync();
 The `options` parameter on the constructor allows you to configure
 
 * `LoggerFactory` - The `ILoggerFactory` to use for logging
-* `UseCompression` - a flag indication whether compression should be used. This defaults to `true`.
+* `UseCompression` - a flag indicating whether compression should be used. This defaults to `true`.
 * `Dictionary` - the zst compression/decompression dictionary to use if compression is enabled. This defaults to a generated dictionary specific to the jetstream.
 * `TaskFactory` - the `TaskFactory` to use when creating new tasks. This allows you to configure `TaskScheduler` settings if needed.
-* `MaximumMessageSize` - the maximum size of messages you are willing to accept, in bytes. This defaults to 8096.
+* `BufferSize` - the size, in bytes, of each block read from the web socket. This is the size of the buffer a single read fills, not a limit on anything; a larger message is read in several blocks and reassembled. This defaults to 8096.
+* `MaxMessageSize` - the maximum size, in bytes, of a message you are willing to accept. Messages larger than this are rejected rather than reassembled, and the value is also sent to the server, which will not send a message larger than it. This defaults to 1048576.
+* `CloseTimeout` - how long to wait for a server to answer a close handshake before the connection is aborted instead. This defaults to 30 seconds.
 
 The `webSocketOptions` parameter allows you to configure the underlying web socket client,
 

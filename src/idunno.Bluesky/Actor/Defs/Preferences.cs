@@ -20,10 +20,8 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <param name="list">A list of actor preferences.</param>
     /// <param name="enableBlueskyModerationLabeler">A flag indicating whether the Bluesky moderation labeler should be enabled as part of the actor's subscribed labelers.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
-    public Preferences(IList<Preference> list, bool enableBlueskyModerationLabeler = true) : base(list)
+    public Preferences(IList<Preference> list, bool enableBlueskyModerationLabeler = true) : base([.. list ?? throw new ArgumentNullException(nameof(list))])
     {
-        ArgumentNullException.ThrowIfNull(list);
-
         List<Did> labelerPreferenceList = [];
         List<ContentLabelPreference> contentLabelPreferenceList = [];
         List<SavedFeed> savedFeedPreferenceV2List = [];
@@ -71,10 +69,7 @@ public class Preferences : ReadOnlyCollection<Preference>
                     break;
 
                 case FeedViewPreference feedViewPreference:
-                    if (!feedViewPreferences.TryAdd(feedViewPreference.Feed, feedViewPreference))
-                    {
-                        feedViewPreferences[feedViewPreference.Feed] = feedViewPreference;
-                    }
+                    feedViewPreferences[feedViewPreference.Feed] = feedViewPreference;
                     break;
 
                 case MutedWordPreferences mutedWordPreferences:
@@ -189,7 +184,7 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <summary>
     /// A list of muted word properties for the account owner.
     /// </summary>
-    public IList<MutedWord> MutedWords { get; }
+    public IReadOnlyList<MutedWord> MutedWords { get; }
 
     /// <summary>
     /// Preferences for displaying how threads are viewed.

@@ -8,7 +8,7 @@ namespace idunno.Bluesky.Chat.Group.Model;
 internal sealed record ListJoinRequestsResponse
 {
     [JsonConstructor]
-    internal ListJoinRequestsResponse(string? cursor, ICollection<JoinRequestConversationView> requests)
+    internal ListJoinRequestsResponse(string? cursor, ICollection<JoinRequestView> requests)
     {
         ArgumentNullException.ThrowIfNull(requests);
 
@@ -18,5 +18,6 @@ internal sealed record ListJoinRequestsResponse
 
     public string? Cursor { get; init; }
 
-    public ICollection<JoinRequestConversationView> Requests { get; init; }
+    [JsonRequired]
+    public ICollection<JoinRequestView> Requests { get; init; }
 }

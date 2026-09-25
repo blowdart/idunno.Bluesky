@@ -15,14 +15,14 @@ if (postResult.Succeeded)
 }
 ```
 
-The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
+The result from creating a post contains, amongst other things, a strong reference to the new record. This `StrongReference` consists of an
 [at:// uri](commonTerms.md#uri) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
 
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
 
 A CID is a way to identify the contents of a record using a fingerprint hash. 
 
-The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records, for example,
+The AT URI, or a record's complete `StrongReference` is used as a parameter in methods which deal with existing Bluesky records, for example,
 liking or deleting a post.
 
 ### Setting the language on a post
@@ -36,7 +36,7 @@ await agent.Post("G'day world!", language: "en-au");
 Or if you have multiple languages
 
 ```C#
-await agent.Post("สวัสดีชาวโลก!\nHello World!"", languages: new string[] {"th", "en-US"});
+await agent.Post("สวัสดีชาวโลก!\nHello World!", languages: new string[] {"th", "en-US"});
 ```
 
 ### Setting the creation date on a post
@@ -52,13 +52,13 @@ If you don't provide `createdAt` the current date and time will be used.
 
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 
-The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResult>`
+The `Post()` method creates a record in your Bluesky repo and returns an `AtProtoHttpResult<CreateRecordResult>`
 This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation,
 if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you,
 which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
 
 To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded.
-If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any
+If it's false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any
 error information the API returned.
 
 ```c#
@@ -83,7 +83,7 @@ else
 "Hello world" isn't exactly the most engaging post, so now is a good time to look at how to delete posts.
 
 To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone.
-For example, to delete the post you just made using the first code snippet above you would pass the an AT URI returned as part of the strong reference
+For example, to delete the post you just made using the first code snippet above you would pass the AT URI returned as part of the strong reference
 you got from creating the post, or the strong reference itself.
 
 ```c#
@@ -110,11 +110,11 @@ var replyCreatePostResult =
 
 // Reply to the reply using the reply's StrongReference
 var replyToReplyStrongReference = 
-  await agent.ReplyTo(replyCreatePostResult.StrongReference, "This is a reply to the reply.");
+  await agent.ReplyTo(replyCreatePostResult.Result.StrongReference, "This is a reply to the reply.");
 ```
 
 Replying to a post creates a new record, and it may not surprise you to see that the `ReplyTo()`
-methods returns an `HttpResult<CreateRecordResult>` just like creating a post does.
+method returns an `AtProtoHttpResult<CreateRecordResult>` just like creating a post does.
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
@@ -137,7 +137,7 @@ var repostResult = await agent.Repost(postStrongReference);
 var undoRepostResult = await agent.DeleteRepost(postUri);
 ```
 
-Quoting a post requires both the post strong reference, and the text you the quote post to contain.
+Quoting a post requires both the post strong reference, and the text you want the quote post to contain.
 Deleting a post quoting another post is like deleting a regular post, you call `DeletePost` with the AT-URI of the quote post that was created;
 
 ```c#
@@ -185,7 +185,7 @@ specifically add facets as you build your post, see [Building facets with a Post
 
 ### <a name="postBuilder">Building facets with a PostBuilder</a>
 
-While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
+While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record. Another option is available, a `PostBuilder`.
 
 You can use the `PostBuilder` class to create facets, each facet has its own class, `HashTag`, `Link`, and `Mention`,
 in the `idunno.Bluesky.RichText` namespace which you can add to a `PostBuilder`
@@ -197,7 +197,7 @@ adding/appending to the `PostBuilder` until you're ready to create a post from i
 instance of `PostBuilder` you have been building on.
 
 If you want to auto-extract facets from text for use with a `PostBuilder` the `BlueskyAgent` class has a property, `FacetExtractor`
-which will extract facets from a string, which you can use when setting up your `PostBuiilder`
+which will extract facets from a string, which you can use when setting up your `PostBuilder`
 
 ```c#
 var postText = "Hello @sinclairinat0r.com, I hear you love beans! #beans";
@@ -214,9 +214,9 @@ Then create a `Mention` instance and add it to your `PostBuilder`, then finally 
 ```c#
 string userToTagHandle = "userHandle.test";
 var userToTagDid = await agent.ResolveHandle(userToTagHandle);
-if (did is null)
+if (userToTagDid is null)
 {
-  // handle did not resolve to a did, react accordindly.
+  // handle did not resolve to a did, react accordingly.
 }
 
 var builder = new PostBuilder("Hello ") + new Mention(userToTagDid, $"@{userToTagHandle}");
@@ -246,10 +246,10 @@ var linkPostResult = await agent.Post(builder);
 
 #### HashTags
 
-To insert a hashtag you create a new `Hashtag` instance:
+To insert a hashtag you create a new `HashTag` instance:
 
 ```c#
-PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new Hashtag("test");
+PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new HashTag("test");
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
@@ -295,7 +295,7 @@ var facetedCreatePostResult =
 > 
 > `postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));`
 > 
-> C# will call `ToString()` on the `Link`` as it is being appended to a string and your post will look something like this:
+> C# will call `ToString()` on the `Link` as it is being appended to a string and your post will look something like this:
 >
 > `Link { Text = Read More, Uri = https://en.wikipedia.org/wiki/Heinz_Baked_Bean }`
 > 
@@ -362,8 +362,7 @@ var imageUploadResult = await agent.UploadImage(
     cancellationToken: cancellationToken);
 if (imageUploadResult.Succeeded)
 {
-    postBuilder += 
-        new EmbeddedImage(replyImageBlobLink.Result!, "Image alttext", new AspectRatio(1000, 1000));
+    postBuilder += imageUploadResult.Result!;
 }
 ```
 

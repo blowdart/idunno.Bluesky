@@ -546,7 +546,6 @@ idunno.Bluesky.BlueskyAgent.BlueskyAgent(idunno.Bluesky.BlueskyAgentOptions? opt
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsIdentity! identity, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsIdentity! identity, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
-idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal! principal, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal! principal, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.BlueskyAgent.BuildAtUriFromBlueskyWebUri(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtUri!>!
 idunno.Bluesky.BlueskyAgent.CreateBlueskyRecord<TRecord>(TRecord! record, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey? rKey = null, bool? validate = true, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -1584,12 +1583,6 @@ idunno.Bluesky.Embed.EmbeddedBase.EmbeddedBase() -> void
 idunno.Bluesky.Embed.EmbeddedBase.EmbeddedBase(idunno.Bluesky.Embed.EmbeddedBase! original) -> void
 idunno.Bluesky.Embed.EmbeddedExternal
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(idunno.Bluesky.Embed.External.Properties! external) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]! associatedRefs) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string! description) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]? associatedRefs) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.Equals(idunno.Bluesky.Embed.EmbeddedExternal? other) -> bool
 idunno.Bluesky.Embed.EmbeddedExternal.External.get -> idunno.Bluesky.Embed.External.Properties!
 idunno.Bluesky.Embed.EmbeddedExternal.External.init -> void
@@ -1699,15 +1692,10 @@ idunno.Bluesky.Embed.External.Properties.AssociatedRefs.set -> void
 idunno.Bluesky.Embed.External.Properties.Description.get -> string!
 idunno.Bluesky.Embed.External.Properties.Description.set -> void
 idunno.Bluesky.Embed.External.Properties.Properties(idunno.Bluesky.Embed.External.Properties! original) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(System.Uri! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
 idunno.Bluesky.Embed.External.Properties.Thumbnail.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Embed.External.Properties.Thumbnail.set -> void
 idunno.Bluesky.Embed.External.Properties.Title.get -> string!
 idunno.Bluesky.Embed.External.Properties.Title.set -> void
-idunno.Bluesky.Embed.External.Properties.Uri.get -> System.Uri!
 idunno.Bluesky.Embed.External.Properties.Uri.set -> void
 idunno.Bluesky.Embed.External.Source.ColorRgb
 idunno.Bluesky.Embed.External.Source.ColorRgb.Blue.get -> int
@@ -2870,9 +2858,6 @@ idunno.Bluesky.RichText.Link.Uri.get -> System.Uri!
 idunno.Bluesky.RichText.Link.Uri.init -> void
 idunno.Bluesky.RichText.LinkFacetFeature
 idunno.Bluesky.RichText.LinkFacetFeature.Equals(idunno.Bluesky.RichText.LinkFacetFeature? other) -> bool
-idunno.Bluesky.RichText.LinkFacetFeature.LinkFacetFeature(System.Uri! uri) -> void
-idunno.Bluesky.RichText.LinkFacetFeature.Uri.get -> System.Uri!
-idunno.Bluesky.RichText.LinkFacetFeature.Uri.init -> void
 idunno.Bluesky.RichText.Mention
 idunno.Bluesky.RichText.Mention.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.RichText.Mention.Did.init -> void

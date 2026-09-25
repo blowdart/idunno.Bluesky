@@ -53,6 +53,21 @@ public class RecordKeyConverterTests
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<RecordKey>(json, options: _jsonSerializerOptions));
     }
 
+    [Theory]
+    [InlineData("bad key!")]
+    [InlineData("alpha/beta")]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("#invalid")]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void InvalidRecordKeyValueThrowsJsonExceptionWhenDeserializing(string recordKey)
+    {
+        string json = $"{{\"recordKey\":\"{recordKey}\"}}";
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<RecordKeyExample>(json, options: _jsonSerializerOptions));
+    }
+
     class RecordKeyExample(RecordKey recordKey)
     {
         public RecordKey RecordKey { get; } = recordKey;

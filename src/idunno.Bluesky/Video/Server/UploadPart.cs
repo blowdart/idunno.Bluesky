@@ -27,6 +27,7 @@ public static partial class BlueskyServer
     /// <param name="serviceCredential">The credentials used to authenticate with the service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when a provided argument is out of the allowable range.</exception>
@@ -41,12 +42,13 @@ public static partial class BlueskyServer
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Only difference between methods is the type of the bytes parameter")]
     public static async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
         string jobId,
-        int part,
+        long part,
         byte[] bytes,
         Uri service,
         ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
@@ -65,11 +67,11 @@ public static partial class BlueskyServer
         ];
 
         // AppView proxy is not needed as we're hitting the video service directly.
-        BlueskyHttpClient<UploadPartResponse> client = new(loggerFactory);
+        BlueskyHttpClient<UploadPartResponse> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         return await client.PostBlob(
                 service: service,
-                endpoint: $"/xrpc/app.bsky.video.uploadPart?jobId={Uri.EscapeDataString(jobId)}&partNumber={part}",
+                endpoint: $"/xrpc/app.bsky.video.uploadPart?jobId={Uri.EscapeDataString(jobId)}&partNumber={part.ToString(CultureInfo.InvariantCulture)}",
                 blob: bytes,
                 requestHeaders: null,
                 contentHeaders: contentHeaders,

@@ -11,7 +11,7 @@ namespace idunno.AtProto.Json;
 /// </summary>
 public sealed class ByteConverter : JsonConverter<Bytes>
 {
-    private static readonly string s_propertyName = JsonEncodedText.Encode("$bytes").ToString();
+    private static readonly JsonEncodedText s_propertyName = JsonEncodedText.Encode("$bytes");
 
     /// <summary>
     /// Reads and converts JSON to an <see cref="Bytes"/>.
@@ -29,7 +29,7 @@ public sealed class ByteConverter : JsonConverter<Bytes>
         }
         reader.Read();
 
-        if (reader.TokenType != JsonTokenType.PropertyName || reader.GetString() != s_propertyName)
+        if (reader.TokenType != JsonTokenType.PropertyName || !reader.ValueTextEquals(s_propertyName.EncodedUtf8Bytes))
         {
             throw new JsonException();
         }

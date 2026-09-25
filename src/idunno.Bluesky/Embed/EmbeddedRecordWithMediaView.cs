@@ -15,9 +15,12 @@ public sealed record EmbeddedRecordWithMediaView : EmbeddedRecordView
     /// </summary>
     /// <param name="record">A view over the record.</param>
     /// <param name="media">The embedded media for the embedded record.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> or <paramref name="media"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     internal EmbeddedRecordWithMediaView(View record, EmbeddedView media) : base(record)
     {
+        ArgumentNullException.ThrowIfNull(media);
+
         Media = media;
     }
 

@@ -38,7 +38,7 @@ public sealed record MessageView : MessageViewBase
         string revision,
         string text,
         IReadOnlyCollection<Facet>? facets,
-        EmbeddedRecordView embed,
+        EmbeddedRecordView? embed,
         IReadOnlyCollection<ReactionView>? reactions,
         MessageViewSender sender,
         DateTimeOffset sentAt) : base()
@@ -57,23 +57,8 @@ public sealed record MessageView : MessageViewBase
         Embed = embed;
         Sender = sender;
 
-        if (facets == null)
-        {
-            Facets = new List<Facet>().AsReadOnly();
-        }
-        else
-        {
-            Facets = new List<Facet>(facets).AsReadOnly();
-        }
-
-        if (reactions == null)
-        {
-            Reactions = new List<ReactionView>().AsReadOnly();
-        }
-        else
-        {
-            Reactions = new List<ReactionView>(reactions).AsReadOnly();
-        }
+        Facets = facets ?? [];
+        Reactions = reactions ?? [];
     }
 
     /// <summary>
@@ -99,7 +84,7 @@ public sealed record MessageView : MessageViewBase
     public DateTimeOffset SentAt { get; init; }
 
     /// <summary>
-    /// Gets the text of a messages.
+    /// Gets the text of a message.
     /// </summary>
     [JsonInclude]
     [JsonRequired]
@@ -108,9 +93,19 @@ public sealed record MessageView : MessageViewBase
     /// <summary>
     /// Gets any facets to apply to <see cref="Text"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
+    /// A <see langword="null"/> value is normalised to an empty collection.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
     [NotNull]
-    public IReadOnlyCollection<Facet> Facets { get; init; }
+    public IReadOnlyCollection<Facet> Facets
+    {
+        get => _facets;
+        init => _facets = value is null ? new List<Facet>().AsReadOnly() : new List<Facet>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// Gets a view over the embedded record, if any.
@@ -121,8 +116,19 @@ public sealed record MessageView : MessageViewBase
     /// <summary>
     /// Gets reactions to the message, in ascending order of creation time.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
+    /// A <see langword="null"/> value is normalised to an empty collection.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
-    public IReadOnlyCollection<ReactionView> Reactions { get; init; }
+    [NotNull]
+    public IReadOnlyCollection<ReactionView> Reactions
+    {
+        get => _reactions;
+        init => _reactions = value is null ? new List<ReactionView>().AsReadOnly() : new List<ReactionView>(value).AsReadOnly();
+    }
 
     /// <summary>
     /// Gets a view over the message author.
@@ -130,4 +136,8 @@ public sealed record MessageView : MessageViewBase
     [JsonInclude]
     [JsonRequired]
     public MessageViewSender Sender { get; init; }
+
+    private readonly IReadOnlyCollection<Facet> _facets = null!;
+
+    private readonly IReadOnlyCollection<ReactionView> _reactions = null!;
 }

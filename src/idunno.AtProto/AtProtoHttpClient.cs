@@ -39,31 +39,160 @@ public class AtProtoHttpClient(
     IMeterFactory? meterFactory = null,
     IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers = null)
 {
+    /// <summary>
+    /// The default value of <see cref="MaximumResponseSize"/>, in bytes.
+    /// </summary>
+    public const int DefaultMaximumResponseSize = 32 * 1024 * 1024;
+
+    /// <summary>
+    /// Gets the maximum number of bytes read from an XRPC response body.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is a backstop against a service returning a response large enough to exhaust the memory of the calling
+    ///   process. XRPC responses are JSON and are ordinarily orders of magnitude smaller than the default, so this
+    ///   only needs raising if you call an endpoint which legitimately returns a very large response.
+    /// </para>
+    /// </remarks>
+    public int MaximumResponseSize
+    {
+        get => _maximumResponseSize;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maximumResponseSize = value;
+        }
+    }
+
+    private readonly int _maximumResponseSize = DefaultMaximumResponseSize;
+
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
                         automaticDecompression: DecompressionMethods.All,
                         loggerFactory: loggerFactory);
 
-    private readonly AtProtoHttpClient<string> _internalAtProtoHttpClient = new(
-            serviceProxy: serviceProxy,
-            requestHeaders: null,
-            loggerFactory: loggerFactory,
-            meterFactory: meterFactory,
-            errorMappers: errorMappers);
+    private AtProtoHttpClient<string>? _internalAtProtoHttpClient;
+
+    private HttpClient? _defaultHttpClient;
+
+    /// <summary>
+    /// Gets the <see cref="HttpClient"/> used when a caller does not supply one of their own.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Created once and reused for the lifetime of this instance. It wraps the handler shared by every request this
+    ///   instance makes, so it is created with disposeHandler set to false. A client created and disposed per call would
+    ///   take that shared handler with it, and every later request on this instance would throw
+    ///   <see cref="ObjectDisposedException"/>.
+    /// </para>
+    /// </remarks>
+    private HttpClient DefaultHttpClient
+    {
+        get
+        {
+            lock (_internalAtProtoHttpClientLock)
+            {
+                return _defaultHttpClient ??= new HttpClient(
+                    handler: _defaultClientHandler,
+                    disposeHandler: false)
+                {
+                    DefaultRequestVersion = HttpVersion.Version20,
+                    DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+                };
+            }
+        }
+    }
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _internalAtProtoHttpClientLock = new();
+#else
+    private readonly object _internalAtProtoHttpClientLock = new();
+#endif
+
+    private AtProtoHttpClient<string> InternalAtProtoHttpClient
+    {
+        get
+        {
+            // Cannot be a field initializer, as those run before the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                return _internalAtProtoHttpClient ??= new(
+                    serviceProxy: serviceProxy,
+                    requestHeaders: null,
+                    loggerFactory: loggerFactory,
+                    meterFactory: meterFactory,
+                    errorMappers: errorMappers)
+                {
+                    MaximumResponseSize = MaximumResponseSize,
+                    OnSendingRequest = _onSendingRequest,
+                    OnResponseReceived = _onResponseReceived
+                };
+            }
+        }
+    }
+
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => _internalAtProtoHttpClient.OnSendingRequest;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
+    {
+        get => _onSendingRequest;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            // Held locally rather than set through InternalAtProtoHttpClient, as doing that would create the inner client
+            // before an object initializer had the chance to run the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                _onSendingRequest = value;
+
+                if (_internalAtProtoHttpClient is not null)
+                {
+                    _internalAtProtoHttpClient.OnSendingRequest = value;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalAtProtoHttpClient.OnResponseReceived;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The response body is buffered, up to <see cref="MaximumResponseSize"/> bytes, before the function is called, so that
+    ///   reading it cannot allocate without limit. A response larger than that limit is rejected and the function is not called.
+    /// </para>
+    /// </remarks>
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
+    {
+        get => _onResponseReceived;
 
-    /// <summary>
-    /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
-    /// </summary>
-    public IList<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            // Held locally rather than set through InternalAtProtoHttpClient, as doing that would create the inner client
+            // before an object initializer had the chance to run the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                _onResponseReceived = value;
+
+                if (_internalAtProtoHttpClient is not null)
+                {
+                    _internalAtProtoHttpClient.OnResponseReceived = value;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
@@ -72,7 +201,7 @@ public class AtProtoHttpClient(
     /// <param name="endpoint">The endpoint on the service to send the request to.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -86,12 +215,13 @@ public class AtProtoHttpClient(
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<string>> Get(
         Uri service,
         string endpoint,
         AtProtoCredential? credentials = null,
         HttpClient? httpClient = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -99,25 +229,16 @@ public class AtProtoHttpClient(
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalHttpClient = new(
-            handler: _defaultClientHandler,
-            disposeHandler: true)
-        {
-            DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-        })
-        {
-            return await _internalAtProtoHttpClient.Get(
-                service: service,
-                endpoint: endpoint,
-                credentials: credentials,
-                httpClient: httpClient ?? internalHttpClient,
-                onCredentialsUpdated: onCredentialsUpdated,
-                requestHeaders: requestHeaders,
-                subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        return await InternalAtProtoHttpClient.Get(
+            service: service,
+            endpoint: endpoint,
+            credentials: credentials,
+            httpClient: httpClient ?? DefaultHttpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            requestHeaders: requestHeaders,
+            subscribedLabelers: subscribedLabelers,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -127,7 +248,7 @@ public class AtProtoHttpClient(
     /// <param name="endpoint">The endpoint on the service to send the request to.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -140,12 +261,13 @@ public class AtProtoHttpClient(
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<string>> Get(
         string service,
         string endpoint,
         AtProtoCredential? credentials = null,
         HttpClient? httpClient = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -172,7 +294,7 @@ public class AtProtoHttpClient(
     /// <param name="body">The body of the request to send.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -186,13 +308,14 @@ public class AtProtoHttpClient(
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<string>> Post(
         Uri service,
         string endpoint,
         string? body,
         AtProtoCredential? credentials = null,
         HttpClient? httpClient = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -200,26 +323,17 @@ public class AtProtoHttpClient(
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalHttpClient = new(
-            handler: _defaultClientHandler,
-            disposeHandler: true)
-        {
-            DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
-        })
-        {
-            return await _internalAtProtoHttpClient.Post(
-                service: service,
-                endpoint: endpoint,
-                record: body,
-                credentials: credentials,
-                httpClient: httpClient ?? internalHttpClient,
-                onCredentialsUpdated: onCredentialsUpdated,
-                requestHeaders: requestHeaders,
-                subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+        return await InternalAtProtoHttpClient.Post(
+            service: service,
+            endpoint: endpoint,
+            record: body,
+            credentials: credentials,
+            httpClient: httpClient ?? DefaultHttpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            requestHeaders: requestHeaders,
+            subscribedLabelers: subscribedLabelers,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -230,7 +344,7 @@ public class AtProtoHttpClient(
     /// <param name="body">The body of the request to send.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -244,13 +358,14 @@ public class AtProtoHttpClient(
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<string>> Post(
         string service,
         string endpoint,
         string? body,
         AtProtoCredential? credentials = null,
         HttpClient? httpClient = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -286,6 +401,33 @@ public class AtProtoHttpClient<TResult> where TResult : class
     private readonly ICollection<NameValueHeaderValue>? _extraRequestHeaders;
 
     private readonly bool _suppressProxyHeaderCheck;
+
+    private readonly int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
+
+    /// <summary>
+    /// Gets the maximum number of bytes read from an XRPC response body.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is a backstop against a service returning a response large enough to exhaust the memory of the calling
+    ///   process. XRPC responses are JSON and are ordinarily orders of magnitude smaller than the default, so this
+    ///   only needs raising if you call an endpoint which legitimately returns a very large response.
+    /// </para>
+    /// <para>
+    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// </remarks>
+    public int MaximumResponseSize
+    {
+        get => _maximumResponseSize;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maximumResponseSize = value;
+        }
+    }
 
     private readonly JsonSerializerOptions _jsonSerializationOptionsDefault = new(JsonSerializerDefaults.Web)
     {
@@ -523,14 +665,17 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         if (errorMappers is not null)
         {
+            // Copied before the base mapper is added, so the caller's list is not modified. Adding to the caller's
+            // list would also throw for a caller which passed a read only one.
+            List<Func<AtErrorDetail?, AtErrorDetail?>> mappers = [.. errorMappers];
+
             // Ensure the base error mapper is always present, so that it can handle any errors not handled by the other mappers.
-            if (!errorMappers.Contains(AtProtoError.Map))
+            if (!mappers.Contains(AtProtoError.Map))
             {
-                errorMappers.Add(AtProtoError.Map);
+                mappers.Add(AtProtoError.Map);
             }
 
-            // Copy the error mappers to a new list to ensure that the list is not modified after being passed in.
-            ErrorMapperChain = new ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>>(list: [.. errorMappers]);
+            ErrorMapperChain = new ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>>(mappers);
         }
         else
         {
@@ -539,15 +684,55 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
+
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest { get; set; } = (requestMessage, cancellationToken) => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
+    {
+        get => _onSendingRequest;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _onSendingRequest = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived { get; set; } = (responseMessage, cancellationToken) => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The response body is buffered, up to <see cref="MaximumResponseSize"/> bytes, before the function is called, so that
+    ///   reading it cannot allocate without limit. A response larger than that limit is rejected and the function is not called.
+    /// </para>
+    /// </remarks>
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
+    {
+        get => _onResponseReceived;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _onResponseReceived = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets a flag indicating whether an <see cref="OnResponseReceived"/> handler has been attached.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Used to avoid buffering the response body when nothing is going to read it before the bounded read does.
+    /// </para>
+    /// </remarks>
+    private bool HasOnResponseReceivedHandler => !ReferenceEquals(_onResponseReceived, AtProtoHttpClientDefaults.OnResponseReceived);
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
@@ -616,7 +801,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -625,12 +810,13 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is <see langword="null"/> or empty.</exception>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Get(
         Uri service,
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -663,7 +849,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -672,13 +858,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is <see langword="null"/> or empty.</exception>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Get(
         Uri service,
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -711,18 +898,19 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post(
         Uri service,
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -746,19 +934,20 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post(
         Uri service,
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -853,19 +1042,20 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
         Uri service,
         string endpoint,
         TRecord? record,
         AtProtoCredential credentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -891,12 +1081,13 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
         Uri service,
         string endpoint,
@@ -904,7 +1095,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -931,7 +1122,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -939,6 +1130,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is <see langword="null"/> or empty.</exception>
     [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
         Uri service,
         string endpoint,
@@ -946,7 +1138,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         ICollection<NameValueHeaderValue>? requestHeaders,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -981,7 +1173,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -989,6 +1181,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is <see langword="null"/> or empty.</exception>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
         Uri service,
         string endpoint,
@@ -997,7 +1190,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -1032,13 +1225,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="contentHeaders">A collection of HTTP content headers to send with the request content.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is <see langword="null"/>.</exception>
     [RequiresDynamicCode("Use a PostBlob overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PostBlob overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> PostBlob(
         Uri service,
         string endpoint,
@@ -1047,7 +1241,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         ICollection<NameValueHeaderValue>? contentHeaders,
         AtProtoCredential credentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -1094,13 +1288,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is <see langword="null"/>.</exception>
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public async Task<AtProtoHttpResult<TResult>> PostBlob(
         Uri service,
         string endpoint,
@@ -1110,7 +1305,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -1158,7 +1353,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
@@ -1175,7 +1370,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -1211,7 +1406,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
-    [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
+    [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "A malformed error body is still reported with its raw content, so as to return as much as can be returned.")]
     private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
         HttpRequestMessage request,
         HttpResponseMessage responseMessage,
@@ -1223,7 +1418,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
             HttpMethod = request.Method
         };
 
-        string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        // Bounded and truncating: an error body is only used for diagnostics, so a partial one is better than
+        // allowing a service to dictate the allocation.
+        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
@@ -1245,12 +1442,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
                 }
             }
-            catch (NotSupportedException) { }
             catch (JsonException) { }
-            catch (ArgumentNullException) { }
+            catch (NotSupportedException ex)
+            {
+                // Only reachable if the serialization context is misconfigured, which is a bug in this library rather
+                // than something a service did, so it is logged rather than silently discarded.
+                Logger.AtProtoClientErrorBodyDeserializationFailed(_logger, request.RequestUri!, request.Method, ex);
+            }
         }
 
-        if (ErrorMapperChain is not null && errorDetail.Error is not null)
+        if (errorDetail.Error is not null)
         {
             foreach (Func<AtErrorDetail?, AtErrorDetail?> mapper in ErrorMapperChain)
             {
@@ -1369,72 +1570,92 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
-    private void RaiseCredentialsUpdatedOnDPoPNonceChange(
+    /// <summary>
+    /// Updates the DPoP nonce held by <paramref name="credentials"/> if the server returned a new one, raising
+    /// <paramref name="credentialsUpdated"/> so the change can be persisted.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The nonce is applied whether or not a <paramref name="credentialsUpdated"/> callback was supplied. Applying it is
+    ///   what makes the next request, and the retry of this one, carry a proof the server will accept; notification is only
+    ///   how a caller persists that change. Skipping the update when nobody asked to be notified leaves the credential
+    ///   pinned to a nonce the server has already rejected, and every subsequent request fails.
+    /// </para>
+    /// </remarks>
+    private async Task UpdateDPoPNonceAndRaiseCredentialsUpdated(
         AtProtoCredential? credentials,
         HttpRequestMessage httpRequestMessage,
         HttpResponseMessage httpResponseMessage,
-        Action<AtProtoCredential>? credentialsUpdated)
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated,
+        CancellationToken cancellationToken)
     {
-        if (credentials is null || credentialsUpdated is null || (credentials is not IAccessCredential && credentials is not DPoPRevokeCredentials))
+        if (credentials is not IDPoPBoundCredential dPoPBoundCredential ||
+            !httpResponseMessage.Headers.ContainsDPoPNonce())
         {
             return;
         }
 
-        if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
-            httpResponseMessage.Headers.ContainsDPoPNonce())
+        string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
+
+        // An empty nonce header carries nothing to rotate to. Assigning it would throw on a credential whose nonce
+        // setter requires a value, out of the middle of handling a response, and would discard a working nonce on one
+        // whose setter does not.
+        if (string.IsNullOrWhiteSpace(returnedDPoPNonce) ||
+            string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
         {
-            string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
+            return;
+        }
 
-            if (returnedDPoPNonce is not null &&
-                !string.Equals(dPoPBoundCredential.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
-            {
-                Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+        Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
+        dPoPBoundCredential.DPoPNonce = returnedDPoPNonce;
 
-                credentialsUpdated(credentials);
-            }
+        // Only credentials a caller can hold on to are worth raising an update for. A refresh credential is created for a
+        // single exchange and discarded, so there is nothing for a handler to persist.
+        if (credentialsUpdated is not null &&
+            (credentials is IAccessCredential || credentials is DPoPRevokeCredentials))
+        {
+            await credentialsUpdated(credentials, cancellationToken).ConfigureAwait(false);
         }
     }
 
+    /// <summary>
+    /// Merges the headers configured on this instance with those supplied for a single call.
+    /// </summary>
+    /// <param name="requestHeaders">The headers supplied for the call being made.</param>
+    /// <returns>The headers to send with the request.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A header supplied for a single call wins over one configured on this instance. The merged collection is a new one;
+    ///   the collection a caller supplies belongs to the caller and may be reused across calls, so adding this instance's
+    ///   headers to it would accumulate them on every call.
+    /// </para>
+    /// </remarks>
     private ICollection<NameValueHeaderValue>? MergeRequestHeaders(ICollection<NameValueHeaderValue>? requestHeaders)
     {
-        if (requestHeaders is null && _extraRequestHeaders is null)
+        if (_extraRequestHeaders is null || _extraRequestHeaders.Count == 0)
         {
-            return null;
+            return requestHeaders;
         }
 
-        if (requestHeaders is null && _extraRequestHeaders is not null)
+        if (requestHeaders is null || requestHeaders.Count == 0)
         {
             return _extraRequestHeaders;
         }
 
-        if (requestHeaders is not null && _extraRequestHeaders is null)
-        {
-            return requestHeaders;
-        }
+        List<NameValueHeaderValue> mergedHeaders = [.. requestHeaders];
 
-        if (requestHeaders is not null && _extraRequestHeaders is not null)
+        foreach (NameValueHeaderValue header in _extraRequestHeaders)
         {
-            foreach (NameValueHeaderValue header in _extraRequestHeaders)
+            if (mergedHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)) && header.Value != null)
-                {
-                    continue;
-                }
-
-                if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase) && h.Value == header.Value))
-                {
-                    continue;
-                }
-
-                requestHeaders.Add(header);
+                continue;
             }
 
-            return requestHeaders;
+            mergedHeaders.Add(header);
         }
 
-        return requestHeaders;
+        return mergedHeaders;
     }
 
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
@@ -1450,7 +1671,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential? credentials,
         HttpClient httpClient,
         bool retry = false,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -1482,7 +1703,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
             using (var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(service, endpoint)))
             {
-                SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, _extraRequestHeaders);
+                bool callerSuppliedContent = false;
+
+                SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, requestHeaders);
 
                 // Add authentication headers
                 credentials?.SetAuthenticationHeaders(httpRequestMessage);
@@ -1497,6 +1720,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     {
                         case HttpContent httpContent:
                             httpRequestMessage.Content = httpContent;
+                            callerSuppliedContent = true;
                             break;
 
                         case byte[] blob:
@@ -1522,15 +1746,24 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     {
                         SetContentHeaders(httpRequestMessage, contentHeaders);
                     }
-                }
 
-                if (OnSendingRequest is not null)
-                {
-                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                    if (callerSuppliedContent && retry && credentials is IDPoPBoundCredential)
+                    {
+                        // A DPoP nonce error causes the request to be reissued with the same HttpContent instance. Caller supplied
+                        // content may be backed by a stream which can only be read once, so buffer it now so that the retry has
+                        // something it can serialize a second time.
+#if NET9_0_OR_GREATER
+                        await httpRequestMessage.Content.LoadIntoBufferAsync(cancellationToken).ConfigureAwait(false);
+#else
+                        // The overload which takes a CancellationToken was only added in .NET 9.
+                        await httpRequestMessage.Content.LoadIntoBufferAsync().ConfigureAwait(false);
+#endif
+                    }
                 }
 
                 try
                 {
+                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
                     _metrics.RequestsSent.Add(
                         1,
                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1555,14 +1788,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 ));
                     }
 
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
-
-                        if (OnResponseReceived is not null)
-                        {
-                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
-                        }
 
                         AtProtoHttpResult<TResult> result = new()
                         {
@@ -1570,7 +1798,42 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             RateLimit = ExtractRateLimitFromResponse(httpResponseMessage.Headers)
                         };
 
-                        RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
+                        await UpdateDPoPNonceAndRaiseCredentialsUpdated(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
+
+                        if (HasOnResponseReceivedHandler)
+                        {
+                            // The request was made with ResponseHeadersRead, so the body has not been read yet and the handler would
+                            // otherwise be handed an unbuffered network stream. A handler which read that stream would allocate
+                            // whatever the service chose to send, bypassing MaximumResponseSize entirely, so buffer under the limit
+                            // first. The buffered body is replayed to the bounded read below, so nothing is read from the wire twice.
+                            try
+                            {
+#if NET9_0_OR_GREATER
+                                await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+#else
+                                // The overload which takes a CancellationToken was only added in .NET 9.
+                                await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize).ConfigureAwait(false);
+#endif
+                            }
+                            catch (HttpRequestException)
+                            {
+                                // The service returned more than we are willing to allocate, so the response cannot be used and
+                                // must not be handed to the handler.
+                                Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
+
+                                result.AtErrorDetail = new AtErrorDetail
+                                {
+                                    Instance = httpRequestMessage.RequestUri,
+                                    HttpMethod = httpRequestMessage.Method,
+                                    Error = "ResponseTooLarge",
+                                    Message = $"The response exceeded the maximum of {MaximumResponseSize} bytes."
+                                };
+
+                                return result;
+                            }
+
+                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                        }
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
@@ -1587,48 +1850,63 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             {
                                 result.Result = new EmptyResponse() as TResult;
                             }
-                            else if (typeof(TResult) == typeof(string))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                                result.Result = responseContent as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonNode))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonNode.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonObject))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonObject.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonDocument))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonDocument.Parse(responseContent) as TResult;
-                            }
                             else
                             {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                string? responseContent = await HttpContentReader.ReadAsString(
+                                    httpResponseMessage.Content,
+                                    MaximumResponseSize,
+                                    cancellationToken).ConfigureAwait(false);
 
-                                try
+                                if (responseContent is null)
                                 {
-                                    result.Result = JsonSerializer.Deserialize<TResult>(
-                                        responseContent,
-                                        jsonSerializerOptions);
+                                    // The service returned more than we are willing to allocate, so the response cannot be used.
+                                    Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
+
+                                    result.AtErrorDetail = new AtErrorDetail
+                                    {
+                                        Instance = httpRequestMessage.RequestUri,
+                                        HttpMethod = httpRequestMessage.Method,
+                                        Error = "ResponseTooLarge",
+                                        Message = $"The response exceeded the maximum of {MaximumResponseSize} bytes."
+                                    };
+
+                                    return result;
                                 }
-                                catch (JsonException ex)
+
+                                if (typeof(TResult) == typeof(string))
                                 {
-                                    _metrics.DeserializationFailures.Add(
-                                        1,
-                                        new KeyValuePair<string, object?>("server", service.Host.ToString()),
-                                        new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
-                                        new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
-                                        new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
-                                    Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    result.Result = responseContent as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonNode))
+                                {
+                                    result.Result = JsonNode.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonObject))
+                                {
+                                    result.Result = JsonObject.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonDocument))
+                                {
+                                    result.Result = JsonDocument.Parse(responseContent) as TResult;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        result.Result = JsonSerializer.Deserialize<TResult>(
+                                            responseContent,
+                                            jsonSerializerOptions);
+                                    }
+                                    catch (JsonException ex)
+                                    {
+                                        _metrics.DeserializationFailures.Add(
+                                            1,
+                                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
+                                            new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
+                                        Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    }
                                 }
                             }
                         }
@@ -1655,6 +1933,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 retry &&
                                 containsDPoPHeader)
                             {
+                                // use_dpop_nonce is an OAuth error code (RFC 9449), not an atproto lexicon error name, so it is
+                                // matched leniently here whilst AtProtoError.Map matches lexicon names ordinally. Being lenient
+                                // can only ever cause an extra nonce-carrying retry, which is the correct response anyway.
                                 bool isAuthorizationServerNonceError = httpResponseMessage.StatusCode == HttpStatusCode.BadRequest &&
                                     string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase);
 
@@ -1687,9 +1968,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                     if (!string.IsNullOrEmpty(updatedDPoPNonce))
                                     {
-                                        // dPoP nonce was already updated in RaiseCredentialsUpdatedOnDPoPNonceChange,
-                                        // but raise the event again to ensure that any credential update logic that needs to run on a nonce change runs before the retry.
-                                        RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
+                                        // The nonce this response carried was already applied when the response was first
+                                        // seen, so the credential is holding it and the retry will send a proof built from it.
 
                                         _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
@@ -1738,7 +2018,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     Logger.AtProtoClientRequestCancelled
                         (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                    return new AtProtoHttpResult<TResult>(null, HttpStatusCode.OK, null);
+                    throw;
+                }
+                finally
+                {
+                    if (callerSuppliedContent)
+                    {
+                        // The content belongs to the caller, who may want to reuse or dispose it themselves, so detach it before
+                        // the request message is disposed. Disposing a request message disposes whatever content is attached to it.
+                        httpRequestMessage.Content = null;
+                    }
                 }
             }
         }

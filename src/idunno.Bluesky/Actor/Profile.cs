@@ -146,7 +146,7 @@ public record Profile : BlueskyRecord
     /// <summary>
     /// Gets the display name of the account.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the display name exceeds 640 characters or 64 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the display name exceeds 640 UTF-8 bytes or 64 graphemes.</exception>
     [JsonInclude]
     public string? DisplayName
     {
@@ -157,7 +157,7 @@ public record Profile : BlueskyRecord
             if (value is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.DisplayNameLengthInGraphemes);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DisplayNameLength);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DisplayNameLengthInBytes);
             }
 
             field = value;
@@ -167,7 +167,7 @@ public record Profile : BlueskyRecord
     /// <summary>
     /// Gets the description for the account.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the display name exceeds 2560 characters or 256 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the description exceeds 2560 UTF-8 bytes or 256 graphemes.</exception>
     [JsonInclude]
     public string? Description
     {
@@ -178,7 +178,7 @@ public record Profile : BlueskyRecord
             if (value is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.DescriptionLengthInGraphemes);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DescriptionLength);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DescriptionLengthInBytes);
             }
 
             field = value;
@@ -188,7 +188,7 @@ public record Profile : BlueskyRecord
     /// <summary>
     /// Gets the pronouns for the account, if any.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the pronouns exceed 2560 characters or 256 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the pronouns exceed 200 UTF-8 bytes or 20 graphemes.</exception>
     [JsonInclude]
     public string? Pronouns
     {
@@ -199,7 +199,7 @@ public record Profile : BlueskyRecord
             if (value is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.PronounLengthInGraphemes);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.PronounLength);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.PronounLengthInBytes);
             }
 
             field = value;

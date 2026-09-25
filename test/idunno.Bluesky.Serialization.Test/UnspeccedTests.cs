@@ -802,4 +802,120 @@ public class UnspeccedTests
         Assert.Equal(1, post0.OpThreadPostIndex);
         Assert.Equal(2, post0.OpThreadPostCount);
     }
+
+    [Fact]
+    public void ThreadItemBlockedDeserializesItsAuthor()
+    {
+        string json = """
+            {
+                "thread": [
+                {
+                    "uri": "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3lbxjmrpmvs2s",
+                    "depth": 0,
+                    "value": {
+                        "$type": "app.bsky.unspecced.defs#threadItemBlocked",
+                        "author": {
+                            "did": "did:plc:ar7c4by46qjdydhdevvrndac"
+                        }
+                    }
+                }],
+                "hasOtherReplies": false
+            }
+            """;
+
+        GetPostThreadV2Response? actual = JsonSerializer.Deserialize<GetPostThreadV2Response>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+
+        ThreadItemBlocked blocked = Assert.IsType<ThreadItemBlocked>(actual.Thread.ElementAt(0).Value);
+
+        Assert.Equal(new Did("did:plc:ar7c4by46qjdydhdevvrndac"), blocked.Author.Did);
+    }
+
+    [Fact]
+    public void AnUnknownThreadItemTypeDeserializesToABareThreadItemValue()
+    {
+        string json = """
+            {
+                "thread": [
+                {
+                    "uri": "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3lbxjmrpmvs2s",
+                    "depth": 0,
+                    "value": {
+                        "$type": "app.bsky.unspecced.defs#threadItemFromTheFuture"
+                    }
+                }],
+                "hasOtherReplies": false
+            }
+            """;
+
+        GetPostThreadV2Response? actual = JsonSerializer.Deserialize<GetPostThreadV2Response>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+
+        ThreadItemValue value = actual.Thread.ElementAt(0).Value;
+
+        Assert.Equal(typeof(ThreadItemValue), value.GetType());
+    }
+
+    [Fact]
+    public void AnAgeAssuranceStateWithoutAStatusThrows()
+    {
+        string json = """
+            {
+                "lastInitiatedAt": "2025-01-01T00:00:00Z"
+            }
+            """;
+
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<GetAgeAssuranceStateResponse>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Fact]
+    public void GetTrendsRecommendationIdentifierDeserializes()
+    {
+        string json = """
+            {
+                "trends": [],
+                "recIdStr": "a-snowflake"
+            }
+            """;
+
+        GetTrendsResponse? actual = JsonSerializer.Deserialize<GetTrendsResponse>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+        Assert.Equal("a-snowflake", actual.RecIdStr);
+    }
+
+    [Theory]
+    [InlineData(AgeAssuranceStatus.Unknown, "unknown")]
+    [InlineData(AgeAssuranceStatus.Pending, "pending")]
+    [InlineData(AgeAssuranceStatus.Assured, "assured")]
+    [InlineData(AgeAssuranceStatus.Blocked, "blocked")]
+    public void AnAgeAssuranceStateRoundTrips(AgeAssuranceStatus status, string expectedWireValue)
+    {
+        AgeAssuranceState expected = new(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), status);
+
+        string json = JsonSerializer.Serialize(expected, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Contains("\"lastInitiatedAt\"", json, StringComparison.Ordinal);
+        Assert.Contains($"\"status\":\"{expectedWireValue}\"", json, StringComparison.Ordinal);
+
+        AgeAssuranceState? actual = JsonSerializer.Deserialize<AgeAssuranceState>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void AnAgeAssuranceStateWithoutAStatusThrowsWhenDeserializedDirectly()
+    {
+        string json = """
+            {
+                "lastInitiatedAt": "2025-01-01T00:00:00Z"
+            }
+            """;
+
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<AgeAssuranceState>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
 }

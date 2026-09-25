@@ -11,25 +11,25 @@ public static class AtProtoClaims
     /// <summary>
     /// The claim name for a <see cref="Did"/>.
     /// </summary>
-    public const string Did = "atproto:did";
+    public const string Did = "urn:atproto:did";
 
     /// <summary>
     /// The claim name for an access token.
     /// </summary>
-    public const string AccessToken = "atproto:token:access";
+    public const string AccessToken = "urn:atproto:token:access";
 
     /// <summary>
     /// The claim name for a refresh token.
     /// </summary>
-    public const string RefreshToken = "atproto:token:refresh";
+    public const string RefreshToken = "urn:atproto:token:refresh";
 
     /// <summary>
     /// The claim name for a DPoPProof.
     /// </summary>
-    public const string DPoPProof = "atproto:dpop:proof";
+    public const string DPoPProof = "urn:atproto:dpop:proof";
 
     /// <summary>
     /// The claim name for a DPoPNonce.
     /// </summary>
-    public const string DPoPNonce = "atproto:dpop:nonce";
+    public const string DPoPNonce = "urn:atproto:dpop:nonce";
 }

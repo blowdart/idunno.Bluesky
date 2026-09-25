@@ -11,8 +11,8 @@ For small video uploads you can use the `UploadVideo()` method.
 
 // Read the video from a file into a byte array
 byte[] videoAsBytes;
-using (FileStream fs = File.OpenRead(pathToImage))
-using (MemoryStream ms = new())
+using (FileStream fs = File.OpenRead(pathToVideo))
+using (MemoryStream memoryStream = new())
 {
     fs.CopyTo(memoryStream);
     videoAsBytes = memoryStream.ToArray();
@@ -20,7 +20,7 @@ using (MemoryStream ms = new())
 
 // Upload the video
 var videoUploadResult = await agent.UploadVideo(
-    fileName:Path.GetFileName(pathToImage),
+    fileName:Path.GetFileName(pathToVideo),
     video:videoAsBytes,
     mimeType: "video/mp4");
 
@@ -30,8 +30,7 @@ videoUploadResult.EnsureSucceeded();
 // Wait for processing to finish.
 while (videoUploadResult.Succeeded &&
        videoUploadResult.Result.State != JobState.Completed &&
-       videoUploadResult.Result.State != JobState.Failed && 
-       videoUploadResult.Result.State != JobState.Unknown)
+       videoUploadResult.Result.State != JobState.Failed)
 {
     // Give the user some feedback
     Console.WriteLine(
@@ -40,12 +39,6 @@ while (videoUploadResult.Succeeded &&
     await Task.Delay(1000);
     videoUploadResult = await agent.GetJobStatus(videoUploadResult.Result.JobId);
     videoUploadResult.EnsureSucceeded();
-}
-
-if (videoUploadResult.Result.State == JobState.Unknown)
-{
-    // Bluesky returned a status that's not part of the published lexicon. This should be treated as an error.
-    return;
 }
 
 if (!videoUploadResult.Succeeded ||
@@ -61,6 +54,11 @@ EmbeddedVideo video = new(videoUploadResult.Result.Blob!, altText: "Alt Text");
 
 The [Samples.Video](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Video) project shows the above code in action,
 and demonstrates how to use the resulting `EmbeddedVideo` in a post.
+
+>[!NOTE]
+> `JobState.Unknown` does not mean the job failed. The lexicon specifies that any job state which is not a known value indicates the job is
+> still in process, so you should keep polling when you see it. The raw value returned by the server is available in `JobStatus.RawState`,
+> `UploadStatus.RawState` and `AbortUploadResponse.RawState` if you want to log it or react to a state this library does not yet know about.
 
 ## Large video uploads with partial uploads
 
@@ -87,14 +85,7 @@ if (!File.Exists(filePath))
 }
 
 var fileInfo = new FileInfo(filePath);
-if (fileInfo.Length > int.MaxValue)
-{
-    Console.WriteLine($"❌ File {filePath} is too large to upload. Max size is {int.MaxValue} bytes.");
-    return;
-}
-
-int fileSize = (int)fileInfo.Length;
-
+long fileSize = fileInfo.Length;
 
 // Check the authenticated user has the ability to upload a video of this size.
 var getUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -137,15 +128,17 @@ ParallelOptions parallelOptions = new()
     CancellationToken = cancellationToken
 };
 
-await Parallel.ForAsync(0, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
+await Parallel.ForAsync(0L, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
 {
     string jobId = startUploadResult.Result.JobId;
-    int partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
-    int offset = uploadPart * startUploadResult.Result.PartSize;
-    int partSize = uploadPart == startUploadResult.Result.PartCount - 1
+    long partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
+    long offset = uploadPart * startUploadResult.Result.PartSize;
+
+    // A single part is always small enough to fit in an int, as it has to be buffered in a byte array before uploading.
+    int partSize = checked((int)(uploadPart == startUploadResult.Result.PartCount - 1
         ? fileSize - offset
-        : startUploadResult.Result.PartSize;
-    byte[] partBytes = pool.Rent(startUploadResult.Result.PartSize);
+        : startUploadResult.Result.PartSize));
+    byte[] partBytes = pool.Rent(partSize);
 
     try
     {
@@ -205,11 +198,11 @@ var finishUploadResult = await agent.FinishUpload(
     jobId: startUploadResult.Result.JobId,
     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-// If the finish upload call failed, or if the job status is failed or unknown, abort the upload and exit the sample.
+// If the finish upload call failed, or if the job status is failed, abort the upload and exit the sample.
+// An unknown state is not a failure; the lexicon specifies that any state which is not a known value indicates the job is still in process.
 if (!finishUploadResult.Succeeded ||
-    finishUploadResult.Result.JobStatus is not null &&
-    (finishUploadResult.Result.JobStatus!.State == JobState.Failed ||
-    finishUploadResult.Result.JobStatus!.State == JobState.Unknown))
+    (finishUploadResult.Result.JobStatus is not null &&
+    finishUploadResult.Result.JobStatus.State == JobState.Failed))
 {
     var abortUploadResult = await agent.AbortUpload(
         jobId: startUploadResult.Result.JobId,
@@ -228,7 +221,7 @@ if (!finishUploadResult.Succeeded ||
 
 Console.WriteLine($"✅ Finished upload for jobID {startUploadResult.Result.JobId}");
 
-// Poll the job status until it is completed, failed, or unknown.
+// Poll the job status until it is completed or failed.
 // This is a long running operation and may take several minutes to complete, depending on the size of the video and the current load on the server.
 AtProtoHttpResult<JobStatus> getJobStatusResult;
 bool finished = false;
@@ -249,10 +242,8 @@ do
             case JobState.Failed:
                 finished = true;
                 break;
-            case JobState.Unknown: // This should never happen, but if it does, we will treat it as a failure.
-                finished = true;
-                break;
             default:
+                // Any other state, including JobState.Unknown, indicates the job is still in process.
                 break;
         }
 
@@ -296,15 +287,15 @@ if you have captions in different languages.
 ```c#
 // Read the captions from a file into a byte array
 byte[] captionsAsBytes;
-using (FileStream fs = File.OpenRead(pathToImage))
-using (MemoryStream ms = new())
+using (FileStream fs = File.OpenRead(pathToCaptions))
+using (MemoryStream memoryStream = new())
 {
     fs.CopyTo(memoryStream);
     captionsAsBytes = memoryStream.ToArray();
 }
 
 var captionUploadResult =
-  await agent.UploadCaptions(captionsAsBytes, "en")
+  await agent.UploadCaptions(captionsAsBytes, "en");
 
 // Quick fail - you'd want to be more graceful in handling errors.
 captionUploadResult.EnsureSucceeded();

@@ -5,11 +5,6 @@ abstract idunno.AtProto.Moderation.SubjectType.<Clone>$() -> idunno.AtProto.Mode
 abstract idunno.AtProto.Repo.AtProtoObject.<Clone>$() -> idunno.AtProto.Repo.AtProtoObject!
 abstract idunno.AtProto.Repo.WriteOperation.<Clone>$() -> idunno.AtProto.Repo.WriteOperation!
 const idunno.AtProto.AtProtoAgentOptions.AtProtoAgent = "AtProtoAgent" -> string!
-const idunno.AtProto.Authentication.AtProtoClaims.AccessToken = "atproto:token:access" -> string!
-const idunno.AtProto.Authentication.AtProtoClaims.Did = "atproto:did" -> string!
-const idunno.AtProto.Authentication.AtProtoClaims.DPoPNonce = "atproto:dpop:nonce" -> string!
-const idunno.AtProto.Authentication.AtProtoClaims.DPoPProof = "atproto:dpop:proof" -> string!
-const idunno.AtProto.Authentication.AtProtoClaims.RefreshToken = "atproto:token:refresh" -> string!
 const idunno.AtProto.Authentication.OAuthOptions.AtProto = "AtProto" -> string!
 const idunno.AtProto.Authentication.OAuthOptions.AtProtoOAuth = "OAuth" -> string!
 const idunno.AtProto.HttpClientOptions.AtProtoHttpClient = "AtProtoHttpClient" -> string!
@@ -54,10 +49,6 @@ idunno.AtProto.AtErrorDetail.Instance.get -> System.Uri?
 idunno.AtProto.AtErrorDetail.Message.get -> string?
 idunno.AtProto.AtProtoAgent
 idunno.AtProto.AtProtoAgent.ApplyWrites(System.Collections.Generic.ICollection<idunno.AtProto.Repo.WriteOperation!>! operations, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Did! repo, bool? validate, idunno.AtProto.Cid? cid = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.ApplyWritesResults!>!>!
-idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity! identity, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
-idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity! identity, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
-idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal! principal, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
-idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal! principal, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Uri! service, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Uri! service, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
 idunno.AtProto.AtProtoAgent.Authenticated -> System.EventHandler<idunno.AtProto.Events.AuthenticatedEventArgs!>?
@@ -266,10 +257,8 @@ idunno.AtProto.Authentication.AtProtoCredential
 idunno.AtProto.Authentication.AtProtoCredential.AtProtoCredential(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType) -> void
 idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.get -> idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.set -> void
-idunno.AtProto.Authentication.AtProtoCredential.ReaderWriterLockSlim.get -> System.Threading.ReaderWriterLockSlim!
 idunno.AtProto.Authentication.AtProtoCredential.Service.get -> System.Uri!
 idunno.AtProto.Authentication.AtProtoCredential.Service.set -> void
-idunno.AtProto.Authentication.AtProtoCredential.~AtProtoCredential() -> void
 idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AuthenticationType.OAuth = 3 -> idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AuthenticationType.Service = 4 -> idunno.AtProto.Authentication.AuthenticationType
@@ -1209,8 +1198,6 @@ static idunno.AtProto.AtProtoServer.RefreshSession(idunno.AtProto.Authentication
 static idunno.AtProto.AtProtoServer.ResolveHandle(idunno.AtProto.Handle! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
 static idunno.AtProto.AtProtoServer.ResolveHandle(string! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
 static idunno.AtProto.AtProtoServer.UploadBlob(byte[]! blob, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Blob!>!>!
-static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsIdentity! identity) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
-static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
 static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType, string? accessJwt = null, string? refreshToken = null, string? dPoPProofKey = null, string? dPoPNonce = null) -> idunno.AtProto.Authentication.AtProtoCredential!
 static idunno.AtProto.Authentication.Models.BaseSessionResponse.operator !=(idunno.AtProto.Authentication.Models.BaseSessionResponse? left, idunno.AtProto.Authentication.Models.BaseSessionResponse? right) -> bool
 static idunno.AtProto.Authentication.Models.BaseSessionResponse.operator ==(idunno.AtProto.Authentication.Models.BaseSessionResponse? left, idunno.AtProto.Authentication.Models.BaseSessionResponse? right) -> bool

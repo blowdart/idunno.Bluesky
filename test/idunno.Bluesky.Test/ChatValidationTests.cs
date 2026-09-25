@@ -1,0 +1,495 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.Bluesky.Chat;
+using idunno.Bluesky.RichText;
+
+namespace idunno.Bluesky.Test;
+
+[ExcludeFromCodeCoverage]
+public class ChatValidationTests
+{
+    private static readonly Uri s_service = new("https://test.internal");
+
+    private static AccessCredentials CreateCredentials()
+    {
+        return new AccessCredentials(
+            service: s_service,
+            authenticationType: AuthenticationType.UsernamePassword,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), s_service.ToString()),
+            refreshToken: "refreshToken");
+    }
+
+    [Fact]
+    public void MessageInputThrowsWhenTextExceedsTheMaximumNumberOfGraphemes()
+    {
+        string text = new('\u00e9', Maximum.MessageLengthInGraphemes + 1);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new MessageInput(text));
+    }
+
+    [Fact]
+    public void MessageInputAcceptsTextAtTheMaximumNumberOfGraphemes()
+    {
+        string text = new('\u00e9', Maximum.MessageLengthInGraphemes);
+
+        MessageInput message = new(text);
+
+        Assert.Equal(text, message.Text);
+    }
+
+    [Fact]
+    public void MessageInputDoesNotAliasTheFacetCollectionPassedToItsConstructor()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+
+        MessageInput message = new("some text", facets);
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+
+        Assert.NotNull(message.Facets);
+        Assert.Single(message.Facets);
+    }
+
+    [Fact]
+    public void MessageInputDoesNotAliasTheFacetCollectionAssignedInAnObjectInitializer()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+
+        MessageInput message = new("some text") { Facets = facets };
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+
+        Assert.NotNull(message.Facets);
+        Assert.Single(message.Facets);
+    }
+
+    [Fact]
+    public void MessageInputThrowsWhenTextAssignedInAnObjectInitializerExceedsTheMaximumNumberOfGraphemes()
+    {
+        string text = new('\u00e9', Maximum.MessageLengthInGraphemes + 1);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new MessageInput("some text") { Text = text });
+    }
+
+    [Fact]
+    public void MessageViewDoesNotAliasTheCollectionsAssignedInAnObjectInitializer()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+        List<ReactionView> reactions =
+        [
+            new ReactionView("\U0001F44D", new ReactionViewSender(new Did("did:plc:sender")), DateTimeOffset.UtcNow)
+        ];
+
+        MessageView message = new(
+            id: "id",
+            revision: "rev",
+            text: "some text",
+            facets: null,
+            embed: null,
+            reactions: null,
+            sender: new MessageViewSender(new Did("did:plc:sender")),
+            sentAt: DateTimeOffset.UtcNow) { Facets = facets, Reactions = reactions };
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+        reactions.Add(new ReactionView("\U0001F44E", new ReactionViewSender(new Did("did:plc:sender")), DateTimeOffset.UtcNow));
+
+        Assert.Single(message.Facets);
+        Assert.Single(message.Reactions);
+    }
+
+    [Fact]
+    public void MessageViewNormalisesNullCollectionsToEmpty()
+    {
+        MessageView message = new(
+            id: "id",
+            revision: "rev",
+            text: "some text",
+            facets: null,
+            embed: null,
+            reactions: null,
+            sender: new MessageViewSender(new Did("did:plc:sender")),
+            sentAt: DateTimeOffset.UtcNow);
+
+        Assert.Empty(message.Facets);
+        Assert.Empty(message.Reactions);
+    }
+
+    [Fact]
+    public void ConversationViewDoesNotAliasTheMemberCollectionAssignedInAnObjectInitializer()
+    {
+        List<Chat.Actor.ProfileViewBasic> members =
+        [
+            new Chat.Actor.ProfileViewBasic(new Did("did:plc:member"), new Handle("member.test"), null, null, null, null, null, null, null, null)
+        ];
+
+        ConversationView conversation = new(
+            id: "id",
+            revision: "rev",
+            members: members,
+            lastMessage: null,
+            lastReaction: null,
+            muted: false,
+            unreadCount: 0,
+            status: null,
+            kind: null) { Members = members };
+
+        members.Add(new Chat.Actor.ProfileViewBasic(new Did("did:plc:other"), new Handle("other.test"), null, null, null, null, null, null, null, null));
+
+        Assert.Single(conversation.Members);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task ListConversationRequestsThrowsWhenTheLimitIsOutOfRange(int limit)
+    {
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.ListConversationRequests(
+            limit: limit,
+            cursor: null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task ListConversationsThrowsWhenTheLimitIsOutOfRange(int limit)
+    {
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.ListConversations(
+            limit: limit,
+            cursor: null,
+            readState: null,
+            status: null,
+            kind: null,
+            lockStatus: null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("readState")]
+    [InlineData("status")]
+    [InlineData("kind")]
+    [InlineData("lockStatus")]
+    public async Task ListConversationsThrowsWhenAFilterIsWhitespace(string filter)
+    {
+        using HttpClient httpClient = new();
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => BlueskyServer.ListConversations(
+            limit: null,
+            cursor: null,
+            readState: filter == "readState" ? " " : null,
+            status: filter == "status" ? " " : null,
+            kind: filter == "kind" ? " " : null,
+            lockStatus: filter == "lockStatus" ? " " : null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(filter, exception.ParamName);
+    }
+
+    [Fact]
+    public async Task AddReactionThrowsWhenASingleGraphemeExceedsTheMaximumNumberOfBytes()
+    {
+        using HttpClient httpClient = new();
+
+        // Ten emoji joined by zero width joiners form a single grapheme cluster of 67 UTF-8 bytes, so this passes the
+        // grapheme check and can only be rejected by the byte limit.
+        string value = string.Join('\u200d', Enumerable.Repeat("\U0001F468", 10));
+
+        Assert.Equal(1, value.GetGraphemeLength());
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(value) > Maximum.ReactionLengthInBytes);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.AddReaction(
+            conversationId: "convoId",
+            messageId: "messageId",
+            value: value,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AddReactionAcceptsASingleGraphemeWithinTheMaximumNumberOfBytes()
+    {
+        using HttpClient httpClient = new();
+
+        string value = "\U0001F468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466";
+
+        Assert.Equal(1, value.GetGraphemeLength());
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(value) <= Maximum.ReactionLengthInBytes);
+
+        // The request is expected to fail against an unreachable service rather than be rejected by validation.
+        await Assert.ThrowsAsync<HttpRequestException>(() => BlueskyServer.AddReaction(
+            conversationId: "convoId",
+            messageId: "messageId",
+            value: value,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(101)]
+    public async Task ListJoinGroupRequestsThrowsWhenTheLimitIsOutOfRange(int limit)
+    {
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.ListJoinGroupRequests(
+            conversationId: "convoId",
+            limit: limit,
+            cursor: null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task EditGroupThrowsWhenTheNameExceedsTheMaximumNumberOfBytes()
+    {
+        using HttpClient httpClient = new();
+
+        // A ZWJ family emoji is a single grapheme but twenty five UTF-8 bytes, so this name stays
+        // within the grapheme limit whilst exceeding the byte limit.
+        string name = string.Concat(Enumerable.Repeat("\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466", Maximum.GroupNameLengthInGraphemes));
+
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(name) > Maximum.GroupNameLengthInBytes);
+        Assert.True(name.GetGraphemeLength() <= Maximum.GroupNameLengthInGraphemes);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.EditGroup(
+            conversationId: "convoId",
+            name: name,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task EditGroupThrowsWhenTheNameExceedsTheMaximumNumberOfGraphemes()
+    {
+        using HttpClient httpClient = new();
+        string name = new('\u00e9', Maximum.GroupNameLengthInGraphemes + 1);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.EditGroup(
+            conversationId: "convoId",
+            name: name,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CreateGroupAllowsMoreMembersThanTheOldRequestLimit()
+    {
+        // The request object used to cap the member count at 49, which was lower than the limit both the
+        // agent and the server validated against, so a valid call could still throw from inside the
+        // internal request type. Anything up to Maximum.GroupMembers should now reach the HTTP layer.
+        using HttpClient httpClient = new();
+        List<Did> members = [.. Enumerable.Range(0, 60).Select(i => new Did($"did:plc:member{i}"))];
+
+        Exception? exception = await Xunit.Record.ExceptionAsync(() => BlueskyServer.CreateGroup(
+            members: members,
+            name: "name",
+            service: new Uri("https://localhost:1"),
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.IsNotType<ArgumentOutOfRangeException>(exception);
+    }
+
+    [Fact]
+    public async Task CreateGroupThrowsWhenMembersExceedsTheMaximum()
+    {
+        using HttpClient httpClient = new();
+        List<Did> members = [.. Enumerable.Range(0, Maximum.GroupMembers + 1).Select(i => new Did($"did:plc:member{i}"))];
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.CreateGroup(
+            members: members,
+            name: "name",
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsThrowsWhenTheCodeCountExceedsTheMaximum()
+    {
+        using HttpClient httpClient = new();
+        List<string> codes = [.. Enumerable.Range(0, Maximum.JoinLinkPreviewCodes + 1).Select(i => $"code{i}")];
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetJoinGroupLinkPreviews(
+            codes: codes,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsAcceptsTheMaximumNumberOfCodes()
+    {
+        using HttpClient httpClient = new();
+        List<string> codes = [.. Enumerable.Range(0, Maximum.JoinLinkPreviewCodes).Select(i => $"code{i}")];
+
+        Exception? exception = await Xunit.Record.ExceptionAsync(() => BlueskyServer.GetJoinGroupLinkPreviews(
+            codes: codes,
+            service: new Uri("https://localhost:1"),
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.IsNotType<ArgumentOutOfRangeException>(exception);
+    }
+
+    public static TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>> GroupServerCalls()
+    {
+        return new TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>>
+        {
+            {
+                nameof(BlueskyServer.AddMembersToGroup),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.AddMembersToGroup(
+                    conversationId: "convoId", members: [new Did("did:plc:member")], service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.ApproveJoinGroupRequest),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.ApproveJoinGroupRequest(
+                    conversationId: "convoId", member: new Did("did:plc:member"), service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.CreateGroup),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.CreateGroup(
+                    members: [new Did("did:plc:member")], name: "name", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.CreateJoinGroupLink),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.CreateJoinGroupLink(
+                    conversationId: "convoId", requireApproval: false, joinRule: Chat.Group.JoinRule.Anyone, service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.DisableJoinGroupLink),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.DisableJoinGroupLink(
+                    conversationId: "convoId", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.EditGroup),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.EditGroup(
+                    conversationId: "convoId", name: "name", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.EnableJoinGroupLink),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.EnableJoinGroupLink(
+                    conversationId: "convoId", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.GetJoinGroupLinkPreviews),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.GetJoinGroupLinkPreviews(
+                    codes: ["code"], service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.ListJoinGroupRequests),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.ListJoinGroupRequests(
+                    conversationId: "convoId", limit: null, cursor: null, service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.ListMutualGroups),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.ListMutualGroups(
+                    subject: new Did("did:plc:subject"), limit: null, cursor: null, service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.RejectJoinGroupRequest),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.RejectJoinGroupRequest(
+                    conversationId: "convoId", member: new Did("did:plc:member"), service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.RemoveGroupMembers),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.RemoveGroupMembers(
+                    conversationId: "convoId", members: [new Did("did:plc:member")], service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.RequestJoinGroup),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.RequestJoinGroup(
+                    code: "code", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.UpdateJoinGroupRequestsRead),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.UpdateJoinGroupRequestsRead(
+                    conversationId: "convoId", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+            {
+                nameof(BlueskyServer.WithdrawJoinGroupRequest),
+                (service, credentials, httpClient, cancellationToken) => BlueskyServer.WithdrawJoinGroupRequest(
+                    conversationId: "convoId", service: service, accessCredentials: credentials, httpClient: httpClient, cancellationToken: cancellationToken)
+            },
+        };
+    }
+
+    [Theory]
+    [MemberData(nameof(GroupServerCalls))]
+    public async Task GroupServerMethodsThrowWhenTheServiceIsNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    {
+        using HttpClient httpClient = new();
+
+        ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
+            () => call(null!, CreateCredentials(), httpClient, TestContext.Current.CancellationToken));
+
+        Assert.Equal("service", exception.ParamName);
+        Assert.NotEmpty(name);
+    }
+
+    [Theory]
+    [MemberData(nameof(GroupServerCalls))]
+    public async Task GroupServerMethodsThrowWhenTheCredentialsAreNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    {
+        using HttpClient httpClient = new();
+
+        ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
+            () => call(s_service, null!, httpClient, TestContext.Current.CancellationToken));
+
+        Assert.Equal("accessCredentials", exception.ParamName);
+        Assert.NotEmpty(name);
+    }
+
+    [Theory]
+    [MemberData(nameof(GroupServerCalls))]
+    public async Task GroupServerMethodsThrowWhenTheHttpClientIsNull(string name, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task> call)
+    {
+        ArgumentNullException exception = await Assert.ThrowsAsync<ArgumentNullException>(
+            () => call(s_service, CreateCredentials(), null!, TestContext.Current.CancellationToken));
+
+        Assert.Equal("httpClient", exception.ParamName);
+        Assert.NotEmpty(name);
+    }
+
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsThrowsWhenTheAgentIsNotAuthenticated()
+    {
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<AuthenticationRequiredException>(
+            () => agent.GetJoinGroupLinkPreviews(["code"], TestContext.Current.CancellationToken));
+    }
+}

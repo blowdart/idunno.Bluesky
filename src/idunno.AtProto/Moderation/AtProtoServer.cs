@@ -28,15 +28,18 @@ public static partial class AtProtoServer
     /// <param name="service">The service to create the record on.</param>
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="labelerDid"/>, <paramref name="subject"/>, <paramref name="reportType"/>, <paramref name="service"/> 
     /// <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="reason"/> is not <see langword="null"/> and is longer than 20000 UTF-8 bytes or 2000 graphemes.
+    /// </exception>
     /// <remarks>
     /// <para>
     ///     Clients should not send reports to Labelers which do not match the subject and report type metadata in their declaration record.
@@ -58,8 +61,9 @@ public static partial class AtProtoServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(labelerDid);
@@ -72,7 +76,8 @@ public static partial class AtProtoServer
 
         if (reason is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetUtf8Length(), 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetGraphemeLength(), 2000);
         }
 
         string atProtoProxy = $"{labelerDid}#atproto_labeler";
@@ -84,7 +89,7 @@ public static partial class AtProtoServer
             Reason = reason
         };
 
-        AtProtoHttpClient<ModerationReport> client = new(atProtoProxy, loggerFactory);
+        AtProtoHttpClient<ModerationReport> client = new(atProtoProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<ModerationReport> result = await client.Post(
             service: service,

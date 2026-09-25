@@ -81,6 +81,12 @@ public sealed record DidDocument
     /// </summary>
     /// <remarks>
     /// <para>See https://www.w3.org/TR/did-core/#also-known-as for details.</para>
+    /// <para>
+    ///   These identifiers are declared by whoever controls the <see cref="DidDocument"/> and are not verified. Use
+    ///   <see cref="Resolution.ResolveVerifiedHandle(Did, Uri?, Microsoft.Extensions.Logging.ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>
+    ///   or <see cref="Resolution.VerifyHandle(Handle, Did, Uri?, Microsoft.Extensions.Logging.ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>
+    ///   before treating a handle taken from here as identifying the subject of this document.
+    /// </para>
     /// </remarks>
     [NotNull]
     [JsonInclude]

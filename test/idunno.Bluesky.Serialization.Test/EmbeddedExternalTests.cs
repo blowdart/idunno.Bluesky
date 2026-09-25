@@ -16,7 +16,7 @@ public class EmbeddedExternalTests
     {
         // at://did:plc:sdeg7lksnp2fusabh5lt5d2w/app.bsky.feed.post/3mlookfem2c26
 
-        var json = """
+        string json = """
             {
                 "$type": "app.bsky.embed.external",
                 "external": {
@@ -35,14 +35,13 @@ public class EmbeddedExternalTests
             }
             """;
 
-        var embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        EmbeddedBase? embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.NotNull(embeddedBase);
-        Assert.IsType<EmbeddedExternal>(embeddedBase);
 
-        var embeddedExternal = (EmbeddedExternal)embeddedBase;
+        EmbeddedExternal embeddedExternal = Assert.IsType<EmbeddedExternal>(embeddedBase);
         Assert.NotNull(embeddedExternal.External);
-        Assert.Equal(new Uri("https://esb-lol-test.leaflet.pub/"), embeddedExternal.External.Uri);
+        Assert.Equal("https://esb-lol-test.leaflet.pub/", embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
         Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
@@ -57,7 +56,7 @@ public class EmbeddedExternalTests
     [Fact]
     public void ExternalEmbedDeserializesCorrectlyWithPkctPublicationData()
     {
-        var json = """
+        string json = """
             {
                 "$type": "app.bsky.embed.external",
                 "external": {
@@ -76,14 +75,13 @@ public class EmbeddedExternalTests
             }
             """;
 
-        var embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        EmbeddedBase? embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.NotNull(embeddedBase);
-        Assert.IsType<EmbeddedExternal>(embeddedBase);
 
-        var embeddedExternal = (EmbeddedExternal)embeddedBase;
+        EmbeddedExternal embeddedExternal = Assert.IsType<EmbeddedExternal>(embeddedBase);
         Assert.NotNull(embeddedExternal.External);
-        Assert.Equal(new Uri("https://esb-lol-test.pckt.blog/"), embeddedExternal.External.Uri);
+        Assert.Equal("https://esb-lol-test.pckt.blog/", embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
         Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
@@ -98,7 +96,7 @@ public class EmbeddedExternalTests
     [Fact]
     public void ExternalEmbedDeserializesCorrectlyWithAPkctPublicationAndAssociatedRefs()
     {
-        var json = """
+        string json = """
             {
                 "$type": "app.bsky.embed.external",
                 "external": {
@@ -129,14 +127,13 @@ public class EmbeddedExternalTests
             }
             """;
 
-        var embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        EmbeddedBase? embeddedBase = JsonSerializer.Deserialize<EmbeddedBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.NotNull(embeddedBase);
-        Assert.IsType<EmbeddedExternal>(embeddedBase);
 
-        var embeddedExternal = (EmbeddedExternal)embeddedBase;
+        EmbeddedExternal embeddedExternal = Assert.IsType<EmbeddedExternal>(embeddedBase);
         Assert.NotNull(embeddedExternal.External);
-        Assert.Equal(new Uri("https://estrattonbailey.pckt.blog/test-post-bn5bcy2"), embeddedExternal.External.Uri);
+        Assert.Equal("https://estrattonbailey.pckt.blog/test-post-bn5bcy2", embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
         Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);

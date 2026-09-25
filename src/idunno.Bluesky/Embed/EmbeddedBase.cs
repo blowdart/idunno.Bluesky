@@ -11,12 +11,12 @@ namespace idunno.Bluesky.Embed;
 /// Base class for embedded records.
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
-[JsonDerivedType(typeof(EmbeddedExternal), typeDiscriminator: "app.bsky.embed.external")]
-[JsonDerivedType(typeof(EmbeddedImages), typeDiscriminator: "app.bsky.embed.images")]
-[JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: "app.bsky.embed.video")]
-[JsonDerivedType(typeof(EmbeddedRecord), typeDiscriminator: "app.bsky.embed.record")]
-[JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: "app.bsky.embed.recordWithMedia")]
-[JsonDerivedType(typeof(EmbeddedGallery), typeDiscriminator: "app.bsky.embed.gallery")]
+[JsonDerivedType(typeof(EmbeddedExternal), typeDiscriminator: EmbeddedRecordTypeDiscriminators.External)]
+[JsonDerivedType(typeof(EmbeddedImages), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Images)]
+[JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Video)]
+[JsonDerivedType(typeof(EmbeddedRecord), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Record)]
+[JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.RecordWithMedia)]
+[JsonDerivedType(typeof(EmbeddedGallery), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Gallery)]
 public record EmbeddedBase : AtProtoRecord
 {
 }

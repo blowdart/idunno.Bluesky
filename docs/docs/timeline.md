@@ -1,18 +1,18 @@
-﻿# Timelines and Feeds
+# Timelines and Feeds
 
 ## <a name="timeline">Reading your timeline</a>
 
-To get the timeline for a logged in account you call `agent.GetTimeLine()`.
+To get the timeline for a logged in account you call `agent.GetTimeline()`.
 
 ```c#
-HttpResult<Timeline> timelineResult = await agent.GetTimeline();
+AtProtoHttpResult<Timeline> timelineResult = await agent.GetTimeline();
 if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
 {
     foreach (FeedViewPost timelineView in timelineResult.Result)
     {
         if (timelineView.Post.Record is Post postRecord && !string.IsNullOrEmpty(postRecord.Text))
         {
-            Console.WriteLine($"{feedView.Post.Record.Text}";
+            Console.WriteLine(postRecord.Text);
         }
         Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
         Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
@@ -51,7 +51,7 @@ When browsing timelines and feeds you will need to understand how AtProto implem
 
 A timeline is a well known feed. A feed is a view created by a feed generator over collections of posts, the criteria for which the feed controls.
 
-A feed is referenced by its [at:// uri](commonTerms.md#uri), loaded with `GetFeed()` rather than `GetTimeLine()` and then paginated in exactly the same way. 
+A feed is referenced by its [at:// uri](commonTerms.md#uri), loaded with `GetFeed()` rather than `GetTimeline()` and then paginated in exactly the same way. 
 
 ```c#
 AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");
@@ -63,22 +63,25 @@ var getFeedResult = await agent.GetFeed(feedUri, limit: pageSize);
 
 if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0)
 {
+    int page = 1;
+
     do
     {
         // Display the feed data
 
-        await agent.GetFeed(feedUri,limit: pageSize, cursor: getFeedResult.Result.Cursor);
+        getFeedResult = await agent.GetFeed(feedUri, limit: pageSize, cursor: getFeedResult.Result.Cursor);
+        page++;
 
     } while (getFeedResult.Succeeded &&
              !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-             page < maxPagesToIterate) ;
+             page < maxPagesToIterate);
 }
 ```
 
 > [!TIP]
 > Some feeds, like the Discover feed use a specialized cursor, rather than the more typical timestamp.
 > This can grow with each page, to the point when it is too large to send back to the server, hence the code above,
-> taken from the The [Feed sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Feed) limiting the do while loop not just until
+> taken from the [Feed sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Feed) limiting the do while loop not just until
 > data runs out but also to a maximum number of pages.
 
 ## <a name="searching">Searching</a>
@@ -91,17 +94,20 @@ const int maxPagesToIterate = 10;
 
 var searchResult = await agent.SearchPosts("#beans", limit: pageSize);
 
-if (searchResult.Succeeded && getFeedResult.Result.Count != 0)
+if (searchResult.Succeeded && searchResult.Result.Count != 0)
 {
+    int page = 1;
+
     do
     {
         // Display the feed data
 
-        await agent.GetFeed(feedUri,limit: pageSize, cursor: searchResult.Result.Cursor);
+        searchResult = await agent.SearchPosts("#beans", limit: pageSize, cursor: searchResult.Result.Cursor);
+        page++;
 
     } while (searchResult.Succeeded &&
-             !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-             page < maxPagesToIterate) ;
+             !string.IsNullOrEmpty(searchResult.Result.Cursor) &&
+             page < maxPagesToIterate);
 }
 ```
 

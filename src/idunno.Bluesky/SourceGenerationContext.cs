@@ -39,6 +39,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Actor.AllowIncomingChat), TypeInfoPropertyName = "ActorAllowIncomingChat")]
 [JsonSerializable(typeof(Actor.BlueskyAppStatePreference), TypeInfoPropertyName = "ActorBlueskyAppStatePreference")]
 [JsonSerializable(typeof(Actor.ContentLabelPreference), TypeInfoPropertyName = "ActorContentLabelPreference")]
+[JsonSerializable(typeof(Actor.DeclaredAgePreference), TypeInfoPropertyName = "ActorDeclaredAgePreference")]
 [JsonSerializable(typeof(Actor.FeedViewPreference), TypeInfoPropertyName = "ActorFeedViewPreference")]
 [JsonSerializable(typeof(Actor.HiddenPostsPreferences), TypeInfoPropertyName = "ActorHiddenPostsPreferences")]
 [JsonSerializable(typeof(Actor.InterestsPreference), TypeInfoPropertyName = "ActorInterestsPreference")]
@@ -72,6 +73,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Actor.StatusView), TypeInfoPropertyName = "ActorStatusView")]
 [JsonSerializable(typeof(Actor.ThreadSortingMode), TypeInfoPropertyName = "ActorThreadSortingMode")]
 [JsonSerializable(typeof(Actor.ThreadViewPreference), TypeInfoPropertyName = "ActorThreadViewPreference")]
+[JsonSerializable(typeof(Actor.VerificationPreferences), TypeInfoPropertyName = "ActorVerificationPreferences")]
 [JsonSerializable(typeof(Actor.VerificationState), TypeInfoPropertyName = "ActorVerificationState")]
 [JsonSerializable(typeof(Actor.VerificationView), TypeInfoPropertyName = "ActorVerificationView")]
 [JsonSerializable(typeof(Actor.ViewerState), TypeInfoPropertyName = "ActorViewerState")]
@@ -138,7 +140,7 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Chat.ConversationViewBase), TypeInfoPropertyName = "ChatBSkyConvoViewBase")]
 [JsonSerializable(typeof(Chat.ConversationView), TypeInfoPropertyName = "ChatBSkyConvoView")]
-[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView), TypeInfoPropertyName = "ChatBSkyConvoViewWithMessages")]
+[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView), TypeInfoPropertyName = "ChatBSkyGroupJoinRequestConvoView")]
 
 [JsonSerializable(typeof(Chat.Convo.Model.AcceptConversationRequest))]
 [JsonSerializable(typeof(Chat.Convo.Model.AcceptConversationResponse))]
@@ -322,7 +324,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Graph.Model.GetListsResponse), TypeInfoPropertyName = "GraphModelGetListsResponse")]
 [JsonSerializable(typeof(Graph.Model.GetListsWithMembershipResponse), TypeInfoPropertyName = "GraphModelGetListsWithMembershipResponse")]
 [JsonSerializable(typeof(Graph.Model.GetMutesResponse), TypeInfoPropertyName = "GraphModelGetMutesResponse")]
-[JsonSerializable(typeof(Graph.Model.GetRelationshipsResponse), TypeInfoPropertyName = "GraphModelGetRelationshipsResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPackResponse), TypeInfoPropertyName = "GraphModelGetStarterPackResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPacksResponse), TypeInfoPropertyName = "GraphModelGetStarterPacksResponse")]
 [JsonSerializable(typeof(Graph.Model.GetStarterPacksWithMembershipResponse), TypeInfoPropertyName = "GraphModelGetStarterPacksWithMembershipResponse")]
@@ -361,6 +362,8 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Post))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Post>))]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Gates.ThreadGate>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedThreadGate")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Gates.PostGate>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedPostGate")]
 [JsonSerializable(typeof(View), TypeInfoPropertyName = "BaseView")]
 [JsonSerializable(typeof(Graph.ListPurpose), TypeInfoPropertyName = "GraphListPurpose")]
 
@@ -419,7 +422,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.JoinLinkPreviewViewBase))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkView))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkViewerState))]
-[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView))]
 [JsonSerializable(typeof(Chat.Group.JoinRequestView))]
 [JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestConversationView>))]
 [JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>))]
@@ -466,6 +468,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Unspecced.TrendView), TypeInfoPropertyName = "UnspeccedTrendView")]
 [JsonSerializable(typeof(Unspecced.Model.GetTrendsResponse), TypeInfoPropertyName = "UnspeccedModelGetTrendsResponse")]
 [JsonSerializable(typeof(Unspecced.AgeAssuranceStatus), TypeInfoPropertyName = "UnspeccedAgeAssuranceStatus")]
+[JsonSerializable(typeof(Unspecced.AgeAssuranceState), TypeInfoPropertyName = "UnspeccedAgeAssuranceState")]
 [JsonSerializable(typeof(Unspecced.Model.GetAgeAssuranceStateResponse), TypeInfoPropertyName = "UnspeccedModelGetAgeAssuranceStateResponse")]
 [JsonSerializable(typeof(Unspecced.ThreadItemValue), TypeInfoPropertyName = "UnspeccedThreadItem")]
 [JsonSerializable(typeof(Unspecced.ThreadItemPost), TypeInfoPropertyName = "UnspeccedThreadItemPost")]

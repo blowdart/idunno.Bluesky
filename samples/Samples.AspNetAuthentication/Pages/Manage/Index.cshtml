@@ -1,0 +1,36 @@
+@page
+@{
+    ViewData["Title"] = "Manage Profile";
+}
+@model IndexModel
+@{
+    <h1>Manage Profile</h1>
+
+    <form method="post" asp-route-cid="@Model.Cid">
+        <div class="row mb-3">
+            <label asp-for="DisplayName" class="col-sm-2 col-form-label">Display Name</label>
+            <div class="col-sm-10">
+                <input asp-for="DisplayName" class="form-text"/>
+                <div asp-validation-for="DisplayName" class="text-danger"></div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <label asp-for="Description" class="col-sm-2 col-form-label">Description</label>
+            <div class="col-sm-10">
+                <input asp-for="Description" class="form-text" />
+                <div asp-validation-for="Description" class="text-danger"></div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <label asp-for="Pronouns" class="col-sm-2 col-form-label">Pronouns</label>
+            <div class="col-sm-10">
+                <input asp-for="Pronouns" class="form-text" />
+                <div asp-validation-for="Pronouns" class="text-danger"></div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update</button>
+    </form>
+}

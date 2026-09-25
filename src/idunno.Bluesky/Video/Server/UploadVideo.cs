@@ -25,11 +25,12 @@ public static partial class BlueskyServer
     /// <param name="serviceCredential">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> is <see langword="null"/>, whitespace, or is not a valid media type.</exception>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="did"/>, <paramref name="serviceCredential"/>, <paramref name="media"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty, or when <paramref name="mimeType"/> is outside the allowable length.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -46,6 +47,7 @@ public static partial class BlueskyServer
         ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
@@ -57,14 +59,22 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(httpClient);
 
         ArgumentOutOfRangeException.ThrowIfZero(media.Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeMinimumLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeLengthInBytes);
+
+        if (!MediaTypeHeaderValue.TryParse(mimeType, out MediaTypeHeaderValue? parsedMimeType) ||
+            parsedMimeType.MediaType is null)
+        {
+            throw new ArgumentException("MIME type is not a valid media type.", nameof(mimeType));
+        }
 
         List<NameValueHeaderValue> contentHeaders =
         [
-            new NameValueHeaderValue("Content-Type", mimeType)
+            new NameValueHeaderValue("Content-Type", parsedMimeType.MediaType)
         ];
 
         // AppView proxy is not needed as we're hitting the video service directly.
-        BlueskyHttpClient<JobStatusWireFormat> client = new(loggerFactory);
+        BlueskyHttpClient<JobStatusWireFormat> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<JobStatusWireFormat> response =
             await client.PostBlob(

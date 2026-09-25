@@ -23,8 +23,9 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to get relationships from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/>, <paramref name="httpClient"/>.</exception>
@@ -42,8 +43,9 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -67,9 +69,13 @@ public static partial class BlueskyServer
         // See https://github.com/bluesky-social/atproto/issues/2919
         foreach (AtIdentifier other in others)
         {
-            if (other is Handle handle)
+            if (other is null)
             {
-                Did? did = await AtProtoServer.ResolveHandle(handle, httpClient, loggerFactory, cancellationToken).ConfigureAwait(false);
+                throw new ArgumentException("The collection of others must not contain null entries.", nameof(others));
+            }
+            else if (other is Handle handle)
+            {
+                Did? did = await AtProtoServer.ResolveHandle(handle, httpClient, loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false);
                 if (did is not null)
                 {
                     queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&others={Uri.EscapeDataString(did.ToString())}");
@@ -92,9 +98,9 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<RelationshipMap> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<RelationshipMap> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
-        return await client.Get(
+        AtProtoHttpResult<RelationshipMap> response = await client.Get(
             service: service,
             endpoint: $"/xrpc/app.bsky.graph.getRelationships?{queryString}",
             requestHeaders: null,
@@ -103,5 +109,20 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return new AtProtoHttpResult<RelationshipMap>(
+                response.Result with
+                {
+                    Relationships = WithoutNullEntries(response.Result.Relationships, service, nameof(RelationshipMap.Relationships), loggerFactory)
+                },
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+
+        return response;
     }
 }

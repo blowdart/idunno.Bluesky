@@ -72,11 +72,11 @@ public record class Post : BlueskyTimestampedRecord
             throw new ArgumentNullException(nameof(text));
         }
 
-        if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         Text = text;
@@ -296,11 +296,11 @@ public record class Post : BlueskyTimestampedRecord
             }
         }
 
-        if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
         Text = text;
     }
@@ -497,9 +497,9 @@ public record class Post : BlueskyTimestampedRecord
                     throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
                 }
 
-                if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
+                if (tag.GetUtf8Length() > Maximum.TagLengthInBytes || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes");
+                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInBytes} UTF-8 bytes or {Maximum.TagLengthInGraphemes} graphemes");
                 }
                 position++;
             }
@@ -779,5 +779,65 @@ public record class Post : BlueskyTimestampedRecord
     public void RemoveEmbed()
     {
         EmbeddedRecord = null;
+    }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="Post"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="Post"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="Facets"/>, <see cref="Langs"/> and <see cref="Tags"/> are compared by their contents rather than by reference.
+    ///   <see cref="BlueskyTimestampedRecord.CreatedAt"/> takes part in the comparison, so two posts created at different times are never equal.
+    /// </para>
+    /// </remarks>
+    public virtual bool Equals(Post? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return base.Equals(other) &&
+            Text == other.Text &&
+            Reply == other.Reply &&
+            EmbeddedRecord == other.EmbeddedRecord &&
+            Equals(Labels, other.Labels) &&
+            CollectionComparison.SequenceEquals(Facets, other.Facets) &&
+            CollectionComparison.SequenceEquals(Langs, other.Langs) &&
+            CollectionComparison.SequenceEquals(Tags, other.Tags);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The hash code is derived from the current property values, so it changes if the instance is mutated.
+    ///   Do not mutate an instance while it is being used as a key in a hashed collection.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Major Code Smell", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Value equality over mutable properties requires the hash code to be derived from the same state, which is documented on the member.")]
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(base.GetHashCode());
+        hashCode.Add(Text, StringComparer.Ordinal);
+        hashCode.Add(Reply);
+        hashCode.Add(EmbeddedRecord);
+        hashCode.Add(Labels);
+        CollectionComparison.AddSequence(ref hashCode, Facets);
+        CollectionComparison.AddSequence(ref hashCode, Langs);
+        CollectionComparison.AddSequence(ref hashCode, Tags);
+
+        return hashCode.ToHashCode();
     }
 }

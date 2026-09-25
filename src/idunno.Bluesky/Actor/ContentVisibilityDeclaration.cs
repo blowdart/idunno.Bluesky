@@ -13,7 +13,7 @@ namespace idunno.Bluesky.Actor;
 /// A declaration of an account's preferences for appearing in content discovery surfaces.
 /// </summary>
 /// <param name="HideFromAlgorithmicRecommendations">
-/// Flag indicating Whether the account requests that its posts be hidden from algorithmic recommendations.
+/// Flag indicating whether the account requests that its posts be hidden from algorithmic recommendations.
 /// Consumers must treat a missing record as <see langword="false"/>
 /// </param>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]

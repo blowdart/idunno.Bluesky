@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
@@ -21,7 +22,17 @@ namespace idunno.AtProto;
 /// </summary>
 public partial class AtProtoAgent : Agent
 {
-    private volatile bool _disposed;
+    /// <summary>
+    /// Tracks disposal of this class only.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="Agent"/> tracks its own disposal separately and privately. The name says which of the two this is,
+    ///   so that a field here is never mistaken for the base class state, or the other way around.
+    /// </para>
+    /// </remarks>
+    private volatile bool _atProtoAgentDisposed;
+
     private readonly ILogger<AtProtoAgent> _logger;
     internal readonly DirectoryAgent _directoryAgent;
 
@@ -61,6 +72,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -84,6 +96,8 @@ public partial class AtProtoAgent : Agent
         OriginalService = service;
         Service = service;
 
+        Options = options;
+
         if (options is not null)
         {
             _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
@@ -101,27 +115,38 @@ public partial class AtProtoAgent : Agent
             new DirectoryAgentOptions()
             {
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                 LoggerFactory = LoggerFactory,
             });
     }
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
-    /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+    /// a <see cref="AccessCredentials"/> derived from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsPrincipal principal,
+        ClaimsPrincipal? principal,
+        Uri service,
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(principal);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (principal is not null &&
+            principal.Identity is not null &&
+            principal.Identity.IsAuthenticated && AtProtoCredential.TryCreate(principal, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -144,6 +169,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -154,21 +180,31 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsPrincipal principal,
+        ClaimsPrincipal? principal,
+        Uri service,
         IHttpClientFactory httpClientFactory,
         AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
     {
         ArgumentNullException.ThrowIfNull(principal);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(principal, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
+
+        Options = options;
 
         if (options is not null)
         {
@@ -187,6 +223,7 @@ public partial class AtProtoAgent : Agent
             new DirectoryAgentOptions()
             {
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                 LoggerFactory = LoggerFactory,
             });
     }
@@ -196,18 +233,26 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsIdentity identity,
+        ClaimsIdentity? identity,
+        Uri service,
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -230,6 +275,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -240,20 +286,28 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsIdentity identity,
+        ClaimsIdentity? identity,
+        Uri service,
         IHttpClientFactory httpClientFactory,
         AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -277,6 +331,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory
                 });
     }
@@ -290,6 +345,12 @@ public partial class AtProtoAgent : Agent
     /// Gets the configuration options for the agent.
     /// </summary>
     protected internal AtProtoAgentOptions? Options { get; init; }
+
+    /// <summary>
+    /// Gets the maximum number of bytes to read from an XRPC response body, as configured by
+    /// <see cref="AtProtoAgentOptions.MaximumResponseSize"/>.
+    /// </summary>
+    protected internal int MaximumResponseSize => Options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize;
 
     /// <summary>
     /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
@@ -307,33 +368,30 @@ public partial class AtProtoAgent : Agent
     /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
     protected override void Dispose(bool disposing)
     {
-        if (_disposed)
+        if (_atProtoAgentDisposed)
         {
             return;
         }
+
+        _atProtoAgentDisposed = true;
 
         if (disposing)
         {
             Authenticated = null;
             CredentialsUpdated = null;
+            CredentialsUpdatedAsync = null;
             TokenRefreshFailed = null;
             Unauthenticated = null;
 
-            if (_credentialRefreshTimer is not null)
-            {
-                _credentialRefreshTimer.Stop();
-                _credentialRefreshTimer.Enabled = false;
-                _credentialRefreshTimer.Dispose();
-                _credentialRefreshTimer = null;
-            }
+            StopTokenRefreshTimer(dispose: true);
+
+            ForgetExchangedRefreshTokens();
+            ClearCredentials();
 
             _directoryAgent.Dispose();
-            _credentialReaderWriterLockSlim.Dispose();
         }
 
         base.Dispose(disposing);
-
-        _disposed = true;
     }
 
     /// <summary>
@@ -359,6 +417,7 @@ public partial class AtProtoAgent : Agent
             handle,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory,
+            maximumWellKnownResponseSize: Options?.MaximumWellKnownResponseSize ?? AtProtoServer.DefaultMaximumWellKnownResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result is null)
@@ -440,7 +499,13 @@ public partial class AtProtoAgent : Agent
 
             if (didDocument is not null && didDocument.Services is not null)
             {
-                pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
+                pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
+
+                if (pds is not null && !Resolution.IsSupportedServiceEndpoint(pds))
+                {
+                    Logger.UnsupportedPdsUri(_logger, did, pds);
+                    pds = null;
+                }
             }
         }
 
@@ -493,7 +558,10 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="operations"/> or <paramref name="repo" /> is <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -527,11 +595,21 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (applyWritesResult.Succeeded)
         {
-            Logger.ApplyWritesSucceeded(_logger, applyWritesResult.Result.Commit.Cid, applyWritesResult.Result.Commit.Rev, Service);
+            // The lexicon declares the commit as optional, so a server which applies the writes without reporting the
+            // commit they landed in must not turn a successful call into a NullReferenceException out of the logger.
+            if (applyWritesResult.Result.Commit is Commit commit)
+            {
+                Logger.ApplyWritesSucceeded(_logger, commit.Cid, commit.Rev, Service);
+            }
+            else
+            {
+                Logger.ApplyWritesSucceededWithNoCommit(_logger, Service);
+            }
         }
         else
         {
@@ -594,6 +672,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -668,6 +747,7 @@ public partial class AtProtoAgent : Agent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             jsonSerializerOptions: jsonSerializerOptions,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -693,7 +773,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection or the uri record key is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtUri uri,
         string? serviceProxy = null,
         CancellationToken cancellationToken = default)
@@ -722,7 +803,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> or <paramref name="rKey"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         Nsid collection,
         RecordKey rKey,
         Cid? swapRecord = null,
@@ -752,7 +834,8 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>, </exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> is not valid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         StrongReference strongReference,
         Cid? swapRecord = null,
         Cid? swapCommit = null,
@@ -792,7 +875,8 @@ public partial class AtProtoAgent : Agent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Throw when the current session is not an authenticated session.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> is <see langword="null"/>, <paramref name="collection"/> or <paramref name="rKey"/> are <see langword="null"/> or empty.</exception>
-    public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtIdentifier repo,
         Nsid collection,
         RecordKey rKey,
@@ -811,7 +895,7 @@ public partial class AtProtoAgent : Agent
             throw new AuthenticationRequiredException();
         }
 
-        AtProtoHttpResult<Commit> response =
+        AtProtoHttpResult<DeleteResult> response =
             await AtProtoServer.DeleteRecord(
                 repo,
                 collection,
@@ -824,11 +908,12 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
         {
-            Logger.DeleteRecordSucceeded(_logger, repo, collection, rKey, Service, response.Result);
+            Logger.DeleteRecordSucceeded(_logger, repo, collection, rKey, Service, response.Result.Commit);
         }
         else
         {
@@ -837,7 +922,7 @@ public partial class AtProtoAgent : Agent
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<Commit>
+            return new AtProtoHttpResult<DeleteResult>
             {
                 Result = response.Result,
                 AtErrorDetail = response.AtErrorDetail,
@@ -848,7 +933,7 @@ public partial class AtProtoAgent : Agent
         }
         else
         {
-            return new AtProtoHttpResult<Commit>
+            return new AtProtoHttpResult<DeleteResult>
             {
                 Result = null,
                 AtErrorDetail = response.AtErrorDetail,
@@ -918,6 +1003,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -998,6 +1084,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1063,6 +1150,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1131,6 +1219,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1169,6 +1258,7 @@ public partial class AtProtoAgent : Agent
             service,
             HttpClient,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -1195,19 +1285,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1274,6 +1359,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1313,19 +1399,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1393,6 +1474,7 @@ public partial class AtProtoAgent : Agent
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 jsonSerializerOptions: jsonSerializerOptions,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1419,19 +1501,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1460,19 +1537,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1504,11 +1576,6 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(pds);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
             throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
@@ -1535,11 +1602,6 @@ public partial class AtProtoAgent : Agent
         Cid cid)
     {
         ArgumentNullException.ThrowIfNull(uri);
-
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
 
         if (uri.Collection is null)
         {
@@ -1579,19 +1641,14 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
-        }
-
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         Uri? service = null;
@@ -1625,11 +1682,6 @@ public partial class AtProtoAgent : Agent
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
         ArgumentNullException.ThrowIfNull(pds);
-
-        if (uri.Repo is null)
-        {
-            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
-        }
 
         if (uri.Collection is null)
         {
@@ -1698,6 +1750,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1814,6 +1867,7 @@ public partial class AtProtoAgent : Agent
             httpClient: HttpClient,
             serviceProxy: serviceProxy,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1936,6 +1990,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             serviceProxy: serviceProxy,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1960,7 +2015,7 @@ public partial class AtProtoAgent : Agent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is empty, or <paramref name="mimeType"/> is empty or is not a valid media type.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the file specified by <paramref name="fileName"/> could not be found.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
@@ -2008,6 +2063,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
@@ -2026,7 +2082,7 @@ public partial class AtProtoAgent : Agent
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length, or if <paramref name="mimeType"/> is <see langword="null"/>, empty, or is not a valid media type.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
@@ -2066,6 +2122,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
@@ -2104,7 +2161,7 @@ public partial class AtProtoAgent : Agent
         if (limit is not null &&
            (limit < 1 || limit > 250))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 250."));
         }
 
         service ??= Service;
@@ -2119,6 +2176,7 @@ public partial class AtProtoAgent : Agent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

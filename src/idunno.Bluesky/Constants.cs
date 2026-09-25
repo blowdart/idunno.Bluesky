@@ -31,9 +31,16 @@ public static class DefaultServiceUris
 public static class Maximum
 {
     /// <summary>
-    /// The maximum length for a post, in characters.
+    /// The maximum length for a post, in UTF-8 bytes.
     /// </summary>
-    public static readonly int PostLengthInCharacters = 3000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>. Text outside the ASCII range encodes to more bytes than it has characters, so a post
+    /// can exceed this limit while remaining within <see cref="PostLengthInGraphemes"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int PostLengthInBytes = 3000;
 
     /// <summary>
     /// The maximum length for a post, in graphemes.
@@ -51,14 +58,84 @@ public static class Maximum
     public static readonly int ExternalTagsInPost = 8;
 
     /// <summary>
-    /// The maximum length of an tag, in characters.
+    /// The maximum length of a tag, in UTF-8 bytes.
     /// </summary>
-    public static readonly int TagLengthInCharacters = 640;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int TagLengthInBytes = 640;
 
     /// <summary>
     /// The maximum length of an tag, in graphemes.
     /// </summary>
     public static readonly int TagLengthInGraphemes = 64;
+
+    /// <summary>
+    /// The maximum length of a list name, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int ListNameLengthInBytes = 64;
+
+    /// <summary>
+    /// The maximum length of a list description, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int ListDescriptionLengthInBytes = 3000;
+
+    /// <summary>
+    /// The maximum length of a list description, in graphemes.
+    /// </summary>
+    public static readonly int ListDescriptionLengthInGraphemes = 300;
+
+    /// <summary>
+    /// The maximum length of a starter pack name, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int StarterPackNameLengthInBytes = 500;
+
+    /// <summary>
+    /// The maximum length of a starter pack name, in graphemes.
+    /// </summary>
+    public static readonly int StarterPackNameLengthInGraphemes = 50;
+
+    /// <summary>
+    /// The maximum length of a starter pack description, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int StarterPackDescriptionLengthInBytes = 3000;
+
+    /// <summary>
+    /// The maximum length of a starter pack description, in graphemes.
+    /// </summary>
+    public static readonly int StarterPackDescriptionLengthInGraphemes = 300;
+
+    /// <summary>
+    /// The maximum number of feeds a starter pack can contain.
+    /// </summary>
+    public static readonly int FeedsInStarterPack = 3;
 
     /// <summary>
     /// The maximum number of rules a thread gate can contain.
@@ -81,9 +158,59 @@ public static class Maximum
     public static readonly int PostGateDetachedEmbeddingPosts = 50;
 
     /// <summary>
+    /// The maximum number of posts a feed endpoint will return in a single page.
+    /// </summary>
+    public static readonly int PostsToList = 100;
+
+    /// <summary>
+    /// The maximum number of posts that can be requested by <see cref="AtUri"/> in a single call.
+    /// </summary>
+    public static readonly int PostsToGet = 25;
+
+    /// <summary>
+    /// The maximum depth of replies a post thread can be retrieved to.
+    /// </summary>
+    public static readonly int PostThreadDepth = 1000;
+
+    /// <summary>
+    /// The maximum number of parent posts a post thread can be retrieved to.
+    /// </summary>
+    public static readonly int PostThreadParentHeight = 1000;
+
+    /// <summary>
     /// The maximum number of actors that can suggested 
     /// </summary>
     public static readonly int SuggestedActors = 100;
+
+    /// <summary>
+    /// The maximum number of actor profiles that can be retrieved in a single call.
+    /// </summary>
+    public static readonly int ProfilesToGet = 25;
+
+    /// <summary>
+    /// The maximum number of actors that can be returned by an actor search.
+    /// </summary>
+    public static readonly int ActorSearchResults = 100;
+
+    /// <summary>
+    /// The maximum number of actors that can be returned by an actor typeahead search.
+    /// </summary>
+    public static readonly int ActorTypeaheadSearchResults = 100;
+
+    /// <summary>
+    /// The maximum number of tags that can be saved in an actor's interests.
+    /// </summary>
+    public static readonly int InterestTags = 100;
+
+    /// <summary>
+    /// The maximum length, in bytes, of a muted word.
+    /// </summary>
+    public static readonly int MutedWordLengthInBytes = 10000;
+
+    /// <summary>
+    /// The maximum length, in graphemes, of a muted word.
+    /// </summary>
+    public static readonly int MutedWordLengthInGraphemes = 1000;
 
     /// <summary>
     /// The maximum number of conversations to list.
@@ -101,14 +228,79 @@ public static class Maximum
     public static readonly int MessagesToList = 100;
 
     /// <summary>
-    /// The maximum number of characters in a direct message.
+    /// The maximum number of UTF-8 bytes in a direct message.
     /// </summary>
-    public static readonly int MessageLengthInCharacters = 10000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int MessageLengthInBytes = 10000;
+
+    /// <summary>
+    /// The maximum number of graphemes in a direct message.
+    /// </summary>
+    public static readonly int MessageLengthInGraphemes = 1000;
+
+    /// <summary>
+    /// The maximum number of conversation requests to list.
+    /// </summary>
+    public static readonly int ConversationRequestsToList = 100;
+
+    /// <summary>
+    /// The maximum number of group join requests to list.
+    /// </summary>
+    public static readonly int JoinRequestsToList = 100;
+
+    /// <summary>
+    /// The maximum number of members that can be specified when creating a group conversation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the limit from the lexicon schema. Implementations may enforce a lower limit;
+    /// Bluesky currently supports up to 100 total members in a group conversation.
+    /// </para>
+    /// </remarks>
+    public static readonly int GroupMembers = 10000;
+
+    /// <summary>
+    /// The maximum number of UTF-8 bytes in a group conversation name.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int GroupNameLengthInBytes = 500;
+
+    /// <summary>
+    /// The maximum number of graphemes in a group conversation name.
+    /// </summary>
+    public static readonly int GroupNameLengthInGraphemes = 50;
+
+    /// <summary>
+    /// The maximum number of group join link codes that previews can be requested for in a single call.
+    /// </summary>
+    public static readonly int JoinLinkPreviewCodes = 50;
 
     /// <summary>
     /// The maximum number of messages in a message batch.
     /// </summary>
     public static readonly int BatchedMessages = 100;
+
+    /// <summary>
+    /// The maximum number of UTF-8 bytes in a reaction to a direct message.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A reaction is limited to a single grapheme, but a single grapheme has no upper bound on its encoded length. A sequence of emoji
+    /// joined by zero width joiners is one grapheme cluster and can be arbitrarily long, so this limit is reachable independently of
+    /// the grapheme check.
+    /// </para>
+    /// </remarks>
+    public static readonly int ReactionLengthInBytes = 64;
 
     /// <summary>
     /// The maximum number of bookmarks that can be returned from GetBookmarks.
@@ -151,19 +343,41 @@ public static class Maximum
     public static readonly int Trends = 25;
 
     /// <summary>
-    /// The maximum length of a profile pronoun.
+    /// The maximum number of levels of replies that can be requested below the anchor post of a v2 post thread.
     /// </summary>
-    public static readonly int PronounLength = 2560;
+    public static readonly int PostThreadV2Below = 20;
+
+    /// <summary>
+    /// The maximum number of replies that can be requested at each level of a v2 post thread.
+    /// </summary>
+    public static readonly int PostThreadV2BranchingFactor = 100;
+
+    /// <summary>
+    /// The maximum length of a profile pronoun, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int PronounLengthInBytes = 200;
 
     /// <summary>
     /// The maximum length of a profile pronoun, in graphemes.
     /// </summary>
-    public static readonly int PronounLengthInGraphemes = 256;
+    public static readonly int PronounLengthInGraphemes = 20;
 
     /// <summary>
-    /// The maximum length of a profile display name.
+    /// The maximum length of a profile display name, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DisplayNameLength = 640;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DisplayNameLengthInBytes = 640;
 
     /// <summary>
     /// The maximum length of a profile display name, in graphemes.
@@ -171,9 +385,15 @@ public static class Maximum
     public static readonly int DisplayNameLengthInGraphemes = 64;
 
     /// <summary>
-    /// The maximum length of a profile description.
+    /// The maximum length of a profile description, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DescriptionLength = 2560;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DescriptionLengthInBytes = 2560;
 
     /// <summary>
     /// The maximum length of a profile description, in graphemes.
@@ -186,9 +406,15 @@ public static class Maximum
     public static readonly int ListedDrafts = 100;
 
     /// <summary>
-    /// The maximum length of text in an individual draft.
+    /// The maximum length of text in an individual draft, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DraftTextLengthInCharacters = 10000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftTextLengthInBytes = 10000;
 
     /// <summary>
     /// The maximum length of text in an individual draft, in graphemes.
@@ -196,9 +422,169 @@ public static class Maximum
     public static readonly int DraftTextLengthInGraphemes = 1000;
 
     /// <summary>
+    /// The maximum number of posts in a draft.
+    /// </summary>
+    public static readonly int DraftPosts = 100;
+
+    /// <summary>
+    /// The maximum length of the identifier of the device which created a draft, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftDeviceIdLengthInBytes = 100;
+
+    /// <summary>
+    /// The maximum length of the name of the device which created a draft, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftDeviceNameLengthInBytes = 100;
+
+    /// <summary>
+    /// The maximum number of languages a draft can declare.
+    /// </summary>
+    public static readonly int DraftLangs = 3;
+
+    /// <summary>
+    /// The maximum number of post gate embedding rules a draft can declare.
+    /// </summary>
+    public static readonly int DraftPostGateEmbeddingRules = 5;
+
+    /// <summary>
+    /// The maximum number of thread gate allow rules a draft can declare.
+    /// </summary>
+    public static readonly int DraftThreadGateAllowRules = 5;
+
+    /// <summary>
+    /// The maximum number of images which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedImages = 4;
+
+    /// <summary>
+    /// The maximum number of videos which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedVideos = 1;
+
+    /// <summary>
+    /// The maximum number of external embeds which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedExternals = 1;
+
+    /// <summary>
+    /// The maximum number of records which can be embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedRecords = 1;
+
+    /// <summary>
+    /// The maximum length of the local path of a file embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftEmbedLocalRefPathLengthInBytes = 1024;
+
+    /// <summary>
+    /// The minimum length of the local path of a file embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    public static readonly int DraftEmbedLocalRefPathMinimumLengthInBytes = 1;
+
+    /// <summary>
+    /// The maximum length of the alt text of an image or video embedded in a draft post, in graphemes.
+    /// </summary>
+    public static readonly int DraftEmbedAltTextLengthInGraphemes = 2000;
+
+    /// <summary>
+    /// The maximum length of the content of a caption embedded in a draft post, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftEmbedCaptionContentLengthInBytes = 10000;
+
+    /// <summary>
+    /// The maximum number of captions which can be attached to a video embedded in a draft post.
+    /// </summary>
+    public static readonly int DraftEmbedVideoCaptions = 20;
+
+    /// <summary>
     /// The maximum number of items in a gallery.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the client authoring limit documented by
+    /// <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json">app.bsky.embed.gallery</see>,
+    /// not the schema limit, which is twenty. Galleries read from the service are not held to this limit.
+    /// </para>
+    /// </remarks>
     public static readonly int GalleryItems = 10;
+
+    /// <summary>
+    /// The maximum number of AT URIs which can be resolved in a single call to app.bsky.embed.getEmbedExternalView.
+    /// </summary>
+    public static readonly int EmbedExternalViewUris = 4;
+
+    /// <summary>
+    /// The maximum number of captions which can be attached to a video embed.
+    /// </summary>
+    public static readonly int EmbedVideoCaptions = 20;
+
+    /// <summary>
+    /// The minimum length of the declared MIME type of a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoMimeTypeMinimumLengthInBytes = 3;
+
+    /// <summary>
+    /// The maximum length of the declared MIME type of a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoMimeTypeLengthInBytes = 255;
+
+    /// <summary>
+    /// The maximum length of the client provided file name for a video upload, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoUploadNameLengthInBytes = 256;
+
+    /// <summary>
+    /// The maximum length of a video upload job identifier, in UTF-8 bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int VideoJobIdLengthInBytes = 256;
 }
 
 /// <summary>
@@ -284,6 +670,11 @@ public static class CollectionNsid
     /// The NSID for an actor's status record.
     /// </summary>
     public static Nsid Status => new("app.bsky.actor.status");
+
+    /// <summary>
+    /// The NSID for an actor's content visibility declaration record.
+    /// </summary>
+    public static Nsid ContentVisibilityDeclaration => new("app.bsky.actor.contentVisibilityDeclaration");
 
     /// <summary>
     /// The NSID for an actor's notification declaration record.
@@ -492,12 +883,37 @@ public static class EmbeddedViewTypeDiscriminators
     /// <summary>
     /// The json type discriminator for a view over a record that is blocked
     /// </summary>
-    public const string EmbedViewBlocked = "app.bsky.embed.record#Blocked";
+    public const string EmbedViewBlocked = "app.bsky.embed.record#viewBlocked";
 
     /// <summary>
     /// The json type discriminator for a view over a record that is detached
     /// </summary>
-    public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
+    public const string EmbedViewDetached = "app.bsky.embed.record#viewDetached";
+
+    /// <summary>
+    /// The json type discriminator for a view over embedded images
+    /// </summary>
+    public const string ImagesView = "app.bsky.embed.images#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded external link
+    /// </summary>
+    public const string ExternalView = "app.bsky.embed.external#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded video
+    /// </summary>
+    public const string VideoView = "app.bsky.embed.video#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded record with media
+    /// </summary>
+    public const string RecordWithMediaView = "app.bsky.embed.recordWithMedia#view";
+
+    /// <summary>
+    /// The json type discriminator for a view over an embedded gallery
+    /// </summary>
+    public const string GalleryView = "app.bsky.embed.gallery#view";
 
     /// <summary>
     /// The json type discriminator for a view over a feed generator

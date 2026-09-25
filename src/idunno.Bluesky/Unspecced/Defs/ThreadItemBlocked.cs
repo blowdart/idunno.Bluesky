@@ -1,7 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+
+using idunno.Bluesky.Feed;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Unspecced;
@@ -10,7 +12,18 @@ namespace idunno.Bluesky.Unspecced;
 /// <summary>
 /// Indicates that the thread item is blocked.
 /// </summary>
-[SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Used in json polymorphism, record has no properties.")]
 public sealed record ThreadItemBlocked : ThreadItemValue
 {
+    [JsonConstructor]
+    internal ThreadItemBlocked(BlockedAuthor author)
+    {
+        Author = author;
+    }
+
+    /// <summary>
+    /// Gets the <see cref="BlockedAuthor"/> whose post is blocked.
+    /// </summary>
+    [JsonRequired]
+    [JsonInclude]
+    public BlockedAuthor Author { get; init; }
 }

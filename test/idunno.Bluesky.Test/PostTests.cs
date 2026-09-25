@@ -252,9 +252,9 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenTextIsTooLongInCharacters()
+    public void ConstructorThrowsWhenTextIsTooLongInBytes()
     {
-        string text = new('a', Maximum.PostLengthInCharacters + 1);
+        string text = new('a', Maximum.PostLengthInBytes + 1);
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post(text));
 
         Assert.Equal("text", caughtException.ParamName);
@@ -317,9 +317,9 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
+    public void ConstructorThrowsWhenAnTooLongTagInBytesIsPassed()
     {
-        List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
+        List<string> tags = [new('x', Maximum.TagLengthInBytes + 1)];
 
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", tags: tags));
 
@@ -671,7 +671,7 @@ public class PostTests
     [Fact]
     public void ConstructorThrowsWhenTagIsTooLongInCharacters()
     {
-        string tag = new('a', Maximum.TagLengthInCharacters + 1);
+        string tag = new('a', Maximum.TagLengthInBytes + 1);
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("test", tags: [tag]));
 
         Assert.Equal("tags", caughtException.ParamName);

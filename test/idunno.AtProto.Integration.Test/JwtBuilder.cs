@@ -11,7 +11,7 @@ namespace idunno.AtProto.Integration.Test;
 
 internal class JwtBuilder
 {
-    public static string CreateJwt(Did? did, string? issuer = null, string? audience = null, string? lxm = null, TimeSpan? expiresIn = null)
+    public static string CreateJwt(Did? did, string? issuer = null, string? audience = null, string? lxm = null, TimeSpan? expiresIn = null, string? scope = null)
     {
         if (did is null && issuer is null)
         {
@@ -34,6 +34,11 @@ internal class JwtBuilder
         if (lxm is not null)
         {
             claims.Add("lxm", lxm);
+        }
+
+        if (scope is not null)
+        {
+            claims.Add("scope", scope);
         }
 
         SecurityKey key = new RsaSecurityKey(RSA.Create(2048));

@@ -78,7 +78,7 @@ public sealed class Program
             }
             else
             {
-                Console.WriteLine($"Could get server description.");
+                Console.WriteLine("Could not get server description.");
                 return;
             }
 

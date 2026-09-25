@@ -35,11 +35,12 @@ public record List : BlueskyTimestampedRecord
         SelfLabels? labels = null) : base(createdAt)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 64);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.ListNameLengthInBytes);
 
         if (description is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetGraphemeLength(), 300);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetGraphemeLength(), Maximum.ListDescriptionLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetUtf8Length(), Maximum.ListDescriptionLengthInBytes);
         }
 
         _name = name;
@@ -66,7 +67,7 @@ public record List : BlueskyTimestampedRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the list was created at. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> is &gt; 64 characters or <paramref name="description"/> &gt; 300 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="purpose"/> is <see cref="ListPurpose.Unknown"/>, or <paramref name="name"/> is &gt; 64 UTF-8 bytes, or <paramref name="description"/> is &gt; 300 graphemes or &gt; 3000 UTF-8 bytes.</exception>
     public List(
         string name,
         ListPurpose purpose,
@@ -77,11 +78,17 @@ public record List : BlueskyTimestampedRecord
         DateTimeOffset? createdAt = null) : base(createdAt)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 64);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.ListNameLengthInBytes);
+
+        if (purpose == ListPurpose.Unknown)
+        {
+            throw new ArgumentOutOfRangeException(nameof(purpose), $"{nameof(ListPurpose)}.{nameof(ListPurpose.Unknown)} is not a purpose a list can be created with.");
+        }
 
         if (description is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetGraphemeLength(), 300);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetGraphemeLength(), Maximum.ListDescriptionLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetUtf8Length(), Maximum.ListDescriptionLengthInBytes);
         }
 
         _name = name;
@@ -108,7 +115,7 @@ public record List : BlueskyTimestampedRecord
     /// Gets or sets the display name for the list.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 64 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 64 UTF-8 bytes.</exception>
     [JsonInclude]
     [JsonRequired]
     public string Name
@@ -121,7 +128,7 @@ public record List : BlueskyTimestampedRecord
         set
         {
             ArgumentException.ThrowIfNullOrEmpty(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 64);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.ListNameLengthInBytes);
 
             _name = value;
         }
@@ -130,8 +137,7 @@ public record List : BlueskyTimestampedRecord
     /// <summary>
     /// Gets or sets the description of the list, if any.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 300 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 300 graphemes or 3000 UTF-8 bytes.</exception>
     [JsonInclude]
     public string? Description
     {
@@ -144,7 +150,8 @@ public record List : BlueskyTimestampedRecord
         {
             if (value is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), 300);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.ListDescriptionLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.ListDescriptionLengthInBytes);
             }
 
             _description = value;

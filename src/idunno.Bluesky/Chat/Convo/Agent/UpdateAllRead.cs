@@ -16,7 +16,10 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="status"/> is <see langword="null"/> or white space.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<ulong>> UpdateAllRead(
+    /// <remarks>
+    /// <para>The result is <see langword="null"/> if the API call failed, which is distinct from a successful call which marked no conversations as read.</para>
+    /// </remarks>
+    public async Task<AtProtoHttpResult<ulong?>> UpdateAllRead(
         string status,
         CancellationToken cancellationToken = default)
     {
@@ -34,6 +37,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

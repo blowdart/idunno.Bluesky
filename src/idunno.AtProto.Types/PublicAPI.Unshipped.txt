@@ -1,1 +1,7 @@
 #nullable enable
+*REMOVED*idunno.AtProto.AtIdentifierException.AtIdentifierException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+*REMOVED*idunno.AtProto.AtUriFormatException.AtUriFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+*REMOVED*idunno.AtProto.NsidFormatException.NsidFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+*REMOVED*idunno.AtProto.RecordKey.Value.init -> void
+*REMOVED*idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+static idunno.AtProto.Cid.TryParse(string? s, out idunno.AtProto.Cid? result) -> bool

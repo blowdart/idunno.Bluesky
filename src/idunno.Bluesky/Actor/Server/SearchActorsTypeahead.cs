@@ -18,13 +18,14 @@ public static partial class BlueskyServer
     /// Find actor suggestions for a prefix search term. Expected use is for auto-completion during text field entry. Does not require authentication.
     /// </summary>
     /// <param name="q">"Search query prefix; not a full query string.</param>
-    /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
+    /// <param name="limit">The number of suggested actors to return. Defaults to 10 if <see langword="null"/>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="q"/> is <see langword="null"/>.</exception>
@@ -43,9 +44,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(q);
@@ -56,12 +58,12 @@ public static partial class BlueskyServer
 
         ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorTypeaheadSearchResults);
 
-        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.searchActorsTypeahead?q={Uri.EscapeDataString(q)}&limit={limit}",
+            $"/xrpc/app.bsky.actor.searchActorsTypeahead?q={Uri.EscapeDataString(q)}&limit={limitValue}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -72,7 +74,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
-                new PagedViewReadOnlyCollection<ProfileViewBasic>(new List<ProfileViewBasic>(response.Result.Actors).AsReadOnly()),
+                new PagedViewReadOnlyCollection<ProfileViewBasic>(WithoutNullEntries<ProfileViewBasic>(response.Result.Actors, service, nameof(response.Result.Actors), loggerFactory).AsReadOnly()),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -81,7 +83,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
-                new PagedViewReadOnlyCollection<ProfileViewBasic>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

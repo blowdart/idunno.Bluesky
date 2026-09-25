@@ -28,6 +28,7 @@ public static partial class BlueskyServer
     /// <param name="serviceCredential">The credentials used to authenticate with the service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when a provided argument is out of the allowable range.</exception>
@@ -40,7 +41,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<StartUploadResponse>> StartUpload(
-        int size,
+        long size,
         string mimeType,
         string? name,
         long? duration,
@@ -50,17 +51,23 @@ public static partial class BlueskyServer
         ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfZero(size);
         ArgumentOutOfRangeException.ThrowIfNegative(size);
         ArgumentException.ThrowIfNullOrWhiteSpace(mimeType);
-        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.Length, 3);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.Length, 255);
+        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeMinimumLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeLengthInBytes);
 
         if (!mimeType.Contains('/', StringComparison.InvariantCulture))
         {
             throw new ArgumentException("MIME type must contain a '/' character.", nameof(mimeType));
+        }
+
+        if (name is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetUtf8Length(), Maximum.VideoUploadNameLengthInBytes);
         }
 
         if (duration.HasValue)
@@ -86,7 +93,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(httpClient);
 
         // AppView proxy is not needed as we're hitting the video service directly.
-        BlueskyHttpClient<StartUploadResponse> client = new(loggerFactory);
+        BlueskyHttpClient<StartUploadResponse> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<StartUploadResponse> response = await client.Post(
             service: service,

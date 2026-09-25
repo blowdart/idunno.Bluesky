@@ -22,7 +22,7 @@ the number of items in the list.
 
 ## Viewing a list's details and members.
 
-To view a lists details and its members call `GetList()` with the `at://` [uri](../commonTerms.md#uri) of the list.
+To view a list's details and its members call `GetList()` with the `at://` [uri](../commonTerms.md#uri) of the list.
 `GetList(did)`. This returns the list details and a paginated collection of members.
 
 `GetList(did)`
@@ -90,14 +90,14 @@ You can also supply the user's handle.
 
 [!code-csharp[](code/manageLists.cs#L32-L34)]
 
-Removing a user from a list requires calling `DeleteFromList()` with the same information required to a user to a list.
+Removing a user from a list requires calling `DeleteFromList()` with the same information required to add a user to a list.
 
 `DeleteFromList(uri, did)`
 
-| Parameter | Type  | Description                               | Required   | Default   |
-|-----------|-------|-------------------------------------------|:----------:|:---------:|
-| uri       | AtUri | The AtUri of the list to add the user to. | Yes        |           |
-| did       | Did   | The Did of the user to add.               | Yes        |           |
+| Parameter | Type  | Description                                    | Required   | Default   |
+|-----------|-------|------------------------------------------------|:----------:|:---------:|
+| uri       | AtUri | The AtUri of the list to remove the user from. | Yes        |           |
+| did       | Did   | The Did of the user to remove.                 | Yes        |           |
 
 [!code-csharp[](code/manageLists.cs#L38-L40)]
 
@@ -105,16 +105,16 @@ You can also supply the user's handle.
 
 `DeleteFromList(uri, handle)`
 
-| Parameter | Type     | Description                               | Required   | Default   |
-|-----------|----------|-------------------------------------------|:----------:|:---------:|
-| uri       | AtUri    | The AtUri of the list to add the user to. | Yes        |           |
-| handle    | Handle   | The Handle of the user to add.            | Yes        |           |
+| Parameter | Type     | Description                                    | Required   | Default   |
+|-----------|----------|------------------------------------------------|:----------:|:---------:|
+| uri       | AtUri    | The AtUri of the list to remove the user from. | Yes        |           |
+| handle    | Handle   | The Handle of the user to remove.              | Yes        |           |
 
 [!code-csharp[](code/manageLists.cs#L42-L44)]
 
 ### Deleting a list
 
-To delete a list to call `DeleteList()` with the list's `at://` [uri](../commonTerms.md#uri)
+To delete a list, call `DeleteList()` with the list's `at://` [uri](../commonTerms.md#uri)
 
 `DeleteList()`
 
@@ -144,10 +144,10 @@ To mute all users of a moderation list use `MuteModList()`. Mutes are *private*.
 | listUri   | AtUri          | The AtUri of the moderation list to mute | Yes        |           |
 
 ```c#
-await agent.MuteModList(listUri)
+await agent.MuteModList(listUri);
 ```
 
-To unmute all users of a moderation list use `MuteModList()`.
+To unmute all users of a moderation list use `UnmuteModList()`.
 
 `UnmuteModList(listUri)`
 
@@ -156,7 +156,7 @@ To unmute all users of a moderation list use `MuteModList()`.
 | listUri   | AtUri          | The AtUri of the moderation list to mute | Yes        |           |
 
 ```c#
-await agent.UnmuteModList(listUri)
+await agent.UnmuteModList(listUri);
 ```
 
 > [!TIP]
@@ -165,7 +165,7 @@ await agent.UnmuteModList(listUri)
 
 ### Blocking and unblocking members of a moderation list
 
-To mute all users of a moderation list use `BlockModList()`. Blocks are *public*.
+To block all users of a moderation list use `BlockModList()`. Blocks are *public*.
 
 `BlockModList(listUri)`
 
@@ -174,19 +174,19 @@ To mute all users of a moderation list use `BlockModList()`. Blocks are *public*
 | listUri   | AtUri          | The AtUri of the moderation list to block | Yes        |           |
 
 ```c#
-await agent.BlockModList(listUri)
+await agent.BlockModList(listUri);
 ```
 
-To unmute all users of a moderation list use `MuteModList()`.
+To unblock all users of a moderation list use `UnblockModList()`.
 
-`UnmuteBlockList(listUri)`
+`UnblockModList(listUri)`
 
-| Parameter | Type           | Description                               | Required   | Default   |
-|-----------|----------------|-------------------------------------------|:----------:|:---------:|
-| listUri   | AtUri          | The AtUri of the moderation list to block | Yes        |           |
+| Parameter | Type           | Description                                 | Required   | Default   |
+|-----------|----------------|---------------------------------------------|:----------:|:---------:|
+| listUri   | AtUri          | The AtUri of the moderation list to unblock | Yes        |           |
 
 ```c#
-await agent.UnmuteBlockList(listUri)
+await agent.UnblockModList(listUri);
 ```
 
 > [!TIP]
@@ -218,7 +218,7 @@ authenticated user is using to block and mute list members.
 | limit     | int    | The number of posts to return per page (max 100)          | No         | 50        |
 
 ```c#
-var listBlocksResult = agent.GetListBlocks();
+var listBlocksResult = await agent.GetListBlocks();
 ```
 
 `GetListMutes(cursor?, limit?)`
@@ -229,7 +229,7 @@ var listBlocksResult = agent.GetListBlocks();
 | limit     | int    | The number of posts to return per page (max 100)          | No         | 50        |
 
 ```c#
-var listMutesResult = agent.GetListMutes();
+var listMutesResult = await agent.GetListMutes();
 ```
 
 

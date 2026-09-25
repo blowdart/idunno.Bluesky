@@ -28,10 +28,10 @@ public abstract record WriteOperation
     /// <summary>
     /// Gets the <see cref="Nsid"/> of the collection the operation will apply to.
     /// </summary>
-    public Nsid Collection { get; init; }
+    public Nsid Collection { get; }
 
     /// <summary>
-    /// Gets the <see cref="RecordKey"/> the the operation will apply to.
+    /// Gets the <see cref="RecordKey"/> the operation will apply to.
     /// </summary>
-    public RecordKey? RecordKey { get; init; }
+    public RecordKey? RecordKey { get; }
 }

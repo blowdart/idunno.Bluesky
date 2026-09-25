@@ -45,7 +45,7 @@ public sealed class Program
         // Change the log level in the ConfigureConsoleLogging() to enable logging
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {
@@ -138,7 +138,6 @@ public sealed class Program
                 while (videoUploadResult.Succeeded &&
                       videoUploadResult.Result.State != JobState.Completed &&
                       videoUploadResult.Result.State != JobState.Failed &&
-                      videoUploadResult.Result.State != JobState.Unknown &&
                       !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
@@ -207,7 +206,6 @@ public sealed class Program
                 while (videoUploadResult.Succeeded &&
                     videoUploadResult.Result.State != JobState.Completed &&
                     videoUploadResult.Result.State != JobState.Failed &&
-                    videoUploadResult.Result.State != JobState.Unknown &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");

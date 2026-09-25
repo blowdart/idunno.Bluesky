@@ -1,14 +1,14 @@
-﻿# Writing a scheduled post bot
+# Writing a scheduled post bot
 
 Bots are accounts on the network that post automatically. Popular ones include bots that post the magnitude of recent earthquakes, traffic alerts, etc.
 
 Let's write a simple bot that posts every fifteen minutes. We're choosing to implement the bot as a command line application, so it could eventually live inside a docker container,
-or ran in something like a Digital Ocean droplet easily.
+or run easily in something like a DigitalOcean droplet.
 
 > [!NOTE]
 > You must already have created an account for your bot to run as, and generated a [app password](https://bsky.app/settings/app-passwords) for that account.
 
-## Create a .NET project and add the idunno.Bluesky nuget package
+## Create a .NET project and add the idunno.Bluesky NuGet package
 
 Let's start by creating a .NET project for our bot and adding the idunno.Bluesky package.
 
@@ -27,8 +27,8 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `BlueskyBot` and click Next.
 1. In the "**Additional information**" dialog choose the Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
+1. Close the **Manage NuGet packages** dialog.
 
 # [Visual Studio Code](#tab/vsCode)
 
@@ -44,9 +44,9 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 
 ---
 
-## Add nuget packages for scheduling
+## Add NuGet packages for scheduling
 
-Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the scheduling.
+Now add the [Coravel](https://docs.coravel.net/) NuGet package to provide the scheduling.
 
 # [Command Line](#tab/coravel/commandLine)
 
@@ -55,16 +55,16 @@ Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the sc
    dotnet add package Coravel
    dotnet add package Microsoft.Extensions.Hosting
    ```
-1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+1. Open `BlueskyBot.csproj` in the editor of your choice and add the following before the `</Project>` line
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 
 # [Visual Studio](#tab/coravel/visualStudio)
 
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab, search for `Coravel`, and click **Install**.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab, search for `Coravel`, and click **Install**.
 1. Search for `Microsoft.Extensions.Hosting`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Close the **Manage NuGet packages** dialog.
 1. Choose **File ▶ Save All**
-1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+1. Open `BlueskyBot.csproj` in the editor of your choice and add the following before the `</Project>` line
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 
 # [Visual Studio Code](#tab/coravel/vsCode)
@@ -73,7 +73,7 @@ Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the sc
 1. Enter `Coravel` in the package search dialog and choose the latest version.
 1. Open the Command Palette (Ctrl + Shift + P) then search for and select **Nuget: Add**
 1. Enter `Microsoft.Extensions.Hosting` in the package search dialog and choose the latest version.
-1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+1. Open `BlueskyBot.csproj` in the editor of your choice and add the following before the `</Project>` line
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 ---
 
@@ -100,9 +100,9 @@ Now we have all our dependencies lined up we'll add a settings file and a class 
 1. Open `appsettings.json` in your editor of choice and add the following, replacing
    **<yourAccountHandle>** with the handle of your bot account.
    [!code-json[](code/BlueskyBot/appsettings.json?highlight=3)]
-1. Open `BotSettings.cs` in your editor of choice and and change the contents to the following
+1. Open `BotSettings.cs` in your editor of choice and change the contents to the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]
-1. Open `ValidateBotSettings.cs` in your editor of choice and and change the contents to the following
+1. Open `ValidateBotSettings.cs` in your editor of choice and change the contents to the following
    [!code-csharp[](code/BlueskyBot/ValidateBotSettings.cs)]
 1. Open `BlueskyBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L27-L31)]
@@ -130,7 +130,7 @@ Now we have all our dependencies lined up we'll add a settings file and a class 
 1. Click on the BlueskyBot project file to open it and add the following lines before the closing `</project>`
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L33-L35)]
 1. Choose **File ▶ Save All**
-1. In the main VS menu choose choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
+1. In the main VS menu choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
  
 # [Visual Studio Code](#tab/settings/vsCode)
 
@@ -160,7 +160,7 @@ Now we'll use the [User Secret Manager](https://learn.microsoft.com/en-us/aspnet
 > [!TIP]
 > Secret Manager is a developer resource, it does not exist on production servers. If you moved the bot to a production server
 > you could use [environment variables](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=windows#environment-variables)
-> to store the bot password, or something like> Azure KeyVault with its
+> to store the bot password, or something like Azure Key Vault with its
 > [.NET configuration provider](https://learn.microsoft.com/en-us/aspnet/core/security/key-vault-configuration).
 > Refer to your hosting providers documentation to discover your options.
 
@@ -174,7 +174,7 @@ At the command line run the following commands, replacing **<yourAppPassword>** 
 
 # [Visual Studio](#tab/appPassword/visualStudio)
 
-1. Right click on the `BluseskyBot` project and select **Manage User Secrets**
+1. Right click on the `BlueskyBot` project and select **Manage User Secrets**
 1. Add the following on a new line between the {} brackets, replacing **<yourAppPassword>** with an app password for your bot account.
    ```json
    "Bot:AppPassword": "<yourAppPassword>"

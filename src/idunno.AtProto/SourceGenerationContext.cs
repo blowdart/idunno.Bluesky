@@ -96,6 +96,7 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(AtJetstreamEvent))]
 [JsonSerializable(typeof(JetStreamEventKind))]
+[JsonSerializable(typeof(JetstreamCommitOperation))]
 [JsonSerializable(typeof(AtJetstreamAccountEvent))]
 [JsonSerializable(typeof(AtJetstreamCommitEvent))]
 [JsonSerializable(typeof(AtJetstreamIdentityEvent))]

@@ -18,11 +18,11 @@ public sealed record TagFacetFeature : FacetFeature
     /// <param name="tag">The hashtag referred to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="tag"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="tag"/> is white space.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tag"/> is longer than 640 characters or 64 graphemes.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tag"/> is longer than 640 UTF-8 bytes or 64 graphemes.</exception>
     public TagFacetFeature(string tag)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
         Tag = tag;
     }

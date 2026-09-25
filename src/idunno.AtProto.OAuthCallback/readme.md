@@ -2,7 +2,7 @@
 
 ## About
 
-OAuth libraries for the [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto).
+OAuth libraries for [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto).
 
 ## Key Features
 
@@ -41,8 +41,6 @@ using (var agent = new BlueskyAgent(
             OAuthClient.OpenBrowser(startUri);
 
             callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
 
             await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
         }

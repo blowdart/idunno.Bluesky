@@ -22,7 +22,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is <see langword="null"/> or white space.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>, or if <paramref name="embeddedPost"/> is specified but its collection is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="embeddedPost"/> is specified but it is not in the <see cref="CollectionNsid.Post"/> collection.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="message"/> is longer than the maximum allowed length, or when <paramref name="embeddedPost"/> is specified but it is not in the <see cref="CollectionNsid.Post"/> collection.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<MessageView>> SendMessage(
         string conversationId,
@@ -35,6 +35,17 @@ public partial class BlueskyAgent
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
 
         ArgumentNullException.ThrowIfNull(message);
+
+        // Facet extraction runs the rich text regexes over the whole message and then resolves every
+        // distinct handle it mentions, which is a network call each. MessageInput rejects an over-long
+        // message, but only once that work has already been done, so check the length here first. This
+        // also matches the order used by the Post helpers, where the length is validated up front.
+        if (message.GetUtf8Length() > Maximum.MessageLengthInBytes || message.GetGraphemeLength() > Maximum.MessageLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(message),
+                $"message cannot be longer than {Maximum.MessageLengthInBytes} UTF-8 bytes, or {Maximum.MessageLengthInGraphemes} graphemes.");
+        }
 
         if (embeddedPost is not null)
         {
@@ -49,22 +60,17 @@ public partial class BlueskyAgent
 
         MessageInput messageInput;
 
+        Embed.EmbeddedRecord? embed = embeddedPost is not null ? new Embed.EmbeddedRecord(embeddedPost) : null;
+
         if (!extractFacets)
         {
-            messageInput = new MessageInput(message);
+            messageInput = new MessageInput(message, embed: embed, replyTo: replyTo);
         }
         else
         {
             IList<Facet> facets = await FacetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
-            messageInput = new MessageInput(message, facets);
+            messageInput = new MessageInput(message, facets, embed: embed, replyTo: replyTo);
         }
-
-        if (embeddedPost is not null)
-        {
-            messageInput.Embed = new Embed.EmbeddedRecord(embeddedPost);
-        }
-
-        messageInput.ReplyTo = replyTo;
 
         return await BlueskyServer.SendMessage(
             conversationId,
@@ -74,6 +80,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
     }

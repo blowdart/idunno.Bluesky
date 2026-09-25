@@ -110,6 +110,6 @@ which accepts four key parameters
 ```c#
 var authorFeedResult = await agent.GetAuthorFeed(
     actor: "did:plc:z72i7hdynmk6r22z27h6tvur",
-    filter: FeedFilter..PostsAndAuthorThreads,
+    filter: FeedFilter.PostsAndAuthorThreads,
     limit: 30);
 ```

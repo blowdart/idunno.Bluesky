@@ -1,8 +1,7 @@
-﻿# On the backlog
+# On the backlog
 
 ## Non-breaking
 
-* ASP.NET Authentication Handler
 * Firehose support
 * Json DateTimeOffset Z format serializer.
 

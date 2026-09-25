@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 using idunno.AtProto.Authentication;
@@ -10,6 +11,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -28,8 +30,9 @@ public static partial class AtProtoServer
     /// <param name="service">The service to create fine the labels on.</param>
     /// <param name="accessCredentials">Optional access credentials to use to authenticate against the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/></exception>
@@ -49,8 +52,9 @@ public static partial class AtProtoServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uriPatterns);
@@ -65,7 +69,7 @@ public static partial class AtProtoServer
         if (limit is not null &&
            (limit < 1 || limit > 250))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 250."));
         }
 
         List<Did> sourcesList = [];
@@ -89,7 +93,7 @@ public static partial class AtProtoServer
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
         }
 
-        AtProtoHttpClient<QueryLabelsResponse> request = new(loggerFactory);
+        AtProtoHttpClient<QueryLabelsResponse> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<QueryLabelsResponse> response = await request.Get(
             service,
@@ -103,7 +107,7 @@ public static partial class AtProtoServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
-                new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor),
+                new PagedReadOnlyCollection<Label>(WithoutNullEntries(response.Result.Labels, service, nameof(response.Result.Labels), loggerFactory), cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -118,5 +122,44 @@ public static partial class AtProtoServer
                 response.AtErrorDetail,
                 response.RateLimit);
         }
+    }
+
+    /// <summary>
+    /// Returns the non <see langword="null"/> entries in <paramref name="source"/>, logging a warning if any were skipped.
+    /// </summary>
+    /// <remarks>
+    /// <para>Neither <see cref="System.Text.Json.Serialization.JsonRequiredAttribute"/> nor
+    /// <see cref="System.Text.Json.JsonSerializerOptions.RespectNullableAnnotations"/> applies to a collection's element
+    /// type, so a service can return a <see langword="null"/> entry inside an otherwise well formed collection.</para>
+    /// </remarks>
+    private static List<T> WithoutNullEntries<T>(
+        IEnumerable<T> source,
+        Uri service,
+        string collection,
+        ILoggerFactory? loggerFactory,
+        [CallerMemberName] string caller = "") where T : class
+    {
+        List<T> entries = [];
+        int skipped = 0;
+
+        foreach (T? entry in source)
+        {
+            if (entry is null)
+            {
+                skipped++;
+            }
+            else
+            {
+                entries.Add(entry);
+            }
+        }
+
+        if (skipped != 0)
+        {
+            ILogger logger = loggerFactory?.CreateLogger(nameof(AtProtoServer)) ?? NullLogger.Instance;
+            Logger.SkippedNullCollectionEntries(logger, caller, skipped, collection, service);
+        }
+
+        return entries;
     }
 }

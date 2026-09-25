@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 using idunno.AtProto;
@@ -19,7 +20,8 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> Unblock(Handle handle, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> Unblock(Handle handle, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(handle);
 
@@ -28,18 +30,16 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        ArgumentNullException.ThrowIfNull(handle);
-
         Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
 
         if (didResolutionResult is null)
         {
-            Logger.BlockFailedAsHandleCouldNotResolve(_logger, handle);
+            Logger.UnblockFailedAsHandleCouldNotResolve(_logger, handle);
         }
 
         if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 HttpStatusCode.NotFound,
                 null,
@@ -57,7 +57,8 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Commit>> Unblock(Did did, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The return type changed in this release, which makes the analyzer treat these as newly added overloads.")]
+    public async Task<AtProtoHttpResult<DeleteResult>> Unblock(Did did, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
 
@@ -72,7 +73,7 @@ public partial class BlueskyAgent
         {
             Logger.UnblockFailedAsHandleCouldNotGetUserProfile(_logger, did);
 
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 userProfileResult.StatusCode,
                 userProfileResult.HttpResponseHeaders,
@@ -84,9 +85,9 @@ public partial class BlueskyAgent
 
         if (userProfileResult.Result.Viewer is null || userProfileResult.Result.Viewer.Blocking is null)
         {
-            Logger.UnblockFailedAsHandleCouldNotGetUserIsNotFollowing(_logger, did);
+            Logger.UnblockFailedAsUserIsNotBlocking(_logger, did);
 
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 HttpStatusCode.NotFound,
                 userProfileResult.HttpResponseHeaders,

@@ -1,0 +1,33 @@
+@page
+
+@model Samples.AspNetAuthentication.Pages.ClaimsModel
+@{
+    ViewData["Title"] = "User Claims";
+}
+
+<h1 class="display-4">
+    User Claims
+</h1>
+<table class="table table-striped table-sm">
+    <thead>
+        <tr>
+            <th>Claim Type</th>
+            <th>Value</th>
+            <th>Issuer</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var claim in Model.Claims)
+        {
+            <tr class="@(claim.Type == AtProtoClaims.Did ? "table-primary" : String.Empty)">
+                    <td>@claim.Type</td>
+                    <td>@claim.Value</td>
+                    <td>@claim.Issuer</td>
+                </tr>
+            }
+        </tbody>
+</table>
+@if (Model.ExpiresOn is not null)
+{
+    <p class="display-6">Access token expires on @Model.ExpiresOn.Value.ToLocalTime().ToString("G")</p>
+}

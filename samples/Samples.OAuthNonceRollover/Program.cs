@@ -35,7 +35,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(handle);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -173,9 +173,9 @@ public sealed class Program
 
             Debugger.Break();
 
-            bool credentialsUpdatedEventFired = false;
+            bool credentialsUpdatedCallbackFired = false;
 
-            agent.CredentialsUpdated += (sender, eventArgs) =>
+            agent.CredentialsUpdatedAsync = (eventArgs, cancellationToken) =>
             {
                 string updatedAccessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
                 Console.WriteLine($"Credentials updated      : {updatedAccessCredentialsHash}");
@@ -184,7 +184,9 @@ public sealed class Program
                 DPoPAccessCredentials? accessCredentials = agent.Credentials as DPoPAccessCredentials;
                 Console.WriteLine($"DPoP Nonce               : {accessCredentials?.DPoPNonce}");
 
-                credentialsUpdatedEventFired = true;
+                credentialsUpdatedCallbackFired = true;
+
+                return Task.CompletedTask;
             };
 
             string? initialNonce = agent.Credentials is DPoPAccessCredentials dPoPAccessCredentials ? dPoPAccessCredentials.DPoPNonce : null;
@@ -199,7 +201,7 @@ public sealed class Program
             }
 
             Console.WriteLine("Making initial request...");
-            AtProtoHttpResult<int> getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
+            AtProtoHttpResult<int?> getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
             getNotificationCount.EnsureSucceeded();
 
             Console.WriteLine("Waiting for 90 seconds for the nonce to rotate.");
@@ -208,15 +210,14 @@ public sealed class Program
             getNotificationCount = getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
             getNotificationCount.EnsureSucceeded();
 
-            if (!credentialsUpdatedEventFired)
+            if (!credentialsUpdatedCallbackFired)
             {
                 ConsoleColor oldColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("CredentialsUpdated event did not fire as expected.");
+                Console.WriteLine("CredentialsUpdatedAsync callback did not fire as expected.");
                 Console.ForegroundColor = oldColor;
                 return;
             }
-            credentialsUpdatedEventFired = false;
 
             string? autoUpdatedNonce = agent.Credentials is DPoPAccessCredentials autoUpdatedCredentials ? autoUpdatedCredentials.DPoPNonce : null;
 

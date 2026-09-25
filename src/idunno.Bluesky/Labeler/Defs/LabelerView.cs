@@ -50,7 +50,16 @@ public record LabelerView
     public required DateTimeOffset IndexedAt { get; init; }
 
     /// <summary>
-    /// Gets the labels applied to the labeller
+    /// Gets the labels applied to the labeller.
     /// </summary>
-    public ICollection<Label> Labels { get; } = [];
+    /// <remarks>
+    /// <para>The deserializer supplies <see langword="null"/> when the JSON carries no labels, so the initializer
+    /// substitutes an empty collection to keep this property non-nullable.</para>
+    /// </remarks>
+    [JsonInclude]
+    public IReadOnlyCollection<Label> Labels
+    {
+        get;
+        init => field = value is null ? [] : new List<Label>(value).AsReadOnly();
+    } = [];
 }

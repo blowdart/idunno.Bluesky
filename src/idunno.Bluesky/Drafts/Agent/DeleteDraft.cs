@@ -19,12 +19,12 @@ public partial class BlueskyAgent
         TimestampIdentifier draftId,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(draftId);
+
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
-
-        ArgumentNullException.ThrowIfNull(draftId);
 
         return await BlueskyServer.DeleteDraft(
             draftId,
@@ -33,6 +33,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

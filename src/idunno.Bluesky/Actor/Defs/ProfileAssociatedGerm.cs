@@ -30,14 +30,36 @@ public record ProfileAssociatedGerm
     /// <summary>
     /// The URI to message the user.
     /// </summary>
+    /// <exception cref="System.ArgumentNullException">Thrown when the value set is <see langword="null" />.</exception>
     [JsonRequired]
-    public Uri MessageMeUrl { get; set; }
+    public Uri MessageMeUrl
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Who the message button should be shown to. Current known values contained in <see cref="ShowButtonToKnownValues"/>
     /// </summary>
+    /// <exception cref="System.ArgumentNullException">Thrown when the value set is <see langword="null" />.</exception>
     [JsonRequired]
-    public string ShowButtonTo { get; set; }
+    public string ShowButtonTo
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 }
 
 /// <summary>

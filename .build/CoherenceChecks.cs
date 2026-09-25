@@ -1,6 +1,6 @@
 #!/usr/bin/env -S dotnet --
 #:property TargetFramework=net10.0
-#:package System.CommandLine@2.0.11
+#:package System.CommandLine@2.0.12
 #:package SemVer@3.0.0
 #:property ManagePackageVersionsCentrally=false
 using System.Text.Json;
@@ -236,9 +236,9 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
             }
             Console.WriteLine($"✔️ Prerelease version");
 
-            if (!await CheckPublicAPIUnshippedAsync(dirInfo))
+            if (!await CheckPublicAPIUnshippedAsync(dirInfo, false))
             {
-                WriteWarning("One or more PublicAPI.unshipped.txt files contain unshipped APIs");
+                WriteWarning("Ensure that any unshipped API changes are intentional and will be shipped in the next release.");
             }
 
             if (branchName.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
@@ -327,7 +327,7 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
         }
         Console.WriteLine($"✔️ CHANGELOG.md has a release date for version {tagVersion}");
 
-        if (!await CheckPublicAPIUnshippedAsync(dirInfo))
+        if (!await CheckPublicAPIUnshippedAsync(dirInfo, true))
         {
             return (int)ExitCode.PublicAPIsHaveUnshipped;
         }
@@ -437,7 +437,7 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
     return false;
 }
 
-static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
+static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory, bool onMain=false)
 {
     const string EmptyUnshippedContent = "#nullable enable";
     List<string> nonEmptyFiles = [];
@@ -456,7 +456,14 @@ static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
     {
         foreach (string file in nonEmptyFiles)
         {
-            WriteError($" {file} contains unshipped API changes.");
+            if (onMain)
+            {
+                WriteError($"{file} contains unshipped API changes.");
+            }
+            else
+            {
+                WriteWarning($"{file} contains unshipped API changes.");
+            }
         }
         return false;
     }

@@ -13,9 +13,19 @@ namespace idunno.Bluesky.Graph;
 /// <remarks>
 ///<para>See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/graph/defs.json</para>
 /// </remarks>
-[JsonConverter(typeof(JsonStringEnumConverter<ListPurpose>))]
+[JsonConverter(typeof(ListPurposeConverter))]
 public enum ListPurpose
 {
+    /// <summary>
+    /// The list has a purpose this library does not recognize.
+    /// </summary>
+    /// <remarks>
+    /// <para>The lexicon definition of a list purpose is an open union, so the service may introduce purposes which
+    /// postdate this library. Such a purpose is surfaced as <see cref="Unknown"/> rather than failing to deserialize.
+    /// A list whose purpose is <see cref="Unknown"/> cannot be serialized.</para>
+    /// </remarks>
+    Unknown,
+
     /// <summary>
     /// The list is a moderation list.
     /// </summary>

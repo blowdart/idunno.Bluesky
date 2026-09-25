@@ -25,7 +25,7 @@ public record ProfileAssociatedChat
 /// <summary>
 /// Configuration values for an actor's incoming chat configuration.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<AllowIncomingChat>))]
+[JsonConverter(typeof(AllowIncomingChatConverter))]
 public enum AllowIncomingChat
 {
     /// <summary>
@@ -41,5 +41,13 @@ public enum AllowIncomingChat
     /// <summary>
     /// Chats are only allowed from the actor's followers.
     /// </summary>
-    Following = 2
+    Following = 2,
+
+    /// <summary>
+    /// The chat configuration is one this library does not recognize.
+    /// </summary>
+    /// <remarks>
+    /// <para>This value only ever comes from the service, and cannot be serialized.</para>
+    /// </remarks>
+    Unknown = 3
 }

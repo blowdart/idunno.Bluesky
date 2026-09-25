@@ -85,3 +85,35 @@ public enum NotificationReason
     [JsonStringEnumMemberName("contact-match")]
     ContactMatch
 }
+/// <summary>
+/// Extension methods for <see cref="NotificationReason"/>.
+/// </summary>
+internal static class NotificationReasonExtensions
+{
+    /// <summary>
+    /// Returns the value the API uses for the specified <paramref name="reason"/>.
+    /// </summary>
+    /// <param name="reason">The <see cref="NotificationReason"/> whose API value should be returned.</param>
+    /// <returns>The value the API uses for the specified <paramref name="reason"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not a known reason.</exception>
+    internal static string ToNotificationReasonValue(this NotificationReason reason)
+    {
+        return reason switch
+        {
+            NotificationReason.Follow => "follow",
+            NotificationReason.Like => "like",
+            NotificationReason.Mention => "mention",
+            NotificationReason.Reply => "reply",
+            NotificationReason.Repost => "repost",
+            NotificationReason.Quote => "quote",
+            NotificationReason.StarterPackJoined => "starterpack-joined",
+            NotificationReason.Verified => "verified",
+            NotificationReason.Unverified => "unverified",
+            NotificationReason.LikeViaRepost => "like-via-repost",
+            NotificationReason.RepostViaRepost => "repost-via-repost",
+            NotificationReason.SubscribedPost => "subscribed-post",
+            NotificationReason.ContactMatch => "contact-match",
+            _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, null),
+        };
+    }
+}

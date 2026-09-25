@@ -18,6 +18,10 @@ namespace idunno.Bluesky.Graph;
 [JsonDerivedType(typeof(StarterPack), typeDiscriminator: RecordType.StarterPack)]
 public record StarterPack : BlueskyTimestampedRecord
 {
+    private string _name = null!;
+    private string? _description;
+    private AtUri _list = null!;
+
     /// <summary>
     /// Creates a new instance of <see cref="StarterPack"/>.
     /// </summary>
@@ -27,7 +31,13 @@ public record StarterPack : BlueskyTimestampedRecord
     /// <param name="feeds">A collection of <see cref="GeneratorView"/>s for any feeds in the starter pack.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the starter pack was created on.</param>
     /// <param name="updatedAt">The <see cref="DateTimeOffset"/> the starter pack was last updated.</param>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown if more than 3 feeds are provided in <paramref name="feeds"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="name"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="list"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown if <paramref name="name"/> is &gt; 50 graphemes or &gt; 500 UTF-8 bytes,
+    /// if <paramref name="description"/> is &gt; 300 graphemes or &gt; 3000 UTF-8 bytes,
+    /// or if more than 3 feeds are provided in <paramref name="feeds"/>.
+    /// </exception>
     [JsonConstructor]
     public StarterPack(
         string name,
@@ -37,13 +47,15 @@ public record StarterPack : BlueskyTimestampedRecord
         DateTimeOffset createdAt,
         DateTimeOffset? updatedAt) : base(createdAt)
     {
+        ArgumentNullException.ThrowIfNull(list);
+
         Name = name;
         Description = description;
         List = list;
 
         if (feeds is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(feeds.Count, 3);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(feeds.Count, Maximum.FeedsInStarterPack);
         }
         Feeds = feeds;
         UpdatedAt = updatedAt;
@@ -52,21 +64,70 @@ public record StarterPack : BlueskyTimestampedRecord
     /// <summary>
     /// Gets the name of the starter pack.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 50 graphemes or 500 UTF-8 bytes.</exception>
     [JsonInclude]
     [JsonRequired]
-    public string Name { get; set; }
+    public string Name
+    {
+        get
+        {
+            return _name;
+        }
+
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.StarterPackNameLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.StarterPackNameLengthInBytes);
+
+            _name = value;
+        }
+    }
 
     /// <summary>
     /// Gets the description of the starter pack
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value exceeds 300 graphemes or 3000 UTF-8 bytes.</exception>
     [JsonInclude]
-    public string? Description { get; init; }
+    public string? Description
+    {
+        get
+        {
+            return _description;
+        }
+
+        init
+        {
+            if (value is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.StarterPackDescriptionLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.StarterPackDescriptionLengthInBytes);
+            }
+
+            _description = value;
+        }
+    }
 
     /// <summary>
     /// Gets the <see cref="AtUri"/> of the starter pack.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     [JsonInclude]
-    public AtUri List { get; set; }
+    public AtUri List
+    {
+        get
+        {
+            return _list;
+        }
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            _list = value;
+        }
+    }
 
     /// <summary>
     /// Gets a collection of <see cref="GeneratorView"/>s for any feeds in the starter pack.

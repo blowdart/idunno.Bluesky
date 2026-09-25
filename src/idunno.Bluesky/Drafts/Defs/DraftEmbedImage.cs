@@ -20,9 +20,9 @@ public record DraftEmbedImage
     /// Creates a new instance of <see cref="DraftEmbedImage"/> with the specified local reference and optional alt text.
     /// </summary>
     /// <param name="localRef">The device local reference to an image.</param>
-    /// <param name="altText">The alt text for the image, if any. Maximum 2000 grapheme clusters.</param>
+    /// <param name="altText">The alt text for the image, if any. Maximum <see cref="Maximum.DraftEmbedAltTextLengthInGraphemes"/> grapheme clusters.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="localRef"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="altText"/> length is greater than 2000 grapheme clusters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="altText"/> length is greater than <see cref="Maximum.DraftEmbedAltTextLengthInGraphemes"/> grapheme clusters.</exception>
     [JsonConstructor]
     public DraftEmbedImage(DraftEmbedLocalRef localRef, string? altText = null)
     {
@@ -30,7 +30,7 @@ public record DraftEmbedImage
 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             altText?.GetGraphemeLength() ?? 0,
-            2000);
+            Maximum.DraftEmbedAltTextLengthInGraphemes);
 
         LocalRef = localRef;
         AltText = altText;
@@ -39,13 +39,24 @@ public record DraftEmbedImage
     /// <summary>
     /// Get the device local reference to an image.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
     [JsonRequired]
-    public DraftEmbedLocalRef LocalRef { get; init; }
+    public DraftEmbedLocalRef LocalRef
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
 
     /// <summary>
-    /// Gets or sets the alt text for the image, if any. Maximum 2000 grapheme clusters.
+    /// Gets or sets the alt text for the image, if any. Maximum <see cref="Maximum.DraftEmbedAltTextLengthInGraphemes"/> grapheme clusters.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if <paramref name="value"/> length is greater than 2000 grapheme clusters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than <see cref="Maximum.DraftEmbedAltTextLengthInGraphemes"/> grapheme clusters.</exception>
     [JsonPropertyName("alt")]
     public string? AltText
     {
@@ -55,7 +66,7 @@ public record DraftEmbedImage
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 value?.GetGraphemeLength() ?? 0,
-                2000);
+                Maximum.DraftEmbedAltTextLengthInGraphemes);
 
             field = value;
         }

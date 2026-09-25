@@ -34,7 +34,7 @@ public partial class BlueskyAgent
 
             ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorSearchResults);
         }
 
         return await BlueskyServer.SearchActors(
@@ -47,6 +47,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

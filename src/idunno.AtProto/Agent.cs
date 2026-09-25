@@ -21,7 +21,7 @@ namespace idunno.AtProto;
 /// </summary>
 public abstract class Agent : IDisposable
 {
-    private const string HttpClientName = "idunno.atproto";
+    internal const string HttpClientName = "idunno.atproto";
 
     private volatile bool _disposed;
 
@@ -161,9 +161,26 @@ public abstract class Agent : IDisposable
     /// <returns>An <see cref="HttpMessageHandler"/> configured to any proxy specified when the agent was created.</returns>
     protected HttpMessageHandler ProxyHttpMessageHandlerBuilder()
     {
+        return CreateHttpMessageHandler(_httpClientOptions, _loggerFactory);
+    }
+
+    /// <summary>
+    /// Creates the primary <see cref="HttpMessageHandler"/> agents make requests through.
+    /// </summary>
+    /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> to configure the handler with.</param>
+    /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to create loggers from.</param>
+    /// <remarks>
+    /// <para>
+    ///   Agents which build their own <see cref="IHttpClientFactory"/> and applications which register one in their
+    ///   service collection both come through here, so that the SSRF protections an agent relies on cannot be lost by
+    ///   supplying an <see cref="IHttpClientFactory"/> of your own.
+    /// </para>
+    /// </remarks>
+    internal static HttpMessageHandler CreateHttpMessageHandler(HttpClientOptions? httpClientOptions, ILoggerFactory? loggerFactory)
+    {
         SslClientAuthenticationOptions? sslOptions = null;
 
-        if (_httpClientOptions?.CheckCertificateRevocationList == false)
+        if (httpClientOptions?.CheckCertificateRevocationList == false)
         {
             sslOptions = new SslClientAuthenticationOptions
             {
@@ -171,35 +188,35 @@ public abstract class Agent : IDisposable
             };
         }
 
-        if (_httpClientOptions is not null && _httpClientOptions.ProxyUri is not null)
+        if (httpClientOptions is not null && httpClientOptions.ProxyUri is not null)
         {
             ProxiedSsrfOptions options = new()
             {
-                ConnectTimeout = _httpClientOptions.Timeout,
+                ConnectTimeout = httpClientOptions.Timeout,
                 AutomaticDecompression = DecompressionMethods.All,
                 SslOptions = sslOptions,
-                Proxy = new WebProxy(_httpClientOptions.ProxyUri)
+                Proxy = new WebProxy(httpClientOptions.ProxyUri)
             };
             return new ProxiedSsrfDelegatingHandler(
                 options: options,
-                loggerFactory: _loggerFactory);
+                loggerFactory: loggerFactory);
         }
         else
         {
             SsrfOptions options = new()
             {
-                ConnectTimeout = _httpClientOptions?.Timeout,
+                ConnectTimeout = httpClientOptions?.Timeout,
                 AutomaticDecompression = DecompressionMethods.All,
                 SslOptions = sslOptions
             };
 
             return SsrfSocketsHttpHandlerFactory.Create(
                 options: options,
-                loggerFactory: _loggerFactory);
+                loggerFactory: loggerFactory);
         }
     }
 
-    private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
+    internal static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
     {
         ArgumentNullException.ThrowIfNull(client);
 

@@ -3,6 +3,8 @@
   <PropertyGroup>
     <Description>.NET client for the Bluesky social network.</Description>
     <PackageTags>atproto;bluesky</PackageTags>
+    <!-- BlueskyAgentOptions contains runtime services and serializer objects which cannot be source-bound. -->
+    <EnableConfigurationBindingGenerator>false</EnableConfigurationBindingGenerator>
   </PropertyGroup>
 
   <ItemGroup>
