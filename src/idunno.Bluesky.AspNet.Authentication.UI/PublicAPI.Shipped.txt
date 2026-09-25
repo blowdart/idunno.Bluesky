@@ -1,1 +1,49 @@
 #nullable enable
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.CallbackModel(idunno.Bluesky.AspNet.Authentication.BlueskySignInManager! blueskySignInManager, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel!>! logger) -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.Input.get -> idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.Input.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.Code.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.Code.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.InputModel() -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.Iss.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.Iss.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.ReturnUrl.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.ReturnUrl.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.State.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.InputModel.State.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.CallbackModel.OnGet() -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel.ErrorModel() -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel.OnGet() -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel.RequestId.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel.RequestId.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.ErrorModel.ShowRequestId.get -> bool
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.ErrorMessage.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.ErrorMessage.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.Input.get -> idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.Input.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel.InputModel() -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel.RememberHandle.get -> bool
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel.RememberHandle.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel.UserHandle.get -> string!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.InputModel.UserHandle.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.LoginModel(idunno.Bluesky.AspNet.Authentication.BlueskySignInManager! blueskySignInManager, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel!>! logger) -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.OnGet(string? returnUrl = null) -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.OnPostAsync(string? returnUrl = null) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.ReturnUrl.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LoginModel.ReturnUrl.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.Input.get -> idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel!
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.Input.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel.InputModel() -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel.ReturnUrl.get -> string?
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.InputModel.ReturnUrl.set -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.LogoutModel(idunno.Bluesky.AspNet.Authentication.BlueskySignInManager! blueskySignInManager) -> void
+idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages.LogoutModel.OnPost(string? returnUrl = null) -> System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult!>!
+Microsoft.Extensions.DependencyInjection.BlueskyAuthenticationUIExtensions
+static Microsoft.Extensions.DependencyInjection.BlueskyAuthenticationUIExtensions.AddBlueskyAuthenticationUI(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
