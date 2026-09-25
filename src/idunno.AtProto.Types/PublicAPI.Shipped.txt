@@ -8,7 +8,6 @@ idunno.AtProto.AtIdentifierException
 idunno.AtProto.AtIdentifierException.AtIdentifierException() -> void
 idunno.AtProto.AtIdentifierException.AtIdentifierException(string! message) -> void
 idunno.AtProto.AtIdentifierException.AtIdentifierException(string! message, System.Exception! inner) -> void
-idunno.AtProto.AtIdentifierException.AtIdentifierException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.AtUri
 idunno.AtProto.AtUri.AbsolutePath.get -> string?
 idunno.AtProto.AtUri.AtUri(string! s) -> void
@@ -22,7 +21,6 @@ idunno.AtProto.AtUriFormatException
 idunno.AtProto.AtUriFormatException.AtUriFormatException() -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message) -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message, System.Exception! inner) -> void
-idunno.AtProto.AtUriFormatException.AtUriFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.Blob
 idunno.AtProto.Blob.Blob(idunno.AtProto.Blob! original) -> void
 idunno.AtProto.Blob.Blob(idunno.AtProto.CidLink! reference, string! mimeType, int size) -> void
@@ -91,17 +89,14 @@ idunno.AtProto.NsidFormatException
 idunno.AtProto.NsidFormatException.NsidFormatException() -> void
 idunno.AtProto.NsidFormatException.NsidFormatException(string! message) -> void
 idunno.AtProto.NsidFormatException.NsidFormatException(string! message, System.Exception! inner) -> void
-idunno.AtProto.NsidFormatException.NsidFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.RecordKey
 idunno.AtProto.RecordKey.Equals(idunno.AtProto.RecordKey? other) -> bool
 idunno.AtProto.RecordKey.RecordKey(string! s) -> void
 idunno.AtProto.RecordKey.Value.get -> string!
-idunno.AtProto.RecordKey.Value.init -> void
 idunno.AtProto.RecordKeyFormatException
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException() -> void
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(string! message) -> void
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(string! message, System.Exception! inner) -> void
-idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.TimestampIdentifier
 idunno.AtProto.TimestampIdentifier.ClockId.get -> double
 idunno.AtProto.TimestampIdentifier.CompareTo(idunno.AtProto.TimestampIdentifier? other) -> int
@@ -185,6 +180,7 @@ static idunno.AtProto.Cid.FromString(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.implicit operator idunno.AtProto.Cid!(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.operator !=(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
 static idunno.AtProto.Cid.operator ==(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
+static idunno.AtProto.Cid.TryParse(string? s, out idunno.AtProto.Cid? result) -> bool
 static idunno.AtProto.CidLink.operator !=(idunno.AtProto.CidLink? left, idunno.AtProto.CidLink? right) -> bool
 static idunno.AtProto.CidLink.operator ==(idunno.AtProto.CidLink? left, idunno.AtProto.CidLink? right) -> bool
 static idunno.AtProto.Did.FromString(string! s) -> idunno.AtProto.Did!

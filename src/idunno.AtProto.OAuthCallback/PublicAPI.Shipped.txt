@@ -1,7 +1,13 @@
 #nullable enable
 idunno.AtProto.OAuthCallback.CallbackServer
 idunno.AtProto.OAuthCallback.CallbackServer.CallbackServer(int port, string? path = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.OAuthCallback.CallbackServer.ContentSecurityPolicy.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.ContentSecurityPolicy.set -> void
 idunno.AtProto.OAuthCallback.CallbackServer.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.OAuthCallback.CallbackServer.FailureBody.get -> string!
+idunno.AtProto.OAuthCallback.CallbackServer.FailureBody.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.FailureTitle.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.FailureTitle.set -> void
 idunno.AtProto.OAuthCallback.CallbackServer.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
 idunno.AtProto.OAuthCallback.CallbackServer.LoggerFactory.init -> void
 idunno.AtProto.OAuthCallback.CallbackServer.ResponseStyleSheet.get -> string?
