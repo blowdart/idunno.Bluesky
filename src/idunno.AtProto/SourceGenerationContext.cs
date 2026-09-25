@@ -63,6 +63,17 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(Server.Links))]
 [JsonSerializable(typeof(Server.Contact))]
 
+[JsonSerializable(typeof(Sync.HostDescription))]
+[JsonSerializable(typeof(Sync.HostStatus))]
+[JsonSerializable(typeof(Sync.RepoHostingStatus))]
+[JsonSerializable(typeof(Sync.RepoStatus))]
+[JsonSerializable(typeof(Sync.Model.ListBlobsResponse))]
+[JsonSerializable(typeof(Sync.Model.ListHostsResponse))]
+[JsonSerializable(typeof(Sync.HostedRepository))]
+[JsonSerializable(typeof(Sync.Model.ListReposResponse))]
+[JsonSerializable(typeof(Sync.Model.ListReposByCollectionResponse))]
+[JsonSerializable(typeof(Sync.Model.RequestCrawlRequest))]
+
 [JsonSerializable(typeof(RepoDescription))]
 
 [JsonSerializable(typeof(BaseSessionResponse))]

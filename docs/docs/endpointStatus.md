@@ -161,3 +161,15 @@
 | | [com.atproto.server.getServiceAuth](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getServiceAuth) | `AtProtoAgent.GetServiceAuth()` | ✔ |
 | | [com.atproto.server.getSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getSession) | `AtProtoAgent.GetSession()` | ✔ |
 | | [com.atproto.server.refreshSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.refreshSession) | `AtProtoAgent.RefreshSession()` | ✔ |
+| **Sync** | [com.atproto.sync.getBlob](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlob.json) | `AtProtoAgent.GetBlob()` | ✔ |
+| | [com.atproto.sync.getBlocks](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlocks.json) | `AtProtoAgent.GetBlocks()` | ✔ |
+| | [com.atproto.sync.getHostStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getHostStatus.json) | `AtProtoAgent.GetHostStatus()` | ✔ |
+| | [com.atproto.sync.getLatestCommit](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getLatestCommit.json) | `AtProtoAgent.GetLatestCommit()` | ✔ |
+| | [com.atproto.sync.getRecord](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRecord.json) | `AtProtoAgent.GetSyncRecord()` | ✔ |
+| | [com.atproto.sync.getRepo](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRepo.json) | `AtProtoAgent.GetRepo()` | ✔ |
+| | [com.atproto.sync.getRepoStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRepoStatus.json) | `AtProtoAgent.GetRepoStatus()` | ✔ |
+| | [com.atproto.sync.listBlobs](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listBlobs.json) | `AtProtoAgent.ListBlobs()` | ✔ |
+| | [com.atproto.sync.listHosts](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listHosts.json) | `AtProtoAgent.ListHosts()` | ✔ |
+| | [com.atproto.sync.listRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listRepos.json) | `AtProtoAgent.ListRepos()` | ✔ |
+| | [com.atproto.sync.listReposByCollection](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listReposByCollection.json) | `AtProtoAgent.ListReposByCollection()` | ✔ |
+| | [com.atproto.sync.requestCrawl](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/requestCrawl.json) | `AtProtoAgent.RequestCrawl()` | ✔ |
