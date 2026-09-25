@@ -21,27 +21,7 @@ public record Session
 
         // Attempting to avoid the trimming errors with enum use
         // See https://github.com/dotnet/runtime/issues/114307
-        if (createSessionResponse.Status is not null)
-        {
-            switch (createSessionResponse.Status.ToUpperInvariant())
-            {
-                case "TAKENDOWN":
-                    Status = AccountStatus.Takendown;
-                    break;
-
-                case "SUSPENDED":
-                    Status = AccountStatus.Suspended;
-                    break;
-
-                case "DEACTIVATED":
-                    Status = AccountStatus.Deactivated;
-                    break;
-
-                default:
-                    Status = AccountStatus.Unknown;
-                    break;
-            }
-        }
+        Status = ParseAccountStatus(createSessionResponse.Status);
 
         AccessJwt = createSessionResponse.AccessJwt;
         RefreshJwt = createSessionResponse.RefreshJwt;
@@ -59,33 +39,33 @@ public record Session
         DidDoc = getSessionResponse.DidDoc;
         Active = getSessionResponse.Active;
 
-        if (getSessionResponse.Status is not null)
-        {
-            switch (getSessionResponse.Status.ToUpperInvariant())
-            {
-                case "TAKENDOWN":
-                    Status = AccountStatus.Takendown;
-                    break;
-
-                case "SUSPENDED":
-                    Status = AccountStatus.Suspended;
-                    break;
-
-                case "DEACTIVATED":
-                    Status = AccountStatus.Deactivated;
-                    break;
-
-                default:
-                    Status = AccountStatus.Unknown;
-                    break;
-            }
-        }
+        Status = ParseAccountStatus(getSessionResponse.Status);
 
         AccessJwt = accessCredentials.AccessJwt;
         RefreshJwt = accessCredentials.RefreshToken;
         Email = getSessionResponse.Email;
         EmailConfirmed = getSessionResponse.EmailConfirmed;
         EmailAuthFactor = getSessionResponse.EmailAuthFactor;
+    }
+
+    // Written as a switch over strings rather than an enum parse to avoid the trimming errors with enum use.
+    // See https://github.com/dotnet/runtime/issues/114307.
+    private static AccountStatus? ParseAccountStatus(string? status)
+    {
+        if (status is null)
+        {
+            return null;
+        }
+
+        return status.ToUpperInvariant() switch
+        {
+            "TAKENDOWN" => AccountStatus.Takendown,
+            "SUSPENDED" => AccountStatus.Suspended,
+            "DEACTIVATED" => AccountStatus.Deactivated,
+            "DELETED" => AccountStatus.Deleted,
+            "THROTTLED" => AccountStatus.Throttled,
+            _ => AccountStatus.Unknown
+        };
     }
 
     /// <summary>
