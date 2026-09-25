@@ -50,6 +50,20 @@ builder.Services
 
 This configures Bluesky authentication with in-memory stores, suitable for development use.
 
+Next add the authentication middleware to your request pipeline, before the authorization middleware.
+
+```c#
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+> [!IMPORTANT]
+> Without `app.UseAuthentication()` the authorization middleware only authenticates requests to endpoints which carry an authorization policy, so `User` is
+> anonymous everywhere else. Pages which have no `[Authorize]` attribute, including the layout and login partial shown below, would keep rendering the signed
+> out state even after a successful login.
+
 Next, in your `appsettings.json` or `appsettings.Development.json` add configuration for the agent,
 
 ```json

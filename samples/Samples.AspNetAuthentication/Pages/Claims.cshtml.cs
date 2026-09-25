@@ -15,7 +15,7 @@ public class ClaimsModel : PageModel
 
     public DateTimeOffset? ExpiresOn { get; private set; }
 
-    public async Task OnGet()
+    public void OnGet()
     {
         foreach (var claim in User.Claims)
         {
