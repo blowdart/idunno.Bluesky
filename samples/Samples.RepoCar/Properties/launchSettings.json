@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Samples.RepoCar": {
+      "commandName": "Project",
+      "commandLineArgs": "beans.monster"
+    }
+  }
+}

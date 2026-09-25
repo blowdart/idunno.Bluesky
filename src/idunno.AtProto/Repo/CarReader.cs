@@ -2,6 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Formats.Cbor;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Numerics;
+using System.Security.Cryptography;
 
 namespace idunno.AtProto.Repo;
 
@@ -13,6 +17,7 @@ public sealed class CarReader : IDisposable
     private const int MaximumHeaderSize = 1024 * 1024;
     private readonly Stream _stream;
     private readonly bool _leaveOpen;
+    private readonly Stream? _sourceStreamToDispose;
     private bool _disposed;
     private bool _headerRead;
 
@@ -23,6 +28,11 @@ public sealed class CarReader : IDisposable
     /// <param name="leaveOpen"><see langword="true"/> to leave <paramref name="stream"/> open when this instance is disposed.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="stream"/> is not readable.</exception>
     public CarReader(Stream stream, bool leaveOpen = false)
+        : this(stream, leaveOpen, sourceStreamToDispose: null)
+    {
+    }
+
+    private CarReader(Stream stream, bool leaveOpen, Stream? sourceStreamToDispose)
     {
         ArgumentNullException.ThrowIfNull(stream);
         if (!stream.CanRead)
@@ -32,6 +42,137 @@ public sealed class CarReader : IDisposable
 
         _stream = stream;
         _leaveOpen = leaveOpen;
+        _sourceStreamToDispose = sourceStreamToDispose;
+    }
+
+    /// <summary>
+    /// Asynchronously creates a new <see cref="CarReader"/>, optionally validating the signature of the root repository commit.
+    /// </summary>
+    /// <param name="stream">The readable CAR stream.</param>
+    /// <param name="validateSignature"><see langword="true"/> to validate the root commit signature using its DID document.</param>
+    /// <param name="leaveOpen"><see langword="true"/> to leave <paramref name="stream"/> open when this instance is disposed.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>A reader for the CAR archive.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="stream"/> is not readable.</exception>
+    /// <exception cref="InvalidDataException">Thrown when signature validation is requested and the root commit cannot be verified.</exception>
+    /// <exception cref="CryptographicException">Thrown when the platform cannot use the secp256k1 signing key.</exception>
+    /// <remarks>
+    /// <para>
+    /// When validation is requested, the stream must contain a single-root repository CAR. A non-seekable stream is copied to a temporary file
+    /// so it can be validated and then read normally; the temporary file is deleted when the reader is disposed.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with a custom DID document resolver.")]
+    public static Task<CarReader> CreateAsync(
+        Stream stream,
+        bool validateSignature = false,
+        bool leaveOpen = false,
+        CancellationToken cancellationToken = default)
+    {
+        return CreateAsync(
+            stream,
+            validateSignature,
+            static (did, token) => Resolution.ResolveDidDocument(did, cancellationToken: token),
+            leaveOpen,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Asynchronously creates a new <see cref="CarReader"/> and validates the root repository commit signature using the supplied DID-document resolver.
+    /// </summary>
+    /// <param name="stream">The readable CAR stream.</param>
+    /// <param name="didDocumentResolver">A function that resolves a DID document for the repository DID.</param>
+    /// <param name="leaveOpen"><see langword="true"/> to leave <paramref name="stream"/> open when this instance is disposed.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>A reader for the CAR archive.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="stream"/> is not readable.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the root commit cannot be verified.</exception>
+    /// <exception cref="CryptographicException">Thrown when the platform cannot use the secp256k1 signing key.</exception>
+    /// <remarks>
+    /// <para>
+    /// The stream must contain a single-root repository CAR. A non-seekable stream is copied to a temporary file so it can be validated and then
+    /// read normally; the temporary file is deleted when the reader is disposed.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with a custom DID document resolver.")]
+    public static Task<CarReader> CreateAsync(
+        Stream stream,
+        Func<Did, CancellationToken, Task<DidDocument?>> didDocumentResolver,
+        bool leaveOpen = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(didDocumentResolver);
+        return CreateAsync(stream, true, didDocumentResolver, leaveOpen, cancellationToken);
+    }
+
+    private static async Task<CarReader> CreateAsync(
+        Stream stream,
+        bool validateSignature,
+        Func<Did, CancellationToken, Task<DidDocument?>> didDocumentResolver,
+        bool leaveOpen,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        if (!stream.CanRead)
+        {
+            throw new ArgumentException("The stream must be readable.", nameof(stream));
+        }
+
+        Stream readerStream = stream;
+        try
+        {
+            if (validateSignature)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (!stream.CanSeek)
+                {
+                    readerStream = CreateTemporaryStream();
+                    await stream.CopyToAsync(readerStream, cancellationToken).ConfigureAwait(false);
+                    readerStream.Position = 0;
+                }
+
+                long initialPosition = readerStream.Position;
+                try
+                {
+                    await ValidateRootCommitSignatureAsync(readerStream, didDocumentResolver, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    readerStream.Position = initialPosition;
+                }
+            }
+
+            if (readerStream == stream)
+            {
+                return new CarReader(readerStream, leaveOpen);
+            }
+
+            return new CarReader(readerStream, leaveOpen: false, sourceStreamToDispose: leaveOpen ? null : stream);
+        }
+        catch
+        {
+            if (readerStream != stream)
+            {
+                try
+                {
+                    await readerStream.DisposeAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (!leaveOpen)
+                    {
+                        await stream.DisposeAsync().ConfigureAwait(false);
+                    }
+                }
+            }
+            else if (!leaveOpen)
+            {
+                await stream.DisposeAsync().ConfigureAwait(false);
+            }
+
+            throw;
+        }
     }
 
     /// <summary>
@@ -146,9 +287,16 @@ public sealed class CarReader : IDisposable
         if (!_disposed)
         {
             _disposed = true;
-            if (!_leaveOpen)
+            try
             {
-                _stream.Dispose();
+                if (!_leaveOpen)
+                {
+                    _stream.Dispose();
+                }
+            }
+            finally
+            {
+                _sourceStreamToDispose?.Dispose();
             }
         }
     }
@@ -276,15 +424,267 @@ public sealed class CarReader : IDisposable
 
     private static Cid ReadCid(CborReader reader)
     {
-        if (reader.PeekState() == CborReaderState.Tag)
+        if (reader.PeekState() != CborReaderState.Tag || (ulong)reader.ReadTag() != 42)
         {
-            ulong tag = (ulong)reader.ReadTag();
-            if (tag != 42)
+            throw new InvalidDataException("A CAR root must use DAG-CBOR CID tag 42.");
+        }
+
+        byte[] cidLink = reader.ReadByteString();
+        if (cidLink.Length < 2 || cidLink[0] != 0)
+        {
+            throw new InvalidDataException("A CAR root CID link has an invalid prefix.");
+        }
+
+        return ParseCid(cidLink.AsSpan(1));
+    }
+
+    private static FileStream CreateTemporaryStream()
+    {
+        string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        return new FileStream(
+            path,
+            FileMode.CreateNew,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            bufferSize: 81920,
+            FileOptions.Asynchronous | FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+    }
+
+    private static async Task ValidateRootCommitSignatureAsync(
+        Stream stream,
+        Func<Did, CancellationToken, Task<DidDocument?>> didDocumentResolver,
+        CancellationToken cancellationToken)
+    {
+        using CarReader reader = new(stream, leaveOpen: true);
+        CarHeader header = reader.ReadHeader();
+        if (header.Roots.Count != 1)
+        {
+            throw new InvalidDataException("A repository CAR must have exactly one root to validate its commit signature.");
+        }
+
+        Cid root = header.Roots[0];
+        CarBlock? block;
+        do
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            block = reader.ReadBlock();
+        }
+        while (block is not null && block.Cid != root);
+
+        if (block is null)
+        {
+            throw new InvalidDataException("The CAR root commit block is missing.");
+        }
+
+        if (root.Version != 1 || root.Codec != 0x71 || root.Hash.Count != 34 ||
+            root.Hash[0] != 0x12 || root.Hash[1] != 0x20 ||
+            !CryptographicOperations.FixedTimeEquals(
+                root.Hash.Skip(2).ToArray(),
+                SHA256.HashData(block.Data.Span)))
+        {
+            throw new InvalidDataException("The CAR root CID does not match the root commit block.");
+        }
+
+        (Did did, byte[] unsignedCommit, byte[] signature) = ReadUnsignedCommit(block.Data);
+        DidDocument? didDocument = await didDocumentResolver(did, cancellationToken).ConfigureAwait(false);
+        if (didDocument is null || didDocument.Id != did)
+        {
+            throw new InvalidDataException($"The DID document for repository '{did}' could not be resolved.");
+        }
+
+        VerificationMethod? verificationMethod = null;
+        foreach (VerificationMethod method in didDocument.VerificationMethods ?? [])
+        {
+            if (method.Id == $"{did}#atproto")
             {
-                throw new InvalidDataException($"Unsupported CID CBOR tag {tag}.");
+                if (verificationMethod is not null)
+                {
+                    throw new InvalidDataException($"The DID document for repository '{did}' contains multiple #atproto verification keys.");
+                }
+
+                verificationMethod = method;
             }
         }
 
-        return ParseCid(reader.ReadByteString());
+        if (verificationMethod is null ||
+            verificationMethod.Controller != did ||
+            string.IsNullOrEmpty(verificationMethod.PublicKeyMultibase))
+        {
+            throw new InvalidDataException($"The DID document for repository '{did}' has no usable #atproto verification key.");
+        }
+
+        byte[] publicKeyBytes;
+        try
+        {
+            publicKeyBytes = SimpleBase.Multibase.Decode(verificationMethod.PublicKeyMultibase);
+        }
+        catch (Exception exception) when (exception is FormatException or ArgumentException)
+        {
+            throw new InvalidDataException("The DID document contains an invalid multibase public key.", exception);
+        }
+
+        string curveOid;
+        BigInteger prime;
+        BigInteger curveA;
+        BigInteger curveB;
+        if (publicKeyBytes.Length != 35)
+        {
+            throw new InvalidDataException("The repository signing key must be a compressed P-256 or secp256k1 multikey.");
+        }
+
+        if (publicKeyBytes[0] == 0xE7 && publicKeyBytes[1] == 0x01)
+        {
+            curveOid = "1.3.132.0.10";
+            prime = (BigInteger.One << 256) - (BigInteger.One << 32) - 977;
+            curveA = BigInteger.Zero;
+            curveB = 7;
+        }
+        else if (publicKeyBytes[0] == 0x80 && publicKeyBytes[1] == 0x24)
+        {
+            curveOid = "1.2.840.10045.3.1.7";
+            prime = (BigInteger.One << 256) - (BigInteger.One << 224) + (BigInteger.One << 192) +
+                (BigInteger.One << 96) - 1;
+            curveA = prime - 3;
+            curveB = BigInteger.Parse(
+                "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
+                NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            throw new InvalidDataException("The repository signing key uses an unsupported multikey curve.");
+        }
+
+        byte[] compressedPoint = publicKeyBytes.AsSpan(2).ToArray();
+        if (compressedPoint[0] is not 0x02 and not 0x03)
+        {
+            throw new InvalidDataException("The repository signing key is not a compressed elliptic curve public key.");
+        }
+
+        byte[] x = compressedPoint.AsSpan(1).ToArray();
+        byte[] y = DecompressPoint(compressedPoint[0], x, prime, curveA, curveB);
+        using ECDsa verifier = ECDsa.Create(new ECParameters
+        {
+            Curve = ECCurve.CreateFromValue(curveOid),
+            Q = new ECPoint { X = x, Y = y }
+        });
+
+        byte[] digest = SHA256.HashData(unsignedCommit);
+        if (signature.Length != 64 ||
+            !verifier.VerifyHash(digest, signature, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
+        {
+            throw new InvalidDataException("The CAR root repository commit signature is invalid.");
+        }
+    }
+
+    private static (Did Did, byte[] UnsignedCommit, byte[] Signature) ReadUnsignedCommit(ReadOnlyMemory<byte> data)
+    {
+        CborReader reader = new(data, CborConformanceMode.Canonical);
+        int? fieldCount = reader.ReadStartMap();
+        if (fieldCount != 6)
+        {
+            throw new InvalidDataException("The repository commit must contain exactly six fields.");
+        }
+
+        CborWriter unsignedWriter = new(CborConformanceMode.Canonical);
+        unsignedWriter.WriteStartMap(fieldCount.Value - 1);
+        string? didValue = null;
+        long? version = null;
+        byte[]? signature = null;
+        HashSet<string> fields = new(StringComparer.Ordinal);
+        for (int index = 0; index < fieldCount; index++)
+        {
+            string key = reader.ReadTextString();
+            if (!fields.Add(key))
+            {
+                throw new InvalidDataException($"The repository commit contains duplicate field '{key}'.");
+            }
+
+            if (key == "sig")
+            {
+                signature = reader.ReadByteString();
+                continue;
+            }
+
+            if (key == "did")
+            {
+                didValue = reader.ReadTextString();
+                unsignedWriter.WriteTextString(key);
+                unsignedWriter.WriteTextString(didValue);
+                continue;
+            }
+
+            if (key == "version")
+            {
+                version = reader.ReadInt64();
+                unsignedWriter.WriteTextString(key);
+                unsignedWriter.WriteInt64(version.Value);
+                continue;
+            }
+
+            unsignedWriter.WriteTextString(key);
+            unsignedWriter.WriteEncodedValue(reader.ReadEncodedValue().Span);
+        }
+
+        reader.ReadEndMap();
+        unsignedWriter.WriteEndMap();
+        if (reader.BytesRemaining != 0 ||
+            didValue is null ||
+            version != 3 ||
+            signature is null ||
+            !fields.SetEquals(["did", "version", "prev", "data", "rev", "sig"]))
+        {
+            throw new InvalidDataException("The repository commit is missing required fields or contains trailing data.");
+        }
+
+        Did did;
+        try
+        {
+            did = new Did(didValue);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException("The repository commit DID is invalid.", exception);
+        }
+
+        return (did, unsignedWriter.Encode(), signature);
+    }
+
+    private static byte[] DecompressPoint(byte prefix, byte[] xBytes, BigInteger prime, BigInteger curveA, BigInteger curveB)
+    {
+        BigInteger x = new(xBytes, isUnsigned: true, isBigEndian: true);
+        if (x >= prime)
+        {
+            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
+        }
+
+        BigInteger ySquared = Mod(BigInteger.Pow(x, 3) + (curveA * x) + curveB, prime);
+        BigInteger y = BigInteger.ModPow(ySquared, (prime + 1) >> 2, prime);
+        if (Mod(BigInteger.Pow(y, 2), prime) != ySquared)
+        {
+            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
+        }
+
+        bool yIsOdd = !y.IsEven;
+        if (yIsOdd != (prefix == 0x03))
+        {
+            y = prime - y;
+        }
+
+        if (y >= prime)
+        {
+            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
+        }
+
+        byte[] yBytes = y.ToByteArray(isUnsigned: true, isBigEndian: true);
+        byte[] paddedY = new byte[32];
+        yBytes.CopyTo(paddedY, paddedY.Length - yBytes.Length);
+        return paddedY;
+    }
+
+    private static BigInteger Mod(BigInteger value, BigInteger modulus)
+    {
+        BigInteger result = value % modulus;
+        return result.Sign < 0 ? result + modulus : result;
     }
 }

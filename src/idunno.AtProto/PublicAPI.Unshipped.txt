@@ -1,4 +1,108 @@
 #nullable enable
+idunno.AtProto.AtProtoAgent.GetLatestCommit(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+static idunno.AtProto.AtProtoServer.GetLatestCommit(idunno.AtProto.Did! did, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.GetHostStatus(string! hostname, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.HostDescription!>!>!
+static idunno.AtProto.AtProtoServer.GetHostStatus(string! hostname, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.HostDescription!>!>!
+idunno.AtProto.Sync.HostDescription
+override idunno.AtProto.Sync.HostDescription.<Clone>$() -> idunno.AtProto.Sync.HostDescription!
+override sealed idunno.AtProto.Sync.HostDescription.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+idunno.AtProto.Sync.HostDescription.Equals(idunno.AtProto.Sync.HostDescription? other) -> bool
+override idunno.AtProto.Sync.HostDescription.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.HostDescription.GetHashCode() -> int
+override idunno.AtProto.Sync.HostDescription.ToString() -> string!
+static idunno.AtProto.Sync.HostDescription.operator !=(idunno.AtProto.Sync.HostDescription? left, idunno.AtProto.Sync.HostDescription? right) -> bool
+static idunno.AtProto.Sync.HostDescription.operator ==(idunno.AtProto.Sync.HostDescription? left, idunno.AtProto.Sync.HostDescription? right) -> bool
+idunno.AtProto.Sync.HostDescription.AccountCount.get -> long?
+idunno.AtProto.Sync.HostDescription.AccountCount.init -> void
+idunno.AtProto.Sync.HostDescription.Hostname.get -> string!
+idunno.AtProto.Sync.HostDescription.Hostname.init -> void
+idunno.AtProto.Sync.HostDescription.Seq.get -> long?
+idunno.AtProto.Sync.HostDescription.Seq.init -> void
+idunno.AtProto.Sync.HostDescription.Status.get -> idunno.AtProto.Sync.HostStatus?
+idunno.AtProto.Sync.HostDescription.Status.init -> void
+idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Active = 0 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Idle = 1 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Offline = 2 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Throttled = 3 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Banned = 4 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Unknown = 5 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.AtProtoAgent.GetBlocks(idunno.AtProto.AtIdentifier! repo, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! cids, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetBlocks(idunno.AtProto.Did! did, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! cids, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+idunno.AtProto.AtProtoAgent.GetRepoStatus(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.RepoHostingStatus!>!>!
+static idunno.AtProto.AtProtoServer.GetRepoStatus(idunno.AtProto.Did! did, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.RepoHostingStatus!>!>!
+idunno.AtProto.Sync.RepoHostingStatus
+idunno.AtProto.Sync.RepoHostingStatus.<Clone>$() -> idunno.AtProto.Sync.RepoHostingStatus!
+idunno.AtProto.Sync.RepoHostingStatus.Equals(idunno.AtProto.Sync.RepoHostingStatus? other) -> bool
+override idunno.AtProto.Sync.RepoHostingStatus.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.RepoHostingStatus.GetHashCode() -> int
+override idunno.AtProto.Sync.RepoHostingStatus.ToString() -> string!
+static idunno.AtProto.Sync.RepoHostingStatus.operator !=(idunno.AtProto.Sync.RepoHostingStatus? left, idunno.AtProto.Sync.RepoHostingStatus? right) -> bool
+static idunno.AtProto.Sync.RepoHostingStatus.operator ==(idunno.AtProto.Sync.RepoHostingStatus? left, idunno.AtProto.Sync.RepoHostingStatus? right) -> bool
+idunno.AtProto.Sync.RepoHostingStatus.Active.get -> bool
+idunno.AtProto.Sync.RepoHostingStatus.Active.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Sync.RepoHostingStatus.Did.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Rev.get -> string?
+idunno.AtProto.Sync.RepoHostingStatus.Rev.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Status.get -> idunno.AtProto.Sync.RepoStatus?
+idunno.AtProto.Sync.RepoHostingStatus.Status.init -> void
+idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Takendown = 0 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Suspended = 1 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Deleted = 2 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Deactivated = 3 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Desynchronized = 4 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Throttled = 5 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Unknown = 6 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.AtProtoAgent.ListBlobs(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.TimestampIdentifier? since = null, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedCidCollection!>!>!
+static idunno.AtProto.AtProtoServer.ListBlobs(idunno.AtProto.Did! did, idunno.AtProto.TimestampIdentifier? since, int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedCidCollection!>!>!
+idunno.AtProto.Sync.PagedCidCollection
+idunno.AtProto.Sync.PagedCidCollection.Cursor.get -> string?
+idunno.AtProto.Sync.PagedCidCollection.PagedCidCollection(System.Collections.Generic.IList<idunno.AtProto.Cid!>! list, string? cursor = null) -> void
+idunno.AtProto.AtProtoAgent.ListHosts(int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostDescription!>!>!>!
+static idunno.AtProto.AtProtoServer.ListHosts(int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostDescription!>!>!>!
+idunno.AtProto.AtProtoAgent.ListRepos(int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostedRepository!>!>!>!
+static idunno.AtProto.AtProtoServer.ListRepos(int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostedRepository!>!>!>!
+idunno.AtProto.Sync.HostedRepository
+override idunno.AtProto.Sync.HostedRepository.<Clone>$() -> idunno.AtProto.Sync.HostedRepository!
+override sealed idunno.AtProto.Sync.HostedRepository.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+idunno.AtProto.Sync.HostedRepository.Equals(idunno.AtProto.Sync.HostedRepository? other) -> bool
+override idunno.AtProto.Sync.HostedRepository.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.HostedRepository.GetHashCode() -> int
+override idunno.AtProto.Sync.HostedRepository.ToString() -> string!
+static idunno.AtProto.Sync.HostedRepository.operator !=(idunno.AtProto.Sync.HostedRepository? left, idunno.AtProto.Sync.HostedRepository? right) -> bool
+static idunno.AtProto.Sync.HostedRepository.operator ==(idunno.AtProto.Sync.HostedRepository? left, idunno.AtProto.Sync.HostedRepository? right) -> bool
+idunno.AtProto.Sync.HostedRepository.Active.get -> bool?
+idunno.AtProto.Sync.HostedRepository.Active.init -> void
+idunno.AtProto.Sync.HostedRepository.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Sync.HostedRepository.Did.init -> void
+idunno.AtProto.Sync.HostedRepository.Head.get -> idunno.AtProto.Cid!
+idunno.AtProto.Sync.HostedRepository.Head.init -> void
+idunno.AtProto.Sync.HostedRepository.Rev.get -> string!
+idunno.AtProto.Sync.HostedRepository.Rev.init -> void
+idunno.AtProto.Sync.HostedRepository.Status.get -> idunno.AtProto.Sync.RepoStatus?
+idunno.AtProto.Sync.HostedRepository.Status.init -> void
+idunno.AtProto.AtProtoAgent.ListReposByCollection(idunno.AtProto.Nsid! collection, int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedDidCollection!>!>!
+static idunno.AtProto.AtProtoServer.ListReposByCollection(idunno.AtProto.Nsid! collection, int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedDidCollection!>!>!
+idunno.AtProto.Sync.PagedDidCollection
+idunno.AtProto.Sync.PagedDidCollection.Cursor.get -> string?
+idunno.AtProto.Sync.PagedDidCollection.PagedDidCollection(System.Collections.Generic.IList<idunno.AtProto.Did!>! list, string? cursor = null) -> void
+idunno.AtProto.AtProtoAgent.RequestCrawl(string! hostname, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.AtProto.AtProtoServer.RequestCrawl(string! hostname, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.AtProto.AtProtoAgent.GetSyncRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetSyncRecord(idunno.AtProto.Did! did, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+idunno.AtProto.AtProtoAgent.GetBlob(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Cid! cid, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.BlobContent!>!>!
+static idunno.AtProto.AtProtoServer.GetBlob(idunno.AtProto.Did! did, idunno.AtProto.Cid! cid, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.BlobContent!>!>!
+idunno.AtProto.Sync.BlobContent
+idunno.AtProto.Sync.BlobContent.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Sync.BlobContent.Content.get -> System.IO.Stream!
+idunno.AtProto.Sync.BlobContent.ContentLength.get -> long?
+idunno.AtProto.Sync.BlobContent.ContentType.get -> System.Net.Http.Headers.MediaTypeHeaderValue?
+idunno.AtProto.Sync.BlobContent.Dispose() -> void
+idunno.AtProto.Sync.BlobContent.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.AtProtoAgent.GetRepo(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetRepo(idunno.AtProto.Did! repo, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
 const idunno.AtProto.Repo.CarHeader.Version = 1 -> ulong
 idunno.AtProto.Repo.CarBlock
 idunno.AtProto.Repo.CarBlock.CarBlock(idunno.AtProto.Cid! cid, System.ReadOnlyMemory<byte> data) -> void
@@ -9,10 +113,12 @@ idunno.AtProto.Repo.CarHeader.CarHeader(System.Collections.Generic.IEnumerable<i
 idunno.AtProto.Repo.CarHeader.Roots.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Cid!>!
 idunno.AtProto.Repo.CarReader
 idunno.AtProto.Repo.CarReader.CarReader(System.IO.Stream! stream, bool leaveOpen = false) -> void
+static idunno.AtProto.Repo.CarReader.CreateAsync(System.IO.Stream! stream, bool validateSignature = false, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarReader!>!
+static idunno.AtProto.Repo.CarReader.CreateAsync(System.IO.Stream! stream, System.Func<idunno.AtProto.Did!, System.Threading.CancellationToken, System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!>! didDocumentResolver, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarReader!>!
 idunno.AtProto.Repo.CarReader.Dispose() -> void
 idunno.AtProto.Repo.CarReader.ReadBlock() -> idunno.AtProto.Repo.CarBlock?
 idunno.AtProto.Repo.CarReader.ReadHeader() -> idunno.AtProto.Repo.CarHeader!
 idunno.AtProto.Repo.CarWriter
-idunno.AtProto.Repo.CarWriter.CarWriter(System.IO.Stream! stream, idunno.AtProto.Repo.CarHeader! header, bool leaveOpen = false) -> void
-idunno.AtProto.Repo.CarWriter.Dispose() -> void
-idunno.AtProto.Repo.CarWriter.WriteBlock(idunno.AtProto.Repo.CarBlock! block) -> void
+static idunno.AtProto.Repo.CarWriter.CreateAsync(System.IO.Stream! stream, idunno.AtProto.Repo.CarHeader! header, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarWriter!>!
+idunno.AtProto.Repo.CarWriter.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.Repo.CarWriter.WriteBlockAsync(idunno.AtProto.Repo.CarBlock! block, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

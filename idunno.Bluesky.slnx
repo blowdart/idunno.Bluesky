@@ -30,6 +30,9 @@
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
     <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
   </Folder>
+  <Folder Name="/.github/instructions/">
+    <File Path=".github/instructions/docs.instructions.md" />
+  </Folder>
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
   </Folder>
@@ -243,6 +246,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.RepoCar/Samples.RepoCar.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
