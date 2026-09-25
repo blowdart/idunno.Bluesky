@@ -1,0 +1,44 @@
+@page
+@using idunno.Bluesky.Feed
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+@if (User is null || User.Identity is null || !User.Identity.IsAuthenticated)
+{
+<div class="text-center">
+  <h1 class="display-4">
+    Welcome
+  </h1>
+  <p>
+    <a class="btn btn-primary" asp-area="Bluesky" asp-page="/Login">Login</a>
+  </p>
+</div>
+}
+@if (Model.Timeline is not null && Model.Timeline.Count > 0)
+{
+    ViewData["Title"] = "Home page";
+
+    <div class="text-start">
+        <h2 class="display-4">
+            Bluesky Timeline
+        </h2>
+    </div>
+    <table>
+        <tbody>
+            @foreach (var entry in Model.Timeline) {
+                <tr>
+                    <td class="align-top"><partial name="_RenderAuthorPartial" model="entry.Post" /></td>
+                    <td class="align-top">
+                        <partial name="_RenderPostPartial" model="entry.Post" />
+
+                        @if (entry.Reply is not null && entry.Reply.Parent is PostView inReplyTo) {
+                            <table><tbody><tr><td class="align-top">⬑</td><td class="align-top"><partial name="_RenderAuthorPartial" model="inReplyTo" /></td><td class="align-top"><partial name="_RenderPostPartial" model="inReplyTo" /></td></tr></tbody></table>
+                        }
+                   </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.Text;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
@@ -56,6 +57,28 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     protected ILogger ILogger { get; set; } = NullLogger.Instance;
 
     /// <summary>
+    /// The default maximum number of bytes read from a webpage when generating a card from it.
+    /// </summary>
+    public const int DefaultMaximumPageSize = 1024 * 1024;
+
+    /// <summary>
+    /// The default maximum number of bytes downloaded for a card's thumbnail image.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/external.json">app.bsky.embed.external</see>
+    ///   declares a maximum size of one million bytes for a card's thumbnail, so downloading more than that would only produce a
+    ///   blob the service rejects when the post is written.
+    /// </para>
+    /// </remarks>
+    public const long DefaultMaximumThumbnailSize = 1000000;
+
+    /// <summary>
+    /// The default size of the buffer used when downloading a card's thumbnail image.
+    /// </summary>
+    public const int DefaultThumbnailDownloadBufferSize = 81920;
+
+    /// <summary>
     /// Gets the mime type returned if the content type of an image is unknown.
     /// </summary>
     protected static string UnknownImageType => "application/octet-stream";
@@ -72,14 +95,75 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// Gets the contents of the webpage at <paramref name="uri"/> as a string.
     /// </summary>
     /// <param name="uri">The URI of the webpage to retrieve.</param>
+    /// <param name="maxPageSize">The maximum number of bytes to read from the webpage.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The contents of the webpage as a string or <see langword="null"/> if the request fails.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not a valid http or https URI.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxPageSize"/> is zero or negative.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the generator has been disposed.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The page is served by whoever controls <paramref name="uri"/>, so at most <paramref name="maxPageSize"/> bytes are
+    ///   read from it. A longer page is truncated rather than rejected, as the metadata a card is built from appears in the
+    ///   document head.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference")]
-    protected virtual async Task<string?> GetPageContent(Uri uri, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Bounding parameter added with a default to preserve the existing shape")]
+    protected virtual async Task<string?> GetPageContent(Uri uri, int maxPageSize = DefaultMaximumPageSize, CancellationToken cancellationToken = default)
     {
+        return await GetContent(
+            uri,
+            maxPageSize,
+            [
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/html"),
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xhtml+xml"),
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xml", 0.9),
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("*/*", 0.8)
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the contents of the plain text document at <paramref name="uri"/> as a string.
+    /// </summary>
+    /// <param name="uri">The URI of the document to retrieve.</param>
+    /// <param name="maxDocumentSize">The maximum number of bytes to read from the document.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The contents of the document as a string or <see langword="null"/> if the request fails.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not a valid http or https URI.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxDocumentSize"/> is zero or negative.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the generator has been disposed.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This differs from <see cref="GetPageContent(Uri, int, CancellationToken)"/> only in the media types it asks for. It is
+    ///   used for well known documents, which are plain text rather than markup.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference")]
+    protected virtual async Task<string?> GetPlainTextContent(Uri uri, int maxDocumentSize = DefaultMaximumPageSize, CancellationToken cancellationToken = default)
+    {
+        return await GetContent(
+            uri,
+            maxDocumentSize,
+            [
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/plain"),
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("*/*", 0.8)
+            ],
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string?> GetContent(
+        Uri uri,
+        int maxContentSize,
+        IReadOnlyCollection<System.Net.Http.Headers.MediaTypeWithQualityHeaderValue> accept,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         ArgumentNullException.ThrowIfNull(uri);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxContentSize);
 
         if (!uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
             !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
@@ -90,22 +174,24 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         using (HttpRequestMessage httpRequest = new(HttpMethod.Get, uri))
         {
             httpRequest.Headers.Accept.Clear();
-            httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/html"));
-            httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
-            httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xml", 0.9));
-            httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("*/*", 0.8));
+
+            foreach (System.Net.Http.Headers.MediaTypeWithQualityHeaderValue mediaType in accept)
+            {
+                httpRequest.Headers.Accept.Add(mediaType);
+            }
 
             try
             {
-                using HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
+                // Read the response headers only, then read a bounded amount of the body. The URI comes from post text,
+                // so the server on the other end is untrusted and must not be allowed to dictate the allocation.
+                using HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.EmbeddedCardGetRequestFailedWithStatusCode(ILogger, uri, response.StatusCode);
                     return null;
                 }
 
-                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
+                return await ReadBoundedString(response.Content, maxContentSize, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
@@ -125,13 +211,14 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The uploaded <see cref="Blob"/> or <see langword="null"/> if the operation fails.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not a valid URI.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxDownloadSize"/> or <paramref name="bufferSize"/> is zero or negative.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Allows for string/Uri overloads")]
     protected async Task<Blob?> DownloadAndUploadImageBlob(
         string uri,
         string? imageMimeType = null,
-        long maxDownloadSize = 2000000,
-        int bufferSize = 1000000,
+        long maxDownloadSize = DefaultMaximumThumbnailSize,
+        int bufferSize = DefaultThumbnailDownloadBufferSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uri);
@@ -155,27 +242,47 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// Gets an image from the specified <paramref name="uri"/> and uploads it to blob storage via the <see cref="BlueskyAgent"/>.
     /// </summary>
     /// <param name="uri">The URI of the image to download.</param>
-    /// <param name="imageMimeType">The mime type of the image, if known.</param>
+    /// <param name="imageMimeType">The mime type of the image, if known. This is treated as a hint; the type recorded on the blob is always the one sniffed from the content.</param>
     /// <param name="maxDownloadSize">The maximum number of bytes to download.</param>
     /// <param name="bufferSize">The size of the buffer to use when downloading the image.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The uploaded <see cref="Blob"/> or <see langword="null"/> if the operation fails.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxDownloadSize"/> or <paramref name="bufferSize"/> is zero or negative.</exception>
     /// <exception cref="UnauthorizedAccessException">Thrown if the agent is not authenticated.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown if the generator has been disposed.</exception>
+    /// <remarks>
+    /// <para>
+    ///   <paramref name="imageMimeType"/> typically comes from the page being read, which is served by whoever controls it,
+    ///   so it cannot be used to decide what is uploaded. The content is always sniffed and anything which is not a
+    ///   recognised image is rejected.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Allows for string/Uri overloads")]
     protected async Task<Blob?> DownloadAndUploadImageBlob(
         Uri uri,
         string? imageMimeType = null,
-        long maxDownloadSize = 2000000,
-        int bufferSize = 1000000,
+        long maxDownloadSize = DefaultMaximumThumbnailSize,
+        int bufferSize = DefaultThumbnailDownloadBufferSize,
         CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
         ArgumentNullException.ThrowIfNull(uri);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxDownloadSize);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
 
         if (!Agent.IsAuthenticated)
         {
             throw new UnauthorizedAccessException();
+        }
+
+        // The URI comes from the page being read, so it is not necessarily something which should be requested at all.
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.EmbeddedCardImageSchemeNotSupported(ILogger, uri, uri.Scheme);
+            return null;
         }
 
         Blob? result = null;
@@ -189,7 +296,9 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("image/png"));
                 httpRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("image/gif"));
 
-                using (HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false))
+                // Read the response headers only. With the default completion option the whole body is buffered into memory
+                // before this returns, which would defeat every size check below.
+                using (HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                 {
                     if (response.IsSuccessStatusCode)
                     {
@@ -215,20 +324,31 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                                 return null;
                             }
 
-                            imageMimeType ??= SniffImageContentType(header) ?? UnknownImageType;
-                            if (imageMimeType == UnknownImageType)
+                            // The declared type is only a hint, and the page which supplied it is untrusted, so the type
+                            // recorded on the blob is always the one the content itself says it is.
+                            string? sniffedMimeType = SniffImageContentType(header);
+
+                            if (sniffedMimeType is null)
                             {
                                 stream.Close();
                                 Logger.EmbeddedCardImageTypeNotRecognized(ILogger, uri);
                                 return null;
                             }
 
+                            if (imageMimeType is not null &&
+                                !imageMimeType.Equals(sniffedMimeType, StringComparison.OrdinalIgnoreCase))
+                            {
+                                Logger.EmbeddedCardImageTypeMismatch(ILogger, uri, imageMimeType, sniffedMimeType);
+                            }
+
+                            imageMimeType = sniffedMimeType;
+
                             string fileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                             byte[] readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
                             try
                             {
-                                using (var fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize, useAsync: true))
+                                using (var fileStream = new FileStream(fileName, CreateTemporaryFileOptions(bufferSize)))
                                 {
                                     // Write the header bytes we already read
                                     await fileStream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
@@ -238,15 +358,17 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                                     int bytesRead;
                                     while ((bytesRead = await stream.ReadAsync(readBuffer, cancellationToken).ConfigureAwait(false)) > 0)
                                     {
-                                        await fileStream.WriteAsync(readBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
-                                        totalBytesRead += bytesRead;
-
-                                        if (totalBytesRead > maxDownloadSize)
+                                        // Checked before the write rather than after it, so that a server cannot have an
+                                        // extra buffer's worth written to disk by sending it in one read.
+                                        if (totalBytesRead + bytesRead > maxDownloadSize)
                                         {
                                             fileStream.Close();
-                                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, totalBytesRead, maxDownloadSize);
+                                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, totalBytesRead + bytesRead, maxDownloadSize);
                                             return null;
                                         }
+
+                                        await fileStream.WriteAsync(readBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                                        totalBytesRead += bytesRead;
                                     }
                                     await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                                     fileStream.Close();
@@ -306,7 +428,60 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         return result;
     }
 
-    private static string SniffImageContentType(byte[] imageData)
+    /// <summary>
+    /// Reads at most <paramref name="maximumLength"/> bytes of <paramref name="content"/> as a string, truncating anything longer.
+    /// </summary>
+    private static async Task<string> ReadBoundedString(HttpContent content, int maximumLength, CancellationToken cancellationToken)
+    {
+        // Start small and grow rather than renting the maximum up front, which would allocate it on every request.
+        const int initialBufferSize = 8 * 1024;
+
+        int initialLength = content.Headers.ContentLength is long contentLength && contentLength > 0 && contentLength <= maximumLength
+            ? (int)Math.Min(contentLength, maximumLength)
+            : Math.Min(initialBufferSize, maximumLength);
+
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(initialLength);
+
+        try
+        {
+            int bytesRead = 0;
+
+            using (Stream contentStream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            {
+                while (bytesRead < maximumLength)
+                {
+                    if (bytesRead == buffer.Length)
+                    {
+                        byte[] grown = ArrayPool<byte>.Shared.Rent(Math.Min(buffer.Length * 2, maximumLength));
+                        Buffer.BlockCopy(buffer, 0, grown, 0, bytesRead);
+                        ArrayPool<byte>.Shared.Return(buffer);
+                        buffer = grown;
+                    }
+
+                    // The rented buffer may be larger than requested, so bound the read by the requested length rather than by its size.
+                    int available = Math.Min(buffer.Length, maximumLength) - bytesRead;
+
+                    int read = await contentStream.ReadAsync(buffer.AsMemory(bytesRead, available), cancellationToken).ConfigureAwait(false);
+
+                    if (read == 0)
+                    {
+                        break;
+                    }
+
+                    bytesRead += read;
+                }
+            }
+
+            // The page decides how its bytes are encoded, so decode with the charset it declared rather than assuming UTF-8.
+            return EncodingFor(content.Headers.ContentType?.CharSet).GetString(buffer, 0, bytesRead);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
+    }
+
+    private static string? SniffImageContentType(byte[] imageData)
     {
         // Simple content type sniffing based on file signatures (magic numbers)
         if (imageData.Length >= 4)
@@ -327,14 +502,63 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 return "image/gif";
             }
         }
-        // Default to octet-stream if content type cannot be determined
-        return UnknownImageType;
+
+        return null;
+    }
+
+    /// <summary>
+    /// Creates the options a downloaded image is written to a temporary file with.
+    /// </summary>
+    private static FileStreamOptions CreateTemporaryFileOptions(int bufferSize)
+    {
+        FileStreamOptions options = new()
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            BufferSize = bufferSize,
+            Options = FileOptions.Asynchronous
+        };
+
+        // The temporary directory is shared with every other user of the machine, so the file is created readable only
+        // by the user which created it. Setting this on Windows throws, where the ACL inherited from the directory
+        // already restricts it.
+        if (!OperatingSystem.IsWindows())
+        {
+            options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// Returns the <see cref="Encoding"/> named by <paramref name="charSet"/>, or <see cref="Encoding.UTF8"/> if it does not name one.
+    /// </summary>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Any unusable charset falls back to UTF-8.")]
+    private static Encoding EncodingFor(string? charSet)
+    {
+        if (string.IsNullOrWhiteSpace(charSet))
+        {
+            return Encoding.UTF8;
+        }
+
+        try
+        {
+            return Encoding.GetEncoding(charSet.Trim().Trim('"'));
+        }
+        catch (Exception)
+        {
+            return Encoding.UTF8;
+        }
     }
 
     /// <summary>
     /// Releases the unmanaged resources used by the <see cref="BaseEmbeddedCardGenerator"/> and optionally disposes of the managed resources.
     /// </summary>
     /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to releases only unmanaged resources.</param>
+    /// <remarks>
+    /// <para>Once disposed, a generator throws <see cref="ObjectDisposedException"/> rather than making any further requests.</para>
+    /// </remarks>
     protected virtual void Dispose(bool disposing)
     {
         if (!_isDisposed)

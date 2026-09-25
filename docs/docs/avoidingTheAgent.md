@@ -1,22 +1,22 @@
-﻿# Avoiding the Agent
+# Avoiding the Agent
 
 The agents are meant as the main way to interact with Bluesky. However, there are scenarios where you might want to avoid
 using agents, and talk to the PDS directly, bypassing an app view or other intermediate API.
 
-The `AtProtoServer` class has methods to get, list create, update and delete records directly on a PDS, given appropriate credentials.
+The `AtProtoServer` class has methods to get, list, create, update and delete records directly on a PDS, given appropriate credentials.
 
-This approach entails you discovering the resolve a user handle to a DID, then discovering the PDS endpoint for a user. At that point
-you can read and list records directly from that PDS. To create, update and delete records you will need to handle you must
+This approach entails you resolving a user handle to a DID, then discovering the PDS endpoint for that user. At that point
+you can read and list records directly from that PDS. To create, update and delete records you must
 authenticate with that PDS to get a session, create access credentials from the session, then using the access credentials
 you can create, update and delete directly records on the PDS. You will also need to manually refresh sessions as they expire.
 
-The [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexcions) library aims to provide common third party
+The [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexicons) library aims to provide common third party
 record types as C# records, so you can work with strongly typed records.
 
 To discover the PDS endpoint for a user you first resolve the DID from the user handle, then resolve the PDS for the DID.
 
 ```c#
-sring userHandle = "example.bsky.social";
+string userHandle = "example.bsky.social";
 
 var did = await idunno.AtProto.Resolution.ResolveHandle(userHandle, cancellationToken: cancellationToken);
 if (did is null)
@@ -50,7 +50,7 @@ If you want to use raw JSON please see the [Sending raw AT Protocol requests](ra
 For these examples we will use the [statusphere.xyz](https://statusphere.xyz) sample records,
 which are defined in the [idunno.AtProto.Lexicons](https://github.com/blowdart/idunno.AtProto.Lexicons) library.
 
-Assuming you have adding the `idunno.AtProto.Lexicons` nupkg, and added the appropriate `using` statements you could
+Assuming you have added the `idunno.AtProto.Lexicons` NuGet package, and added the appropriate `using` statements you could
 list the statusphere status for a user like this:
 
 ```c#
@@ -68,7 +68,7 @@ var listResult = await AtProtoServer.ListRecords<StatusphereStatus>(
 You'll note that the AtProtoServer methods require you to specify a lot of parameters, and very few are optional. This is deliberate,
 the assumption is if you are using the `AtProtoServer` class directly you are likely building your own higher level abstraction on top of it.
 
-To retrieve an individual record you use `GetRecord`. This required credentials. So you would first need to authenticate with the PDS,
+To retrieve an individual record you use `GetRecord`. This requires credentials. So you would first need to authenticate with the PDS,
 via the `CreateSession` method, then create access credentials from the session.
 
 ```c#
@@ -78,7 +78,6 @@ var createSessionResult = await AtProtoServer.CreateSession(
                 identifier: userHandle,
                 password: password,
                 authFactorToken: null,
-                authFactorToken: authCode,
                 httpClient: httpClient);
 
 if (createSessionResult.Succeeded)
@@ -92,7 +91,7 @@ else
 ```
 
 You must check the `CreateSessionResult` to ensure the session was created successfully. If a user has 2FA enabled
-the `CreateSession` call will fail and the `AtErrorDetails` property will have an `Error` value of `AuthFactorCodeRequired`.
+the `CreateSession` call will fail and the `AtErrorDetail` property will have an `Error` value of `AuthFactorCodeRequired`.
 If that is returned you will need prompt the user for, and provide the MFA token in the `authFactorToken` parameter.
 
 Once you have the access credentials you perform create, update and delete operations. For example, to create a new
@@ -149,7 +148,8 @@ var putRecordResult = await AtProtoServer.PutRecord(
     swapCommit: null,
     swapRecord: getRecordResult.Result.Cid,
     service: pds,
-    accessCredentials: accessCredentials);
+    accessCredentials: accessCredentials,
+    httpClient: httpClient);
 ```
 
 Here you can use the `swapRecord` parameter to ensure you are updating the version of the record you think you are. If
@@ -161,7 +161,7 @@ Finally, to delete the record you just created you would do:
 var deleteRecordResult = await AtProtoServer.DeleteRecord(
     repo: did,
     collection: StatusphereConstants.Collection,
-    rKey: createResult.Result.Uri.RecordKey!,
+    rKey: createRecordResult.Result.Uri.RecordKey!,
     swapCommit: null,
     swapRecord: null,
     service: pds,

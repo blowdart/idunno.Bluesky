@@ -51,6 +51,11 @@ items:
       - name: Editing a user profile
         href: profileEditing.md
 
+  - name: ASP.NET
+    items:
+      - name: ASP.NET Authentication
+        href: asp.net.md
+
   - name: Advanced Topics
     items:
       - name: Configuring logging

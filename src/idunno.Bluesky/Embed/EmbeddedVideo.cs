@@ -85,7 +85,11 @@ public record EmbeddedVideo : EmbeddedMediaBase
     /// Gets a collection of <see cref="Caption"/>s for the video, if any.
     /// </summary>
     [JsonInclude]
-    public ICollection<Caption>? Captions { get; init; }
+    public ICollection<Caption>? Captions
+    {
+        get;
+        init => field = value is null ? null : [.. value];
+    }
 
     /// <summary>
     /// Gets the alternative text for the video, if any.
@@ -107,6 +111,52 @@ public record EmbeddedVideo : EmbeddedMediaBase
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Presentation { get; init; }
+
+    /// <summary>
+    /// Determines whether the specified <see cref="EmbeddedVideo"/> is equal to the current instance.
+    /// </summary>
+    /// <param name="other">The <see cref="EmbeddedVideo"/> to compare against the current instance.</param>
+    /// <returns><see langword="true" /> if <paramref name="other"/> is equal to the current instance, otherwise <see langword="false" />.</returns>
+    /// <remarks>
+    /// <para><see cref="Captions"/> is compared by its contents rather than by reference.</para>
+    /// </remarks>
+    public virtual bool Equals(EmbeddedVideo? other)
+    {
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (other is null || EqualityContract != other.EqualityContract)
+        {
+            return false;
+        }
+
+        return base.Equals(other) &&
+            Video == other.Video &&
+            AltText == other.AltText &&
+            AspectRatio == other.AspectRatio &&
+            Presentation == other.Presentation &&
+            CollectionComparison.SequenceEquals(Captions, other.Captions);
+    }
+
+    /// <summary>
+    /// Returns the hash code for the current instance.
+    /// </summary>
+    /// <returns>The hash code for the current instance.</returns>
+    public override int GetHashCode()
+    {
+        HashCode hashCode = new();
+
+        hashCode.Add(base.GetHashCode());
+        hashCode.Add(Video);
+        hashCode.Add(AltText);
+        hashCode.Add(AspectRatio);
+        hashCode.Add(Presentation);
+        CollectionComparison.AddSequence(ref hashCode, Captions);
+
+        return hashCode.ToHashCode();
+    }
 }
 
 /// <summary>
@@ -138,9 +188,14 @@ public record Caption
     /// </summary>
     /// <param name="lang">The language for the caption file.</param>
     /// <param name="file">The blob containing the caption file.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lang"/> is <see langword="null" /> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     public Caption(string lang, Blob file)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(lang);
+        ArgumentNullException.ThrowIfNull(file);
+
         Lang = lang;
         File = file;
     }
@@ -149,11 +204,13 @@ public record Caption
     /// Gets the language for the caption file.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public string Lang { get; init; }
 
     /// <summary>
     /// Gets the blob containing the caption file.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public Blob File { get; init; }
 }

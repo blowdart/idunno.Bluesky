@@ -25,7 +25,7 @@ public abstract class AtIdentifier
 
         if (!TryParse(s, out AtIdentifier? returnValue))
         {
-            throw new ArgumentException("{s} is not a valid AtIdentifier", nameof(s));
+            throw new ArgumentException($"\"{s}\" is not a valid AtIdentifier", nameof(s));
         }
 
         return returnValue;
@@ -107,7 +107,7 @@ public abstract class AtIdentifier
     public override bool Equals(object? obj) => obj is AtIdentifier identifier && Value == identifier.Value;
 
     /// <summary>
-    /// Gets the underlying value of the <see cref="AtIdentifier"/>/.
+    /// Gets the underlying value of the <see cref="AtIdentifier"/>.
     /// </summary>
     public abstract string Value
     {

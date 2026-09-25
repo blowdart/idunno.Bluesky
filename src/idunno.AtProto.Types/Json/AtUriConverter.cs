@@ -18,7 +18,7 @@ public sealed class AtUriConverter : JsonConverter<AtUri>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <returns>An <see cref="AtUri"/> created from the JSON.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON to be converted is not a string token.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON to be converted is not a string token, or is not a valid AT URI.</exception>
     public override AtUri? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.String)
@@ -39,10 +39,6 @@ public sealed class AtUriConverter : JsonConverter<AtUri>
         catch (AtUriFormatException e)
         {
             throw new JsonException("Invalid AT URI format.", e);
-        }
-        catch (RecordKeyFormatException e)
-        {
-            throw new JsonException("Invalid rKey format.", e);
         }
 
         return atUri;

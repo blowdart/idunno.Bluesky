@@ -4,6 +4,18 @@
     <BuildType Name="Debug" />
     <BuildType Name="Release" />
   </Configurations>
+  <Folder Name="/.artifacts/">
+    <File Path=".artifacts/Start-MySqlContainer.ps1" />
+    <File Path=".artifacts/Start-RedisContainer.ps1" />
+  </Folder>
+  <Folder Name="/.assets/">
+    <File Path=".assets/.gitkeep" />
+  </Folder>
+  <Folder Name="/.build/">
+    <File Path=".build/CoherenceChecks.cs" />
+    <File Path=".build/Directory.Build.Props" />
+    <File Path=".build/ExtractReleaseNotes.cs" />
+  </Folder>
   <Folder Name="/.devcontainer/">
     <File Path=".devcontainer/devcontainer.json" />
   </Folder>
@@ -150,6 +162,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.AtProto/Samples.AtProto.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -226,6 +242,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.PartialUploads/Samples.PartialUploads.csproj" Id="592ef987-eca7-4409-816e-a8d1ca452df0">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -246,7 +266,6 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
-    <File Path=".runsettings" />
     <File Path=".ssh-allowed-signers" />
     <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
@@ -266,6 +285,7 @@
     <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
+    <File Path="testconfig.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
     <File Path="ToDo.md" />
     <File Path="trimTest.ps1" />
@@ -277,6 +297,11 @@
     <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
     <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.MySQL/idunno.Bluesky.AspNet.Authentication.MySQL.csproj" Id="2fe1e43a-b4ac-4aff-851e-83fc5d7c6b35" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj" Id="3fc9d41e-099d-461b-92f6-30275b1d8b43" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
   <Folder Name="/test/">
@@ -284,35 +309,53 @@
     <File Path="test/Directory.Build.props" />
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.AtProto.OAuthCallback.Test/idunno.AtProto.OAuthCallback.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Serialization.Test/idunno.AtProto.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Test/idunno.AtProto.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Types.Test/idunno.AtProto.Types.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.AspNet.Authentication.SQLite.Test/idunno.Bluesky.AspNet.Authentication.SQLite.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Serialization.Test/idunno.Bluesky.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
   </Folder>
   <Folder Name="/trimming/">
-    <Project Path="trimming/idunno.TrimmingTest.csproj">
+    <Project Path="trimming/AuthenticationAnalysis/idunno.Trimming.AuthenticationAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/CoreAnalysis/idunno.Trimming.CoreAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PackageAnalysis/idunno.Trimming.PackageAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PackageConsumerSmoke/idunno.Trimming.PackageConsumerSmoke.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/PublicApiSmoke/idunno.Trimming.PublicApiSmoke.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

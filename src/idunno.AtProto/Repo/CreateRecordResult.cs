@@ -20,8 +20,8 @@ public sealed record CreateRecordResult
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
     public CreateRecordResult(AtUri uri, Cid cid, Commit? commit, string? validationStatus)
     {
-        ArgumentNullException.ThrowIfNull("uri");
-        ArgumentNullException.ThrowIfNull("cid");
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(cid);
 
         Uri = uri;
         Cid = cid;
@@ -58,8 +58,8 @@ public sealed record CreateRecordResult
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
     public CreateRecordResult(AtUri uri, Cid cid, Commit? commit, ValidationStatus? validationStatus)
     {
-        ArgumentNullException.ThrowIfNull("uri");
-        ArgumentNullException.ThrowIfNull("cid");
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(cid);
 
         Uri = uri;
         Cid = cid;

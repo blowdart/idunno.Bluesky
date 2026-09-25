@@ -1,8 +1,8 @@
-﻿# Get started
+# Get started
 
 Let's make your first post to Bluesky via the API in under 5 minutes.
 
-## Create a .NET project with the idunno.Bluesky nuget package
+## Create a .NET project with the idunno.Bluesky NuGet package
 
 # [Command Line](#tab/commandLine)
 
@@ -19,19 +19,19 @@ Let's make your first post to Bluesky via the API in under 5 minutes.
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `HelloBluesky` and click Next.
 1. In the "**Additional information**" dialog choose a Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
-1. Close the **Manage nuget packages** dialog.
+1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
+1. Close the **Manage NuGet packages** dialog.
 
 # [Visual Studio Code](#tab/vsCode)
 
 1. Create a new .NET Command Line project by opening the Command Palette (**Ctrl + Shift + P**) and search for **.NET New Project**
 1. In the Create a new .NET Project template search for and select **Console App**
 1. Select the folder you want to save your project in
-1. Name your project `HelloBlusky`
+1. Name your project `HelloBluesky`
 1. Choose the solution format you prefer.
 1. Press **Enter** to create the solution.
 1. Select the HelloWorld.csproj file in Explorer window.
-1. Opening the Command Palette (Ctrl + Shift + P) and search for **Nuget: Add**
+1. Open the Command Palette (Ctrl + Shift + P) and search for **NuGet: Add**
 1. Enter `idunno.Bluesky` in the package search dialog and choose the latest version.
 
 ---
@@ -48,7 +48,7 @@ the `"handle"` and `"password"` parameters in the `agent.Login()` call with your
 # [Visual Studio](#tab/session/visualStudio)
 
 1. Open the `Program.cs` file from the Solution Explorer window and change its contents to the following code, replacing
-the `"handle"` and `"password"` parameters for in the `agent.Login()` call with your Bluesky handle and password.
+the `"handle"` and `"password"` parameters in the `agent.Login()` call with your Bluesky handle and password.
   [!code-csharp[](docs/code/createASession.cs?highlight=4)]
 2. Save the changed file.
 

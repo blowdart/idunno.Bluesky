@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -15,6 +17,9 @@ namespace idunno.AtProto;
 [JsonConverter(typeof(Json.CidConverter))]
 public sealed class Cid : IEquatable<Cid>
 {
+    // The multiformats unsigned-varint specification limits values to 9 bytes / 63 bits.
+    private const int MaximumVarIntLength = 9;
+
     /// <summary>
     /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
     /// </summary>
@@ -111,11 +116,25 @@ public sealed class Cid : IEquatable<Cid>
     /// <param name="version">The Cid version.</param>
     /// <param name="codec">The codec used to encode the hash.</param>
     /// <param name="hash">The hash value(s).</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="hash"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="hash"/> is empty, or when <paramref name="version"/> is not 0 or 1.
+    /// </exception>
     public Cid(byte version, ulong codec, byte[] hash)
     {
+        ArgumentNullException.ThrowIfNull(hash);
+        ArgumentOutOfRangeException.ThrowIfZero(hash.Length);
+
+        if (version is not 0 and not 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(version),
+                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."));
+        }
+
         Version = version;
         Codec = codec;
-        Hash = hash;
+        Hash = (byte[])hash.Clone();
     }
 
     /// <summary>
@@ -146,12 +165,14 @@ public sealed class Cid : IEquatable<Cid>
     /// Returns a string that represents the current <see cref="Cid"/> object.
     /// </summary>
     /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes to lower case")]
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes the base32 used by CIDv1 to lower case.")]
     public override string ToString()
     {
         if (Version == 0)
         {
-            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray()).ToLowerInvariant();
+            // CIDv0 is base58btc, whose alphabet is case sensitive, so unlike the base32 used by CIDv1
+            // the result cannot be case normalized without producing a different, unparsable identifier.
+            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray());
         }
         else if (Version == 1)
         {
@@ -286,21 +307,41 @@ public sealed class Cid : IEquatable<Cid>
     {
         Span<byte> span = new(bytes);
 
+        if (span.IsEmpty)
+        {
+            throw new ArgumentException("Value contains no data.", nameof(bytes));
+        }
+
         byte version = span[0];
 
         if (version == 0)
         {
-            return (version, 0x70, span[1..].ToArray());
+            Span<byte> multihash = span[1..];
+
+            if (multihash.IsEmpty)
+            {
+                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+            }
+
+            return (version, 0x70, multihash.ToArray());
         }
         else if (version == 1)
         {
             (ulong codec, int codecLength) = DecodeVarInt(span[1..]);
 
-            return new(version, codec, span[(1 + codecLength)..].ToArray());
+            Span<byte> multihash = span[(1 + codecLength)..];
+
+            if (multihash.IsEmpty)
+            {
+                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+            }
+
+            return new(version, codec, multihash.ToArray());
         }
         else
         {
-            throw new ArgumentException($"Version {BitConverter.ToString(new byte[version])} is unsupported");
+            throw new ArgumentException(
+                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."), nameof(bytes));
         }
     }
 
@@ -326,17 +367,56 @@ public sealed class Cid : IEquatable<Cid>
 
         foreach (byte b in bytes)
         {
+            if (length == MaximumVarIntLength)
+            {
+                throw new ArgumentException(
+                    string.Create(CultureInfo.InvariantCulture, $"Varint is longer than the maximum of {MaximumVarIntLength} bytes."),
+                    nameof(bytes));
+            }
+
             length++;
             value |= (ulong)(b & 0x7F) << shift;
 
             if ((b & 0x80) == 0)
             {
-                break;
+                return (value, length);
             }
 
             shift += 7;
         }
 
-        return (value, length);
+        throw new ArgumentException("Varint is truncated.", nameof(bytes));
+    }
+
+    /// <summary>
+    /// Converts the string representation of an identifier to its <see cref="Cid"/> equivalent.
+    /// A return value indicates whether the operation succeeded.
+    /// </summary>
+    /// <param name="s">A string containing the id to convert.</param>
+    /// <param name="result">
+    /// When this method returns contains the <see cref="Cid"/> equivalent of the
+    /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+    /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+    /// supplied in result will be overwritten.
+    /// </param>
+    /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(string? s, [NotNullWhen(true)] out Cid? result)
+    {
+        if (string.IsNullOrEmpty(s))
+        {
+            result = null;
+            return false;
+        }
+
+        try
+        {
+            result = new Cid(s);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            result = null;
+            return false;
+        }
     }
 }

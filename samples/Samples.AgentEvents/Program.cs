@@ -87,9 +87,13 @@ public sealed class Program
                     Console.WriteLine($"EVENT: {e.Did} authenticated on {e.AccessCredentials.Service}");
                 };
 
-                agent.CredentialsUpdated += (sender, e) =>
+                agent.CredentialsUpdatedAsync = (e, cancellationToken) =>
                 {
                     // Here you update your saved state. Saving the access token is optional.
+                    //
+                    // The agent awaits this handler, so asynchronous persistence completes before the updated credentials
+                    // are used, and an exception thrown here surfaces to the caller rather than being swallowed. There is
+                    // nothing to await in this sample, so it returns a completed task.
                     //
                     // When your app restarts you can then use the RefreshCredentials(AtProtoCredential, CancellationToken) method on the Agent
                     // to try to restore the session you had.
@@ -107,6 +111,8 @@ public sealed class Program
                     }
 
                     Console.WriteLine($"EVENT: Credentials updated for : {e.Did}");
+
+                    return Task.CompletedTask;
                 };
 
                 agent.Unauthenticated += (sender, e) =>
@@ -230,9 +236,13 @@ public sealed class Program
                     Console.WriteLine($"EVENT: {e.Did} authenticated on {e.Service}");
                 };
 
-                agent.CredentialsUpdated += (sender, e) =>
+                agent.CredentialsUpdatedAsync = (e, cancellationToken) =>
                 {
                     // Here you update your saved state. Saving the access token is optional.
+                    //
+                    // The agent awaits this handler, so asynchronous persistence completes before the updated credentials
+                    // are used, and an exception thrown here surfaces to the caller rather than being swallowed. There is
+                    // nothing to await in this sample, so it returns a completed task.
                     //
                     // When your app restarts you can then use the RefreshCredentials(AtProtoCredential, CancellationToken) method on the Agent
                     // to try to restore the session you had.
@@ -250,6 +260,8 @@ public sealed class Program
                     }
 
                     Console.WriteLine($"EVENT: Credentials updated for : {e.Did}");
+
+                    return Task.CompletedTask;
                 };
 
                 agent.Unauthenticated += (sender, e) =>
@@ -294,6 +306,7 @@ public sealed class Program
                 if (!await agent.RefreshCredentials(restoredCredential, cancellationToken) || !agent.IsAuthenticated)
                 {
                     Console.WriteLine("❌\tRestore failed for access/refresh pair");
+                    return -1;
                 }
 
                 if (savedState.Equals(persistedLoginState))
@@ -311,6 +324,7 @@ public sealed class Program
                 if (!await agent.RefreshCredentials(restoredCredential, cancellationToken) || !agent.IsAuthenticated)
                 {
                     Console.WriteLine("❌\tRestore failed for refresh only");
+                    return -1;
                 }
             }
 
@@ -367,9 +381,13 @@ public sealed class Program
                     Console.WriteLine($"EVENT: {e.AccessCredentials.Did} authenticated on {e.AccessCredentials.Service}");
                 };
 
-                agent.CredentialsUpdated += (sender, e) =>
+                agent.CredentialsUpdatedAsync = (e, cancellationToken) =>
                 {
                     // Here you update your saved state. Saving the access token is optional.
+                    //
+                    // The agent awaits this handler, so asynchronous persistence completes before the updated credentials
+                    // are used, and an exception thrown here surfaces to the caller rather than being swallowed. There is
+                    // nothing to await in this sample, so it returns a completed task.
                     //
                     // When your app restarts you can then use the RefreshCredentials(AtProtoCredential, CancellationToken) method on the Agent
                     // to try to restore the session you had.
@@ -387,6 +405,8 @@ public sealed class Program
                     }
 
                     Console.WriteLine($"EVENT: Credentials updated for : {e.AccessCredentials.Did}");
+
+                    return Task.CompletedTask;
                 };
 
                 agent.Unauthenticated += (sender, e) =>
@@ -589,9 +609,13 @@ public sealed class Program
                     Console.WriteLine($"EVENT: {e.AccessCredentials.Did} authenticated on {e.AccessCredentials.Service}");
                 };
 
-                agent.CredentialsUpdated += (sender, e) =>
+                agent.CredentialsUpdatedAsync = (e, cancellationToken) =>
                 {
                     // Here you update your saved state. Saving the access token is optional.
+                    //
+                    // The agent awaits this handler, so asynchronous persistence completes before the updated credentials
+                    // are used, and an exception thrown here surfaces to the caller rather than being swallowed. There is
+                    // nothing to await in this sample, so it returns a completed task.
                     //
                     // When your app restarts you can then use the RefreshCredentials(AtProtoCredential, CancellationToken) method on the Agent
                     // to try to restore the session you had.
@@ -609,6 +633,8 @@ public sealed class Program
                     }
 
                     Console.WriteLine($"EVENT: Credentials updated for : {e.AccessCredentials.Did}");
+
+                    return Task.CompletedTask;
                 };
 
                 agent.Unauthenticated += (sender, e) =>

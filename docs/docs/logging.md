@@ -6,7 +6,7 @@ The log messages come in three categories, the `BlueskyAgent` category for opera
 the `AtProtoAgent` category for operations which are not Bluesky specific and could be used against any AT Proto server, and the
 `DirectoryAgent` category for operations performed by the DirectoryAgent class for any [DID PLC Directory](https://web.plc.directory/) operations.
 
-To configure a `LoggerFactory` for the agent, set the `LoggerFactory`property  in the `AtProtoAgentOptions` when creating an agent.
+To configure a `LoggerFactory` for the agent, set the `LoggerFactory` property in the `AtProtoAgentOptions` when creating an agent.
 
 ## <a name="configuring">Configuring logging</a>
 
@@ -20,15 +20,14 @@ using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
     configure.SetMinimumLevel(LogLevel.Debug);
 });
 
-using var agent = new BlueSkyAgent(
+using var agent = new BlueskyAgent(
     options: new BlueskyAgentOptions()
     {
         LoggerFactory = loggerFactory
-    }))
-{
-    await agent.Login(handle, password);
-    await agent.Logout();
-}
+    });
+
+await agent.Login(handle, password);
+await agent.Logout();
 ```
 
 > [!IMPORTANT]

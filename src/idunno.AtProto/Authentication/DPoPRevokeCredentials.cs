@@ -6,9 +6,15 @@ using Duende.IdentityModel.OidcClient.DPoP;
 
 namespace idunno.AtProto.Authentication;
 
-internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IDisposable
+internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
 {
-    private bool _isDisposed;
+#if NET9_0_OR_GREATER
+    private readonly Lock _dPoPRevokeCredentialsLock = new();
+#else
+    private readonly object _dPoPRevokeCredentialsLock = new();
+#endif
+
+    private DefaultDPoPProofTokenFactory? _proofTokenFactory;
 
     public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
     {
@@ -21,10 +27,10 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
         Token = token;
     }
 
-    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
+    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(
+        accessCredentials != null ? accessCredentials.Service : throw new ArgumentNullException(nameof(accessCredentials)),
+        AuthenticationType.OAuth)
     {
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-
         DPoPProofKey = accessCredentials.DPoPProofKey;
         DPoPNonce = accessCredentials.DPoPNonce;
         Token = accessCredentials.AccessJwt;
@@ -34,14 +40,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -49,14 +50,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
                 field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -65,14 +61,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -80,86 +71,77 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
                 field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _proofTokenFactory = null;
             }
         }
     }
 
+    /// <summary>
+    /// Gets or sets a string representation of the DPoP nonce to use when signing requests.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Unlike the nonce on credentials issued by a token endpoint this may be empty. A revocation request is made to
+    ///   an authorization server the agent has not necessarily called before, which only supplies a nonce in response
+    ///   to the first request, so the first proof has to be signed without one.
+    /// </para>
+    /// </remarks>
     public string DPoPNonce
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
         set
         {
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_dPoPRevokeCredentialsLock)
             {
-                field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
+                field = value ?? string.Empty;
             }
         }
     }
 
+    /// <summary>
+    /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
+    /// </summary>
+    /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The proof for a revocation request deliberately does not carry an <c>ath</c> claim, so
+    ///   <see cref="DPoPProofRequest.AccessToken"/> is left unset. Revocation is not a protected resource request, and
+    ///   setting it has been tested against a live authorization server and rejected. Do not add it back.
+    /// </para>
+    /// <para>
+    ///   The proof token factory is cached and rebuilt only when the <see cref="DPoPProofKey"/> changes. Building it imports
+    ///   the key, which every request sharing this credential would otherwise pay for whilst holding the lock.
+    /// </para>
+    /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        DPoPProofRequest dPoPProofRequest = new()
+        lock (_dPoPRevokeCredentialsLock)
         {
-            DPoPNonce = DPoPNonce,
-            Method = httpRequestMessage.Method.ToString(),
-            Url = httpRequestMessage.GetDPoPUrl()
-        };
-
-        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
-
-        httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_isDisposed)
-        {
-            if (disposing)
+            // Do not set AccessToken here. See the remarks above.
+            DPoPProofRequest dPoPProofRequest = new()
             {
-                ReaderWriterLockSlim.Dispose();
-            }
+                DPoPNonce = DPoPNonce,
+                Method = httpRequestMessage.Method.ToString(),
+                Url = httpRequestMessage.GetDPoPUrl()
+            };
 
-            _isDisposed = true;
+            _proofTokenFactory ??= new DefaultDPoPProofTokenFactory(DPoPProofKey);
+            DPoPProof proofToken = _proofTokenFactory.CreateProofToken(dPoPProofRequest);
+
+            httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
         }
-    }
-
-    ~DPoPRevokeCredentials()
-    {
-        Dispose(disposing: false);
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

@@ -5,13 +5,106 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Embed.Gallery;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]
 public class PostBuilderTests
 {
+    [Fact]
+    public void ToPostShouldCaptureGateRulesAtomicallyWithThePost()
+    {
+        PostBuilder postBuilder = new PostBuilder("Test post");
+        postBuilder.ThreadGateRules = [new FollowerRule()];
+        postBuilder.PostGateRules = [new DisableEmbeddingRule()];
+
+        Post post = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
+
+        Assert.NotNull(post);
+
+        Assert.NotNull(threadGateRules);
+        Assert.Equal(postBuilder.ThreadGateRules!.Count, threadGateRules.Count);
+        Assert.IsType<FollowerRule>(Assert.Single(threadGateRules));
+
+        Assert.NotNull(postGateRules);
+        Assert.IsType<DisableEmbeddingRule>(Assert.Single(postGateRules));
+    }
+
+    [Fact]
+    public void ToPostShouldReturnCopiesOfTheGateRulesRatherThanTheBuildersOwnLists()
+    {
+        PostBuilder postBuilder = new PostBuilder("Test post");
+        postBuilder.ThreadGateRules = [new FollowerRule()];
+        postBuilder.PostGateRules = [new DisableEmbeddingRule()];
+
+        _ = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
+
+        Assert.NotNull(threadGateRules);
+        Assert.NotNull(postGateRules);
+
+        threadGateRules.Clear();
+        postGateRules.Clear();
+
+        Assert.NotNull(postBuilder.ThreadGateRules);
+        Assert.Single(postBuilder.ThreadGateRules);
+        Assert.NotNull(postBuilder.PostGateRules);
+        Assert.Single(postBuilder.PostGateRules);
+    }
+
+    [Fact]
+    public void ToPostShouldReturnNullGateRulesWhenNoneAreConfigured()
+    {
+        PostBuilder postBuilder = new PostBuilder("Test post");
+
+        _ = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
+
+        Assert.Null(threadGateRules);
+        Assert.Null(postGateRules);
+    }
+
+    [Fact]
+    public async Task ExtractFacetsShouldNotApplyFacetsWhenTheTextChangesDuringExtraction()
+    {
+        PostBuilder postBuilder = new PostBuilder("Hello #world");
+
+        // Facet indexes are byte offsets into the text they were extracted from, so facets
+        // extracted from text that has since been replaced must be discarded.
+        MutatingFacetExtractor extractor = new(postBuilder, "Something completely different");
+
+        await postBuilder.ExtractFacets(extractor, TestContext.Current.CancellationToken);
+
+        Assert.Empty(postBuilder.Facets);
+    }
+
+    [Fact]
+    public async Task ExtractFacetsShouldApplyFacetsWhenTheTextIsUnchanged()
+    {
+        PostBuilder postBuilder = new PostBuilder("Hello #world");
+
+        MutatingFacetExtractor extractor = new(postBuilder, null);
+
+        await postBuilder.ExtractFacets(extractor, TestContext.Current.CancellationToken);
+
+        Assert.Single(postBuilder.Facets);
+    }
+
+    private sealed class MutatingFacetExtractor(PostBuilder postBuilder, string? replacementText) : IFacetExtractor
+    {
+        public async Task<IList<Facet>> ExtractFacets(string text, CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+
+            if (replacementText is not null)
+            {
+                postBuilder.WithText(replacementText);
+            }
+
+            return [new Facet(new ByteSlice(6, 12), [new TagFacetFeature("world")])];
+        }
+    }
     [Fact]
     public void SettingTextViaBuilderConstructorShouldSetPostRecordText()
     {
@@ -233,9 +326,9 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
+    public void ConstructorThrowsWhenAnTooLongTagInBytesIsPassed()
     {
-        List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
+        List<string> tags = [new('x', Maximum.TagLengthInBytes + 1)];
 
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder("text", tags: tags));
 

@@ -17,9 +17,14 @@ public sealed record EmbeddedImageView
     /// <param name="fullSizeUri">The fully-qualified URL where a large version of the image can be fetched</param>
     /// <param name="altText">The alt text description of the image, for accessibility.</param>
     /// <param name="aspectRatio">An optional aspect ratio for the image.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="thumbnailUri"/>, <paramref name="fullSizeUri"/> or <paramref name="altText"/> is <see langword="null" />.</exception>
     [JsonConstructor]
     internal EmbeddedImageView(Uri thumbnailUri, Uri fullSizeUri, string altText, AspectRatio? aspectRatio)
     {
+        ArgumentNullException.ThrowIfNull(thumbnailUri);
+        ArgumentNullException.ThrowIfNull(fullSizeUri);
+        ArgumentNullException.ThrowIfNull(altText);
+
         ThumbnailUri = thumbnailUri;
         FullSizeUri = fullSizeUri;
         AltText = altText;

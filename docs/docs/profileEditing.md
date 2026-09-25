@@ -1,4 +1,4 @@
-﻿# <a name="profileEditing">Changing a user's profile</a>
+# <a name="profileEditing">Changing a user's profile</a>
 
 A user's profile consists of the user's title, a description, a profile picture and a banner picture, all of which can be left empty, as
 well as other settings like a pinned post that is shown when someone views the account's profile page, a setting to discourage applications
@@ -11,19 +11,19 @@ To get the profile record for the current user call `agent.GetProfileRecord()`.
 var profileRecordResult = await agent.GetProfileRecord();
 ```
 
-If the call is successful, it will return an `AtProtoHttpResult` wrapping an `AtProtoRecord<Profile>` which, in turn,
+If the call is successful, it will return an `AtProtoHttpResult` wrapping an `AtProtoRepositoryRecord<Profile>` which, in turn,
 exposes the profile values in its `Value` property.
 
 ```c#
 var profileRecordResult = await agent.GetProfileRecord();
 if (profileRecordResult.Succeeded)
 {
-    string displayName = profileRecord.Result.Value.DisplayName);
+    string displayName = profileRecordResult.Result.Value.DisplayName;
 }
 ```
 
 To make changes to the basic profile information you must get the current record, change the `Value` properties you want to update, then call
-`agent.UpdateProfileRecord()`. For example:
+`agent.UpdateProfile()`. For example:
 
 ```c#
 var profileRecordResult = await agent.GetProfileRecord();
@@ -40,10 +40,10 @@ If you try to update a profile a second time, without re-reading it, you will ge
 
 ## <a name="pinningAPost">Pinning a post.</a>
 
-To pin a post you set the `PinnedPost` property on the `ProfileRecord` value, then call `UpdateProfileRecord()`.
+To pin a post you set the `PinnedPost` property on the `ProfileRecord` value, then call `UpdateProfile()`.
 This requires a strong reference to a post, and the post must belong to the current user.
 
-To remove the pinned post set `PinnedPost` to null and call `UpdateProfileRecord()`.
+To remove the pinned post set `PinnedPost` to null and call `UpdateProfile()`.
 
 ## <a name="discouragingUnauthenticatedViewing">Discouraging apps from showing an account to unauthenticated users.</a>
 
@@ -72,14 +72,14 @@ service.
 To create a status indicating the current user is live streaming use `CreateLiveStatus()`.
 
 ```c#
-var createLiveStatusREsult = await agent.CreateLiveStatus(
+var createLiveStatusResult = await agent.CreateLiveStatus(
     uri: new Uri("https://twitch.tv/streamer"),
     title: "BeanEater",
     description: "Rolling that beautiful bean footage",
     durationMinutes: 5);
 ```
 
-You can include a thumbnail preview for your stream with the `PreviewBlob` parameter, using an blob reference
+You can include a thumbnail preview for your stream with the `PreviewBlob` parameter, using a blob reference
 you previously uploaded with [UploadImage](posting.md#images).
 
 To delete a status before it expires use `DeleteStatus`.

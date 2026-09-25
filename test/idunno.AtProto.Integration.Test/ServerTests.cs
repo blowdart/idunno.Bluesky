@@ -1,7 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -20,7 +20,7 @@ public class ServerTests
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (request.Path == AtProtoServer.DescribeServerEndpoint)
+            if (request.Path == "/xrpc/com.atproto.server.describeServer")
             {
                 response.StatusCode = 200;
                 var serverDescription = new ServerDescription(
@@ -33,7 +33,8 @@ public class ServerTests
                     },
                     availableUserDomains: [domainName],
                     inviteCodeRequired: false,
-                    phoneVerificationRequired: false);
+                    phoneVerificationRequired: false,
+                    blobUploadLimit: 10000000);
                 await response.WriteAsJsonAsync(serverDescription);
             }
         });
@@ -51,6 +52,8 @@ public class ServerTests
         Assert.Equal($"test@{domainName}", response.Result.Contact.Email);
 
         Assert.False(response.Result.InviteCodeRequired);
+        Assert.False(response.Result.PhoneVerificationRequired);
+        Assert.Equal(10000000, response.Result.BlobUploadLimit);
 
         Assert.Single(response.Result.AvailableUserDomains);
         Assert.Equal(response.Result.AvailableUserDomains[0], domainName);
@@ -70,7 +73,7 @@ public class ServerTests
             HttpRequest request = context.Request;
             HttpResponse response = context.Response;
 
-            if (request.Path == AtProtoServer.DescribeServerEndpoint)
+            if (request.Path == "/xrpc/com.atproto.server.describeServer")
             {
                 response.StatusCode = 200;
                 var serverDescription = new ServerDescription(
@@ -83,7 +86,8 @@ public class ServerTests
                     },
                     availableUserDomains: [domainName],
                     inviteCodeRequired: false,
-                    phoneVerificationRequired: false);
+                    phoneVerificationRequired: false,
+                    blobUploadLimit: 10000000);
                 await response.WriteAsJsonAsync(serverDescription);
             }
         });
@@ -99,6 +103,8 @@ public class ServerTests
             Assert.Equal($"test@{domainName}", response.Result.Contact.Email);
 
             Assert.False(response.Result.InviteCodeRequired);
+            Assert.False(response.Result.PhoneVerificationRequired);
+            Assert.Equal(10000000, response.Result.BlobUploadLimit);
 
             Assert.Single(response.Result.AvailableUserDomains);
             Assert.Equal(response.Result.AvailableUserDomains[0], domainName);

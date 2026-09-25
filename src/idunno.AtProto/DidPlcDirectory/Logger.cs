@@ -27,4 +27,7 @@ internal static partial class Logger
 
     [LoggerMessage(12, LogLevel.Error, "Cannot resolve DidDoc, unknown {did} type")]
     internal static partial void UnknownDidType(ILogger logger, Did did);
+
+    [LoggerMessage(13, LogLevel.Error, "Cannot resolve DidDoc, {did} is not a supported did:web identifier")]
+    internal static partial void UnsupportedWebDid(ILogger logger, Did did);
 }

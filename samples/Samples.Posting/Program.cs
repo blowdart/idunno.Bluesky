@@ -56,7 +56,7 @@ public sealed class Program
         // Change the log level in the ConfigureConsoleLogging() to enable logging
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {
@@ -118,7 +118,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -149,7 +149,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -178,7 +178,7 @@ public sealed class Program
                 Debugger.Break();
 
                 // Delete the post we just made
-                AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                AtProtoHttpResult<DeleteResult> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                 if (!delete.Succeeded)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;

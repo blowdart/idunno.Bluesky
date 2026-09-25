@@ -10,13 +10,13 @@ namespace idunno.Bluesky.Chat.Group.Model;
 internal class AddMembersRequest
 {
     [JsonConstructor]
-    public AddMembersRequest(string conversationId, IEnumerable<Did> members)
+    public AddMembersRequest(string conversationId, ICollection<Did> members)
     {
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(members);
-        ArgumentOutOfRangeException.ThrowIfZero(members.Count());
+        ArgumentOutOfRangeException.ThrowIfZero(members.Count);
         ConversationId = conversationId;
-        Members = members;
+        Members = new List<Did>(members);
     }
 
     [JsonInclude]
@@ -26,5 +26,5 @@ internal class AddMembersRequest
 
     [JsonInclude]
     [JsonRequired]
-    public IEnumerable<Did> Members { get; init; }
+    public ICollection<Did> Members { get; init; }
 }

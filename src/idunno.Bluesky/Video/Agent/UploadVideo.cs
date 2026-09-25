@@ -1,7 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text.Json;
+
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Server;
 using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;
@@ -13,12 +19,12 @@ public partial class BlueskyAgent
     /// </summary>
     /// <param name="fileName">The filename of the media.</param>
     /// <param name="media">The media to upload as bytes.</param>
-    /// <param name="mimeType">The MIME type of the media. Must start with 'video/' or be 'image/gif'.</param>
+    /// <param name="mimeType">The MIME type of the media.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> does not start with 'video/' or is not 'image/gif'.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> is <see langword="null"/>, whitespace, or is not a valid media type.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="media"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="media"/> is empty, or when <paramref name="mimeType"/> is outside the allowable length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
         string fileName,
@@ -30,43 +36,112 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(media);
         ArgumentException.ThrowIfNullOrWhiteSpace(mimeType);
         ArgumentOutOfRangeException.ThrowIfZero(media.Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeMinimumLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mimeType.GetUtf8Length(), Maximum.VideoMimeTypeLengthInBytes);
 
-        if (!mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) &&
-            !mimeType.Equals("image/gif", StringComparison.OrdinalIgnoreCase))
+        if (!MediaTypeHeaderValue.TryParse(mimeType, out MediaTypeHeaderValue? parsedMimeType) ||
+            parsedMimeType.MediaType is null)
         {
-            throw new ArgumentException("The MIME type must start with 'video/' or be 'image/gif'.", nameof(mimeType));
+            throw new ArgumentException("MIME type is not a valid media type.", nameof(mimeType));
         }
 
-
-        if (!IsAuthenticated)
+        using (_logger.BeginScope($"Uploading media for {Did}"))
         {
-            throw new AuthenticationRequiredException();
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            // Get the server description so we can get the DID of the server.
+            AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
+
+            if (serverDescriptionResult.Succeeded)
+            {
+                AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
+                    Service,
+                    audience: serverDescriptionResult.Result.Did,
+                    lxm: UploadBlobLxm,
+                    expiry: new TimeSpan(0, 30, 0),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!getServiceAuthResult.Succeeded)
+                {
+                    return new AtProtoHttpResult<JobStatus>(
+                        null,
+                        getServiceAuthResult.StatusCode,
+                        getServiceAuthResult.HttpResponseHeaders,
+                        getServiceAuthResult.AtErrorDetail,
+                        getServiceAuthResult.RateLimit);
+                }
+
+                Logger.UploadMediaStarted(_logger, Did, _videoServer, fileName, media.Length, mimeType);
+
+                AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadVideo(
+                    serverDescriptionResult.Result.Did,
+                    fileName,
+                    mimeType,
+                    media,
+                    service: _videoServer,
+                    serviceCredential: getServiceAuthResult.Result,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    maximumResponseSize: MaximumResponseSize,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (result.Succeeded)
+                {
+                    Logger.UploadMediaSucceeded(_logger, result.Result.JobId, Did);
+                }
+                else
+                {
+                    if (result.StatusCode == HttpStatusCode.Conflict &&
+                        result.AtErrorDetail is not null &&
+                        string.Equals("already_exists", result.AtErrorDetail.Error, StringComparison.Ordinal) &&
+                        result.AtErrorDetail.ExtensionData is not null &&
+                        result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement) &&
+                        jobIdElement.ValueKind == JsonValueKind.String)
+                    {
+                        // A JsonElement whose ValueKind is String never returns null from GetString().
+                        string jobId = jobIdElement.GetString()!;
+
+                        if (!string.IsNullOrWhiteSpace(jobId))
+                        {
+                            return await GetJobStatus(jobId, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        Logger.UploadMediaAlreadyExistsJobIdUnusable(_logger, Did);
+                    }
+
+                    string? error = null;
+                    string? message = null;
+                    if (result.AtErrorDetail is not null)
+                    {
+                        error = result.AtErrorDetail.Error;
+                        message = result.AtErrorDetail.Message;
+                    }
+
+                    Logger.UploadMediaFailed(_logger, result.StatusCode, Did, error, message);
+                }
+
+                return result;
+            }
+            else
+            {
+                Logger.UploadMediaGetServerDescriptionFailed(
+                    _logger,
+                    Did,
+                    Service,
+                    serverDescriptionResult.StatusCode,
+                    serverDescriptionResult.AtErrorDetail?.Error,
+                    serverDescriptionResult.AtErrorDetail?.Message);
+
+                return new AtProtoHttpResult<JobStatus>(
+                    null,
+                    serverDescriptionResult.StatusCode,
+                    serverDescriptionResult.HttpResponseHeaders,
+                    serverDescriptionResult.AtErrorDetail,
+                    serverDescriptionResult.RateLimit);
+            }
         }
-
-        return await UploadMedia(fileName, media, mimeType, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Uploads a video to be processed and stored.
-    /// </summary>
-    /// <param name="fileName">The filename of the video.</param>
-    /// <param name="video">The video to upload as bytes.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    [Obsolete("Use UploadVideo(string fileName, byte[] media, string mimeType, CancellationToken cancellationToken) instead.", false)]
-    public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
-        string fileName,
-        byte[] video,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(fileName);
-        ArgumentNullException.ThrowIfNull(video);
-        ArgumentOutOfRangeException.ThrowIfZero(video.Length);
-
-        return await UploadVideo(fileName, video, "video/mp4", cancellationToken).ConfigureAwait(false);
     }
 }

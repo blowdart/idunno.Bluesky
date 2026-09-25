@@ -4,6 +4,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
 
@@ -28,17 +29,11 @@ public sealed record MessageInput
     public MessageInput(string text, ICollection<Facet>? facets = null, EmbeddedRecord? embed = null, ReplyReference? replyTo = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.MessageLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.MessageLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
         Text = text;
 
-        if (facets is not null)
-        {
-            Facets = new ReadOnlyCollection<Facet>(facets.ToList().AsReadOnly());
-        }
-        else
-        {
-            Facets = null;
-        }
+        Facets = facets is not null ? [.. facets] : null;
 
         Embed = embed;
         ReplyTo = replyTo;
@@ -47,28 +42,62 @@ public sealed record MessageInput
     /// <summary>
     /// Gets the text of the message
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value set exceeds the maximum allowed length.</exception>
+    /// <remarks>
+    /// <para>
+    /// The value supplied is validated against the same limits the constructor applies, so the limits cannot be
+    /// bypassed by assigning in an object initializer or a <see langword="with"/> expression.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
     [JsonRequired]
-    public string Text { get; init; }
+    public string Text
+    {
+        get => _text;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.MessageLengthInBytes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
+
+            _text = value;
+        }
+    }
 
     /// <summary>
-    /// Gets or sets the rich text <see cref="Facet"/>s of the message, if any.
+    /// Gets the rich text <see cref="Facet"/>s of the message, if any.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A facet's range is a pair of byte offsets into <see cref="Text"/>, so facets are only meaningful alongside the text they were
+    /// extracted from. The value supplied is copied, so later changes to the collection passed in are not reflected here.
+    /// </para>
+    /// </remarks>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyCollection<Facet>? Facets
+    {
+        get => _facets;
+        init => _facets = value is not null ? new ReadOnlyCollection<Facet>([.. value]) : null;
+    }
+
+    /// <summary>
+    /// Gets the embedded record of the message, if any.
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyCollection<Facet>? Facets { get; set; }
+    public EmbeddedBase? Embed { get; init; }
 
     /// <summary>
-    /// Gets or sets the embedded record of the message, if any.
+    /// Gets the message this message is replying to. The referenced message must be in the same conversation.
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public EmbeddedBase? Embed { get; set; }
+    public ReplyReference? ReplyTo { get; init; }
 
-    /// <summary>
-    /// Gets or sets the message this message is replying to. The referenced message must be in the same conversation.
-    /// </summary>
-    [JsonInclude]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ReplyReference? ReplyTo { get; set; }
+    private readonly string _text = null!;
+
+    private readonly IReadOnlyCollection<Facet>? _facets;
 }

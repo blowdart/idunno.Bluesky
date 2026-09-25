@@ -11,8 +11,15 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _dPoPAccessCredentialsLock = new();
+#else
+    private readonly object _dPoPAccessCredentialsLock = new();
+#endif
+
     private string _dPoPProofKey;
     private string _dPoPNonce;
+    private DefaultDPoPProofTokenFactory? _proofTokenFactory;
 
     /// <summary>
     /// Creates a new instance of <see cref="DPoPAccessCredentials"/> with the specified <paramref name="accessJwt"/>, <paramref name="refreshToken"/>,
@@ -32,8 +39,8 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
-        ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-        ArgumentException.ThrowIfNullOrEmpty(dPoPNonce);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPProofKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPNonce);
 
         _dPoPProofKey = dPoPProofKey;
         _dPoPNonce = dPoPNonce;
@@ -47,14 +54,9 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_dPoPAccessCredentialsLock)
             {
                 return _dPoPProofKey;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -62,46 +64,35 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_dPoPAccessCredentialsLock)
             {
                 _dPoPProofKey = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
+                _proofTokenFactory = null;
             }
         }
     }
 
     /// <summary>
-    /// Gets a string representation of the DPoP nonce to use when signing requests.
+    /// Gets or sets a string representation of the DPoP nonce to use when signing requests.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
     public string DPoPNonce
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_dPoPAccessCredentialsLock)
             {
                 return _dPoPNonce;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
         set
         {
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            lock (_dPoPAccessCredentialsLock)
             {
                 _dPoPNonce = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -111,42 +102,41 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     /// </summary>
     /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="AccessCredentials.AccessJwt">access token</see> is read once so that the proof token's <c>ath</c>
+    ///   claim and the token presented in the authorization header are always bound to the same value.
+    /// </para>
+    /// <para>
+    ///   The proof token factory is cached and rebuilt only when the <see cref="DPoPProofKey"/> changes. Building it imports
+    ///   the key, which every request sharing this credential would otherwise pay for whilst holding the lock.
+    /// </para>
+    /// <para>
+    ///   The access token is read before the DPoP lock is taken rather than inside it. This type and its base class guard
+    ///   their state with separate locks, and taking one whilst holding the other establishes an ordering between them which
+    ///   nothing else enforces.
+    /// </para>
+    /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        DPoPProofRequest dPoPProofRequest = new()
+        string accessJwt = AccessJwt;
+
+        lock (_dPoPAccessCredentialsLock)
         {
-            AccessToken = AccessJwt,
-            DPoPNonce = DPoPNonce,
-            Method = httpRequestMessage.Method.ToString(),
-            Url = httpRequestMessage.GetDPoPUrl()
-        };
+            DPoPProofRequest dPoPProofRequest = new()
+            {
+                AccessToken = accessJwt,
+                DPoPNonce = _dPoPNonce,
+                Method = httpRequestMessage.Method.ToString(),
+                Url = httpRequestMessage.GetDPoPUrl()
+            };
 
-        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+            _proofTokenFactory ??= new DefaultDPoPProofTokenFactory(_dPoPProofKey);
+            DPoPProof proofToken = _proofTokenFactory.CreateProofToken(dPoPProofRequest);
 
-        httpRequestMessage.SetDPoPToken(AccessJwt, proofToken.ProofToken);
-    }
-
-    internal void Update(DPoPAccessCredentials dPoPAccessCredentials)
-    {
-        ArgumentNullException.ThrowIfNull(dPoPAccessCredentials);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.AccessJwt);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.RefreshToken);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.DPoPProofKey);
-
-        ReaderWriterLockSlim.EnterWriteLock();
-
-        try
-        {
-            Update(dPoPAccessCredentials as AccessCredentials);
-            _dPoPProofKey = dPoPAccessCredentials.DPoPProofKey;
-            _dPoPNonce = dPoPAccessCredentials.DPoPNonce;
-        }
-        finally
-        {
-            ReaderWriterLockSlim.ExitWriteLock();
+            httpRequestMessage.SetDPoPToken(accessJwt, proofToken.ProofToken);
         }
     }
 }

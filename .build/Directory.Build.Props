@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <NoWarn>$(NoWarn);CA1303;CA1050</NoWarn>
+    <NoError>$(NoError);CA1303;CA1050</NoError>
+    <WarningsNotAsErrors>CA1303;CA1050</WarningsNotAsErrors>
+  </PropertyGroup>
+</Project>

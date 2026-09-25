@@ -13,11 +13,11 @@ public sealed record RepoDescription
     /// <summary>
     /// Creates a new instance of <see cref="RepoDescription"/>.
     /// </summary>
-    /// <param name="handle">The <see cref="Handle"/> the is owned by.</param>
+    /// <param name="handle">The <see cref="Handle"/> the repository is owned by.</param>
     /// <param name="did">The <see cref="Did"/> for the repo.</param>
     /// <param name="didDoc">The <see cref="DidDocument"/> for the repo.</param>
     /// <param name="collections">Any collection NSIDs the repo may contain.</param>
-    /// <param name="handleIsCorrect">A flag indicating indicating if handle is currently valid (resolves bi-directionally)</param>
+    /// <param name="handleIsCorrect">A flag indicating if the handle is currently valid (resolves bi-directionally)</param>
     [JsonConstructor]
     internal RepoDescription(Handle handle, Did did, DidDocument didDoc, IReadOnlyCollection<Nsid> collections, bool handleIsCorrect)
     {

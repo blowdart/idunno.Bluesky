@@ -47,7 +47,7 @@ public record Declaration : BlueskyRecord
 /// <summary>
 /// Who is allowed to subscribe to notifications about account posts and reposts.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<NotificationAllowedFrom>))]
+[JsonConverter(typeof(NotificationAllowedFromConverter))]
 public enum NotificationAllowedFrom
 {
     /// <summary>
@@ -66,5 +66,15 @@ public enum NotificationAllowedFrom
     /// Users who follow the account and the account follows.
     /// </summary>
     [JsonStringEnumMemberName("mutuals")]
-    Mutuals
+    Mutuals,
+
+    /// <summary>
+    /// The value is not one this library recognizes.
+    /// </summary>
+    /// <remarks>
+    /// <para>The set of values is decided by the service, not by this library, so a value added upstream is
+    /// surfaced as <see cref="Unknown"/> rather than causing the declaration to fail to deserialize. It cannot
+    /// be sent to the service.</para>
+    /// </remarks>
+    Unknown
 }

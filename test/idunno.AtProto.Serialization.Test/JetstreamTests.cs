@@ -60,7 +60,7 @@ public class JetstreamTests
         Assert.NotNull(derivedCast);
 
         Assert.Equal("3l3qo2vutsw2b", derivedCast.Commit.Rev);
-        Assert.Equal("create", derivedCast.Commit.Operation);
+        Assert.Equal(JetstreamCommitOperation.Create, derivedCast.Commit.Operation);
         Assert.Equal("app.bsky.feed.like", derivedCast.Commit.Collection);
         Assert.Equal("3l3qo2vuowo2b", derivedCast.Commit.RKey);
         Assert.NotNull(derivedCast.Commit.Record);
@@ -100,7 +100,7 @@ public class JetstreamTests
         AtJetstreamCommitEvent? derivedCast = derived as AtJetstreamCommitEvent;
         Assert.NotNull(derivedCast);
 
-        Assert.Equal("delete", derivedCast.Commit.Operation);
+        Assert.Equal(JetstreamCommitOperation.Delete, derivedCast.Commit.Operation);
         Assert.Null(derivedCast.Commit.Cid);
     }
 
@@ -162,7 +162,7 @@ public class JetstreamTests
         AtJetstreamCommitEvent? derivedCast = derived as AtJetstreamCommitEvent;
         Assert.NotNull(derivedCast);
 
-        Assert.Equal("update", derivedCast.Commit.Operation);
+        Assert.Equal(JetstreamCommitOperation.Update, derivedCast.Commit.Operation);
     }
 
     [Fact]

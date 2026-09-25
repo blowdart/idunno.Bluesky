@@ -14,7 +14,7 @@ to like
 | post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to like. | Yes        |
 
 >[!Tip]
->It is recommended use the `Like()` overload that takes a `FeedViewPost` where possible as this will check if you are liking a repost, and ensures the correct notification is send to the
+>It is recommended to use the `Like()` overload that takes a `FeedViewPost` where possible as this will check if you are liking a repost, and ensures the correct notification is sent to the
 >repost author.
 
 `Like(strongReference)`
@@ -24,7 +24,7 @@ to like
 | strongReference | StrongReference | The [Strong Reference](../commonTerms.md#strongReference) of the post to like. | Yes        |
 
 ```c#
-var likeResult = agent.Like(strongReference);
+var likeResult = await agent.Like(strongReference);
 ```
 
 `agent.Like()` also has an overload which takes the [at:// uri](../commonTerms.md#uri) and [CID](../commonTerms.md#cid) of
@@ -38,24 +38,24 @@ the post to like
 | cid          | Cid    | The [CID](../commonTerms.md#cid) of the post to like.                   | Yes        |
 
 ```c#
-var likeResult = agent.Like(uri, cid);
+var likeResult = await agent.Like(uri, cid);
 ```
 
 ## Un-liking a post
 
-Un-liking a post requires calling `agent.DeleteLike()` with original post's [at:// uri](../commonTerms.md#uri).
+Un-liking a post requires calling `agent.DeleteLike()` with the original post's [at:// uri](../commonTerms.md#uri).
 
 | Parameter    | Type   | Description                                                                | Required   |
 |--------------|--------|----------------------------------------------------------------------------|:----------:|
 | uri          | AtUri  | The [at:// uri](../commonTerms.md#uri) of the post to delete the like for. | Yes        |
 
 ```c#
-var deleteLikeResult = agent.DeleteLike(uri);
+var deleteLikeResult = await agent.DeleteLike(uri);
 ```
 
 ## Reposting a post
 
-Reposting and un-reposting looks almost exactly the same as liking and un-liking.
+Reposting and un-reposting look almost exactly the same as liking and un-liking.
 
 `Repost(post)`
 
@@ -64,7 +64,7 @@ Reposting and un-reposting looks almost exactly the same as liking and un-liking
 | post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to repost. | Yes        |
 
 >[!Tip]
->It is recommended use the Repost() overload that takes a `FeedViewPost` where possible as this will check if you are reposting a repost, and ensures the correct notification is send to the
+>It is recommended to use the `Repost()` overload that takes a `FeedViewPost` where possible as this will check if you are reposting a repost, and ensures the correct notification is sent to the
 >repost author.
 
 `Repost(strongReference)`
@@ -74,7 +74,7 @@ Reposting and un-reposting looks almost exactly the same as liking and un-liking
 | strongReference | StrongReference | The [Strong Reference](../commonTerms.md#strongReference) of the post to repost.             | Yes        |
 
 ```c#
-var repostResult = agent.Repost(strongReference);
+var repostResult = await agent.Repost(strongReference);
 ```
 
 .Repost(atUri, cid)`
@@ -85,7 +85,7 @@ var repostResult = agent.Repost(strongReference);
 | cid          | Cid    | The [CID](../commonTerms.md#cid) of the post to repost.                   | Yes        |
 
 ```c#
-var repostResult = agent.Repost(uri, cid);
+var repostResult = await agent.Repost(uri, cid);
 ```
 
 ## Un-Reposting a post
@@ -97,7 +97,7 @@ Just like un-liking a post deleting a repost requires the original post's [at://
 | uri          | AtUri  | The [at:// uri](../commonTerms.md#uri) of the post to delete the like for. | Yes        |
 
 ```c#
-var deleteRepostResult = agent.DeleteRepost(uri);
+var deleteRepostResult = await agent.DeleteRepost(uri);
 ```
 
 ### Quoting a post

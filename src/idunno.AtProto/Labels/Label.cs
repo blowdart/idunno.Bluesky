@@ -34,7 +34,7 @@ public sealed record Label : AtProtoObject
     /// <param name="signature">Signature of dag-cbor encoded label.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="source"/>, <paramref name="uri"/> or <paramref name="value"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a length &gt; 128 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 UTF-8 bytes.</exception>
     public Label(
         int? version,
         Did source,
@@ -48,7 +48,7 @@ public sealed record Label : AtProtoObject
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentException.ThrowIfNullOrEmpty(value);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 128);
 
         Version = version;
         Source = source;
@@ -110,10 +110,14 @@ public sealed record Label : AtProtoObject
     public DateTimeOffset CreationTimestamp { get; init; }
 
     /// <summary>
-    /// Signature of dag-cbor encoded label.
+    /// Signature of dag-cbor encoded label, if the label was signed.
     /// </summary>
+    /// <remarks>
+    /// <para>The <c>sig</c> property is optional in <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/defs.json">com.atproto.label.defs</see>,
+    /// so this will be <see langword="null" /> for labels which carry no signature.</para>
+    /// </remarks>
     [JsonPropertyName("sig")]
-    public IEnumerable<byte> Signature { get; init; }
+    public IEnumerable<byte>? Signature { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => '{' + Value + '}';

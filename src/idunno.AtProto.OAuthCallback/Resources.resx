@@ -131,4 +131,10 @@ Main &gt; h1 {font-size: 3.5em;} img { float:left; padding-right: 20px;}
   <data name="SuccessTitle" xml:space="preserve">
     <value>&lt;title&gt;Login completed&lt;/title&gt;</value>
   </data>
+  <data name="FailureBody" xml:space="preserve">
+    <value>&lt;h1&gt;Login was not completed.&lt;/h1&gt;&lt;p&gt;The authorization server did not issue an authorization code. You may now close this window and return to your application.&lt;/p&gt;</value>
+  </data>
+  <data name="FailureTitle" xml:space="preserve">
+    <value>&lt;title&gt;Login was not completed&lt;/title&gt;</value>
+  </data>
 </root>

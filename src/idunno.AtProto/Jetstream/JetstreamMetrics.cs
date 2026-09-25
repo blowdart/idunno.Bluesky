@@ -100,7 +100,7 @@ public sealed class JetstreamMetrics
             unit: "{connections}");
 
         ConnectionFailures = meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.total_connections_failed",
+            name: $"{MeterName.ToLowerInvariant()}.total.connections_failed",
             description: "Number of connection failures.",
             unit: "{connections}");
 

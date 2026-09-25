@@ -10,22 +10,15 @@ namespace idunno.Bluesky.Actor;
 /// <summary>
 /// Base record for actor preferences.
 /// </summary>
-[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor, IgnoreUnrecognizedTypeDiscriminators = true)]
-[JsonDerivedType(typeof(LabelersPreference), typeDiscriminator: PreferenceTypeDiscriminators.Labelers)]
-[JsonDerivedType(typeof(ContentLabelPreference), typeDiscriminator: PreferenceTypeDiscriminators.ContentLabel)]
-[JsonDerivedType(typeof(InterestsPreference), typeDiscriminator: PreferenceTypeDiscriminators.Interests)]
-[JsonDerivedType(typeof(SavedFeedPreference), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds)]
-[JsonDerivedType(typeof(SavedFeedPreference2), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds2)]
-[JsonDerivedType(typeof(HiddenPostsPreferences), typeDiscriminator: PreferenceTypeDiscriminators.HiddenPosts)]
-[JsonDerivedType(typeof(AdultContentPreference), typeDiscriminator: PreferenceTypeDiscriminators.AdultContent)]
-[JsonDerivedType(typeof(PersonalDetailsPreference), typeDiscriminator: PreferenceTypeDiscriminators.PersonalDetails)]
-[JsonDerivedType(typeof(FeedViewPreference), typeDiscriminator: PreferenceTypeDiscriminators.FeedView)]
-[JsonDerivedType(typeof(MutedWordPreferences), typeDiscriminator: PreferenceTypeDiscriminators.MutedWords)]
-[JsonDerivedType(typeof(ThreadViewPreference), typeDiscriminator: PreferenceTypeDiscriminators.ThreadView)]
-[JsonDerivedType(typeof(BlueskyAppStatePreference), typeDiscriminator: PreferenceTypeDiscriminators.BlueskyAppState)]
-[JsonDerivedType(typeof(InteractionPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
-[JsonDerivedType(typeof(VerificationPreferences), typeDiscriminator: PreferenceTypeDiscriminators.Verification)]
-[JsonDerivedType(typeof(DeclaredAgePreference), typeDiscriminator: PreferenceTypeDiscriminators.DeclaredAge)]
+/// <remarks>
+/// <para>
+/// Polymorphic serialization for preferences is handled by <c>PreferenceConverter</c> rather than by
+/// <see cref="JsonPolymorphicAttribute"/>. System.Text.Json discards the <c>$type</c> property of a preference
+/// whose discriminator it does not recognize, which loses data when the preference set is written back. The
+/// converter maps discriminators itself so unrecognized preferences survive a round trip intact, and a custom
+/// converter on a base type cannot be combined with the polymorphism attributes.
+/// </para>
+/// </remarks>
 public record Preference
 {
     /// <summary>

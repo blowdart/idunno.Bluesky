@@ -110,6 +110,144 @@ public class DirectoryTests
     }
 
     [Fact]
+    public async Task DirectoryAgentHonoursAConfiguredMaximumResponseSize()
+    {
+        const string directoryServerHostName = "directory.invalid";
+        const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+        const int maximumResponseSize = 256;
+
+        TestServer testServer = CreatePaddedDidDocumentServer(directoryServerHostName, knownDid);
+
+        using (var agent = new DirectoryAgent(
+            new TestHttpClientFactory(testServer),
+            new DirectoryAgentOptions
+            {
+                PlcDirectoryUri = new Uri($"https://{directoryServerHostName}"),
+                MaximumResponseSize = maximumResponseSize
+            }))
+        {
+            AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
+                did: new Did(knownDid),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.False(result.Succeeded);
+            Assert.NotNull(result.AtErrorDetail);
+            Assert.Equal("ResponseTooLarge", result.AtErrorDetail.Error);
+        }
+    }
+
+    [Fact]
+    public async Task DirectoryAgentResolvesTheSameDocumentWhenTheMaximumResponseSizeAllowsIt()
+    {
+        const string directoryServerHostName = "directory.invalid";
+        const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+
+        TestServer testServer = CreatePaddedDidDocumentServer(directoryServerHostName, knownDid);
+
+        using (var agent = new DirectoryAgent(
+            new TestHttpClientFactory(testServer),
+            new DirectoryAgentOptions
+            {
+                PlcDirectoryUri = new Uri($"https://{directoryServerHostName}")
+            }))
+        {
+            AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
+                did: new Did(knownDid),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(result.Result);
+            Assert.Equal(new Did(knownDid), result.Result.Id);
+        }
+    }
+
+    [Fact]
+    public async Task AtProtoAgentAppliesItsMaximumResponseSizeToDidDocumentResolution()
+    {
+        const string directoryServerHostName = "directory.invalid";
+        const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+        const int maximumResponseSize = 256;
+
+        TestServer testServer = CreatePaddedDidDocumentServer(directoryServerHostName, knownDid);
+
+        using (var agent = new AtProtoAgent(
+            TestServerBuilder.DefaultUri,
+            new TestHttpClientFactory(testServer),
+            new AtProtoAgentOptions
+            {
+                PlcDirectoryServer = new Uri($"https://{directoryServerHostName}"),
+                MaximumResponseSize = maximumResponseSize
+            }))
+        {
+            // The document is valid and would resolve, so a null result can only come from the configured limit.
+            DidDocument? result = await agent.ResolveDidDocument(
+                did: new Did(knownDid),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.Null(result);
+        }
+    }
+
+    [Fact]
+    public async Task AtProtoAgentResolvesTheSameDocumentWhenTheMaximumResponseSizeAllowsIt()
+    {
+        const string directoryServerHostName = "directory.invalid";
+        const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+
+        TestServer testServer = CreatePaddedDidDocumentServer(directoryServerHostName, knownDid);
+
+        using (var agent = new AtProtoAgent(
+            TestServerBuilder.DefaultUri,
+            new TestHttpClientFactory(testServer),
+            new AtProtoAgentOptions
+            {
+                PlcDirectoryServer = new Uri($"https://{directoryServerHostName}")
+            }))
+        {
+            DidDocument? result = await agent.ResolveDidDocument(
+                did: new Did(knownDid),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.NotNull(result);
+            Assert.Equal(new Did(knownDid), result.Id);
+        }
+    }
+
+    // Serves a valid DID document padded well beyond the small maximum the bounds tests configure, so a rejected
+    // response cannot be confused with a document which simply failed to deserialize.
+    private TestServer CreatePaddedDidDocumentServer(string directoryServerHostName, string did)
+    {
+        return TestServerBuilder.CreateServer(directoryServerHostName, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == $"/{did}" && request.Host.Host == directoryServerHostName && request.IsHttps)
+            {
+                response.StatusCode = 200;
+                DidDocument didDocument = new(
+                    id: did,
+                    context: ["https://www.w3.org/ns/did/v1"],
+                    alsoKnownAs: null,
+                    verificationMethods: null,
+                    services:
+                    [
+                        new(
+                            id : "#atproto_pds",
+                            type : "atprotopds",
+                            serviceEndpoint : new Uri($"https://pds.invalid/?padding={new string('a', 1024)}")
+                            )
+                    ]);
+                await response.WriteAsJsonAsync(didDocument, _jsonSerializerOptions);
+            }
+            else
+            {
+                response.StatusCode = 500;
+            }
+        });
+    }
+
+    [Fact]
     public async Task DirectServerResolveDidDocumentSucceedsWithKnownWebDid()
     {
         const string expectedPdsHostName = "test.invalid";
@@ -165,7 +303,7 @@ public class DirectoryTests
             httpClient: testServer.CreateClient(),
             loggerFactory: null,
             meterFactory: meterFactory,
-            TestContext.Current.CancellationToken);
+            cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal(new Did(knownDid), result.Result.Id);

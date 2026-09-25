@@ -8,7 +8,7 @@ namespace idunno.AtProto;
 /// <summary>
 /// The hosting status of a user account.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))]
+[JsonConverter(typeof(AccountStatusConverter))]
 public enum AccountStatus
 {
     /// <summary>
@@ -34,5 +34,14 @@ public enum AccountStatus
     /// <summary>
     /// The account has been throttled
     /// </summary>
-    Throttled
+    Throttled,
+
+    /// <summary>
+    /// The account status is not one this library recognizes.
+    /// </summary>
+    /// <remarks>
+    /// <para>The set of account statuses is decided by the service, not by this library, so a status added
+    /// upstream is surfaced as <see cref="Unknown"/> rather than causing the response to fail to deserialize.</para>
+    /// </remarks>
+    Unknown
 }

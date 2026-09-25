@@ -1,4 +1,4 @@
-﻿# Viewing threads 
+# Viewing threads 
 
 A *thread* refers to a post, its replies (descendants), and its parents (ancestors). Fetching a thread is done with `agent.GetPostThread()` , which accepts the following key parameters:
 
@@ -7,7 +7,7 @@ A *thread* refers to a post, its replies (descendants), and its parents (ancesto
 | Parameter    | Type   | Description                                                             | Required   | Default | Minimum | Maximum |
 |--------------|--------|-------------------------------------------------------------------------|:----------:|:-------:|:-------:|:-------:|
 | uri          | AtUri  | The [at:// uri](../commonTerms.md#uri) of the post you'd like to fetch. | Yes        |         |         |         |
-| depth        | int    | The *depth* of the descendent post tree you'd like to fetch.            | No         | 6       | 0       | 1000    |
+| depth        | int    | The *depth* of the descendant post tree you'd like to fetch.            | No         | 6       | 0       | 1000    |
 | parentHeight | int    | The *height* of the ancestor post tree you'd like to fetch.             | No         | 80      | 0       | 1000    |
 
 ```c#
@@ -23,9 +23,9 @@ The result of a `GetPostThread()` is a `PostThread` which contains the `Thread` 
 a `Parent` property, which is a nested tree of ancestors (if any), and `Replies`, a one dimensional array of replies (if any).
 
 As `Replies` is one-dimensional, to facilitate the construction of a tree from this data, each reply in the array contains references to its
-immediate parent (ancestor) and immediate child (descendent).
+immediate parent (ancestor) and immediate child (descendant).
 
-`Post`, `Parent` and each entry in `Replies` can either a `ThreadViewPost`, a `NotFoundPost` or a`BlockedPost` type.
+`Post`, `Parent` and each entry in `Replies` can either be a `ThreadViewPost`, a `NotFoundPost` or a `BlockedPost` type.
 
 ## The depth and parentHeight parameters
 depth and parentHeight can be thought of as the distance from the root post to its most distant child or parent.
@@ -42,7 +42,7 @@ root
 ```
 
 Above, if you were to fetch the root post, child 1.2 is at a depth of 2 from the root, its ancestor. If you were to fetch child 2.1.1 directly,
-root would be at a height of 3 from child 2.1.1, its descendent.
+root would be at a height of 3 from child 2.1.1, its descendant.
 
 ## Handling blocks, takedowns, and not found
 
@@ -81,4 +81,4 @@ if (getPostThreadResult.Succeeded)
 }
 ```
 
-These posts types are included in the response so that a complete tree can be constructed. It's up to the you to decide how to render these different states.
+These post types are included in the response so that a complete tree can be constructed. It's up to you to decide how to render these different states.

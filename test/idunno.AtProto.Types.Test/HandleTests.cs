@@ -373,4 +373,30 @@ public class HandleTests
         Assert.NotNull(handle);
         Assert.Equal(value, handle.Value);
     }
+
+    [Fact]
+    public void HandleConstructorThrowsArgumentNullExceptionWhenValueIsNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new Handle(null!));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void HandleConstructorThrowsArgumentExceptionWhenValueIsEmptyOrWhitespace(string value)
+    {
+        Assert.Throws<ArgumentException>(() => new Handle(value));
+    }
+
+    [Fact]
+    public void HandleImplicitConversionFromANullStringThrowsArgumentNullException()
+    {
+        string? value = null;
+
+        Assert.Throws<ArgumentNullException>(() =>
+        {
+            Handle handle = value!;
+            return handle;
+        });
+    }
 }

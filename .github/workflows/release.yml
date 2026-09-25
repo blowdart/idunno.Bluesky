@@ -16,6 +16,33 @@ permissions:
   contents: read
 
 jobs:
+  coherency:
+    permissions:
+      contents: read
+
+    name: Check coherency
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: 'Checkout repository'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+ 
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        dotnet-version: | 
+          10.0.x
+
+    - name: 'Check coherence'
+      run: dotnet run .build/CoherenceChecks.cs
+
   build:
     permissions:
       attestations: write
@@ -23,11 +50,12 @@ jobs:
       id-token: write
 
     name: Build release
+    needs: coherency
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
 
@@ -38,7 +66,7 @@ jobs:
         persist-credentials: false
 
     - name: "Validate pushed tag"
-      uses: lfreleng-actions/tag-validate-action@aeca49ae6d1e87184477d803d30c4fa68777d814 # v1.1.0
+      uses: lfreleng-actions/tag-validate-action@88c077f712af0fe1e5ccd4a0fdf6fe31181ab62f # v1.1.6
       with:
         require_type: semver
         require_signed: ssh
@@ -54,19 +82,20 @@ jobs:
           9.0.x
           10.0.x
 
+    - name: 'Setup Node'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: '22.x'
+        package-manager-cache: false
+
     - name: 'Build'
-      run: dotnet build --configuration Release --property:PublicRelease=true
+      run: dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
 
     - name: 'Test'
-      run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=true
+      run: dotnet test --no-restore --no-build --configuration Release --property:PublicRelease=true
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=true
-
-    - name: 'List artifact directory'
-      shell: pwsh
-      run: >
-        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Recurse -Force
 
     - name: 'Extract SBOMs'
       shell: pwsh
@@ -76,6 +105,16 @@ jobs:
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json"
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json.sha256"
           Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
+
+    - name: 'Generate release notes'
+      shell: pwsh
+      run: >
+        dotnet run .build/ExtractReleaseNotes.cs --output-file ${env:BUILD_OUTPUT}/release-notes.md
+
+    - name: 'List artifact directory'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Recurse -Force
 
     - name: Upload unsigned nupkgs to artifacts
       id: upload
@@ -88,6 +127,7 @@ jobs:
   sign:
     name: Sign
     needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: windows-latest
     environment: release
     permissions:
@@ -109,7 +149,7 @@ jobs:
         path : ${{ env.BUILD_OUTPUT }}
 
     - name: Authenticate to Azure
-      uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
+      uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
       with:
         allow-no-subscriptions : true
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -155,7 +195,7 @@ jobs:
         Get-ChildItem -Path ${env:ATTESTATION_INPUT} -Recurse -Force
 
     - name: 'Attest artifacts'
-      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
       with:
         subject-path: ${{env.ATTESTATION_INPUT}}
 
@@ -173,10 +213,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     permissions:
+      contents: write
       id-token: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
 
@@ -196,12 +237,14 @@ jobs:
         user: ${{secrets.NUGET_USERNAME}}
 
       # Use --skip-duplicate to prevent errors if a package with the same version already exists.
-      # This allows a retory of a failed workflow, already published packages will be skipped without error.
+      # This allows a retry of a failed workflow, already published packages will be skipped without error.
     - name: Publish NuGet packages
       shell: pwsh
+      env:
+        NUGET_API_KEY: ${{ steps.nugetlogin.outputs.NUGET_API_KEY }}
       run: >
         foreach($file in (Get-ChildItem "${env:BUILD_OUTPUT}" -Recurse -Filter *.nupkg)) {
-          dotnet nuget push $file --api-key "${{ steps.nugetlogin.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push $file --api-key "${env:NUGET_API_KEY}" --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
 
     - name: Setup MyGet and GitHub Packages as NuGet Sources
@@ -225,4 +268,42 @@ jobs:
         foreach($file in (Get-ChildItem "${env:BUILD_OUTPUT}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package" --skip-duplicate
         }
+
+  createRelease:
+    name: Create Release
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      discussions: write
+    steps:
+    - name: 'Harden Runner'
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: 'Gather nupkgs from signing output'
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        name: signed-artifacts
+        path : ${{ env.BUILD_OUTPUT }}
+
+      # The release is published rather than drafted because the GitHub API ignores
+      # discussion_category_name on draft releases, so a drafted release never gets
+      # its announcement discussion.
+    - name: Create release
+      shell: bash
+      working-directory: ${{ env.BUILD_OUTPUT }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_REPO: ${{ github.repository }}
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: >
+        gh release create "${RELEASE_TAG}"
+        --title "${RELEASE_TAG}"
+        --notes-file release-notes.md
+        --discussion-category "Announcements"
+        --verify-tag
+        *.nupkg
 

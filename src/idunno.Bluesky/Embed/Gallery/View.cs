@@ -27,5 +27,9 @@ public record View : EmbeddedView
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public ICollection<ViewImage> Items { get; init; }
+    public ICollection<ViewImage> Items
+    {
+        get;
+        init => field = [.. value];
+    }
 }

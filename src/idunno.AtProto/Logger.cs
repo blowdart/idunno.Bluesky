@@ -12,8 +12,8 @@ namespace idunno.AtProto;
 internal static partial class Logger
 {
     // Create session logging
-    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {did} on {service}")]
-    internal static partial void CreateSessionCalled(ILogger logger, string did, Uri service);
+    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {identifier} on {service}")]
+    internal static partial void CreateSessionCalled(ILogger logger, string identifier, Uri service);
 
     [LoggerMessage(2, LogLevel.Debug, "CreateSession API returned {statusCode}")]
     internal static partial void CreateSessionReturned(ILogger logger, HttpStatusCode statusCode);
@@ -108,6 +108,21 @@ internal static partial class Logger
     [LoggerMessage(47, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
     internal static partial void RefreshOAuthIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
 
+    [LoggerMessage(1121, LogLevel.Error, "RefreshOAuthIssuedCredentials was refreshing {expectedDid} on {service} but the authorization server issued a token for {issuedDid}")]
+    internal static partial void RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
+
+    [LoggerMessage(48, LogLevel.Debug, "Refresh token #{tokenHash} has already been exchanged by another caller, skipping refresh")]
+    internal static partial void RefreshTokenAlreadyExchanged(ILogger logger, string tokenHash);
+
+    [LoggerMessage(62, LogLevel.Error, "Refresh token #{tokenHash} was exchanged but the agent credentials did not change, so the exchange did not complete")]
+    internal static partial void RefreshTokenExchangedButCredentialsUnchanged(ILogger logger, string tokenHash);
+
+    [LoggerMessage(1122, LogLevel.Warning, "Credentials refreshed for {did} on {service} were discarded because the agent credentials were replaced whilst the refresh was in flight")]
+    internal static partial void RefreshedCredentialsDiscardedAsAgentCredentialsChanged(ILogger logger, Did did, Uri service);
+
+    [LoggerMessage(49, LogLevel.Error, "Background token refresh failed, the refresh timer has been restarted to retry in {retryIn}ms")]
+    internal static partial void BackgroundTokenRefreshFailed(ILogger logger, double retryIn, Exception? ex);
+
     // Resolution methods logging
     [LoggerMessage(50, LogLevel.Debug, "ResolveHandle called for {handle}")]
     internal static partial void ResolveHandleCalled(ILogger logger, string handle);
@@ -124,6 +139,21 @@ internal static partial class Logger
     [LoggerMessage(54, LogLevel.Debug, "ResolveHandle HTTP request for {handle} to {didUri} threw an exception")]
     internal static partial void ErrorResolvingHandleViaHttp(ILogger logger, Handle handle, Uri didUri, Exception ex);
 
+    [LoggerMessage(55, LogLevel.Debug, "VerifyHandle called for {handle} and {did}")]
+    internal static partial void VerifyHandleCalled(ILogger logger, Handle handle, Did did);
+
+    [LoggerMessage(56, LogLevel.Debug, "ResolveVerifiedHandle called for {did}")]
+    internal static partial void ResolveVerifiedHandleCalled(ILogger logger, Did did);
+
+    [LoggerMessage(57, LogLevel.Warning, "The DID document for {did} does not declare {handle} in alsoKnownAs")]
+    internal static partial void HandleNotDeclaredByDidDocument(ILogger logger, Handle handle, Did did);
+
+    [LoggerMessage(58, LogLevel.Warning, "{handle} resolved to {resolvedDid}, which does not match the expected {did}")]
+    internal static partial void HandleDidNotResolveToDid(ILogger logger, Handle handle, Did did, Did? resolvedDid);
+
+    [LoggerMessage(59, LogLevel.Debug, "{handle} and {did} were verified to resolve to each other")]
+    internal static partial void HandleVerified(ILogger logger, Handle handle, Did did);
+
     [LoggerMessage(60, LogLevel.Debug, "ResolveDidDocument called for {did}")]
     internal static partial void ResolveDidDocumentCalled(ILogger logger, Did did);
 
@@ -136,6 +166,9 @@ internal static partial class Logger
     [LoggerMessage(71, LogLevel.Error, "ResolvePdsFailed failed for {did}")]
     internal static partial void ResolvePdsFailed(ILogger logger, Did did);
 
+    [LoggerMessage(72, LogLevel.Error, "ResolvePds rejected the unsupported service endpoint {serviceEndpoint} for {did}")]
+    internal static partial void UnsupportedPdsUri(ILogger logger, Did did, Uri serviceEndpoint);
+
     [LoggerMessage(80, LogLevel.Debug, "ResolveAuthorizationServer called for {pds}")]
     internal static partial void ResolveAuthorizationServerCalled(ILogger logger, Uri pds);
 
@@ -144,6 +177,9 @@ internal static partial class Logger
 
     [LoggerMessage(82, LogLevel.Error, "ResolveAuthorizationServer could not resolve for {pds}")]
     internal static partial void ResolveAuthorizationServerFailed(ILogger logger, Uri pds);
+
+    [LoggerMessage(83, LogLevel.Warning, "ResolveAuthorizationServer ignored the authorization server entry {serverUri} advertised by {pds} as it is not a valid, appropriately secured absolute uri")]
+    internal static partial void ResolveAuthorizationServerSkippedEntry(ILogger logger, Uri pds, string serverUri);
 
     // Repo Operations logging
     [LoggerMessage(90, LogLevel.Debug, "CreateRecord succeeded, created {uri} {cid} in {collection} on {service}")]
@@ -162,7 +198,7 @@ internal static partial class Logger
     internal static partial void DeleteRecordFailedAsSessionIsAnonymous(ILogger logger);
 
     [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rKey} on {service}. Commit: {commit}")]
-    internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service, Commit commit);
+    internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service, Commit? commit);
 
     [LoggerMessage(102, LogLevel.Error, "DeleteRecord failed with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
     internal static partial void DeleteRecordFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
@@ -185,6 +221,15 @@ internal static partial class Logger
     [LoggerMessage(122, LogLevel.Error, "ListRecords succeeded but returned a null result against {repo} {collection} on {service}.")]
     internal static partial void ListRecordsSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, Nsid collection, Uri service);
 
+    [LoggerMessage(123, LogLevel.Warning, "ListRecords skipped the record {uri} in {collection} on {service} as it could not be deserialized.")]
+    internal static partial void ListRecordsSkippedUndeserializableRecord(ILogger logger, string? uri, Nsid collection, Uri service, Exception exception);
+
+    [LoggerMessage(124, LogLevel.Warning, "ListRecords skipped a null record in {collection} on {service}.")]
+    internal static partial void ListRecordsSkippedNullRecord(ILogger logger, Nsid collection, Uri service);
+
+    [LoggerMessage(125, LogLevel.Warning, "{caller} skipped {skipped} null entries in {collection} returned by {service}")]
+    internal static partial void SkippedNullCollectionEntries(ILogger logger, string caller, int skipped, string collection, Uri service);
+
     [LoggerMessage(130, LogLevel.Error, "UploadBlob to {service} failed as current session is not authenticated.")]
     internal static partial void UploadBlobFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 
@@ -199,6 +244,9 @@ internal static partial class Logger
 
     [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
     internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
+
+    [LoggerMessage(1123, LogLevel.Debug, "ApplyWrites succeeded on {service}, but the service did not return the commit the writes landed in")]
+    internal static partial void ApplyWritesSucceededWithNoCommit(ILogger logger, Uri service);
 
     [LoggerMessage(151, LogLevel.Error, "ApplyWrites failed as current session is not authenticated.")]
     internal static partial void ApplyWritesFailedAsSessionIsAnonymous(ILogger logger);
@@ -240,8 +288,14 @@ internal static partial class Logger
     [LoggerMessage(203, LogLevel.Debug, "DPoP nonce changed on {method} call to {requestUri}")]
     internal static partial void AtProtoClientDetectedDPoPNonceChanged(ILogger logger, Uri requestUri, HttpMethod method);
 
+    [LoggerMessage(207, LogLevel.Error, "AtProtoHttpClient could not deserialize the error body from a {method} call to {requestUri}. The error will be reported without its title or message.")]
+    internal static partial void AtProtoClientErrorBodyDeserializationFailed(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
+
     [LoggerMessage(204, LogLevel.Error, "AtProtoHttpClient threw when deserializing the response from {method} call to {requestUri}")]
     internal static partial void AtProtoClientResponseDeserializationThrew(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
+
+    [LoggerMessage(206, LogLevel.Error, "AtProtoHttpClient rejected the response from {method} call to {requestUri} as it exceeded the maximum response size of {maximumResponseSize} bytes")]
+    internal static partial void AtProtoClientResponseTooLarge(ILogger logger, Uri requestUri, HttpMethod method, int maximumResponseSize);
 
     [LoggerMessage(205, LogLevel.Error, "DPoP nonce error encountered on {method} to {service} but no DPoP nonce header was found")]
     internal static partial void AtProtoClientEncounteredDPoPNonceErrorWithoutANonceHeader(ILogger logger, Uri service, HttpMethod method);
@@ -289,6 +343,15 @@ internal static partial class Logger
     [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
     internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
 
+    [LoggerMessage(507, LogLevel.Error, "DNS resolution for {handle} returned {recordCount} conflicting did text records in {txtRecord}, which is ambiguous, so {handle} cannot be resolved")]
+    internal static partial void MultipleDidTextRecordsFound(ILogger logger, Handle handle, string txtRecord, int recordCount);
+
+    [LoggerMessage(508, LogLevel.Error, "DNS record {txtRecord} for {handle} did not parse as a DID")]
+    internal static partial void DnsHandleResolutionParseFailed(ILogger logger, Handle handle, string txtRecord);
+
+    [LoggerMessage(509, LogLevel.Error, "HTTP request for {handle} to {Uri} returned more than {maximumLength} bytes")]
+    internal static partial void HttpHandleResolutionResponseTooLarge(ILogger logger, Handle handle, Uri uri, int maximumLength);
+
     // AtProtoServer auth logging
     [LoggerMessage(600, LogLevel.Debug, "Generated oauth login {loginUri} for {authority}, correlation {correlation}")]
     internal static partial void OAuthLoginUriGenerated(ILogger logger, Uri authority, Uri loginUri, Guid correlation);
@@ -309,7 +372,10 @@ internal static partial class Logger
     internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
 
     [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
-    internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri expected, Uri actual, Guid correlation);
+    internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri actual, Uri expected, Guid correlation);
+
+    [LoggerMessage(607, LogLevel.Warning, "OAuth authorization server did not grant the requested scope {requestedScope}, it granted \"{grantedScopes}\", correlation {correlation}")]
+    internal static partial void OAuthScopeNotGranted(ILogger logger, Guid correlation, string requestedScope, string grantedScopes);
 
     [LoggerMessage(610, LogLevel.Debug, "OAuthClient refresh called for token issued by {service} against authority {authority}")]
     internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);
@@ -336,6 +402,9 @@ internal static partial class Logger
     [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}).")]
     internal static partial void ReceivedMessageTooLarge(ILogger logger, int messageSize, int maximumMessageSize);
 
+    [LoggerMessage(1001, LogLevel.Error, "Received more than {maximumConsecutiveEmptyFragments} consecutive empty fragments whilst reading a message.")]
+    internal static partial void ReceivedTooManyEmptyFragments(ILogger logger, int maximumConsecutiveEmptyFragments);
+
     [LoggerMessage(1100, LogLevel.Error, "{uri} is unsafe")]
     internal static partial void UnsafeUri(ILogger logger, Uri uri);
 
@@ -344,4 +413,7 @@ internal static partial class Logger
 
     [LoggerMessage(1102, LogLevel.Error, "{uri} does not resolve to any IP addresses")]
     internal static partial void UriDoesNotResolve(ILogger logger, Uri uri);
+
+    [LoggerMessage(1120, LogLevel.Error, "Cannot GetServiceAuth, could not get serviceDescription for {service}")]
+    internal static partial void GetServiceAuthCannotGetServiceDescription(ILogger logger, Uri service);
 }

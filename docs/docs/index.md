@@ -4,5 +4,5 @@
 
 Bluesky's own HTTP Reference can be found in their [documentation](https://docs.bsky.app/docs/category/http-reference).
 
-The [current and planned APIs](endpointStatus.md) contains information on the library classes that implement Bluesky or AT Proto APIs along with the
+The [current and planned APIs](endpointStatus.md) contain information on the library classes that implement Bluesky or AT Proto APIs along with the
 Bluesky and AT Proto endpoints they call.

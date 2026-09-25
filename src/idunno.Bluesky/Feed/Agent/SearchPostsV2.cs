@@ -4,15 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
-using idunno.AtProto.Authentication;
-using idunno.Bluesky.Chat.Convo.Model;
 using idunno.Bluesky.Feed;
 
 namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
-
     /// <summary>
     /// Find posts matching a search query or filters, returning search hits for matching post records.
     /// </summary>
@@ -98,7 +95,7 @@ public partial class BlueskyAgent
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         return await BlueskyServer.SearchPostsV2(
@@ -137,6 +134,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

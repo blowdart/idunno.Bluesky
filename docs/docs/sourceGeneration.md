@@ -8,7 +8,7 @@
 If you are using your own record types with an `AtProtoAgent` Native AOT requires 
 [JSON serialization source generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation).
 
-### Configurating the agent for source generation
+### Configuring the agent for source generation
 
 You must configure the `AtProtoAgent` to use the source generation context either for your classes via `JsonOptions`,
 
@@ -32,31 +32,29 @@ or through the agent builder
 ```c#
 var service = new Uri("https://pds.example.com");
 
-var builder = AtProtoAgent.CreateBuilder();
+var builder = AtProtoAgent.CreateBuilder()
     .ForService(service)
-    .ConfigureJsonOptions(options =>
+    .ConfigureHttpJsonOptions(options =>
     {
         options.SerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
     });
 
-using var agent = agent.Build()
-{
-    // Your code to use the agent
-};
+using var agent = builder.Build();
 
+// Your code to use the agent
 ```
 
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.
 
-If you are using the generic static server methods which a `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.
-The `jsonSerializationOptions` value must be a a chained instance which adds the type resolver for your classes to the type resolved for the classes `AtProtoServer` uses internally.
-To create a chained instance of `JsonSerializationOptions` call `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions()`
-and passing in the `JsonSerializerOptions.Default` from your code where you have JSON source generation configured
+If you are using the generic static server methods which take an `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.
+The `jsonSerializerOptions` value must be a chained instance which adds the type resolver for your classes to the type resolver for the classes `AtProtoServer` uses internally.
+To create a chained instance of `JsonSerializerOptions` call `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions()`,
+passing in the `SourceGenerationContext.Default` from your code where you have JSON source generation configured.
 
 ### Annotating your own classes for json source generation
 
 The reference `AtProto` implementation is quite laissez faire about where the `$type` property appears in serialized JSON. Make sure that the
-`AllowOutOfOrderMetadataProperties` is set to `true`` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
+`AllowOutOfOrderMetadataProperties` is set to `true` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
 
 ```c#
     [JsonSourceGenerationOptions(
@@ -108,7 +106,11 @@ For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProt
 
 # Native AOT
 
-`idunno.AtProto` and `idunno.Bluesky` support [.NET native ahead-of-time (AOT)](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/).
+`idunno.AtProto`, `idunno.Bluesky`, and the non-UI ASP.NET authentication packages support
+[.NET native ahead-of-time (AOT)](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/).
+
+`idunno.Bluesky.AspNet.Authentication.UI` contains Razor Pages and does not support trimming or Native AOT. Its
+`AddBlueskyAuthenticationUI()` entry point is annotated with `RequiresUnreferencedCode` and `RequiresDynamicCode`.
 
 Native AOT has benefits:
 
@@ -120,5 +122,5 @@ If you wish to use AOT with your own classes you must enable JSON Source Generat
 
 # Trimming
 
-Trimming is supported if your application targets .NET 9.0. You cannot target .NET 8.0 due the use of v9 of `System.Text.Json` and
+Trimming is supported if your application targets .NET 9.0 or later. You cannot target .NET 8.0 due the use of v9 of `System.Text.Json` and
 a [bug in the linker](https://github.com/dotnet/runtime/issues/114307).

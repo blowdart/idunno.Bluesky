@@ -25,11 +25,12 @@ public partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -44,8 +45,9 @@ public partial class BlueskyServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(subject);
@@ -65,7 +67,11 @@ public partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<ListMutualGroupsResponse> client = new(ChatProxy, loggerFactory);
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        BlueskyHttpClient<ListMutualGroupsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<ListMutualGroupsResponse> response = await client.Get(
             service,
@@ -77,15 +83,9 @@ public partial class BlueskyServer
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Flatten into collection
-        PagedViewReadOnlyCollection<ConversationView> result;
-        if (response.Result is not null)
-        {
-            result = new PagedViewReadOnlyCollection<ConversationView>(response.Result.Conversations, response.Result.Cursor);
-        }
-        else
-        {
-            result = new PagedViewReadOnlyCollection<ConversationView>();
-        }
+        PagedViewReadOnlyCollection<ConversationView>? result = response.Result is not null
+            ? new PagedViewReadOnlyCollection<ConversationView>(WithoutNullEntries(response.Result.Conversations, service, nameof(response.Result.Conversations), loggerFactory), response.Result.Cursor)
+            : null;
 
         return new AtProtoHttpResult<PagedViewReadOnlyCollection<ConversationView>>(
             result: result,

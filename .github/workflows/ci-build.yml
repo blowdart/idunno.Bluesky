@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'dev/*'
       - 'version/*'
       - 'dependabot/nuget/*'
     paths-ignore:
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - 'main'
+      - 'dev/*'
       - 'version/*'
       - 'dependabot/nuget/*'
 
@@ -22,7 +24,8 @@ permissions:
 env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  COVERAGE_REPORT: ${{ github.workspace}}/coveragereport
+  TEST_RESULTS: ${{ github.workspace }}/TestResults
+  COVERAGE_REPORT: ${{ github.workspace }}/coveragereport
 
 jobs:
   build:
@@ -36,7 +39,7 @@ jobs:
       checks: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
 
@@ -54,6 +57,12 @@ jobs:
           9.0.x
           10.0.x
 
+    - name: 'Setup Node'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: '22.x'
+        package-manager-cache: false
+
     - name: 'Report SDK versions'
       run : dotnet --info
 
@@ -66,7 +75,7 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          src/**/idunno.*.nupkg
+          .assets/idunno.*.nupkg
           src/**/idunno.*.dll
           src/**/idunno.*.deps.json
           src/**/idunno.*.xml
@@ -74,29 +83,30 @@ jobs:
 
     - name: 'Test'
       id: test
-      run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit --settings .runsettings
+      shell: bash
+      run: dotnet test --no-build --no-restore --results-directory ${TEST_RESULTS} --coverlet --report-xunit-junit
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
       if: always()
       with:
-        files: "test/**/TestResults.xml"
+        files: ${{ env.TEST_RESULTS }}/*.junit.xml
 
     - name: Upload Test Artifacts
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: test-results
-        path: "test/**/TestResults.xml"
+        path: ${{ env.TEST_RESULTS }}/*.junit.xml
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
-      uses: danielpalme/ReportGenerator-GitHub-Action@049f7ec958c672fd31d5cc1cb01622dc8d2e23ab # 5.5.10
+      uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
       with:
-        reports: "test/**/coverage.cobertura.xml"
+        reports: ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
         targetdir: "${{ env.COVERAGE_REPORT }}"
-        reporttypes: "Cobertura,MarkdownSummaryGithub" 
-        verbosity: "Info" 
-        title: "Code Coverage" 
+        reporttypes: "Cobertura,MarkdownSummaryGithub"
+        verbosity: "Info"
+        title: "Code Coverage"
         tag: "${{ github.run_number }}_${{ github.run_id }}"
         toolpath: "reportgeneratortool"
         license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
@@ -111,6 +121,69 @@ jobs:
         name: coverage-results
         path: | 
           ${{ env.COVERAGE_REPORT }}
-          test/**/coverage.cobertura.xml
+          ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
         retention-days: 5
 
+  trimming:
+    name: Trimming and AOT
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - name: 'Harden Runner'
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - name: 'Checkout'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
+        persist-credentials: false
+
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        dotnet-version: | 
+          8.0.x
+          9.0.x
+          10.0.x
+
+    - name: 'Cache NuGet packages'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-trimming-${{ hashFiles('global.json', 'nuget.config', 'Directory.Packages.props', 'Directory.Build.props', 'src/**/*.props', 'src/**/*.csproj', 'trimming/**/*.props', 'trimming/**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-trimming-
+
+    - name: 'Report SDK versions'
+      run : dotnet --info
+
+    # Native AOT needs a platform linker, which the .NET SDK does not carry.
+    - name: 'Install native AOT prerequisites'
+      run: sudo apt-get update && sudo apt-get install --yes clang zlib1g-dev
+
+    # Whole-assembly analysis covers every package which claims trimming and AOT compatibility. Offline smoke
+    # binaries are then run from project references and locally packed NuGet packages, without credentials or
+    # network access. RequireNativeBinary makes a missing linker a CI failure rather than a local warning.
+    - name: 'Trimming and AOT test'
+      id: trimming
+      shell: pwsh
+      run: ./trimTest.ps1 -Rid linux-x64 -RequireNativeBinary
+
+    - name: Append trimming size report to build summary
+      if: always()
+      shell: bash
+      run: |
+        if [[ -f trimming/artifacts/size-report.md ]]; then
+          cat trimming/artifacts/size-report.md >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload Trimming Binary Logs
+      if: failure() && steps.trimming.outcome == 'failure'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: trimming-binlog
+        path: trimming/artifacts/logs/*.binlog
+        retention-days: 5

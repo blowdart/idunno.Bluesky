@@ -1,0 +1,44 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Text.Json.Serialization;
+
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace idunno.Bluesky.Drafts;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
+
+/// <summary>
+/// Encapsulates a embedded URI in a draft post.
+/// </summary>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+[JsonDerivedType(typeof(DraftEmbedExternal), typeDiscriminator: "app.bsky.draft.defs#draftEmbedExternal")]
+public record DraftEmbedExternal
+{
+    /// <summary>
+    /// Creates a new instance of <see cref="DraftEmbedExternal"/> with the specified external <see cref="Uri"/>.
+    /// </summary>
+    /// <param name="uri">The <see cref="Uri"/> to embed.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    public DraftEmbedExternal(Uri uri)
+    {
+        Uri = uri;
+    }
+
+    /// <summary>
+    /// Gets the embedded external <see cref="Uri"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
+    [JsonRequired]
+    public Uri Uri
+    {
+        get;
+
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            field = value;
+        }
+    }
+}

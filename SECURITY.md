@@ -2,7 +2,7 @@
 
 I take security bugs in code seriously. I appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
 
-If you believe you have found a security vulnerability in any this repository please report it to me as described below.
+If you believe you have found a security vulnerability in this repository please report it to me as described below.
 
 # Reporting Security Issues
 

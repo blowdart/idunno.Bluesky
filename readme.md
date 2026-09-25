@@ -15,7 +15,7 @@ A .NET 8, 9 and 10 library and SDK for [Bluesky](https://bsky.social/) and the [
 
 ## Getting Started
 
-Add the `idunno.Bluesky` package to your project, and then 
+Add the `idunno.Bluesky` package to your project, and then:
 
 ```c#
 BlueskyAgent agent = new ();
@@ -55,10 +55,12 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 * Muting and blocking users
 * Sending, receiving, and deleting direct messages
 * Creating, joining and leaving group conversations
-* Create, deleting and listing a user's bookmarks
+* Creating, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
+* Multipart uploads for videos
 * Jetstream support for simple firehose consumption
 * Automatic session management with background token refreshes
+* ASP.NET authentication, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
 
 Trimming is supported for applications targeting .NET 9.0 or later.
 
@@ -70,8 +72,15 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 
 ## License
 
-`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,
+`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallback`, `idunno.AtProto.Types` and `idunno.Bluesky.AspNet.Authentication` are available under the MIT license,
 see the [LICENSE](LICENSE) file for more information.
+
+## Support Policy
+
+Only the latest version of the libraries are supported. All bug fixes, including security fixes, will be made in the latest version.
+Older versions will not receive any updates.
+
+The library is supported on all in-support versions of .NET.
 
 ## Tipping / Sponsoring
 
@@ -124,6 +133,7 @@ or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tool
       <package pattern="idunno.AtProto" />
       <package pattern="idunno.AtProto.*" />
       <package pattern="idunno.Bluesky" />
+      <package pattern="idunno.Bluesky.*" />
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />
@@ -141,7 +151,7 @@ To match a pre-release for a specific commit, if a build was produced for that c
 1. The pre-release package will have the first 10 digits of the commit sha, prefixed with a `g` as the build number.
 
 For example, commit [190d63e](https://github.com/blowdart/idunno.Bluesky/commit/190d63e20d3d59e86912fd8cfe315915d101f6a8)
-produced a nightly build and packages. The package build number is be 1.1.0-prerelease.`g190d63e20d`
+produced a nightly build and packages. The package build number is 1.1.0-prerelease.`g190d63e20d`
 
 Please note that nightly builds are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing),
 the signing certificate chain will not match the signing chain of a release build. The subject name remains the same.
@@ -163,10 +173,13 @@ where the `$type` property is not the first property in the JSON object.
 
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
+* [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) - used in SQLite implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [Duende.IdentityModel.OidcClient](https://github.com/DuendeSoftware/foss/tree/main/identity-model-oidc-client) - used to do the OAuth heavy lifting.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
+* [MySqlConnector](https://mysqlconnector.net/) - used in MySQL implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [PeterO.CBor](https://github.com/peteroupc/CBOR) - used in Fire Hose decoding.
 * [SimpleBase](https://github.com/ssg/SimpleBase) - used in decoding CIDs.
+* [StackExchange.Redis](https://stackexchange.github.io/StackExchange.Redis/) - used in Redis implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [ZstdSharp](https://github.com/oleg-st/ZstdSharp) - used in Jetstream decompression.
 
 ### External analyzers used during builds
@@ -180,7 +193,7 @@ where the `$type` property is not the first property in the JSON object.
 * [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
 * [Coverlet.Collector](https://github.com/coverlet-coverage/coverlet) - used to produce code coverage files
-* [JunitXml.TestLogger](https://github.com/spekt/junit.testlogger) - used in CI builds to produce test results in a format understood by the [test-summary](https://github.com/test-summary/action) GitHub action.
+* [Microsoft.Sbom.Targets](https://www.nuget.org/packages/Microsoft.Sbom.Targets) - used to generate Software Bill of Materials (SBOM) files and embed them in the NuGet packages.
 * [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
 * [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
 * [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.

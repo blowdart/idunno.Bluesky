@@ -1,0 +1,337 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.Bluesky.AspNet.Authentication.Events;
+
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace idunno.Bluesky.AspNet.Authentication;
+
+/// <summary>
+/// Implements an <see cref="IIdentityStore"/> using a distributed cache.
+/// </summary>
+/// <remarks>
+/// <para>This implementation uses a distributed cache to store identity information, allowing for scalable and shared access across multiple instances.</para>
+/// <para>
+/// Depending on the backing distributed cache, this may be a best effort. Caches that are eventually consistent will not guarantee locking.
+/// </para>
+/// </remarks>
+public class DistributedCacheIdentityStore : IIdentityStore
+{
+    private static readonly TimeSpan s_defaultEntryTTL = TimeSpan.FromDays(7);
+    private static readonly TimeSpan s_defaultRefreshLockTTL = TimeSpan.FromSeconds(90);
+
+    const string ClaimsStorePrefix = "_didMap:";
+    const string RefreshStorePrefix = "_tokenRefreshLock:";
+
+    /// <summary>
+    /// Creates a new instance of <see cref="DistributedCacheIdentityStore"/>.
+    /// </summary>
+    /// <param name="cache">The <see cref="IDistributedCache"/> to store the claims in.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create loggers.</param>
+    /// <param name="options">The <see cref="BlueskyAuthenticationOptions"/>.</param>
+    /// <param name="meterFactory">An optional <see cref="IMeterFactory"/> to use for creating the underlying <see cref="Meter"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="cache"/> is <see langword="null" />.</exception>
+    public DistributedCacheIdentityStore(
+        IDistributedCache cache,
+        ILoggerFactory loggerFactory,
+        IOptions<BlueskyAuthenticationOptions>? options = null,
+        IMeterFactory? meterFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(cache);
+
+        Cache = cache;
+        Logger = loggerFactory.CreateLogger<DistributedCacheIdentityStore>();
+
+        if (options is not null)
+        {
+            TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                SlidingExpiration = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultEntryTTL
+            };
+
+            RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = options.Value.RefreshLockLength ?? s_defaultRefreshLockTTL
+            };
+        }
+        else
+        {
+            TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                SlidingExpiration = s_defaultEntryTTL
+            };
+
+            RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL
+            };
+        }
+
+        Metrics = new BlueskyAuthenticationMetrics(meterFactory);
+    }
+
+    /// <summary>
+    /// Gets the cache used to store identities.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is an instance member. An application can register a different <see cref="IDistributedCache"/> for each
+    ///   authentication scheme, and a static cache would leave every store sharing whichever instance was constructed last.
+    /// </para>
+    /// </remarks>
+    protected IDistributedCache Cache { get; }
+
+    /// <summary>
+    /// Gets or sets the time to live for entries in the identity store.
+    /// </summary>
+    protected DistributedCacheEntryOptions TokenCacheMemoryOptions { get; init; }
+
+    /// <summary>
+    /// Gets or sets the time to live for entries in the refresh lock store.
+    /// </summary>
+    protected DistributedCacheEntryOptions RefreshCacheMemoryOptions { get; init; }
+
+    /// <summary>
+    /// Gets the metrics for this instance.
+    /// </summary>
+    protected BlueskyAuthenticationMetrics Metrics { get; }
+
+    private ILogger<DistributedCacheIdentityStore> Logger { get; }
+
+    /// <inheritdoc/>
+    public IdentityStoreEvents Events { get; set; } = new IdentityStoreEvents();
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="claimsIdentity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    public async Task Add(ClaimsIdentity claimsIdentity, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(claimsIdentity);
+
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        Did did = await AddCore(claimsIdentity, nameof(claimsIdentity), cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationAdd, startTimestamp);
+
+        Logger.IdentityAddedToCache(did);
+    }
+
+    private async Task<Did> AddCore(ClaimsIdentity claimsIdentity, string paramName, CancellationToken cancellationToken)
+    {
+        string? didAsString = (claimsIdentity.Claims?.FirstOrDefault(
+            x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value) ??
+            throw new ArgumentException("No DID claim found", paramName);
+
+        if (!Did.TryParse(didAsString, out Did? did))
+        {
+            throw new ArgumentException("DID claim was not a valid DID", paramName);
+        }
+
+        byte[] claimsIdentityAsBytes;
+        using (MemoryStream claimsMemoryStream = new())
+        {
+            using BinaryWriter claimsWriter = new(claimsMemoryStream);
+            claimsIdentity.WriteTo(claimsWriter);
+            claimsWriter.Flush();
+            claimsIdentityAsBytes = claimsMemoryStream.ToArray();
+        }
+
+        IdentityStoreSettingContext context = new(claimsIdentityAsBytes);
+        await Events.PreStoring(context).ConfigureAwait(false);
+        claimsIdentityAsBytes = context.Identity.ToArray();
+
+        await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, TokenCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
+
+        return did;
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
+    {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        try
+        {
+            return await GetIdentityCore(did, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationGet, startTimestamp);
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
+    private async Task<ClaimsIdentity?> GetIdentityCore(Did did, CancellationToken cancellationToken)
+    {
+        ClaimsIdentity? result = null;
+
+        byte[]? claimsIdentityAsBytes = await Cache.GetAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+
+        if (claimsIdentityAsBytes is null)
+        {
+            Logger.IdentityNotFoundInCache(did);
+            return null;
+        }
+
+        try
+        {
+            // Raise the event to allow subscribers to modify the stored bytes before they are deserialized into a ClaimsIdentity.
+            IdentityStoreRetrievedContext context = new(claimsIdentityAsBytes);
+            await Events.PostRetrieval(context).ConfigureAwait(false);
+
+            // Deserialize the potentially modified identity bytes back into a ClaimsIdentity.
+            using MemoryStream contextMemoryStream = new();
+            await contextMemoryStream.WriteAsync(context.Identity, cancellationToken).ConfigureAwait(false);
+            contextMemoryStream.Position = 0;
+            using BinaryReader contextReader = new(contextMemoryStream);
+            result = new ClaimsIdentity(contextReader);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (CryptographicException ex)
+        {
+            // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
+            await Cache.RemoveAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+            Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
+            Metrics.DataProtectionFailures.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.DataProtectionSourceTagName,
+                    BlueskyAuthenticationMetrics.DataProtectionSourceIdentityStore));
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Logger.CachedIdentityIsCorrupt(did, ex);
+            return null;
+        }
+
+        await Cache.RefreshAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task Remove(Did did, CancellationToken cancellationToken = default)
+    {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        await Cache.RemoveAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationRemove, startTimestamp);
+
+        Logger.CachedIdentityRemoved(did);
+    }
+
+    /// <inheritdoc/>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        // AddCore rather than Add, otherwise an update would also be timed as an add and the two operations could not
+        // be told apart.
+        Did did = await AddCore(identity, nameof(identity), cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationUpdate, startTimestamp);
+
+        Logger.CachedIdentityUpdated(did);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="IDistributedCache"/> has no atomic conditional set, so the lock is acquired by writing a unique token and reading it back. If another
+    ///   caller raced and its write landed last it owns the lock and this caller backs off. This narrows the window in which two callers can both start a
+    ///   refresh to the gap between the write and the read back, rather than it spanning the whole refresh, but it cannot close it entirely.
+    /// </para>
+    /// <para>
+    ///   A cache which supports an atomic conditional set, such as Redis with <c>SET NX</c>, should derive from this class and override this method and
+    ///   <see cref="EndRefresh(Did, string?, CancellationToken)"/> to use it.
+    /// </para>
+    /// </remarks>
+    public virtual async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    {
+        string refreshLockKey = $"{RefreshStorePrefix}{did}";
+
+        byte[]? existing = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        if (existing is not null)
+        {
+            Logger.StartRefreshDenied(did);
+            return null;
+        }
+
+        string refreshLockToken = Guid.NewGuid().ToString("N");
+
+        await Cache.SetAsync(refreshLockKey, Encoding.UTF8.GetBytes(refreshLockToken), RefreshCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
+
+        byte[]? written = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        if (written is null ||
+            !CryptographicOperations.FixedTimeEquals(written, Encoding.UTF8.GetBytes(refreshLockToken)))
+        {
+            Logger.StartRefreshDenied(did);
+            return null;
+        }
+
+        Logger.StartRefreshEntered(did);
+
+        return refreshLockToken;
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<bool> EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    {
+        string refreshLockKey = $"{RefreshStorePrefix}{did}";
+
+        byte[]? current = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        if (current is null)
+        {
+            // The lock already expired, so there is nothing of ours to release. Removing the key anyway would delete a
+            // lock another caller acquired between this read and that removal.
+            Logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
+        if (!CryptographicOperations.FixedTimeEquals(current, Encoding.UTF8.GetBytes(refreshLockToken ?? string.Empty)))
+        {
+            // The lock expired and someone else acquired it, so it is not ours to release.
+            Logger.EndRefreshLockNotOwned(did);
+            return false;
+        }
+
+        await Cache.RemoveAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        Logger.EndRefreshFinished(did);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
+    {
+        byte[]? existing = await Cache.GetAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+        return existing is not null;
+    }
+}

@@ -65,14 +65,13 @@ public static partial class BlueskyServer
     // https://docs.bsky.app/docs/api/app-bsky-feed-search-posts
     private const string SearchPostsEndpoint = "/xrpc/app.bsky.feed.searchPosts";
 
-    private static readonly IReadOnlyCollection<PostView> s_emptyFeedPostCollection = new List<PostView>().AsReadOnly();
-
     /// <summary>
     /// Gets a description for the feed generator at <paramref name="generatorUri"/>.
     /// </summary>
     /// <param name="generatorUri">The <see cref="Uri"/> of the generator whose description should be retrieved.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="generatorUri"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -87,12 +86,13 @@ public static partial class BlueskyServer
         Uri generatorUri,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(generatorUri);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<FeedGeneratorDescription> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<FeedGeneratorDescription> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         return await client.Get(
             generatorUri,
@@ -113,9 +113,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -134,9 +135,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -146,7 +148,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -161,7 +163,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetActorFeedsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetActorFeedsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetActorFeedsResponse> response = await client.Get(
             service,
             $"{GetActorFeedsEndpoint}?{queryString}",
@@ -175,7 +177,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
-                new PagedViewReadOnlyCollection<GeneratorView>(response.Result.Feeds, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<GeneratorView>(WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -184,7 +186,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
-                new PagedViewReadOnlyCollection<GeneratorView>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -201,9 +203,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="httpClient"/> or <paramref name="accessCredentials"/> is <see langword="null"/>.</exception>
@@ -222,9 +225,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -235,7 +239,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -250,7 +254,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetActorLikesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetActorLikesResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetActorLikesResponse> response = await client.Get(
             service,
             $"{GetActorLikesEndpoint}?{queryString}",
@@ -264,7 +268,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -273,7 +277,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -292,9 +296,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the feed from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -315,9 +320,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
@@ -327,7 +333,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -374,7 +380,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetAuthorFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetAuthorFeedResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetAuthorFeedResponse> response = await client.Get(
             service,
             $"{GetAuthorFeedEndpoint}?{queryString}",
@@ -388,7 +394,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -397,7 +403,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -412,9 +418,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the information from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -430,16 +437,17 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(feed);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<FeedGenerator> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<FeedGenerator> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         return await client.Get(
             service,
@@ -460,9 +468,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the information from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="feeds"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -479,9 +488,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(feeds);
@@ -500,7 +510,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetFeedGeneratorsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFeedGeneratorsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetFeedGeneratorsResponse> response = await client.Get(
             service,
             $"{GetFeedGeneratorsEndpoint}?{queryString}",
@@ -514,7 +524,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
-                response.Result.Feeds.AsReadOnly(),
+                WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -523,7 +533,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
-                new List<GeneratorView>().AsReadOnly(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -541,9 +551,10 @@ public static partial class BlueskyServer
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="headers">A collection of HTTP headers to send with the request.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -563,9 +574,10 @@ public static partial class BlueskyServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         ICollection<NameValueHeaderValue>? headers = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(feed);
@@ -575,7 +587,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -591,7 +603,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFeedResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetFeedResponse> response = await client.Get(
             service,
             $"{GetFeedEndpoint}?{queryString}",
@@ -606,7 +618,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -615,7 +627,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -633,8 +645,9 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -646,7 +659,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<Likes>> GetLikes(
+    public static async Task<AtProtoHttpResult<LikesCollection>> GetLikes(
         AtUri uri,
         Cid? cid,
         int? limit,
@@ -654,8 +667,9 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -665,7 +679,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -685,7 +699,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetLikesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetLikesResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetLikesResponse> response = await client.Get(
             service,
             $"{GetLikesEndpoint}?{queryString}",
@@ -697,8 +711,8 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<Likes>(
-                new Likes(response.Result.Uri, response.Result.Cid, response.Result.Likes, response.Result.Cursor),
+            return new AtProtoHttpResult<LikesCollection>(
+                new LikesCollection(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.Likes, service, nameof(response.Result.Likes), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -706,8 +720,8 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<Likes>(
-                new Likes(uri, cid),
+            return new AtProtoHttpResult<LikesCollection>(
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -724,9 +738,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -745,9 +760,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(list);
@@ -757,7 +773,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -773,7 +789,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetListFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListFeedResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetListFeedResponse> response = await client.Get(
             service,
             $"{GetListFeedEndpoint}?{queryString}",
@@ -787,7 +803,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -796,7 +812,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -813,9 +829,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -834,9 +851,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -846,13 +864,13 @@ public static partial class BlueskyServer
         if (depth is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)depth, 0);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, 1000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, Maximum.PostThreadDepth);
         }
 
         if (parentHeight is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)parentHeight, 0);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, 1000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, Maximum.PostThreadParentHeight);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -868,7 +886,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<PostThread> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<PostThread> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<PostThread> response = await client.Get(
             service,
             $"{GetPostThreadEndpoint}?{queryString}",
@@ -889,9 +907,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -908,9 +927,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uris);
@@ -922,12 +942,12 @@ public static partial class BlueskyServer
         if (uriList.Count == 0 || uriList.Count > 25)
         {
             ArgumentOutOfRangeException.ThrowIfZero(uriList.Count);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, 25);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, Maximum.PostsToGet);
         }
 
         string queryString = string.Join("&", uriList.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
 
-        BlueskyHttpClient<GetPostsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPostsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetPostsResponse> response = await client.Get(
             service,
             $"{GetPostsEndpoint}?{queryString}",
@@ -941,7 +961,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
-                response.Result.Posts,
+                WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -950,7 +970,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
-                s_emptyFeedPostCollection,
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -966,14 +986,15 @@ public static partial class BlueskyServer
     /// <param name="limit">The maximum number of posts to return.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>, or <see langword="null" /> to make an unauthenticated request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" />, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> &lt;1 or &gt;100.</exception>
     [UnconditionalSuppressMessage(
                 "Trimming",
@@ -990,20 +1011,20 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1023,7 +1044,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetQuotesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetQuotesResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetQuotesResponse> response = await client.Get(
             service,
             $"{GetQuotesEndpoint}?{queryString}",
@@ -1037,7 +1058,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<QuotesCollection>(
-                new QuotesCollection(response.Result.Uri, response.Result.Cid, response.Result.Posts, response.Result.Cursor),
+                new QuotesCollection(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1046,7 +1067,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<QuotesCollection>(
-                new QuotesCollection(uri, cid),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1064,9 +1085,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -1086,9 +1108,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -1098,7 +1121,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1118,7 +1141,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetRepostedByResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetRepostedByResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetRepostedByResponse> response = await client.Get(
             service,
             $"{GetRepostedByEndpoint}?{queryString}",
@@ -1132,7 +1155,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<RepostedBy>(
-                new RepostedBy(response.Result.Uri, response.Result.Cid, response.Result.RepostedBy, response.Result.Cursor),
+                new RepostedBy(response.Result.Uri, response.Result.Cid, WithoutNullEntries(response.Result.RepostedBy, service, nameof(response.Result.RepostedBy), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1141,7 +1164,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<RepostedBy>(
-                new RepostedBy(uri, cid),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1155,9 +1178,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -1170,18 +1194,19 @@ public static partial class BlueskyServer
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
         Uri service,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetSuggestedFeedsResponse> response = await client.Get(
             service,
             GetSuggestedFeedsEndpoint,
@@ -1195,7 +1220,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SuggestedFeeds>(
-                new SuggestedFeeds(response.Result.Feeds, response.Result.Cursor),
+                new SuggestedFeeds(WithoutNullEntries(response.Result.Feeds, service, nameof(response.Result.Feeds), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1204,7 +1229,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SuggestedFeeds>(
-                new SuggestedFeeds(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1221,9 +1246,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -1240,11 +1266,12 @@ public static partial class BlueskyServer
         int? limit,
         string? cursor,
         Uri service,
-        AccessCredentials? accessCredentials,
+        AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -1254,7 +1281,7 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1276,7 +1303,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<GetTimelineResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTimelineResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTimelineResponse> response = await client.Get(
             service,
@@ -1291,7 +1318,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(response.Result.Feed, response.Result.Cursor),
+                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1300,7 +1327,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1324,14 +1351,15 @@ public static partial class BlueskyServer
     /// <param name="limit">The maximum number of post views to return</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve search information from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>, or <see langword="null" /> to make an unauthenticated request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" />, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> &lt;1 or &gt;100.</exception>
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The api demands lowercase.")]
     [UnconditionalSuppressMessage(
@@ -1357,20 +1385,20 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
@@ -1393,7 +1421,7 @@ public static partial class BlueskyServer
         }
         if (author is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&mentions={Uri.EscapeDataString(author.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&author={Uri.EscapeDataString(author.ToString())}");
         }
         if (lang is not null)
         {
@@ -1425,7 +1453,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<SearchPostsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchPostsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchPostsResponse> response = await client.Get(
             service,
             $"{SearchPostsEndpoint}?{queryString}",
@@ -1439,7 +1467,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SearchResults>(
-                new SearchResults(response.Result.Posts, response.Result.HitsTotal, response.Result.Cursor),
+                new SearchResults(WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.HitsTotal, response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1448,7 +1476,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SearchResults>(
-                new SearchResults(),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

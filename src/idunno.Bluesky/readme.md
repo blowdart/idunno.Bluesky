@@ -22,8 +22,9 @@
 * Muting and blocking users
 * Sending, receiving, and deleting messages
 * Creating, joining and leaving group conversations
-* Create, deleting and listing a user's bookmarks
+* Creating, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
+* Multipart uploads for videos
 
 Trimming is supported for applications targeting .NET 9.0 or later.
 

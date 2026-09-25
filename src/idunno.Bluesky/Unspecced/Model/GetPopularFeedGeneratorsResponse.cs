@@ -3,8 +3,10 @@
 
 using idunno.Bluesky.Feed;
 
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal sealed record GetPopularFeedGeneratorsResponse(ICollection<GeneratorView> Feeds, string? Cursor)
+internal sealed record GetPopularFeedGeneratorsResponse([property: JsonRequired] ICollection<GeneratorView> Feeds, string? Cursor)
 {
 }

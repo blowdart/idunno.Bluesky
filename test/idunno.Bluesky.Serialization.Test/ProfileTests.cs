@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-using idunno.Bluesky.Record;
+using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Serialization.Test;
 

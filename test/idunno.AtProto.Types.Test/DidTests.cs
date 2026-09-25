@@ -233,4 +233,18 @@ public class DidTests
         Assert.Equal(input, did.ToString());
         Assert.Equal(expectedMethod, did.Method);
     }
+
+    [Theory]
+    [InlineData("did:plc:ec72yg6n2sydzjvtovvdlxrk", "plc")]
+    [InlineData("did:web:example.com", "web")]
+    [InlineData("did:web:example.com:user:alice", "web")]
+    [InlineData("did:web:localhost:3000", "web")]
+    [InlineData("did:web:example.com:a:b:c:d:e", "web")]
+    public void DidMethodIsExtractedFromDidsWithMoreThanThreeSegments(string value, string expectedMethod)
+    {
+        Did did = new(value);
+
+        Assert.Equal(expectedMethod, did.Method);
+        Assert.Equal(value, did.Value);
+    }
 }

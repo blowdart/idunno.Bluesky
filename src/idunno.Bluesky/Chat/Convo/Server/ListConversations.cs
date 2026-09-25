@@ -21,13 +21,19 @@ public static partial class BlueskyServer
     /// </summary>
     /// <param name="limit">The number of conversations to return.</param>
     /// <param name="cursor">A cursor used for pagination.</param>
+    /// <param name="readState">An optional filter limiting the results to conversations in the specified read state. Known values are defined in <see cref="ConversationReadState"/>.</param>
+    /// <param name="status">An optional filter limiting the results to conversations with the specified status. Known values are defined in <see cref="ConversationStatus"/>.</param>
+    /// <param name="kind">An optional filter limiting the results to conversations of the specified kind. Known values are defined in <see cref="ConversationKind"/>.</param>
+    /// <param name="lockStatus">An optional filter limiting the results to conversations with the specified lock status. Known values are defined in <see cref="ConversationLockStatus"/>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversations from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when any of <paramref name="readState"/>, <paramref name="status"/>, <paramref name="kind"/> or <paramref name="lockStatus"/> is specified and is whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
     [UnconditionalSuppressMessage(
@@ -40,37 +46,44 @@ public static partial class BlueskyServer
     public static async Task<AtProtoHttpResult<Conversations>> ListConversations(
         int? limit,
         string? cursor,
+        string? readState,
+        string? status,
+        string? kind,
+        string? lockStatus,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        int limitValue = limit ?? 50;
-
-        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
-        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ConversationsToList);
-
-        StringBuilder queryStringBuilder = new();
         if (limit is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.ConversationsToList);
         }
 
-        if (cursor is not null)
+        StringBuilder queryStringBuilder = new();
+
+        if (limit is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}");
         }
+
+        AppendFilter("cursor", cursor);
+        AppendFilter("readState", readState);
+        AppendFilter("status", status);
+        AppendFilter("kind", kind);
+        AppendFilter("lockStatus", lockStatus);
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<ListConversationsResponse> response = await client.Get(
             service,
@@ -84,7 +97,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Conversations>(
-                new Conversations(response.Result.Conversations),
+                new Conversations(WithoutNullEntries(response.Result.Conversations, service, nameof(response.Result.Conversations), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -98,6 +111,26 @@ public static partial class BlueskyServer
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
                 response.RateLimit);
+        }
+
+        void AppendFilter(string name, string? value)
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentException($"'{name}' cannot be empty or whitespace.", name);
+            }
+
+            if (queryStringBuilder.Length != 0)
+            {
+                queryStringBuilder.Append('&');
+            }
+
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"{name}={Uri.EscapeDataString(value)}");
         }
     }
 

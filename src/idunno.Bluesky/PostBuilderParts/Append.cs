@@ -84,7 +84,7 @@ public sealed partial class PostBuilder
             ByteSlice byteSlice = GetFacetPosition(_post.Text, link.Text);
             _post.Text += link.Text;
 
-            LinkFacetFeature linkFacetFeature = new(link.Uri);
+            LinkFacetFeature linkFacetFeature = new(link.Uri.ToString());
             List<FacetFeature> features =
                 [
                     linkFacetFeature
@@ -142,7 +142,7 @@ public sealed partial class PostBuilder
 
         lock (_syncLock)
         {
-            if (value.Length > MaxCapacity || value.GetGraphemeLength() > MaxCapacityGraphemes)
+            if (value.GetUtf8Length() > MaxCapacity || value.GetGraphemeLength() > MaxCapacityGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(value),
@@ -155,7 +155,7 @@ public sealed partial class PostBuilder
                 return this;
             }
 
-            int newLength = value.Length + _post.Text.Length;
+            int newLength = value.GetUtf8Length() + _post.Text.GetUtf8Length();
             int newGraphemeLength = value.GetGraphemeLength() + _post.Text.GetGraphemeLength();
 
             if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)

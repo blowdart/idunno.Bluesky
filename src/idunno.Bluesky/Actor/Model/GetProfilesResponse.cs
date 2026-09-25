@@ -16,5 +16,6 @@ internal sealed record GetProfilesResponse
     }
 
     [JsonInclude]
+    [JsonRequired]
     public ProfileViewDetailed[] Profiles { get; init; }
 }

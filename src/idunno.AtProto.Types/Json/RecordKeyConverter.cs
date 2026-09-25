@@ -40,7 +40,7 @@ public sealed class RecordKeyConverter : JsonConverter<RecordKey>
         {
             throw new JsonException("Value is not a valid RecordKey.", e);
         }
-        catch (NsidFormatException e)
+        catch (RecordKeyFormatException e)
         {
             throw new JsonException("Value is not a valid RecordKey.", e);
         }
@@ -52,7 +52,7 @@ public sealed class RecordKeyConverter : JsonConverter<RecordKey>
     /// Writes the specified <see cref="RecordKey" /> as JSON.
     /// </summary>
     /// <param name="writer">The writer to write to.</param>
-    /// <param name="value">The <see cref="Cid"/> to convert to JSON.</param>
+    /// <param name="value">The <see cref="RecordKey"/> to convert to JSON.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="value"/> is <see langword="null"/>.</exception>
     public override void Write(Utf8JsonWriter writer, RecordKey value, JsonSerializerOptions options)

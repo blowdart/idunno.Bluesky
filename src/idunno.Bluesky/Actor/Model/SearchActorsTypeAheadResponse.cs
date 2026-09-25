@@ -16,5 +16,6 @@ internal sealed record SearchActorsTypeAheadResponse
     }
 
     [JsonInclude]
+    [JsonRequired]
     public IReadOnlyCollection<ProfileViewBasic> Actors { get; init; }
 }

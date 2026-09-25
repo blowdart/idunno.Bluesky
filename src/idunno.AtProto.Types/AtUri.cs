@@ -44,7 +44,8 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// Creates a new instance of the <see cref="AtUri"/> class from <paramref name="s"/>.
     /// </summary>
     /// <param name="s">A string to construct an <see cref="AtUri"/> from.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid AT URI, or is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="AtUriFormatException">Thrown when <paramref name="s"/> is not a valid AT URI.</exception>
     public AtUri(string s)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s);
@@ -69,17 +70,17 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// This will always be "at" for a valid AtUri.
     /// </summary>
     /// <value>The normalized scheme component for this <see cref="AtUri"/>.</value>
-    public string Scheme { get; internal set; } = string.Empty;
+    public string Scheme { get; } = string.Empty;
 
     /// <summary>
     /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/>.
     /// </summary>
-    public AtIdentifier Authority { get; internal set; }
+    public AtIdentifier Authority { get; }
 
     /// <summary>
     /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise <see langword="null"/>.
     /// </summary>
-    public string? AbsolutePath { get; internal set; }
+    public string? AbsolutePath { get; }
 
     /// <summary>
     /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a repo (authority).
@@ -91,13 +92,13 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// Returns the collection segment of the <see cref="AtUri"/> or <see langword="null"/> if the <see cref="AtUri"/> does not contain a collection.
     /// </summary>
     [JsonIgnore]
-    public Nsid? Collection { get; internal set; }
+    public Nsid? Collection { get; }
 
     /// <summary>
     /// Returns the record key of the AT URI or <see langword="null"/> if the URI does not contain one.
     /// </summary>
     [JsonIgnore]
-    public RecordKey? RecordKey { get; internal set; }
+    public RecordKey? RecordKey { get; }
 
     /// <summary>
     /// Returns the hash code for this <see cref="AtUri"/>.
@@ -142,15 +143,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
             return false;
         }
 
-        if (Authority is null && other.Authority is not null)
-        {
-            return false;
-        }
-        else if (Authority is not null && other.Authority is null)
-        {
-            return false;
-        }
-        else if (!Authority!.Equals(other.Authority))
+        if (!Authority.Equals(other.Authority))
         {
             return false;
         }
@@ -201,10 +194,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
             atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Scheme}://");
         }
 
-        if (Authority is not null)
-        {
-            atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
-        }
+        atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
 
         if (!string.IsNullOrEmpty(AbsolutePath))
         {
@@ -259,6 +249,19 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
         result = null;
 
+        // Check the length before doing any scanning, splitting or matching over the string.
+        if (s.Length > 8 * 1024)
+        {
+            if (throwOnError)
+            {
+                throw new AtUriFormatException($"{s} is too long.");
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         if (!s.StartsWith(ProtocolAndSeparator, StringComparison.InvariantCulture))
         {
             if (throwOnError)
@@ -309,7 +312,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
         string[] uriParts = s.Split('/');
 
-        if (uriParts.Length >= 3 && (uriParts[0] != "at:" || uriParts[1].Length != 0))
+        if (uriParts.Length < 3 || uriParts[0] != "at:" || uriParts[1].Length != 0)
         {
             if (throwOnError)
             {
@@ -390,34 +393,6 @@ public sealed partial class AtUri : IEquatable<AtUri>
             }
         }
 
-        if (regexValidationResult.Groups.ContainsKey("collection") && !string.IsNullOrEmpty(regexValidationResult.Groups["collection"].Value))
-        {
-            bool nsidParseResult = Nsid.TryParse(regexValidationResult.Groups["collection"].Value, out Nsid? _);
-            if (!nsidParseResult)
-            {
-                if (throwOnError)
-                {
-                    throw new AtUriFormatException($"Collection segment, {regexValidationResult.Groups["collection"].Value}, must be a valid NSID.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-
-        if (s.Length > 8 * 1024)
-        {
-            if (throwOnError)
-            {
-                throw new AtUriFormatException($"{s} is too long.");
-            }
-            else
-            {
-                return false;
-            }
-        }
-
         string scheme = @"at";
         AtIdentifier? authority;
         string? absolutePath = null;
@@ -476,24 +451,38 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
             if (pathSegments.Length > 2)
             {
-                throw new AtUriFormatException($"{s} has too many segments");
-            }
-
-            if (pathSegments.Length >= 1)
-            {
-                bool isSegmentValidNsid = Nsid.Parse(pathSegments[0], throwOnError, out collection);
-
-                if (!isSegmentValidNsid)
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"{s} has too many segments");
+                }
+                else
                 {
                     return false;
                 }
             }
 
-            if (pathSegments.Length == 2)
+            // Failures in either path segment are reported as an AtUriFormatException, so that every way an AT URI
+            // can be malformed is reported the same way. The segment specific exceptions belong to callers parsing
+            // a segment in isolation, not to callers parsing a URI.
+            if (pathSegments.Length >= 1 && !Nsid.Parse(pathSegments[0], false, out collection))
             {
-                bool isSegmentValidRecordKey = RecordKey.Parse(pathSegments[1], throwOnError, out recordKey);
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"Collection segment, {pathSegments[0]}, must be a valid NSID.");
+                }
+                else
+                {
+                    return false;
+                }
+            }
 
-                if (!isSegmentValidRecordKey)
+            if (pathSegments.Length == 2 && !RecordKey.Parse(pathSegments[1], false, out recordKey))
+            {
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"Record key segment, {pathSegments[1]}, must be a valid record key.");
+                }
+                else
                 {
                     return false;
                 }

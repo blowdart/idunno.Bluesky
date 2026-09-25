@@ -41,7 +41,7 @@ public sealed class DidConverter : JsonConverter<Did>
             throw new JsonException("Value is not a valid DID.", e);
         }
 
-        return reader.TokenType != JsonTokenType.String ? throw new JsonException() : did;
+        return did;
     }
 
     /// <summary>

@@ -6,7 +6,7 @@ The available rules are
 
 * **idunno.Bluesky.Feed.Gates.MentionRule** : Allow replies from actors mentioned in your post.
 * **idunno.Bluesky.Feed.Gates.FollowingRule**: Allow replies from actors you follow.
-* **idunno.Bluesky.Feed.Gates.FollowerRule**: Allow replies from actors you follow you.
+* **idunno.Bluesky.Feed.Gates.FollowerRule**: Allow replies from actors who follow you.
 * **idunno.Bluesky.Feed.Gates.ListRule**: Allow replies from actors in a list.
 
 A thread gate may have up to 5 rules.
@@ -42,7 +42,7 @@ await agent.AddThreadGate(
 
 ## Deleting a thread gate
 
-To delete a thread gate one of your posts use `agent.DeleteThreadGate();`
+To delete a thread gate on one of your posts, use `agent.DeleteThreadGate();`
 
 `DeleteThreadGate(post)`
 

@@ -17,6 +17,7 @@ public partial class AtProtoServer
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
+        RespectNullableAnnotations = true,
         TypeInfoResolver = SourceGenerationContext.Default,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
     };
@@ -30,6 +31,7 @@ public partial class AtProtoServer
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        RespectNullableAnnotations = true
     };
 
     /// <summary>
@@ -44,6 +46,29 @@ public partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(jsonSerializerOptions.TypeInfoResolver);
 
         return BuildChainedTypeInfoResolverJsonSerializerOptions(jsonSerializerOptions.TypeInfoResolver);
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="JsonSerializerOptions"/> with the specified <paramref name="jsonSerializerOptions"/> chained to the AtProto source generation resolver.
+    /// </summary>
+    /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to chain type resolution with.</param>
+    /// <returns>An instance of <see cref="JsonSerializerOptions"/> with the type information resolvers chained.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonSerializerOptions"/> or any of its elements or their TypeInfoResolver is <see langword="null"/>.</exception>
+    public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(params JsonSerializerOptions[] jsonSerializerOptions)
+    {
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
+
+        JsonSerializerOptions result = AtProtoJsonSerializerOptions;
+
+        foreach (JsonSerializerOptions options in jsonSerializerOptions)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+            ArgumentNullException.ThrowIfNull(options.TypeInfoResolver);
+
+            result.TypeInfoResolverChain.Insert(0, options.TypeInfoResolver);
+        }
+
+        return result;
     }
 
     /// <summary>

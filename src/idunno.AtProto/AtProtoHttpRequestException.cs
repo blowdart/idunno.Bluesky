@@ -2,25 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using System.Runtime.Serialization;
 
 namespace idunno.AtProto;
 
 /// <summary>
 /// The exception thrown when a problem occurs when making a request in the <see cref="AtProtoHttpClient{TResult}"/>.
 /// </summary>
-[Serializable]
 public class AtProtoHttpRequestException : HttpRequestException
 {
-    /// <summary>
-    /// Creates a new instance of the <see cref="AtProtoHttpRequestException"/> class for serialization.
-    /// </summary>
-    /// <param name="info">The data needed to serialize or deserialize.</param>
-    /// <param name="context">the source and destination of serialized stream.</param>
-    protected AtProtoHttpRequestException(SerializationInfo info, StreamingContext context) : base()
-    {
-    }
-
     /// <summary>
     /// Initializes a new instance of the <see cref="AtProtoHttpRequestException" /> class.
     /// </summary>

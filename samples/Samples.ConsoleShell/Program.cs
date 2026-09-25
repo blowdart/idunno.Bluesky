@@ -1,12 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
-using System.Text.RegularExpressions;
-
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Chat;
 
 using Microsoft.Extensions.Logging;
 
@@ -43,7 +39,7 @@ public sealed class Program
         // Change the log level in the ConfigureConsoleLogging() to enable logging
         using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-        // Create a new BlueSkyAgent
+        // Create a new BlueskyAgent
         using (var agent = new BlueskyAgent(
             options: new BlueskyAgentOptions()
             {
@@ -92,8 +88,6 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
-
-            // Your code goes here.
         }
     }
 }

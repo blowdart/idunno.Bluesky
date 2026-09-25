@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
-using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Serialization.Test;
 
@@ -39,7 +39,7 @@ public class AccountStatusTests
         var embeddedExternal = (EmbeddedExternal)status.Embed!;
         Assert.NotNull(embeddedExternal);
         Assert.NotNull(embeddedExternal.External);
-        Assert.Equal(new Uri("https://twitch.tv/streamer"), embeddedExternal.External.Uri);
+        Assert.Equal("https://twitch.tv/streamer", embeddedExternal.External.Uri);
         Assert.Equal("BeanOnBean", embeddedExternal.External.Title);
         Assert.Equal("Hot Bean on bean action", embeddedExternal.External.Description);
 

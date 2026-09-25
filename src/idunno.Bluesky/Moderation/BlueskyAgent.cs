@@ -23,12 +23,15 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="labelerDid"/> or <paramref name="subject"/> is <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="reportType"/> is not a defined <see cref="ReportType"/>, or when
+    /// <paramref name="reason"/> is not <see langword="null"/> and is longer than 20000 bytes or 2000 graphemes.
+    /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>
     /// <para>
     ///     Clients should not send reports to Labelers which do not match the subject and report type metadata in their declaration record.
-    ///     Labeler declarations can be retrieved 
+    ///     Labeler declarations can be retrieved with <see cref="GetLabelerDeclaration(Did, CancellationToken)"/>.
     /// </para>
     /// </remarks>
     public async Task<AtProtoHttpResult<ModerationReport>> CreateModerationReport(
@@ -41,9 +44,17 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(labelerDid);
         ArgumentNullException.ThrowIfNull(subject);
 
+        if (!WellKnown.ReportType.TryGetValue(reportType, out string? reasonType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(reportType), reportType, "Not a known report type.");
+        }
+
+        // The limits are applied again by the AtProto layer, but applying them here means a caller gets an
+        // exception naming the parameter they passed rather than one naming an internal parameter.
         if (reason is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetUtf8Length(), 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetGraphemeLength(), 2000);
         }
 
         if (!IsAuthenticated)
@@ -54,9 +65,8 @@ public partial class BlueskyAgent
         return await CreateModerationReport(
             labelerDid: labelerDid,
             reportSubject: subject,
-            reasonType: WellKnown.ReportType[reportType],
+            reasonType: reasonType,
             reason: reason,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
     }
 }

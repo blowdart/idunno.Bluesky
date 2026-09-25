@@ -29,7 +29,6 @@ public sealed record Mention : PostBuilderFacetFeature
     /// <param name="handle">The <see cref="Handle"/> of the actor being mentioned, which will generate the text for the facet.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
     public Mention(Did did, Handle handle) : base()
-
     {
         ArgumentNullException.ThrowIfNull(did);
         ArgumentNullException.ThrowIfNull(handle);
@@ -39,7 +38,7 @@ public sealed record Mention : PostBuilderFacetFeature
     }
 
     /// <summary>
-    /// Gets the <see cref="Did"/> of the actor being mentioned in the facet feature..
+    /// Gets the <see cref="Did"/> of the actor being mentioned in the facet feature.
     /// </summary>
     public Did Did { get; init; }
 }

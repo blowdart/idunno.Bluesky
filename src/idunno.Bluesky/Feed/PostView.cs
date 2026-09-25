@@ -33,7 +33,7 @@ public sealed record PostView : PostViewBase
         int bookmarkCount,
         ThreadGateView? threadGate,
         DateTimeOffset indexedAt,
-        FeedViewerState? viewer,
+        ViewerState? viewer,
         IReadOnlyCollection<Label>? labels,
         EmbeddedView? embed)
     {
@@ -148,7 +148,7 @@ public sealed record PostView : PostViewBase
     /// Only has meaningful content for authenticated requests.
     /// </summary>
     [JsonInclude]
-    public FeedViewerState? Viewer { get; init; }
+    public ViewerState? Viewer { get; init; }
 
     /// <summary>
     /// Any labels applied to the post.

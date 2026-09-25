@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +13,7 @@ using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -35,7 +38,7 @@ public static partial class AtProtoServer
     internal const string GetRecordEndpoint = "/xrpc/com.atproto.repo.getRecord";
 
     // https://docs.bsky.app/docs/api/com-atproto-repo-list-records
-    internal const string ListRecordsEndpoint = "/xrpc/com.atproto.repo.ListRecords";
+    internal const string ListRecordsEndpoint = "/xrpc/com.atproto.repo.listRecords";
 
     // https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob
     internal const string UploadBlobEndpoint = "/xrpc/com.atproto.repo.uploadBlob";
@@ -59,18 +62,23 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
     /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
     [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
         ICollection<WriteOperation> operations,
         Did repo,
@@ -80,8 +88,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operations);
@@ -108,21 +117,19 @@ public static partial class AtProtoServer
             {
                 case CreateOperation createOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution)) ??
+                            throw new ArgumentException("A create operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                         break;
                     }
 
                 case UpdateOperation putOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution)) ??
+                            throw new ArgumentException("An update operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                         break;
                     }
 
@@ -130,6 +137,10 @@ public static partial class AtProtoServer
                     mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                     break;
 
+                default:
+                    throw new ArgumentException(
+                        string.Create(CultureInfo.InvariantCulture, $"Write operations of type {operation.GetType()} are not supported."),
+                        nameof(operations));
             }
         }
 
@@ -139,11 +150,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
@@ -196,18 +207,23 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
     /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="operations"/> is an empty collection, contains an operation whose record value cannot be serialized,
+    /// or contains an operation which is not a <see cref="CreateOperation"/>, <see cref="UpdateOperation"/> or <see cref="DeleteOperation"/>.
+    /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
         ICollection<WriteOperation> operations,
         JsonSerializerOptions jsonSerializerOptions,
@@ -218,8 +234,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operations);
@@ -247,27 +264,30 @@ public static partial class AtProtoServer
             {
                 case CreateOperation createOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, jsonSerializerOptions));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, jsonSerializerOptions)) ??
+                            throw new ArgumentException("A create operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                         break;
                     }
 
                 case UpdateOperation putOperation:
                     {
-                        JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, jsonSerializerOptions));
-                        if (value is not null)
-                        {
-                            mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
-                        }
+                        JsonNode value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, jsonSerializerOptions)) ??
+                            throw new ArgumentException("An update operation has a record value which cannot be serialized.", nameof(operations));
+
+                        mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                         break;
                     }
 
                 case DeleteOperation deleteOperation:
                     mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                     break;
+
+                default:
+                    throw new ArgumentException(
+                        string.Create(CultureInfo.InvariantCulture, $"Write operations of type {operation.GetType()} are not supported."),
+                        nameof(operations));
             }
         }
 
@@ -277,11 +297,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
@@ -335,8 +355,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service.</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -347,6 +368,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
         TRecord record,
         Nsid collection,
@@ -358,8 +380,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -382,19 +405,19 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
-            service,
-            CreateRecordEndpoint,
-            request,
-            accessCredentials,
-            httpClient,
+            service: service,
+            endpoint: CreateRecordEndpoint,
+            record: request,
+            credentials: accessCredentials,
+            httpClient: httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -440,8 +463,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service.</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -452,6 +476,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
         TRecord record,
         JsonSerializerOptions jsonSerializerOptions,
@@ -464,8 +489,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -474,6 +500,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -490,11 +517,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
@@ -506,14 +533,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (!response.Succeeded &&
-            response.AtErrorDetail is not null &&
-            response.AtErrorDetail.Error is not null &&
-            string.Equals(InvalidSwap.ErrorTitle, response.AtErrorDetail.Error, StringComparison.Ordinal))
-        {
-            response.AtErrorDetail = new InvalidSwap(response.AtErrorDetail);
-        }
 
         if (response.Succeeded)
         {
@@ -547,8 +566,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><see cref="AccessCredentials"/> for the specified <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -564,7 +584,7 @@ public static partial class AtProtoServer
         "AOT",
         "IL3050:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+    public static async Task<AtProtoHttpResult<DeleteResult>> DeleteRecord(
         AtIdentifier repo,
         Nsid collection,
         RecordKey rKey,
@@ -574,8 +594,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -596,11 +617,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<DeleteRecordResponse> response = await client.Post(
@@ -613,10 +634,12 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (response.Succeeded)
+        // The lexicon declares no required output properties, and a service may answer with no body at all, so a delete
+        // which the service accepted is reported as a success carrying whatever commit, if any, came back with it.
+        if (response.StatusCode is HttpStatusCode.OK or HttpStatusCode.NoContent)
         {
-            return new AtProtoHttpResult<Commit>(
-                response.Result.Commit,
+            return new AtProtoHttpResult<DeleteResult>(
+                new DeleteResult(response.Result?.Commit),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -624,7 +647,7 @@ public static partial class AtProtoServer
         }
         else
         {
-            return new AtProtoHttpResult<Commit>(
+            return new AtProtoHttpResult<DeleteResult>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -650,8 +673,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -660,6 +684,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         AtProtoRepositoryRecord<TRecord> repositoryRecord,
         bool? validate,
@@ -667,8 +692,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
     {
@@ -700,6 +726,7 @@ public static partial class AtProtoServer
             serviceProxy: serviceProxy,
             onCredentialsUpdated: onCredentialsUpdated,
             loggerFactory: loggerFactory,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -725,8 +752,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -737,6 +765,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         TRecord record,
         Nsid collection,
@@ -749,8 +778,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -777,11 +807,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<PutRecordResponse> response = await client.Post(
@@ -831,8 +861,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -841,6 +872,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         AtProtoRepositoryRecord<TRecord> repositoryRecord,
         JsonSerializerOptions jsonSerializerOptions,
@@ -849,8 +881,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
     {
@@ -861,6 +894,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -873,8 +907,8 @@ public static partial class AtProtoServer
             creator: repositoryRecord.Uri.Repo,
             rKey: repositoryRecord.Uri.RecordKey,
             validate: validate,
-            swapCommit: repositoryRecord.Cid,
-            swapRecord: null,
+            swapCommit: null,
+            swapRecord: repositoryRecord.Cid,
             service: service,
             accessCredentials: accessCredentials,
             httpClient: httpClient,
@@ -882,6 +916,7 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             loggerFactory: loggerFactory,
             jsonSerializerOptions: jsonSerializerOptions,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -908,8 +943,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -920,6 +956,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         TRecord record,
         JsonSerializerOptions jsonSerializerOptions,
@@ -933,8 +970,9 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -944,6 +982,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (service != accessCredentials.Service)
         {
@@ -957,15 +996,14 @@ public static partial class AtProtoServer
         PutRecordRequest request = new(serializedRecord, collection, creator, rKey, validate, swapCommit, swapRecord);
 
         AtProtoHttpClient<PutRecordResponse> client;
-        jsonSerializerOptions ??= AtProtoJsonSerializerOptions;
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<PutRecordResponse> response = await client.Post(
@@ -1010,8 +1048,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1020,6 +1059,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1029,8 +1069,9 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1048,11 +1089,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1086,8 +1127,9 @@ public static partial class AtProtoServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1096,6 +1138,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1106,8 +1149,9 @@ public static partial class AtProtoServer
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1115,6 +1159,7 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(rKey);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         AtProtoHttpClient<AtProtoRepositoryRecord<TRecord>> client;
 
@@ -1125,11 +1170,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1162,8 +1207,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1171,7 +1217,7 @@ public static partial class AtProtoServer
     /// </exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "")]
-    [SuppressMessage("Trimming",
+    [UnconditionalSuppressMessage("Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All serialization information is captured by the underlying options.")]
     [UnconditionalSuppressMessage(
@@ -1185,8 +1231,9 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1204,11 +1251,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1243,8 +1290,9 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1254,6 +1302,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1264,8 +1313,9 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1281,14 +1331,14 @@ public static partial class AtProtoServer
         if (limit is not null &&
            (limit < 1 || limit > 100))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 100."));
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}";
 
         if (limit is not null)
         {
-            queryString += $"&limit={limit}";
+            queryString += string.Create(CultureInfo.InvariantCulture, $"&limit={limit}");
         }
 
         if (cursor is not null)
@@ -1301,14 +1351,16 @@ public static partial class AtProtoServer
             queryString += "&reverse=true";
         }
 
+        ILogger logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger(nameof(AtProtoServer));
+
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ListRecordsResponse> response = await client.Get(
@@ -1328,15 +1380,33 @@ public static partial class AtProtoServer
 
             // Run through the nodes and deserialize one by one to the strongly typed PagedReadOnlyCollection<T>, avoiding
             // the need to expose ListRecordsResponse<T>.
-            foreach (JsonObject record in response.Result.Records)
+            //
+            // A record the caller's type cannot represent is remote data we do not control, so it is skipped and logged
+            // rather than thrown, which would make an entire collection unenumerable because of a single bad record.
+            foreach (JsonObject? record in response.Result.Records ?? [])
             {
-                string jsonString = record.ToJsonString();
-
-                AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(jsonString, DefaultJsonSerializerOptionsWithNoTypeResolution);
-
-                if (atProtoRecord is not null)
+                if (record is null)
                 {
-                    records.Add(atProtoRecord);
+                    Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    continue;
+                }
+
+                try
+                {
+                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(record.ToJsonString(), DefaultJsonSerializerOptionsWithNoTypeResolution);
+
+                    if (atProtoRecord is not null)
+                    {
+                        records.Add(atProtoRecord);
+                    }
+                    else
+                    {
+                        Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Logger.ListRecordsSkippedUndeserializableRecord(logger, GetRecordUri(record), collection, service, ex);
                 }
             }
 
@@ -1376,8 +1446,9 @@ public static partial class AtProtoServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1387,6 +1458,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1398,19 +1470,21 @@ public static partial class AtProtoServer
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
         ArgumentNullException.ThrowIfNull(collection);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
         if (limit is not null &&
            (limit < 1 || limit > 100))
         {
-            throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
+            throw new ArgumentOutOfRangeException(nameof(limit), string.Create(CultureInfo.InvariantCulture, $"{limit} must be between 1 and 100."));
         }
 
         if (accessCredentials is not null && service != accessCredentials.Service)
@@ -1422,7 +1496,7 @@ public static partial class AtProtoServer
 
         if (limit is not null)
         {
-            queryString += $"&limit={limit}";
+            queryString += string.Create(CultureInfo.InvariantCulture, $"&limit={limit}");
         }
 
         if (cursor is not null)
@@ -1435,14 +1509,16 @@ public static partial class AtProtoServer
             queryString += "&reverse=true";
         }
 
+        ILogger logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger(nameof(AtProtoServer));
+
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ListRecordsResponse> response = await client.Get(
@@ -1459,23 +1535,40 @@ public static partial class AtProtoServer
         PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>> result;
         if (response.Succeeded)
         {
-            jsonSerializerOptions ??= DefaultJsonSerializerOptionsWithNoTypeResolution;
 
             List<AtProtoRepositoryRecord<TRecord>> records = [];
 
             // Run through the nodes and deserialize one by one to the strongly typed PagedReadOnlyCollection<T>, avoiding
             // the need to expose ListRecordsResponse<T>.
-            foreach (JsonObject record in response.Result.Records)
+            //
+            // A record the caller's type cannot represent is remote data we do not control, so it is skipped and logged
+            // rather than thrown, which would make an entire collection unenumerable because of a single bad record.
+            foreach (JsonObject? record in response.Result.Records ?? [])
             {
-                string jsonString = record.ToJsonString();
-
-                AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(
-                    jsonString,
-                    jsonSerializerOptions);
-
-                if (atProtoRecord is not null)
+                if (record is null)
                 {
-                    records.Add(atProtoRecord);
+                    Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    continue;
+                }
+
+                try
+                {
+                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(
+                        record.ToJsonString(),
+                        jsonSerializerOptions);
+
+                    if (atProtoRecord is not null)
+                    {
+                        records.Add(atProtoRecord);
+                    }
+                    else
+                    {
+                        Logger.ListRecordsSkippedNullRecord(logger, collection, service);
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    Logger.ListRecordsSkippedUndeserializableRecord(logger, GetRecordUri(record), collection, service, ex);
                 }
             }
 
@@ -1502,7 +1595,7 @@ public static partial class AtProtoServer
     }
 
     /// <summary>
-    /// Upload a new blob, to be referenced from a repository record.Requires authentication.
+    /// Upload a new blob, to be referenced from a repository record. Requires authentication.
     /// </summary>
     /// <param name="blob">The blob to upload.</param>
     /// <param name="mimeType">The mime type of the blob to upload.</param>
@@ -1510,13 +1603,14 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="mimeType"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty, or is not a valid media type in the type/subtype format.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     /// <remarks>
     /// <para>
@@ -1538,17 +1632,18 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(blob);
         ArgumentOutOfRangeException.ThrowIfZero(blob.Length);
 
         ArgumentException.ThrowIfNullOrEmpty(mimeType);
-        if (!mimeType.Contains('/', StringComparison.Ordinal) || mimeType.Count(c => c == '/') != 1)
+        if (!MediaTypeHeaderValue.TryParse(mimeType, out MediaTypeHeaderValue? parsedMimeType))
         {
-            throw new ArgumentException("Mime type must be in the format 'type/subtype'.", nameof(mimeType));
+            throw new ArgumentException("Mime type must be a valid media type in the format 'type/subtype'.", nameof(mimeType));
         }
 
         ArgumentNullException.ThrowIfNull(service);
@@ -1562,18 +1657,18 @@ public static partial class AtProtoServer
 
         List<NameValueHeaderValue> contentHeaders =
         [
-            new NameValueHeaderValue("Content-Type", mimeType)
+            new NameValueHeaderValue("Content-Type", parsedMimeType.ToString())
         ];
 
         AtProtoHttpClient<CreateBlobResponse> client;
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateBlobResponse> response =
@@ -1586,7 +1681,7 @@ public static partial class AtProtoServer
                 credentials: accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions: SourceGenerationContext.Default.Options,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -1616,6 +1711,7 @@ public static partial class AtProtoServer
     /// <param name="service">The service to delete the record from.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1633,21 +1729,36 @@ public static partial class AtProtoServer
         Uri service,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<RepoDescription> request = new(loggerFactory);
+        AtProtoHttpClient<RepoDescription> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<RepoDescription> result = await request.Get(
             service: service,
             endpoint: $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
             httpClient: httpClient,
-            jsonSerializerOptions: SourceGenerationContext.Default.Options,
+            jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return result;
+    }
+
+    // Best effort extraction of the uri of a record which could not be deserialized, so the record can be identified
+    // in logs and retrieved individually through an untyped GetRecord() call.
+    private static string? GetRecordUri(JsonObject record)
+    {
+        if (record.TryGetPropertyValue("uri", out JsonNode? uriNode) &&
+            uriNode is JsonValue uriValue &&
+            uriValue.TryGetValue(out string? uri))
+        {
+            return uri;
+        }
+
+        return null;
     }
 }

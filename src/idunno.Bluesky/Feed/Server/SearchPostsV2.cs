@@ -51,9 +51,10 @@ public static partial class BlueskyServer
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve search information from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
@@ -100,9 +101,10 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -117,14 +119,14 @@ public static partial class BlueskyServer
         if (limit is not null)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.PostsToList);
         }
 
         StringBuilder queryStringBuilder = new();
 
         if (query is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"query={Uri.EscapeDataString(query)}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&query={Uri.EscapeDataString(query)}");
         }
 
         if (sort is not null)
@@ -168,7 +170,7 @@ public static partial class BlueskyServer
         {
             foreach (AtUri embeddedAtUri in embeddedAtUris)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&embedded={Uri.EscapeDataString(embeddedAtUri.ToString())}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&embeddedAtUris={Uri.EscapeDataString(embeddedAtUri.ToString())}");
             }
         }
 
@@ -176,6 +178,9 @@ public static partial class BlueskyServer
         {
             foreach (string hashTag in hashTags)
             {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hashTag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hashTag.GetUtf8Length(), Maximum.TagLengthInBytes);
+
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&hashtags={Uri.EscapeDataString(hashTag)}");
             }
         }
@@ -216,7 +221,7 @@ public static partial class BlueskyServer
         {
             foreach (AtUri excludeEmbeddedAtUri in excludeEmbeddedAtUris)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeEmbedded={Uri.EscapeDataString(excludeEmbeddedAtUri.ToString())}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeEmbeddedAtUris={Uri.EscapeDataString(excludeEmbeddedAtUri.ToString())}");
             }
         }
 
@@ -224,6 +229,9 @@ public static partial class BlueskyServer
         {
             foreach (string excludeHashTag in excludeHashTags)
             {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(excludeHashTag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(excludeHashTag.GetUtf8Length(), Maximum.TagLengthInBytes);
+
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&excludeHashtags={Uri.EscapeDataString(excludeHashTag)}");
             }
         }
@@ -240,7 +248,7 @@ public static partial class BlueskyServer
 
         if (allTime is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&until={Uri.EscapeDataString(allTime.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&allTime={Uri.EscapeDataString(allTime.Value.ToString(CultureInfo.InvariantCulture).ToLowerInvariant())}");
         }
 
         if (languages is not null && languages.Count > 0)
@@ -271,12 +279,12 @@ public static partial class BlueskyServer
 
         if (replyParentUri is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&replyParent={Uri.EscapeDataString(replyParentUri.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&replyParentUri={Uri.EscapeDataString(replyParentUri.ToString())}");
         }
 
         if (threadRootUri is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&threadRoot={Uri.EscapeDataString(threadRootUri.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&threadRootUri={Uri.EscapeDataString(threadRootUri.ToString())}");
         }
 
         if (excludeReplies is not null)
@@ -304,6 +312,9 @@ public static partial class BlueskyServer
             throw new ArgumentException("A query or at least one filter is required.");
         }
 
+        // Every parameter is appended with a leading separator, so the first one has to have its separator removed.
+        queryStringBuilder.Remove(0, 1);
+
         if (limit is not null)
         {
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
@@ -315,7 +326,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        BlueskyHttpClient<SearchPostsV2Response> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchPostsV2Response> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchPostsV2Response> response = await client.Get(
             service,
             $"/xrpc/app.bsky.feed.searchPostsV2?{queryString}",
@@ -329,7 +340,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<SearchV2Results>(
-                new SearchV2Results(response.Result.Posts, response.Result.HitsTotal, response.Result.Cursor, response.Result.DetectedQueryLanguages),
+                new SearchV2Results(WithoutNullEntries(response.Result.Posts, service, nameof(response.Result.Posts), loggerFactory), response.Result.HitsTotal, response.Result.Cursor, response.Result.DetectedQueryLanguages is null ? null : WithoutNullEntries(response.Result.DetectedQueryLanguages, service, nameof(response.Result.DetectedQueryLanguages), loggerFactory)),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -338,7 +349,7 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<SearchV2Results>(
-                new SearchV2Results([], null, null, null),
+                default,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

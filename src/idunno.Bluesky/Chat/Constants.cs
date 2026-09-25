@@ -55,3 +55,14 @@ public static class ConversationStatus
     /// </summary>
     public const string Requested = "request";
 }
+
+/// <summary>
+/// Known values for filtering conversations by whether they have been read.
+/// </summary>
+public static class ConversationReadState
+{
+    /// <summary>
+    /// Indicates a conversation that contains unread messages.
+    /// </summary>
+    public const string Unread = "unread";
+}

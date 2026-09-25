@@ -13,14 +13,6 @@ namespace idunno.AtProto.Authentication;
 public abstract class AtProtoCredential(Uri service, AuthenticationType authenticationType)
 {
     /// <summary>
-    /// Finalizes this instance of <see cref="AtProtoCredential"/>.
-    /// </summary>
-    ~AtProtoCredential()
-    {
-        ReaderWriterLockSlim?.Dispose();
-    }
-
-    /// <summary>
     /// The type of authentication used to acquire the credentials.
     /// </summary>
     public AuthenticationType AuthenticationType { get; protected set; } = authenticationType;
@@ -35,11 +27,6 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// </summary>
     /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
     public abstract void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage);
-
-    /// <summary>
-    /// Gets a <see cref="ReaderWriterLock"/> used to guard access to properties.
-    /// </summary>
-    protected ReaderWriterLockSlim ReaderWriterLockSlim { get; } = new();
 
     /// <summary>
     /// Returns a static string to prevent sensitive information from being included in logs or error messages.
@@ -118,98 +105,134 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     }
 
     /// <summary>
-    /// Creates a <see cref="DPoPAccessCredentials"/> instance from the <paramref name="principal"/>.
+    /// Tries to create a <see cref="DPoPAccessCredentials"/> instance from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> containing appropriate claims.</param>
-    /// <returns>A <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="principal"/>.</returns>
-    /// <exception cref="ArgumentNullException">
-    ///   Thrown when the <paramref name="principal"/> is <see langword="null"/>, or its Identity property is <see langword="null"/>,
-    ///   or its Identity property is not a <see cref="ClaimsIdentity"/>.
-    /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="principal"/> contains more than one identity.</exception>
-
-    public static DPoPAccessCredentials Create(ClaimsPrincipal principal)
+    /// <param name="credentials">When this method returns, contains the <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="principal"/>, or <see langword="null"/> if the creation failed.</param>
+    /// <returns><see langword="true"/> if the <see cref="DPoPAccessCredentials"/> was successfully created; otherwise, <see langword="false"/>.</returns>
+    public static bool TryCreate(ClaimsPrincipal principal, out DPoPAccessCredentials? credentials)
     {
-        ArgumentNullException.ThrowIfNull(principal);
-        ArgumentNullException.ThrowIfNull(principal.Identity);
-        ArgumentOutOfRangeException.ThrowIfNotEqual(principal.Identities.Count(), 1);
-
-        ClaimsIdentity? claimsIdentity = principal.Identity as ClaimsIdentity;
-
-        if (claimsIdentity is null)
+        if (principal is null || principal.Identity is null || principal.Identities.Count() != 1)
         {
-            ArgumentNullException.ThrowIfNull(claimsIdentity);
+            credentials = null;
+            return false;
         }
 
-        return Create(claimsIdentity);
+        if (principal.Identity is not ClaimsIdentity claimsIdentity)
+        {
+            credentials = null;
+            return false;
+        }
+
+        if (!claimsIdentity.IsAuthenticated)
+        {
+            credentials = null;
+            return false;
+        }
+
+        return TryCreate(claimsIdentity, out credentials);
     }
 
     /// <summary>
-    /// Creates a <see cref="DPoPAccessCredentials"/> instance from the <paramref name="identity"/>.
+    /// Tries to create a <see cref="DPoPAccessCredentials"/> instance from the <paramref name="claimsIdentity"/>.
     /// </summary>
-    /// <param name="identity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
-    /// <returns>A <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="identity"/>.</returns>
-    /// <exception cref="CredentialException">Thrown when the <paramref name="identity"/> does not contain the required claims, or the claim values are invalid.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="identity"/> is <see langword="null"/>.</exception>
-    public static DPoPAccessCredentials Create(ClaimsIdentity identity)
+    /// <param name="claimsIdentity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
+    /// <param name="credentials">When this method returns, contains the <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="claimsIdentity"/>, or <see langword="null"/> if the creation failed.</param>
+    /// <returns><see langword="true"/> if the <see cref="DPoPAccessCredentials"/> was successfully created; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="AtProtoClaims.Did"/> claim is required to agree with the subject of the access token the credentials
+    ///   are built from. An identity whose claims disagree describes two different actors, so it is rejected rather than
+    ///   allowing the token's subject to silently win.
+    /// </para>
+    /// <para>
+    ///   The service <see cref="Uri"/> is taken from the issuer of the did claim and is required to be an absolute http or
+    ///   https <see cref="Uri"/>, so that a hostile issuer cannot direct requests at another scheme.
+    /// </para>
+    /// <para>
+    ///   An access token claim which cannot be parsed as a JWT, or whose subject is not a DID, is reported by returning
+    ///   <see langword="false"/> rather than by throwing. The claims come from whatever persisted the identity, so a
+    ///   corrupted or tampered with cookie or identity store entry must read as an identity which cannot be used rather
+    ///   than as an exception out of the middleware which reads it.
+    /// </para>
+    /// </remarks>
+    public static bool TryCreate(ClaimsIdentity claimsIdentity, out DPoPAccessCredentials? credentials)
     {
-        ArgumentNullException.ThrowIfNull(identity);
-
-        string? didAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value;
-        string? accessJwt = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.AccessToken, StringComparison.Ordinal))?.Value;
-        string? refreshToken = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.RefreshToken, StringComparison.Ordinal))?.Value;
-        string? dPoPProofKey = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPProof, StringComparison.Ordinal))?.Value;
-        string? dPoPNonce = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPNonce, StringComparison.Ordinal))?.Value;
-        string? serviceAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Issuer;
-
-        if (didAsString is null)
+        if (claimsIdentity is null)
         {
-            throw new CredentialException("Missing DID claim");
+            credentials = null;
+            return false;
         }
 
-        if (accessJwt is null)
+        if (!claimsIdentity.IsAuthenticated)
         {
-            throw new CredentialException("Missing Access Token claim");
+            credentials = null;
+            return false;
         }
 
-        if (refreshToken is null)
+        string? didAsString = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value;
+        string? accessJwt = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.AccessToken, StringComparison.Ordinal))?.Value;
+        string? refreshToken = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.RefreshToken, StringComparison.Ordinal))?.Value;
+        string? dPoPProofKey = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPProof, StringComparison.Ordinal))?.Value;
+        string? dPoPNonce = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPNonce, StringComparison.Ordinal))?.Value;
+        string? serviceAsString = claimsIdentity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Issuer;
+
+        if (didAsString is null ||
+            accessJwt is null ||
+            refreshToken is null ||
+            dPoPProofKey is null ||
+            dPoPNonce is null ||
+            serviceAsString is null)
         {
-            throw new CredentialException("Missing Refresh Token claim");
+            credentials = null;
+            return false;
         }
 
-        if (dPoPProofKey is null)
+        if (!Did.TryParse(didAsString, out Did? did))
         {
-            throw new CredentialException("Missing DPoP Proof claim");
-        }
-
-        if (dPoPNonce is null)
-        {
-            throw new CredentialException("Missing DPoP Nonce claim");
-        }
-
-        if (serviceAsString is null)
-        {
-            throw new CredentialException("Missing issuer on DID claim.");
-        }
-
-        if (!Did.TryParse(didAsString, out Did? _))
-        {
-            throw new CredentialException("Invalid DID.");
+            credentials = null;
+            return false;
         }
 
         if (!Uri.TryCreate(
             serviceAsString,
             new UriCreationOptions(),
-            out Uri? service))
+            out Uri? service) ||
+            !service.IsAbsoluteUri ||
+            (!service.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.Ordinal) &&
+             !service.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.Ordinal)))
         {
-            throw new CredentialException("Invalid issuer on DID claim.");
+            credentials = null;
+            return false;
         }
 
-        return new DPoPAccessCredentials(
-            service: service,
-            accessJwt: accessJwt,
-            refreshToken: refreshToken,
-            dPoPProofKey: dPoPProofKey,
-            dPoPNonce: dPoPNonce);
+        DPoPAccessCredentials createdCredentials;
+
+        try
+        {
+            createdCredentials = new(
+                service: service,
+                accessJwt: accessJwt,
+                refreshToken: refreshToken,
+                dPoPProofKey: dPoPProofKey,
+                dPoPNonce: dPoPNonce);
+        }
+        catch (ArgumentException)
+        {
+            // The claim values are whatever persisted the identity wrote, so a value the credential constructor rejects
+            // is an identity which cannot be used rather than a programming error on the part of the caller.
+            credentials = null;
+            return false;
+        }
+
+        if (createdCredentials.Did != did)
+        {
+            credentials = null;
+            return false;
+        }
+
+        credentials = createdCredentials;
+
+        return true;
     }
 }

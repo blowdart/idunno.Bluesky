@@ -50,14 +50,14 @@ internal static partial class Logger
     [LoggerMessage(32, LogLevel.Information, "Unfollow() failed as current user is not following {did}.")]
     internal static partial void UnfollowFailedAsHandleCouldNotGetUserIsNotFollowing(ILogger logger, Did did);
 
-    [LoggerMessage(35, LogLevel.Error, "Block() failed as {handle} could not be resolved to a DID.")]
-    internal static partial void BlockFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);
+    [LoggerMessage(35, LogLevel.Error, "Unblock() failed as {handle} could not be resolved to a DID.")]
+    internal static partial void UnblockFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);
 
     [LoggerMessage(40, LogLevel.Information, "Unblock() failed as could not get user profile for {did}.")]
     internal static partial void UnblockFailedAsHandleCouldNotGetUserProfile(ILogger logger, Did did);
 
-    [LoggerMessage(41, LogLevel.Error, "Unblock() failed as current user is not following {did}.")]
-    internal static partial void UnblockFailedAsHandleCouldNotGetUserIsNotFollowing(ILogger logger, Did did);
+    [LoggerMessage(41, LogLevel.Error, "Unblock() failed as current user is not blocking {did}.")]
+    internal static partial void UnblockFailedAsUserIsNotBlocking(ILogger logger, Did did);
 
     [LoggerMessage(45, LogLevel.Debug, "CreatePostWithGatesSucceeded for {did} with a record key of {recordKey}")]
     internal static partial void CreatePostWithGatesSucceeded(ILogger logger, RecordKey recordKey, Did did);
@@ -97,7 +97,7 @@ internal static partial class Logger
     [LoggerMessage(75, LogLevel.Debug, "GetUploadLimitsSucceeded succeeded for {did} CanUpload = {canUpload}, RemainingDailyVideos = {remainingDailyVideos} RemainingDailyBytes: {remainingDailyBytes}")]
     internal static partial void GetUploadLimitsSucceeded(ILogger logger, Did did, bool canUpload, long? remainingDailyVideos, long? remainingDailyBytes);
 
-    [LoggerMessage(76, LogLevel.Error, "GetUploadLimitsSucceeded failed with {statusCode} for {did}, error {error} message {message}")]
+    [LoggerMessage(76, LogLevel.Error, "GetUploadLimitsFailed failed with {statusCode} for {did}, error {error} message {message}")]
     internal static partial void GetUploadLimitsFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
 
     [LoggerMessage(80, LogLevel.Information, "GetJobStatus for jobId {jobId} succeeded, state is {state}, progress {progress}")]
@@ -132,6 +132,12 @@ internal static partial class Logger
 
     [LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
     internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(157, LogLevel.Error, "Draft media path {path} in draft {draftId} was rejected: {reason}")]
+    internal static partial void DraftMediaPathRejected(ILogger logger, string path, TimestampIdentifier draftId, string reason);
+    [LoggerMessage(109, LogLevel.Information, "Uploading gallery image {fileName} from draft {draftId}")]
+    internal static partial void UploadingGalleryImageFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
+
 
     // Card Generator errors
     [LoggerMessage(110, LogLevel.Error, "Failed to upload embedded card image for {url} with status code {statusCode}, error {error} message {message}")]
@@ -181,4 +187,80 @@ internal static partial class Logger
 
     [LoggerMessage(125, LogLevel.Error, "Could not delete temporary file {fileName}")]
     internal static partial void CouldNotDeleteTemporaryFile(ILogger logger, string fileName, Exception ex);
+
+    [LoggerMessage(151, LogLevel.Debug, "Image at {uri} has a scheme of {scheme}, which is not http or https")]
+    internal static partial void EmbeddedCardImageSchemeNotSupported(ILogger logger, Uri uri, string scheme);
+
+    [LoggerMessage(152, LogLevel.Debug, "Image at {uri} was declared as {declaredMimeType} but its content is {sniffedMimeType}, which is what the blob will record")]
+    internal static partial void EmbeddedCardImageTypeMismatch(ILogger logger, Uri uri, string declaredMimeType, string sniffedMimeType);
+
+    [LoggerMessage(153, LogLevel.Debug, "The canonical url {canonicalUrl} for the card for {uri} has a scheme which is not http or https")]
+    internal static partial void EmbeddedCardCanonicalUrlSchemeNotSupported(ILogger logger, Uri uri, string canonicalUrl);
+
+    [LoggerMessage(135, LogLevel.Error, "StartUpload getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void StartUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(136, LogLevel.Debug, "GetUploadStatus for jobId {jobId} succeeded, upload state is {state}, received parts count {receivedParts}")]
+    internal static partial void GetUploadStatusSucceeded(ILogger logger, string jobId, UploadState state, int receivedParts);
+
+    [LoggerMessage(137, LogLevel.Error, "GetUploadStatus failed with {statusCode} error {error} message {message}")]
+    internal static partial void GetUploadStatusFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(138, LogLevel.Error, "AbortUpload failed for {jobId} with {statusCode} error {error} message {message}")]
+    internal static partial void AbortUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(139, LogLevel.Error, "AbortUpload getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void AbortUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(140, LogLevel.Error, "UploadPart getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void UploadPartGetServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(141, LogLevel.Error, "FinishUpload getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void FinishUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(142, LogLevel.Error, "FinishUpload failed for {jobId} with {statusCode} error {error} message {message}")]
+    internal static partial void FinishUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(143, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service} with {statusCode} error {error} message {message}")]
+    internal static partial void UploadPartFailed(ILogger logger, long part, string jobId, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(144, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service}, underlying HttpClient threw an exception")]
+    internal static partial void UploadPartThrew(ILogger logger, long part, string jobId, Uri service, Exception ex);
+
+    [LoggerMessage(145, LogLevel.Debug, "StartUpload succeeded on {service} for {did} with job #{jobId}, part count {partCount}, part size {partSize}.")]
+    internal static partial void StartUploadSucceeded(ILogger logger, Uri service, string jobId, Did did, long partCount, long partSize);
+
+    [LoggerMessage(146, LogLevel.Debug, "UploadPart {part} succeeded for {jobId}")]
+    internal static partial void UploadPartSucceeded(ILogger logger, long part, string jobId);
+
+    [LoggerMessage(147, LogLevel.Debug, "AbortUpload succeeded for {jobId}")]
+    internal static partial void AbortUploadSucceeded(ILogger logger, string jobId);
+
+    [LoggerMessage(148, LogLevel.Debug, "FinishUpload succeeded for {jobId}, returned jobId {returnedJobId} as {state}")]
+    internal static partial void FinishUploadSucceeded(ILogger logger, string jobId, string returnedJobId, JobState? state);
+
+    [LoggerMessage(149, LogLevel.Error, "StartUpload failed on {service} for {did} with {statusCode} error {error} message {message}")]
+    internal static partial void StartUploadFailed(ILogger logger, Uri service, Did did, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(150, LogLevel.Error, "GetUploadLimits getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void GetUploadLimitsServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    // ListNotifications
+    [LoggerMessage(154, LogLevel.Warning, "ListNotifications skipped a null notification returned by {service}")]
+    internal static partial void ListNotificationsSkippedNullNotification(ILogger logger, Uri service);
+
+    // Paged readers
+    [LoggerMessage(155, LogLevel.Warning, "{caller} skipped {skipped} null entries in {collection} returned by {service}")]
+    internal static partial void SkippedNullCollectionEntries(ILogger logger, string caller, int skipped, string collection, Uri service);
+
+    [LoggerMessage(156, LogLevel.Error, "UploadMedia for {did} returned already_exists but the jobId in the error detail was missing, was not a JSON string, or was empty")]
+    internal static partial void UploadMediaAlreadyExistsJobIdUnusable(ILogger logger, Did did);
+
+    // Moderation list blocks
+    [LoggerMessage(158, LogLevel.Error, "UnblockModList() failed as the list {listUri} could not be read.")]
+    internal static partial void UnblockModListFailedAsListCouldNotBeRead(ILogger logger, AtUri listUri);
+
+    [LoggerMessage(159, LogLevel.Error, "UnblockModList() failed as the current user is not blocking {listUri}.")]
+    internal static partial void UnblockModListFailedAsUserIsNotBlocking(ILogger logger, AtUri listUri);
+
 }

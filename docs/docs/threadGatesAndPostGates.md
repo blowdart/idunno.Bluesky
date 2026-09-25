@@ -7,7 +7,7 @@ people the author is following to reply, replies from actors in a list or allow 
 A thread gate can have up to five rules, but allowing no replies is an exclusive rule, no other rules can be applied.
 A thread gate can also be used to hide replies in a thread.
 
-You can apply a thread gate to an existing using `AddThreadGate()`. This method requires the `AtUri` of the post to be gated,
+You can apply a thread gate to an existing post using `AddThreadGate()`. This method requires the `AtUri` of the post to be gated,
 and, optionally a collection of gate rules and/or a collection of `AtUri`s of thread replies to be hidden.
 If you provide no rules then the post will not allow any replies at all.
 
@@ -25,7 +25,7 @@ await agent.AddThreadGate(
 
 The four types of thread gate rules are `FollowerRule`, `FollowingRule`, `MentionRule` and `ListRule`. Note that adding,
 or updating a thread gate replaces any gate already in place. If you want to update rules or hidden posts first get any existing rule
-with `GetThreadGate()`, if that is successful update the returned`ThreadGate` class then apply it with with `UpdateThreadGate()`.
+with `GetThreadGate()`, if that is successful update the returned `ThreadGate` class then apply it with `UpdateThreadGate()`.
 
 You can use `GetPostThread()` to see a view over a thread, including replies.
 
@@ -56,14 +56,14 @@ await agent.Post("New gated post",
 
 ## Default user preferences for post and thread gates.
 
-Bluesky allows the users to set a default preference for post. and thread gates. You can retrieve these preferences with `agent.GetPreferences()`.
+Bluesky allows users to set default preferences for post and thread gates. You can retrieve these preferences with `agent.GetPreferences()`.
 
 ```c#
-InteractionPreferences? interactionPreferences = null;
+PostInteractionSettingsPreferences? interactionPreferences = null;
 var userPreferences = await agent.GetPreferences(cancellationToken: cancellationToken);
 if (userPreferences.Succeeded)
 {
-    interactionPreferences = userPreferences.Result.InteractionPreferences;
+    interactionPreferences = userPreferences.Result.PostInteractionSettingsPreferences;
 }
 ```
 

@@ -13,7 +13,7 @@ namespace idunno.Bluesky.Feed;
 public sealed record FeedGeneratorDescription
 {
     [JsonConstructor]
-    internal FeedGeneratorDescription(Did did, IReadOnlyList<GeneratorFeed> feeds, Links links)
+    internal FeedGeneratorDescription(Did did, IReadOnlyList<GeneratorFeed> feeds, Links? links)
     {
         Did = did;
         Feeds = feeds;
@@ -35,9 +35,10 @@ public sealed record FeedGeneratorDescription
     public IReadOnlyList<GeneratorFeed> Feeds { get; init; }
 
     /// <summary>
-    /// Links for the feed generator.
+    /// Links for the feed generator, if the generator supplied any.
     /// </summary>
-    public Links Links { get; init; }
+    [JsonInclude]
+    public Links? Links { get; init; }
 }
 
 /// <summary>
@@ -55,6 +56,7 @@ public sealed record GeneratorFeed
     /// Gets the <see cref="AtUri" /> for the feed.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public AtUri Uri { get; init; }
 }
 

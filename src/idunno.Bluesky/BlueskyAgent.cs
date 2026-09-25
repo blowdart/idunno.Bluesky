@@ -1,10 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.RichText;
 
 using Microsoft.Extensions.Logging;
@@ -47,6 +50,8 @@ public partial class BlueskyAgent : AtProtoAgent
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
 
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
+
         if (options is not null)
         {
             LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
@@ -72,8 +77,10 @@ public partial class BlueskyAgent : AtProtoAgent
     ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     ///   </para>
     /// </remarks>
-    public BlueskyAgent(ClaimsPrincipal principal, BlueskyAgentOptions? options = null) : base(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
+    public BlueskyAgent(ClaimsPrincipal? principal, BlueskyAgentOptions? options = null) : base(
         principal: principal,
+        service: DefaultServiceUris.BlueskyApiUri,
         options: options)
     {
         ArgumentNullException.ThrowIfNull(principal);
@@ -91,6 +98,8 @@ public partial class BlueskyAgent : AtProtoAgent
         {
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
+
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
 
         if (options is not null)
         {
@@ -120,6 +129,7 @@ public partial class BlueskyAgent : AtProtoAgent
 
     public BlueskyAgent(ClaimsIdentity identity, BlueskyAgentOptions? options = null) : base(
         identity: identity,
+        service: DefaultServiceUris.BlueskyApiUri,
         options: options)
     {
         ArgumentNullException.ThrowIfNull(identity);
@@ -137,6 +147,8 @@ public partial class BlueskyAgent : AtProtoAgent
         {
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
+
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
 
         if (options is not null)
         {
@@ -177,6 +189,8 @@ public partial class BlueskyAgent : AtProtoAgent
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
 
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
+
         if (options is not null)
         {
             LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
@@ -199,6 +213,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
     public BlueskyAgent(ClaimsPrincipal principal, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
             principal: principal,
+            service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
             options: options)
     {
@@ -218,6 +233,8 @@ public partial class BlueskyAgent : AtProtoAgent
         {
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
+
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
 
         if (options is not null)
         {
@@ -241,6 +258,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
     public BlueskyAgent(ClaimsIdentity identity, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
             identity: identity,
+            service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
             options: options)
     {
@@ -260,6 +278,8 @@ public partial class BlueskyAgent : AtProtoAgent
         {
             FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
         }
+
+        DraftMediaRoots = NormaliseDraftMediaRoots(options);
 
         if (options is not null)
         {
@@ -306,6 +326,56 @@ public partial class BlueskyAgent : AtProtoAgent
         get;
 
         private set;
+    }
+
+    /// <summary>
+    /// Gets the fully qualified directories draft media may be read from when a draft is posted with
+    /// <see cref="Drafts.DraftMediaPathValidation.Enforce"/>.
+    /// </summary>
+    /// <remarks>
+    ///   <para>
+    ///     This is taken from <see cref="BlueskyAgentOptions.DraftMediaRoots"/> when the agent is created. Entries which are empty,
+    ///     or which cannot be resolved to a fully qualified path, are discarded.
+    ///   </para>
+    /// </remarks>
+    public IReadOnlyList<string> DraftMediaRoots
+    {
+        get;
+
+        private set;
+    }
+
+    private static ReadOnlyCollection<string> NormaliseDraftMediaRoots(BlueskyAgentOptions? options)
+    {
+        if (options is null || options.DraftMediaRoots.Count == 0)
+        {
+            return ReadOnlyCollection<string>.Empty;
+        }
+
+        List<string> normalisedRoots = [];
+
+        foreach (string root in options.DraftMediaRoots.Where(root => !string.IsNullOrWhiteSpace(root)))
+        {
+            string normalisedRoot;
+
+            try
+            {
+                normalisedRoot = Path.GetFullPath(root);
+            }
+            catch (ArgumentException)
+            {
+                // A root which cannot be resolved cannot contain anything, so discarding it fails closed.
+                continue;
+            }
+            catch (PathTooLongException)
+            {
+                continue;
+            }
+
+            normalisedRoots.Add(normalisedRoot);
+        }
+
+        return normalisedRoots.AsReadOnly();
     }
 
     /// <summary>
@@ -366,7 +436,7 @@ public partial class BlueskyAgent : AtProtoAgent
             throw new ArgumentException($"{pathComponents[2]} is not a valid handle.");
         }
 
-        Did? did = await ResolveHandle(handle.ToString(), cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.");
+        Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.", handle: handle);
         string rkey = pathComponents[4];
 
         string rebuiltAtUri = $"at://{did}/app.bsky.feed.post/{rkey}";
@@ -415,4 +485,28 @@ public partial class BlueskyAgent : AtProtoAgent
 
         return new Uri($"https://bsky.app/profile/{atUri.Repo}/post/{atUri.RecordKey}");
     }
+
+    /// <summary>
+    /// Performs a reverse lookup on a <see cref="Did"/> and returns its handle.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to lookup.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    public async Task<Handle?> LookupDid(Did did, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(did);
+
+        AtProtoHttpResult<ProfileViewDetailed> result = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            return result.Result.Handle;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
 }

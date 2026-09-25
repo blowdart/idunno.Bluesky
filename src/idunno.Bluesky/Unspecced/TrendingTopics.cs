@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using idunno.Bluesky.Unspecced.Model;
 
 namespace idunno.Bluesky.Unspecced;
@@ -11,12 +12,33 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="Topics">A collection of trending topics.</param>
 /// <param name="Suggested">A collection of suggested feeds.</param>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference at the end of summary.")]
-public sealed record TrendingTopics(ICollection<TrendingTopic> Topics, ICollection<TrendingTopic> Suggested)
+public sealed record TrendingTopics(IReadOnlyCollection<TrendingTopic> Topics, IReadOnlyCollection<TrendingTopic> Suggested)
 {
     internal TrendingTopics(GetTrendingTopicsResponse getTrendingTopicsResponse)
-        : this(
-            getTrendingTopicsResponse is not null ? getTrendingTopicsResponse.Topics : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)),
-            getTrendingTopicsResponse.Suggested)
+        : this(getTrendingTopicsResponse.Topics, getTrendingTopicsResponse.Suggested)
     {
+    }
+
+    /// <summary>
+    /// A collection of trending topics.
+    /// </summary>
+    public IReadOnlyCollection<TrendingTopic> Topics
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Topics);
+
+    /// <summary>
+    /// A collection of suggested topics.
+    /// </summary>
+    public IReadOnlyCollection<TrendingTopic> Suggested
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Suggested);
+
+    private static ReadOnlyCollection<TrendingTopic> AsReadOnlyCopy(IReadOnlyCollection<TrendingTopic>? value)
+    {
+        return value is null ? new List<TrendingTopic>().AsReadOnly() : new List<TrendingTopic>(value).AsReadOnly();
     }
 }

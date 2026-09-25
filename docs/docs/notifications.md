@@ -1,9 +1,9 @@
-﻿# <a name="checkingNotifications">Checking your notifications</a>
+# <a name="checkingNotifications">Checking your notifications</a>
 
-Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
+Like the [timeline](timeline.md), notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#
-HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
+AtProtoHttpResult<int?> unreadCount = await agent.GetNotificationUnreadCount();
 ```
 
 `GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge.
@@ -15,9 +15,9 @@ To retrieve your notifications, read or unread, call `ListNotifications()`.
 var notifications = 
     await agent.ListNotifications().ConfigureAwait(false);
 ```
-From there, you would perform the `.Succeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
+From there, you would perform the `.Succeeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
 
-Each type of notification, for example `Follow`, `Mention` or `Quote`, have varying types of information used to supplement the notification with appropriate information for its type.
+Each type of notification, for example `Follow`, `Mention` or `Quote`, has varying types of information used to supplement the notification with appropriate information for its type.
 
 ```c#
 foreach (Notification notification in notifications.Result!.Notifications)
@@ -59,7 +59,7 @@ foreach (Notification notification in notifications.Result!.Notifications)
             }
             break;
 
-        // See the notification sample for a full illustration of each of teh notification types.
+        // See the notification sample for a full illustration of each of the notification types.
 
         default:
             // Error handling in the case of an 
@@ -72,33 +72,33 @@ foreach (Notification notification in notifications.Result!.Notifications)
 Then finally, once you've displayed all the unread (and/or previously read) notifications you would tell Bluesky that they've been read with `UpdateNotificationSeenAt()`.
 
 ```c#
-HttpResult<EmptyResponse> updateSeen = 
+AtProtoHttpResult<EmptyResponse> updateSeen = 
     await agent.UpdateNotificationSeenAt();
 ```
 
 `UpdateNotificationSeenAt()` takes an optional `DateTimeOffset seenAt` parameter, so you can, and probably should, save a timestamp before you start working through notifications,
 and then use the saved timestamp once you've finished, so that notifications that happen after you retrieved the notification list don't get marked as seen.
-`UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky things you last saw notifications, which is very handy
+`UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky thinks you last saw notifications, which is very handy
 for testing any notification viewer you've written.
 
-A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) project in the
-[samples](https://github.com/blowdart/idunno.atproto/tree/main/samples) directory in this GitHub repository.
+A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) project in the
+[samples](https://github.com/blowdart/idunno.Bluesky/tree/main/samples) directory in this GitHub repository.
 
 ## <a name=cursorsPagination>Paging results</a>
 
 `ListNotifications()` returns results a page at a time, more results may be waiting for a subsequent call.
 
-The [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) uses the `limit` and `cursor` parameters to get notifications
+The [Notifications sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) uses the `limit` and `cursor` parameters to get notifications
 one page at a time, consisting of five notifications per page.
 
 ```c#
-HttpResult<NotificationsView> notifications = 
+AtProtoHttpResult<NotificationsView> notifications = 
      await agent.ListNotifications(5);
 ```
 
 The first call to `ListNotifications()` uses the `limit` parameter to control how many notifications are returned from the API.
 
-Then the code loops until either the the call to `ListNotifications()` returns an empty cursor, or it fails.
+Then the code loops until either the call to `ListNotifications()` returns an empty cursor, or it fails.
 
 ```c#
 if (notifications.Succeeded && notifications.Result.Count != 0)
@@ -112,18 +112,18 @@ if (notifications.Succeeded && notifications.Result.Count != 0)
         notifications = 
             await agent.ListNotifications(
                 limit: 5, 
-                cursor: notifications.Result.Cursor));
+                cursor: notifications.Result.Cursor);
 
-    } while (notificationsListResult.Succeeded &&
-             !string.IsNullOrEmpty(notificationsListResult.Result.Cursor))
+    } while (notifications.Succeeded &&
+             !string.IsNullOrEmpty(notifications.Result.Cursor));
 }
 ```
 
 You can see that there's a difference between the first call to `ListNotifications()` and the second, the addition of the `cursor` parameter.
 This parameter is how Bluesky APIs implement paging. If there are no more results then the cursor returned from the API call will be null.
 
-For more details see [Cursors and Pagination](cursorsAndPagination.md).
-or AT Proto documentation section on [Cursors and Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
+For more details see [Cursors and Pagination](cursorsAndPagination.md),
+or the AT Proto documentation section on [Cursors and  Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
 
 ## <a name="activity">Subscribing to and viewing subscriptions of activity notifications</a>
 
@@ -146,7 +146,7 @@ then check the `ActivitySubscription` property on `Viewer`.
 ## Controlling who can subscribe to your activities
 
 You can control who has the ability to subscribe to the current user's activity using `SetNotificationDeclaration()`. This takes a `NotificationAllowedFrom` enum, which allows you to choose
-`None`, `Followers` or `Mutals`.
+`None`, `Followers` or `Mutuals`.
 
 ## <a name="preferences">Getting and setting notification preferences</a>
 

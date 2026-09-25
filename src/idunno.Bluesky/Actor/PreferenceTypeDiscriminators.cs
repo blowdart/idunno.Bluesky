@@ -11,7 +11,7 @@ internal static class PreferenceTypeDiscriminators
 
     public const string SavedFeeds = "app.bsky.actor.defs#savedFeedsPref";
 
-    public const string SavedFeeds2 = "app.bsky.actor.defs#savedFeedsPrefV2";
+    public const string SavedFeedsV2 = "app.bsky.actor.defs#savedFeedsPrefV2";
 
     public const string PersonalDetails = "app.bsky.actor.defs#personalDetailsPref";
 
@@ -34,4 +34,6 @@ internal static class PreferenceTypeDiscriminators
     public const string Verification = "app.bsky.actor.defs#verificationPrefs";
 
     public const string DeclaredAge = "app.bsky.actor.defs#declaredAgePref";
+
+    public const string LiveEvents = "app.bsky.actor.defs#liveEventPreferences";
 }

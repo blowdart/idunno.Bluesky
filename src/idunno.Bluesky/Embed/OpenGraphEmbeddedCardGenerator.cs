@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.RegularExpressions;
 
 using idunno.AtProto;
@@ -17,8 +18,11 @@ namespace idunno.Bluesky.Embed;
 /// </summary>
 public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
 {
-    [GeneratedRegex("<meta property=\"og:([^\"]+)\" content=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex s_OpenGraphPropertyRegex();
+    [GeneratedRegex("<meta\\s[^>]*>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex s_MetaElementRegex();
+
+    [GeneratedRegex("(?<name>[a-z0-9:_.-]+)\\s*=\\s*(?:\"(?<value>[^\"]*)\"|'(?<value>[^']*)'|(?<value>[^\\s\"'>]+))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex s_HtmlAttributeRegex();
 
     /// <summary>
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
@@ -27,7 +31,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
     {
-        ArgumentNullException.ThrowIfNull(agent);
     }
 
     /// <summary>
@@ -39,9 +42,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
         : base(agent, agent?.HttpClient)
     {
-        ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(agent.HttpClient);
-
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
     }
@@ -55,8 +55,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     protected OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, ILogger logger)
         : base(agent, agent?.HttpClient)
     {
-        ArgumentNullException.ThrowIfNull(agent);
-        ArgumentNullException.ThrowIfNull(agent.HttpClient);
         ArgumentNullException.ThrowIfNull(logger);
         ILogger = logger;
     }
@@ -71,7 +69,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
         : base(agent, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
@@ -88,7 +85,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     protected OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
         : base(agent, httpClient)
     {
-        ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -113,7 +109,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             throw new ArgumentException("URI must be absolute.", nameof(uri));
         }
 
-        string? pageContent = await GetPageContent(uri, cancellationToken).ConfigureAwait(false);
+        string? pageContent = await GetPageContent(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrEmpty(pageContent))
         {
@@ -141,16 +137,40 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             throw new ArgumentException("URI must be absolute.", nameof(uri));
         }
 
-        Dictionary<string, string> openGraphProperties = [];
+        Dictionary<string, string> openGraphProperties = new(StringComparer.OrdinalIgnoreCase);
 
-        foreach (Match match in s_OpenGraphPropertyRegex().Matches(pageContent))
+        foreach (Match metaElement in s_MetaElementRegex().Matches(pageContent))
         {
-            string property = match.Groups[1].Value;
-            string content = match.Groups[2].Value;
+            string? name = null;
+            string? content = null;
+
+            foreach (Match attribute in s_HtmlAttributeRegex().Matches(metaElement.Value))
+            {
+                string attributeName = attribute.Groups["name"].Value;
+
+                // OpenGraph specifies property=, but name= is commonly used instead, and either may appear before or after content=.
+                if (name is null &&
+                    (attributeName.Equals("property", StringComparison.OrdinalIgnoreCase) || attributeName.Equals("name", StringComparison.OrdinalIgnoreCase)))
+                {
+                    name = attribute.Groups["value"].Value;
+                }
+                else if (content is null && attributeName.Equals("content", StringComparison.OrdinalIgnoreCase))
+                {
+                    content = attribute.Groups["value"].Value;
+                }
+            }
+
+            if (name is null || content is null || !name.StartsWith("og:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string property = name["og:".Length..];
 
             if (!string.IsNullOrEmpty(property) && !openGraphProperties.ContainsKey(property))
             {
-                openGraphProperties.Add(property, content);
+                // Attribute values are HTML encoded, so an entity in the markup would otherwise be posted verbatim in the card.
+                openGraphProperties.Add(property, WebUtility.HtmlDecode(content));
             }
         }
 
@@ -164,16 +184,24 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         }
 
         string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : uri.ToString();
-        if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? _))
+        if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? canonicalUri))
         {
             return null;
         }
 
-        string? description = openGraphProperties.TryGetValue("description", out string? descriptionValue) ? descriptionValue : string.Empty;
+        // og:url is supplied by the page, and an absolute URI is not necessarily a web one. Without this a page can put
+        // a javascript: or data: URI into the card the caller is about to post.
+        if (!canonicalUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
+            !canonicalUri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.EmbeddedCardCanonicalUrlSchemeNotSupported(ILogger, uri, canonicalUrl);
+            return null;
+        }
+
+        string description = openGraphProperties.TryGetValue("description", out string? descriptionValue) ? descriptionValue : string.Empty;
         Blob? thumb = null;
 
         if (openGraphProperties.TryGetValue("image", out string? imageUrl) &&
-            Agent is not null &&
             Agent.IsAuthenticated &&
             Uri.TryCreate(imageUrl, UriKind.Absolute, out Uri? imageUri))
         {
@@ -186,7 +214,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         return new EmbeddedExternal(
             uri: canonicalUrl,
             title: title,
-            description: description ?? canonicalUrl,
+            description: description,
             thumbnail: thumb
         );
     }

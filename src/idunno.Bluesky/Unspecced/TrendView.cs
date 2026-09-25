@@ -1,6 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
+
 using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Unspecced;
@@ -14,16 +17,32 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="StartedAt">The <see cref="DateTimeOffset"/> the trend started at.</param>
 /// <param name="PostCount">The post count for the <paramref name="Topic" />.</param>
 /// <param name="Status">The status of <paramref name="Topic" />.</param>
-/// <param name="Category">The category of the <paramref name="Topic" /></param>
+/// <param name="Category">An optional category for the <paramref name="Topic" />.</param>
 /// <param name="Actors">A collection of actors contributing to the <paramref name="Topic" />.</param>
+/// <param name="Description">An optional description of the trend.</param>
 public sealed record TrendView(
-    string Topic,
-    string DisplayName,
-    string Link,
-    DateTimeOffset StartedAt,
-    int PostCount,
+    [property: JsonRequired] string Topic,
+    [property: JsonRequired] string DisplayName,
+    [property: JsonRequired] string Link,
+    [property: JsonRequired] DateTimeOffset StartedAt,
+    [property: JsonRequired] int PostCount,
     string? Status,
-    string Category,
-    ICollection<ProfileViewBasic> Actors) : View
+    string? Category,
+    IReadOnlyCollection<ProfileViewBasic> Actors,
+    string? Description) : View
 {
+    /// <summary>
+    /// A collection of actors contributing to the <see cref="Topic" />.
+    /// </summary>
+    [JsonRequired]
+    public IReadOnlyCollection<ProfileViewBasic> Actors
+    {
+        get;
+        init => field = AsReadOnlyCopy(value);
+    } = AsReadOnlyCopy(Actors);
+
+    private static ReadOnlyCollection<ProfileViewBasic> AsReadOnlyCopy(IReadOnlyCollection<ProfileViewBasic>? value)
+    {
+        return value is null ? new List<ProfileViewBasic>().AsReadOnly() : new List<ProfileViewBasic>(value).AsReadOnly();
+    }
 }
