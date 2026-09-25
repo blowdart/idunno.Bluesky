@@ -1,1 +1,18 @@
 #nullable enable
+const idunno.AtProto.Repo.CarHeader.Version = 1 -> ulong
+idunno.AtProto.Repo.CarBlock
+idunno.AtProto.Repo.CarBlock.CarBlock(idunno.AtProto.Cid! cid, System.ReadOnlyMemory<byte> data) -> void
+idunno.AtProto.Repo.CarBlock.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.CarBlock.Data.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Repo.CarHeader
+idunno.AtProto.Repo.CarHeader.CarHeader(System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! roots) -> void
+idunno.AtProto.Repo.CarHeader.Roots.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Cid!>!
+idunno.AtProto.Repo.CarReader
+idunno.AtProto.Repo.CarReader.CarReader(System.IO.Stream! stream, bool leaveOpen = false) -> void
+idunno.AtProto.Repo.CarReader.Dispose() -> void
+idunno.AtProto.Repo.CarReader.ReadBlock() -> idunno.AtProto.Repo.CarBlock?
+idunno.AtProto.Repo.CarReader.ReadHeader() -> idunno.AtProto.Repo.CarHeader!
+idunno.AtProto.Repo.CarWriter
+idunno.AtProto.Repo.CarWriter.CarWriter(System.IO.Stream! stream, idunno.AtProto.Repo.CarHeader! header, bool leaveOpen = false) -> void
+idunno.AtProto.Repo.CarWriter.Dispose() -> void
+idunno.AtProto.Repo.CarWriter.WriteBlock(idunno.AtProto.Repo.CarBlock! block) -> void

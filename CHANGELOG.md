@@ -1,5 +1,13 @@
 # Version History
 
+## 8.0.0 - **unreleased**
+
+### Added
+
+#### idunno.AtProto
+
+* Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`.
+
 ## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
