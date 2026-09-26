@@ -86,6 +86,12 @@ public partial class AtProtoAgent
     /// </remarks>
     private bool _deferredCredentialNotificationCommitted;
 
+    /// <summary>
+    /// Called when a credential update notification is about to wait its turn behind any notification already being
+    /// raised, so that a test can synchronise on the notification queue rather than on elapsed time.
+    /// </summary>
+    internal Action<AccessCredentials>? CredentialNotificationQueueing { get; set; }
+
     private AccessCredentials? _credentials;
 
     /// <summary>
@@ -430,6 +436,8 @@ public partial class AtProtoAgent
 
             return;
         }
+
+        CredentialNotificationQueueing?.Invoke(credentials);
 
         await _credentialNotificationSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -2062,14 +2070,17 @@ public partial class AtProtoAgent
             }
 
             // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-            if (tokenRefreshFailedEventArgs is not null)
-            {
-                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
-            }
-
+            // The session ending is raised first: the credentials have already been cleared, so a failure subscriber
+            // which throws must not be able to suppress it, and one which reauthenticates must not be able to make it
+            // arrive after the new session's Authenticated.
             if (unauthenticatedEventArgs is not null)
             {
                 OnUnauthenticated(unauthenticatedEventArgs);
+            }
+
+            if (tokenRefreshFailedEventArgs is not null)
+            {
+                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
             }
         }
 

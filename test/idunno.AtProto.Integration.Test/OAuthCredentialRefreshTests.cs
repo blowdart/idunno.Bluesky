@@ -131,14 +131,24 @@ public class OAuthCredentialRefreshTests
 
         await firstNotificationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
 
+        TaskCompletionSource refreshNotificationQueued = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.CredentialNotificationQueueing = queued =>
+        {
+            if (!ReferenceEquals(queued, originalCredentials))
+            {
+                refreshNotificationQueued.TrySetResult();
+            }
+        };
+
         Task<bool> refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
 
         await server.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
         server.ReleaseRefresh.TrySetResult();
 
-        // Give the refresh time to publish its credentials and reach the point where it notifies handlers, so the
-        // notification for the superseded credentials is the one which completes last.
-        await Task.Delay(500, TestContext.Current.CancellationToken);
+        // Wait until the refresh has published its credentials and queued their notification behind the suspended one,
+        // so that the notification for the superseded credentials is the one which would otherwise complete last.
+        await refreshNotificationQueued.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.NotSame(originalCredentials, agent.Credentials);
 
         releaseFirstNotification.TrySetResult();
 
