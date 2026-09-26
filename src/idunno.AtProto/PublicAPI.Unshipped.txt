@@ -122,3 +122,68 @@ idunno.AtProto.Repo.CarWriter
 static idunno.AtProto.Repo.CarWriter.CreateAsync(System.IO.Stream! stream, idunno.AtProto.Repo.CarHeader! header, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarWriter!>!
 idunno.AtProto.Repo.CarWriter.DisposeAsync() -> System.Threading.Tasks.ValueTask
 idunno.AtProto.Repo.CarWriter.WriteBlockAsync(idunno.AtProto.Repo.CarBlock! block, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtJetstreamSync
+override idunno.AtProto.Jetstream.AtJetstreamSync.ToString() -> string!
+static idunno.AtProto.Jetstream.AtJetstreamSync.operator !=(idunno.AtProto.Jetstream.AtJetstreamSync? left, idunno.AtProto.Jetstream.AtJetstreamSync? right) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSync.operator ==(idunno.AtProto.Jetstream.AtJetstreamSync? left, idunno.AtProto.Jetstream.AtJetstreamSync? right) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSync.GetHashCode() -> int
+override idunno.AtProto.Jetstream.AtJetstreamSync.Equals(object? obj) -> bool
+idunno.AtProto.Jetstream.AtJetstreamSync.Equals(idunno.AtProto.Jetstream.AtJetstreamSync? other) -> bool
+idunno.AtProto.Jetstream.AtJetstreamSync.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamSync!
+idunno.AtProto.Jetstream.AtJetstreamSync.AtJetstreamSync() -> void
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.ToString() -> string!
+static idunno.AtProto.Jetstream.AtJetstreamSyncEvent.operator !=(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? left, idunno.AtProto.Jetstream.AtJetstreamSyncEvent? right) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSyncEvent.operator ==(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? left, idunno.AtProto.Jetstream.AtJetstreamSyncEvent? right) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(object? obj) -> bool
+override sealed idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? other) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamSyncEvent!
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.AtJetstreamSyncEvent() -> void
+idunno.AtProto.Jetstream.JetStreamEventKind.Sync = 4 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetstreamConnectionException
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs
+idunno.AtProto.Jetstream.AtProtoJetstream.InfoReceived -> System.EventHandler<idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs!>?
+idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamProtocolVersion.V1 = 1 -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamProtocolVersion.V2 = 2 -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamOptions.ProtocolVersion.get -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamOptions.ProtocolVersion.init -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.Sequence.get -> long?
+idunno.AtProto.Jetstream.AtJetstreamEvent.WitnessedAt.get -> System.DateTimeOffset?
+idunno.AtProto.Jetstream.AtJetstreamEvent.WitnessedAt.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Jetstream.AtJetstreamSync.Did.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Sequence.get -> long
+idunno.AtProto.Jetstream.AtJetstreamSync.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Rev.get -> string?
+idunno.AtProto.Jetstream.AtJetstreamSync.Rev.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Blocks.get -> idunno.AtProto.Bytes?
+idunno.AtProto.Jetstream.AtJetstreamSync.Blocks.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.TimeStamp.get -> System.DateTimeOffset
+idunno.AtProto.Jetstream.AtJetstreamSync.TimeStamp.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Sync.get -> idunno.AtProto.Jetstream.AtJetstreamSync!
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Sync.init -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException() -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(string! message) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(string! message, System.Exception? innerException) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(System.Net.HttpStatusCode statusCode, idunno.AtProto.AtErrorDetail? errorDetail, System.Exception? innerException) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.StatusCode.get -> System.Net.HttpStatusCode?
+idunno.AtProto.Jetstream.JetstreamConnectionException.ErrorDetail.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.InfoReceivedEventArgs(string! name, string? message) -> void
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.Name.get -> string!
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.Message.get -> string?
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.Error.get -> string?
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.Error.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.get -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.KindsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Jetstream.JetStreamEventKind>?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.KindsToFilterOn.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.UseProtocolVersion(idunno.AtProto.Jetstream.JetstreamProtocolVersion protocolVersion) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Jetstream.JetStreamEventKind[]! kinds) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Jetstream.JetStreamEventKind>!
+idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.LastSequence.get -> long?
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnInfoReceived(idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs! e) -> void

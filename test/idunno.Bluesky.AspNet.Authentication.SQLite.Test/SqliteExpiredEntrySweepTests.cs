@@ -3,10 +3,10 @@
 
 using System.Security.Claims;
 
+using Duende.IdentityModel.OidcClient;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-
-using Duende.IdentityModel.OidcClient;
 
 namespace idunno.Bluesky.AspNet.Authentication.SQLite.Test;
 

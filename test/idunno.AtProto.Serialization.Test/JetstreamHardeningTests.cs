@@ -22,7 +22,7 @@ public class JetstreamHardeningTests
         """;
 
     [Theory]
-    [InlineData("sync")]
+    [InlineData("replay")]
     [InlineData("labels")]
     [InlineData("")]
     [InlineData("Commit")]

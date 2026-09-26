@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
@@ -32,6 +33,7 @@ namespace idunno.AtProto.Jetstream;
 /// <remarks>
 ///<para>See https://github.com/bluesky-social/jetstream.</para>
 /// </remarks>
+[SuppressMessage("Usage", "S8949:Cancellation tokens should be forwarded", Justification = "The stored token belongs to the connection the jetstream reconnects on behalf of, not to the caller of an unrelated method.")]
 public class AtProtoJetstream : IDisposable, IAsyncDisposable
 {
 #if NET9_0_OR_GREATER
@@ -78,15 +80,66 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a parse holds it makes the release which ends that parse throw.")]
     private readonly SemaphoreSlim _parseSemaphore;
 
-    private const string SubscribeEndpoint = "/subscribe";
+    private const string SubscribeEventsSubProtocol = "xrpc.v1.json";
+
+    private const string SubscribeEventsTypePrefix = "network.bsky.jetstream.subscribeEvents#";
+
+    private const string UnknownZstdDictionaryError = "UnknownZstdDictionary";
+
+    /// <summary>
+    /// The maximum number of collections a <see cref="JetstreamProtocolVersion.V2"/> server accepts in a filter.
+    /// </summary>
+    internal const int MaximumV2Collections = 100;
+
+    /// <summary>
+    /// The maximum number of dids a <see cref="JetstreamProtocolVersion.V2"/> server accepts in a filter.
+    /// </summary>
+    internal const int MaximumV2Dids = 10000;
+
+    /// <summary>
+    /// The smallest cursor a <see cref="JetstreamProtocolVersion.V2"/> server treats as a Unix microseconds timestamp
+    /// rather than as a sequence number.
+    /// </summary>
+    internal const long TimestampCursorThreshold = 1_000_000_000_000_000;
+
+    /// <summary>
+    /// The largest zstd dictionary, in bytes, which will be downloaded from a server.
+    /// </summary>
+    private const int MaximumDictionarySize = 1024 * 1024;
+
+    /// <summary>
+    /// The largest error response, in bytes, which will be read from a server which refused a connection.
+    /// </summary>
+    private const int MaximumErrorResponseSize = 64 * 1024;
+
+    /// <summary>
+    /// The magic number which starts a structured zstd dictionary, RFC 8878 section 5.
+    /// </summary>
+    private const uint ZstdDictionaryMagicNumber = 0xEC30A437;
+
+    /// <summary>
+    /// The jetstream connected to when no uri is given and the protocol version is <see cref="JetstreamProtocolVersion.V1"/>.
+    /// </summary>
+    internal static readonly Uri s_defaultV1Uri = new("wss://jetstream1.us-west.bsky.network");
+
+    /// <summary>
+    /// The jetstream connected to when no uri is given and the protocol version is <see cref="JetstreamProtocolVersion.V2"/>.
+    /// </summary>
+    internal static readonly Uri s_defaultV2Uri = new("wss://jetstream.us-west.bsky.network");
 
     private readonly JetstreamMetrics _metrics;
 
     private readonly ILogger<AtProtoJetstream> _logger;
 
-    private readonly Uri _uri = new("wss://jetstream1.us-west.bsky.network");
+    private readonly Uri _uri;
 
     private readonly Decompressor? _decompressor;
+
+    /// <summary>
+    /// The ID of the dictionary loaded into <see cref="_decompressor"/> for a <see cref="JetstreamProtocolVersion.V2"/>
+    /// connection, or zero if none has been loaded. Guarded by <see cref="_decompressorLock"/>.
+    /// </summary>
+    private uint _dictionaryId;
 
     /// <summary>
     /// Serialises use of <see cref="_decompressor"/>.
@@ -103,6 +156,29 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     private List<Nsid> _collections = [];
 
     private List<Did> _dids = [];
+
+    private List<JetStreamEventKind> _kinds = [];
+
+    // Incremented, under _syncLock, whenever a filter changes, and recorded against each connection, so a reconnection
+    // made to apply changed filters can tell whether the connection it would replace already has them.
+    private int _filterVersion;
+    private int _connectedFilterVersion;
+
+    // The largest sequence number seen, or long.MinValue before any has been. Read and written with Interlocked.
+    private long _lastSequence = long.MinValue;
+
+    // Events at or below this sequence number are dropped as already delivered. Set when the jetstream reconnects
+    // itself from the last sequence it saw, as the cursor is inclusive and the event it names would otherwise be
+    // delivered twice. Read and written with Interlocked.
+    private long _skipAtOrBelowSequence = long.MinValue;
+
+    // The socket a reconnection is replacing, so the receive loop reading it does not announce the close as though the
+    // jetstream had been disconnected.
+    private volatile ClientWebSocket? _replacedClient;
+
+    // How the last caller connected, which a reconnection the jetstream makes by itself reuses. Held together, and
+    // replaced rather than updated, so a reconnection never pairs the token of one connection with the client of another.
+    private volatile ConnectionSettings? _connectionSettings;
 
     // Replaced on reconnection, under _syncLock, but read without it by the state properties and by anything holding
     // its own reference to a socket, so the write has to be published rather than left for a reader to notice.
@@ -124,12 +200,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <summary>
     /// Creates a new instance of <see cref="Jetstream"/>.
     /// </summary>
-    /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/. Do not connect to untrusted jet stream servers.</param>
+    /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V2"/>, or wss://jetstream1.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V1"/>. Do not connect to untrusted jet stream servers.</param>
     /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
     /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
     /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
+    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
     public AtProtoJetstream(
         Uri? uri = null,
@@ -153,12 +230,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// specified <paramref name="httpClientFactory"/>.
     /// </summary>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
-    /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/. Do not connect to untrusted jet stream servers.</param>
+    /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V2"/>, or wss://jetstream1.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V1"/>. Do not connect to untrusted jet stream servers.</param>
     /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
     /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
     /// <remarks>
     /// <para>
     ///   The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
@@ -193,21 +271,6 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         ICollection<Nsid>? collections,
         ICollection<Did>? dids)
     {
-        if (uri is not null)
-        {
-            _uri = uri;
-        }
-
-        if (collections is not null)
-        {
-            _collections = [.. collections];
-        }
-
-        if (dids is not null)
-        {
-            _dids = [.. dids];
-        }
-
         if (options is not null)
         {
             Options = options;
@@ -218,6 +281,20 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
             LoggerFactory = NullLoggerFactory.Instance;
         }
 
+        _uri = uri ?? (Options.ProtocolVersion == JetstreamProtocolVersion.V2 ? s_defaultV2Uri : s_defaultV1Uri);
+
+        if (collections is not null)
+        {
+            ValidateFilterSize(collections.Count, MaximumV2Collections, nameof(collections));
+            _collections = [.. collections];
+        }
+
+        if (dids is not null)
+        {
+            ValidateFilterSize(dids.Count, MaximumV2Dids, nameof(dids));
+            _dids = [.. dids];
+        }
+
         _metrics = new JetstreamMetrics(Options.MeterFactory);
 
         _parseSemaphore = new SemaphoreSlim(Options.MaximumConcurrentMessageParsers, Options.MaximumConcurrentMessageParsers);
@@ -226,7 +303,9 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             _decompressor = new Decompressor();
 
-            if (Options.Dictionary is not null)
+            // A version 2 server names the dictionary it compresses with, so it is downloaded when connecting rather
+            // than taken from the options.
+            if (Options.ProtocolVersion == JetstreamProtocolVersion.V1 && Options.Dictionary is not null)
             {
                 _decompressor.LoadDictionary(Options.Dictionary);
             }
@@ -282,12 +361,17 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     internal WebSocketOptions WebSocketOptions { get; init; } = new WebSocketOptions();
 
     /// <summary>
-    /// Gets or sets a list of <see cref="Did"/>s to filter commit operations on.
+    /// Gets or sets a list of <see cref="Did"/>s to filter events on.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and the value being set has more dids than the server accepts.</exception>
     /// <remarks>
-    /// <para>If the jetstream is connected the updated filters are sent to the server in the background, so they may
-    /// not take effect until after the property has been set.</para>
+    /// <para>With <see cref="JetstreamProtocolVersion.V1"/> the filter only applies to commit events, and if the
+    /// jetstream is connected the updated filters are sent to the server in the background, so they may not take
+    /// effect until after the property has been set.</para>
+    /// <para>With <see cref="JetstreamProtocolVersion.V2"/> the filter applies to every kind of event. Filters can only
+    /// be set when connecting, so if the jetstream is connected it reconnects in the background, resuming from
+    /// <see cref="LastSequence"/>.</para>
     /// </remarks>
     public IReadOnlyCollection<Did> DidFilter
     {
@@ -302,23 +386,29 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            ValidateFilterSize(value.Count, MaximumV2Dids, nameof(value));
 
             lock (_syncLock)
             {
                 _dids = [.. value];
+                _filterVersion++;
             }
 
-            SendOptionsUpdateMessage().FireAndForget();
+            ApplyUpdatedFilters();
         }
     }
 
     /// <summary>
-    /// Gets or sets a list of <see cref="Nsid"/>s of collections to filter commit operations on.
+    /// Gets or sets a list of <see cref="Nsid"/>s of collections to filter commit events on.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and the value being set has more collections than the server accepts.</exception>
     /// <remarks>
-    /// <para>If the jetstream is connected the updated filters are sent to the server in the background, so they may
-    /// not take effect until after the property has been set.</para>
+    /// <para>If the jetstream is connected the updated filters are applied in the background, so they may not take
+    /// effect until after the property has been set. See <see cref="DidFilter"/> for how each protocol version applies them.</para>
+    /// <para>With <see cref="JetstreamProtocolVersion.V2"/> a collection can end in <c>.*</c> to match every collection
+    /// under a prefix. The filter only constrains commit events, so combine it with a <see cref="KindFilter"/> of
+    /// <see cref="JetStreamEventKind.Commit"/> to receive nothing but commits.</para>
     /// </remarks>
     public IReadOnlyCollection<Nsid> CollectionFilter
     {
@@ -333,16 +423,81 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            ValidateFilterSize(value.Count, MaximumV2Collections, nameof(value));
 
             lock (_syncLock)
             {
                 _collections = [.. value];
+                _filterVersion++;
             }
 
-            SendOptionsUpdateMessage().FireAndForget();
+            ApplyUpdatedFilters();
         }
     }
 
+    /// <summary>
+    /// Gets or sets the kinds of event to receive. If empty every kind of event is received.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the value being set contains <see cref="JetStreamEventKind.Unknown"/> or a value which is not a defined <see cref="JetStreamEventKind"/>.</exception>
+    /// <exception cref="NotSupportedException">Thrown when the value being set is not empty and the protocol version is <see cref="JetstreamProtocolVersion.V1"/>, which cannot filter by kind.</exception>
+    /// <remarks>
+    /// <para>Only supported by <see cref="JetstreamProtocolVersion.V2"/>. If the jetstream is connected it reconnects
+    /// in the background to apply the new filter, resuming from <see cref="LastSequence"/>.</para>
+    /// <para>A <see cref="CollectionFilter"/> can only be used when this filter is empty or includes <see cref="JetStreamEventKind.Commit"/>.</para>
+    /// </remarks>
+    public IReadOnlyCollection<JetStreamEventKind> KindFilter
+    {
+        get
+        {
+            lock (_syncLock)
+            {
+                return _kinds.AsReadOnly();
+            }
+        }
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            if (value.Count > 0 && Options.ProtocolVersion == JetstreamProtocolVersion.V1)
+            {
+                throw new NotSupportedException("Filtering by event kind needs a version 2 jetstream.");
+            }
+
+            if (value.Any(kind => kind == JetStreamEventKind.Unknown || !Enum.IsDefined(kind)))
+            {
+                throw new ArgumentException("The kind filter can only contain known event kinds.", nameof(value));
+            }
+
+            lock (_syncLock)
+            {
+                _kinds = [.. value.Distinct()];
+                _filterVersion++;
+            }
+
+            ApplyUpdatedFilters();
+        }
+    }
+
+    /// <summary>
+    /// Gets the largest sequence number received from the jetstream, if any.
+    /// </summary>
+    /// <remarks>
+    /// <para>Only <see cref="JetstreamProtocolVersion.V2"/> servers send sequence numbers. Pass the value as the cursor
+    /// to <see cref="ConnectAsync(Uri?, long?, HttpClient?, CancellationToken)"/> to resume from it after a disconnection.
+    /// The cursor is inclusive, and events are delivered at least once, so a consumer which must not act on an event
+    /// twice needs to check <see cref="AtJetstreamEvent.Sequence"/> for itself.</para>
+    /// </remarks>
+    public long? LastSequence
+    {
+        get
+        {
+            long sequence = Interlocked.Read(ref _lastSequence);
+
+            return sequence == long.MinValue ? null : sequence;
+        }
+    }
     /// <summary>
     /// Gets a flag indicating whether the underlying WebSocket is connected to the jetstream.
     /// </summary>
@@ -406,6 +561,16 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// Raised when this instance of <see cref="AtProtoJetstream"/> encounters a fault.
     /// </summary>
     public event EventHandler<FaultRaisedEventArgs>? FaultRaised;
+
+    /// <summary>
+    /// Raised when this instance of <see cref="AtProtoJetstream"/> receives an advisory notice from the server.
+    /// </summary>
+    /// <remarks>
+    /// <para>Only <see cref="JetstreamProtocolVersion.V2"/> servers send notices. For example a server sends
+    /// <c>OutdatedCursor</c> when a timestamp cursor was older than it keeps events for, and it resumed from the
+    /// oldest event it has instead. A notice does not end the connection.</para>
+    /// </remarks>
+    public event EventHandler<InfoReceivedEventArgs>? InfoReceived;
 
     /// <summary>
     /// Creates a new <see cref="AtProtoJetstreamBuilder"/>.
@@ -482,6 +647,20 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Called to raise any <see cref="InfoReceived"/> events, if any.
+    /// </summary>
+    /// <param name="e">The <see cref="InfoReceivedEventArgs"/> for the event.</param>
+    protected virtual void OnInfoReceived(InfoReceivedEventArgs e)
+    {
+        EventHandler<InfoReceivedEventArgs>? infoReceived = InfoReceived;
+
+        if (!_disposed)
+        {
+            infoReceived?.Invoke(this, e);
+        }
+    }
+
+    /// <summary>
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
     public async Task ConnectAsync()
@@ -546,13 +725,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <summary>
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
-    /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="startFrom">The time to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
     public async Task ConnectAsync(
         DateTimeOffset startFrom)
     {
         await ConnectAsync(
             uri: null,
-            cursor: startFrom.ToUnixTimeMilliseconds() * 1000,
+            cursor: ToCursor(startFrom),
             httpClient: null,
             cancellationToken: default).ConfigureAwait(false);
     }
@@ -560,13 +739,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <summary>
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
-    /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="startFrom">The time to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     public async Task ConnectAsync(
         DateTimeOffset? startFrom,
         CancellationToken cancellationToken)
     {
-        long? cursor = startFrom.HasValue ? startFrom.Value.ToUnixTimeMilliseconds() * 1000 : null;
+        long? cursor = startFrom.HasValue ? ToCursor(startFrom.Value) : null;
 
         await ConnectAsync(
             uri: null,
@@ -579,14 +758,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
     /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
-    /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="startFrom">The time to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     public async Task ConnectAsync(
         Uri uri,
         DateTimeOffset? startFrom,
         CancellationToken cancellationToken)
     {
-        long? cursor = startFrom.HasValue ? startFrom.Value.ToUnixTimeMilliseconds() * 1000 : null;
+        long? cursor = startFrom.HasValue ? ToCursor(startFrom.Value) : null;
 
         await ConnectAsync(
             uri: uri,
@@ -599,23 +778,57 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
     /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
-    /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="cursor">
+    ///   The cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.
+    ///   With <see cref="JetstreamProtocolVersion.V1"/> the cursor is a Unix microseconds timestamp. With
+    ///   <see cref="JetstreamProtocolVersion.V2"/> it is a sequence number, such as <see cref="LastSequence"/>, and the
+    ///   event it names is delivered again. A value of 10^15 or more is treated as a Unix microseconds timestamp instead.
+    /// </param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="WebSocketException">Thrown when the underlying web socket could not connect.</exception>
+    /// <exception cref="JetstreamConnectionException">Thrown when the server refused the connection with an HTTP error, for example because the cursor is older than the events it keeps.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/>, compression is enabled, and the server's compression dictionary could not be downloaded.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/>, compression is enabled, and the server's compression dictionary is not a zstd dictionary.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and a <see cref="CollectionFilter"/> is set alongside a <see cref="KindFilter"/> which does not include <see cref="JetStreamEventKind.Commit"/>.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the jetstream has been disposed.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is relative, or does not use a web socket scheme.</exception>
     /// <remarks>
     /// <para>Connection attempts are serialised. A caller which arrives whilst another connection attempt is in
     /// progress waits for it to complete, and returns without doing anything if it left the jetstream connected.</para>
-    /// <para>The jetstream does not reconnect by itself. A caller which wants to reconnect after a disconnection can
-    /// call this method again, including from a <see cref="ConnectionStateChanged"/> handler.</para>
+    /// <para>The jetstream does not reconnect by itself after a disconnection. A caller which wants to reconnect can
+    /// call this method again, including from a <see cref="ConnectionStateChanged"/> handler. The one exception is a
+    /// <see cref="JetstreamProtocolVersion.V2"/> jetstream whose filters change whilst it is connected, which
+    /// reconnects to apply them.</para>
+    /// <para>If a <see cref="JetstreamProtocolVersion.V2"/> server says it no longer has the compression dictionary
+    /// the jetstream downloaded, the current one is downloaded and the connection is tried once more.</para>
     /// </remarks>
     public async Task ConnectAsync(
         Uri? uri,
         long? cursor,
         HttpClient? httpClient,
         CancellationToken cancellationToken = default)
+    {
+        await ConnectCoreAsync(uri, cursor, httpClient, reconnectForUpdatedFilters: false, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connects, or reconnects to apply updated filters.
+    /// </summary>
+    /// <param name="uri">The URI of the jetstream server to connection to, or <see langword="null"/> to use the one passed during construction.</param>
+    /// <param name="cursor">The cursor to begin playback from.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for any HTTP requests, or <see langword="null"/> to use the internal one.</param>
+    /// <param name="reconnectForUpdatedFilters">
+    ///   <see langword="true"/> to close the current connection and reconnect to the same server from <see cref="LastSequence"/>,
+    ///   if the jetstream is connected with filters older than the current ones. <paramref name="uri"/> and <paramref name="cursor"/> are ignored.
+    /// </param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    private async Task ConnectCoreAsync(
+        Uri? uri,
+        long? cursor,
+        HttpClient? httpClient,
+        bool reconnectForUpdatedFilters,
+        CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
@@ -633,7 +846,63 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             try
             {
-                connectedClient = await ConnectInternalAsync(uri, cursor, httpClient, stateChanges, cancellationToken).ConfigureAwait(false);
+                long skipAtOrBelowSequence = long.MinValue;
+
+                if (reconnectForUpdatedFilters)
+                {
+                    ClientWebSocket current = _client;
+
+                    // Checked now the semaphore is held, as a reconnection queued behind another one, or behind a
+                    // caller's own connect or close, finds a connection which either has the filters already or is
+                    // not one the jetstream should reopen.
+                    if (current.State != WebSocketState.Open || Volatile.Read(ref _connectedFilterVersion) == Volatile.Read(ref _filterVersion))
+                    {
+                        return;
+                    }
+
+                    _replacedClient = current;
+
+                    JetStreamLogger.ReconnectingForUpdatedFilters(_logger);
+
+                    await CloseSocketAsync(
+                        current,
+                        WebSocketCloseStatus.NormalClosure,
+                        "Filters updated",
+                        recordAsGracefulDisconnection: true,
+                        stateChanges,
+                        cancellationToken).ConfigureAwait(false);
+
+                    uri = _server;
+                    httpClient = _connectionSettings?.HttpClient;
+
+                    // Taken after the close, so it includes everything the old connection delivered. The cursor is
+                    // inclusive, so the event it names is dropped rather than delivered a second time.
+                    cursor = LastSequence;
+
+                    if (cursor is not null)
+                    {
+                        skipAtOrBelowSequence = cursor.Value;
+                    }
+                }
+
+                try
+                {
+                    connectedClient = await ConnectInternalAsync(uri, cursor, httpClient, skipAtOrBelowSequence, refreshDictionary: false, stateChanges, cancellationToken).ConfigureAwait(false);
+                }
+                catch (JetstreamConnectionException ex) when (
+                    Options.ProtocolVersion == JetstreamProtocolVersion.V2 &&
+                    Options.UseCompression &&
+                    string.Equals(ex.ErrorDetail?.Error, UnknownZstdDictionaryError, StringComparison.Ordinal))
+                {
+                    // The server has replaced the dictionary it compresses with since it was downloaded, so the
+                    // current one is downloaded and the connection tried once more.
+                    connectedClient = await ConnectInternalAsync(uri, cursor, httpClient, skipAtOrBelowSequence, refreshDictionary: true, stateChanges, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (connectedClient is not null && !reconnectForUpdatedFilters)
+                {
+                    _connectionSettings = new ConnectionSettings(httpClient, cancellationToken);
+                }
             }
             finally
             {
@@ -660,12 +929,64 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Applies changed filters to an open connection.
+    /// </summary>
+    private void ApplyUpdatedFilters()
+    {
+        if (Options.ProtocolVersion == JetstreamProtocolVersion.V1)
+        {
+            SendOptionsUpdateMessage().FireAndForget();
+        }
+        else if (_client.State == WebSocketState.Open)
+        {
+            ReconnectForUpdatedFiltersAsync().FireAndForget();
+        }
+    }
+
+    /// <summary>
+    /// Reconnects a <see cref="JetstreamProtocolVersion.V2"/> jetstream so the server applies its current filters.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A reconnection runs in the background, so a failure is reported as a fault rather than thrown to nobody.")]
+    private async Task ReconnectForUpdatedFiltersAsync()
+    {
+        ConnectionSettings? connectionSettings = _connectionSettings;
+
+        if (_disposed || connectionSettings is null || connectionSettings.CancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        CancellationToken cancellationToken = connectionSettings.CancellationToken;
+
+        try
+        {
+            await ConnectCoreAsync(uri: null, cursor: null, httpClient: null, reconnectForUpdatedFilters: true, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Disposed whilst reconnecting, so there is nothing left to reconnect.
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The caller cancelled the connection the reconnection was made on behalf of.
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.ReconnectForUpdatedFiltersFailed(_logger, ex);
+            LogFault(ForLogging($"Reconnecting to apply updated filters failed: {ex.Message}"));
+        }
+    }
+
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
     private async Task<ClientWebSocket?> ConnectInternalAsync(
         Uri? uri,
         long? cursor,
         HttpClient? httpClient,
+        long skipAtOrBelowSequence,
+        bool refreshDictionary,
         List<WebSocketState> stateChanges,
         CancellationToken cancellationToken = default)
     {
@@ -720,6 +1041,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         List<Nsid> collections;
         List<Did> dids;
+        List<JetStreamEventKind> kinds;
+        int filterVersion;
 
         lock (_syncLock)
         {
@@ -727,66 +1050,24 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
             // be enumerated as the query string is built.
             collections = [.. _collections];
             dids = [.. _dids];
+            kinds = [.. _kinds];
+            filterVersion = _filterVersion;
         }
 
-        Uri endpoint = new(uri, SubscribeEndpoint);
+        httpClient ??= _httpClient;
 
-        StringBuilder uriBuilder = new();
+        uint dictionaryId = 0;
 
-        uriBuilder.Append(endpoint);
-        uriBuilder.Append('?');
-
-        foreach (Nsid collection in collections)
+        if (Options.ProtocolVersion == JetstreamProtocolVersion.V2 && Options.UseCompression)
         {
-            uriBuilder.Append(
-                CultureInfo.InvariantCulture,
-                $"wantedCollections={HttpUtility.UrlEncode(collection.ToString())}&");
+            dictionaryId = await GetDictionaryIdAsync(uri, httpClient, refreshDictionary, cancellationToken).ConfigureAwait(false);
         }
 
-        foreach (Did did in dids)
-        {
-            uriBuilder.Append(
-                CultureInfo.InvariantCulture,
-                $"wantedDids={HttpUtility.UrlEncode(did.ToString())}&");
-        }
-
-        if (cursor is not null)
-        {
-            uriBuilder.Append(
-                CultureInfo.InvariantCulture,
-                $"cursor={cursor}&");
-        }
-
-        if (Options.UseCompression)
-        {
-            uriBuilder.Append(
-                CultureInfo.InvariantCulture,
-                $"compress=true&");
-        }
-
-        // The parameter is maxMessageSizeBytes, and it is the size of the message the server is willing to send, so it
-        // takes the maximum message size rather than the size of the blocks the message is read in.
-        uriBuilder.Append(
-            CultureInfo.InvariantCulture,
-            $"maxMessageSizeBytes={Options.MaxMessageSize}&");
-
-        if (uriBuilder[^1] == '&')
-        {
-            uriBuilder.Length--;
-        }
-
-        if (uriBuilder[^1] == '?')
-        {
-            uriBuilder.Length--;
-        }
-
-        Uri jetStreamUri = new(uriBuilder.ToString());
+        Uri jetStreamUri = BuildSubscriptionUri(uri, cursor, collections, dids, kinds, dictionaryId);
 
         WebSocketState previousState = client.State;
 
         JetStreamLogger.ConnectingTo(_logger, jetStreamUri);
-
-        httpClient ??= _httpClient;
 
         // Reset before the attempt, as the flag describes how the connection this attempt is making ends, and carrying
         // the previous connection's answer into it would have a new connection reporting how an older one was disconnected.
@@ -795,6 +1076,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         // Reset for the same reason. The timestamp describes the connection being made, and a caller watching it to
         // decide whether a connection has gone quiet would otherwise be shown a time from a connection which has ended.
         MessageLastReceived = null;
+
+        Interlocked.Exchange(ref _skipAtOrBelowSequence, skipAtOrBelowSequence);
 
         try
         {
@@ -824,6 +1107,19 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                 stateChanges.Add(client.State);
             }
 
+            // A server which refuses the upgrade with an HTTP error says why in the body of the response, which the web
+            // socket client does not expose, so it is asked again over plain HTTP and the reason is thrown instead.
+            HttpStatusCode statusCode = client.HttpStatusCode;
+
+            if (ex is WebSocketException && (int)statusCode >= 400 && (int)statusCode < 600)
+            {
+                AtErrorDetail? errorDetail = await GetConnectionErrorDetailAsync(jetStreamUri, httpClient, cancellationToken).ConfigureAwait(false);
+
+                JetStreamLogger.ConnectionRefused(_logger, (int)statusCode, errorDetail?.Error);
+
+                throw new JetstreamConnectionException(statusCode, errorDetail, ex);
+            }
+
             throw;
         }
 
@@ -834,6 +1130,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (client.State == WebSocketState.Open)
         {
+            Volatile.Write(ref _connectedFilterVersion, filterVersion);
+
             return client;
         }
 
@@ -843,6 +1141,345 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         return null;
     }
 
+    /// <summary>
+    /// Builds the uri to subscribe to.
+    /// </summary>
+    /// <param name="server">The <see cref="Uri"/> of the jetstream server.</param>
+    /// <param name="cursor">The cursor, if any, to begin playback from.</param>
+    /// <param name="collections">The collections to filter on.</param>
+    /// <param name="dids">The dids to filter on.</param>
+    /// <param name="kinds">The kinds of event to filter on.</param>
+    /// <param name="dictionaryId">The ID of the zstd dictionary to ask a <see cref="JetstreamProtocolVersion.V2"/> server to compress with, or zero for none.</param>
+    /// <returns>The <see cref="Uri"/> to subscribe to.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> is not empty whilst <paramref name="kinds"/> excludes commits.</exception>
+    internal Uri BuildSubscriptionUri(
+        Uri server,
+        long? cursor,
+        IReadOnlyCollection<Nsid> collections,
+        IReadOnlyCollection<Did> dids,
+        IReadOnlyCollection<JetStreamEventKind> kinds,
+        uint dictionaryId)
+    {
+        bool isV2 = Options.ProtocolVersion == JetstreamProtocolVersion.V2;
+
+        if (isV2 && collections.Count > 0 && kinds.Count > 0 && !kinds.Contains(JetStreamEventKind.Commit))
+        {
+            // The server rejects this combination, as a collection filter only applies to commits.
+            throw new InvalidOperationException("A collection filter can only be used when the kind filter is empty or includes commit events.");
+        }
+
+        Uri endpoint = new(server, isV2 ? "/xrpc/network.bsky.jetstream.subscribeEvents" : "/subscribe");
+
+        string collectionParameter = isV2 ? "collections" : "wantedCollections";
+        string didParameter = isV2 ? "dids" : "wantedDids";
+
+        StringBuilder uriBuilder = new();
+
+        uriBuilder.Append(endpoint);
+        uriBuilder.Append('?');
+
+        foreach (Nsid collection in collections)
+        {
+            uriBuilder.Append(
+                CultureInfo.InvariantCulture,
+                $"{collectionParameter}={HttpUtility.UrlEncode(collection.ToString())}&");
+        }
+
+        foreach (Did did in dids)
+        {
+            uriBuilder.Append(
+                CultureInfo.InvariantCulture,
+                $"{didParameter}={HttpUtility.UrlEncode(did.ToString())}&");
+        }
+
+        if (isV2)
+        {
+            foreach (JetStreamEventKind kind in kinds)
+            {
+                uriBuilder.Append(
+                    CultureInfo.InvariantCulture,
+                    $"kinds={ToQueryValue(kind)}&");
+            }
+        }
+
+        if (cursor is not null)
+        {
+            uriBuilder.Append(
+                CultureInfo.InvariantCulture,
+                $"cursor={cursor}&");
+        }
+
+        if (isV2)
+        {
+            if (dictionaryId != 0)
+            {
+                uriBuilder.Append(
+                    CultureInfo.InvariantCulture,
+                    $"zstdDictionary={dictionaryId}&");
+            }
+        }
+        else if (Options.UseCompression)
+        {
+            uriBuilder.Append(
+                CultureInfo.InvariantCulture,
+                $"compress=true&");
+        }
+
+        // The parameter is maxMessageSizeBytes, and it is the size of the message the server is willing to send, so it
+        // takes the maximum message size rather than the size of the blocks the message is read in.
+        uriBuilder.Append(
+            CultureInfo.InvariantCulture,
+            $"maxMessageSizeBytes={Options.MaxMessageSize}&");
+
+        if (uriBuilder[^1] == '&')
+        {
+            uriBuilder.Length--;
+        }
+
+        if (uriBuilder[^1] == '?')
+        {
+            uriBuilder.Length--;
+        }
+
+        return new Uri(uriBuilder.ToString());
+    }
+
+    /// <summary>
+    /// Gets the ID of the zstd dictionary a <see cref="JetstreamProtocolVersion.V2"/> server compresses with,
+    /// downloading the dictionary and loading it into the decompressor if needed.
+    /// </summary>
+    /// <param name="server">The <see cref="Uri"/> of the jetstream server.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to download the dictionary with.</param>
+    /// <param name="refresh"><see langword="true"/> to download the dictionary even if one has already been loaded.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The ID of the dictionary.</returns>
+    /// <exception cref="HttpRequestException">Thrown when the dictionary could not be downloaded.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the download is not a structured zstd dictionary, or is larger than a dictionary is allowed to be.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the jetstream is disposed whilst the dictionary is downloaded.</exception>
+    private async Task<uint> GetDictionaryIdAsync(Uri server, HttpClient httpClient, bool refresh, CancellationToken cancellationToken)
+    {
+        lock (_decompressorLock)
+        {
+            if (!refresh && _dictionaryId != 0)
+            {
+                return _dictionaryId;
+            }
+        }
+
+        Uri dictionaryUri = new(ToHttpUri(server), "/xrpc/network.bsky.jetstream.getZstdDictionary");
+
+        using HttpRequestMessage request = new(HttpMethod.Get, dictionaryUri);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Octet));
+
+        using HttpResponseMessage response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+
+        response.EnsureSuccessStatusCode();
+
+        byte[] dictionary = await ReadBoundedAsync(response.Content, MaximumDictionarySize, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException($"The zstd dictionary is larger than {MaximumDictionarySize} bytes.");
+
+        uint dictionaryId = ParseDictionaryId(dictionary);
+
+        lock (_decompressorLock)
+        {
+            // Checked under the lock the decompressor is disposed under, as loading a dictionary into a disposed
+            // decompressor hands native code a context which has been freed.
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            _decompressor!.LoadDictionary(dictionary);
+            _dictionaryId = dictionaryId;
+        }
+
+        JetStreamLogger.DictionaryLoaded(_logger, dictionaryId);
+
+        return dictionaryId;
+    }
+
+    /// <summary>
+    /// Reads the dictionary ID from the header of a structured zstd dictionary.
+    /// </summary>
+    /// <param name="dictionary">The dictionary.</param>
+    /// <returns>The dictionary ID.</returns>
+    /// <exception cref="InvalidDataException">Thrown when <paramref name="dictionary"/> is not a structured zstd dictionary, or has no ID.</exception>
+    internal static uint ParseDictionaryId(ReadOnlySpan<byte> dictionary)
+    {
+        if (dictionary.Length < 8 || BinaryPrimitives.ReadUInt32LittleEndian(dictionary) != ZstdDictionaryMagicNumber)
+        {
+            throw new InvalidDataException("The zstd dictionary is not a structured dictionary.");
+        }
+
+        uint dictionaryId = BinaryPrimitives.ReadUInt32LittleEndian(dictionary[4..]);
+
+        if (dictionaryId == 0)
+        {
+            throw new InvalidDataException("The zstd dictionary does not have an ID.");
+        }
+
+        return dictionaryId;
+    }
+
+    /// <summary>
+    /// Asks a server which refused a connection why it did so.
+    /// </summary>
+    /// <param name="jetStreamUri">The <see cref="Uri"/> the connection was refused for.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to ask with.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The error the server gave, or <see langword="null"/> if it could not be read.</returns>
+    /// <remarks>
+    /// <para>A jetstream checks a request before it upgrades it to a web socket, so the same request made over plain
+    /// HTTP is refused for the same reason, and that response can be read.</para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "The error is only used to explain a failure which is thrown regardless.")]
+    private async Task<AtErrorDetail?> GetConnectionErrorDetailAsync(Uri jetStreamUri, HttpClient httpClient, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using HttpRequestMessage request = new(HttpMethod.Get, ToHttpUri(jetStreamUri));
+            using HttpResponseMessage response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+
+            byte[]? body = await ReadBoundedAsync(response.Content, MaximumErrorResponseSize, cancellationToken).ConfigureAwait(false);
+
+            if (body is null || body.Length == 0)
+            {
+                return null;
+            }
+
+            if (string.Equals(response.Content.Headers.ContentType?.MediaType, MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase))
+            {
+                AtErrorDetail? errorDetail = JsonSerializer.Deserialize(body, SourceGenerationContext.Default.AtErrorDetail);
+
+                if (errorDetail is not null)
+                {
+                    // Remote input, which ends up in an exception message and so in whatever logs it.
+                    errorDetail.Error = errorDetail.Error is null ? null : ForLogging(errorDetail.Error);
+                    errorDetail.Message = errorDetail.Message is null ? null : ForLogging(errorDetail.Message);
+                }
+
+                return errorDetail;
+            }
+
+            return new AtErrorDetail { Message = ForLogging(Encoding.UTF8.GetString(body).Trim()) };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.CouldNotReadConnectionError(_logger, ex);
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads <paramref name="content"/>, up to <paramref name="maximumLength"/> bytes.
+    /// </summary>
+    /// <param name="content">The <see cref="HttpContent"/> to read.</param>
+    /// <param name="maximumLength">The most bytes to read.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The content, or <see langword="null"/> if it is longer than <paramref name="maximumLength"/>.</returns>
+    private static async Task<byte[]?> ReadBoundedAsync(HttpContent content, int maximumLength, CancellationToken cancellationToken)
+    {
+        if (content.Headers.ContentLength > maximumLength)
+        {
+            return null;
+        }
+
+        Stream stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+
+        await using (stream.ConfigureAwait(false))
+        {
+            using MemoryStream buffer = new();
+            byte[] block = new byte[16 * 1024];
+            int read;
+
+            while ((read = await stream.ReadAsync(block, cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                if (buffer.Length + read > maximumLength)
+                {
+                    return null;
+                }
+
+                await buffer.WriteAsync(block.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+            }
+
+            return buffer.ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Converts a web socket <see cref="Uri"/> to the HTTP <see cref="Uri"/> for the same server and path.
+    /// </summary>
+    /// <param name="uri">The <see cref="Uri"/> to convert.</param>
+    /// <returns>The HTTP <see cref="Uri"/>.</returns>
+    internal static Uri ToHttpUri(Uri uri)
+    {
+        UriBuilder builder = new(uri);
+
+        if (uri.Scheme.Equals(Uri.UriSchemeWss, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Scheme = Uri.UriSchemeHttps;
+        }
+        else if (uri.Scheme.Equals(Uri.UriSchemeWs, StringComparison.OrdinalIgnoreCase))
+        {
+            builder.Scheme = Uri.UriSchemeHttp;
+        }
+
+        return builder.Uri;
+    }
+
+    /// <summary>
+    /// Converts <paramref name="startFrom"/> to a cursor.
+    /// </summary>
+    /// <param name="startFrom">The time to begin playback from.</param>
+    /// <returns>The cursor for <paramref name="startFrom"/>.</returns>
+    /// <remarks>
+    /// <para>A <see cref="JetstreamProtocolVersion.V2"/> server treats a cursor below 10^15 as a sequence number, so a
+    /// time before September 2001 is raised to the smallest timestamp. No server keeps events that old, so it resumes
+    /// from the oldest event it has either way.</para>
+    /// </remarks>
+    internal long ToCursor(DateTimeOffset startFrom)
+    {
+        long cursor = startFrom.ToUnixTimeMilliseconds() * 1000;
+
+        if (Options.ProtocolVersion == JetstreamProtocolVersion.V2 && cursor < TimestampCursorThreshold)
+        {
+            cursor = TimestampCursorThreshold;
+        }
+
+        return cursor;
+    }
+
+    /// <summary>
+    /// Gets the value a <see cref="JetstreamProtocolVersion.V2"/> server expects for <paramref name="kind"/>.
+    /// </summary>
+    /// <param name="kind">The <see cref="JetStreamEventKind"/> to convert.</param>
+    /// <returns>The value for <paramref name="kind"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="kind"/> has no value the server accepts.</exception>
+    private static string ToQueryValue(JetStreamEventKind kind) => kind switch
+    {
+        JetStreamEventKind.Account => "account",
+        JetStreamEventKind.Commit => "commit",
+        JetStreamEventKind.Identity => "identity",
+        JetStreamEventKind.Sync => "sync",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "The event kind cannot be filtered on.")
+    };
+
+    /// <summary>
+    /// Checks a filter is no larger than a <see cref="JetstreamProtocolVersion.V2"/> server accepts.
+    /// </summary>
+    /// <param name="count">The number of entries in the filter.</param>
+    /// <param name="maximum">The largest number of entries the server accepts.</param>
+    /// <param name="parameterName">The name of the parameter the filter was passed in.</param>
+    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="count"/> is larger than <paramref name="maximum"/>.</exception>
+    private void ValidateFilterSize(int count, int maximum, string parameterName)
+    {
+        if (Options.ProtocolVersion == JetstreamProtocolVersion.V2 && count > maximum)
+        {
+            throw new ArgumentException($"A version 2 jetstream accepts at most {maximum} entries in this filter.", parameterName);
+        }
+    }
     /// <summary>
     /// Closes the existing WebSocket connection.
     /// </summary>
@@ -862,7 +1499,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     {
         // Captured once, so a reconnection which replaces the field cannot leave this call inspecting one socket and
         // aborting another.
-        await CloseSocketAsync(_client, status, statusDescription, recordAsGracefulDisconnection: true, cancellationToken).ConfigureAwait(false);
+        await CloseSocketAsync(_client, status, statusDescription, recordAsGracefulDisconnection: true, stateChanges: null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -872,6 +1509,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="status">Status for the shutdown.</param>
     /// <param name="statusDescription">Reason for the shutdown.</param>
     /// <param name="recordAsGracefulDisconnection">Whether a completed close should be recorded as a graceful disconnection.</param>
+    /// <param name="stateChanges">A list to add any state change to, so the caller can raise it once it holds nothing a handler could wait on, or <see langword="null"/> to raise it here.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="ObjectDisposedException">Thrown if <paramref name="client"/> has been disposed.</exception>
     /// <remarks>
@@ -884,6 +1522,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         WebSocketCloseStatus status,
         string statusDescription,
         bool recordAsGracefulDisconnection,
+        List<WebSocketState>? stateChanges,
         CancellationToken cancellationToken)
     {
         WebSocketState startingState = client.State;
@@ -972,7 +1611,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (client.State != startingState)
         {
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            if (stateChanges is not null)
+            {
+                stateChanges.Add(client.State);
+            }
+            else
+            {
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            }
         }
     }
 
@@ -1142,6 +1788,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         var client = new ClientWebSocket();
         JetStreamLogger.InternalClientWebSocketCreated(_logger);
 
+        // Kept so a server which refuses the upgrade can be told apart from one which could not be reached.
+        client.Options.CollectHttpResponseDetails = true;
+
+        if (Options.ProtocolVersion == JetstreamProtocolVersion.V2)
+        {
+            client.Options.AddSubProtocol(SubscribeEventsSubProtocol);
+        }
+
         if (WebSocketOptions is not null)
         {
             if (WebSocketOptions.Proxy is not null)
@@ -1204,6 +1858,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                         ex.CloseStatus,
                         ex.Message,
                         recordAsGracefulDisconnection: false,
+                        stateChanges: null,
                         cancellationToken).ConfigureAwait(false);
 
                     // CloseSocketAsync raises the state change itself.
@@ -1250,7 +1905,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     JetStreamLogger.CloseMessageReceived(_logger);
 
                     _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
-                    OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+
+                    // A connection being replaced to apply updated filters is announced by the reconnection instead.
+                    if (!ReferenceEquals(client, _replacedClient))
+                    {
+                        OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                    }
+
                     finalStateRaised = true;
 
                     break;
@@ -1368,6 +2029,12 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     }
                 }
             }
+            catch (Exception) when (ReferenceEquals(client, _replacedClient) && client.State != WebSocketState.Open)
+            {
+                // The socket was closed, and possibly disposed, by a reconnection applying updated filters before this
+                // loop noticed. Nothing has gone wrong, so the loop just ends.
+                break;
+            }
             catch (Exception e)
             {
                 JetStreamLogger.MessageLoopError(_logger, e);
@@ -1387,7 +2054,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    await Task.Delay(ReceiveFailureBackoff, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(s_receiveFailureBackoff, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -1398,10 +2065,17 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
         {
-            // CloseAsync raises the state change itself.
-            await CloseAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            // CloseSocketAsync raises the state change itself. The socket this loop read is closed rather than the
+            // field, which a reconnection may already have replaced with a socket this loop knows nothing about.
+            await CloseSocketAsync(
+                client,
+                WebSocketCloseStatus.NormalClosure,
+                "Client disconnect",
+                recordAsGracefulDisconnection: true,
+                stateChanges: null,
+                cancellationToken).ConfigureAwait(false);
         }
-        else if (!finalStateRaised && client.State != WebSocketState.Open)
+        else if (!finalStateRaised && client.State != WebSocketState.Open && !ReferenceEquals(client, _replacedClient))
         {
             // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
             // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
@@ -1427,7 +2101,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <summary>
     /// How long the receive loop waits after a failure before reading again.
     /// </summary>
-    private static readonly TimeSpan ReceiveFailureBackoff = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan s_receiveFailureBackoff = TimeSpan.FromMilliseconds(500);
 
     /// <summary>
     /// Prepares remote input for logging, by bounding its length and removing the characters which would let it forge
@@ -1479,14 +2153,30 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         try
         {
-            AtJetstreamEvent? atJetstreamEvent = JsonSerializer.Deserialize<AtJetstreamEvent>(
-                json,
-                SourceGenerationContext.Default.AtJetstreamEvent);
+            AtJetstreamEvent? atJetstreamEvent;
+            AtJetstreamEvent? derivedEvent;
+
+            if (Options.ProtocolVersion == JetstreamProtocolVersion.V2)
+            {
+                if (!TryDeriveV2Event(json, out derivedEvent))
+                {
+                    // A notice, an error, or an event already delivered, none of which is raised as a record.
+                    return Task.CompletedTask;
+                }
+
+                atJetstreamEvent = derivedEvent;
+            }
+            else
+            {
+                atJetstreamEvent = JsonSerializer.Deserialize<AtJetstreamEvent>(
+                    json,
+                    SourceGenerationContext.Default.AtJetstreamEvent);
+
+                derivedEvent = atJetstreamEvent is null ? null : DeriveEvent(atJetstreamEvent);
+            }
 
             if (atJetstreamEvent is not null)
             {
-                AtJetstreamEvent? derivedEvent = DeriveEvent(atJetstreamEvent);
-
                 if (derivedEvent is not null)
                 {
                     // Raised outside the parsing catches below. A handler is application code, and an exception out of
@@ -1739,6 +2429,239 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Parses a <see cref="JetstreamProtocolVersion.V2"/> message, raising any notice or error it carries.
+    /// </summary>
+    /// <param name="json">The message to parse.</param>
+    /// <param name="derivedEvent">The event the message carries, or <see langword="null"/> if it could not be derived.</param>
+    /// <returns>
+    ///   <see langword="true"/> if the message should be raised as a record, in which case <paramref name="derivedEvent"/> is
+    ///   <see langword="null"/> when it could not be derived, or <see langword="false"/> if the message was a notice, an error,
+    ///   or an event which has already been delivered.
+    /// </returns>
+    /// <exception cref="JsonException">Thrown when <paramref name="json"/> is not valid JSON, or an event it carries is malformed.</exception>
+    internal bool TryDeriveV2Event(string json, out AtJetstreamEvent? derivedEvent)
+    {
+        derivedEvent = null;
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement root = document.RootElement;
+
+        string? frameType = GetStringProperty(root, "$type");
+
+        if (string.Equals(frameType, "error", StringComparison.Ordinal))
+        {
+            string error = ForLogging(GetStringProperty(root, "error") ?? "Unknown");
+            string? message = GetStringProperty(root, "message");
+
+            JetStreamLogger.ErrorReceived(_logger, error);
+
+            OnFaultRaised(new FaultRaisedEventArgs(message is null ? error : ForLogging($"{error}: {message}")) { Error = error });
+
+            return false;
+        }
+
+        if (!string.Equals(frameType, "message", StringComparison.Ordinal) ||
+            !root.TryGetProperty("payload", out JsonElement payload) ||
+            payload.ValueKind != JsonValueKind.Object)
+        {
+            // Not a frame this version of the protocol defines, so it is unparsable rather than unknown.
+            return true;
+        }
+
+        string? payloadType = GetStringProperty(payload, "$type");
+        string? kind = payloadType is not null && payloadType.StartsWith(SubscribeEventsTypePrefix, StringComparison.Ordinal)
+            ? payloadType[SubscribeEventsTypePrefix.Length..]
+            : null;
+
+        if (string.Equals(kind, "info", StringComparison.Ordinal))
+        {
+            string name = ForLogging(GetStringProperty(payload, "name") ?? "Unknown");
+            string? message = GetStringProperty(payload, "message");
+
+            JetStreamLogger.InfoReceived(_logger, name);
+
+            OnInfoReceived(new InfoReceivedEventArgs(name, message is null ? null : ForLogging(message)));
+
+            return false;
+        }
+
+        JetstreamV2EventPayload? eventPayload = payload.Deserialize(SourceGenerationContext.Default.JetstreamV2EventPayload);
+
+        if (eventPayload is null)
+        {
+            return true;
+        }
+
+        RecordSequence(eventPayload.Sequence);
+
+        if (eventPayload.Sequence <= Interlocked.Read(ref _skipAtOrBelowSequence))
+        {
+            JetStreamLogger.DuplicateEventSkipped(_logger, eventPayload.Sequence);
+
+            return false;
+        }
+
+        long timeStamp = (eventPayload.Time.UtcTicks - DateTimeOffset.UnixEpoch.UtcTicks) / TimeSpan.TicksPerMicrosecond;
+
+        // The $type has been consumed to pick the kind, so it is left out along with the properties the event carries.
+        Dictionary<string, JsonElement> extensionData = eventPayload.ExtensionData is null
+            ? new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+            : ExtensionDataExcept(eventPayload.ExtensionData, "$type");
+
+        switch (kind)
+        {
+            case "commit":
+                if (eventPayload.Operation is null ||
+                    eventPayload.Collection is null ||
+                    eventPayload.Rev is null ||
+                    eventPayload.RKey is null)
+                {
+                    return true;
+                }
+
+                derivedEvent = new AtJetstreamCommitEvent()
+                {
+                    Did = eventPayload.Did,
+                    TimeStamp = timeStamp,
+                    Kind = JetStreamEventKind.Commit,
+                    Sequence = eventPayload.Sequence,
+                    WitnessedAt = eventPayload.WitnessedAt,
+                    Commit = new AtJetstreamCommit()
+                    {
+                        Operation = eventPayload.Operation.Value,
+                        Collection = eventPayload.Collection,
+                        Rev = eventPayload.Rev,
+                        RKey = eventPayload.RKey,
+                        Record = eventPayload.Record,
+                        Cid = eventPayload.Cid
+                    },
+                    ExtensionData = extensionData
+                };
+
+                RecordEventParsed("commit");
+                break;
+
+            case "identity":
+                if (eventPayload.Identity is null)
+                {
+                    return true;
+                }
+
+                derivedEvent = new AtJetstreamIdentityEvent()
+                {
+                    Did = eventPayload.Did,
+                    TimeStamp = timeStamp,
+                    Kind = JetStreamEventKind.Identity,
+                    Sequence = eventPayload.Sequence,
+                    WitnessedAt = eventPayload.WitnessedAt,
+                    Identity = eventPayload.Identity,
+                    ExtensionData = extensionData
+                };
+
+                RecordEventParsed("identity");
+                break;
+
+            case "account":
+                if (eventPayload.Account is null)
+                {
+                    return true;
+                }
+
+                derivedEvent = new AtJetstreamAccountEvent()
+                {
+                    Did = eventPayload.Did,
+                    TimeStamp = timeStamp,
+                    Kind = JetStreamEventKind.Account,
+                    Sequence = eventPayload.Sequence,
+                    WitnessedAt = eventPayload.WitnessedAt,
+                    Account = eventPayload.Account,
+                    ExtensionData = extensionData
+                };
+
+                RecordEventParsed("account");
+                break;
+
+            case "sync":
+                if (eventPayload.Sync is null)
+                {
+                    return true;
+                }
+
+                derivedEvent = new AtJetstreamSyncEvent()
+                {
+                    Did = eventPayload.Did,
+                    TimeStamp = timeStamp,
+                    Kind = JetStreamEventKind.Sync,
+                    Sequence = eventPayload.Sequence,
+                    WitnessedAt = eventPayload.WitnessedAt,
+                    Sync = eventPayload.Sync,
+                    ExtensionData = extensionData
+                };
+
+                RecordEventParsed("sync");
+                break;
+
+            default:
+                // An event kind added to the jetstream after this library was built. It is raised as it is, in the
+                // same way as an unknown kind from a version 1 server, so a consumer can still see it and its sequence.
+                _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+
+                if (payloadType is not null)
+                {
+                    extensionData["$type"] = payload.GetProperty("$type").Clone();
+                }
+
+                derivedEvent = new AtJetstreamEvent()
+                {
+                    Did = eventPayload.Did,
+                    TimeStamp = timeStamp,
+                    Kind = JetStreamEventKind.Unknown,
+                    Sequence = eventPayload.Sequence,
+                    WitnessedAt = eventPayload.WitnessedAt,
+                    ExtensionData = extensionData
+                };
+                break;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Records <paramref name="sequence"/> as seen, if it is larger than any sequence seen so far.
+    /// </summary>
+    /// <param name="sequence">The sequence number of an event.</param>
+    /// <remarks>
+    /// <para>Messages are parsed concurrently, so they do not finish in the order they arrived, and a later event can
+    /// be recorded before an earlier one. Only ever moving forwards keeps <see cref="LastSequence"/> at the furthest point reached.</para>
+    /// </remarks>
+    private void RecordSequence(long sequence)
+    {
+        long current = Interlocked.Read(ref _lastSequence);
+
+        while (sequence > current)
+        {
+            long previous = Interlocked.CompareExchange(ref _lastSequence, sequence, current);
+
+            if (previous == current)
+            {
+                break;
+            }
+
+            current = previous;
+        }
+    }
+
+    private void RecordEventParsed(string eventType) =>
+        _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", eventType), new KeyValuePair<string, object?>("server", _server?.ToString()));
+
+    private static string? GetStringProperty(JsonElement element, string propertyName) =>
+        element.ValueKind == JsonValueKind.Object &&
+        element.TryGetProperty(propertyName, out JsonElement property) &&
+        property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
+
+    /// <summary>
     /// Copies <paramref name="extensionData"/>, leaving out the entry named by <paramref name="consumedKey"/>.
     /// </summary>
     /// <param name="extensionData">The extension data to copy.</param>
@@ -1761,4 +2684,6 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         return remaining;
     }
+
+    private sealed record ConnectionSettings(HttpClient? HttpClient, CancellationToken CancellationToken);
 }

@@ -41,6 +41,7 @@ public sealed class Program
         using (var jetStream = new AtProtoJetstream(
             options: new JetstreamOptions()
             {
+                ProtocolVersion = JetstreamProtocolVersion.V2,
                 UseCompression = true,
                 LoggerFactory = loggerFactory
             }))
@@ -55,9 +56,26 @@ public sealed class Program
                 Console.WriteLine($"MESSAGE   : Received message {e.Message}");
             };
 
+            jetStream.FaultRaised += (sender, e) =>
+            {
+                if (e.Error is not null)
+                {
+                    Console.WriteLine($"ERROR     : Server sent {e.Error}, {e.Fault}");
+                }
+                else
+                {
+                    Console.WriteLine($"FAULT     : {e.Fault}");
+                }
+            };
+
+            jetStream.InfoReceived += (sender, e) =>
+            {
+                Console.WriteLine($"INFO      : Server sent {e.Name}, {e.Message}");
+            };
+
             jetStream.RecordReceived += async (sender, e) =>
             {
-                string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
+                string timeStamp = $"{e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture)} (#{e.ParsedEvent.Sequence})";
 
                 switch (e.ParsedEvent)
                 {
@@ -147,6 +165,12 @@ public sealed class Program
                             break;
                         }
 
+                    case AtJetstreamSyncEvent syncEvent:
+                        {
+                            Console.WriteLine($"SYNC      : {syncEvent.Did} needs resyncing from revision {syncEvent.Sync.Rev} at {timeStamp}");
+                            break;
+                        }
+
                     default:
                         break;
                 }
@@ -173,7 +197,17 @@ public sealed class Program
                 }
 
                 lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
-                await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
+
+                try
+                {
+                    // Resume from the last event received, so nothing is missed across a reconnection.
+                    await jetStream.ConnectAsync(uri: null, cursor: jetStream.LastSequence, httpClient: null, cancellationToken: cancellationToken);
+                }
+                catch (JetstreamConnectionException ex) when (ex.ErrorDetail?.Error == "CursorTooOld")
+                {
+                    Console.WriteLine("RECONNECT: Cursor is too old, resuming from now");
+                    await jetStream.ConnectAsync(cancellationToken);
+                }
                 while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
                 {
                     // Let it run and process

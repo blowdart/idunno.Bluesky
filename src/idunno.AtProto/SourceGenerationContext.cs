@@ -111,6 +111,9 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(AtJetstreamAccountEvent))]
 [JsonSerializable(typeof(AtJetstreamCommitEvent))]
 [JsonSerializable(typeof(AtJetstreamIdentityEvent))]
+[JsonSerializable(typeof(AtJetstreamSyncEvent))]
+[JsonSerializable(typeof(AtJetstreamSync))]
+[JsonSerializable(typeof(JetstreamV2EventPayload))]
 [JsonSerializable(typeof(OptionsUpdateMessage))]
 
 [JsonSerializable(typeof(OAuthLoginState))]

@@ -31,6 +31,7 @@ internal sealed class JetStreamEventKindConverter : JsonConverter<JetStreamEvent
             "account" => JetStreamEventKind.Account,
             "commit" => JetStreamEventKind.Commit,
             "identity" => JetStreamEventKind.Identity,
+            "sync" => JetStreamEventKind.Sync,
             _ => JetStreamEventKind.Unknown
         };
     }
@@ -51,6 +52,10 @@ internal sealed class JetStreamEventKindConverter : JsonConverter<JetStreamEvent
 
             case JetStreamEventKind.Identity:
                 writer.WriteStringValue("identity");
+                break;
+
+            case JetStreamEventKind.Sync:
+                writer.WriteStringValue("sync");
                 break;
 
             default:

@@ -2,9 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

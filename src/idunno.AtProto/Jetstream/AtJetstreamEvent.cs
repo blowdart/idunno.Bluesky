@@ -55,6 +55,26 @@ public record AtJetstreamEvent
     public required JetStreamEventKind Kind { get; init; }
 
     /// <summary>
+    /// Gets the jetstream sequence number for the event, if the server sent one.
+    /// </summary>
+    /// <remarks>
+    /// <para>Sent by <see cref="JetstreamProtocolVersion.V2"/> servers. The sequence number is the cursor for the
+    /// stream, so passing it to <see cref="AtProtoJetstream.ConnectAsync(Uri?, long?, HttpClient?, CancellationToken)"/>
+    /// resumes from this event. The cursor is inclusive, so the event it names is delivered again.</para>
+    /// </remarks>
+    [JsonPropertyName("seq")]
+    public long? Sequence { get; init; }
+
+    /// <summary>
+    /// Gets when the jetstream server witnessed the event, if the server sent it.
+    /// </summary>
+    /// <remarks>
+    /// <para>Sent by <see cref="JetstreamProtocolVersion.V2"/> servers. Unlike <see cref="Sequence"/> it is meaningful
+    /// across jetstream instances, so it is the value to resume from when moving to a different server.</para>
+    /// </remarks>
+    public DateTimeOffset? WitnessedAt { get; init; }
+
+    /// <summary>
     /// A list of keys and element data that do not map to any strongly typed properties.
     /// </summary>
     /// <remarks>

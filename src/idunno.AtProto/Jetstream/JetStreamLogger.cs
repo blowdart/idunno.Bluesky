@@ -82,4 +82,28 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(31, LogLevel.Warning, "Connecting to {uri} without transport security. The dids and collections being subscribed to will be sent in plain text.")]
     internal static partial void ConnectingWithoutTransportSecurity(ILogger logger, Uri uri);
+
+    [LoggerMessage(32, LogLevel.Information, "Reconnecting to apply updated filters")]
+    internal static partial void ReconnectingForUpdatedFilters(ILogger logger);
+
+    [LoggerMessage(33, LogLevel.Error, "Reconnecting to apply updated filters failed")]
+    internal static partial void ReconnectForUpdatedFiltersFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(34, LogLevel.Error, "The jetstream refused the connection with status code {statusCode} and error {error}")]
+    internal static partial void ConnectionRefused(ILogger logger, int statusCode, string? error);
+
+    [LoggerMessage(35, LogLevel.Debug, "Loaded compression dictionary {dictionaryId}")]
+    internal static partial void DictionaryLoaded(ILogger logger, uint dictionaryId);
+
+    [LoggerMessage(36, LogLevel.Warning, "The reason the jetstream refused the connection could not be read")]
+    internal static partial void CouldNotReadConnectionError(ILogger logger, Exception ex);
+
+    [LoggerMessage(37, LogLevel.Error, "The jetstream sent error {error}")]
+    internal static partial void ErrorReceived(ILogger logger, string error);
+
+    [LoggerMessage(38, LogLevel.Information, "The jetstream sent notice {name}")]
+    internal static partial void InfoReceived(ILogger logger, string name);
+
+    [LoggerMessage(39, LogLevel.Trace, "Skipped event {sequence}, which was delivered before reconnecting")]
+    internal static partial void DuplicateEventSkipped(ILogger logger, long sequence);
 }

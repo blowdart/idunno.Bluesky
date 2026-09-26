@@ -21,10 +21,27 @@
 * The relay-only sync methods (`GetHostStatus()`, `ListHosts()`, `ListReposByCollection()` and `RequestCrawl()`) on `AtProtoServer` accept optional access credentials, and the `AtProtoAgent` versions send the agent's credentials when authenticated and calling the service the agent is authenticated to.
 * Added `AtProtoServer.GetHostStatus()` and `AtProtoAgent.GetHostStatus()`, which query a relay for the status of an upstream host, returning a `HostDescription` and `HostStatus`.
 * Added `AtProtoServer.GetLatestCommit()` and `AtProtoAgent.GetLatestCommit()`, which get the current commit CID and revision of a repository.
+* Added Jetstream v2 support to `AtProtoJetstream`, selected with `JetstreamOptions.ProtocolVersion` or `AtProtoJetstreamBuilder.UseProtocolVersion()`.
+  * Added `KindFilter`, and `AtProtoJetstreamBuilder.FilterTo(JetStreamEventKind[])`, to filter events by kind.
+  * Added `AtJetstreamSyncEvent`, `AtJetstreamSync` and `JetStreamEventKind.Sync` for sync events.
+  * Added `AtJetstreamEvent.Sequence` and `AtJetstreamEvent.WitnessedAt`, and `AtProtoJetstream.LastSequence` to resume from the last event received.
+  * Added the `InfoReceived` event for informational notices, and `FaultRaisedEventArgs.Error` for errors sent by the server.
+  * Added `JetstreamConnectionException`, thrown when a server refuses a connection, carrying the status code and error the server returned.
+  * Compressed v2 connections download the server's current zstd dictionary.
+  * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
 
 #### Samples
 
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
+
+### Changed
+
+#### idunno.AtProto
+
+* **Breaking** `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
+  To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
+* **Breaking** `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
+* Version 2 jetstreams limit `CollectionFilter` to 100 collections and `DidFilter` to 10,000 DIDs, and larger filters throw an `ArgumentException`.
 
 ## 7.0.0 - 2026-09-24
 

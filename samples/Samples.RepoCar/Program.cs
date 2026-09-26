@@ -1,8 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Formats.Cbor;
 using System.CommandLine;
+using System.Formats.Cbor;
 using System.Security.Cryptography;
 using System.Text;
 

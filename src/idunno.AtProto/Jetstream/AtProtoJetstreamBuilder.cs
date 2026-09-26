@@ -14,7 +14,7 @@ namespace idunno.AtProto.Jetstream;
 /// </summary>
 public sealed class AtProtoJetstreamBuilder
 {
-    private static readonly Uri s_defaultUri = new("wss://jetstream1.us-west.bsky.network");
+    private Uri? _service;
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoJetstreamBuilder"/>.
@@ -27,17 +27,39 @@ public sealed class AtProtoJetstreamBuilder
     /// Gets or sets the service the agent will initially connect to.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>If no service has been set this is a Bluesky jetstream server which speaks the <see cref="ProtocolVersion"/> selected.</para>
+    /// </remarks>
     public Uri Service
     {
-        get;
+        get => _service ?? (ProtocolVersion == JetstreamProtocolVersion.V1 ? AtProtoJetstream.s_defaultV1Uri : AtProtoJetstream.s_defaultV2Uri);
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
 
+            _service = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the version of the jetstream protocol to connect with. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is not a defined <see cref="JetstreamProtocolVersion"/>.</exception>
+    public JetstreamProtocolVersion ProtocolVersion
+    {
+        get;
+
+        set
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value));
+            }
+
             field = value;
         }
-    } = s_defaultUri;
+    } = JetstreamProtocolVersion.V2;
 
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/> to use when creating loggers.
@@ -212,6 +234,15 @@ public sealed class AtProtoJetstreamBuilder
     public ICollection<Nsid>? CollectionsToFilterOn { get; set; }
 
     /// <summary>
+    /// Gets or sets the kinds of event to limit events to.
+    /// </summary>
+    /// <remarks>
+    /// <para>Filtering on event kinds is only supported by <see cref="JetstreamProtocolVersion.V2"/>.</para>
+    /// </remarks>
+    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "This is meant to be settable.")]
+    public ICollection<JetStreamEventKind>? KindsToFilterOn { get; set; }
+
+    /// <summary>
     /// Gets or sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
     /// </summary>
     /// <remarks>
@@ -241,6 +272,26 @@ public sealed class AtProtoJetstreamBuilder
         ArgumentNullException.ThrowIfNull(service);
 
         Service = service;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the version of the jetstream protocol the <see cref="AtProtoJetstream"/> instance will connect with.
+    /// </summary>
+    /// <param name="protocolVersion">The version of the jetstream protocol to connect with.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="protocolVersion"/> is not a defined <see cref="JetstreamProtocolVersion"/>.</exception>
+    /// <remarks>
+    /// <para>If <see cref="ConnectTo(Uri)"/> has not been called the service connected to is a Bluesky jetstream server which speaks <paramref name="protocolVersion"/>.</para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder UseProtocolVersion(JetstreamProtocolVersion protocolVersion)
+    {
+        if (!Enum.IsDefined(protocolVersion))
+        {
+            throw new ArgumentOutOfRangeException(nameof(protocolVersion));
+        }
+
+        ProtocolVersion = protocolVersion;
         return this;
     }
 
@@ -457,6 +508,26 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures a filter to only raise events of the specified <paramref name="kinds"/>.
+    /// </summary>
+    /// <param name="kinds">The <see cref="JetStreamEventKind"/>s to filter on.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="kinds"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Filtering on event kinds is only supported by <see cref="JetstreamProtocolVersion.V2"/>.</para>
+    /// <para>A collection filter only applies to commit events, so combining one with kinds which do not include
+    /// <see cref="JetStreamEventKind.Commit"/> is rejected when connecting.</para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder FilterTo(JetStreamEventKind[] kinds)
+    {
+        ArgumentNullException.ThrowIfNull(kinds);
+
+        KindsToFilterOn = kinds;
+
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
     /// </summary>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use.</param>
@@ -507,10 +578,28 @@ public sealed class AtProtoJetstreamBuilder
     /// Builds a new instance of <see cref="AtProtoJetstream"/>.
     /// </summary>
     /// <returns>A configured <see cref="AtProtoJetstream"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when the filters are larger than <see cref="ProtocolVersion"/> allows.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="KindsToFilterOn"/> contains a kind which cannot be filtered on.</exception>
+    /// <exception cref="NotSupportedException">Thrown when <see cref="KindsToFilterOn"/> is not empty and <see cref="ProtocolVersion"/> is <see cref="JetstreamProtocolVersion.V1"/>.</exception>
     public AtProtoJetstream Build()
     {
+        // Checked before the jetstream is created, so an invalid filter does not leave a jetstream behind to dispose.
+        if (KindsToFilterOn is not null && KindsToFilterOn.Count > 0)
+        {
+            if (ProtocolVersion == JetstreamProtocolVersion.V1)
+            {
+                throw new NotSupportedException("Filtering by event kind needs a version 2 jetstream.");
+            }
+
+            if (KindsToFilterOn.Any(kind => kind == JetStreamEventKind.Unknown || !Enum.IsDefined(kind)))
+            {
+                throw new InvalidOperationException($"{nameof(KindsToFilterOn)} can only contain known event kinds.");
+            }
+        }
+
         JetstreamOptions options = new()
         {
+            ProtocolVersion = ProtocolVersion,
             LoggerFactory = LoggerFactory,
             MeterFactory = MeterFactory,
             UseCompression = EnableCompression,
@@ -523,9 +612,11 @@ public sealed class AtProtoJetstreamBuilder
             MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
         };
 
+        AtProtoJetstream jetstream;
+
         if (HttpClientFactory is null)
         {
-            return new AtProtoJetstream(
+            jetstream = new AtProtoJetstream(
                 uri: Service,
                 options: options,
                 webSocketOptions: WebSocketOptions,
@@ -535,7 +626,7 @@ public sealed class AtProtoJetstreamBuilder
         }
         else
         {
-            return new AtProtoJetstream(
+            jetstream = new AtProtoJetstream(
                 httpClientFactory: HttpClientFactory,
                 uri: Service,
                 options: options,
@@ -543,5 +634,12 @@ public sealed class AtProtoJetstreamBuilder
                 collections: CollectionsToFilterOn,
                 dids: DidsToFilterOn);
         }
+
+        if (KindsToFilterOn is not null && KindsToFilterOn.Count > 0)
+        {
+            jetstream.KindFilter = [.. KindsToFilterOn];
+        }
+
+        return jetstream;
     }
 }

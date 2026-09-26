@@ -132,9 +132,9 @@ public class AtProtoHttpClient(
         }
     }
 
-    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.s_onSendingRequest;
 
-    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.s_onResponseReceived;
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
@@ -684,9 +684,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
-    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.s_onSendingRequest;
 
-    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.s_onResponseReceived;
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
@@ -732,7 +732,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     ///   Used to avoid buffering the response body when nothing is going to read it before the bounded read does.
     /// </para>
     /// </remarks>
-    private bool HasOnResponseReceivedHandler => !ReferenceEquals(_onResponseReceived, AtProtoHttpClientDefaults.OnResponseReceived);
+    private bool HasOnResponseReceivedHandler => !ReferenceEquals(_onResponseReceived, AtProtoHttpClientDefaults.s_onResponseReceived);
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.

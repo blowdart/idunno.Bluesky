@@ -6,12 +6,12 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Notifications;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.Bluesky.Integration.Test;
 
