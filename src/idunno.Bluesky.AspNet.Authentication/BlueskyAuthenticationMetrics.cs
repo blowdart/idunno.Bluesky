@@ -82,6 +82,7 @@ public class BlueskyAuthenticationMetrics
     /// The value of the <see cref="TokenRefreshWaitReasonTagName"/> tag when a refresh was already running when the
     /// request arrived.
     /// </summary>
+    [SuppressMessage("Security", "S6418:Hard-coded secrets are security-sensitive", Justification = "A metric tag value describing why a refresh waited, not a secret.")]
     public const string TokenRefreshWaitReasonRefreshInProgress = "refresh_in_progress";
 
     /// <summary>
