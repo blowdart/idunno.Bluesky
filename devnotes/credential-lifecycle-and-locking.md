@@ -37,7 +37,7 @@ The rules below exist to make one guarantee:
 | `_raisingCredentialNotification` | `AsyncLocal<CredentialNotificationScope?>` | Detects a notification raised from inside a handler. |
 | `_deferredCredentialNotification` | `AccessCredentials?` | The newest credentials a handler deferred, to be raised once it returns. |
 | `_deferredCredentialNotificationCommitted` | `bool` | Sticky. Records that the deferred credentials are already live in the agent. |
-| `_deferredSessionEvents` | `Queue<Action>` | `Authenticated`/`Unauthenticated` raised from inside a handler, drained in order after it. |
+| `_deferredSessionEvents` | `List<DeferredSessionEvent>` | `Authenticated`/`Unauthenticated` raised from inside a handler, drained in the order deferred, and compared against `_deferredCredentialNotification` by sequence rather than always taking one channel first. |
 | `_exchangedRefreshTokens` / `_exchangedRefreshTokenLock` | bounded `Queue<string>` + `Lock`/`object` | Remembers the last few refresh tokens this session has exchanged, so a retry cannot re-present a spent one. Independent of `_credentialLock`. |
 
 ### Lock ordering
@@ -256,11 +256,23 @@ sequenceDiagram
 
 Every item deferred into the queue is therefore tagged with the notification turn number of whichever call deferred
 it — `_deferredCredentialNotificationTurnNumber` for the single credential slot, and a turn number carried alongside
-each entry in `_deferredSessionEvents` (a list of `(TurnNumber, Raise)` pairs rather than a plain queue). A drain only
-takes an item whose turn number is strictly *before* the earliest notification turn genuinely still waiting for its
-own place in the queue — `EarliestGenuinelyWaitingNotificationTurn`, which scans `_notificationTurnWaiters` for a
-real waiter (a non-`null` entry; a `null` entry marks a turn stepped over, which blocks nothing).
+each entry in `_deferredSessionEvents` (a list of `DeferredSessionEvent` records, tagging a turn number, a sequence
+number and the action to raise, rather than a plain queue). A drain only takes an item whose turn number is strictly
+*before* the earliest notification turn genuinely still waiting for its own place in the queue —
+`EarliestGenuinelyWaitingNotificationTurn`.
 
+* **A reservation, not just a registered waiter, is what makes a turn "genuinely waiting".**
+  `EarliestGenuinelyWaitingNotificationTurn` scans `_reservedNotificationTurns`, a set every turn number is added to
+  the moment `TakeNotificationTurn` hands it out and removed from, unconditionally, the moment
+  `FinishNotificationTurn` gives it up — not `_notificationTurnWaiters`, which a turn is only added to once it either
+  has to wait or is given up without ever running. A turn which has reserved its place but not yet reached
+  `EnterNotificationTurnAsync` — because it is still doing genuine work first, an HTTP exchange for example — is
+  invisible to `_notificationTurnWaiters` but must not be invisible here: scanning the waiters dictionary alone would
+  let a reentrant drain leapfrog it during exactly that window, regardless of how it eventually resolves. A
+  reservation is skipped only once it is positively known to never run — a `null` entry in `_notificationTurnWaiters`
+  — so a turn still deciding its own fate is always assumed to be one worth holding back for. The turn currently
+  entered and running is also skipped: it is what is asking, not what it is asking about, and counting it would make
+  every later turn look unsafe against itself.
 * **Turn numbers only ever increase, under the same lock that computes the earliest waiting one,** so once an item is
   found safe to raise it stays safe: nothing taken afterwards can insert itself before a turn already reserved and
   waiting. This is what lets a drain reuse the same "earliest waiting" value across everything it takes in one pass,
@@ -276,6 +288,12 @@ real waiter (a non-`null` entry; a `null` entry marks a turn stepped over, which
 * **A caller with no turn of its own — a DPoP nonce rotation, for example — is tagged with the currently active scope's
   own turn number.** It has no reserved place in the queue to be leapfrogged out of, so it is treated as belonging to
   whichever notification it is deferring into.
+* **Two channels, one order.** A credential notification and a session event deferred by the same reentrant call — the
+  two raises `RaiseSessionStartAndCredentialsUpdatedAsync` makes when a refresh starts a session, for example — carry
+  the same turn number, so turn safety alone cannot tell a drain which to take first. Each deferral is also stamped
+  with a sequence number from one shared counter (`NextDeferredNotificationSequence`), and `TakeNextDeferredNotification`
+  takes whichever of the two channels holds the lower sequence. A drain which always took the credential channel first
+  would silently reverse a caller's intended ordering the moment both ended up deferred into the same scope.
 
 ### Committed credentials
 
@@ -337,8 +355,8 @@ exception the caller needs to see.
     A reentrant change is always taken and deferred before its caller returns, but it must not be raised ahead of a
     change which committed, and reserved its own turn, first. Adding a new deferral slot means adding the same turn
     number to it and checking `EarliestGenuinelyWaitingNotificationTurn` before taking from it, exactly as
-    `TakeDeferredCredentialNotification` and `RaiseDeferredSessionEvents` already do — otherwise a reentrant caller can
-    leapfrog a genuinely concurrent one that was already ahead of it in commit order.
+    `TakeNextDeferredNotification` already does — otherwise a reentrant caller can leapfrog a genuinely concurrent one
+    that was already ahead of it in commit order.
 14. **Taking a turn and committing are not the same step — hold the semaphore across both, or not at all.**
     `TakeNotificationTurn` only reserves a place in the queue; it does not serialize against another caller's commit.
     A caller which takes a turn and then, separately, reads or writes `_credentials` under `_credentialLock` leaves a
@@ -348,6 +366,19 @@ exception the caller needs to see.
     `ClearCredentialsAndRecordSessionEnd` which does not already run under the semaphore — see rule 10 — so it takes
     the semaphore itself for exactly the take-turn-and-clear step, and releases it before raising. Every other caller
     of `ClearCredentialsAndRecordSessionEnd` is inside `Logout`, already holding the semaphore for the same reason.
+15. **A turn is "genuinely waiting" from the moment it is reserved, not from the moment it starts to wait.**
+    `EarliestGenuinelyWaitingNotificationTurn` must check `_reservedNotificationTurns`, not `_notificationTurnWaiters`.
+    A caller can do real work — an HTTP exchange, another raise — between `TakeNotificationTurn` and
+    `EnterNotificationTurnAsync`, and during that window it has no entry at all in `_notificationTurnWaiters`. Checking
+    only the waiters dictionary lets a reentrant drain leapfrog a turn which fully intends to run but has not yet
+    reached the point of waiting for it.
+16. **A credential notification and a session event deferred together keep the order they were deferred in, not the
+    order their channel is drained in.** `RaiseSessionStartAndCredentialsUpdatedAsync` raises `Authenticated` before
+    `CredentialsUpdated`; if both end up deferred by the same reentrant commit, they carry the same turn number, so
+    turn safety cannot order them against each other. `TakeNextDeferredNotification` breaks the tie with a shared
+    sequence counter (`NextDeferredNotificationSequence`), stamped on every deferral in both
+    `_deferredCredentialNotification` and `_deferredSessionEvents`. A drain which always took one channel ahead of the
+    other, regardless of sequence, would silently reverse whichever caller relied on the other order.
 
 ## Notes for writing a credential store
 
