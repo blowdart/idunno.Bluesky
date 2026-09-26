@@ -21,6 +21,7 @@ public class CredentialRefreshTests
 {
     private const string DomainName = "test.invalid";
     private const string ExpectedDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+    private const string OtherDid = "did:plc:someoneelse";
 
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -554,6 +555,729 @@ public class CredentialRefreshTests
         await (Task)backgroundRefresh.Invoke(agent, null)!;
     }
 
+    [Fact]
+    public async Task ARefreshWhichIssuesASessionForADifferentActorIsRejected()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentialsBeforeRefresh = agent.Credentials!;
+
+            refreshTestServer.IssuedDid = new Did(OtherDid);
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // A server which answers with a session for another account must not re-point the agent, and everything
+            // built on it, at that account.
+            Assert.Same(credentialsBeforeRefresh, agent.Credentials);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshOfAStoredCredentialWhichIssuesASessionForADifferentActorDoesNotStartASession()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        AccessCredentials storedCredentials;
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            storedCredentials = agent.Credentials!;
+        }
+
+        using (AtProtoAgent restoringAgent = CreateAgent(refreshTestServer))
+        {
+            refreshTestServer.IssuedDid = new Did(OtherDid);
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => restoringAgent.RefreshCredentials(storedCredentials, TestContext.Current.CancellationToken));
+
+            // An agent which holds no credentials has no current actor to compare the result against, so restoring a
+            // stored credential is the one path where nothing downstream can catch a session issued for the wrong one.
+            Assert.False(restoringAgent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshQueuedBehindAChangeOfActorDoesNotSpendTheRefreshTokenItWasGiven()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentials = agent.Credentials!;
+
+            AccessCredentials otherActorCredentials = new(
+                new Uri($"https://{DomainName}"),
+                AuthenticationType.UsernamePassword,
+                JwtBuilder.CreateJwt(new Did(OtherDid), $"did:web:{DomainName}", expiresIn: TimeSpan.FromMinutes(15)),
+                "otherActorRefreshToken");
+
+            // Models a login which commits whilst this refresh is queued for the refresh semaphore, after the check
+            // made before queueing said the agent was still the actor being refreshed.
+            agent.CredentialRefreshQueueing = () =>
+            {
+                agent.CredentialRefreshQueueing = null;
+                agent.Credentials = otherActorCredentials;
+
+                return Task.CompletedTask;
+            };
+
+            Assert.False(await agent.RefreshCredentials(credentials, TestContext.Current.CancellationToken));
+
+            // Exchanging on the stale check would spend the caller's single use refresh token and then discard what it
+            // was exchanged for, destroying the stored session the call was asked to refresh.
+            Assert.Equal(0, refreshTestServer.RefreshAttemptCount);
+            Assert.Same(otherActorCredentials, agent.Credentials);
+        }
+    }
+
+    [Fact]
+    public async Task ALogoutDoesNotDeadlockWithACredentialsUpdatedHandlerWaitingForACredentialRefresh()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentials = agent.Credentials!;
+
+            TaskCompletionSource handlerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource logoutHoldingSemaphore = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            int notificationCount = 0;
+
+            agent.CredentialsUpdatedAsync = async (e, cancellationToken) =>
+            {
+                if (Interlocked.Increment(ref notificationCount) != 1)
+                {
+                    return;
+                }
+
+                handlerEntered.TrySetResult();
+
+                await logoutHoldingSemaphore.Task.ConfigureAwait(false);
+
+                // Needs the refresh semaphore, which the logout is holding whilst this handler owns the notification
+                // queue the logout has to wait for to raise Unauthenticated.
+                await agent.RefreshSessionIssuedCredentials(
+                    new RefreshCredential(credentials),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            };
+
+            Task refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
+
+            await handlerEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            UnauthenticatedEventArgs? unauthenticated = null;
+
+            agent.Unauthenticated += (_, e) => unauthenticated = e;
+
+            agent.LogoutHoldingCredentialRefreshSemaphore = () =>
+            {
+                logoutHoldingSemaphore.TrySetResult();
+
+                return Task.CompletedTask;
+            };
+
+            await agent.Logout(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            await refresh;
+
+            // Waiting for a notification turn whilst holding the refresh semaphore deadlocks the agent for good: the
+            // logout never returns and the session it ended is never reported.
+            Assert.NotNull(unauthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginRaisesAuthenticatedEvenWhenTheHandlerForTheSessionItReplacedThrows()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AuthenticatedEventArgs? authenticated = null;
+
+            agent.Unauthenticated += (_, _) => throw new InvalidOperationException("The subscriber for the replaced session threw.");
+            agent.Authenticated += (_, e) => authenticated = e;
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => agent.Login(
+                    did: ExpectedDid,
+                    password: "password",
+                    authFactorToken: null,
+                    service: new Uri($"https://{DomainName}"),
+                    cancellationToken: TestContext.Current.CancellationToken));
+
+            // The new credentials are already live, so a subscriber which is never told this session started would go
+            // on holding the ones for the session it replaced.
+            Assert.NotNull(authenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshFromInsideASessionEventNotifiesTheCredentialsItIssued()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            List<AccessCredentials> notified = [];
+
+            agent.CredentialsUpdatedAsync = (e, _) =>
+            {
+                notified.Add(e.AccessCredentials);
+
+                return Task.CompletedTask;
+            };
+
+            int authenticatedCount = 0;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref authenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                agent.RefreshCredentials(CancellationToken.None).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The refresh the subscriber triggered published its credentials before the session event returned, so its
+            // notification was deferred into that event's scope. Dropping it would leave a subscriber storing a refresh
+            // token which has already been spent.
+            Assert.NotEmpty(notified);
+            Assert.Same(agent.Credentials, notified[^1]);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginFromInsideTheHandlerForTheSessionItReplacedDoesNotAnnounceTheReplacedSessionLast()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            List<AuthenticatedEventArgs> authenticated = [];
+            int unauthenticatedCount = 0;
+
+            agent.Authenticated += (_, e) => authenticated.Add(e);
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref unauthenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                Login(agent).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The nested login moved the agent on and announced itself. Announcing the session it interrupted after
+            // that would put credentials the agent no longer holds last, and a subscriber would store them.
+            Assert.NotEmpty(authenticated);
+            Assert.Same(agent.Credentials, authenticated[^1].AccessCredentials);
+        }
+    }
+
+    [Fact]
+    public async Task AReentrantSessionStartAnnouncesAuthenticatedBeforeCredentialsUpdated()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            List<string> order = [];
+            bool reentered = false;
+
+            MethodInfo raiseSessionStartAndCredentialsUpdated = typeof(AtProtoAgent).GetMethod(
+                "RaiseSessionStartAndCredentialsUpdatedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            agent.Authenticated += (_, _) =>
+            {
+                order.Add("Authenticated");
+
+                if (!reentered)
+                {
+                    reentered = true;
+
+                    // Reentrant: exactly what a refresh which starts a session calls, from inside this handler, so its
+                    // own Authenticated and CredentialsUpdated raises are both deferred into this scope with the same
+                    // turn number, and only the order the two were actually deferred in decides which is drained
+                    // first.
+                    ((Task) raiseSessionStartAndCredentialsUpdated.Invoke(
+                        agent,
+                        [agent.Credentials!, true, TestContext.Current.CancellationToken, null])!)
+                        .GetAwaiter().GetResult();
+                }
+            };
+
+            agent.CredentialsUpdatedAsync = (_, _) =>
+            {
+                order.Add("CredentialsUpdated");
+
+                return Task.CompletedTask;
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // RaiseSessionStartAndCredentialsUpdatedAsync raises Authenticated before CredentialsUpdated when a
+            // refresh starts a session. A drain which always takes a credential notification ahead of a session
+            // event would reverse that ordering once both end up deferred into the same scope by the reentrant call
+            // above.
+            int authenticatedIndex = order.LastIndexOf("Authenticated");
+            int credentialsUpdatedIndex = order.LastIndexOf("CredentialsUpdated");
+
+            Assert.True(authenticatedIndex >= 0);
+            Assert.True(credentialsUpdatedIndex >= 0);
+            Assert.True(authenticatedIndex < credentialsUpdatedIndex);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginFromInsideADeferredUnauthenticatedHandlerDoesNotDeadlock()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            int credentialsUpdatedCount = 0;
+            bool loggedBackIn = false;
+
+            agent.CredentialsUpdatedAsync = async (_, _) =>
+            {
+                if (Interlocked.Increment(ref credentialsUpdatedCount) != 1)
+                {
+                    return;
+                }
+
+                // Raised from inside the notification it is ordered behind, so Unauthenticated is deferred rather than
+                // raised inline, and the scope this notification opened is still active when it is eventually raised.
+                await agent.Logout(TestContext.Current.CancellationToken).ConfigureAwait(false);
+            };
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                // Reached only by draining what the logout above deferred. If the scope it flowed from had already
+                // closed before this ran, this synchronous login would wait for a turn of its own instead of
+                // deferring, and deadlock against the notification which is still holding the queue.
+                Login(agent).GetAwaiter().GetResult();
+                loggedBackIn = true;
+            };
+
+            Task refresh = Task.Run(
+                () => agent.RaiseCredentialsUpdatedAsync(
+                    agent.Credentials!,
+                    credentialsCommitted: false,
+                    TestContext.Current.CancellationToken),
+                TestContext.Current.CancellationToken);
+
+            await refresh.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            Assert.True(loggedBackIn);
+            Assert.True(agent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task AReentrantLoginDoesNotLeapfrogATurnAlreadyReservedAndWaiting()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo enterTurn = typeof(AtProtoAgent).GetMethod("EnterNotificationTurnAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            AtProtoAgent.NotificationTurn? reservedTurn = null;
+            Task? reservedTurnGranted = null;
+            bool authenticatedForReentrantLogin = false;
+
+            agent.SessionEventQueueing = () =>
+            {
+                // Fired once, before the logout below takes or waits for its own turn. Reserves a place in the queue
+                // behind it, exactly as a genuinely concurrent login committing between this point and the reentrant
+                // one below would, so the reentrant login has a turn already reserved and waiting to leapfrog.
+                if (reservedTurn is null)
+                {
+                    reservedTurn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+                    reservedTurnGranted = (Task) enterTurn.Invoke(agent, [reservedTurn, TestContext.Current.CancellationToken])!;
+                }
+
+                return Task.CompletedTask;
+            };
+
+            agent.Authenticated += (_, _) => authenticatedForReentrantLogin = true;
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                // Reentrant: commits and takes a place in the queue behind the one reserved above, then defers its own
+                // notifications rather than raising them, exactly as the turn ahead of it, still waiting, requires.
+                Login(agent).GetAwaiter().GetResult();
+            };
+
+            await agent.Logout(TestContext.Current.CancellationToken);
+
+            // The reentrant login's own notifications are deferred behind the turn reserved above, which has not yet
+            // run. Raising them here would let the reentrant login leapfrog it.
+            Assert.False(authenticatedForReentrantLogin);
+
+            // What a genuinely concurrent notification ahead of the reentrant login's own turn does once it finishes:
+            // gives its own turn up, granting the one reserved above.
+            finishTurn.Invoke(agent, [reservedTurn]);
+
+            await reservedTurnGranted!.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+            // The turn reserved above has now been granted and entered, exactly as a genuinely concurrent login would
+            // have been. Raising its own notification is what drains, and raises, everything the reentrant login above
+            // deferred, now that nothing reserved ahead of it is left waiting.
+            await agent.RaiseCredentialsUpdatedAsync(
+                agent.Credentials!,
+                credentialsCommitted: false,
+                TestContext.Current.CancellationToken,
+                reservedTurn);
+
+            finishTurn.Invoke(agent, [reservedTurn]);
+
+            Assert.True(authenticatedForReentrantLogin);
+        }
+    }
+
+    [Fact]
+    public async Task AReentrantLoginDoesNotLeapfrogATurnReservedButNotYetWaiting()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo enterTurn = typeof(AtProtoAgent).GetMethod("EnterNotificationTurnAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            AtProtoAgent.NotificationTurn? reservedTurn = null;
+            bool authenticatedForReentrantLogin = false;
+
+            agent.SessionEventQueueing = () =>
+            {
+                // Fired once, before the logout below takes or waits for its own turn. Only reserves a place in the
+                // queue, exactly as a genuinely concurrent login which has committed but not yet reached
+                // EnterNotificationTurnAsync would have: reserved, but with no entry of any kind in
+                // _notificationTurnWaiters yet. This is the gap EarliestGenuinelyWaitingNotificationTurn has to see
+                // through without it, rather than a turn already registered as waiting.
+                reservedTurn ??= (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                return Task.CompletedTask;
+            };
+
+            agent.Authenticated += (_, _) => authenticatedForReentrantLogin = true;
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                // Reentrant: commits and takes a place in the queue behind the one reserved above, then defers its own
+                // notifications rather than raising them, exactly as the turn ahead of it, not yet entered but still
+                // genuinely pending, requires.
+                Login(agent).GetAwaiter().GetResult();
+            };
+
+            await agent.Logout(TestContext.Current.CancellationToken);
+
+            // The reentrant login's own notifications are deferred behind the turn reserved above, which has not yet
+            // entered the queue at all. Raising them here would let the reentrant login leapfrog it.
+            Assert.False(authenticatedForReentrantLogin);
+
+            // What the caller which reserved the turn above does once it gets around to it: waits for its own place,
+            // exactly as InternalLogin does after committing.
+            await (Task) enterTurn.Invoke(agent, [reservedTurn, TestContext.Current.CancellationToken])!;
+
+            await agent.RaiseCredentialsUpdatedAsync(
+                agent.Credentials!,
+                credentialsCommitted: false,
+                TestContext.Current.CancellationToken,
+                reservedTurn);
+
+            finishTurn.Invoke(agent, [reservedTurn]);
+
+            Assert.True(authenticatedForReentrantLogin);
+        }
+    }
+
+    [Fact]
+    public async Task DeferredSessionEventsDrainInAscendingTurnOrderRatherThanInsertionOrder()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo raiseSessionEvent = typeof(AtProtoAgent).GetMethod("RaiseSessionEventAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            List<string> order = [];
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // Two turns taken in ascending order, exactly as two reentrant commits racing under the refresh
+                // semaphore would. The turn taken first is finished first below, but its event is deferred second,
+                // reproducing the reverse-of-turn-order append that scheduling can produce once the semaphore is
+                // released.
+                AtProtoAgent.NotificationTurn earlierTurn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+                AtProtoAgent.NotificationTurn laterTurn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                Action raiseForLaterTurn = () => order.Add("later");
+                Action raiseForEarlierTurn = () => order.Add("earlier");
+
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForLaterTurn, laterTurn])!).GetAwaiter().GetResult();
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForEarlierTurn, earlierTurn])!).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [earlierTurn]);
+                finishTurn.Invoke(agent, [laterTurn]);
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // Draining by insertion order would raise "later" ahead of "earlier", even though earlierTurn's caller
+            // committed first. TakeNextDeferredNotification must pick the lowest safe turn number instead.
+            Assert.Equal(["earlier", "later"], order);
+        }
+    }
+
+    [Fact]
+    public async Task DeferredNotificationsAcrossDifferentTurnsOrderByTurnNumberNotSequence()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo raiseSessionEvent = typeof(AtProtoAgent).GetMethod("RaiseSessionEventAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            List<string> order = [];
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // turnA takes the lower turn number and so committed first; turnB takes the higher one. Deferring
+                // turnB's credential notification before turnA's session event gives turnB the lower sequence number
+                // even though turnA committed first, reproducing a later commit reaching its own defer point sooner
+                // than an earlier one delayed ahead of it.
+                AtProtoAgent.NotificationTurn turnA = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+                AtProtoAgent.NotificationTurn turnB = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                agent.RaiseCredentialsUpdatedAsync(
+                    agent.Credentials!,
+                    credentialsCommitted: true,
+                    TestContext.Current.CancellationToken,
+                    turnB).GetAwaiter().GetResult();
+
+                Action raiseForTurnA = () => order.Add("sessionEventForTurnA");
+
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForTurnA, turnA])!).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [turnA]);
+                finishTurn.Invoke(agent, [turnB]);
+            };
+
+            agent.CredentialsUpdatedAsync = (_, _) =>
+            {
+                order.Add("credentialsUpdatedForTurnB");
+
+                return Task.CompletedTask;
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // turnA committed first, so its session event must be delivered before turnB's credential notification,
+            // even though turnB's notification was deferred first and so carries the lower sequence number. Ordering
+            // by sequence alone, rather than turn number first, would reverse this.
+            Assert.Equal(["sessionEventForTurnA", "credentialsUpdatedForTurnB"], order);
+        }
+    }
+
+    [Fact]
+    public async Task DrainingStopsRatherThanSpinningOnAnUncommittedLeftoverNotification()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // An uncommitted notification, exactly as a DPoP nonce rotation defers: reentrant, for the agent's
+                // own current credentials, and never committed. Its own turn is finished immediately, so it becomes
+                // the only thing deferred and safe to take. TakeNextDeferredNotification never takes an uncommitted
+                // notification, so the drain has to recognise nothing safe is actually takeable and stop, rather
+                // than spin asking HasNotificationSafeToRaise forever.
+                AtProtoAgent.NotificationTurn turn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                agent.RaiseCredentialsUpdatedAsync(
+                    agent.Credentials!,
+                    credentialsCommitted: false,
+                    TestContext.Current.CancellationToken,
+                    turn).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [turn]);
+            };
+
+            // If the drain cannot tell the leftover is unsafe to take, it spins forever whilst still holding the
+            // notification turn, and this call never returns.
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+            Assert.True(agent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task AFailedLoginDoesNotDiscardASessionACommittedConcurrentLoginJustEstablished()
+    {
+        RefreshTestServer refreshTestServer = new(this) { FailNextCreateSession = true };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            Task<AtProtoHttpResult<bool>>? concurrentGoodLogin = null;
+
+            // Set before the concurrent login is even started. SessionEventQueueing fires for its Authenticated raise
+            // strictly after that login has committed its credentials, but before it needs to enter the notification
+            // turn queue, so waiting on it here cannot deadlock against the turn this failed login's clear already
+            // holds: it either fires quickly, because the concurrent login was free to commit, or it never fires,
+            // because the fix is holding the semaphore the concurrent login needs to commit, and the wait below times
+            // out instead.
+            TaskCompletionSource concurrentLoginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            agent.SessionEventQueueing = () =>
+            {
+                agent.SessionEventQueueing = null;
+                concurrentLoginCommitted.TrySetResult();
+
+                return Task.CompletedTask;
+            };
+
+            // Fired once the failed login's clear has taken its notification turn and still holds the refresh
+            // semaphore. Starting the concurrent login here, rather than after the failed login returns, is what puts
+            // it in the race the fix has to survive: it can only commit once the semaphore this clear is holding is
+            // released.
+            agent.FailedLoginClearingCredentialsQueueing = async () =>
+            {
+                agent.FailedLoginClearingCredentialsQueueing = null;
+
+                concurrentGoodLogin = agent.Login(
+                    did: ExpectedDid,
+                    password: "password",
+                    authFactorToken: null,
+                    service: new Uri($"https://{DomainName}"),
+                    cancellationToken: TestContext.Current.CancellationToken);
+
+                // Bounded rather than unconditional: without the fix this resolves almost immediately, and with the
+                // fix it never resolves at all, since the concurrent login cannot commit until the semaphore this
+                // clear holds is released.
+                await Task.WhenAny(concurrentLoginCommitted.Task, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false);
+            };
+
+            AtProtoHttpResult<bool> failedLogin = await agent.Login(
+                did: ExpectedDid,
+                password: "wrong password",
+                authFactorToken: null,
+                service: new Uri($"https://{DomainName}"),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.False(failedLogin.Succeeded);
+            Assert.NotNull(concurrentGoodLogin);
+
+            AtProtoHttpResult<bool> goodLogin = await concurrentGoodLogin.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            Assert.True(goodLogin.Succeeded);
+
+            // Without holding the refresh semaphore across taking the turn and clearing, the failed login could read
+            // and discard the session the concurrent login had, by then, already committed, leaving the agent
+            // unauthenticated even though the concurrent login reported success.
+            Assert.True(agent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ACancelledNotificationTheQueueHasAlreadySteppedOverIsNotLeftInTheWaiterList()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using AtProtoAgent agent = CreateAgent(refreshTestServer);
+
+        MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo enterTurn = typeof(AtProtoAgent).GetMethod("EnterNotificationTurnAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo waiters = typeof(AtProtoAgent).GetField("_notificationTurnWaiters", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        object runningTurn = takeTurn.Invoke(agent, null)!;
+        object cancelledTurn = takeTurn.Invoke(agent, null)!;
+
+        await (Task)enterTurn.Invoke(agent, [runningTurn, CancellationToken.None])!;
+
+        using CancellationTokenSource cancellationTokenSource = new();
+
+        Task waitingForTurn = (Task)enterTurn.Invoke(agent, [cancelledTurn, cancellationTokenSource.Token])!;
+
+        await cancellationTokenSource.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waitingForTurn);
+
+        // The turn ahead is given up before the cancelled call gives up its own, so the queue steps over the cancelled
+        // turn first. Giving it up afterwards must not then re-record it: the queue is already past that number and
+        // would never look at the entry again, so repeated cancelled notifications would grow the list without bound.
+        finishTurn.Invoke(agent, [runningTurn]);
+        finishTurn.Invoke(agent, [cancelledTurn]);
+
+        Assert.Empty((IEnumerable<KeyValuePair<long, TaskCompletionSource?>>)waiters.GetValue(agent)!);
+    }
+
     private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer)
     {
         return new AtProtoAgent(
@@ -596,7 +1320,19 @@ public class CredentialRefreshTests
 
         internal bool FailRefresh { get; set; }
 
+        /// <summary>
+        /// When <see langword="true"/>, the next <c>createSession</c> call fails with a 400 and the flag resets itself,
+        /// so a test can fail exactly one login attempt without affecting any which follow it.
+        /// </summary>
+        internal bool FailNextCreateSession { get; set; }
+
         internal bool IssueUnvalidatableAccessJwtOnRefresh { get; set; }
+
+        /// <summary>
+        /// The DID the server issues a refreshed session for. Set to something other than the account being refreshed
+        /// to model a server which answers with a session for the wrong actor.
+        /// </summary>
+        internal Did IssuedDid { get; set; } = new Did(ExpectedDid);
 
         internal bool GateRefresh { get; set; }
 
@@ -634,6 +1370,13 @@ public class CredentialRefreshTests
             }
             else if (request.Path == "/xrpc/com.atproto.server.createSession" && request.Method == HttpMethod.Post.Method)
             {
+                if (FailNextCreateSession)
+                {
+                    FailNextCreateSession = false;
+                    response.StatusCode = 400;
+                    return;
+                }
+
                 response.StatusCode = 200;
 
                 await response.WriteAsJsonAsync(
@@ -669,7 +1412,7 @@ public class CredentialRefreshTests
                         accessJwt: IssueUnvalidatableAccessJwtOnRefresh ? CreateUnvalidatableAccessJwt() : CreateAccessJwt(),
                         refreshJwt: NextRefreshToken(),
                         handle: new Handle(DomainName),
-                        did: new Did(ExpectedDid),
+                        did: IssuedDid,
                         didDoc: null,
                         active: true,
                         status: null),
@@ -687,7 +1430,7 @@ public class CredentialRefreshTests
                 await response.WriteAsJsonAsync(
                     new GetSessionResponse(
                         handle: new Handle(DomainName),
-                        did: new Did(ExpectedDid),
+                        did: IssuedDid,
                         email: null,
                         emailConfirmed: null,
                         emailAuthFactor: null,
@@ -702,7 +1445,7 @@ public class CredentialRefreshTests
             }
         }
 
-        private string CreateAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
+        private string CreateAccessJwt() => JwtBuilder.CreateJwt(IssuedDid, $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
 
         /// <summary>
         /// Creates an access token whose audience is not the service it was requested from, so validation of it fails.

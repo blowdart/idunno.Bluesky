@@ -578,23 +578,21 @@ public class AtProtoJetstreamConnectionTests
     /// </summary>
     private sealed class RawJetstreamServer : IDisposable
     {
-        private readonly TcpListener _listener;
+        // Bound to port zero so the port is chosen as the listener binds. Choosing one up front and binding it later
+        // leaves a window in which another listener, including one in a test process for another target framework,
+        // can take it.
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private int _connectionCount;
 
-        public RawJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener = new TcpListener(IPAddress.Loopback, port);
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://127.0.0.1:{port}"));
-        }
-
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://127.0.0.1");
 
         public Task Start(Func<TcpClient, int, CancellationToken, Task> onConnected)
         {
             _listener.Start();
+
+            Uri = new Uri(
+                string.Create(CultureInfo.InvariantCulture, $"ws://127.0.0.1:{((IPEndPoint)_listener.LocalEndpoint).Port}"));
 
             _ = Task.Run(async () =>
             {
@@ -827,15 +825,7 @@ public class AtProtoJetstreamConnectionTests
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private int _connectionCount;
 
-        public TestJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
-        }
-
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://localhost");
 
         /// <summary>
         /// How long to wait before accepting a connection, to keep a connection attempt in flight.
@@ -849,7 +839,7 @@ public class AtProtoJetstreamConnectionTests
 
         public Task Start(Func<WebSocket, int, CancellationToken, Task> onConnected)
         {
-            _listener.Start();
+            StartListener();
 
             _ = Task.Run(async () =>
             {
@@ -907,6 +897,37 @@ public class AtProtoJetstreamConnectionTests
             }, _cancellationTokenSource.Token);
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Binds the listener to a free port, retrying when another listener takes the port between it being found
+        /// and the listener binding it. <see cref="HttpListener"/> has no equivalent of binding port zero, so the
+        /// window cannot be closed, only retried out of.
+        /// </summary>
+        private void StartListener()
+        {
+            const int maximumAttempts = 20;
+
+            for (int attempt = 1; ; attempt++)
+            {
+                int port = FreePort();
+
+                _listener.Prefixes.Clear();
+                _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+
+                try
+                {
+                    _listener.Start();
+                }
+                catch (HttpListenerException) when (attempt < maximumAttempts)
+                {
+                    continue;
+                }
+
+                Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+
+                return;
+            }
         }
 
         public void Dispose()
