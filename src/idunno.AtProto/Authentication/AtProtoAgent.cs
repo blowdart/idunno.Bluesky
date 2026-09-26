@@ -43,6 +43,28 @@ public partial class AtProtoAgent
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a refresh holds it makes the release which ends that refresh throw.")]
     private readonly SemaphoreSlim _credentialRefreshSemaphore = new(1, 1);
 
+    /// <summary>
+    /// Serialises credential update notifications, so a handler which persists them cannot have an older set of
+    /// credentials written after a newer set.
+    /// </summary>
+    /// <remarks>
+    /// <para>Deliberately not disposed, for the same reason <see cref="_credentialRefreshSemaphore"/> is not.</para>
+    /// </remarks>
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a notification holds it makes the release which ends that notification throw.")]
+    private readonly SemaphoreSlim _credentialNotificationSemaphore = new(1, 1);
+
+    /// <summary>
+    /// Set whilst a credential update notification is being raised on the current asynchronous flow.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   A handler is free to call back into the agent, and a call which rotates the DPoP nonce raises another
+    ///   notification. Waiting on <see cref="_credentialNotificationSemaphore"/> for a notification raised from inside
+    ///   one which already holds it would deadlock the agent, so a reentrant notification is raised directly.
+    /// </para>
+    /// </remarks>
+    private readonly AsyncLocal<bool> _raisingCredentialNotification = new();
+
     private AccessCredentials? _credentials;
 
     /// <summary>
@@ -289,7 +311,7 @@ public partial class AtProtoAgent
 
         if (credentials is DPoPAccessCredentials dPopAccessCredentials)
         {
-            CredentialsUpdatedEventArgs credentialsUpdatedEventArgs;
+            DPoPAccessCredentials credentialsToNotify;
 
             lock (_credentialLock)
             {
@@ -309,14 +331,11 @@ public partial class AtProtoAgent
                     currentCredentials.DPoPNonce = dPopAccessCredentials.DPoPNonce;
                 }
 
-                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                    currentCredentials.Did,
-                    currentCredentials.Service,
-                    currentCredentials);
+                credentialsToNotify = currentCredentials;
             }
 
             Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
         }
         else if (credentials is AccessCredentials accessCredentials)
         {
@@ -337,6 +356,71 @@ public partial class AtProtoAgent
         }
     }
 
+    /// <summary>
+    /// Raises <see cref="AtProtoAgent.CredentialsUpdated"/> and awaits <see cref="AtProtoAgent.CredentialsUpdatedAsync"/> for
+    /// <paramref name="credentials"/>, provided the agent still holds them.
+    /// </summary>
+    /// <param name="credentials">The credentials the notification is being raised for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A handler which persists what it is given must never write an older set of credentials over a newer set. A DPoP
+    ///   nonce update and a credential refresh can be notified concurrently, so without serialisation a nonce notification
+    ///   which started first can finish last and write a refresh token the server has already spent over the one which
+    ///   replaced it, leaving a restart with unusable credentials.
+    /// </para>
+    /// <para>
+    ///   Notifications are therefore raised one at a time, and one whose credentials the agent has since replaced is
+    ///   dropped rather than raised: whatever replaced them has its own notification, and the credentials in hand no
+    ///   longer describe the session.
+    /// </para>
+    /// </remarks>
+    private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, CancellationToken cancellationToken)
+    {
+        // A handler is free to call back into the agent, and a call which rotates the DPoP nonce raises another
+        // notification. Waiting for the semaphore this notification already holds would deadlock the agent.
+        if (_raisingCredentialNotification.Value)
+        {
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
+                cancellationToken).ConfigureAwait(false);
+
+            return;
+        }
+
+        await _credentialNotificationSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        _raisingCredentialNotification.Value = true;
+
+        try
+        {
+            lock (_credentialLock)
+            {
+                if (_atProtoAgentDisposed || !ReferenceEquals(_credentials, credentials))
+                {
+                    return;
+                }
+            }
+
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
+                cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _raisingCredentialNotification.Value = false;
+            _credentialNotificationSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Clears the agent credentials if it is still holding <paramref name="refreshToken"/>, which the server has spent
+    /// without the agent receiving anything in return.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token which has already been exchanged.</param>
+    /// <param name="unauthenticatedEventArgs">The event args to raise for the session which has ended, if any.</param>
+    /// <returns><see langword="true"/> if the credentials were cleared, otherwise <see langword="false"/>.</returns>
     private bool TryClearCredentialsForSpentRefreshToken(string refreshToken, out UnauthenticatedEventArgs? unauthenticatedEventArgs)
     {
         lock (_credentialLock)
@@ -1731,7 +1815,7 @@ public partial class AtProtoAgent
 
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        AccessCredentials? credentialsToNotify = null;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
         UnauthenticatedEventArgs? unauthenticatedEventArgs = null;
         bool timerStopped = false;
@@ -1822,10 +1906,7 @@ public partial class AtProtoAgent
                 StartTokenRefreshTimer();
                 succeeded = true;
 
-                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                    refreshedCredentials.Did,
-                    refreshedCredentials.Service,
-                    refreshedCredentials);
+                credentialsToNotify = refreshedCredentials;
             }
         }
         finally
@@ -1852,9 +1933,9 @@ public partial class AtProtoAgent
         }
 
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-        if (credentialsUpdatedEventArgs is not null)
+        if (credentialsToNotify is not null)
         {
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
         }
 
         return true;
@@ -1880,7 +1961,7 @@ public partial class AtProtoAgent
 
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        AccessCredentials? credentialsToNotify = null;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
@@ -1970,10 +2051,7 @@ public partial class AtProtoAgent
                 StartTokenRefreshTimer();
                 succeeded = true;
 
-                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                    refreshedCredentials.Did,
-                    refreshedCredentials.Service,
-                    refreshedCredentials);
+                credentialsToNotify = refreshedCredentials;
             }
         }
         finally
@@ -1995,9 +2073,9 @@ public partial class AtProtoAgent
         }
 
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-        if (credentialsUpdatedEventArgs is not null)
+        if (credentialsToNotify is not null)
         {
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
         }
 
         return true;

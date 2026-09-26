@@ -8,6 +8,7 @@
 
 * Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
 * Ended sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely.
+* Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
 
 ## 7.0.0 - 2026-09-24
 

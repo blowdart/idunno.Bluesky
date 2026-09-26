@@ -101,6 +101,57 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ASuspendedNonceNotificationCannotPersistCredentialsSupersededByARefresh()
+    {
+        OAuthTestServer server = new() { GateRefresh = true };
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        TaskCompletionSource releaseFirstNotification = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource firstNotificationEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        AccessCredentials? lastPersistedCredentials = null;
+        int notificationCount = 0;
+
+        agent.CredentialsUpdatedAsync = async (e, _) =>
+        {
+            if (Interlocked.Increment(ref notificationCount) == 1)
+            {
+                firstNotificationEntered.TrySetResult();
+                await releaseFirstNotification.Task;
+            }
+
+            lastPersistedCredentials = e.AccessCredentials;
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        Task notification = agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        await firstNotificationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Task<bool> refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
+
+        await server.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        server.ReleaseRefresh.TrySetResult();
+
+        // Give the refresh time to publish its credentials and reach the point where it notifies handlers, so the
+        // notification for the superseded credentials is the one which completes last.
+        await Task.Delay(500, TestContext.Current.CancellationToken);
+
+        releaseFirstNotification.TrySetResult();
+
+        await notification;
+        Assert.True(await refresh);
+
+        // The refreshed credentials must be the last ones a handler was given, otherwise a handler which persists
+        // them would leave a spent refresh token in durable storage.
+        Assert.Equal(2, notificationCount);
+        Assert.Same(agent.Credentials, lastPersistedCredentials);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
