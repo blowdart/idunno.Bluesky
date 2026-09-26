@@ -726,6 +726,40 @@ public class CredentialRefreshTests
         }
     }
 
+    [Fact]
+    public async Task ACancelledNotificationTheQueueHasAlreadySteppedOverIsNotLeftInTheWaiterList()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using AtProtoAgent agent = CreateAgent(refreshTestServer);
+
+        MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo enterTurn = typeof(AtProtoAgent).GetMethod("EnterNotificationTurnAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo waiters = typeof(AtProtoAgent).GetField("_notificationTurnWaiters", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        object runningTurn = takeTurn.Invoke(agent, null)!;
+        object cancelledTurn = takeTurn.Invoke(agent, null)!;
+
+        await (Task)enterTurn.Invoke(agent, [runningTurn, CancellationToken.None])!;
+
+        using CancellationTokenSource cancellationTokenSource = new();
+
+        Task waitingForTurn = (Task)enterTurn.Invoke(agent, [cancelledTurn, cancellationTokenSource.Token])!;
+
+        await cancellationTokenSource.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waitingForTurn);
+
+        // The turn ahead is given up before the cancelled call gives up its own, so the queue steps over the cancelled
+        // turn first. Giving it up afterwards must not then re-record it: the queue is already past that number and
+        // would never look at the entry again, so repeated cancelled notifications would grow the list without bound.
+        finishTurn.Invoke(agent, [runningTurn]);
+        finishTurn.Invoke(agent, [cancelledTurn]);
+
+        Assert.Empty((IEnumerable<KeyValuePair<long, TaskCompletionSource?>>)waiters.GetValue(agent)!);
+    }
+
     private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer)
     {
         return new AtProtoAgent(

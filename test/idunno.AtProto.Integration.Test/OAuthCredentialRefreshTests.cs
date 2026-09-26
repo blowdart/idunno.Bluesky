@@ -774,6 +774,90 @@ public class OAuthCredentialRefreshTests
         Assert.Same(refreshedCredentials, Assert.Single(persisted));
     }
 
+    [Fact]
+    public async Task ASessionEndedByWorkAHandlerStartedIsReportedBeforeALoginWhichCommittedAfterIt()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        // Spend the refresh token on an exchange which cannot complete, so the refresh started from inside the handler
+        // below finds it already spent and ends the session.
+        server.IssuedDid = new Did(OtherDid);
+
+        await Assert.ThrowsAsync<SecurityTokenValidationException>(
+            () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        server.IssuedDid = new Did(AccountDid);
+
+        List<string> order = [];
+
+        agent.Unauthenticated += (_, _) =>
+        {
+            lock (order)
+            {
+                order.Add("unauthenticated");
+            }
+        };
+
+        agent.Authenticated += (_, _) =>
+        {
+            lock (order)
+            {
+                order.Add("authenticated");
+            }
+        };
+
+        TaskCompletionSource sessionEndCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseSessionEnd = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Holds the session ending between the refresh committing it and it being raised, so the handler which started
+        // that refresh can return, closing the notification scope the refresh saw when it committed.
+        agent.SessionEventQueueing = async () =>
+        {
+            if (sessionEndCommitted.TrySetResult())
+            {
+                await releaseSessionEnd.Task;
+            }
+        };
+
+        Task<bool>? endingRefresh = null;
+
+        agent.CredentialsUpdatedAsync = async (_, _) =>
+        {
+            // Started but not awaited, so it outlives the handler it came from whilst still carrying its scope.
+            endingRefresh ??= agent.RefreshCredentials(CancellationToken.None);
+
+            await sessionEndCommitted.Task;
+        };
+
+        AccessCredentials credentials = agent.Credentials!;
+
+        await agent.NotifyCredentialsUpdated(credentials, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        agent.CredentialsUpdatedAsync = null;
+
+        Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
+
+        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
+
+        releaseSessionEnd.TrySetResult();
+
+        Assert.False(await endingRefresh!.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        // The session ended before the login committed, so it is reported first even though the work which ended it was
+        // started inside a handler and only reached the queue afterwards.
+        lock (order)
+        {
+            Assert.Equal(["unauthenticated", "authenticated"], order);
+        }
+
+        Assert.NotNull(agent.Credentials);
+    }
+
     /// <summary>
     /// Waits for <paramref name="condition"/> to become true, so that a test does not depend on a notification which is
     /// queued behind another having been delivered by the time the call which caused it returns.

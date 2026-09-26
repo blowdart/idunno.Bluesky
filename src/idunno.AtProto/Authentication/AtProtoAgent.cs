@@ -682,8 +682,12 @@ public partial class AtProtoAgent
     ///   Callers therefore take their place at the commit, release the refresh semaphore, and only then wait.
     /// </para>
     /// <para>
-    ///   A caller running inside a notification is already in a turn, and must not queue behind itself, so it is given
-    ///   nothing. Its raises are deferred by the notification which is running and drained when the handler returns.
+    ///   A turn is taken whether the caller is running inside a notification or not. A reentrant caller does not queue
+    ///   behind itself: its raises are deferred by the notification which is running, and return without ever waiting
+    ///   for the turn, which is then simply stepped over when it is given up. Deciding at the commit not to take one,
+    ///   because a notification happened to be running, is not safe. Work a handler started but did not await carries
+    ///   that handler's scope, so it can see the scope running when it commits and find it closed by the time it
+    ///   raises, leaving it to take its place in the queue after a change which was committed later than its own.
     /// </para>
     /// <para>
     ///   Every turn taken must be given up exactly once, with <see cref="FinishNotificationTurn(NotificationTurn?)"/>
@@ -693,11 +697,6 @@ public partial class AtProtoAgent
     /// </remarks>
     private NotificationTurn? TakeNotificationTurn()
     {
-        if (_raisingCredentialNotification.Value is { Active: true })
-        {
-            return null;
-        }
-
         lock (_credentialLock)
         {
             return new NotificationTurn { Number = _nextNotificationTurn++ };
@@ -778,11 +777,19 @@ public partial class AtProtoAgent
                 // Never entered, and at the head of the queue, so it is stepped over immediately.
                 _notificationTurnNowServing = turn.Number + 1;
             }
-            else
+            else if (_notificationTurnNowServing < turn.Number)
             {
                 // Never entered, and not yet at the head, so it is marked as one to step over when it gets there.
                 _notificationTurnWaiters[turn.Number] = null;
 
+                return;
+            }
+            else
+            {
+                // Never entered, and already behind the head, so the queue has stepped over it: a waiter cancelled
+                // whilst the turn ahead was running is dropped and stepped over by whoever finished that turn, before
+                // the cancelled call unwinds to here. Marking it now would add an entry for a turn the queue will
+                // never look at again, which is a leak rather than a tombstone.
                 return;
             }
 
@@ -1134,6 +1141,13 @@ public partial class AtProtoAgent
     /// </remarks>
     private async Task RaiseSessionEventAsync(Action raise, NotificationTurn? notificationTurn = null)
     {
+        // Invoked before the reentrancy check so that a test can hold a session event in the window between the change
+        // being committed and it being raised, which is where ordering against a concurrent change is decided.
+        if (SessionEventQueueing is Func<Task> sessionEventQueueing)
+        {
+            await sessionEventQueueing().ConfigureAwait(false);
+        }
+
         bool deferred = false;
 
         lock (_credentialLock)
@@ -1148,11 +1162,6 @@ public partial class AtProtoAgent
         if (deferred)
         {
             return;
-        }
-
-        if (SessionEventQueueing is Func<Task> sessionEventQueueing)
-        {
-            await sessionEventQueueing().ConfigureAwait(false);
         }
 
         NotificationTurn? ownedTurn = null;

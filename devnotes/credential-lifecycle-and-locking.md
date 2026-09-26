@@ -195,7 +195,14 @@ stateDiagram-v2
     SessionEvents --> [*]: Authenticated / Unauthenticated raised last (except on a session start)
 ```
 
-Three subtleties in that machinery:
+Four subtleties in that machinery:
+
+* **A turn is always reserved, even when reentrant.** `TakeNotificationTurn` hands out a turn whether or not a
+  notification is running. A reentrant caller never queues behind itself, because its raises are deferred and return
+  without waiting, and the unused turn is simply stepped over when it is given up. Skipping the reservation because a
+  notification happened to be running would not be safe: work a handler started but did not await carries that
+  handler's scope, so it can see the scope running when it commits and find it closed by the time it raises, taking its
+  place in the queue behind a change which was committed *after* its own.
 
 * **The deferral slot holds only the newest set.** It is written only when the credentials being deferred are still the
   agent's (`ReferenceEquals(_credentials, credentials)`). A notification can reach the slot *later* than one for the
@@ -246,7 +253,10 @@ exception the caller needs to see.
    produces, and calls `FinishNotificationTurn` from a `finally` — including on the paths where nothing was committed
    and nothing was raised. A turn which is never given up stops the notification queue for the lifetime of the agent.
    Methods which `return` from inside a `try` need an outer `try`/`finally` for this; `RefreshOAuthIssuedCredentials`
-   and `RefreshSessionIssuedCredentials` both have one.
+   and `RefreshSessionIssuedCredentials` both have one. A turn given up without ever being entered is either stepped
+   over immediately, if it is at the head, or recorded as one to step over when it gets there — but only while it is
+   still ahead of the queue. A turn the queue has already passed, which is what a cancelled waiter becomes when the
+   turn ahead of it is given up first, is left alone: recording it would add an entry nothing ever removes.
 10. **Never wait for a turn while holding `_credentialRefreshSemaphore`.** See the lock ordering section above. `Logout`
     holds that semaphore, so it splits the work: `ClearCredentialsAndRecordSessionEnd` discards the credentials and
     takes a turn — neither of which waits — under the semaphore, and `RaisePendingSessionEndAsync` raises the session
