@@ -325,6 +325,9 @@ internal static partial class Logger
     [LoggerMessage(302, LogLevel.Error, "A credentials updated handler threw whilst being notified of credentials a refresh had already committed.")]
     internal static partial void CommittedCredentialsNotificationThrew(ILogger logger, Exception ex);
 
+    [LoggerMessage(303, LogLevel.Error, "A session event subscriber threw whilst being notified of a session starting or ending which had been deferred from a credentials updated handler.")]
+    internal static partial void DeferredSessionEventThrew(ILogger logger, Exception ex);
+
     // AtProtoServer logging
 
     // AtProtoServer Identity Logging

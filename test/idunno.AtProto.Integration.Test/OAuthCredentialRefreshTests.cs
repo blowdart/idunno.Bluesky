@@ -737,6 +737,45 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(new Did(AccountDid), authenticatedAs);
     }
 
+    [Fact]
+    public async Task AStaleNonceUpdateForACredentialTypeOfYourOwnDoesNotReplaceNewerCredentials()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        CustomDPoPCredentials staleCredentials = CreateCustomCredentials("staleRefreshToken");
+        agent.Credentials = staleCredentials;
+
+        CustomDPoPCredentials currentCredentials = CreateCustomCredentials("currentRefreshToken");
+        agent.Credentials = currentCredentials;
+
+        int credentialsUpdatedCount = 0;
+        agent.CredentialsUpdated += (_, _) => credentialsUpdatedCount++;
+
+        staleCredentials.DPoPNonce = "staleNonce";
+        await agent.NotifyCredentialsUpdated(staleCredentials, TestContext.Current.CancellationToken);
+
+        // A credential type of your own is DPoP bound without deriving from DPoPAccessCredentials, so it used to take
+        // an unguarded path which published the caller's snapshot, restoring the refresh token it was holding.
+        Assert.Same(currentCredentials, agent.Credentials);
+        Assert.Equal(0, credentialsUpdatedCount);
+    }
+
+    private static CustomDPoPCredentials CreateCustomCredentials(string refreshToken) =>
+        new(new Uri($"https://{DomainName}"), CreateAccessJwt(new Did(AccountDid)), refreshToken);
+
+    /// <summary>
+    /// A DPoP bound credential which does not derive from <see cref="DPoPAccessCredentials"/>, as a caller is free to
+    /// write, since <see cref="AccessCredentials"/> and <see cref="IDPoPBoundCredential"/> are both public.
+    /// </summary>
+    private sealed class CustomDPoPCredentials(Uri service, string accessJwt, string refreshToken)
+        : AccessCredentials(service, AuthenticationType.OAuth, accessJwt, refreshToken), IDPoPBoundCredential
+    {
+        public string DPoPProofKey { get; set; } = JwtBuilder.CreateProofKey();
+
+        public string DPoPNonce { get; set; } = "nonce";
+    }
+
     private static DPoPAccessCredentials CreateCredentials() => CreateCredentials(new Did(AccountDid));
 
     private static DPoPAccessCredentials CreateCredentials(Did did) =>

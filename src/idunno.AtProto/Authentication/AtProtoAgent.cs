@@ -540,9 +540,9 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(credentials);
 
-        if (credentials is DPoPAccessCredentials dPopAccessCredentials)
+        if (credentials is AccessCredentials updatedAccessCredentials && credentials is IDPoPBoundCredential updatedDPoPCredential)
         {
-            DPoPAccessCredentials credentialsToNotify;
+            AccessCredentials credentialsToNotify;
 
             lock (_credentialLock)
             {
@@ -552,11 +552,12 @@ public partial class AtProtoAgent
                 // which is over, and applying it would corrupt the current ones. The agent is left alone, and the
                 // request is left to fail and retry, which will collect a nonce for the credentials in use.
                 if (_atProtoAgentDisposed ||
-                    _credentials is not DPoPAccessCredentials currentCredentials ||
-                    !string.Equals(currentCredentials.AccessJwt, dPopAccessCredentials.AccessJwt, StringComparison.Ordinal) ||
-                    !string.Equals(currentCredentials.RefreshToken, dPopAccessCredentials.RefreshToken, StringComparison.Ordinal) ||
-                    !string.Equals(currentCredentials.DPoPProofKey, dPopAccessCredentials.DPoPProofKey, StringComparison.Ordinal) ||
-                    currentCredentials.Service != dPopAccessCredentials.Service)
+                    _credentials is not AccessCredentials currentCredentials ||
+                    currentCredentials is not IDPoPBoundCredential currentDPoPCredential ||
+                    !string.Equals(currentCredentials.AccessJwt, updatedAccessCredentials.AccessJwt, StringComparison.Ordinal) ||
+                    !string.Equals(currentCredentials.RefreshToken, updatedAccessCredentials.RefreshToken, StringComparison.Ordinal) ||
+                    !string.Equals(currentDPoPCredential.DPoPProofKey, updatedDPoPCredential.DPoPProofKey, StringComparison.Ordinal) ||
+                    currentCredentials.Service != updatedAccessCredentials.Service)
                 {
                     return;
                 }
@@ -564,10 +565,10 @@ public partial class AtProtoAgent
                 // Mutated in place rather than published, so the generation does not change and a refresh which is in
                 // flight is not made to think its credentials have been superseded. A handler already holding this
                 // instance sees the new nonce without being told anything.
-                if (!ReferenceEquals(currentCredentials, dPopAccessCredentials) &&
-                    !string.Equals(currentCredentials.DPoPNonce, dPopAccessCredentials.DPoPNonce, StringComparison.Ordinal))
+                if (!ReferenceEquals(currentCredentials, updatedAccessCredentials) &&
+                    !string.Equals(currentDPoPCredential.DPoPNonce, updatedDPoPCredential.DPoPNonce, StringComparison.Ordinal))
                 {
-                    currentCredentials.DPoPNonce = dPopAccessCredentials.DPoPNonce;
+                    currentDPoPCredential.DPoPNonce = updatedDPoPCredential.DPoPNonce;
                 }
 
                 credentialsToNotify = currentCredentials;
@@ -579,26 +580,11 @@ public partial class AtProtoAgent
             // credentials still work and the nonce is simply collected again on the next request.
             await RaiseCredentialsUpdatedAsync(credentialsToNotify, credentialsCommitted: false, cancellationToken).ConfigureAwait(false);
         }
-        else if (credentials is AccessCredentials accessCredentials)
-        {
-            // Unreachable in practice: only a DPoP bound credential drives this callback, and it is handled above.
-            // Kept as a defensive fallback, and deliberately left as it was. If something ever does reach here it
-            // should be routed through RaiseCredentialsUpdatedAsync like everything else, because raising the handler
-            // directly and then assigning the credentials is neither ordered against other notifications nor guarded
-            // against publishing a stale snapshot.
-            Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials),
-                cancellationToken).ConfigureAwait(false);
-
-            if (!_atProtoAgentDisposed)
-            {
-                Credentials = accessCredentials;
-            }
-        }
         else
         {
-            // This should never happen.
+            // Anything else is rejected rather than published. Only a DPoP bound access credential drives this
+            // callback, and publishing a shape which is not one would mean assigning the caller's snapshot without the
+            // freshness check above, which is exactly the stale assignment issue 559 was.
             Logger.OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(_logger);
         }
     }
@@ -954,7 +940,7 @@ public partial class AtProtoAgent
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
-                Logger.CommittedCredentialsNotificationThrew(_logger, exception);
+                Logger.DeferredSessionEventThrew(_logger, exception);
             }
         }
     }

@@ -7,7 +7,7 @@
 #### idunno.AtProto
 
 * Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
-* Ended sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely.
+* Ended OAuth sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely. Sessions issued from a handle and password keep retrying, as they did before, so that a refresh which failed part way through is retried rather than ending the session.
 * Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
 * Made the notification for credentials a refresh has already committed uncancellable, so cancelling the caller cannot leave a superseded set of credentials as the last ones persisted.
 * Deferred credential update notifications raised from inside a handler until that handler has finished, so a handler which refreshes before it persists is given the refreshed credentials last.
@@ -25,6 +25,7 @@
 * Declined a refresh of a credential belonging to a different actor before the token endpoint is called, so the supplied credential is left unspent. Rejecting the result afterwards exchanged the caller's refresh token and then discarded its replacement, destroying the stored session it was asked to refresh.
 * Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
 * Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
+* Applied the DPoP nonce freshness check to any credential implementing `IDPoPBoundCredential`, rather than only to `DPoPAccessCredentials`. A credential type of your own passed to `Login` previously took an unguarded path which published the snapshot the request started with, restoring a spent refresh token and discarding the credentials a refresh had just been issued.
 
 ## 7.0.0 - 2026-09-24
 
