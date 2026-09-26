@@ -1,5 +1,31 @@
 # Version History
 
+## 8.0.0 - **unreleased**
+
+### Added
+
+#### idunno.AtProto
+
+* Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
+* Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
+* Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
+  They return a disposable `BlobContent` containing the blob stream and the server-reported, untrusted, content type and length.
+* Added streaming `AtProtoServer.GetBlocks()` and `AtProtoAgent.GetBlocks()` methods to download specific repository blocks as a CAR file.
+* Added streaming `AtProtoServer.GetSyncRecord()` and `AtProtoAgent.GetSyncRecord()` methods for `com.atproto.sync.getRecord`, to download the blocks proving a record's existence or non-existence as a CAR file.
+* Added `AtProtoServer.GetRepoStatus()` and `AtProtoAgent.GetRepoStatus()` methods, and the `RepoHostingStatus` and `RepoStatus` types, to get the hosting status of a repository.
+* Added `AtProtoServer.ListBlobs()` and `AtProtoAgent.ListBlobs()` methods, and the `PagedCidCollection` type, to list the blob CIDs in a repository.
+* Added `AtProtoServer.ListHosts()` and `AtProtoAgent.ListHosts()` methods to enumerate the upstream hosts a relay consumes from.
+* Added `AtProtoServer.ListRepos()` and `AtProtoAgent.ListRepos()` methods, and the `HostedRepository` type, to enumerate the repositories hosted by a PDS or relay.
+* Added `AtProtoServer.ListReposByCollection()` and `AtProtoAgent.ListReposByCollection()` methods, and the `PagedDidCollection` type, to enumerate the DIDs of repositories with records in a collection.
+* Added `AtProtoServer.RequestCrawl()` and `AtProtoAgent.RequestCrawl()` methods to ask a relay to crawl a host.
+* The relay-only sync methods (`GetHostStatus()`, `ListHosts()`, `ListReposByCollection()` and `RequestCrawl()`) on `AtProtoServer` accept optional access credentials, and the `AtProtoAgent` versions send the agent's credentials when authenticated and calling the service the agent is authenticated to.
+* Added `AtProtoServer.GetHostStatus()` and `AtProtoAgent.GetHostStatus()`, which query a relay for the status of an upstream host, returning a `HostDescription` and `HostStatus`.
+* Added `AtProtoServer.GetLatestCommit()` and `AtProtoAgent.GetLatestCommit()`, which get the current commit CID and revision of a repository.
+
+#### Samples
+
+* Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
+
 ## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.
