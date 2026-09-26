@@ -288,17 +288,25 @@ number and the action to raise, rather than a plain queue). A drain only takes a
 * **A caller with no turn of its own — a DPoP nonce rotation, for example — is tagged with the currently active scope's
   own turn number.** It has no reserved place in the queue to be leapfrogged out of, so it is treated as belonging to
   whichever notification it is deferring into.
-* **Two channels, one order.** A credential notification and a session event deferred by the same reentrant call — the
-  two raises `RaiseSessionStartAndCredentialsUpdatedAsync` makes when a refresh starts a session, for example — carry
-  the same turn number, so turn safety alone cannot tell a drain which to take first. Each deferral is also stamped
-  with a sequence number from one shared counter (`NextDeferredNotificationSequence`), and `TakeNextDeferredNotification`
-  takes whichever of the two channels holds the lower sequence. A drain which always took the credential channel first
-  would silently reverse a caller's intended ordering the moment both ended up deferred into the same scope.
+* **Two channels, one order — but turn number always wins first.** A credential notification and a session event tagged
+  with *different* turn numbers were deferred by two different calls, so the turn numbers alone already encode which
+  committed first; the lower turn number is always taken first. Only when the two carry the *same* turn number — the
+  two raises `RaiseSessionStartAndCredentialsUpdatedAsync` makes when a refresh starts a session, for example, both
+  deferred by the one reentrant call which produced them — does a shared sequence number
+  (`NextDeferredNotificationSequence`, stamped on every deferral) break the tie. Comparing sequence before turn number
+  would let a later commit's credential notification, deferred sooner and so carrying a lower sequence, jump ahead of
+  an earlier commit's session event.
 * **Among deferred session events, the lowest safe turn number wins, not the earliest entry in the list.** Two
   reentrant callers commit turns in ascending order, but nothing serializes the append each makes to
   `_deferredSessionEvents` afterwards — both have already released `_credentialRefreshSemaphore` by then — so the
   later commit's event can land in the list before the earlier commit's. `TakeNextDeferredNotification` scans every
   entry for the lowest safe `TurnNumber` rather than stopping at the first one it finds safe.
+* **"Safe to take" and "safe to report" must be the same thing.** `HasNotificationSafeToRaise` decides whether the
+  drain loop keeps going; `TakeNextDeferredNotification` decides what it actually takes. Both exclude an uncommitted
+  `_deferredCredentialNotification` — it has no durable write worth recovering, so it is never taken here, only raised
+  inline or dropped by `DropOrphanedDeferredNotifications`. If `HasNotificationSafeToRaise` reported one as safe
+  without that same exclusion, the loop would take nothing every iteration yet be told to keep going, spinning forever
+  whilst still holding the notification turn.
 
 ### Committed credentials
 
@@ -377,19 +385,32 @@ exception the caller needs to see.
     `EnterNotificationTurnAsync`, and during that window it has no entry at all in `_notificationTurnWaiters`. Checking
     only the waiters dictionary lets a reentrant drain leapfrog a turn which fully intends to run but has not yet
     reached the point of waiting for it.
-16. **A credential notification and a session event deferred together keep the order they were deferred in, not the
-    order their channel is drained in.** `RaiseSessionStartAndCredentialsUpdatedAsync` raises `Authenticated` before
-    `CredentialsUpdated`; if both end up deferred by the same reentrant commit, they carry the same turn number, so
-    turn safety cannot order them against each other. `TakeNextDeferredNotification` breaks the tie with a shared
-    sequence counter (`NextDeferredNotificationSequence`), stamped on every deferral in both
-    `_deferredCredentialNotification` and `_deferredSessionEvents`. A drain which always took one channel ahead of the
-    other, regardless of sequence, would silently reverse whichever caller relied on the other order.
+16. **A credential notification and a session event deferred with the same turn number keep the order they were
+    deferred in, not the order their channel is drained in.** `RaiseSessionStartAndCredentialsUpdatedAsync` raises
+    `Authenticated` before `CredentialsUpdated`; if both end up deferred by the same reentrant commit, they carry the
+    same turn number, so turn safety cannot order them against each other. `TakeNextDeferredNotification` breaks the
+    tie with a shared sequence counter (`NextDeferredNotificationSequence`), stamped on every deferral in both
+    `_deferredCredentialNotification` and `_deferredSessionEvents`, but only when the two turn numbers are equal — see
+    rule 18.
 17. **Among deferred session events, "next" means the lowest turn number safe to raise, not the first entry appended.**
     Two reentrant callers can take turns in ascending order and still append to `_deferredSessionEvents` in the
     reverse of that order — nothing serializes the append against another caller's, since it happens after each has
     already released `_credentialRefreshSemaphore`. `TakeNextDeferredNotification` must scan the whole list for the
     lowest safe `TurnNumber`, not stop at the first entry whose turn is safe, or a later commit's session event can be
     raised ahead of an earlier commit's.
+18. **Turn number, not sequence, decides between the two deferral channels whenever they disagree.** Sequence exists
+    only to break a tie when a credential notification and a session event carry the *same* turn number — see rule 16.
+    A credential notification for a later turn can still be deferred before an earlier turn's session event, giving
+    it the lower sequence number even though it committed second; `TakeNextDeferredNotification` must compare turn
+    numbers first and fall back to sequence only when they are equal, or a later commit's credential notification can
+    be raised ahead of an earlier commit's session event, letting a stale `Unauthenticated` overwrite refreshed
+    credentials the earlier turn already restored.
+19. **`HasNotificationSafeToRaise` and `TakeNextDeferredNotification` must agree on what "safe" means, or the drain
+    spins forever.** Neither takes nor reports an uncommitted `_deferredCredentialNotification` as safe — an
+    uncommitted notification, a DPoP nonce rotation for example, has no durable write worth recovering, and is either
+    raised inline by the notification it flowed from or dropped by `DropOrphanedDeferredNotifications`. If the two
+    checks disagree, `DrainDeferredNotificationsAsync`'s loop takes nothing, is told something is still safe, and asks
+    again forever, holding the notification turn for the lifetime of the agent.
 
 ## Notes for writing a credential store
 

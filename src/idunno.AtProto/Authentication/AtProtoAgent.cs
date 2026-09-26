@@ -86,7 +86,10 @@ namespace idunno.AtProto;
 // inline would put it ahead of the handler which caused it, letting that handler finish afterwards and persist what it
 // was already holding. So a reentrant raise is parked, in _deferredCredentialNotification or _deferredSessionEvents,
 // and drained by the notification which is already running once its handler returns. Reentrancy is detected with
-// _raisingCredentialNotification, and a reentrant caller is given no turn at all.
+// _raisingCredentialNotification. A reentrant commit still takes a turn of its own, exactly as a non-reentrant one
+// does, and that turn is what the parked raise is tagged with; it is only ever stepped over, by
+// EarliestGenuinelyWaitingNotificationTurn, never skipped entirely — the reentrant call simply never waits for it
+// itself, deferring instead.
 //
 // Committed credentials.
 //
@@ -1250,15 +1253,19 @@ public partial class AtProtoAgent
     /// </returns>
     /// <remarks>
     /// <para>
-    ///   A credential notification and a session event deferred from the same call — the two raises
-    ///   <see cref="RaiseSessionStartAndCredentialsUpdatedAsync"/> makes, for example — are compared by
-    ///   <see cref="_deferredCredentialNotificationSequence"/> and <see cref="DeferredSessionEvent.Sequence"/>, the
-    ///   order the two were actually deferred in, rather than one channel always being taken ahead of the other. A
-    ///   caller which relies on raising one before the other therefore keeps that ordering even once a reentrant
-    ///   handler defers both.
+    ///   The channel with the lower turn number always wins: turn number is the actual commit order, and a credential
+    ///   notification and a session event which carry different turns were deferred by two different calls, so
+    ///   nothing about when either was actually deferred can override which one committed first.
     /// </para>
     /// <para>
-    ///   Among deferred session events, "actually deferred first" means the lowest <see cref="DeferredSessionEvent.TurnNumber"/>
+    ///   Only when both carry the <em>same</em> turn number — meaning both were deferred by one reentrant call, the
+    ///   two raises <see cref="RaiseSessionStartAndCredentialsUpdatedAsync"/> makes, for example — does
+    ///   <see cref="_deferredCredentialNotificationSequence"/> and <see cref="DeferredSessionEvent.Sequence"/> decide
+    ///   between them, breaking the tie by the order the two were actually deferred in. A caller which relies on
+    ///   raising one before the other therefore keeps that ordering even once a reentrant handler defers both.
+    /// </para>
+    /// <para>
+    ///   Among deferred session events, "the lower turn number" means the lowest <see cref="DeferredSessionEvent.TurnNumber"/>
     ///   currently safe to raise, not the earliest entry in <see cref="_deferredSessionEvents"/> by insertion order. Two
     ///   reentrant callers can commit turns out of scheduling order and so append their deferred events in the reverse
     ///   of turn order; scanning for the first safe entry, rather than the safe entry with the lowest turn number, would
@@ -1274,7 +1281,9 @@ public partial class AtProtoAgent
     /// <para>
     ///   Only a committed credential notification is considered: an uncommitted one, a DPoP nonce rotation for
     ///   example, has no durable write to recover and is either raised inline by the notification it flowed from, or
-    ///   dropped along with it: see <see cref="DropOrphanedDeferredNotifications"/>.
+    ///   dropped along with it: see <see cref="DropOrphanedDeferredNotifications"/>. <see cref="HasNotificationSafeToRaise"/>
+    ///   must agree with this, or the drain loop this feeds spins forever on an uncommitted leftover neither method
+    ///   will take.
     /// </para>
     /// </remarks>
     private (AccessCredentials? Credentials, Action? RaiseSessionEvent) TakeNextDeferredNotification(AccessCredentials? justRaisedCredentials)
@@ -1308,8 +1317,19 @@ public partial class AtProtoAgent
                 return (null, null);
             }
 
-            if (credentialAvailable &&
-                (sessionEventIndex < 0 || _deferredCredentialNotificationSequence < _deferredSessionEvents[sessionEventIndex].Sequence))
+            // Turn number decides which was committed first, and must win whenever the two differ: a credential
+            // notification and a session event tagged with different turns were never deferred by the same call, so
+            // there is no ordering between them for a sequence number to preserve, only the commit order the turn
+            // numbers already encode. Sequence only ever breaks a tie between the two channels when they carry the
+            // same turn number — meaning both were deferred by the one reentrant call which produced them, such as
+            // RaiseSessionStartAndCredentialsUpdatedAsync's own two raises.
+            bool takeCredentialFirst = credentialAvailable &&
+                (sessionEventIndex < 0 ||
+                 _deferredCredentialNotificationTurnNumber < sessionEventTurnNumber ||
+                 (_deferredCredentialNotificationTurnNumber == sessionEventTurnNumber &&
+                  _deferredCredentialNotificationSequence < _deferredSessionEvents[sessionEventIndex].Sequence));
+
+            if (takeCredentialFirst)
             {
                 AccessCredentials deferred = _deferredCredentialNotification!;
 
@@ -1424,16 +1444,28 @@ public partial class AtProtoAgent
     /// Whether a deferred credential notification or session event is currently safe to raise.
     /// </summary>
     /// <returns>
-    /// <see langword="true"/> if <see cref="_deferredCredentialNotification"/> or an entry in
+    /// <see langword="true"/> if a <em>committed</em> <see cref="_deferredCredentialNotification"/> or an entry in
     /// <see cref="_deferredSessionEvents"/> was deferred by a turn earlier than the earliest genuinely waiting one,
     /// otherwise <see langword="false"/>.
     /// </returns>
-    /// <remarks><para>Must be called whilst <see cref="_credentialLock"/> is held.</para></remarks>
+    /// <remarks>
+    /// <para>Must be called whilst <see cref="_credentialLock"/> is held.</para>
+    /// <para>
+    ///   Must agree with <see cref="TakeNextDeferredNotification(AccessCredentials?)"/> on what counts as safe to
+    ///   take, or the drain loop spins forever: <see cref="TakeNextDeferredNotification(AccessCredentials?)"/> never
+    ///   takes an uncommitted <see cref="_deferredCredentialNotification"/> — a DPoP nonce rotation, for example, has
+    ///   no durable write to recover and is dropped by <see cref="DropOrphanedDeferredNotifications"/> instead — so
+    ///   this check must not report one as safe either. Doing so would make the loop take nothing, ask this method
+    ///   again, be told there is still something safe, and repeat forever whilst still holding the notification turn.
+    /// </para>
+    /// </remarks>
     private bool HasNotificationSafeToRaise()
     {
         long earliestWaiting = EarliestGenuinelyWaitingNotificationTurn();
 
-        if (_deferredCredentialNotification is not null && _deferredCredentialNotificationTurnNumber < earliestWaiting)
+        if (_deferredCredentialNotification is not null &&
+            _deferredCredentialNotificationTurnNumber < earliestWaiting &&
+            _deferredCredentialNotificationCommitted)
         {
             return true;
         }

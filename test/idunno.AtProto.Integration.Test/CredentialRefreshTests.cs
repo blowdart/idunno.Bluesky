@@ -1074,6 +1074,111 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task DeferredNotificationsAcrossDifferentTurnsOrderByTurnNumberNotSequence()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo raiseSessionEvent = typeof(AtProtoAgent).GetMethod("RaiseSessionEventAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            List<string> order = [];
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // turnA takes the lower turn number and so committed first; turnB takes the higher one. Deferring
+                // turnB's credential notification before turnA's session event gives turnB the lower sequence number
+                // even though turnA committed first, reproducing a later commit reaching its own defer point sooner
+                // than an earlier one delayed ahead of it.
+                AtProtoAgent.NotificationTurn turnA = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+                AtProtoAgent.NotificationTurn turnB = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                agent.RaiseCredentialsUpdatedAsync(
+                    agent.Credentials!,
+                    credentialsCommitted: true,
+                    TestContext.Current.CancellationToken,
+                    turnB).GetAwaiter().GetResult();
+
+                Action raiseForTurnA = () => order.Add("sessionEventForTurnA");
+
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForTurnA, turnA])!).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [turnA]);
+                finishTurn.Invoke(agent, [turnB]);
+            };
+
+            agent.CredentialsUpdatedAsync = (_, _) =>
+            {
+                order.Add("credentialsUpdatedForTurnB");
+
+                return Task.CompletedTask;
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // turnA committed first, so its session event must be delivered before turnB's credential notification,
+            // even though turnB's notification was deferred first and so carries the lower sequence number. Ordering
+            // by sequence alone, rather than turn number first, would reverse this.
+            Assert.Equal(["sessionEventForTurnA", "credentialsUpdatedForTurnB"], order);
+        }
+    }
+
+    [Fact]
+    public async Task DrainingStopsRatherThanSpinningOnAnUncommittedLeftoverNotification()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // An uncommitted notification, exactly as a DPoP nonce rotation defers: reentrant, for the agent's
+                // own current credentials, and never committed. Its own turn is finished immediately, so it becomes
+                // the only thing deferred and safe to take. TakeNextDeferredNotification never takes an uncommitted
+                // notification, so the drain has to recognise nothing safe is actually takeable and stop, rather
+                // than spin asking HasNotificationSafeToRaise forever.
+                AtProtoAgent.NotificationTurn turn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                agent.RaiseCredentialsUpdatedAsync(
+                    agent.Credentials!,
+                    credentialsCommitted: false,
+                    TestContext.Current.CancellationToken,
+                    turn).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [turn]);
+            };
+
+            // If the drain cannot tell the leftover is unsafe to take, it spins forever whilst still holding the
+            // notification turn, and this call never returns.
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+            Assert.True(agent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
     public async Task AFailedLoginDoesNotDiscardASessionACommittedConcurrentLoginJustEstablished()
     {
         RefreshTestServer refreshTestServer = new(this) { FailNextCreateSession = true };
