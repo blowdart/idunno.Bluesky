@@ -1026,6 +1026,54 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task DeferredSessionEventsDrainInAscendingTurnOrderRatherThanInsertionOrder()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            MethodInfo raiseSessionEvent = typeof(AtProtoAgent).GetMethod("RaiseSessionEventAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+            List<string> order = [];
+            bool reentered = false;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (reentered)
+                {
+                    return;
+                }
+
+                reentered = true;
+
+                // Two turns taken in ascending order, exactly as two reentrant commits racing under the refresh
+                // semaphore would. The turn taken first is finished first below, but its event is deferred second,
+                // reproducing the reverse-of-turn-order append that scheduling can produce once the semaphore is
+                // released.
+                AtProtoAgent.NotificationTurn earlierTurn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+                AtProtoAgent.NotificationTurn laterTurn = (AtProtoAgent.NotificationTurn) takeTurn.Invoke(agent, null)!;
+
+                Action raiseForLaterTurn = () => order.Add("later");
+                Action raiseForEarlierTurn = () => order.Add("earlier");
+
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForLaterTurn, laterTurn])!).GetAwaiter().GetResult();
+                ((Task) raiseSessionEvent.Invoke(agent, [raiseForEarlierTurn, earlierTurn])!).GetAwaiter().GetResult();
+
+                finishTurn.Invoke(agent, [earlierTurn]);
+                finishTurn.Invoke(agent, [laterTurn]);
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // Draining by insertion order would raise "later" ahead of "earlier", even though earlierTurn's caller
+            // committed first. TakeNextDeferredNotification must pick the lowest safe turn number instead.
+            Assert.Equal(["earlier", "later"], order);
+        }
+    }
+
+    [Fact]
     public async Task AFailedLoginDoesNotDiscardASessionACommittedConcurrentLoginJustEstablished()
     {
         RefreshTestServer refreshTestServer = new(this) { FailNextCreateSession = true };

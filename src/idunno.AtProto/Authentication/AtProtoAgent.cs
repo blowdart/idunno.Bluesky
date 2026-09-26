@@ -1258,6 +1258,13 @@ public partial class AtProtoAgent
     ///   handler defers both.
     /// </para>
     /// <para>
+    ///   Among deferred session events, "actually deferred first" means the lowest <see cref="DeferredSessionEvent.TurnNumber"/>
+    ///   currently safe to raise, not the earliest entry in <see cref="_deferredSessionEvents"/> by insertion order. Two
+    ///   reentrant callers can commit turns out of scheduling order and so append their deferred events in the reverse
+    ///   of turn order; scanning for the first safe entry, rather than the safe entry with the lowest turn number, would
+    ///   then deliver the later commit's session event ahead of the earlier commit's.
+    /// </para>
+    /// <para>
     ///   Neither is taken, and both are left untouched, if deferred by a turn at, or after, the earliest one which is
     ///   genuinely still waiting for its own place in the queue: see
     ///   <see cref="EarliestGenuinelyWaitingNotificationTurn"/>. Taking either here would let a reentrant login or
@@ -1283,14 +1290,16 @@ public partial class AtProtoAgent
                 !ReferenceEquals(_deferredCredentialNotification, justRaisedCredentials);
 
             int sessionEventIndex = -1;
+            long sessionEventTurnNumber = long.MaxValue;
 
             for (int index = 0; index < _deferredSessionEvents.Count; index++)
             {
-                if (_deferredSessionEvents[index].TurnNumber < earliestWaiting)
+                DeferredSessionEvent candidate = _deferredSessionEvents[index];
+
+                if (candidate.TurnNumber < earliestWaiting && candidate.TurnNumber < sessionEventTurnNumber)
                 {
                     sessionEventIndex = index;
-
-                    break;
+                    sessionEventTurnNumber = candidate.TurnNumber;
                 }
             }
 

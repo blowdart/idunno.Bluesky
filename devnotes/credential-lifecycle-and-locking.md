@@ -294,6 +294,11 @@ number and the action to raise, rather than a plain queue). A drain only takes a
   with a sequence number from one shared counter (`NextDeferredNotificationSequence`), and `TakeNextDeferredNotification`
   takes whichever of the two channels holds the lower sequence. A drain which always took the credential channel first
   would silently reverse a caller's intended ordering the moment both ended up deferred into the same scope.
+* **Among deferred session events, the lowest safe turn number wins, not the earliest entry in the list.** Two
+  reentrant callers commit turns in ascending order, but nothing serializes the append each makes to
+  `_deferredSessionEvents` afterwards — both have already released `_credentialRefreshSemaphore` by then — so the
+  later commit's event can land in the list before the earlier commit's. `TakeNextDeferredNotification` scans every
+  entry for the lowest safe `TurnNumber` rather than stopping at the first one it finds safe.
 
 ### Committed credentials
 
@@ -379,6 +384,12 @@ exception the caller needs to see.
     sequence counter (`NextDeferredNotificationSequence`), stamped on every deferral in both
     `_deferredCredentialNotification` and `_deferredSessionEvents`. A drain which always took one channel ahead of the
     other, regardless of sequence, would silently reverse whichever caller relied on the other order.
+17. **Among deferred session events, "next" means the lowest turn number safe to raise, not the first entry appended.**
+    Two reentrant callers can take turns in ascending order and still append to `_deferredSessionEvents` in the
+    reverse of that order — nothing serializes the append against another caller's, since it happens after each has
+    already released `_credentialRefreshSemaphore`. `TakeNextDeferredNotification` must scan the whole list for the
+    lowest safe `TurnNumber`, not stop at the first entry whose turn is safe, or a later commit's session event can be
+    raised ahead of an earlier commit's.
 
 ## Notes for writing a credential store
 
