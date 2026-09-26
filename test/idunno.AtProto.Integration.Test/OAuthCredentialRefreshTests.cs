@@ -641,10 +641,85 @@ public class OAuthCredentialRefreshTests
 
         AccessCredentials credentialsBeforeRefresh = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
 
+        int refreshesBefore = server.RefreshCount;
+
         Assert.False(await agent.RefreshCredentials(CreateCredentials(new Did(OtherDid)), TestContext.Current.CancellationToken));
 
         Assert.Same(credentialsBeforeRefresh, agent.Credentials);
         Assert.Equal(new Did(AccountDid), agent.Credentials!.Did);
+
+        // Declined before the token endpoint was called, so the supplied credential has not been spent and remains
+        // usable. Exchanging it and then discarding the result would destroy the caller's stored session.
+        Assert.Equal(refreshesBefore, server.RefreshCount);
+    }
+
+    [Fact]
+    public async Task ALoginAfterASessionEndsDoesNotTreatItsRefreshTokenAsAlreadySpent()
+    {
+        OAuthTestServer server = new();
+        using AtProtoAgent agent = CreateAgent(server);
+
+        await Login(agent);
+
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        // The session ends by a route which does not go through logout, leaving the tokens it exchanged remembered.
+        agent.Credentials = null;
+
+        Assert.True(await agent.Login(CreateCredentials(), TestContext.Current.CancellationToken));
+
+        int refreshesBefore = server.RefreshCount;
+
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        // The new session's refresh token has the same value as the ended session's, so if the exchanges the old
+        // session made are still remembered this refresh is wrongly short circuited as already spent.
+        Assert.Equal(refreshesBefore + 1, server.RefreshCount);
+    }
+
+    [Fact]
+    public async Task ARefreshWhichRestoresASessionNotifiesItsCredentialsEvenWhenAuthenticatedThrows()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        List<AccessCredentials> persisted = [];
+
+        agent.CredentialsUpdatedAsync = (e, _) =>
+        {
+            persisted.Add(e.AccessCredentials);
+            return Task.CompletedTask;
+        };
+
+        agent.Authenticated += (_, _) => throw new InvalidOperationException("Session start handling failed.");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => agent.RefreshCredentials(CreateCredentials(), TestContext.Current.CancellationToken));
+
+        // The credentials are already live in the agent and the token they replaced has been spent, so they have to be
+        // notified even though the session start handler failed, otherwise storage keeps a token the server has burnt.
+        // The notification can be queued behind one which is still running, so it is waited for rather than sampled.
+        await WaitFor(() => persisted.Count == 1, TestContext.Current.CancellationToken);
+
+        AccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        Assert.Same(refreshedCredentials, Assert.Single(persisted));
+    }
+
+    /// <summary>
+    /// Waits for <paramref name="condition"/> to become true, so that a test does not depend on a notification which is
+    /// queued behind another having been delivered by the time the call which caused it returns.
+    /// </summary>
+    private static async Task WaitFor(Func<bool> condition, CancellationToken cancellationToken)
+    {
+        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+
+        while (!condition() && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(10, cancellationToken);
+        }
+
+        Assert.True(condition(), "The expected condition was not reached before the timeout expired.");
     }
 
     [Fact]
@@ -755,6 +830,15 @@ public class OAuthCredentialRefreshTests
 
         internal string? LastIssuedRefreshToken { get; private set; }
 
+        /// <summary>
+        /// Gets the number of times the token endpoint has been asked to exchange a refresh token, so that a refresh
+        /// which should have been declined before reaching the server can be distinguished from one which was made
+        /// and then discarded.
+        /// </summary>
+        internal int RefreshCount => _refreshCount;
+
+        private int _refreshCount;
+
         private async Task Handle(HttpContext context)
         {
             HttpRequest request = context.Request;
@@ -799,6 +883,8 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
+                    Interlocked.Increment(ref _refreshCount);
+
                     if (GateRefresh)
                     {
                         RefreshEntered.TrySetResult();

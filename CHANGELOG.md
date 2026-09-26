@@ -22,6 +22,9 @@
 * Raised `Unauthenticated` when a failed login or a failed logout discards the agent credentials. The credentials were cleared silently, leaving a subscriber holding a session the server had rejected in durable storage and restoring it on the next start.
 * Raised `Authenticated` when refreshing a stored credential starts a session on an agent which did not have one, so restoring a session reports itself in the same way logging in does.
 * Discarded credentials a refresh produced for a different actor to the one the agent is authenticated as, rather than publishing them. Refreshing a stored credential for another account re-pointed the agent, and everything built on it, at that account with no indication the session had changed.
+* Declined a refresh of a credential belonging to a different actor before the token endpoint is called, so the supplied credential is left unspent. Rejecting the result afterwards exchanged the caller's refresh token and then discarded its replacement, destroying the stored session it was asked to refresh.
+* Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
+* Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
 
 ## 7.0.0 - 2026-09-24
 
