@@ -388,7 +388,7 @@ public class CredentialRefreshTests
     }
 
     [Fact]
-    public async Task ABackgroundRefreshOfATokenSpentByAnExchangeWhichNeverCompletedEndsTheSession()
+    public async Task ABackgroundRefreshOfATokenSpentByAnExchangeWhichNeverCompletedKeepsRetrying()
     {
         RefreshTestServer refreshTestServer = new(this);
 
@@ -404,18 +404,11 @@ public class CredentialRefreshTests
             StopRefreshTimer(agent);
             Assert.False(GetRefreshTimer(agent)!.Enabled);
 
-            bool unauthenticatedEventRaised = false;
-            agent.Unauthenticated += (_, _) => unauthenticatedEventRaised = true;
-
             await InvokeBackgroundRefresh(agent);
 
-            // The remembered token was spent by an exchange which never produced usable credentials, so the session
-            // is unrecoverable: retrying it forever would just repeat this failure every time the timer elapsed.
-            // The agent clears the credentials, leaves the timer stopped and tells the application, rather than
-            // logging the same failure indefinitely.
-            Assert.Null(agent.Credentials);
-            Assert.False(GetRefreshTimer(agent)!.Enabled);
-            Assert.True(unauthenticatedEventRaised);
+            // Reporting the remembered token as a completed refresh leaves the timer stopped, so the agent sits on
+            // credentials it never refreshed until they expire.
+            Assert.True(GetRefreshTimer(agent)!.Enabled);
         }
     }
 
