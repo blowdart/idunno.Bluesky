@@ -91,7 +91,7 @@ sequenceDiagram
     Q->>H: OnCredentialsUpdatedAsync (only if agent still holds these credentials)
     H-->>Q: persisted
     Q->>Q: drain anything the handler deferred
-    Q->>H: Authenticated / Unauthenticated (last)
+    Q->>H: Authenticated / Unauthenticated (last, except on a session start)
     A->>Q: FinishNotificationTurn (in a finally)
 ```
 
@@ -103,9 +103,13 @@ Three consequences worth internalising:
   queueing afterwards lets another caller commit and queue in between, so a session which ended before another began
   is reported as ending after it, and a subscriber which discards its stored credentials on `Unauthenticated` discards
   the session which is actually live.
-* **Session events come last.** `Authenticated` and `Unauthenticated` are ordered *behind* the credential notification
-  queue on purpose, so a subscriber which discards its stored credentials on `Unauthenticated` discards any stale write
-  that a suspended handler made on its way out.
+* **Session events come last, except on a session start.** `Authenticated` and `Unauthenticated` are ordered *behind*
+  the credential notification queue on purpose, so a subscriber which discards its stored credentials on
+  `Unauthenticated` discards any stale write that a suspended handler made on its way out. The one deliberate exception
+  is `RaiseSessionStartAndCredentialsUpdatedAsync`, used when a refresh of stored credentials starts a session: it
+  raises `Authenticated` *before* the credential notification, so a subscriber is told a session began before it is
+  handed credentials for it. The credential notification is still made when that `Authenticated` handler throws,
+  because the refresh token it replaced has already been spent.
 
 ## Guards, and what each one prevents
 
@@ -144,8 +148,10 @@ This is the #559 path. A DPoP nonce rotation arrives on an arbitrary request, ca
 request was built with. If a refresh completed in the meantime, that snapshot is stale, and assigning it back would
 restore dead tokens *and* bump the generation so the fresh ones were discarded too.
 
-The callback now verifies under `_credentialLock` that the agent still holds exactly that instance, and if so mutates
-**only** the nonce, in place. It never reassigns `Credentials` and never touches the generation.
+The callback now verifies under `_credentialLock` that the credentials the agent is holding still match the snapshot the
+request carried — comparing the access token, the refresh token, the DPoP proof key and the service, not object
+identity — and if so mutates **only** the nonce, in place. It never reassigns `Credentials` and never touches the
+generation.
 
 > **Warning.** Nonce rotation must stay an in-place mutation. Swapping the credentials object to carry a new nonce
 > makes every nonce update look like a credential change, which is what caused the original bug.
@@ -186,7 +192,7 @@ stateDiagram-v2
     Deferred --> Draining
     Draining --> HandlerRunning: raise the deferred credentials
     Draining --> SessionEvents: nothing left deferred
-    SessionEvents --> [*]: Authenticated / Unauthenticated raised last
+    SessionEvents --> [*]: Authenticated / Unauthenticated raised last (except on a session start)
 ```
 
 Three subtleties in that machinery:
@@ -241,12 +247,17 @@ exception the caller needs to see.
    and nothing was raised. A turn which is never given up stops the notification queue for the lifetime of the agent.
    Methods which `return` from inside a `try` need an outer `try`/`finally` for this; `RefreshOAuthIssuedCredentials`
    and `RefreshSessionIssuedCredentials` both have one.
-10. **Never wait for a turn while holding `_credentialRefreshSemaphore`.** See the lock ordering section above.
+10. **Never wait for a turn while holding `_credentialRefreshSemaphore`.** See the lock ordering section above. `Logout`
+    holds that semaphore, so it splits the work: `ClearCredentialsAndRecordSessionEnd` discards the credentials and
+    takes a turn — neither of which waits — under the semaphore, and `RaisePendingSessionEndAsync` raises the session
+    end only once the semaphore has been released. Calling `ClearCredentialsAndRaiseUnauthenticatedAsync`, which does
+    both, from under the semaphore deadlocks the agent.
 
 ## Notes for writing a credential store
 
-* Persist on `CredentialsUpdated`. `Authenticated` also carries credentials, but it is a session-start signal which
-  arrives *after* the notification for those credentials — treat `CredentialsUpdated` as the one that stores.
+* Persist on `CredentialsUpdated`. `Authenticated` also carries credentials, but it is a session-start signal — treat
+  `CredentialsUpdated` as the one that stores. It normally arrives *before* the session event; the exception is a
+  refresh of stored credentials which starts a session, where `Authenticated` is raised first.
 * Discard stored credentials on `Unauthenticated`. Because session events are raised last, doing so also discards any
   stale write which preceded it.
 * Handlers are serialised, so a handler does not need its own lock against other handlers.

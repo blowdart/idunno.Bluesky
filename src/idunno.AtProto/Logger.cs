@@ -111,6 +111,9 @@ internal static partial class Logger
     [LoggerMessage(1121, LogLevel.Error, "RefreshOAuthIssuedCredentials was refreshing {expectedDid} on {service} but the authorization server issued a token for {issuedDid}")]
     internal static partial void RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
 
+    [LoggerMessage(1125, LogLevel.Error, "RefreshSessionIssuedCredentials was refreshing {expectedDid} on {service} but the server issued a session for {issuedDid}")]
+    internal static partial void RefreshSessionIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
+
     [LoggerMessage(48, LogLevel.Debug, "Refresh token #{tokenHash} has already been exchanged by another caller, skipping refresh")]
     internal static partial void RefreshTokenAlreadyExchanged(ILogger logger, string tokenHash);
 
@@ -327,6 +330,9 @@ internal static partial class Logger
 
     [LoggerMessage(303, LogLevel.Error, "A session event subscriber threw whilst being notified of a session starting or ending which had been deferred from a credentials updated handler.")]
     internal static partial void DeferredSessionEventThrew(ILogger logger, Exception ex);
+
+    [LoggerMessage(304, LogLevel.Error, "An unauthenticated subscriber threw whilst being notified of a session which had already ended.")]
+    internal static partial void SessionEndedNotificationThrew(ILogger logger, Exception ex);
 
     // AtProtoServer logging
 

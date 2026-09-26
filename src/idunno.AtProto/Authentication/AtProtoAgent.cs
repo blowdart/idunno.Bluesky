@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Security;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -266,6 +267,19 @@ public partial class AtProtoAgent
     /// change commits behind it and check they reach a subscriber in the order they were committed in.
     /// </summary>
     internal Func<Task>? SessionEventQueueing { get; set; }
+
+    /// <summary>
+    /// Called by <see cref="Logout(CancellationToken)"/> once it holds <see cref="_credentialRefreshSemaphore"/>, so
+    /// that a test can drive something which needs that semaphore at the point a logout is holding it.
+    /// </summary>
+    internal Func<Task>? LogoutHoldingCredentialRefreshSemaphore { get; set; }
+
+    /// <summary>
+    /// Called by a refresh once it has decided to proceed but before it waits for
+    /// <see cref="_credentialRefreshSemaphore"/>, so that a test can commit a change whilst the refresh is queued for
+    /// it and check what the refresh does when it is finally granted.
+    /// </summary>
+    internal Func<Task>? CredentialRefreshQueueing { get; set; }
 
     private AccessCredentials? _credentials;
 
@@ -1253,35 +1267,104 @@ public partial class AtProtoAgent
     /// </remarks>
     private async Task ClearCredentialsAndRaiseUnauthenticatedAsync()
     {
-        UnauthenticatedEventArgs? endedSession;
-
-        // Taken before the credentials are cleared so that a login which commits after this point is reported after
-        // this session ends, rather than the end of this session arriving after it and taking the new session with it.
-        NotificationTurn? notificationTurn = TakeNotificationTurn();
+        PendingSessionEnd pendingSessionEnd = new();
 
         try
         {
-            lock (_credentialLock)
-            {
-                endedSession = _credentials is AccessCredentials ended && ended.Did is Did did
-                    ? new UnauthenticatedEventArgs(did, ended.Service)
-                    : null;
+            ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
-                _credentials = null;
-                _credentialGeneration++;
-                Service = OriginalService;
-            }
-
-            ForgetExchangedRefreshTokens();
-
-            if (endedSession is not null)
-            {
-                await RaiseUnauthenticatedAsync(endedSession, notificationTurn).ConfigureAwait(false);
-            }
+            await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
         }
         finally
         {
-            FinishNotificationTurn(notificationTurn);
+            FinishNotificationTurn(pendingSessionEnd.NotificationTurn);
+        }
+    }
+
+    /// <summary>
+    /// The end of a session whose credentials have been cleared, held until the notification for it can be raised.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Clearing the credentials and telling a subscriber about it are separate steps because a caller which is
+    ///   holding <see cref="_credentialRefreshSemaphore"/> must not wait for a notification turn. Such a caller clears
+    ///   into one of these, releases the semaphore, and raises afterwards.
+    /// </para>
+    /// </remarks>
+    private sealed class PendingSessionEnd
+    {
+        /// <summary>
+        /// Gets or sets the place in the notification queue taken when the credentials were cleared.
+        /// </summary>
+        public NotificationTurn? NotificationTurn { get; set; }
+
+        /// <summary>
+        /// Gets or sets the arguments describing the session which ended, or <see langword="null"/> if there was no
+        /// session to end or it has already been raised.
+        /// </summary>
+        public UnauthenticatedEventArgs? EventArgs { get; set; }
+    }
+
+    /// <summary>
+    /// Clears the agent credentials, recording the session they belonged to in <paramref name="pendingSessionEnd"/>
+    /// without raising anything for it.
+    /// </summary>
+    /// <param name="pendingSessionEnd">The pending session end to record what has to be raised in.</param>
+    /// <remarks>
+    /// <para>
+    ///   The notification turn is taken here, before the credentials are cleared, so that a login which commits after
+    ///   this point is reported after this session ends rather than the end of this session arriving after it and
+    ///   taking the new session with it. Taking a turn does not wait, so this is safe to call whilst
+    ///   <see cref="_credentialRefreshSemaphore"/> is held. Raising is not.
+    /// </para>
+    /// </remarks>
+    private void ClearCredentialsAndRecordSessionEnd(PendingSessionEnd pendingSessionEnd)
+    {
+        pendingSessionEnd.NotificationTurn ??= TakeNotificationTurn();
+
+        UnauthenticatedEventArgs? endedSession;
+
+        lock (_credentialLock)
+        {
+            endedSession = _credentials is AccessCredentials ended && ended.Did is Did did
+                ? new UnauthenticatedEventArgs(did, ended.Service)
+                : null;
+
+            _credentials = null;
+            _credentialGeneration++;
+            Service = OriginalService;
+        }
+
+        ForgetExchangedRefreshTokens();
+
+        // Kept if something has already been recorded, so that a path which clears twice still reports the session
+        // which was actually ended rather than the empty agent the second clear saw.
+        pendingSessionEnd.EventArgs ??= endedSession;
+    }
+
+    /// <summary>
+    /// Raises <see cref="Unauthenticated"/> for the session recorded in <paramref name="pendingSessionEnd"/>, if any.
+    /// </summary>
+    /// <param name="pendingSessionEnd">The pending session end to raise.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The session end is taken rather than read, so a caller which raises on both its success and its failure path
+    ///   reports it exactly once.
+    /// </para>
+    /// <para>
+    ///   Must not be called whilst <see cref="_credentialRefreshSemaphore"/> is held.
+    /// </para>
+    /// </remarks>
+    private async Task RaisePendingSessionEndAsync(PendingSessionEnd pendingSessionEnd)
+    {
+        UnauthenticatedEventArgs? endedSession = pendingSessionEnd.EventArgs;
+
+        pendingSessionEnd.EventArgs = null;
+
+        if (endedSession is not null)
+        {
+            await RaiseUnauthenticatedAsync(endedSession, pendingSessionEnd.NotificationTurn).ConfigureAwait(false);
         }
     }
 
@@ -2297,15 +2380,48 @@ public partial class AtProtoAgent
     /// </remarks>
     public async Task Logout(CancellationToken cancellationToken = default)
     {
-        await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        // The session ending is raised after the refresh semaphore has been released, never whilst it is held.
+        // Waiting for a notification turn under that semaphore deadlocks: a credential update handler which calls back
+        // into the agent owns the turn and waits for the semaphore, whilst the logout holding the semaphore waits for
+        // the turn. Clearing the credentials does not wait, so that part stays where it is.
+        PendingSessionEnd pendingSessionEnd = new();
 
         try
         {
-            await InternalLogout(cancellationToken).ConfigureAwait(false);
+            await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                if (LogoutHoldingCredentialRefreshSemaphore is Func<Task> logoutHoldingSemaphore)
+                {
+                    await logoutHoldingSemaphore().ConfigureAwait(false);
+                }
+
+                await InternalLogout(pendingSessionEnd, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _credentialRefreshSemaphore.Release();
+            }
+
+            await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
         }
         finally
         {
-            _credentialRefreshSemaphore.Release();
+            // A logout which failed still discarded the credentials, so the session ending is reported rather than
+            // being lost along with the failure. Nothing is raised twice: the session end is taken by whichever call
+            // reaches it first, so this does nothing once the call above has made it. A subscriber which throws here
+            // is logged rather than allowed to displace the failure the caller needs to see.
+            try
+            {
+                await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logger.SessionEndedNotificationThrew(_logger, exception);
+            }
+
+            FinishNotificationTurn(pendingSessionEnd.NotificationTurn);
         }
     }
 
@@ -2316,8 +2432,11 @@ public partial class AtProtoAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    private async Task InternalLogout(CancellationToken cancellationToken = default)
+    private async Task InternalLogout(PendingSessionEnd pendingSessionEnd, CancellationToken cancellationToken = default)
     {
+        // Clears into pendingSessionEnd rather than raising, because this runs with _credentialRefreshSemaphore held.
+        // The caller raises what is recorded here once it has released it.
+
         // The agent credentials are read once. Logout spans several awaits, and re-reading the property would let a
         // concurrent logout, or a background refresh landing part way through, revoke one credential having checked
         // another, or null the property and leave the later reads throwing a NullReferenceException.
@@ -2422,7 +2541,7 @@ public partial class AtProtoAgent
                         // The credentials are discarded even though the revocation failed, so that a failed logout does not
                         // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
                         // DeleteSession() below.
-                        await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
+                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
                         throw new LogoutException()
                         {
@@ -2461,7 +2580,7 @@ public partial class AtProtoAgent
                         // The refresh token has already been revoked by this point, so the session is over whatever happens
                         // to the access token. Holding on to the credentials would leave the agent reporting itself as
                         // authenticated against a session which no longer exists.
-                        await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
+                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
                         throw new LogoutException()
                         {
@@ -2473,7 +2592,7 @@ public partial class AtProtoAgent
 
                 succeeded = true;
 
-                await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
+                ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
             }
             finally
             {
@@ -2505,13 +2624,13 @@ public partial class AtProtoAgent
                 {
                     succeeded = true;
 
-                    await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
                 }
                 else
                 {
                     Logger.LogoutFailed(_logger, credentials.Did, credentials.Service, deleteSessionResult.StatusCode);
 
-                    await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
                     throw new LogoutException()
                     {
@@ -2782,15 +2901,41 @@ public partial class AtProtoAgent
             // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it,
             // and ordered behind any credential update notification still running so that a handler suspended part way
             // through persisting the previous session cannot finish afterwards and write it over this one.
+            ExceptionDispatchInfo? replacedSessionFailure = null;
+
             if (replacedSession is not null)
             {
-                await RaiseUnauthenticatedAsync(replacedSession, notificationTurn).ConfigureAwait(false);
+                try
+                {
+                    await RaiseUnauthenticatedAsync(replacedSession, notificationTurn).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is not OutOfMemoryException)
+                {
+                    // The new credentials are already live, so the session which started is still reported rather than
+                    // being lost along with the failure to report the one it replaced. A subscriber which never hears
+                    // that this session started would go on holding the credentials for the previous one. The failure
+                    // is rethrown once it has been told.
+                    replacedSessionFailure = ExceptionDispatchInfo.Capture(exception);
+                }
             }
 
-            await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
-                accessCredentials.Did,
-                accessCredentials.Service,
-                accessCredentials), notificationTurn).ConfigureAwait(false);
+            try
+            {
+                await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
+                    accessCredentials.Did,
+                    accessCredentials.Service,
+                    accessCredentials), notificationTurn).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException && replacedSessionFailure is not null)
+            {
+                // Both notifications failed. The one for the session which started is the one the caller sees, as it
+                // describes the state the agent is actually in, so the earlier failure is logged rather than lost.
+                Logger.SessionEndedNotificationThrew(_logger, replacedSessionFailure.SourceException);
+
+                throw;
+            }
+
+            replacedSessionFailure?.Throw();
         }
         finally
         {
@@ -2840,6 +2985,11 @@ public partial class AtProtoAgent
         // including when nothing was ever committed, because a turn which is never given up stops the queue.
         NotificationTurn? notificationTurn = null;
 
+        if (CredentialRefreshQueueing is Func<Task> credentialRefreshQueueing)
+        {
+            await credentialRefreshQueueing().ConfigureAwait(false);
+        }
+
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         long credentialGeneration = CredentialGeneration;
@@ -2851,6 +3001,18 @@ public partial class AtProtoAgent
                 using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
                 {
                     Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
+
+                    // Rechecked under the refresh semaphore. The check made before waiting for it can be stale by the
+                    // time it is granted: a login or a refresh which was already holding it can have re-pointed the
+                    // agent at another account whilst this call queued. Exchanging on a stale check would spend the
+                    // caller's refresh token and leave only the post-response guard to reject the result, destroying
+                    // the stored session this call was asked to refresh.
+                    if (IsRefreshForADifferentActor(expectedDid, out Did? currentActor))
+                    {
+                        Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, currentActor);
+
+                        return false;
+                    }
 
                     if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                     {
@@ -3017,6 +3179,11 @@ public partial class AtProtoAgent
         // in the outer finally, including when nothing was committed, because a turn never given up stops the queue.
         NotificationTurn? notificationTurn = null;
 
+        if (CredentialRefreshQueueing is Func<Task> credentialRefreshQueueing)
+        {
+            await credentialRefreshQueueing().ConfigureAwait(false);
+        }
+
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         long credentialGeneration = CredentialGeneration;
@@ -3028,6 +3195,18 @@ public partial class AtProtoAgent
                 using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
                 {
                     Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
+
+                    // Rechecked under the refresh semaphore. The check made before waiting for it can be stale by the
+                    // time it is granted: a login or a refresh which was already holding it can have re-pointed the
+                    // agent at another account whilst this call queued. Exchanging on a stale check would spend the
+                    // caller's refresh token and leave only the post-response guard to reject the result, destroying
+                    // the stored session this call was asked to refresh.
+                    if (IsRefreshForADifferentActor(expectedDid, out Did? currentActor))
+                    {
+                        Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, currentActor);
+
+                        return false;
+                    }
 
                     if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
                     {
@@ -3076,6 +3255,20 @@ public partial class AtProtoAgent
                     // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
                     // a retry re-presents a token which has already been exchanged.
                     RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
+                    // The refresh token was issued to one actor, so the session it is exchanged for must belong to that
+                    // same actor. Without this a server which answered with a session for a different subject would
+                    // silently re-point the agent, and everything built on it, at another account. TryPublishRefreshedCredentials
+                    // cannot catch this on its own: an agent which holds no credentials, which is how a stored credential is
+                    // restored, has no current actor to compare against.
+                    if (expectedDid is not null && refreshSessionResult.Result.Did != expectedDid)
+                    {
+                        Logger.RefreshSessionIssuedCredentialsReturnedUnexpectedDid(_logger, expectedDid, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        throw new SecurityTokenValidationException("The issued access token was not issued for the account being refreshed.");
+                    }
 
                     if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
                     {
