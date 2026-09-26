@@ -678,6 +678,74 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ASessionWhichEndedBeforeAnotherBeganIsReportedBeforeIt()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        // Spend the refresh token on an exchange which cannot complete, so the next refresh finds it already spent,
+        // ends the session, and raises the session ending after it has released the refresh semaphore. That is the
+        // window a login can commit in.
+        server.IssuedDid = new Did(OtherDid);
+
+        await Assert.ThrowsAsync<SecurityTokenValidationException>(
+            () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        server.IssuedDid = new Did(AccountDid);
+
+        List<string> order = [];
+
+        agent.Unauthenticated += (_, _) =>
+        {
+            lock (order)
+            {
+                order.Add("unauthenticated");
+            }
+        };
+
+        agent.Authenticated += (_, _) =>
+        {
+            lock (order)
+            {
+                order.Add("authenticated");
+            }
+        };
+
+        TaskCompletionSource sessionEndQueued = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseSessionEnd = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Holds the session ending between the refresh committing it and the event being raised, which is the window a
+        // login can commit in and, without commit ordered delivery, announce itself first.
+        agent.SessionEventQueueing = async () =>
+        {
+            if (sessionEndQueued.TrySetResult())
+            {
+                await releaseSessionEnd.Task;
+            }
+        };
+
+        Task<bool> refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
+
+        await sessionEndQueued.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
+
+        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
+
+        releaseSessionEnd.TrySetResult();
+
+        Assert.False(await refresh);
+        Assert.True(await login);
+
+        // The session ended before the new one began, so it has to be reported first. A subscriber which discards its
+        // stored credentials when a session ends would otherwise discard the session which is actually current.
+        Assert.Equal(["unauthenticated", "authenticated"], order);
+        Assert.NotNull(agent.Credentials);
+    }
+
+    [Fact]
     public async Task ARefreshWhichRestoresASessionNotifiesItsCredentialsEvenWhenAuthenticatedThrows()
     {
         OAuthTestServer server = new();

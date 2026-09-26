@@ -26,6 +26,7 @@
 * Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
 * Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
 * Applied the DPoP nonce freshness check to any credential implementing `IDPoPBoundCredential`, rather than only to `DPoPAccessCredentials`. A credential type of your own passed to `Login` previously took an unguarded path which published the snapshot the request started with, restoring a spent refresh token and discarding the credentials a refresh had just been issued.
+* Reported credential changes in the order they were committed in, rather than in the order the notifications happened to reach the queue. A session which ended because its refresh token had been spent could be reported as ending after a login which followed it, so a subscriber which discards its stored credentials when a session ends discarded the session which was actually live.
 
 ## 7.0.0 - 2026-09-24
 
