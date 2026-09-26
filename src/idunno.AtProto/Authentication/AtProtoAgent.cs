@@ -104,6 +104,9 @@ namespace idunno.AtProto;
 ///   prevent gets reintroduced. A path which ends a session because something failed should use
 ///   <see cref="ClearCredentialsAndRaiseUnauthenticatedAsync"/>, so the credentials are not discarded silently.
 /// </para>
+/// <para>
+///   A longer walkthrough of this model, with diagrams, is in <c>devnotes/credential-lifecycle-and-locking.md</c>.
+/// </para>
 /// </remarks>
 public partial class AtProtoAgent
 {

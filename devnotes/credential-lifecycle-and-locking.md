@@ -1,0 +1,245 @@
+# Credential lifecycle, locking and ordering
+
+This note describes how `AtProtoAgent` holds credentials, how it tells subscribers about them, and the rules which keep
+those two things consistent. It is aimed at anyone changing authentication code in `idunno.AtProto`, or writing an
+agent subclass or a credential store on top of it.
+
+Everything described here lives in `src/idunno.AtProto/Authentication/AtProtoAgent.cs` unless stated otherwise.
+
+## Why any of this exists
+
+An agent holds one set of credentials. Several things can change them, and more than one of those can be in flight at
+the same time:
+
+* a **login**, which installs a session,
+* a **logout**, which ends one,
+* a **token refresh**, either started by the caller or by the background refresh timer,
+* a **DPoP nonce rotation**, which the server can force on any request at any time.
+
+Each of those also has to reach the application, because the application is what persists credentials to durable
+storage. If notifications arrive out of order, or a handler which suspended finishes after the thing it was told about
+has been replaced, the application ends up storing credentials which no longer work. For OAuth that is not recoverable:
+refresh tokens are single use, so storing a spent one loses the session permanently. That failure is
+[#559](https://github.com/blowdart/idunno.Bluesky/issues/559).
+
+The rules below exist to make one guarantee:
+
+> **The last thing a subscriber is told about a session is the state that session actually ended in.**
+
+## The moving parts
+
+| Member | Type | Guards |
+| --- | --- | --- |
+| `_credentialLock` | `Lock` (net9.0+) / `object` (net8.0) | `_credentials`, `_credentialGeneration`, and every piece of deferral state below. Held only for short, synchronous critical sections. |
+| `_credentialGeneration` | `long` | Incremented on every change to `_credentials`. Lets an in-flight refresh detect that the world moved underneath it. |
+| `_credentialRefreshSemaphore` | `SemaphoreSlim(1)` | Serialises token refreshes, so two refreshes cannot both spend from the same session. |
+| `_credentialNotificationSemaphore` | `SemaphoreSlim(1)` | Serialises delivery of `CredentialsUpdated`, `Authenticated` and `Unauthenticated`, so only one is ever being handled at a time. |
+| `_raisingCredentialNotification` | `AsyncLocal<CredentialNotificationScope?>` | Detects a notification raised from inside a handler. |
+| `_deferredCredentialNotification` | `AccessCredentials?` | The newest credentials a handler deferred, to be raised once it returns. |
+| `_deferredCredentialNotificationCommitted` | `bool` | Sticky. Records that the deferred credentials are already live in the agent. |
+| `_deferredSessionEvents` | `Queue<Action>` | `Authenticated`/`Unauthenticated` raised from inside a handler, drained in order after it. |
+| `_exchangedRefreshTokens` / `_exchangedRefreshTokenLock` | bounded `Queue<string>` + `Lock`/`object` | Remembers the last few refresh tokens this session has exchanged, so a retry cannot re-present a spent one. Independent of `_credentialLock`. |
+
+### Lock ordering
+
+There is one ordering rule, and it is not negotiable:
+
+```
+_credentialRefreshSemaphore  →  _credentialNotificationSemaphore  →  _credentialLock
+```
+
+Acquire in that order or not at all. Never acquire in the reverse order, and **never hold `_credentialLock` across an
+`await`** — every critical section under it is synchronous by design. Raising an event while holding either semaphore
+is fine; raising one while holding `_credentialLock` is not, because a handler calling back into the agent would
+deadlock instantly.
+
+```mermaid
+flowchart LR
+    R["_credentialRefreshSemaphore<br/>(one refresh at a time)"] --> N["_credentialNotificationSemaphore<br/>(one handler at a time)"] --> L["_credentialLock<br/>(short, synchronous)"]
+```
+
+## How a change reaches a subscriber
+
+Every credential change follows the same shape: mutate state under `_credentialLock`, release it, then notify outside
+every lock.
+
+```mermaid
+sequenceDiagram
+    participant C as Caller / timer
+    participant A as AtProtoAgent
+    participant L as _credentialLock
+    participant Q as Notification queue
+    participant H as Subscriber
+
+    C->>A: Login / Logout / RefreshCredentials
+    A->>L: take lock
+    L-->>A: check generation, swap _credentials, bump generation
+    A->>L: release lock
+    Note over A: Credentials are now live in the agent
+    A->>Q: RaiseCredentialsUpdatedAsync
+    Q->>Q: wait on _credentialNotificationSemaphore
+    Q->>H: OnCredentialsUpdatedAsync (only if agent still holds these credentials)
+    H-->>Q: persisted
+    Q->>Q: drain anything the handler deferred
+    Q->>H: Authenticated / Unauthenticated (last)
+```
+
+Two consequences worth internalising:
+
+* **State changes before anyone is told.** By the time a handler runs, the agent has already committed. A handler
+  cannot veto a change; it can only fail to persist it.
+* **Session events come last.** `Authenticated` and `Unauthenticated` are ordered *behind* the credential notification
+  queue on purpose, so a subscriber which discards its stored credentials on `Unauthenticated` discards any stale write
+  that a suspended handler made on its way out.
+
+## Guards, and what each one prevents
+
+### Generation check — `TryPublishRefreshedCredentials`
+
+A refresh spans a network call. The check and the write both happen inside one `_credentialLock` critical section:
+
+```csharp
+if (_atProtoAgentDisposed || _credentialGeneration != expectedGeneration)
+{
+    return false;
+}
+```
+
+Prevents a refresh which started before a logout from re-establishing the session that logout ended, and a refresh
+which started before a login from overwriting the session that login installed.
+
+> **Warning.** A `false` return here means the refresh token has been spent and its replacement discarded. The caller
+> must treat that as the session being over — not as something to retry.
+
+### Actor check — `IsRefreshForADifferentActor`, and again in `TryPublishRefreshedCredentials`
+
+`RefreshCredentials(credential)` takes an arbitrary credential, which need not belong to the agent's own session.
+Publishing the result blindly would silently re-point the agent, and everything built on it, at another account.
+
+The check is made **twice, deliberately**:
+
+* **Before** the token endpoint is called, so a mismatch leaves the supplied credential unspent and still usable
+  elsewhere. Rejecting only afterwards destroys the very session the caller asked to refresh.
+* **After** the response, as the backstop for what the early check cannot see: a credential carrying no DID, a login
+  racing the refresh, and a server answering with a token for the wrong subject.
+
+### Freshness check — `InternalOnCredentialsUpdatedCallBack`
+
+This is the #559 path. A DPoP nonce rotation arrives on an arbitrary request, carrying the credentials snapshot that
+request was built with. If a refresh completed in the meantime, that snapshot is stale, and assigning it back would
+restore dead tokens *and* bump the generation so the fresh ones were discarded too.
+
+The callback now verifies under `_credentialLock` that the agent still holds exactly that instance, and if so mutates
+**only** the nonce, in place. It never reassigns `Credentials` and never touches the generation.
+
+> **Warning.** Nonce rotation must stay an in-place mutation. Swapping the credentials object to carry a new nonce
+> makes every nonce update look like a credential change, which is what caused the original bug.
+
+### Spent refresh token cache — `_exchangedRefreshTokens`
+
+Refresh tokens are single use. The token is recorded as spent *before* anything which can fail, so a retry cannot
+re-present it. The last `MaximumRememberedRefreshTokens` (4) are kept rather than just the most recent one, because a
+caller holding an older credential can otherwise present a token which was spent several refreshes ago.
+
+A token being remembered is not on its own fatal: `HasExchangeOfRefreshTokenProducedNewCredentials` distinguishes
+"already exchanged, and the agent got new credentials from it" — which succeeds — from "already exchanged, and nothing
+came back", which ends the session via `TryClearCredentialsForSpentRefreshToken`.
+
+This cache is per session and must be cleared whenever the session ends or is replaced — `ForgetExchangedRefreshTokens`
+is called from `InternalLogin`, `TryClearCredentialsForSpentRefreshToken` and
+`ClearCredentialsAndRaiseUnauthenticatedAsync`. Leaving stale entries means a later session whose token happens to
+match one is cleared on its first refresh.
+
+> **Warning.** `InternalLogin` forgets **unconditionally**, not only when it displaces a live session. Any remembered
+> token belongs to some earlier session, however that session ended.
+
+### Reentrancy and deferral
+
+A handler may call back into the agent, and a call which refreshes raises a notification of its own. Raising that
+inline would let the outer handler — still holding the credentials which have just been replaced — finish *last* and
+persist them.
+
+So a reentrant notification is parked and raised once the handler it came from returns:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Raising: notification wins the semaphore
+    Raising --> HandlerRunning: OnCredentialsUpdatedAsync
+    HandlerRunning --> Deferred: handler refreshes, raising a nested notification
+    Deferred --> HandlerRunning: parked, not raised inline
+    HandlerRunning --> Draining: handler returns
+    Deferred --> Draining
+    Draining --> HandlerRunning: raise the deferred credentials
+    Draining --> SessionEvents: nothing left deferred
+    SessionEvents --> [*]: Authenticated / Unauthenticated raised last
+```
+
+Three subtleties in that machinery:
+
+* **The deferral slot holds only the newest set.** It is written only when the credentials being deferred are still the
+  agent's (`ReferenceEquals(_credentials, credentials)`). A notification can reach the slot *later* than one for the
+  credentials which superseded it; without the currency check the stale set would displace the newer one and then be
+  dropped as stale when drained, losing both.
+* **Closing the scope is atomic with observing an empty slot.** `TakeDeferredCredentialNotification` marks the scope
+  inactive inside the same critical section in which it sees nothing deferred, so a racing notification either got into
+  the slot in time or sees a closed scope and queues on the semaphore instead. There is no gap.
+* **Scope, not a flag.** `_raisingCredentialNotification` holds an object rather than a `bool` because an `AsyncLocal`
+  value flows into work a handler *starts but does not await*. That work can run long after its originating
+  notification finished; the object lets it discover the scope is closed and queue properly.
+
+### Committed credentials
+
+A notification is flagged `credentialsCommitted: true` when the credentials are already live in the agent and the token
+they replaced has been spent. Those notifications are special:
+
+* they are raised with `CancellationToken.None`, because cancelling the caller must not leave a superseded set as the
+  last thing persisted;
+* they are still delivered when the handler they were deferred from **throws**, and when an `Authenticated` subscriber
+  throws, because nothing else can bring durable storage back into step.
+
+A failure of the replacement notification itself is logged (message 302) rather than thrown, so it cannot displace the
+exception the caller needs to see.
+
+## Rules for maintainers
+
+1. **Use the `Raise*` helpers.** Never call `OnCredentialsUpdatedAsync`, `OnAuthenticated` or `OnUnauthenticated`
+   directly. Go through `RaiseCredentialsUpdatedAsync`, `RaiseAuthenticatedAsync` or `RaiseUnauthenticatedAsync`, which
+   apply the queueing, ordering and reentrancy rules.
+2. **Never clear credentials silently.** On any failure path which discards a session, call
+   `ClearCredentialsAndRaiseUnauthenticatedAsync`. A silent clear leaves a subscriber holding a rejected session in
+   durable storage, which it will restore on the next start.
+3. **Never hold `_credentialLock` across an `await`,** and never raise an event while holding it.
+4. **Respect the lock order** given above.
+5. **Edit both `#if` branches.** `_credentialLock` and `_timerLock` are declared twice, as `Lock` on net9.0+ and
+   `object` on net8.0. A change to one branch without the other breaks a target framework.
+6. **Do not make the locks `protected`.** They cannot be — the type differs per target framework, so a single
+   `PublicAPI` file cannot express it, and locking a boxed `Lock` is a compile error (CS9216). A subclass holding these
+   locks across a callback would also deadlock the agent. Subclasses should override the event methods instead; the
+   ordering guarantees are provided for them, not something they need to reimplement.
+7. **The public `Credentials` setter raises nothing and is not ordered.** It is a raw assignment. Use `Login`, `Logout`
+   or `RefreshCredentials` for anything which should be observable.
+8. **The semaphores are never disposed,** and are CA2213-suppressed. Disposing one while it is held makes the release
+   throw.
+
+## Notes for writing a credential store
+
+* Persist on `CredentialsUpdated`. `Authenticated` also carries credentials, but it is a session-start signal which
+  arrives *after* the notification for those credentials — treat `CredentialsUpdated` as the one that stores.
+* Discard stored credentials on `Unauthenticated`. Because session events are raised last, doing so also discards any
+  stale write which preceded it.
+* Handlers are serialised, so a handler does not need its own lock against other handlers.
+* A handler may call back into the agent. It will not deadlock, and its notification will be ordered after the current
+  one — but expect to be re-entered with newer credentials before your original call returns.
+* A handler which throws does not stop committed credentials being delivered to the next attempt.
+
+## Tests
+
+The race coverage lives in `test/idunno.AtProto.Integration.Test/OAuthCredentialRefreshTests.cs`. Each test there has a
+verified negative control: the fix was neutered and the test confirmed to fail before being accepted. Keep that
+discipline — a concurrency test which has never been seen to fail proves nothing.
+
+`OAuthTestAgent` exposes internal hooks (`NotifyCredentialsUpdated`, `RaiseCredentialsUpdated`,
+`CredentialNotificationQueueing`) so ordering can be asserted deterministically rather than with timing delays.
+
+> **Warning.** Do not assume a notification has been delivered by the time the call which caused it returns. It may be
+> queued behind one which is still running. Poll for the condition instead.
