@@ -1,5 +1,14 @@
 # Version History
 
+## Unreleased
+
+### Fixed
+
+#### idunno.AtProto
+
+* Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
+* Ended sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely.
+
 ## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.

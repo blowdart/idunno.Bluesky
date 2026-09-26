@@ -55,6 +55,52 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ANonceUpdateDuringRefreshDoesNotDiscardTheRefreshedCredentials()
+    {
+        OAuthTestServer server = new() { GateRefresh = true };
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Task<bool> refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
+
+        await server.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        server.ReleaseRefresh.TrySetResult();
+
+        Assert.True(await refresh);
+        DPoPAccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.NotSame(originalCredentials, refreshedCredentials);
+        Assert.Equal("rotatedNonce", refreshedCredentials.DPoPNonce);
+    }
+
+    [Fact]
+    public async Task AStaleNonceUpdateAfterRefreshDoesNotReplaceTheRefreshedCredentials()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        DPoPAccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        int credentialsUpdatedCount = 0;
+        agent.CredentialsUpdated += (_, _) => credentialsUpdatedCount++;
+
+        originalCredentials.DPoPNonce = "staleNonce";
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        Assert.Same(refreshedCredentials, agent.Credentials);
+        Assert.Equal(0, credentialsUpdatedCount);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
@@ -71,6 +117,13 @@ public class OAuthCredentialRefreshTests
         // issued for another actor.
         Assert.Same(credentialsBeforeRefresh, agent.Credentials);
         Assert.Equal(new Did(AccountDid), agent.Credentials!.Did);
+
+        bool unauthenticatedEventRaised = false;
+        agent.Unauthenticated += (_, _) => unauthenticatedEventRaised = true;
+
+        Assert.False(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.Null(agent.Credentials);
+        Assert.True(unauthenticatedEventRaised);
     }
 
     [Fact]
@@ -126,6 +179,9 @@ public class OAuthCredentialRefreshTests
     {
         private readonly OAuthTestServer _server = server;
 
+        internal Task NotifyCredentialsUpdated(AtProtoCredential credentials, CancellationToken cancellationToken) =>
+            InternalOnCredentialsUpdatedCallBack(credentials, cancellationToken);
+
         public override OAuthClient CreateOAuthClient() =>
             new(httpClientConfigurator: httpClient => httpClient,
                 innerHandlerFactory: _server.TestServer.CreateHandler,
@@ -141,12 +197,18 @@ public class OAuthCredentialRefreshTests
     {
         private int _tokenSerialNumber;
 
+        internal bool GateRefresh { get; set; }
+
         internal OAuthTestServer()
         {
             TestServer = TestServerBuilder.CreateServer(DomainName, Handle);
         }
 
         internal TestServer TestServer { get; }
+
+        internal TaskCompletionSource RefreshEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal TaskCompletionSource ReleaseRefresh { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
         /// Gets or sets the DID the token endpoint issues tokens for. Defaults to the account being refreshed.
@@ -187,6 +249,12 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
+                    if (GateRefresh)
+                    {
+                        RefreshEntered.TrySetResult();
+                        await ReleaseRefresh.Task.ConfigureAwait(false);
+                    }
+
                     LastIssuedRefreshToken = $"refreshToken{Interlocked.Increment(ref _tokenSerialNumber)}";
 
                     response.ContentType = "application/json";

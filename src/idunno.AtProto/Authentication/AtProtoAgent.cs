@@ -175,6 +175,14 @@ public partial class AtProtoAgent
                 return false;
             }
 
+            if (_credentials is DPoPAccessCredentials currentDPoPCredentials &&
+                refreshedCredentials is DPoPAccessCredentials refreshedDPoPCredentials &&
+                currentDPoPCredentials.Service == refreshedDPoPCredentials.Service &&
+                string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal))
+            {
+                refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
+            }
+
             _credentials = refreshedCredentials;
             _credentialGeneration++;
             Service = refreshedCredentials.Service;
@@ -281,15 +289,34 @@ public partial class AtProtoAgent
 
         if (credentials is DPoPAccessCredentials dPopAccessCredentials)
         {
-            Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials),
-                cancellationToken).ConfigureAwait(false);
+            CredentialsUpdatedEventArgs credentialsUpdatedEventArgs;
 
-            if (!_atProtoAgentDisposed)
+            lock (_credentialLock)
             {
-                Credentials = dPopAccessCredentials;
+                if (_atProtoAgentDisposed ||
+                    _credentials is not DPoPAccessCredentials currentCredentials ||
+                    !string.Equals(currentCredentials.AccessJwt, dPopAccessCredentials.AccessJwt, StringComparison.Ordinal) ||
+                    !string.Equals(currentCredentials.RefreshToken, dPopAccessCredentials.RefreshToken, StringComparison.Ordinal) ||
+                    !string.Equals(currentCredentials.DPoPProofKey, dPopAccessCredentials.DPoPProofKey, StringComparison.Ordinal) ||
+                    currentCredentials.Service != dPopAccessCredentials.Service)
+                {
+                    return;
+                }
+
+                if (!ReferenceEquals(currentCredentials, dPopAccessCredentials) &&
+                    !string.Equals(currentCredentials.DPoPNonce, dPopAccessCredentials.DPoPNonce, StringComparison.Ordinal))
+                {
+                    currentCredentials.DPoPNonce = dPopAccessCredentials.DPoPNonce;
+                }
+
+                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    currentCredentials.Did,
+                    currentCredentials.Service,
+                    currentCredentials);
             }
+
+            Logger.OnCredentialUpdatedCallbackCalled(_logger);
+            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
         }
         else if (credentials is AccessCredentials accessCredentials)
         {
@@ -307,6 +334,29 @@ public partial class AtProtoAgent
         {
             // This should never happen.
             Logger.OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(_logger);
+        }
+    }
+
+    private bool TryClearCredentialsForSpentRefreshToken(string refreshToken, out UnauthenticatedEventArgs? unauthenticatedEventArgs)
+    {
+        lock (_credentialLock)
+        {
+            if (_credentials is not AccessCredentials currentCredentials ||
+                !string.Equals(currentCredentials.RefreshToken, refreshToken, StringComparison.Ordinal))
+            {
+                unauthenticatedEventArgs = null;
+                return false;
+            }
+
+            _credentials = null;
+            _credentialGeneration++;
+            Service = OriginalService;
+
+            unauthenticatedEventArgs = currentCredentials.Did is Did did
+                ? new UnauthenticatedEventArgs(did, currentCredentials.Service)
+                : null;
+
+            return true;
         }
     }
 
@@ -1683,6 +1733,7 @@ public partial class AtProtoAgent
 
         CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
+        UnauthenticatedEventArgs? unauthenticatedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
 
@@ -1703,6 +1754,11 @@ public partial class AtProtoAgent
                     if (!succeeded)
                     {
                         tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        if (TryClearCredentialsForSpentRefreshToken(refreshCredential.RefreshToken, out unauthenticatedEventArgs))
+                        {
+                            StopTokenRefreshTimer();
+                        }
                     }
 
                     return succeeded;
@@ -1787,6 +1843,11 @@ public partial class AtProtoAgent
             if (tokenRefreshFailedEventArgs is not null)
             {
                 OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+            }
+
+            if (unauthenticatedEventArgs is not null)
+            {
+                OnUnauthenticated(unauthenticatedEventArgs);
             }
         }
 
