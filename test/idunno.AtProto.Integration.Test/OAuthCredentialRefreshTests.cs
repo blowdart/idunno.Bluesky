@@ -287,6 +287,46 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ARefreshAHandlerStartedWithoutAwaitingItStillNotifiesTheCredentialsItCommits()
+    {
+        OAuthTestServer server = new() { GateRefresh = true };
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        List<AccessCredentials> persisted = [];
+        Task<bool>? refresh = null;
+
+        agent.CredentialsUpdatedAsync = (e, _) =>
+        {
+            // A handler which starts a refresh and returns without awaiting it. The refresh runs on, and completes,
+            // after the notification it was started from has finished, so the credentials it commits have to be
+            // notified rather than handed to a notification which is no longer running.
+            refresh ??= agent.RefreshCredentials(CancellationToken.None);
+
+            persisted.Add(e.AccessCredentials);
+
+            return Task.CompletedTask;
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refresh);
+
+        await server.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+        server.ReleaseRefresh.TrySetResult();
+
+        Assert.True(await refresh);
+
+        Assert.Equal(2, persisted.Count);
+        Assert.Same(originalCredentials, persisted[0]);
+        Assert.Same(agent.Credentials, persisted[1]);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };

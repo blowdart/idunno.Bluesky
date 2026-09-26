@@ -63,8 +63,28 @@ public partial class AtProtoAgent
     ///   raised from inside one which already holds it would deadlock the agent, so a reentrant notification is handed
     ///   to <see cref="_deferredCredentialNotification"/> instead.
     /// </para>
+    /// <para>
+    ///   The value is a scope rather than a flag because an <see cref="AsyncLocal{T}"/> flows into any work a handler
+    ///   starts, including work it does not await. Such work can run after the notification it was started from has
+    ///   finished, when there is no longer anything holding the semaphore to drain a deferred notification, so the
+    ///   scope is marked inactive as the notification finishes and a reentrant notification is only deferred while
+    ///   the scope it flowed from is still active.
+    /// </para>
     /// </remarks>
-    private readonly AsyncLocal<bool> _raisingCredentialNotification = new();
+    private readonly AsyncLocal<CredentialNotificationScope?> _raisingCredentialNotification = new();
+
+    /// <summary>
+    /// Marks the extent of a credential update notification, so that work which flowed out of it can tell whether it
+    /// is still running.
+    /// </summary>
+    private sealed class CredentialNotificationScope
+    {
+        /// <summary>
+        /// Gets or sets a value indicating whether the notification this scope was created for is still running.
+        /// </summary>
+        /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
+        public bool Active { get; set; } = true;
+    }
 
     /// <summary>
     /// Credentials raised from inside a notification which is still running, to be notified once it has finished.
@@ -426,22 +446,36 @@ public partial class AtProtoAgent
             cancellationToken = CancellationToken.None;
         }
 
-        if (_raisingCredentialNotification.Value)
+        if (_raisingCredentialNotification.Value is CredentialNotificationScope scope)
         {
+            bool deferred = false;
+
             lock (_credentialLock)
             {
-                _deferredCredentialNotification = credentials;
-                _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
+                // Work a handler started but did not await keeps the scope it flowed from, so the notification it
+                // raises has to be checked against that scope still running. Deferring to a notification which has
+                // already finished would leave nothing to raise it.
+                if (scope.Active)
+                {
+                    _deferredCredentialNotification = credentials;
+                    _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
+                    deferred = true;
+                }
             }
 
-            return;
+            if (deferred)
+            {
+                return;
+            }
         }
 
         CredentialNotificationQueueing?.Invoke(credentials);
 
         await _credentialNotificationSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-        _raisingCredentialNotification.Value = true;
+        CredentialNotificationScope notificationScope = new();
+
+        _raisingCredentialNotification.Value = notificationScope;
 
         try
         {
@@ -455,7 +489,7 @@ public partial class AtProtoAgent
 
                     await RaiseCredentialsUpdatedIfCurrent(raising, cancellationToken).ConfigureAwait(false);
 
-                    credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false);
+                    credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false, notificationScope);
                 }
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -463,17 +497,18 @@ public partial class AtProtoAgent
                 // A handler which failed may have already triggered a refresh, spending the refresh token the agent
                 // was holding. Whatever replaced it has to reach a handler, otherwise nothing is left which can
                 // persist it and durable storage keeps a token the server will not honour.
-                await DrainCommittedCredentialNotifications(credentialsToRaise).ConfigureAwait(false);
+                await DrainCommittedCredentialNotifications(credentialsToRaise, notificationScope).ConfigureAwait(false);
 
                 throw;
             }
         }
         finally
         {
-            _raisingCredentialNotification.Value = false;
+            _raisingCredentialNotification.Value = null;
 
             lock (_credentialLock)
             {
+                notificationScope.Active = false;
                 _deferredCredentialNotification = null;
                 _deferredCredentialNotificationCommitted = false;
             }
@@ -512,8 +547,15 @@ public partial class AtProtoAgent
     /// </summary>
     /// <param name="justRaised">The credentials whose notification has just finished.</param>
     /// <param name="committedOnly">Whether to take the deferred credentials only if the agent has already published them.</param>
+    /// <param name="scopeToCloseWhenEmpty">
+    /// The scope to mark inactive if nothing is deferred, so that work which flowed out of the notification and raises
+    /// one after this point takes the queue rather than deferring to a notification which is about to finish.
+    /// </param>
     /// <returns>The credentials to raise a notification for, or <see langword="null"/> if there are none.</returns>
-    private AccessCredentials? TakeDeferredCredentialNotification(AccessCredentials justRaised, bool committedOnly)
+    private AccessCredentials? TakeDeferredCredentialNotification(
+        AccessCredentials justRaised,
+        bool committedOnly,
+        CredentialNotificationScope? scopeToCloseWhenEmpty = null)
     {
         lock (_credentialLock)
         {
@@ -529,6 +571,13 @@ public partial class AtProtoAgent
             // handed, a DPoP nonce rotation for example, needs no notification of its own.
             if (deferred is null || ReferenceEquals(deferred, justRaised) || (committedOnly && !committed))
             {
+                // Closed under the same lock the deferral is taken under, so anything raising a notification either
+                // deferred before this point, and is taken above, or finds the scope closed and queues instead.
+                if (scopeToCloseWhenEmpty is not null)
+                {
+                    scopeToCloseWhenEmpty.Active = false;
+                }
+
                 return null;
             }
 
@@ -541,10 +590,11 @@ public partial class AtProtoAgent
     /// then failed, swallowing any exception a handler throws so the original failure is the one which propagates.
     /// </summary>
     /// <param name="justRaised">The credentials whose notification failed, if any.</param>
+    /// <param name="scope">The scope of the notification which failed, closed once there is nothing left to drain.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised)
+    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised, CredentialNotificationScope scope)
     {
-        AccessCredentials? credentialsToRaise = justRaised is null ? null : TakeDeferredCredentialNotification(justRaised, committedOnly: true);
+        AccessCredentials? credentialsToRaise = justRaised is null ? null : TakeDeferredCredentialNotification(justRaised, committedOnly: true, scope);
 
         while (credentialsToRaise is not null)
         {
@@ -559,7 +609,7 @@ public partial class AtProtoAgent
                 Logger.CommittedCredentialsNotificationThrew(_logger, exception);
             }
 
-            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true);
+            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true, scope);
         }
     }
 
