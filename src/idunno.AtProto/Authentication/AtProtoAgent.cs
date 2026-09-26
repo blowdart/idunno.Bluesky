@@ -335,7 +335,7 @@ public partial class AtProtoAgent
             }
 
             Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, credentialsCommitted: false, cancellationToken).ConfigureAwait(false);
         }
         else if (credentials is AccessCredentials accessCredentials)
         {
@@ -361,6 +361,10 @@ public partial class AtProtoAgent
     /// <paramref name="credentials"/>, provided the agent still holds them.
     /// </summary>
     /// <param name="credentials">The credentials the notification is being raised for.</param>
+    /// <param name="credentialsCommitted">
+    ///   <see langword="true"/> if <paramref name="credentials"/> have already been published as the agent's credentials
+    ///   and a handler is the only opportunity to persist them, otherwise <see langword="false"/>.
+    /// </param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <remarks>
@@ -375,9 +379,19 @@ public partial class AtProtoAgent
     ///   dropped rather than raised: whatever replaced them has its own notification, and the credentials in hand no
     ///   longer describe the session.
     /// </para>
+    /// <para>
+    ///   Once credentials have been committed their notification cannot be cancelled. Dropping it would leave an older
+    ///   notification queued ahead of it free to persist credentials the server has already replaced, with nothing left
+    ///   to follow and repair them.
+    /// </para>
     /// </remarks>
-    private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, CancellationToken cancellationToken)
+    private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken)
     {
+        if (credentialsCommitted)
+        {
+            cancellationToken = CancellationToken.None;
+        }
+
         // A handler is free to call back into the agent, and a call which rotates the DPoP nonce raises another
         // notification. Waiting for the semaphore this notification already holds would deadlock the agent.
         if (_raisingCredentialNotification.Value)
@@ -1935,7 +1949,7 @@ public partial class AtProtoAgent
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
         if (credentialsToNotify is not null)
         {
-            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, credentialsCommitted: true, cancellationToken).ConfigureAwait(false);
         }
 
         return true;
@@ -2075,7 +2089,7 @@ public partial class AtProtoAgent
         // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
         if (credentialsToNotify is not null)
         {
-            await RaiseCredentialsUpdatedAsync(credentialsToNotify, cancellationToken).ConfigureAwait(false);
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, credentialsCommitted: true, cancellationToken).ConfigureAwait(false);
         }
 
         return true;

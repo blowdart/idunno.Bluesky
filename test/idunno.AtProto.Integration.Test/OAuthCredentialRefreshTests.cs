@@ -152,6 +152,59 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ACancelledRefreshStillNotifiesCredentialsItHasAlreadyCommitted()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        TaskCompletionSource releaseFirstNotification = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource firstNotificationEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        AccessCredentials? lastPersistedCredentials = null;
+        int notificationCount = 0;
+
+        agent.CredentialsUpdatedAsync = async (e, _) =>
+        {
+            if (Interlocked.Increment(ref notificationCount) == 1)
+            {
+                firstNotificationEntered.TrySetResult();
+                await releaseFirstNotification.Task;
+            }
+
+            lastPersistedCredentials = e.AccessCredentials;
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        Task notification = agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        await firstNotificationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        using CancellationTokenSource refreshCancellation = new();
+        Task<bool> refresh = agent.RefreshCredentials(refreshCancellation.Token);
+
+        // Wait until the refresh has committed its credentials, then cancel the caller. The notification for
+        // credentials the agent is already using must still be raised, otherwise the suspended handler would be the
+        // last to write and would persist the refresh token the server has spent.
+        while (ReferenceEquals(agent.Credentials, originalCredentials))
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        await refreshCancellation.CancelAsync();
+
+        releaseFirstNotification.TrySetResult();
+
+        await notification;
+        Assert.True(await refresh);
+
+        Assert.Equal(2, notificationCount);
+        Assert.Same(agent.Credentials, lastPersistedCredentials);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
