@@ -727,6 +727,77 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task ARefreshFromInsideASessionEventNotifiesTheCredentialsItIssued()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            List<AccessCredentials> notified = [];
+
+            agent.CredentialsUpdatedAsync = (e, _) =>
+            {
+                notified.Add(e.AccessCredentials);
+
+                return Task.CompletedTask;
+            };
+
+            int authenticatedCount = 0;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref authenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                agent.RefreshCredentials(CancellationToken.None).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The refresh the subscriber triggered published its credentials before the session event returned, so its
+            // notification was deferred into that event's scope. Dropping it would leave a subscriber storing a refresh
+            // token which has already been spent.
+            Assert.NotEmpty(notified);
+            Assert.Same(agent.Credentials, notified[^1]);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginFromInsideTheHandlerForTheSessionItReplacedDoesNotAnnounceTheReplacedSessionLast()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            List<AuthenticatedEventArgs> authenticated = [];
+            int unauthenticatedCount = 0;
+
+            agent.Authenticated += (_, e) => authenticated.Add(e);
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref unauthenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                Login(agent).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The nested login moved the agent on and announced itself. Announcing the session it interrupted after
+            // that would put credentials the agent no longer holds last, and a subscriber would store them.
+            Assert.NotEmpty(authenticated);
+            Assert.Same(agent.Credentials, authenticated[^1].AccessCredentials);
+        }
+    }
+
+    [Fact]
     public async Task ACancelledNotificationTheQueueHasAlreadySteppedOverIsNotLeftInTheWaiterList()
     {
         RefreshTestServer refreshTestServer = new(this);

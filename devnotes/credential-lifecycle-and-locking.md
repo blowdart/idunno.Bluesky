@@ -195,7 +195,7 @@ stateDiagram-v2
     SessionEvents --> [*]: Authenticated / Unauthenticated raised last (except on a session start)
 ```
 
-Four subtleties in that machinery:
+Some subtleties in that machinery:
 
 * **A turn is always reserved, even when reentrant.** `TakeNotificationTurn` hands out a turn whether or not a
   notification is running. A reentrant caller never queues behind itself, because its raises are deferred and return
@@ -214,6 +214,10 @@ Four subtleties in that machinery:
 * **Scope, not a flag.** `_raisingCredentialNotification` holds an object rather than a `bool` because an `AsyncLocal`
   value flows into work a handler *starts but does not await*. That work can run long after its originating
   notification finished; the object lets it discover the scope is closed and queue properly.
+* **A session event is a notification scope too.** `RaiseSessionEventAsync` opens its own scope, so a subscriber to
+  `Authenticated` or `Unauthenticated` which refreshes the agent has that refresh's notification deferred into it. That
+  path therefore drains committed credential notifications, exactly as the credential path does, before it closes the
+  scope and empties the slots. Dropping them would leave a subscriber storing a refresh token which has been spent.
 
 ### Committed credentials
 
@@ -262,6 +266,15 @@ exception the caller needs to see.
     takes a turn — neither of which waits — under the semaphore, and `RaisePendingSessionEndAsync` raises the session
     end only once the semaphore has been released. Calling `ClearCredentialsAndRaiseUnauthenticatedAsync`, which does
     both, from under the semaphore deadlocks the agent.
+11. **Give the turn up before raising a synchronous event which is not ordered.** `TokenRefreshFailed` is raised with
+    `OnTokenRefreshFailed` on the calling thread and carries no ordering guarantee of its own, so the turn is finished
+    first. A subscriber which reauthenticates would otherwise take the next turn and block on the very thread which is
+    the only one able to give up the turn ahead of it. `FinishNotificationTurn` is idempotent, so the `finally` which
+    normally gives the turn up is still correct.
+12. **Anything raised after a subscriber has run may be stale.** A subscriber is free to log in or out, and by the time
+    it returns everything it caused has already been raised. `InternalLogin` therefore rechecks that the agent still
+    holds the credentials it is about to announce before raising `Authenticated`; announcing them unconditionally would
+    put a session the agent has already moved on from last.
 
 ## Notes for writing a credential store
 

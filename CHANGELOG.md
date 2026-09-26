@@ -33,6 +33,10 @@
 * Rechecked that a refresh is still for the account the agent is authenticated as once the refresh semaphore has been granted. A login or another refresh could re-point the agent while the call queued, so the exchange went ahead on a stale check, spending the caller's refresh token and destroying the stored session it was asked to refresh.
 * Reserved a place in the notification queue for every change, including one committed by work a handler started but did not await. Such work could see the handler's notification running when it committed and find it finished by the time it raised, so its events were queued behind a change which was committed after it and a session which had already ended was reported as ending after the one which replaced it.
 * Stopped a cancelled notification the queue had already stepped over being recorded again, which left an entry for a turn nothing would ever visit. A long lived agent whose notifications are repeatedly cancelled grew that list without bound.
+* Notified credentials committed by a refresh started from inside an `Authenticated` or `Unauthenticated` subscriber. The notification was deferred into the session event and then discarded, so a subscriber was never told about a live token pair and went on storing a refresh token the server would not honour.
+* Skipped `Authenticated` for a session a subscriber for the session it replaced has itself logged out of or replaced, so a session start describing credentials the agent no longer holds is no longer announced last.
+* Gave up the notification turn before raising `TokenRefreshFailed`, so a subscriber which reauthenticates on that thread no longer waits for a turn only the thread it is blocking can give up.
+* Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
 
 ## 7.0.0 - 2026-09-24
 

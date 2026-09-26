@@ -466,9 +466,9 @@ public partial class AtProtoAgent
             // nonce the refresh began with, and a rotation which happened during the refresh is lost, costing a
             // rejected request and a retry on the next call. Only carried when the proof key and service match, as a
             // nonce is only meaningful for the binding it was issued against.
-            if (_credentials is DPoPAccessCredentials currentDPoPCredentials &&
-                refreshedCredentials is DPoPAccessCredentials refreshedDPoPCredentials &&
-                currentDPoPCredentials.Service == refreshedDPoPCredentials.Service &&
+            if (_credentials is IDPoPBoundCredential currentDPoPCredentials &&
+                refreshedCredentials is IDPoPBoundCredential refreshedDPoPCredentials &&
+                _credentials.Service == refreshedCredentials.Service &&
                 string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal))
             {
                 refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
@@ -1033,7 +1033,7 @@ public partial class AtProtoAgent
     /// </param>
     /// <returns>The credentials to raise a notification for, or <see langword="null"/> if there are none.</returns>
     private AccessCredentials? TakeDeferredCredentialNotification(
-        AccessCredentials justRaised,
+        AccessCredentials? justRaised,
         bool committedOnly,
         CredentialNotificationScope? scopeToCloseWhenEmpty = null)
     {
@@ -1074,7 +1074,7 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised, CredentialNotificationScope scope)
     {
-        AccessCredentials? credentialsToRaise = justRaised is null ? null : TakeDeferredCredentialNotification(justRaised, committedOnly: true, scope);
+        AccessCredentials? credentialsToRaise = TakeDeferredCredentialNotification(justRaised, committedOnly: true, scope);
 
         while (credentialsToRaise is not null)
         {
@@ -1191,12 +1191,20 @@ public partial class AtProtoAgent
             {
                 raise();
 
+                // A subscriber is free to refresh the agent, and the notification for the credentials that published
+                // was deferred into this scope. Nothing else can raise it: this call owns the turn, and the slots are
+                // emptied when the scope closes, so a subscriber would never be told about a token pair which is
+                // already live and would go on storing one the server will not honour.
+                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
+
                 RaiseDeferredSessionEvents(swallowExceptions: false);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
                 // The session has already started or ended, so anything the failing subscriber queued is still raised
                 // rather than being dropped along with it.
+                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
+
                 RaiseDeferredSessionEvents(swallowExceptions: true);
 
                 throw;
@@ -2928,12 +2936,26 @@ public partial class AtProtoAgent
                 }
             }
 
+            // The subscriber for the replaced session is free to log in or out itself, and anything it did has already
+            // been raised by the time that returns. Announcing this session afterwards would describe credentials the
+            // agent no longer holds, putting a stale session start last, so it is announced only if it is still the
+            // live one. Whatever replaced it has announced itself.
+            bool sessionIsStillLive;
+
+            lock (_credentialLock)
+            {
+                sessionIsStillLive = ReferenceEquals(_credentials, accessCredentials);
+            }
+
             try
             {
-                await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
-                    accessCredentials.Did,
-                    accessCredentials.Service,
-                    accessCredentials), notificationTurn).ConfigureAwait(false);
+                if (sessionIsStillLive)
+                {
+                    await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
+                        accessCredentials.Did,
+                        accessCredentials.Service,
+                        accessCredentials), notificationTurn).ConfigureAwait(false);
+                }
             }
             catch (Exception exception) when (exception is not OutOfMemoryException && replacedSessionFailure is not null)
             {
@@ -3128,6 +3150,12 @@ public partial class AtProtoAgent
 
                 if (tokenRefreshFailedEventArgs is not null)
                 {
+                    // The turn is given up before the failure is raised. TokenRefreshFailed is synchronous, so a
+                    // handler which reauthenticates does so on this thread, and a login which had to wait for a turn
+                    // this call was still holding would block the only thread able to give it up. Everything this call
+                    // had to order has been raised by the time it gets here, so the turn has nothing left to keep.
+                    FinishNotificationTurn(notificationTurn);
+
                     OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
                 }
             }

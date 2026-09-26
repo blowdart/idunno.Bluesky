@@ -407,7 +407,8 @@ public class OAuthCredentialRefreshTests
         agent.CredentialsUpdatedAsync = async (_, cancellationToken) =>
         {
             // Logout raised from inside the notification it would otherwise be ordered behind. There is nothing left
-            // to wait for, so it has to be raised inline rather than waiting on a queue the caller is holding.
+            // to wait on, so the session event is deferred into this notification's scope and drained once the handler
+            // returns rather than waiting on a queue the caller is holding.
             await agent.Logout(cancellationToken);
         };
 
@@ -872,6 +873,50 @@ public class OAuthCredentialRefreshTests
         }
 
         Assert.True(condition(), "The expected condition was not reached before the timeout expired.");
+    }
+
+    [Fact]
+    public async Task ATokenRefreshFailedHandlerWhichLogsInDoesNotDeadlockTheNotificationQueue()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        // Spend the refresh token on an exchange which cannot complete, so the refresh below finds it already spent,
+        // ends the session, and raises both the session ending and the failure in the turn it took to end it.
+        server.IssuedDid = new Did(OtherDid);
+
+        await Assert.ThrowsAsync<SecurityTokenValidationException>(
+            () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        server.IssuedDid = new Did(AccountDid);
+
+        bool reauthenticated = false;
+
+        agent.TokenRefreshFailed += (_, _) =>
+        {
+            if (!reauthenticated)
+            {
+                reauthenticated = true;
+
+                // The supported reentrancy pattern: the handler runs on the thread which raised the event, so a login
+                // which cannot take the notification queue blocks the thread which is holding it.
+                agent.Login(CreateCredentials(), CancellationToken.None).GetAwaiter().GetResult();
+            }
+        };
+
+        // Run on a worker, because the deadlock this guards against blocks the thread which starts the refresh: the
+        // continuation after the notification queue runs inline on the thread the blocked handler is holding.
+        Task<bool> refresh = Task.Run(() => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        Assert.Same(
+            refresh,
+            await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
+
+        Assert.False(await refresh);
+        Assert.True(reauthenticated);
+        Assert.NotNull(agent.Credentials);
     }
 
     [Fact]
