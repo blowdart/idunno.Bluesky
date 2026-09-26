@@ -107,6 +107,13 @@ public partial class AtProtoAgent
     private bool _deferredCredentialNotificationCommitted;
 
     /// <summary>
+    /// The session ending raised from inside a credential update notification which is still running, to be raised
+    /// once that notification, and everything queued behind it, has finished.
+    /// </summary>
+    /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
+    private UnauthenticatedEventArgs? _deferredUnauthenticatedEventArgs;
+
+    /// <summary>
     /// Called when a credential update notification is about to wait its turn behind any notification already being
     /// raised, so that a test can synchronise on the notification queue rather than on elapsed time.
     /// </summary>
@@ -438,8 +445,12 @@ public partial class AtProtoAgent
     ///   came from has finished. A deferred notification for committed credentials is raised even if the handler it was
     ///   deferred from fails, as the refresh token it replaced has already been spent.
     /// </para>
+    /// <para>
+    ///   Internal rather than private so that a test can raise a notification directly, bypassing the freshness check
+    ///   the DPoP nonce callback applies.
+    /// </para>
     /// </remarks>
-    private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken)
+    internal async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken)
     {
         if (credentialsCommitted)
         {
@@ -455,10 +466,20 @@ public partial class AtProtoAgent
                 // Work a handler started but did not await keeps the scope it flowed from, so the notification it
                 // raises has to be checked against that scope still running. Deferring to a notification which has
                 // already finished would leave nothing to raise it.
-                if (scope.Active)
+                //
+                // The credentials also have to still be the agent's. The slot holds only the newest deferral, and a
+                // notification can reach it later than one for credentials which replaced it, so without this a stale
+                // set could overwrite a newer one and be dropped as stale when the drain raised it, losing both.
+                if (scope.Active && ReferenceEquals(_credentials, credentials))
                 {
                     _deferredCredentialNotification = credentials;
                     _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
+                    deferred = true;
+                }
+                else if (scope.Active)
+                {
+                    // Nothing to raise, but the deferral is still accounted for: whatever replaced these credentials
+                    // has a notification of its own, so returning here drops only the superseded set.
                     deferred = true;
                 }
             }
@@ -491,6 +512,11 @@ public partial class AtProtoAgent
 
                     credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false, notificationScope);
                 }
+
+                // Raised last, after everything a handler queued, so a handler which ended the session cannot persist
+                // it afterwards. A subscriber which discards its stored credentials therefore discards the last thing
+                // written for the ended session.
+                RaiseDeferredUnauthenticated(swallowExceptions: false);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
@@ -498,6 +524,9 @@ public partial class AtProtoAgent
                 // was holding. Whatever replaced it has to reach a handler, otherwise nothing is left which can
                 // persist it and durable storage keeps a token the server will not honour.
                 await DrainCommittedCredentialNotifications(credentialsToRaise, notificationScope).ConfigureAwait(false);
+
+                // The session has already ended, so a subscriber is told even though the notification failed.
+                RaiseDeferredUnauthenticated(swallowExceptions: true);
 
                 throw;
             }
@@ -511,6 +540,7 @@ public partial class AtProtoAgent
                 notificationScope.Active = false;
                 _deferredCredentialNotification = null;
                 _deferredCredentialNotificationCommitted = false;
+                _deferredUnauthenticatedEventArgs = null;
             }
 
             _credentialNotificationSemaphore.Release();
@@ -529,9 +559,10 @@ public partial class AtProtoAgent
 
         lock (_credentialLock)
         {
+            // The deferral slot is deliberately left alone. The drain loop empties it before each raise, and work
+            // which outlived a handler can fill it at any point, so clearing it here would discard a notification
+            // which nothing else is going to raise.
             agentStillHoldsCredentials = !_atProtoAgentDisposed && ReferenceEquals(_credentials, credentials);
-            _deferredCredentialNotification = null;
-            _deferredCredentialNotificationCommitted = false;
         }
 
         if (agentStillHoldsCredentials)
@@ -628,23 +659,31 @@ public partial class AtProtoAgent
     ///   makes it the last thing a handler sees, so a subscriber which discards its stored credentials discards the
     ///   stale write with them.
     /// </para>
+    /// <para>
+    ///   A session ended from inside a handler is deferred rather than raised inline, so that the handler which ended
+    ///   it, and anything it queued, still runs first.
+    /// </para>
     /// </remarks>
     private async Task RaiseUnauthenticatedAsync(UnauthenticatedEventArgs e)
     {
-        bool insideCredentialNotification;
+        bool deferred = false;
 
         lock (_credentialLock)
         {
-            insideCredentialNotification = _raisingCredentialNotification.Value is { Active: true };
+            // Raised from inside a credential update notification, which is holding the semaphore this would
+            // otherwise wait on. Waiting would deadlock the agent, and raising it inline would put it ahead of the
+            // handler which ended the session, letting that handler persist the ended session afterwards. It is
+            // parked instead, and raised once the notification it came from, and everything queued behind it, has
+            // finished.
+            if (_raisingCredentialNotification.Value is { Active: true })
+            {
+                _deferredUnauthenticatedEventArgs = e;
+                deferred = true;
+            }
         }
 
-        if (insideCredentialNotification)
+        if (deferred)
         {
-            // Raised from inside a credential update notification, which is holding the semaphore this would wait on.
-            // The handler which ends the session is the one which would have to finish first, so there is nothing to
-            // order behind and waiting would deadlock the agent.
-            OnUnauthenticated(e);
-
             return;
         }
 
@@ -657,6 +696,46 @@ public partial class AtProtoAgent
         finally
         {
             _credentialNotificationSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Raises the session ending deferred by a <see cref="Logout"/> called from inside a credential update
+    /// notification, if any.
+    /// </summary>
+    /// <param name="swallowExceptions">
+    /// Whether to swallow an exception thrown by a subscriber, so that a failure which is already propagating stays
+    /// the one which reaches the caller.
+    /// </param>
+    private void RaiseDeferredUnauthenticated(bool swallowExceptions)
+    {
+        UnauthenticatedEventArgs? e;
+
+        lock (_credentialLock)
+        {
+            e = _deferredUnauthenticatedEventArgs;
+            _deferredUnauthenticatedEventArgs = null;
+        }
+
+        if (e is null)
+        {
+            return;
+        }
+
+        if (!swallowExceptions)
+        {
+            OnUnauthenticated(e);
+
+            return;
+        }
+
+        try
+        {
+            OnUnauthenticated(e);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            Logger.CommittedCredentialsNotificationThrew(_logger, exception);
         }
     }
 

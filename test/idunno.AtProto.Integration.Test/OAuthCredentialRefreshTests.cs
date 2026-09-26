@@ -421,6 +421,77 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task AHandlerWhichAwaitsALogoutPersistsBeforeUnauthenticatedIsRaised()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        List<string> order = [];
+
+        agent.Unauthenticated += (_, _) => order.Add("unauthenticated");
+
+        agent.CredentialsUpdatedAsync = async (_, cancellationToken) =>
+        {
+            // A handler which ends the session and then persists what it was given. The session ending has to reach a
+            // subscriber after that write, otherwise nothing tells it to discard the ended session.
+            await agent.Logout(cancellationToken);
+
+            order.Add("persisted");
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["persisted", "unauthenticated"], order);
+        Assert.Null(agent.Credentials);
+    }
+
+    [Fact]
+    public async Task ANotificationForSupersededCredentialsDoesNotDisplaceADeferredOneForCurrentCredentials()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        List<AccessCredentials> persisted = [];
+        bool refreshed = false;
+
+        agent.CredentialsUpdatedAsync = async (e, cancellationToken) =>
+        {
+            if (!refreshed)
+            {
+                refreshed = true;
+
+                // The refresh publishes and defers its credentials, which the drain has to raise. The notification
+                // raised afterwards carries the credentials that refresh replaced, so it must not displace them.
+                Assert.True(await agent.RefreshCredentials(cancellationToken));
+
+                await agent.RaiseCredentialsUpdated(originalCredentials, credentialsCommitted: true, cancellationToken);
+            }
+
+            persisted.Add(e.AccessCredentials);
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        // The credentials the refresh issued have to be the last ones a handler was given, otherwise durable storage
+        // keeps a spent refresh token.
+        Assert.Equal(2, persisted.Count);
+        Assert.Same(originalCredentials, persisted[0]);
+        Assert.Same(agent.Credentials, persisted[1]);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
@@ -501,6 +572,14 @@ public class OAuthCredentialRefreshTests
 
         internal Task NotifyCredentialsUpdated(AtProtoCredential credentials, CancellationToken cancellationToken) =>
             InternalOnCredentialsUpdatedCallBack(credentials, cancellationToken);
+
+        /// <summary>
+        /// Raises a credential update notification directly, bypassing the freshness check the DPoP nonce callback
+        /// applies, so that a notification which reaches the queue later than the credentials which replaced it can
+        /// be reproduced.
+        /// </summary>
+        internal Task RaiseCredentialsUpdated(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken) =>
+            RaiseCredentialsUpdatedAsync(credentials, credentialsCommitted, cancellationToken);
 
         public override OAuthClient CreateOAuthClient() =>
             new(httpClientConfigurator: httpClient => httpClient,
