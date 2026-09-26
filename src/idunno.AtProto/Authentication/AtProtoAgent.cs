@@ -22,92 +22,72 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto;
 
-/// <content>
-/// Credential storage, refresh, and the notifications and events which report them.
-/// </content>
-/// <remarks>
-/// <para>
-///   <b>Why any of this is serialised.</b> A subscriber typically persists what it is given, so the order it is told
-///   things in decides what ends up in durable storage. The last write wins, and the agent has several things which can
-///   change credentials at once: a background refresh, a manual refresh, a DPoP nonce rotation forced by the server, a
-///   login, and a logout. Left unordered, a handler which started first can finish last and leave storage holding a
-///   refresh token the server has already spent, or a session which has ended, with nothing following it to repair the
-///   damage. On the next start the agent restores those credentials and cannot authenticate.
-/// </para>
-/// <para>
-///   <b>The four pieces of state.</b>
-/// </para>
-/// <list type="bullet">
-///   <item>
-///     <description>
-///       <see cref="_credentialLock"/> guards the agent credentials and everything which describes them, and is only
-///       ever held for straight line work. Never await, raise an event, or call a handler while holding it.
-///     </description>
-///   </item>
-///   <item>
-///     <description>
-///       <see cref="_credentialRefreshSemaphore"/> allows one credential exchange at a time, so two refreshes cannot
-///       both present the same refresh token, and a logout cannot revoke tokens a refresh is part way through
-///       replacing.
-///     </description>
-///   </item>
-///   <item>
-///     <description>
-///       <see cref="_credentialNotificationSemaphore"/> allows one notification or session event at a time, which is
-///       what gives a subscriber a single ordered view of the session.
-///     </description>
-///   </item>
-///   <item>
-///     <description>
-///       <see cref="_credentialGeneration"/> counts every change to the credentials, so work which started against one
-///       set can tell, when it finishes, that it is looking at history.
-///     </description>
-///   </item>
-/// </list>
-/// <para>
-///   <b>Lock ordering.</b> The refresh semaphore may be taken before the notification semaphore, and either may be
-///   taken before <see cref="_credentialLock"/>. Never the other way around. In practice this means a notification or
-///   session event is raised after the refresh semaphore has been released, which is also what stops a handler which
-///   calls back into the agent from deadlocking it.
-/// </para>
-/// <para>
-///   <b>How a change reaches a subscriber.</b> Credentials are published under <see cref="_credentialLock"/>, by
-///   <see cref="TryPublishRefreshedCredentials(AccessCredentials, long, out bool)"/> for a refresh or directly for a
-///   login or logout. Whatever made the change then calls
-///   <see cref="RaiseCredentialsUpdatedAsync(AccessCredentials, bool, CancellationToken)"/>, or
-///   <see cref="RaiseAuthenticatedAsync(AuthenticatedEventArgs)"/> or
-///   <see cref="RaiseUnauthenticatedAsync(UnauthenticatedEventArgs)"/> for a session starting or ending. Each waits its
-///   turn on the notification semaphore, and a notification is dropped rather than raised if the agent no longer holds
-///   the credentials it carries, because whatever replaced them is raising a notification of its own.
-/// </para>
-/// <para>
-///   <b>Reentrancy.</b> A handler may call straight back into the agent, and a login, logout or refresh it performs
-///   produces something else to raise while the notification which triggered it still holds the semaphore. Waiting
-///   would deadlock, and raising it inline would put it ahead of the handler which caused it, letting that handler
-///   finish afterwards and persist what it was already holding. So a reentrant raise is parked, in
-///   <see cref="_deferredCredentialNotification"/> or <see cref="_deferredSessionEvents"/>, and drained by the
-///   notification which is already running once its handler returns. Reentrancy is detected with
-///   <see cref="_raisingCredentialNotification"/>.
-/// </para>
-/// <para>
-///   <b>Committed credentials.</b> Once an exchange has happened the refresh token the agent was holding is spent,
-///   whatever happens next. A notification for credentials in that state is marked committed, cannot be cancelled, and
-///   is drained even if the handler which triggered it throws, because it is the only opportunity to persist tokens
-///   which actually work.
-/// </para>
-/// <para>
-///   <b>Adding code here.</b> Anything which changes the credentials should publish them under
-///   <see cref="_credentialLock"/> and then raise through the helpers above rather than calling
-///   <see cref="OnCredentialsUpdatedAsync(CredentialsUpdatedEventArgs, CancellationToken)"/>,
-///   <see cref="OnAuthenticated(AuthenticatedEventArgs)"/> or <see cref="OnUnauthenticated(UnauthenticatedEventArgs)"/>
-///   directly. Raising one of those directly bypasses the ordering and is how every bug this machinery exists to
-///   prevent gets reintroduced. A path which ends a session because something failed should use
-///   <see cref="ClearCredentialsAndRaiseUnauthenticatedAsync"/>, so the credentials are not discarded silently.
-/// </para>
-/// <para>
-///   A longer walkthrough of this model, with diagrams, is in <c>devnotes/credential-lifecycle-and-locking.md</c>.
-/// </para>
-/// </remarks>
+// Credential storage, refresh, and the notifications and events which report them.
+//
+// This describes private machinery, so it is a plain comment rather than a documentation comment; none of it belongs
+// in the published API documentation. A longer walkthrough, with diagrams, is in
+// devnotes/credential-lifecycle-and-locking.md.
+//
+// Why any of this is serialised.
+//
+// A subscriber typically persists what it is given, so the order it is told things in decides what ends up in durable
+// storage. The last write wins, and the agent has several things which can change credentials at once: a background
+// refresh, a manual refresh, a DPoP nonce rotation forced by the server, a login, and a logout. Left unordered, a
+// handler which started first can finish last and leave storage holding a refresh token the server has already spent,
+// or a session which has ended, with nothing following it to repair the damage. On the next start the agent restores
+// those credentials and cannot authenticate.
+//
+// The four pieces of state.
+//
+//   _credentialLock guards the agent credentials and everything which describes them, and is only ever held for
+//   straight line work. Never await, raise an event, or call a handler while holding it.
+//
+//   _credentialRefreshSemaphore allows one credential exchange at a time, so two refreshes cannot both present the
+//   same refresh token, and a logout cannot revoke tokens a refresh is part way through replacing.
+//
+//   _credentialNotificationSemaphore allows one notification or session event at a time, which is what gives a
+//   subscriber a single ordered view of the session.
+//
+//   _credentialGeneration counts every change to the credentials, so work which started against one set can tell,
+//   when it finishes, that it is looking at history.
+//
+// Lock ordering.
+//
+// The refresh semaphore may be taken before the notification semaphore, and either may be taken before
+// _credentialLock. Never the other way around. In practice this means a notification or session event is raised after
+// the refresh semaphore has been released, which is also what stops a handler which calls back into the agent from
+// deadlocking it.
+//
+// How a change reaches a subscriber.
+//
+// Credentials are published under _credentialLock, by TryPublishRefreshedCredentials for a refresh or directly for a
+// login or logout. Whatever made the change then calls RaiseCredentialsUpdatedAsync, or RaiseAuthenticatedAsync or
+// RaiseUnauthenticatedAsync for a session starting or ending. Each waits its turn on the notification semaphore, and a
+// notification is dropped rather than raised if the agent no longer holds the credentials it carries, because whatever
+// replaced them is raising a notification of its own.
+//
+// Reentrancy.
+//
+// A handler may call straight back into the agent, and a login, logout or refresh it performs produces something else
+// to raise while the notification which triggered it still holds the semaphore. Waiting would deadlock, and raising it
+// inline would put it ahead of the handler which caused it, letting that handler finish afterwards and persist what it
+// was already holding. So a reentrant raise is parked, in _deferredCredentialNotification or _deferredSessionEvents,
+// and drained by the notification which is already running once its handler returns. Reentrancy is detected with
+// _raisingCredentialNotification.
+//
+// Committed credentials.
+//
+// Once an exchange has happened the refresh token the agent was holding is spent, whatever happens next. A
+// notification for credentials in that state is marked committed, cannot be cancelled, and is drained even if the
+// handler which triggered it throws, because it is the only opportunity to persist tokens which actually work.
+//
+// Adding code here.
+//
+// Anything which changes the credentials should publish them under _credentialLock and then raise through the helpers
+// above rather than calling OnCredentialsUpdatedAsync, OnAuthenticated or OnUnauthenticated directly. Raising one of
+// those directly bypasses the ordering and is how every bug this machinery exists to prevent gets reintroduced. A path
+// which ends a session because something failed should use ClearCredentialsAndRaiseUnauthenticatedAsync, so the
+// credentials are not discarded silently.
 public partial class AtProtoAgent
 {
 #if NET9_0_OR_GREATER
