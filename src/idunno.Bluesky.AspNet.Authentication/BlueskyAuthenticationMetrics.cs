@@ -11,6 +11,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// Bluesky Authentication metrics.
 /// </summary>
 [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Metric names are typically lower case.")]
+[SuppressMessage("Security", "S6418:Hard-coded secrets are security-sensitive", Justification = "The constants are metric tag names and values. Those describing token refresh are flagged for containing \"token\", but hold no secret.")]
 public class BlueskyAuthenticationMetrics
 {
     // A wait typically ends on the first check, when the refresh which held the lock has already finished, so the
@@ -82,7 +83,6 @@ public class BlueskyAuthenticationMetrics
     /// The value of the <see cref="TokenRefreshWaitReasonTagName"/> tag when a refresh was already running when the
     /// request arrived.
     /// </summary>
-    [SuppressMessage("Security", "S6418:Hard-coded secrets are security-sensitive", Justification = "A metric tag value describing why a refresh waited, not a secret.")]
     public const string TokenRefreshWaitReasonRefreshInProgress = "refresh_in_progress";
 
     /// <summary>
