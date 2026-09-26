@@ -3209,6 +3209,7 @@ public partial class AtProtoAgent
         AccessCredentials? credentialsToNotify = null;
         bool sessionStartedByRefresh = false;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
+        UnauthenticatedEventArgs? unauthenticatedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
 
@@ -3252,6 +3253,13 @@ public partial class AtProtoAgent
                         if (!succeeded)
                         {
                             tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                            notificationTurn = TakeNotificationTurn();
+
+                            if (TryClearCredentialsForSpentRefreshToken(refreshCredential.RefreshToken, out unauthenticatedEventArgs))
+                            {
+                                StopTokenRefreshTimer();
+                            }
                         }
 
                         return succeeded;
@@ -3352,8 +3360,22 @@ public partial class AtProtoAgent
                 }
 
                 // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+                // The session ending is raised first: the credentials have already been cleared, so a failure subscriber
+                // which throws must not be able to suppress it, and one which reauthenticates must not be able to make it
+                // arrive after the new session's Authenticated.
+                if (unauthenticatedEventArgs is not null)
+                {
+                    await RaiseUnauthenticatedAsync(unauthenticatedEventArgs, notificationTurn).ConfigureAwait(false);
+                }
+
                 if (tokenRefreshFailedEventArgs is not null)
                 {
+                    // The turn is given up before the failure is raised. TokenRefreshFailed is synchronous, so a
+                    // handler which reauthenticates does so on this thread, and a login which had to wait for a turn
+                    // this call was still holding would block the only thread able to give it up. Everything this call
+                    // had to order has been raised by the time it gets here, so the turn has nothing left to keep.
+                    FinishNotificationTurn(notificationTurn);
+
                     OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
                 }
             }
