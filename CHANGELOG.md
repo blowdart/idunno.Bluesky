@@ -14,6 +14,7 @@
 * Notified credentials committed by a refresh a handler triggered even when that handler then fails, so a failure cannot leave a spent refresh token as the last credentials a handler was given.
 * Raised `Unauthenticated` before `TokenRefreshFailed` when a refresh ends a session, so a `TokenRefreshFailed` handler which throws can no longer suppress the notification that the session has ended, and one which reauthenticates can no longer make it arrive after the new session's `Authenticated`.
 * Notified credentials committed by a refresh a handler started but did not await. Work started inside a handler carries the notification it was started from, so a refresh which outlived that handler previously handed its credentials to a notification which had already finished and nothing raised them.
+* Ordered `Unauthenticated` behind any credential update notification which is still running, so a handler suspended when the session ends can no longer finish afterwards and leave credentials for the ended session in durable storage with nothing following to discard them. A session ended from inside a handler still raises the event immediately, as there is nothing left to order it behind.
 
 ## 7.0.0 - 2026-09-24
 

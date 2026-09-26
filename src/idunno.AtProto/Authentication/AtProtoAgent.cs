@@ -614,6 +614,53 @@ public partial class AtProtoAgent
     }
 
     /// <summary>
+    /// Raises <see cref="Unauthenticated"/> for a session which has ended, ordered behind any credential update
+    /// notification which is still running.
+    /// </summary>
+    /// <param name="e">The event arguments describing the session which has ended.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The credentials a notification carries are checked against the agent before the handler is given them, but a
+    ///   handler which suspends can still be running when the session ends. Raising <see cref="Unauthenticated"/>
+    ///   immediately would let that handler finish afterwards and write credentials for the ended session back to
+    ///   durable storage, with nothing following it to repair them. Ordering the event behind the notification queue
+    ///   makes it the last thing a handler sees, so a subscriber which discards its stored credentials discards the
+    ///   stale write with them.
+    /// </para>
+    /// </remarks>
+    private async Task RaiseUnauthenticatedAsync(UnauthenticatedEventArgs e)
+    {
+        bool insideCredentialNotification;
+
+        lock (_credentialLock)
+        {
+            insideCredentialNotification = _raisingCredentialNotification.Value is { Active: true };
+        }
+
+        if (insideCredentialNotification)
+        {
+            // Raised from inside a credential update notification, which is holding the semaphore this would wait on.
+            // The handler which ends the session is the one which would have to finish first, so there is nothing to
+            // order behind and waiting would deadlock the agent.
+            OnUnauthenticated(e);
+
+            return;
+        }
+
+        await _credentialNotificationSemaphore.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            OnUnauthenticated(e);
+        }
+        finally
+        {
+            _credentialNotificationSemaphore.Release();
+        }
+    }
+
+    /// <summary>
     /// Clears the agent credentials if it is still holding <paramref name="refreshToken"/>, which the server has spent
     /// without the agent receiving anything in return.
     /// </summary>
@@ -1704,7 +1751,7 @@ public partial class AtProtoAgent
                 Credentials = null;
                 succeeded = true;
 
-                OnUnauthenticated(unauthenticatedEventArgs);
+                await RaiseUnauthenticatedAsync(unauthenticatedEventArgs).ConfigureAwait(false);
             }
             finally
             {
@@ -1740,7 +1787,7 @@ public partial class AtProtoAgent
                     Credentials = null;
                     succeeded = true;
 
-                    OnUnauthenticated(unauthenticatedEventArgs);
+                    await RaiseUnauthenticatedAsync(unauthenticatedEventArgs).ConfigureAwait(false);
                 }
                 else
                 {
@@ -2125,7 +2172,7 @@ public partial class AtProtoAgent
             // arrive after the new session's Authenticated.
             if (unauthenticatedEventArgs is not null)
             {
-                OnUnauthenticated(unauthenticatedEventArgs);
+                await RaiseUnauthenticatedAsync(unauthenticatedEventArgs).ConfigureAwait(false);
             }
 
             if (tokenRefreshFailedEventArgs is not null)

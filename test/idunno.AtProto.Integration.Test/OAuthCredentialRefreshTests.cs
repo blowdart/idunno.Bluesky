@@ -327,6 +327,100 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task ALogoutDoesNotRaiseUnauthenticatedUntilASuspendedCredentialsHandlerHasFinished()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        TaskCompletionSource handlerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseHandler = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<string> order = [];
+
+        agent.CredentialsUpdatedAsync = async (_, _) =>
+        {
+            handlerEntered.TrySetResult();
+            await releaseHandler.Task;
+
+            lock (order)
+            {
+                order.Add("persisted");
+            }
+        };
+
+        agent.Unauthenticated += (_, _) =>
+        {
+            lock (order)
+            {
+                order.Add("unauthenticated");
+            }
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        Task notification = agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        await handlerEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        // The handler is held until the logout has actually cleared the credentials, which is the point an unordered
+        // Unauthenticated would be raised from, so the two are not merely racing.
+        Task releaseWhenSessionEnded = Task.Run(
+            async () =>
+            {
+                while (agent.Credentials is not null)
+                {
+                    await Task.Delay(1, TestContext.Current.CancellationToken);
+                }
+
+                releaseHandler.TrySetResult();
+            },
+            TestContext.Current.CancellationToken);
+
+        Task logout = agent.Logout(TestContext.Current.CancellationToken);
+
+        await notification;
+        await logout;
+        await releaseWhenSessionEnded;
+
+        // A subscriber which discards its stored credentials when the session ends can only discard the write the
+        // suspended handler made if the session ending reaches it afterwards.
+        Assert.Equal(["persisted", "unauthenticated"], order);
+        Assert.Null(agent.Credentials);
+    }
+
+    [Fact]
+    public async Task AHandlerWhichLogsOutDoesNotDeadlockTheAgent()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        bool unauthenticated = false;
+
+        agent.Unauthenticated += (_, _) => unauthenticated = true;
+
+        agent.CredentialsUpdatedAsync = async (_, cancellationToken) =>
+        {
+            // Logout raised from inside the notification it would otherwise be ordered behind. There is nothing left
+            // to wait for, so it has to be raised inline rather than waiting on a queue the caller is holding.
+            await agent.Logout(cancellationToken);
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        Assert.True(unauthenticated);
+        Assert.Null(agent.Credentials);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
@@ -463,10 +557,16 @@ public class OAuthCredentialRefreshTests
                           "authorization_endpoint": "https://{{DomainName}}/authorize",
                           "token_endpoint": "https://{{DomainName}}/token",
                           "jwks_uri": "https://{{DomainName}}/jwks",
+                          "revocation_endpoint": "https://{{DomainName}}/revoke",
                           "response_types_supported": [ "code" ],
                           "grant_types_supported": [ "authorization_code", "refresh_token" ]
                         }
                         """);
+                    return;
+
+                case "/revoke" when request.Method == HttpMethod.Post.Method:
+                    response.ContentType = "application/json";
+                    await response.WriteAsync("{}");
                     return;
 
                 case "/jwks":
