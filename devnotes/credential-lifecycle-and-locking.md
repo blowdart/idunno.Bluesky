@@ -339,6 +339,15 @@ exception the caller needs to see.
     number to it and checking `EarliestGenuinelyWaitingNotificationTurn` before taking from it, exactly as
     `TakeDeferredCredentialNotification` and `RaiseDeferredSessionEvents` already do — otherwise a reentrant caller can
     leapfrog a genuinely concurrent one that was already ahead of it in commit order.
+14. **Taking a turn and committing are not the same step — hold the semaphore across both, or not at all.**
+    `TakeNotificationTurn` only reserves a place in the queue; it does not serialize against another caller's commit.
+    A caller which takes a turn and then, separately, reads or writes `_credentials` under `_credentialLock` leaves a
+    gap in which a login or refresh holding `_credentialRefreshSemaphore` can commit with a later turn number. Because
+    the queue always serves the earlier turn first, that later commit would then be reported as ending before it is
+    reported as having started. `ClearCredentialsAndRaiseUnauthenticatedAsync` is the one caller of
+    `ClearCredentialsAndRecordSessionEnd` which does not already run under the semaphore — see rule 10 — so it takes
+    the semaphore itself for exactly the take-turn-and-clear step, and releases it before raising. Every other caller
+    of `ClearCredentialsAndRecordSessionEnd` is inside `Logout`, already holding the semaphore for the same reason.
 
 ## Notes for writing a credential store
 

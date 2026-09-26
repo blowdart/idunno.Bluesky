@@ -324,6 +324,13 @@ public partial class AtProtoAgent
     /// </summary>
     internal Func<Task>? CredentialRefreshQueueing { get; set; }
 
+    /// <summary>
+    /// Called by <see cref="ClearCredentialsAndRaiseUnauthenticatedAsync"/> once it has taken its notification turn
+    /// and still holds <see cref="_credentialRefreshSemaphore"/>, so that a test can start a concurrent login or
+    /// refresh and check that it cannot commit, and be read by the clear, until the semaphore is released.
+    /// </summary>
+    internal Func<Task>? FailedLoginClearingCredentialsQueueing { get; set; }
+
     private AccessCredentials? _credentials;
 
     /// <summary>
@@ -1498,6 +1505,16 @@ public partial class AtProtoAgent
     ///   discarding them silently leaves a subscriber holding them in durable storage with nothing to say they are
     ///   finished with, so the next start restores a session the server has already rejected.
     /// </para>
+    /// <para>
+    ///   The turn is taken and the credentials cleared whilst <see cref="_credentialRefreshSemaphore"/> is held, and
+    ///   the semaphore is released before raising. None of the callers of this method hold the semaphore themselves,
+    ///   unlike the other callers of <see cref="ClearCredentialsAndRecordSessionEnd"/>. Taking the turn and clearing
+    ///   without it would leave a gap, between reserving the turn and reading the credentials to clear, in which a
+    ///   login or refresh which takes a later turn under the semaphore could commit its own credentials and have them
+    ///   read and cleared here instead of whatever this call actually started against. Delivery would then raise this
+    ///   call's earlier <see cref="Unauthenticated"/> before that login's later, and by then stale, <see cref="Authenticated"/>,
+    ///   leaving a subscriber believing the session this call just cleared is still live.
+    /// </para>
     /// </remarks>
     private async Task ClearCredentialsAndRaiseUnauthenticatedAsync()
     {
@@ -1505,7 +1522,23 @@ public partial class AtProtoAgent
 
         try
         {
-            ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+            await _credentialRefreshSemaphore.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                pendingSessionEnd.NotificationTurn = TakeNotificationTurn();
+
+                if (FailedLoginClearingCredentialsQueueing is Func<Task> failedLoginClearingCredentialsQueueing)
+                {
+                    await failedLoginClearingCredentialsQueueing().ConfigureAwait(false);
+                }
+
+                ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+            }
+            finally
+            {
+                _credentialRefreshSemaphore.Release();
+            }
 
             await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
         }

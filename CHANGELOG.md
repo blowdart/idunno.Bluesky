@@ -39,6 +39,7 @@
 * Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
 * Stopped a login called from inside a deferred `Unauthenticated` handler deadlocking. The scope the handler was running under could close before the handler ran, so the login it started waited for a notification turn instead of deferring, and deadlocked against the notification still holding the queue it was waiting for.
 * Stopped a reentrant login or logout leapfrogging a change already committed and waiting for its own place in the notification queue. Draining what a handler deferred previously raised it as soon as the handler which caused it returned, rather than behind the change it was reentrant from, so a subscriber could be told about a session which had already been replaced after the one which replaced it.
+* Held the refresh semaphore whilst clearing credentials for a failed login. Taking the notification turn and clearing the credentials were previously two separate steps, so a login or refresh which committed in the gap between them could have its own credentials read and cleared instead, and reported as ending before the session it actually started was reported as beginning.
 
 ## 7.0.0 - 2026-09-24
 

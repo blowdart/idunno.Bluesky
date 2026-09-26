@@ -912,6 +912,72 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task AFailedLoginDoesNotDiscardASessionACommittedConcurrentLoginJustEstablished()
+    {
+        RefreshTestServer refreshTestServer = new(this) { FailNextCreateSession = true };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            Task<AtProtoHttpResult<bool>>? concurrentGoodLogin = null;
+
+            // Set before the concurrent login is even started. SessionEventQueueing fires for its Authenticated raise
+            // strictly after that login has committed its credentials, but before it needs to enter the notification
+            // turn queue, so waiting on it here cannot deadlock against the turn this failed login's clear already
+            // holds: it either fires quickly, because the concurrent login was free to commit, or it never fires,
+            // because the fix is holding the semaphore the concurrent login needs to commit, and the wait below times
+            // out instead.
+            TaskCompletionSource concurrentLoginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            agent.SessionEventQueueing = () =>
+            {
+                agent.SessionEventQueueing = null;
+                concurrentLoginCommitted.TrySetResult();
+
+                return Task.CompletedTask;
+            };
+
+            // Fired once the failed login's clear has taken its notification turn and still holds the refresh
+            // semaphore. Starting the concurrent login here, rather than after the failed login returns, is what puts
+            // it in the race the fix has to survive: it can only commit once the semaphore this clear is holding is
+            // released.
+            agent.FailedLoginClearingCredentialsQueueing = async () =>
+            {
+                agent.FailedLoginClearingCredentialsQueueing = null;
+
+                concurrentGoodLogin = agent.Login(
+                    did: ExpectedDid,
+                    password: "password",
+                    authFactorToken: null,
+                    service: new Uri($"https://{DomainName}"),
+                    cancellationToken: TestContext.Current.CancellationToken);
+
+                // Bounded rather than unconditional: without the fix this resolves almost immediately, and with the
+                // fix it never resolves at all, since the concurrent login cannot commit until the semaphore this
+                // clear holds is released.
+                await Task.WhenAny(concurrentLoginCommitted.Task, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false);
+            };
+
+            AtProtoHttpResult<bool> failedLogin = await agent.Login(
+                did: ExpectedDid,
+                password: "wrong password",
+                authFactorToken: null,
+                service: new Uri($"https://{DomainName}"),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.False(failedLogin.Succeeded);
+            Assert.NotNull(concurrentGoodLogin);
+
+            AtProtoHttpResult<bool> goodLogin = await concurrentGoodLogin.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            Assert.True(goodLogin.Succeeded);
+
+            // Without holding the refresh semaphore across taking the turn and clearing, the failed login could read
+            // and discard the session the concurrent login had, by then, already committed, leaving the agent
+            // unauthenticated even though the concurrent login reported success.
+            Assert.True(agent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
     public async Task ACancelledNotificationTheQueueHasAlreadySteppedOverIsNotLeftInTheWaiterList()
     {
         RefreshTestServer refreshTestServer = new(this);
@@ -987,6 +1053,12 @@ public class CredentialRefreshTests
 
         internal bool FailRefresh { get; set; }
 
+        /// <summary>
+        /// When <see langword="true"/>, the next <c>createSession</c> call fails with a 400 and the flag resets itself,
+        /// so a test can fail exactly one login attempt without affecting any which follow it.
+        /// </summary>
+        internal bool FailNextCreateSession { get; set; }
+
         internal bool IssueUnvalidatableAccessJwtOnRefresh { get; set; }
 
         /// <summary>
@@ -1031,6 +1103,13 @@ public class CredentialRefreshTests
             }
             else if (request.Path == "/xrpc/com.atproto.server.createSession" && request.Method == HttpMethod.Post.Method)
             {
+                if (FailNextCreateSession)
+                {
+                    FailNextCreateSession = false;
+                    response.StatusCode = 400;
+                    return;
+                }
+
                 response.StatusCode = 200;
 
                 await response.WriteAsJsonAsync(
