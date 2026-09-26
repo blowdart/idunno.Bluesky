@@ -120,6 +120,9 @@ internal static partial class Logger
     [LoggerMessage(1122, LogLevel.Warning, "Credentials refreshed for {did} on {service} were discarded because the agent credentials were replaced whilst the refresh was in flight")]
     internal static partial void RefreshedCredentialsDiscardedAsAgentCredentialsChanged(ILogger logger, Did did, Uri service);
 
+    [LoggerMessage(1124, LogLevel.Warning, "Credentials refreshed for {did} were discarded because the agent is authenticated as {currentDid}")]
+    internal static partial void RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(ILogger logger, Did did, Did currentDid);
+
     [LoggerMessage(49, LogLevel.Error, "Background token refresh failed, the refresh timer has been restarted to retry in {retryIn}ms")]
     internal static partial void BackgroundTokenRefreshFailed(ILogger logger, double retryIn, Exception? ex);
 

@@ -17,6 +17,11 @@
 * Ordered `Unauthenticated` behind any credential update notification which is still running, so a handler suspended when the session ends can no longer finish afterwards and leave credentials for the ended session in durable storage with nothing following to discard them.
 * Dropped a deferred credential update notification whose credentials the agent has already replaced, so a notification which reaches the queue after the credentials which superseded it can no longer displace, and discard, the notification for the current ones.
 * Deferred `Unauthenticated` raised from inside a credential update handler until that handler has finished, so a handler which ends the session can no longer persist the ended session's credentials after the event has been raised.
+* Ordered `Authenticated` behind any credential update notification which is still running, so a handler suspended when a new session starts can no longer finish afterwards and write the previous session's credentials over the new ones.
+* Raised `Unauthenticated` for a session replaced by a login, so a subscriber is told the previous session is finished with rather than being left holding credentials for it.
+* Raised `Unauthenticated` when a failed login or a failed logout discards the agent credentials. The credentials were cleared silently, leaving a subscriber holding a session the server had rejected in durable storage and restoring it on the next start.
+* Raised `Authenticated` when refreshing a stored credential starts a session on an agent which did not have one, so restoring a session reports itself in the same way logging in does.
+* Discarded credentials a refresh produced for a different actor to the one the agent is authenticated as, rather than publishing them. Refreshing a stored credential for another account re-pointed the agent, and everything built on it, at that account with no indication the session had changed.
 
 ## 7.0.0 - 2026-09-24
 

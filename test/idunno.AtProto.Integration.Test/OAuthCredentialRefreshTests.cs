@@ -531,9 +531,142 @@ public class OAuthCredentialRefreshTests
         Assert.Null(agent.Credentials);
     }
 
-    private static DPoPAccessCredentials CreateCredentials() =>
+    [Fact]
+    public async Task ALoginWhichReplacesASessionRaisesUnauthenticatedForItBeforeAuthenticatedForTheNewOne()
+    {
+        OAuthTestServer server = new();
+        using AtProtoAgent agent = CreateAgent(server);
+
+        await Login(agent);
+
+        List<string> events = [];
+
+        agent.Unauthenticated += (_, _) => events.Add("unauthenticated");
+        agent.Authenticated += (_, _) => events.Add("authenticated");
+
+        await Login(agent);
+
+        Assert.Equal(["unauthenticated", "authenticated"], events);
+    }
+
+    [Fact]
+    public async Task ALoginDoesNotRaiseAuthenticatedUntilASuspendedCredentialsHandlerHasFinished()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        TaskCompletionSource notificationEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseNotification = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<string> events = [];
+
+        agent.CredentialsUpdatedAsync = async (_, _) =>
+        {
+            notificationEntered.TrySetResult();
+
+            // Held until the login has published its credentials, which is the instant an unordered Authenticated
+            // would be raised, so that the event has every opportunity to overtake this handler.
+            await releaseNotification.Task;
+
+            lock (events)
+            {
+                events.Add("persisted");
+            }
+        };
+
+        agent.Authenticated += (_, _) =>
+        {
+            lock (events)
+            {
+                events.Add("authenticated");
+            }
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        Task notification = agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        await notificationEntered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        // Cleared directly, so that the login has no session to end and the ordering of Authenticated is the only
+        // thing keeping it behind the handler which is still running.
+        agent.Credentials = null;
+
+        Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
+
+        while (agent.Credentials is null)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        releaseNotification.TrySetResult();
+
+        Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        await notification.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        lock (events)
+        {
+            Assert.Equal(["persisted", "authenticated"], events);
+        }
+    }
+
+    [Fact]
+    public async Task AFailedLogoutStillRaisesUnauthenticated()
+    {
+        OAuthTestServer server = new() { RevocationSucceeds = false };
+        using AtProtoAgent agent = CreateAgent(server);
+
+        await Login(agent);
+
+        bool unauthenticatedEventRaised = false;
+        agent.Unauthenticated += (_, _) => unauthenticatedEventRaised = true;
+
+        await Assert.ThrowsAsync<LogoutException>(() => agent.Logout(TestContext.Current.CancellationToken));
+
+        // The credentials are discarded whether or not the revocation succeeded, so a subscriber holding them in
+        // durable storage has to be told, otherwise the next start restores a session the server has rejected.
+        Assert.Null(agent.Credentials);
+        Assert.True(unauthenticatedEventRaised);
+    }
+
+    [Fact]
+    public async Task ARefreshOfACredentialForADifferentAccountDoesNotRePointTheAgent()
+    {
+        OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
+        using AtProtoAgent agent = CreateAgent(server);
+
+        await Login(agent);
+
+        AccessCredentials credentialsBeforeRefresh = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        Assert.False(await agent.RefreshCredentials(CreateCredentials(new Did(OtherDid)), TestContext.Current.CancellationToken));
+
+        Assert.Same(credentialsBeforeRefresh, agent.Credentials);
+        Assert.Equal(new Did(AccountDid), agent.Credentials!.Did);
+    }
+
+    [Fact]
+    public async Task ARefreshWhichRestoresASessionRaisesAuthenticated()
+    {
+        OAuthTestServer server = new();
+        using AtProtoAgent agent = CreateAgent(server);
+
+        Did? authenticatedAs = null;
+        agent.Authenticated += (_, e) => authenticatedAs = e.Did;
+
+        Assert.True(await agent.RefreshCredentials(CreateCredentials(), TestContext.Current.CancellationToken));
+
+        Assert.True(agent.IsAuthenticated);
+        Assert.Equal(new Did(AccountDid), authenticatedAs);
+    }
+
+    private static DPoPAccessCredentials CreateCredentials() => CreateCredentials(new Did(AccountDid));
+
+    private static DPoPAccessCredentials CreateCredentials(Did did) =>
         new(service: new Uri($"https://{DomainName}"),
-            accessJwt: CreateAccessJwt(new Did(AccountDid)),
+            accessJwt: CreateAccessJwt(did),
             refreshToken: "initialRefreshToken",
             dPoPProofKey: JwtBuilder.CreateProofKey(),
             dPoPNonce: "nonce");
@@ -614,6 +747,12 @@ public class OAuthCredentialRefreshTests
         /// </summary>
         internal Did IssuedDid { get; set; } = new Did(AccountDid);
 
+        /// <summary>
+        /// Gets or sets whether the revocation endpoint accepts a token, so that a logout which fails at the server
+        /// can be exercised.
+        /// </summary>
+        internal bool RevocationSucceeds { get; set; } = true;
+
         internal string? LastIssuedRefreshToken { get; private set; }
 
         private async Task Handle(HttpContext context)
@@ -644,6 +783,12 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/revoke" when request.Method == HttpMethod.Post.Method:
+                    if (!RevocationSucceeds)
+                    {
+                        response.StatusCode = StatusCodes.Status400BadRequest;
+                        return;
+                    }
+
                     response.ContentType = "application/json";
                     await response.WriteAsync("{}");
                     return;
