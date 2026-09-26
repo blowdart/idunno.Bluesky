@@ -216,11 +216,28 @@ public partial class AtProtoAgent
     /// </summary>
     private sealed class CredentialNotificationScope
     {
+        public CredentialNotificationScope(long turnNumber)
+        {
+            TurnNumber = turnNumber;
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether the notification this scope was created for is still running.
         /// </summary>
         /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
         public bool Active { get; set; } = true;
+
+        /// <summary>
+        /// Gets the number of the notification turn this scope was opened for.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Used to tag anything a reentrant caller running under this scope defers, so it is only later raised by
+        ///   the turn which deferred it, or one before it, rather than leapfrogging a turn already reserved and
+        ///   waiting in between. See <see cref="EarliestGenuinelyWaitingNotificationTurn"/>.
+        /// </para>
+        /// </remarks>
+        public long TurnNumber { get; }
     }
 
     /// <summary>
@@ -244,17 +261,43 @@ public partial class AtProtoAgent
     private bool _deferredCredentialNotificationCommitted;
 
     /// <summary>
+    /// The number of the notification turn which deferred <see cref="_deferredCredentialNotification"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Guarded by <see cref="_credentialLock"/>. Meaningless whilst <see cref="_deferredCredentialNotification"/> is
+    ///   <see langword="null"/>. Compared against <see cref="EarliestGenuinelyWaitingNotificationTurn"/> so that a
+    ///   deferral made by a turn at, or after, one already reserved and waiting is left for that earlier turn's own
+    ///   drain to find, rather than being raised out of turn order.
+    /// </para>
+    /// </remarks>
+    private long _deferredCredentialNotificationTurnNumber;
+
+    /// <summary>
+    /// A session start or end event deferred from inside a credential update notification which is still running,
+    /// tagged with the notification turn which deferred it.
+    /// </summary>
+    /// <param name="TurnNumber">
+    /// The number of the notification turn which deferred <paramref name="Raise"/>; see
+    /// <see cref="EarliestGenuinelyWaitingNotificationTurn"/>.
+    /// </param>
+    /// <param name="Raise">The action which raises the event.</param>
+    private readonly record struct DeferredSessionEvent(long TurnNumber, Action Raise);
+
+    /// <summary>
     /// Session start and end events raised from inside a credential update notification which is still running, to be
     /// raised once that notification, and everything queued behind it, has finished.
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   Guarded by <see cref="_credentialLock"/>. Held as a queue rather than a single event because a handler can end
-    ///   one session and start another, and a subscriber which is told they happened in the other order would discard
-    ///   the credentials for the session which is actually current.
+    ///   Guarded by <see cref="_credentialLock"/>. Held as a list, in the order deferred, rather than a single event
+    ///   because a handler can end one session and start another, and a subscriber which is told they happened in the
+    ///   other order would discard the credentials for the session which is actually current. Each entry is tagged
+    ///   with the notification turn which deferred it, so one deferred by a turn already reserved and waiting is left
+    ///   in place for that turn's own drain, instead of being raised ahead of it.
     /// </para>
     /// </remarks>
-    private readonly Queue<Action> _deferredSessionEvents = new();
+    private readonly List<DeferredSessionEvent> _deferredSessionEvents = [];
 
     /// <summary>
     /// Called when a credential update notification is about to wait its turn behind any notification already being
@@ -822,6 +865,41 @@ public partial class AtProtoAgent
     }
 
     /// <summary>
+    /// Finds the smallest notification turn number which is genuinely still waiting for its own place in the queue.
+    /// </summary>
+    /// <returns>
+    /// The smallest such turn number, or <see cref="long.MaxValue"/> if nothing is currently waiting.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   Must be called whilst <see cref="_credentialLock"/> is held. Only a non-<see langword="null"/> entry in
+    ///   <see cref="_notificationTurnWaiters"/> counts: a <see langword="null"/> entry marks a turn taken by a
+    ///   reentrant caller which will never run, stepped over rather than waited for, so it is not something a
+    ///   deferred notification needs to hold back for.
+    /// </para>
+    /// <para>
+    ///   Turn numbers are handed out in strictly increasing order under the same lock, so the value returned here
+    ///   can only stay the same or grow as more turns are taken. A notification once found safe to raise against a
+    ///   given result therefore stays safe, which is what lets a drain reuse a value from earlier in the same pass
+    ///   rather than having to recompute it after every raise.
+    /// </para>
+    /// </remarks>
+    private long EarliestGenuinelyWaitingNotificationTurn()
+    {
+        long earliest = long.MaxValue;
+
+        foreach (KeyValuePair<long, TaskCompletionSource?> waiter in _notificationTurnWaiters)
+        {
+            if (waiter.Value is not null && waiter.Key < earliest)
+            {
+                earliest = waiter.Key;
+            }
+        }
+
+        return earliest;
+    }
+
+    /// <summary>
     /// Raises <see cref="AtProtoAgent.CredentialsUpdated"/> and awaits <see cref="AtProtoAgent.CredentialsUpdatedAsync"/> for
     /// <paramref name="credentials"/>, provided the agent still holds them.
     /// </summary>
@@ -886,6 +964,11 @@ public partial class AtProtoAgent
                 {
                     _deferredCredentialNotification = credentials;
                     _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
+
+                    // Tagged with the caller's own turn if it took one at commit, otherwise with the turn of the
+                    // notification it is deferring into: a caller without a turn of its own, a DPoP nonce rotation for
+                    // example, has no place of its own in the queue to be leapfrogged out of.
+                    _deferredCredentialNotificationTurnNumber = notificationTurn?.Number ?? scope.TurnNumber;
                     deferred = true;
                 }
                 else if (scope.Active)
@@ -932,7 +1015,7 @@ public partial class AtProtoAgent
             // From here this call owns the queue, and is responsible for raising anything a handler defers into it
             // before it gives the turn up. Nothing else can drain those deferrals: a later caller is still waiting for
             // its turn, and the handler which parked them has, by definition, already returned.
-            CredentialNotificationScope notificationScope = new();
+            CredentialNotificationScope notificationScope = new(notificationTurn.Number);
 
             _raisingCredentialNotification.Value = notificationScope;
 
@@ -951,23 +1034,27 @@ public partial class AtProtoAgent
 
                         await RaiseCredentialsUpdatedIfCurrent(raising, cancellationToken).ConfigureAwait(false);
 
-                        credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false, notificationScope);
+                        // The scope is not closed here even on the last, empty, iteration: a session event raised below
+                        // still has to run whilst it is active, so a login or refresh it triggers defers instead of
+                        // waiting for a turn this call is still holding. See DrainDeferredNotificationsAsync.
+                        credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false);
                     }
 
                     // Raised last, after everything a handler queued, so a handler which ended or replaced the session
                     // cannot persist it afterwards. A subscriber which discards its stored credentials therefore discards
-                    // the last thing written for the session which is over.
-                    RaiseDeferredSessionEvents(swallowExceptions: false);
+                    // the last thing written for the session which is over. Looped with any committed notification a
+                    // session-event subscriber's own login or refresh defers, until both are simultaneously empty, so a
+                    // subscriber reached only by that second pass is not left deferring to a scope which has already closed.
+                    await DrainDeferredNotificationsAsync(notificationScope, justRaised: null, swallowSessionEventExceptions: false).ConfigureAwait(false);
                 }
                 catch (Exception exception) when (exception is not OutOfMemoryException)
                 {
                     // A handler which failed may have already triggered a refresh, spending the refresh token the agent
                     // was holding. Whatever replaced it has to reach a handler, otherwise nothing is left which can
-                    // persist it and durable storage keeps a token the server will not honour.
-                    await DrainCommittedCredentialNotifications(credentialsToRaise, notificationScope).ConfigureAwait(false);
-
-                    // The session has already started or ended, so a subscriber is told even though the notification failed.
-                    RaiseDeferredSessionEvents(swallowExceptions: true);
+                    // persist it and durable storage keeps a token the server will not honour. The session has already
+                    // started or ended too, so a subscriber is told even though the notification failed, looped the same
+                    // way as the success path above until nothing further is deferred by either drain.
+                    await DrainDeferredNotificationsAsync(notificationScope, credentialsToRaise, swallowSessionEventExceptions: true).ConfigureAwait(false);
 
                     throw;
                 }
@@ -978,15 +1065,11 @@ public partial class AtProtoAgent
 
                 lock (_credentialLock)
                 {
-                    // Closing the scope makes any later reentrant raise take a turn instead of deferring here, and the
-                    // slots are emptied because nothing after this point can drain them. In the normal case they are
-                    // already empty; anything still present was parked by work which outlived its handler and arrived
-                    // after the loop had stopped looking, and is dropped in preference to being raised out of order or
-                    // never raised at all.
+                    // Closing the scope makes any later reentrant raise take a turn instead of deferring here. What is
+                    // still deferred is dropped only if nothing else is left to raise it: see
+                    // DropOrphanedDeferredNotifications.
                     notificationScope.Active = false;
-                    _deferredCredentialNotification = null;
-                    _deferredCredentialNotificationCommitted = false;
-                    _deferredSessionEvents.Clear();
+                    DropOrphanedDeferredNotifications();
                 }
             }
         }
@@ -1023,23 +1106,33 @@ public partial class AtProtoAgent
     }
 
     /// <summary>
-    /// Takes the credentials deferred by a notification raised from inside the one for <paramref name="justRaised"/>, if any.
+    /// Takes the credentials deferred by a notification raised from inside the one for <paramref name="justRaised"/>, if
+    /// any which is safe to raise now.
     /// </summary>
     /// <param name="justRaised">The credentials whose notification has just finished.</param>
     /// <param name="committedOnly">Whether to take the deferred credentials only if the agent has already published them.</param>
-    /// <param name="scopeToCloseWhenEmpty">
-    /// The scope to mark inactive if nothing is deferred, so that work which flowed out of the notification and raises
-    /// one after this point takes the queue rather than deferring to a notification which is about to finish.
-    /// </param>
-    /// <returns>The credentials to raise a notification for, or <see langword="null"/> if there are none.</returns>
-    private AccessCredentials? TakeDeferredCredentialNotification(
-        AccessCredentials? justRaised,
-        bool committedOnly,
-        CredentialNotificationScope? scopeToCloseWhenEmpty = null)
+    /// <returns>
+    /// The credentials to raise a notification for, or <see langword="null"/> if there are none safe to take yet.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   Not taken, and left untouched, if it was deferred by a turn at, or after, the earliest one which is genuinely
+    ///   still waiting for its own place in the queue: see <see cref="EarliestGenuinelyWaitingNotificationTurn"/>.
+    ///   Raising it here would let a reentrant login or refresh leapfrog a turn already reserved and waiting ahead of
+    ///   it. Left in place, it stays for that earlier turn's own drain to find once it starts running.
+    /// </para>
+    /// </remarks>
+    private AccessCredentials? TakeDeferredCredentialNotification(AccessCredentials? justRaised, bool committedOnly)
     {
         lock (_credentialLock)
         {
-            AccessCredentials? deferred = _deferredCredentialNotification;
+            if (_deferredCredentialNotification is null ||
+                _deferredCredentialNotificationTurnNumber >= EarliestGenuinelyWaitingNotificationTurn())
+            {
+                return null;
+            }
+
+            AccessCredentials deferred = _deferredCredentialNotification;
 
             _deferredCredentialNotification = null;
 
@@ -1049,15 +1142,8 @@ public partial class AtProtoAgent
 
             // A handler is given the credentials themselves, so a reentrant update to the instance it has just been
             // handed, a DPoP nonce rotation for example, needs no notification of its own.
-            if (deferred is null || ReferenceEquals(deferred, justRaised) || (committedOnly && !committed))
+            if (ReferenceEquals(deferred, justRaised) || (committedOnly && !committed))
             {
-                // Closed under the same lock the deferral is taken under, so anything raising a notification either
-                // deferred before this point, and is taken above, or finds the scope closed and queues instead.
-                if (scopeToCloseWhenEmpty is not null)
-                {
-                    scopeToCloseWhenEmpty.Active = false;
-                }
-
                 return null;
             }
 
@@ -1070,11 +1156,10 @@ public partial class AtProtoAgent
     /// then failed, swallowing any exception a handler throws so the original failure is the one which propagates.
     /// </summary>
     /// <param name="justRaised">The credentials whose notification failed, if any.</param>
-    /// <param name="scope">The scope of the notification which failed, closed once there is nothing left to drain.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised, CredentialNotificationScope scope)
+    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised)
     {
-        AccessCredentials? credentialsToRaise = TakeDeferredCredentialNotification(justRaised, committedOnly: true, scope);
+        AccessCredentials? credentialsToRaise = TakeDeferredCredentialNotification(justRaised, committedOnly: true);
 
         while (credentialsToRaise is not null)
         {
@@ -1089,7 +1174,124 @@ public partial class AtProtoAgent
                 Logger.CommittedCredentialsNotificationThrew(_logger, exception);
             }
 
-            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true, scope);
+            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true);
+        }
+    }
+
+    /// <summary>
+    /// Drains committed credential notifications and deferred session events, safe to raise now, until neither remain,
+    /// then closes <paramref name="scope"/>.
+    /// </summary>
+    /// <param name="scope">The scope to drain and then close.</param>
+    /// <param name="justRaised">The credentials whose notification has just finished or failed, if any.</param>
+    /// <param name="swallowSessionEventExceptions">
+    /// Whether to swallow an exception thrown by a session event subscriber, so that a failure which is already
+    /// propagating stays the one which reaches the caller.
+    /// </param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Draining the two in a single pass each and then closing the scope is not enough: a session event subscriber is
+    ///   free to log in or refresh, deferring a committed credential notification, and a credential notification
+    ///   subscriber is equally free to log in or out, deferring a session event. Either can therefore leave the other
+    ///   with something safe still to raise, and closing the scope at that point would make a notification deferred
+    ///   into it by the pass which has already run wait for a turn of its own instead, deadlocking against the turn
+    ///   this call still holds.
+    /// </para>
+    /// <para>
+    ///   The two are therefore drained in a loop, and the scope is only closed once a single check, made under
+    ///   <see cref="_credentialLock"/>, finds neither has anything safe left at the same instant. That check is the
+    ///   same atomic handover the credential-only drain relies on: a notification which reaches the check first is
+    ///   deferred into it and picked up by another pass round the loop, and one which reaches it afterwards finds the
+    ///   scope already closed and takes a turn of its own.
+    /// </para>
+    /// <para>
+    ///   Something deferred by a turn already reserved and waiting is left behind by both drains rather than raised:
+    ///   see <see cref="EarliestGenuinelyWaitingNotificationTurn"/>. Its presence therefore does not keep this loop
+    ///   running, and the scope is closed leaving it in place, for that turn's own drain to find once it starts
+    ///   running.
+    /// </para>
+    /// </remarks>
+    private async Task DrainDeferredNotificationsAsync(CredentialNotificationScope scope, AccessCredentials? justRaised, bool swallowSessionEventExceptions)
+    {
+        while (true)
+        {
+            await DrainCommittedCredentialNotifications(justRaised).ConfigureAwait(false);
+
+            // Only relevant to the first pass: anything raised by a subsequent pass was deferred by a handler this
+            // call has already raised a notification for, so there is nothing left to deduplicate against.
+            justRaised = null;
+
+            RaiseDeferredSessionEvents(swallowSessionEventExceptions);
+
+            lock (_credentialLock)
+            {
+                if (!HasNotificationSafeToRaise())
+                {
+                    scope.Active = false;
+
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether a deferred credential notification or session event is currently safe to raise.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> if <see cref="_deferredCredentialNotification"/> or an entry in
+    /// <see cref="_deferredSessionEvents"/> was deferred by a turn earlier than the earliest genuinely waiting one,
+    /// otherwise <see langword="false"/>.
+    /// </returns>
+    /// <remarks><para>Must be called whilst <see cref="_credentialLock"/> is held.</para></remarks>
+    private bool HasNotificationSafeToRaise()
+    {
+        long earliestWaiting = EarliestGenuinelyWaitingNotificationTurn();
+
+        if (_deferredCredentialNotification is not null && _deferredCredentialNotificationTurnNumber < earliestWaiting)
+        {
+            return true;
+        }
+
+        foreach (DeferredSessionEvent deferredSessionEvent in _deferredSessionEvents)
+        {
+            if (deferredSessionEvent.TurnNumber < earliestWaiting)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Drops anything left deferred in <see cref="_deferredCredentialNotification"/> or
+    /// <see cref="_deferredSessionEvents"/>, provided nothing else is left to raise it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Must be called whilst <see cref="_credentialLock"/> is held, as the notification turn which held the queue is
+    ///   about to give it up.
+    /// </para>
+    /// <para>
+    ///   If some other turn is still reserved and genuinely waiting, whatever is left here was deferred by a turn at,
+    ///   or before, that one, so it belongs to it: see <see cref="EarliestGenuinelyWaitingNotificationTurn"/>. That
+    ///   turn's own drain finds and raises it once it starts running. Clearing it here would lose it outright.
+    /// </para>
+    /// <para>
+    ///   Otherwise nothing else is coming to look. In the normal case both slots are already empty; anything still
+    ///   present was parked by work which outlived its handler and arrived after the loop had stopped looking, and is
+    ///   dropped in preference to being raised out of order or never raised at all.
+    /// </para>
+    /// </remarks>
+    private void DropOrphanedDeferredNotifications()
+    {
+        if (EarliestGenuinelyWaitingNotificationTurn() == long.MaxValue)
+        {
+            _deferredCredentialNotification = null;
+            _deferredCredentialNotificationCommitted = false;
+            _deferredSessionEvents.Clear();
         }
     }
 
@@ -1152,9 +1354,11 @@ public partial class AtProtoAgent
 
         lock (_credentialLock)
         {
-            if (_raisingCredentialNotification.Value is { Active: true })
+            if (_raisingCredentialNotification.Value is { Active: true } activeScope)
             {
-                _deferredSessionEvents.Enqueue(raise);
+                // Tagged with the caller's own turn if it took one at commit, otherwise with the turn of the
+                // notification it is deferring into: see the equivalent deferral in RaiseCredentialsUpdatedAsync.
+                _deferredSessionEvents.Add(new DeferredSessionEvent(notificationTurn?.Number ?? activeScope.TurnNumber, raise));
                 deferred = true;
             }
         }
@@ -1183,7 +1387,7 @@ public partial class AtProtoAgent
                 await EnterNotificationTurnAsync(notificationTurn, CancellationToken.None).ConfigureAwait(false);
             }
 
-            CredentialNotificationScope notificationScope = new();
+            CredentialNotificationScope notificationScope = new(notificationTurn.Number);
 
             _raisingCredentialNotification.Value = notificationScope;
 
@@ -1192,20 +1396,16 @@ public partial class AtProtoAgent
                 raise();
 
                 // A subscriber is free to refresh the agent, and the notification for the credentials that published
-                // was deferred into this scope. Nothing else can raise it: this call owns the turn, and the slots are
-                // emptied when the scope closes, so a subscriber would never be told about a token pair which is
-                // already live and would go on storing one the server will not honour.
-                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
-
-                RaiseDeferredSessionEvents(swallowExceptions: false);
+                // was deferred into this scope, or to log in or out again itself, deferring a session event of its
+                // own. Nothing else can raise either: this call owns the turn, and anything left deferred is drained,
+                // or left for a turn already reserved and waiting, when the scope closes.
+                await DrainDeferredNotificationsAsync(notificationScope, justRaised: null, swallowSessionEventExceptions: false).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
                 // The session has already started or ended, so anything the failing subscriber queued is still raised
                 // rather than being dropped along with it.
-                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
-
-                RaiseDeferredSessionEvents(swallowExceptions: true);
+                await DrainDeferredNotificationsAsync(notificationScope, justRaised: null, swallowSessionEventExceptions: true).ConfigureAwait(false);
 
                 throw;
             }
@@ -1216,9 +1416,7 @@ public partial class AtProtoAgent
                 lock (_credentialLock)
                 {
                     notificationScope.Active = false;
-                    _deferredCredentialNotification = null;
-                    _deferredCredentialNotificationCommitted = false;
-                    _deferredSessionEvents.Clear();
+                    DropOrphanedDeferredNotifications();
                 }
             }
         }
@@ -1230,21 +1428,40 @@ public partial class AtProtoAgent
 
     /// <summary>
     /// Raises the session events deferred by a login or logout called from inside a credential update notification,
-    /// in the order they happened.
+    /// in the order they happened, skipping any deferred by a turn already reserved and waiting.
     /// </summary>
     /// <param name="swallowExceptions">
     /// Whether to swallow an exception thrown by a subscriber, so that a failure which is already propagating stays
     /// the one which reaches the caller.
     /// </param>
+    /// <remarks>
+    /// <para>
+    ///   An event deferred by a turn at, or after, the earliest one genuinely still waiting for its own place in the
+    ///   queue is left in <see cref="_deferredSessionEvents"/> rather than raised: see
+    ///   <see cref="EarliestGenuinelyWaitingNotificationTurn"/>. It stays there for that earlier turn's own drain to
+    ///   find, in the order it was deferred in, once that turn starts running.
+    /// </para>
+    /// </remarks>
     private void RaiseDeferredSessionEvents(bool swallowExceptions)
     {
         while (true)
         {
-            Action? raise;
+            Action? raise = null;
 
             lock (_credentialLock)
             {
-                raise = _deferredSessionEvents.Count == 0 ? null : _deferredSessionEvents.Dequeue();
+                long earliestWaiting = EarliestGenuinelyWaitingNotificationTurn();
+
+                for (int index = 0; index < _deferredSessionEvents.Count; index++)
+                {
+                    if (_deferredSessionEvents[index].TurnNumber < earliestWaiting)
+                    {
+                        raise = _deferredSessionEvents[index].Raise;
+                        _deferredSessionEvents.RemoveAt(index);
+
+                        break;
+                    }
+                }
             }
 
             if (raise is null)

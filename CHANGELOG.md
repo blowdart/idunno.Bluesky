@@ -37,6 +37,8 @@
 * Skipped `Authenticated` for a session a subscriber for the session it replaced has itself logged out of or replaced, so a session start describing credentials the agent no longer holds is no longer announced last.
 * Gave up the notification turn before raising `TokenRefreshFailed`, so a subscriber which reauthenticates on that thread no longer waits for a turn only the thread it is blocking can give up.
 * Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
+* Stopped a login called from inside a deferred `Unauthenticated` handler deadlocking. The scope the handler was running under could close before the handler ran, so the login it started waited for a notification turn instead of deferring, and deadlocked against the notification still holding the queue it was waiting for.
+* Stopped a reentrant login or logout leapfrogging a change already committed and waiting for its own place in the notification queue. Draining what a handler deferred previously raised it as soon as the handler which caused it returned, rather than behind the change it was reentrant from, so a subscriber could be told about a session which had already been replaced after the one which replaced it.
 
 ## 7.0.0 - 2026-09-24
 

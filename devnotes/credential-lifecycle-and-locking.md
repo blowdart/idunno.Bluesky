@@ -186,12 +186,12 @@ So a reentrant notification is parked and raised once the handler it came from r
 stateDiagram-v2
     [*] --> Raising: notification's turn is served
     Raising --> HandlerRunning: OnCredentialsUpdatedAsync
-    HandlerRunning --> Deferred: handler refreshes, raising a nested notification
+    HandlerRunning --> Deferred: handler refreshes or logs in/out, deferring a nested notification, tagged with its own turn
     Deferred --> HandlerRunning: parked, not raised inline
     HandlerRunning --> Draining: handler returns
     Deferred --> Draining
-    Draining --> HandlerRunning: raise the deferred credentials
-    Draining --> SessionEvents: nothing left deferred
+    Draining --> HandlerRunning: raise anything deferred before the earliest turn genuinely still waiting
+    Draining --> SessionEvents: nothing left safe to raise (unsafe items, if any, are left for that earlier turn)
     SessionEvents --> [*]: Authenticated / Unauthenticated raised last (except on a session start)
 ```
 
@@ -208,9 +208,13 @@ Some subtleties in that machinery:
   agent's (`ReferenceEquals(_credentials, credentials)`). A notification can reach the slot *later* than one for the
   credentials which superseded it; without the currency check the stale set would displace the newer one and then be
   dropped as stale when drained, losing both.
-* **Closing the scope is atomic with observing an empty slot.** `TakeDeferredCredentialNotification` marks the scope
-  inactive inside the same critical section in which it sees nothing deferred, so a racing notification either got into
-  the slot in time or sees a closed scope and takes a turn of its own instead. There is no gap.
+* **Closing the scope waits for both queues to drain, not just one pass each.** `DrainDeferredNotificationsAsync` loops
+  draining committed credential notifications and deferred session events until a single check, made under
+  `_credentialLock`, finds nothing safe left in either at the same instant — only then is the scope closed. A session
+  event subscriber is free to log in or refresh, deferring a committed credential notification, and a credential
+  notification subscriber is equally free to log in or out, deferring a session event; either can leave the other with
+  something still to raise. Closing the scope after a single pass each would make a notification deferred into it by
+  the pass which already ran wait for a turn of its own instead, deadlocking against the turn this call still holds.
 * **Scope, not a flag.** `_raisingCredentialNotification` holds an object rather than a `bool` because an `AsyncLocal`
   value flows into work a handler *starts but does not await*. That work can run long after its originating
   notification finished; the object lets it discover the scope is closed and queue properly.
@@ -218,6 +222,60 @@ Some subtleties in that machinery:
   `Authenticated` or `Unauthenticated` which refreshes the agent has that refresh's notification deferred into it. That
   path therefore drains committed credential notifications, exactly as the credential path does, before it closes the
   scope and empties the slots. Dropping them would leave a subscriber storing a refresh token which has been spent.
+
+### Turn-ordered draining
+
+Deferring a reentrant raise is not enough on its own: without more information, draining the deferred slots as soon as
+the handler which caused them returns can let that reentrant work leapfrog a change which is already committed and
+genuinely waiting for its own, earlier, place in the queue.
+
+Concretely: turn 0 is running and its handler makes a reentrant change, taking turn 2, while a second, genuinely
+concurrent, caller has already committed a change of its own, taken turn 1, and is waiting for it. Draining turn 2's
+deferred notifications as soon as turn 0's handler returns — before turn 1 has run at all — would announce turn 2's
+session as current, then have turn 1 announce its own session on top of it once it is finally granted, back-to-front
+from what was actually committed.
+
+```mermaid
+sequenceDiagram
+    participant T0 as Turn 0 (running)
+    participant T1 as Turn 1 (concurrent, reserved and waiting)
+    participant T2 as Turn 2 (reentrant, from T0's handler)
+    participant Q as Deferred queue
+
+    T1->>T1: commits, takes turn 1
+    T1->>Q: EnterNotificationTurnAsync — genuinely waits
+    T0->>T0: handler runs
+    T0->>T2: reentrant login, commits, takes turn 2
+    T2->>Q: raises deferred into T0's scope, tagged with turn 2
+    T2-->>T0: returns (turn 2 stepped over, never entered)
+    T0->>Q: drain — turn 2 is NOT before turn 1, left in place
+    T0->>T0: scope closes, turn given up
+    T1->>T1: granted, entered, raises its own notification
+    T1->>Q: drain — nothing else waiting now, turn 2 is safe, raised
+```
+
+Every item deferred into the queue is therefore tagged with the notification turn number of whichever call deferred
+it — `_deferredCredentialNotificationTurnNumber` for the single credential slot, and a turn number carried alongside
+each entry in `_deferredSessionEvents` (a list of `(TurnNumber, Raise)` pairs rather than a plain queue). A drain only
+takes an item whose turn number is strictly *before* the earliest notification turn genuinely still waiting for its
+own place in the queue — `EarliestGenuinelyWaitingNotificationTurn`, which scans `_notificationTurnWaiters` for a
+real waiter (a non-`null` entry; a `null` entry marks a turn stepped over, which blocks nothing).
+
+* **Turn numbers only ever increase, under the same lock that computes the earliest waiting one,** so once an item is
+  found safe to raise it stays safe: nothing taken afterwards can insert itself before a turn already reserved and
+  waiting. This is what lets a drain reuse the same "earliest waiting" value across everything it takes in one pass,
+  rather than recomputing it after every raise.
+* **An item judged unsafe is left exactly where it is, not requeued or discarded.** It is picked up later by whichever
+  turn eventually becomes the earliest one waiting — that turn drains the same shared slots itself once it is granted,
+  so nothing is lost, only raised at the point it was always going to be safe to raise it.
+* **A scope closing drops what is left only if nothing else is reserved and waiting at all.**
+  `DropOrphanedDeferredNotifications` checks `EarliestGenuinelyWaitingNotificationTurn` is `long.MaxValue` — meaning no
+  turn anywhere is waiting — before clearing anything. If some turn is genuinely waiting, whatever is left belongs to
+  it, or to one before it, and clearing it would lose it outright; the normal case is both slots are already empty, and
+  what survives past that point is what would otherwise be raised out of order or never raised at all.
+* **A caller with no turn of its own — a DPoP nonce rotation, for example — is tagged with the currently active scope's
+  own turn number.** It has no reserved place in the queue to be leapfrogged out of, so it is treated as belonging to
+  whichever notification it is deferring into.
 
 ### Committed credentials
 
@@ -275,6 +333,12 @@ exception the caller needs to see.
     it returns everything it caused has already been raised. `InternalLogin` therefore rechecks that the agent still
     holds the credentials it is about to announce before raising `Authenticated`; announcing them unconditionally would
     put a session the agent has already moved on from last.
+13. **Tag anything deferred with the turn number it belongs to, and never drain past a turn genuinely still waiting.**
+    A reentrant change is always taken and deferred before its caller returns, but it must not be raised ahead of a
+    change which committed, and reserved its own turn, first. Adding a new deferral slot means adding the same turn
+    number to it and checking `EarliestGenuinelyWaitingNotificationTurn` before taking from it, exactly as
+    `TakeDeferredCredentialNotification` and `RaiseDeferredSessionEvents` already do — otherwise a reentrant caller can
+    leapfrog a genuinely concurrent one that was already ahead of it in commit order.
 
 ## Notes for writing a credential store
 
