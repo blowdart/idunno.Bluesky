@@ -1,8 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Formats.Cbor;
 using System.Diagnostics.CodeAnalysis;
+using System.Formats.Cbor;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;

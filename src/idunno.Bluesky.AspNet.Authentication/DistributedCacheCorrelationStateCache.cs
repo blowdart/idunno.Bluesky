@@ -4,10 +4,10 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 
-using Microsoft.Extensions.Caching.Distributed;
-
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
+
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

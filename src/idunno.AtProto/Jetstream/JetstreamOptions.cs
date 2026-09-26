@@ -24,14 +24,43 @@ public record JetstreamOptions
     public IMeterFactory? MeterFactory { get; set; }
 
     /// <summary>
+    /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is not a defined <see cref="JetstreamProtocolVersion"/>.</exception>
+    /// <remarks>
+    /// <para>The version decides the endpoint connected to, the parameters the filters and cursor are sent in, and the
+    /// shape of the messages the server sends, so it has to match the server being connected to.</para>
+    /// </remarks>
+    public JetstreamProtocolVersion ProtocolVersion
+    {
+        get;
+
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown jetstream protocol version.");
+            }
+
+            field = value;
+        }
+    } = JetstreamProtocolVersion.V2;
+
+    /// <summary>
     /// Gets a flag indicating whether the underlying WebSocket should use compression. Defaults to <see langword="true"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>With <see cref="JetstreamProtocolVersion.V1"/> messages are decompressed with <see cref="Dictionary"/>.
+    /// With <see cref="JetstreamProtocolVersion.V2"/> the server's current dictionary is downloaded from it when
+    /// connecting, and downloaded again if the server has since replaced it.</para>
+    /// </remarks>
     public bool UseCompression { get; init; } = true;
 
     /// <summary>
-    /// Gets the dictionary to use for zst decompression.
+    /// Gets the dictionary to use for zst decompression with <see cref="JetstreamProtocolVersion.V1"/>.
     /// </summary>
     /// <remarks>
+    /// <para>Not used with <see cref="JetstreamProtocolVersion.V2"/>, which downloads the dictionary from the server.</para>
     /// <para>Copied on the way in and on the way out. The dictionary is handed to native code each time a message is
     /// decompressed, so a caller which held on to the array it supplied could otherwise change what that code reads
     /// whilst it is reading it.</para>
