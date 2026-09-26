@@ -21,6 +21,7 @@ public class CredentialRefreshTests
 {
     private const string DomainName = "test.invalid";
     private const string ExpectedDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+    private const string OtherDid = "did:plc:someoneelse";
 
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -554,6 +555,282 @@ public class CredentialRefreshTests
         await (Task)backgroundRefresh.Invoke(agent, null)!;
     }
 
+    [Fact]
+    public async Task ARefreshWhichIssuesASessionForADifferentActorIsRejected()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentialsBeforeRefresh = agent.Credentials!;
+
+            refreshTestServer.IssuedDid = new Did(OtherDid);
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+            // A server which answers with a session for another account must not re-point the agent, and everything
+            // built on it, at that account.
+            Assert.Same(credentialsBeforeRefresh, agent.Credentials);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshOfAStoredCredentialWhichIssuesASessionForADifferentActorDoesNotStartASession()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        AccessCredentials storedCredentials;
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            storedCredentials = agent.Credentials!;
+        }
+
+        using (AtProtoAgent restoringAgent = CreateAgent(refreshTestServer))
+        {
+            refreshTestServer.IssuedDid = new Did(OtherDid);
+
+            await Assert.ThrowsAsync<SecurityTokenValidationException>(
+                () => restoringAgent.RefreshCredentials(storedCredentials, TestContext.Current.CancellationToken));
+
+            // An agent which holds no credentials has no current actor to compare the result against, so restoring a
+            // stored credential is the one path where nothing downstream can catch a session issued for the wrong one.
+            Assert.False(restoringAgent.IsAuthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshQueuedBehindAChangeOfActorDoesNotSpendTheRefreshTokenItWasGiven()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentials = agent.Credentials!;
+
+            AccessCredentials otherActorCredentials = new(
+                new Uri($"https://{DomainName}"),
+                AuthenticationType.UsernamePassword,
+                JwtBuilder.CreateJwt(new Did(OtherDid), $"did:web:{DomainName}", expiresIn: TimeSpan.FromMinutes(15)),
+                "otherActorRefreshToken");
+
+            // Models a login which commits whilst this refresh is queued for the refresh semaphore, after the check
+            // made before queueing said the agent was still the actor being refreshed.
+            agent.CredentialRefreshQueueing = () =>
+            {
+                agent.CredentialRefreshQueueing = null;
+                agent.Credentials = otherActorCredentials;
+
+                return Task.CompletedTask;
+            };
+
+            Assert.False(await agent.RefreshCredentials(credentials, TestContext.Current.CancellationToken));
+
+            // Exchanging on the stale check would spend the caller's single use refresh token and then discard what it
+            // was exchanged for, destroying the stored session the call was asked to refresh.
+            Assert.Equal(0, refreshTestServer.RefreshAttemptCount);
+            Assert.Same(otherActorCredentials, agent.Credentials);
+        }
+    }
+
+    [Fact]
+    public async Task ALogoutDoesNotDeadlockWithACredentialsUpdatedHandlerWaitingForACredentialRefresh()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials credentials = agent.Credentials!;
+
+            TaskCompletionSource handlerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource logoutHoldingSemaphore = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            int notificationCount = 0;
+
+            agent.CredentialsUpdatedAsync = async (e, cancellationToken) =>
+            {
+                if (Interlocked.Increment(ref notificationCount) != 1)
+                {
+                    return;
+                }
+
+                handlerEntered.TrySetResult();
+
+                await logoutHoldingSemaphore.Task.ConfigureAwait(false);
+
+                // Needs the refresh semaphore, which the logout is holding whilst this handler owns the notification
+                // queue the logout has to wait for to raise Unauthenticated.
+                await agent.RefreshSessionIssuedCredentials(
+                    new RefreshCredential(credentials),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            };
+
+            Task refresh = agent.RefreshCredentials(TestContext.Current.CancellationToken);
+
+            await handlerEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+            UnauthenticatedEventArgs? unauthenticated = null;
+
+            agent.Unauthenticated += (_, e) => unauthenticated = e;
+
+            agent.LogoutHoldingCredentialRefreshSemaphore = () =>
+            {
+                logoutHoldingSemaphore.TrySetResult();
+
+                return Task.CompletedTask;
+            };
+
+            await agent.Logout(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            await refresh;
+
+            // Waiting for a notification turn whilst holding the refresh semaphore deadlocks the agent for good: the
+            // logout never returns and the session it ended is never reported.
+            Assert.NotNull(unauthenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginRaisesAuthenticatedEvenWhenTheHandlerForTheSessionItReplacedThrows()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AuthenticatedEventArgs? authenticated = null;
+
+            agent.Unauthenticated += (_, _) => throw new InvalidOperationException("The subscriber for the replaced session threw.");
+            agent.Authenticated += (_, e) => authenticated = e;
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => agent.Login(
+                    did: ExpectedDid,
+                    password: "password",
+                    authFactorToken: null,
+                    service: new Uri($"https://{DomainName}"),
+                    cancellationToken: TestContext.Current.CancellationToken));
+
+            // The new credentials are already live, so a subscriber which is never told this session started would go
+            // on holding the ones for the session it replaced.
+            Assert.NotNull(authenticated);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshFromInsideASessionEventNotifiesTheCredentialsItIssued()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            List<AccessCredentials> notified = [];
+
+            agent.CredentialsUpdatedAsync = (e, _) =>
+            {
+                notified.Add(e.AccessCredentials);
+
+                return Task.CompletedTask;
+            };
+
+            int authenticatedCount = 0;
+
+            agent.Authenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref authenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                agent.RefreshCredentials(CancellationToken.None).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The refresh the subscriber triggered published its credentials before the session event returned, so its
+            // notification was deferred into that event's scope. Dropping it would leave a subscriber storing a refresh
+            // token which has already been spent.
+            Assert.NotEmpty(notified);
+            Assert.Same(agent.Credentials, notified[^1]);
+        }
+    }
+
+    [Fact]
+    public async Task ALoginFromInsideTheHandlerForTheSessionItReplacedDoesNotAnnounceTheReplacedSessionLast()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            List<AuthenticatedEventArgs> authenticated = [];
+            int unauthenticatedCount = 0;
+
+            agent.Authenticated += (_, e) => authenticated.Add(e);
+
+            agent.Unauthenticated += (_, _) =>
+            {
+                if (Interlocked.Increment(ref unauthenticatedCount) != 1)
+                {
+                    return;
+                }
+
+                Login(agent).GetAwaiter().GetResult();
+            };
+
+            await Login(agent).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+            // The nested login moved the agent on and announced itself. Announcing the session it interrupted after
+            // that would put credentials the agent no longer holds last, and a subscriber would store them.
+            Assert.NotEmpty(authenticated);
+            Assert.Same(agent.Credentials, authenticated[^1].AccessCredentials);
+        }
+    }
+
+    [Fact]
+    public async Task ACancelledNotificationTheQueueHasAlreadySteppedOverIsNotLeftInTheWaiterList()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using AtProtoAgent agent = CreateAgent(refreshTestServer);
+
+        MethodInfo takeTurn = typeof(AtProtoAgent).GetMethod("TakeNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo enterTurn = typeof(AtProtoAgent).GetMethod("EnterNotificationTurnAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        MethodInfo finishTurn = typeof(AtProtoAgent).GetMethod("FinishNotificationTurn", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        FieldInfo waiters = typeof(AtProtoAgent).GetField("_notificationTurnWaiters", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        object runningTurn = takeTurn.Invoke(agent, null)!;
+        object cancelledTurn = takeTurn.Invoke(agent, null)!;
+
+        await (Task)enterTurn.Invoke(agent, [runningTurn, CancellationToken.None])!;
+
+        using CancellationTokenSource cancellationTokenSource = new();
+
+        Task waitingForTurn = (Task)enterTurn.Invoke(agent, [cancelledTurn, cancellationTokenSource.Token])!;
+
+        await cancellationTokenSource.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waitingForTurn);
+
+        // The turn ahead is given up before the cancelled call gives up its own, so the queue steps over the cancelled
+        // turn first. Giving it up afterwards must not then re-record it: the queue is already past that number and
+        // would never look at the entry again, so repeated cancelled notifications would grow the list without bound.
+        finishTurn.Invoke(agent, [runningTurn]);
+        finishTurn.Invoke(agent, [cancelledTurn]);
+
+        Assert.Empty((IEnumerable<KeyValuePair<long, TaskCompletionSource?>>)waiters.GetValue(agent)!);
+    }
+
     private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer)
     {
         return new AtProtoAgent(
@@ -597,6 +874,12 @@ public class CredentialRefreshTests
         internal bool FailRefresh { get; set; }
 
         internal bool IssueUnvalidatableAccessJwtOnRefresh { get; set; }
+
+        /// <summary>
+        /// The DID the server issues a refreshed session for. Set to something other than the account being refreshed
+        /// to model a server which answers with a session for the wrong actor.
+        /// </summary>
+        internal Did IssuedDid { get; set; } = new Did(ExpectedDid);
 
         internal bool GateRefresh { get; set; }
 
@@ -669,7 +952,7 @@ public class CredentialRefreshTests
                         accessJwt: IssueUnvalidatableAccessJwtOnRefresh ? CreateUnvalidatableAccessJwt() : CreateAccessJwt(),
                         refreshJwt: NextRefreshToken(),
                         handle: new Handle(DomainName),
-                        did: new Did(ExpectedDid),
+                        did: IssuedDid,
                         didDoc: null,
                         active: true,
                         status: null),
@@ -687,7 +970,7 @@ public class CredentialRefreshTests
                 await response.WriteAsJsonAsync(
                     new GetSessionResponse(
                         handle: new Handle(DomainName),
-                        did: new Did(ExpectedDid),
+                        did: IssuedDid,
                         email: null,
                         emailConfirmed: null,
                         emailAuthFactor: null,
@@ -702,7 +985,7 @@ public class CredentialRefreshTests
             }
         }
 
-        private string CreateAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
+        private string CreateAccessJwt() => JwtBuilder.CreateJwt(IssuedDid, $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
 
         /// <summary>
         /// Creates an access token whose audience is not the service it was requested from, so validation of it fails.

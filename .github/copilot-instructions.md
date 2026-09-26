@@ -14,6 +14,17 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 * Run a single test or class: `dotnet test --filter "FullyQualifiedName~PostBuilderTests"` (or `--filter "DisplayName~..."`).
 * Tests multi-target `net8.0;net9.0;net10.0`. Restrict to one framework with `-f net10.0` to iterate faster.
 * Linting is not a separate step: analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on, so a clean build is the lint gate.
+* **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.
+* **Never trust an incremental build as a pre-commit gate.** If you have just built an individual project, a subsequent solution build reuses that result and silently skips its analyzers. Pass `--no-incremental`.
+
+## Pre-commit gate
+
+Before *every* commit, run both of these from the repository root and require both to be clean:
+
+1. `dotnet build idunno.Bluesky.slnx -c Debug --no-incremental` — must report 0 warnings and 0 errors.
+2. `dotnet test` — every test in every test project must pass.
+
+Do not commit on the strength of a single project build, a `Release` build, an incremental build, or a filtered test run. Those are for iterating; this gate is what CI actually checks. If either step fails, fix it before committing rather than pushing and waiting for CI to tell you.
 
 ## Architecture
 
@@ -59,6 +70,7 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 
 ## Checkin conventions
 
+* Run the pre-commit gate above (full `Debug` `--no-incremental` solution build plus the whole test suite) and require it to be clean before committing. Never commit on the strength of a partial or incremental build.
 * Do not make verbose commit messages. Use the imperative mood and keep it short (e.g., "Add X", "Fix Y", "Update Z").
 * Never commit directly to `main`. Use a feature branch and open a pull request. The PR description should summarize the change, link to any relevant issues, and note any breaking changes.
 * Never create unsigned commits. All commits must be signed with a GPG key or SSH key.

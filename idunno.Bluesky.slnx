@@ -47,6 +47,9 @@
   <Folder Name="/.vscode/">
     <File Path=".vscode/settings.json" />
   </Folder>
+  <Folder Name="/devnotes/">
+    <File Path="devnotes/credential-lifecycle-and-locking.md" />
+  </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
     <File Path="docs/docfx.json" />

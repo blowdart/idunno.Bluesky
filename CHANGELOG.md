@@ -1,5 +1,43 @@
 # Version History
 
+## Unreleased
+
+### Fixed
+
+#### idunno.AtProto
+
+* Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
+* Ended OAuth sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely. Sessions issued from a handle and password keep retrying, as they did before, so that a refresh which failed part way through is retried rather than ending the session.
+* Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
+* Made the notification for credentials a refresh has already committed uncancellable, so cancelling the caller cannot leave a superseded set of credentials as the last ones persisted.
+* Deferred credential update notifications raised from inside a handler until that handler has finished, so a handler which refreshes before it persists is given the refreshed credentials last.
+* Notified credentials committed by a refresh a handler triggered even when that handler then fails, so a failure cannot leave a spent refresh token as the last credentials a handler was given.
+* Raised `Unauthenticated` before `TokenRefreshFailed` when a refresh ends a session, so a `TokenRefreshFailed` handler which throws can no longer suppress the notification that the session has ended, and one which reauthenticates can no longer make it arrive after the new session's `Authenticated`.
+* Notified credentials committed by a refresh a handler started but did not await. Work started inside a handler carries the notification it was started from, so a refresh which outlived that handler previously handed its credentials to a notification which had already finished and nothing raised them.
+* Ordered `Unauthenticated` behind any credential update notification which is still running, so a handler suspended when the session ends can no longer finish afterwards and leave credentials for the ended session in durable storage with nothing following to discard them.
+* Dropped a deferred credential update notification whose credentials the agent has already replaced, so a notification which reaches the queue after the credentials which superseded it can no longer displace, and discard, the notification for the current ones.
+* Deferred `Unauthenticated` raised from inside a credential update handler until that handler has finished, so a handler which ends the session can no longer persist the ended session's credentials after the event has been raised.
+* Ordered `Authenticated` behind any credential update notification which is still running, so a handler suspended when a new session starts can no longer finish afterwards and write the previous session's credentials over the new ones.
+* Raised `Unauthenticated` for a session replaced by a login, so a subscriber is told the previous session is finished with rather than being left holding credentials for it.
+* Raised `Unauthenticated` when a failed login or a failed logout discards the agent credentials. The credentials were cleared silently, leaving a subscriber holding a session the server had rejected in durable storage and restoring it on the next start.
+* Raised `Authenticated` when refreshing a stored credential starts a session on an agent which did not have one, so restoring a session reports itself in the same way logging in does.
+* Discarded credentials a refresh produced for a different actor to the one the agent is authenticated as, rather than publishing them. Refreshing a stored credential for another account re-pointed the agent, and everything built on it, at that account with no indication the session had changed.
+* Declined a refresh of a credential belonging to a different actor before the token endpoint is called, so the supplied credential is left unspent. Rejecting the result afterwards exchanged the caller's refresh token and then discarded its replacement, destroying the stored session it was asked to refresh.
+* Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
+* Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
+* Applied the DPoP nonce freshness check to any credential implementing `IDPoPBoundCredential`, rather than only to `DPoPAccessCredentials`. A credential type of your own passed to `Login` previously took an unguarded path which published the snapshot the request started with, restoring a spent refresh token and discarding the credentials a refresh had just been issued.
+* Reported credential changes in the order they were committed in, rather than in the order the notifications happened to reach the queue. A session which ended because its refresh token had been spent could be reported as ending after a login which followed it, so a subscriber which discards its stored credentials when a session ends discarded the session which was actually live.
+* Raised `Authenticated` for a session a login started even when the subscriber for the session it replaced throws. The new credentials are live by then, so a subscriber which was never told the session started went on holding the ones for the session it replaced.
+* Stopped `Logout` deadlocking with a credential update handler which calls back into the agent. The session ending was raised while the refresh semaphore was held, so a handler waiting for that semaphore and a logout waiting for that handler's notification turn waited on each other for ever.
+* Checked that a refresh of credentials issued from a handle and password returns a session for the account being refreshed, throwing `SecurityTokenValidationException` when it does not, matching the check already made on an OAuth refresh. Restoring a stored credential on an agent which holds no credentials has no current account to compare against, so nothing downstream caught a session issued for the wrong one.
+* Rechecked that a refresh is still for the account the agent is authenticated as once the refresh semaphore has been granted. A login or another refresh could re-point the agent while the call queued, so the exchange went ahead on a stale check, spending the caller's refresh token and destroying the stored session it was asked to refresh.
+* Reserved a place in the notification queue for every change, including one committed by work a handler started but did not await. Such work could see the handler's notification running when it committed and find it finished by the time it raised, so its events were queued behind a change which was committed after it and a session which had already ended was reported as ending after the one which replaced it.
+* Stopped a cancelled notification the queue had already stepped over being recorded again, which left an entry for a turn nothing would ever visit. A long lived agent whose notifications are repeatedly cancelled grew that list without bound.
+* Notified credentials committed by a refresh started from inside an `Authenticated` or `Unauthenticated` subscriber. The notification was deferred into the session event and then discarded, so a subscriber was never told about a live token pair and went on storing a refresh token the server would not honour.
+* Skipped `Authenticated` for a session a subscriber for the session it replaced has itself logged out of or replaced, so a session start describing credentials the agent no longer holds is no longer announced last.
+* Gave up the notification turn before raising `TokenRefreshFailed`, so a subscriber which reauthenticates on that thread no longer waits for a turn only the thread it is blocking can give up.
+* Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
+
 ## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.

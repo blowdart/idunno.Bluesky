@@ -111,6 +111,9 @@ internal static partial class Logger
     [LoggerMessage(1121, LogLevel.Error, "RefreshOAuthIssuedCredentials was refreshing {expectedDid} on {service} but the authorization server issued a token for {issuedDid}")]
     internal static partial void RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
 
+    [LoggerMessage(1125, LogLevel.Error, "RefreshSessionIssuedCredentials was refreshing {expectedDid} on {service} but the server issued a session for {issuedDid}")]
+    internal static partial void RefreshSessionIssuedCredentialsReturnedUnexpectedDid(ILogger logger, Did expectedDid, Did issuedDid, Uri service);
+
     [LoggerMessage(48, LogLevel.Debug, "Refresh token #{tokenHash} has already been exchanged by another caller, skipping refresh")]
     internal static partial void RefreshTokenAlreadyExchanged(ILogger logger, string tokenHash);
 
@@ -119,6 +122,9 @@ internal static partial class Logger
 
     [LoggerMessage(1122, LogLevel.Warning, "Credentials refreshed for {did} on {service} were discarded because the agent credentials were replaced whilst the refresh was in flight")]
     internal static partial void RefreshedCredentialsDiscardedAsAgentCredentialsChanged(ILogger logger, Did did, Uri service);
+
+    [LoggerMessage(1124, LogLevel.Warning, "Credentials refreshed for {did} were discarded because the agent is authenticated as {currentDid}")]
+    internal static partial void RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(ILogger logger, Did did, Did currentDid);
 
     [LoggerMessage(49, LogLevel.Error, "Background token refresh failed, the refresh timer has been restarted to retry in {retryIn}ms")]
     internal static partial void BackgroundTokenRefreshFailed(ILogger logger, double retryIn, Exception? ex);
@@ -318,6 +324,15 @@ internal static partial class Logger
 
     [LoggerMessage(301, LogLevel.Error, "Agent credentials update via OnCredentialsUpdatedCallBack() ignored, unexpected credentials type.")]
     internal static partial void OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(ILogger logger);
+
+    [LoggerMessage(302, LogLevel.Error, "A credentials updated handler threw whilst being notified of credentials a refresh had already committed.")]
+    internal static partial void CommittedCredentialsNotificationThrew(ILogger logger, Exception ex);
+
+    [LoggerMessage(303, LogLevel.Error, "A session event subscriber threw whilst being notified of a session starting or ending which had been deferred from a credentials updated handler.")]
+    internal static partial void DeferredSessionEventThrew(ILogger logger, Exception ex);
+
+    [LoggerMessage(304, LogLevel.Error, "An unauthenticated subscriber threw whilst being notified of a session which had already ended.")]
+    internal static partial void SessionEndedNotificationThrew(ILogger logger, Exception ex);
 
     // AtProtoServer logging
 

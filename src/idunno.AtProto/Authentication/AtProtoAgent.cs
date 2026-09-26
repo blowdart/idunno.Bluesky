@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Security;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -22,13 +23,130 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto;
 
+// Credential storage, refresh, and the notifications and events which report them.
+//
+// This describes private machinery, so it is a plain comment rather than a documentation comment; none of it belongs
+// in the published API documentation. A longer walkthrough, with diagrams, is in
+// devnotes/credential-lifecycle-and-locking.md.
+//
+// Why any of this is serialised.
+//
+// A subscriber typically persists what it is given, so the order it is told things in decides what ends up in durable
+// storage. The last write wins, and the agent has several things which can change credentials at once: a background
+// refresh, a manual refresh, a DPoP nonce rotation forced by the server, a login, and a logout. Left unordered, a
+// handler which started first can finish last and leave storage holding a refresh token the server has already spent,
+// or a session which has ended, with nothing following it to repair the damage. On the next start the agent restores
+// those credentials and cannot authenticate.
+//
+// The four pieces of state.
+//
+//   _credentialLock guards the agent credentials and everything which describes them, and is only ever held for
+//   straight line work. Never await, raise an event, or call a handler while holding it.
+//
+//   _credentialRefreshSemaphore allows one credential exchange at a time, so two refreshes cannot both present the
+//   same refresh token, and a logout cannot revoke tokens a refresh is part way through replacing.
+//
+//   The notification queue allows one notification or session event at a time, which is what gives a subscriber a
+//   single ordered view of the session. Places in it are handed out as numbered turns by TakeNotificationTurn, and
+//   served strictly in number order.
+//
+//   _credentialGeneration counts every change to the credentials, so work which started against one set can tell,
+//   when it finishes, that it is looking at history.
+//
+// Lock ordering.
+//
+// A place in the notification queue may be taken whilst the refresh semaphore is held, because taking one does not
+// wait. Waiting for the turn must not be: a handler running in the turn ahead is free to log in or out, which needs
+// the refresh semaphore, so a caller holding it whilst waiting for a turn would deadlock against that handler. Either
+// semaphore may be taken before _credentialLock, never the other way around. In practice a notification or session
+// event is raised after the refresh semaphore has been released.
+//
+// How a change reaches a subscriber.
+//
+// A caller which is about to change the credentials takes a numbered turn first, then publishes under _credentialLock,
+// by TryPublishRefreshedCredentials for a refresh or directly for a login or logout, then raises everything the change
+// produced in that one turn. Taking the turn before the commit is what makes delivery order match commit order:
+// committing first and queueing afterwards lets another caller commit and queue in between, so a session which ended
+// before another began is reported as ending after it, and a subscriber which discards its stored credentials when a
+// session ends discards the live ones.
+//
+// Whatever made the change calls RaiseCredentialsUpdatedAsync, or RaiseAuthenticatedAsync or RaiseUnauthenticatedAsync
+// for a session starting or ending, passing the turn it took. Each waits for that turn, and a notification is dropped
+// rather than raised if the agent no longer holds the credentials it carries, because whatever replaced them is
+// raising a notification of its own. A raise with no turn of its own, such as a DPoP nonce rotation, takes one as it
+// queues.
+//
+// Every turn taken must be given up exactly once, by FinishNotificationTurn from a finally, whether it was ever
+// entered or not. A turn which is never given up stops the queue for the lifetime of the agent.
+//
+// Reentrancy.
+//
+// A handler may call straight back into the agent, and a login, logout or refresh it performs produces something else
+// to raise while the notification which triggered it still holds its turn. Waiting would deadlock, and raising it
+// inline would put it ahead of the handler which caused it, letting that handler finish afterwards and persist what it
+// was already holding. So a reentrant raise is parked, in _deferredCredentialNotification or _deferredSessionEvents,
+// and drained by the notification which is already running once its handler returns. Reentrancy is detected with
+// _raisingCredentialNotification, and a reentrant caller is given no turn at all.
+//
+// Committed credentials.
+//
+// Once an exchange has happened the refresh token the agent was holding is spent, whatever happens next. A
+// notification for credentials in that state is marked committed, cannot be cancelled, and is drained even if the
+// handler which triggered it throws, because it is the only opportunity to persist tokens which actually work.
+//
+// Adding code here.
+//
+// Anything which changes the credentials should take a notification turn, publish under _credentialLock, and then
+// raise through the helpers above rather than calling OnCredentialsUpdatedAsync, OnAuthenticated or OnUnauthenticated
+// directly. Raising one of those directly bypasses the ordering and is how every bug this machinery exists to prevent
+// gets reintroduced. A path
+// which ends a session because something failed should use ClearCredentialsAndRaiseUnauthenticatedAsync, so the
+// credentials are not discarded silently.
 public partial class AtProtoAgent
 {
 #if NET9_0_OR_GREATER
+    /// <summary>
+    /// Guards the agent credentials, the generation which tracks changes to them, and the deferred notification state.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Held only for straight line work. Nothing awaits, raises an event or calls a handler whilst holding it, as a
+    ///   handler is free to call back into the agent and would deadlock against itself.
+    /// </para>
+    /// <para>
+    ///   Checks made against the credentials are only meaningful if the decision they lead to happens under the same
+    ///   acquisition. Reading the credentials, releasing the lock and then acting on what was read allows the thing
+    ///   which was checked to change in between.
+    /// </para>
+    /// </remarks>
     private readonly Lock _credentialLock = new();
+
+    /// <summary>
+    /// Guards the background credential refresh timer. Unrelated to <see cref="_credentialLock"/>, and may be taken
+    /// whilst holding it.
+    /// </summary>
     private readonly Lock _timerLock = new();
 #else
+    /// <summary>
+    /// Guards the agent credentials, the generation which tracks changes to them, and the deferred notification state.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Held only for straight line work. Nothing awaits, raises an event or calls a handler whilst holding it, as a
+    ///   handler is free to call back into the agent and would deadlock against itself.
+    /// </para>
+    /// <para>
+    ///   Checks made against the credentials are only meaningful if the decision they lead to happens under the same
+    ///   acquisition. Reading the credentials, releasing the lock and then acting on what was read allows the thing
+    ///   which was checked to change in between.
+    /// </para>
+    /// </remarks>
     private readonly object _credentialLock = new();
+
+    /// <summary>
+    /// Guards the background credential refresh timer. Unrelated to <see cref="_credentialLock"/>, and may be taken
+    /// whilst holding it.
+    /// </summary>
     private readonly object _timerLock = new();
 #endif
 
@@ -42,6 +160,126 @@ public partial class AtProtoAgent
     /// </remarks>
     [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a refresh holds it makes the release which ends that refresh throw.")]
     private readonly SemaphoreSlim _credentialRefreshSemaphore = new(1, 1);
+
+    /// <summary>
+    /// The number to give to the next notification turn handed out.
+    /// </summary>
+    /// <remarks><para>Guarded by <see cref="_credentialLock"/>.</para></remarks>
+    private long _nextNotificationTurn;
+
+    /// <summary>
+    /// The number of the notification turn which may run now.
+    /// </summary>
+    /// <remarks><para>Guarded by <see cref="_credentialLock"/>.</para></remarks>
+    private long _notificationTurnNowServing;
+
+    /// <summary>
+    /// Whether a notification turn is currently being taken.
+    /// </summary>
+    /// <remarks><para>Guarded by <see cref="_credentialLock"/>.</para></remarks>
+    private bool _notificationTurnInProgress;
+
+    /// <summary>
+    /// The turns waiting to run, by number.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Guarded by <see cref="_credentialLock"/>. A <see langword="null"/> value marks a turn which was taken out but
+    ///   will never be run, so that the queue steps over it rather than stopping on it.
+    /// </para>
+    /// </remarks>
+    private readonly Dictionary<long, TaskCompletionSource?> _notificationTurnWaiters = [];
+
+    /// <summary>
+    /// Set whilst a credential update notification is being raised on the current asynchronous flow.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   A handler is free to call back into the agent, and a call which refreshes credentials or rotates the DPoP
+    ///   nonce raises another notification. Waiting for a notification turn from inside one which already holds it
+    ///   would deadlock the agent, so a reentrant notification is handed
+    ///   to <see cref="_deferredCredentialNotification"/> instead.
+    /// </para>
+    /// <para>
+    ///   The value is a scope rather than a flag because an <see cref="AsyncLocal{T}"/> flows into any work a handler
+    ///   starts, including work it does not await. Such work can run after the notification it was started from has
+    ///   finished, when there is no longer anything holding a turn to drain a deferred notification, so the
+    ///   scope is marked inactive as the notification finishes and a reentrant notification is only deferred while
+    ///   the scope it flowed from is still active.
+    /// </para>
+    /// </remarks>
+    private readonly AsyncLocal<CredentialNotificationScope?> _raisingCredentialNotification = new();
+
+    /// <summary>
+    /// Marks the extent of a credential update notification, so that work which flowed out of it can tell whether it
+    /// is still running.
+    /// </summary>
+    private sealed class CredentialNotificationScope
+    {
+        /// <summary>
+        /// Gets or sets a value indicating whether the notification this scope was created for is still running.
+        /// </summary>
+        /// <remarks>Guarded by <see cref="_credentialLock"/>.</remarks>
+        public bool Active { get; set; } = true;
+    }
+
+    /// <summary>
+    /// Credentials raised from inside a notification which is still running, to be notified once it has finished.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Guarded by <see cref="_credentialLock"/>. Only the newest credentials are held: an older reentrant update is
+    ///   of no interest to a handler which is about to be given a newer one.
+    /// </para>
+    /// </remarks>
+    private AccessCredentials? _deferredCredentialNotification;
+
+    /// <summary>
+    /// Whether <see cref="_deferredCredentialNotification"/> holds credentials the agent has already published, whose
+    /// notification is the only opportunity to persist them.
+    /// </summary>
+    /// <remarks>
+    /// <para>Guarded by <see cref="_credentialLock"/>.</para>
+    /// </remarks>
+    private bool _deferredCredentialNotificationCommitted;
+
+    /// <summary>
+    /// Session start and end events raised from inside a credential update notification which is still running, to be
+    /// raised once that notification, and everything queued behind it, has finished.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Guarded by <see cref="_credentialLock"/>. Held as a queue rather than a single event because a handler can end
+    ///   one session and start another, and a subscriber which is told they happened in the other order would discard
+    ///   the credentials for the session which is actually current.
+    /// </para>
+    /// </remarks>
+    private readonly Queue<Action> _deferredSessionEvents = new();
+
+    /// <summary>
+    /// Called when a credential update notification is about to wait its turn behind any notification already being
+    /// raised, so that a test can synchronise on the notification queue rather than on elapsed time.
+    /// </summary>
+    internal Action<AccessCredentials>? CredentialNotificationQueueing { get; set; }
+
+    /// <summary>
+    /// Called when a session event is about to wait its turn, so that a test can hold one turn open whilst another
+    /// change commits behind it and check they reach a subscriber in the order they were committed in.
+    /// </summary>
+    internal Func<Task>? SessionEventQueueing { get; set; }
+
+    /// <summary>
+    /// Called by <see cref="Logout(CancellationToken)"/> once it holds <see cref="_credentialRefreshSemaphore"/>, so
+    /// that a test can drive something which needs that semaphore at the point a logout is holding it.
+    /// </summary>
+    internal Func<Task>? LogoutHoldingCredentialRefreshSemaphore { get; set; }
+
+    /// <summary>
+    /// Called by a refresh once it has decided to proceed but before it waits for
+    /// <see cref="_credentialRefreshSemaphore"/>, so that a test can commit a change whilst the refresh is queued for
+    /// it and check what the refresh does when it is finally granted.
+    /// </summary>
+    internal Func<Task>? CredentialRefreshQueueing { get; set; }
 
     private AccessCredentials? _credentials;
 
@@ -95,6 +333,20 @@ public partial class AtProtoAgent
     /// Gets the current credentials for the agent, if any.
     /// </summary>
     /// <exception cref="ObjectDisposedException">Thrown when setting the credentials on a disposed agent.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Setting this property replaces the agent credentials and nothing else. It raises no <see cref="Authenticated"/>,
+    ///   <see cref="Unauthenticated"/> or credentials updated notification, and it is not ordered against a notification
+    ///   which is already running, so a subscriber persisting credentials is not told about the change and can write the
+    ///   credentials it was already holding afterwards.
+    /// </para>
+    /// <para>
+    ///   Prefer <see cref="Login(string, string, string?, Uri?, CancellationToken)"/>, <see cref="Logout(CancellationToken)"/>
+    ///   and <see cref="RefreshCredentials(AtProtoCredential, CancellationToken)"/>, which raise the matching events and
+    ///   order them behind any notification in flight. Credentials assigned here are still published under the same lock,
+    ///   so an in flight refresh which started before the assignment is discarded rather than allowed to overwrite it.
+    /// </para>
+    /// </remarks>
     public AccessCredentials? Credentials
     {
         get
@@ -151,6 +403,10 @@ public partial class AtProtoAgent
     /// </summary>
     /// <param name="refreshedCredentials">The credentials a refresh produced.</param>
     /// <param name="expectedGeneration">The <see cref="CredentialGeneration"/> read when the refresh started.</param>
+    /// <param name="sessionStarted">
+    /// Whether the credentials started a session on an agent which did not have one, as a refresh of stored credentials
+    /// on a newly created agent does.
+    /// </param>
     /// <returns><see langword="true"/> if the credentials were published, otherwise <see langword="false"/>.</returns>
     /// <remarks>
     /// <para>
@@ -163,16 +419,59 @@ public partial class AtProtoAgent
     ///   The check and the write happen under the same lock the generation is incremented under, so a refresh cannot
     ///   observe an unchanged generation and then publish over a change made immediately afterwards.
     /// </para>
+    /// <para>
+    ///   Credentials for a different actor to the one the agent is authenticated as are never published. A refresh of a
+    ///   credential the caller supplied is not necessarily a refresh of the agent's own session, and re-pointing the
+    ///   agent, and everything built on it, at another account as a side effect of refreshing a stored credential would
+    ///   be silent.
+    /// </para>
     /// </remarks>
-    private bool TryPublishRefreshedCredentials(AccessCredentials refreshedCredentials, long expectedGeneration)
+    private bool TryPublishRefreshedCredentials(AccessCredentials refreshedCredentials, long expectedGeneration, out bool sessionStarted)
     {
         ArgumentNullException.ThrowIfNull(refreshedCredentials);
 
+        sessionStarted = false;
+
         lock (_credentialLock)
         {
+            // The generation moved, so a login, a logout or another refresh landed while this one was talking to the
+            // server. Whatever did that is more recent than this, so these credentials are history and are dropped.
+            // The refresh token they replaced is spent either way, which is why the caller treats this as a failure
+            // and ends the session rather than retrying.
             if (_atProtoAgentDisposed || _credentialGeneration != expectedGeneration)
             {
                 return false;
+            }
+
+            // Refreshing a credential the caller supplied is not necessarily refreshing the agent's own session, so
+            // the result is only published if it belongs to the account the agent is authenticated as.
+            if (_credentials is AccessCredentials currentCredentials &&
+                currentCredentials.Did is Did currentDid &&
+                currentDid != refreshedCredentials.Did)
+            {
+                Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(
+                    _logger,
+                    refreshedCredentials.Did,
+                    currentDid);
+
+                return false;
+            }
+
+            // Reported so the caller can raise Authenticated. Refreshing a stored credential on a fresh agent is how
+            // a session is restored across a restart, and that starts a session just as a login does.
+            sessionStarted = _credentials is null;
+
+            // The nonce belongs to the connection rather than to the tokens, so the newest one the agent has seen is
+            // carried across to the credentials replacing them. Without this the refreshed credentials start with the
+            // nonce the refresh began with, and a rotation which happened during the refresh is lost, costing a
+            // rejected request and a retry on the next call. Only carried when the proof key and service match, as a
+            // nonce is only meaningful for the binding it was issued against.
+            if (_credentials is IDPoPBoundCredential currentDPoPCredentials &&
+                refreshedCredentials is IDPoPBoundCredential refreshedDPoPCredentials &&
+                _credentials.Service == refreshedCredentials.Service &&
+                string.Equals(currentDPoPCredentials.DPoPProofKey, refreshedDPoPCredentials.DPoPProofKey, StringComparison.Ordinal))
+            {
+                refreshedDPoPCredentials.DPoPNonce = currentDPoPCredentials.DPoPNonce;
             }
 
             _credentials = refreshedCredentials;
@@ -275,39 +574,948 @@ public partial class AtProtoAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   In practice this reports a DPoP nonce rotation. The server hands back a new nonce on a request made with an
+    ///   old one, and the agent has to record it so the retry, and everything after it, is accepted.
+    /// </para>
+    /// <para>
+    ///   The nonce is the only part which changes, so it is written into the credentials the agent already holds rather
+    ///   than replacing them. Replacing them with the snapshot the request was made with is what
+    ///   <see href="https://github.com/blowdart/idunno.Bluesky/issues/559">issue 559</see> was: a request which started
+    ///   before a refresh carries the tokens from before it, so publishing that snapshot restored a spent refresh
+    ///   token and changed the generation, which in turn made the refresh discard the credentials it had just been
+    ///   issued. The session then had no usable tokens at all.
+    /// </para>
+    /// </remarks>
     protected internal virtual async Task InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(credentials);
 
-        if (credentials is DPoPAccessCredentials dPopAccessCredentials)
+        if (credentials is AccessCredentials updatedAccessCredentials && credentials is IDPoPBoundCredential updatedDPoPCredential)
         {
-            Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials),
-                cancellationToken).ConfigureAwait(false);
+            AccessCredentials credentialsToNotify;
 
-            if (!_atProtoAgentDisposed)
+            lock (_credentialLock)
             {
-                Credentials = dPopAccessCredentials;
-            }
-        }
-        else if (credentials is AccessCredentials accessCredentials)
-        {
-            Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials),
-                cancellationToken).ConfigureAwait(false);
+                // The request this nonce came from was made with a snapshot of the credentials taken when it started,
+                // and a refresh or a logout can have happened since. Everything except the nonce therefore has to still
+                // match what the agent holds. If any of it does not, the nonce belongs to a session, or a set of tokens,
+                // which is over, and applying it would corrupt the current ones. The agent is left alone, and the
+                // request is left to fail and retry, which will collect a nonce for the credentials in use.
+                if (_atProtoAgentDisposed ||
+                    _credentials is not AccessCredentials currentCredentials ||
+                    currentCredentials is not IDPoPBoundCredential currentDPoPCredential ||
+                    !string.Equals(currentCredentials.AccessJwt, updatedAccessCredentials.AccessJwt, StringComparison.Ordinal) ||
+                    !string.Equals(currentCredentials.RefreshToken, updatedAccessCredentials.RefreshToken, StringComparison.Ordinal) ||
+                    !string.Equals(currentDPoPCredential.DPoPProofKey, updatedDPoPCredential.DPoPProofKey, StringComparison.Ordinal) ||
+                    currentCredentials.Service != updatedAccessCredentials.Service)
+                {
+                    return;
+                }
 
-            if (!_atProtoAgentDisposed)
-            {
-                Credentials = accessCredentials;
+                // Mutated in place rather than published, so the generation does not change and a refresh which is in
+                // flight is not made to think its credentials have been superseded. A handler already holding this
+                // instance sees the new nonce without being told anything.
+                if (!ReferenceEquals(currentCredentials, updatedAccessCredentials) &&
+                    !string.Equals(currentDPoPCredential.DPoPNonce, updatedDPoPCredential.DPoPNonce, StringComparison.Ordinal))
+                {
+                    currentDPoPCredential.DPoPNonce = updatedDPoPCredential.DPoPNonce;
+                }
+
+                credentialsToNotify = currentCredentials;
             }
+
+            Logger.OnCredentialUpdatedCallbackCalled(_logger);
+
+            // Not committed: nothing has been exchanged, so if this notification is dropped or cancelled the agent's
+            // credentials still work and the nonce is simply collected again on the next request.
+            await RaiseCredentialsUpdatedAsync(credentialsToNotify, credentialsCommitted: false, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            // This should never happen.
+            // Anything else is rejected rather than published. Only a DPoP bound access credential drives this
+            // callback, and publishing a shape which is not one would mean assigning the caller's snapshot without the
+            // freshness check above, which is exactly the stale assignment issue 559 was.
             Logger.OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(_logger);
         }
+    }
+
+    /// <summary>
+    /// Marks a place in the notification queue.
+    /// </summary>
+    internal sealed class NotificationTurn
+    {
+        /// <summary>
+        /// Gets or sets the number of this turn.
+        /// </summary>
+        public long Number { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this turn is the one running now.
+        /// </summary>
+        public bool Entered { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this turn has been given up.
+        /// </summary>
+        public bool Finished { get; set; }
+    }
+
+    /// <summary>
+    /// Takes a place in the notification queue for a caller which is about to change the agent credentials, so the
+    /// order notifications reach a subscriber in is the order the changes were committed in.
+    /// </summary>
+    /// <returns>The turn taken, or <see langword="null"/> if the caller does not need one.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Taken <b>before</b> the change is committed, not afterwards. Committing first and queueing afterwards leaves a
+    ///   window in which another caller commits and queues ahead of this one, so a subscriber is told about the changes
+    ///   in the opposite order to the one they happened in. A session which ended before another began is then reported
+    ///   as ending after it, and a subscriber which discards its stored credentials when a session ends discards the
+    ///   live ones with them.
+    /// </para>
+    /// <para>
+    ///   Taking a place does not wait for it, so it is safe to do whilst <see cref="_credentialRefreshSemaphore"/> is
+    ///   held. Waiting for the turn must not be: a handler running in the turn ahead is free to log in or out, which
+    ///   needs that semaphore, and a caller holding it whilst waiting for a turn would deadlock against such a handler.
+    ///   Callers therefore take their place at the commit, release the refresh semaphore, and only then wait.
+    /// </para>
+    /// <para>
+    ///   A turn is taken whether the caller is running inside a notification or not. A reentrant caller does not queue
+    ///   behind itself: its raises are deferred by the notification which is running, and return without ever waiting
+    ///   for the turn, which is then simply stepped over when it is given up. Deciding at the commit not to take one,
+    ///   because a notification happened to be running, is not safe. Work a handler started but did not await carries
+    ///   that handler's scope, so it can see the scope running when it commits and find it closed by the time it
+    ///   raises, leaving it to take its place in the queue after a change which was committed later than its own.
+    /// </para>
+    /// <para>
+    ///   Every turn taken must be given up exactly once, with <see cref="FinishNotificationTurn(NotificationTurn?)"/>
+    ///   from a <see langword="finally"/>, whether it was ever entered or not. A turn which is never given up stops
+    ///   the queue for the lifetime of the agent.
+    /// </para>
+    /// </remarks>
+    private NotificationTurn? TakeNotificationTurn()
+    {
+        lock (_credentialLock)
+        {
+            return new NotificationTurn { Number = _nextNotificationTurn++ };
+        }
+    }
+
+    /// <summary>
+    /// Waits for <paramref name="turn"/> to be the turn which may run.
+    /// </summary>
+    /// <param name="turn">The turn to wait for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Must not be called whilst <see cref="_credentialRefreshSemaphore"/> is held. See
+    ///   <see cref="TakeNotificationTurn"/>.
+    /// </para>
+    /// </remarks>
+    private async Task EnterNotificationTurnAsync(NotificationTurn turn, CancellationToken cancellationToken)
+    {
+        TaskCompletionSource waiter;
+
+        lock (_credentialLock)
+        {
+            if (!_notificationTurnInProgress && _notificationTurnNowServing == turn.Number)
+            {
+                _notificationTurnInProgress = true;
+                turn.Entered = true;
+
+                return;
+            }
+
+            waiter = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _notificationTurnWaiters[turn.Number] = waiter;
+        }
+
+        try
+        {
+            await waiter.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            turn.Entered = true;
+        }
+        catch (OperationCanceledException)
+        {
+            // The turn can be granted between the cancellation and this point, in which case it is owned here and has
+            // to be handed on rather than abandoned, otherwise the queue stops. TrySetCanceled failing is what says so.
+            if (!waiter.TrySetCanceled(CancellationToken.None))
+            {
+                turn.Entered = true;
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gives up <paramref name="turn"/>, letting the turn behind it run.
+    /// </summary>
+    /// <param name="turn">The turn to give up, or <see langword="null"/> if the caller never took one.</param>
+    private void FinishNotificationTurn(NotificationTurn? turn)
+    {
+        if (turn is null || turn.Finished)
+        {
+            return;
+        }
+
+        turn.Finished = true;
+
+        lock (_credentialLock)
+        {
+            if (turn.Entered)
+            {
+                _notificationTurnInProgress = false;
+                _notificationTurnNowServing = turn.Number + 1;
+            }
+            else if (_notificationTurnNowServing == turn.Number && !_notificationTurnInProgress)
+            {
+                // Never entered, and at the head of the queue, so it is stepped over immediately.
+                _notificationTurnNowServing = turn.Number + 1;
+            }
+            else if (_notificationTurnNowServing < turn.Number)
+            {
+                // Never entered, and not yet at the head, so it is marked as one to step over when it gets there.
+                _notificationTurnWaiters[turn.Number] = null;
+
+                return;
+            }
+            else
+            {
+                // Never entered, and already behind the head, so the queue has stepped over it: a waiter cancelled
+                // whilst the turn ahead was running is dropped and stepped over by whoever finished that turn, before
+                // the cancelled call unwinds to here. Marking it now would add an entry for a turn the queue will
+                // never look at again, which is a leak rather than a tombstone.
+                return;
+            }
+
+            GrantNextNotificationTurn();
+        }
+    }
+
+    /// <summary>
+    /// Grants the queue to the turn which may now run, stepping over any which will never run.
+    /// </summary>
+    /// <remarks><para>Must be called whilst <see cref="_credentialLock"/> is held.</para></remarks>
+    private void GrantNextNotificationTurn()
+    {
+        while (!_notificationTurnInProgress &&
+               _notificationTurnWaiters.TryGetValue(_notificationTurnNowServing, out TaskCompletionSource? waiter))
+        {
+            _notificationTurnWaiters.Remove(_notificationTurnNowServing);
+
+            // A waiter which has already been cancelled gives up its own turn, so it is stepped over here as if it had
+            // never queued at all.
+            if (waiter is not null && waiter.TrySetResult())
+            {
+                _notificationTurnInProgress = true;
+
+                return;
+            }
+
+            _notificationTurnNowServing++;
+        }
+    }
+
+    /// <summary>
+    /// Raises <see cref="AtProtoAgent.CredentialsUpdated"/> and awaits <see cref="AtProtoAgent.CredentialsUpdatedAsync"/> for
+    /// <paramref name="credentials"/>, provided the agent still holds them.
+    /// </summary>
+    /// <param name="credentials">The credentials the notification is being raised for.</param>
+    /// <param name="credentialsCommitted">
+    ///   <see langword="true"/> if <paramref name="credentials"/> have already been published as the agent's credentials
+    ///   and a handler is the only opportunity to persist them, otherwise <see langword="false"/>.
+    /// </param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <param name="notificationTurn">The place in the notification queue taken by the caller when it committed its change, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A handler which persists what it is given must never write an older set of credentials over a newer set. A DPoP
+    ///   nonce update and a credential refresh can be notified concurrently, so without serialisation a nonce notification
+    ///   which started first can finish last and write a refresh token the server has already spent over the one which
+    ///   replaced it, leaving a restart with unusable credentials.
+    /// </para>
+    /// <para>
+    ///   Notifications are therefore raised one at a time, and one whose credentials the agent has since replaced is
+    ///   dropped rather than raised: whatever replaced them has its own notification, and the credentials in hand no
+    ///   longer describe the session.
+    /// </para>
+    /// <para>
+    ///   Once credentials have been committed their notification cannot be cancelled. Dropping it would leave an older
+    ///   notification queued ahead of it free to persist credentials the server has already replaced, with nothing left
+    ///   to follow and repair them.
+    /// </para>
+    /// <para>
+    ///   A handler is free to call back into the agent, and a call which refreshes credentials raises a notification of
+    ///   its own. Raising that inline would let the outer handler, holding the credentials which have just been
+    ///   replaced, finish last and persist them, so a reentrant notification is deferred and raised once the handler it
+    ///   came from has finished. A deferred notification for committed credentials is raised even if the handler it was
+    ///   deferred from fails, as the refresh token it replaced has already been spent.
+    /// </para>
+    /// <para>
+    ///   Internal rather than private so that a test can raise a notification directly, bypassing the freshness check
+    ///   the DPoP nonce callback applies.
+    /// </para>
+    /// </remarks>
+    internal async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken, NotificationTurn? notificationTurn = null)
+    {
+        if (credentialsCommitted)
+        {
+            cancellationToken = CancellationToken.None;
+        }
+
+        if (_raisingCredentialNotification.Value is CredentialNotificationScope scope)
+        {
+            bool deferred = false;
+
+            lock (_credentialLock)
+            {
+                // Work a handler started but did not await keeps the scope it flowed from, so the notification it
+                // raises has to be checked against that scope still running. Deferring to a notification which has
+                // already finished would leave nothing to raise it.
+                //
+                // The credentials also have to still be the agent's. The slot holds only the newest deferral, and a
+                // notification can reach it later than one for credentials which replaced it, so without this a stale
+                // set could overwrite a newer one and be dropped as stale when the drain raised it, losing both.
+                if (scope.Active && ReferenceEquals(_credentials, credentials))
+                {
+                    _deferredCredentialNotification = credentials;
+                    _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
+                    deferred = true;
+                }
+                else if (scope.Active)
+                {
+                    // Nothing to raise, but the deferral is still accounted for: whatever replaced these credentials
+                    // has a notification of its own, so returning here drops only the superseded set.
+                    deferred = true;
+                }
+            }
+
+            if (deferred)
+            {
+                return;
+            }
+        }
+
+        CredentialNotificationQueueing?.Invoke(credentials);
+
+        // Cancellation is checked here, before the queue, rather than inside it. A notification which has waited its
+        // turn is raised to completion, because abandoning it part way would leave the subscriber holding whatever the
+        // notification ahead of it wrote.
+        //
+        // A caller which took a turn before committing its change passes it in, and everything it raises runs in that
+        // one turn, so its changes reach a subscriber in the order they were committed in.
+        NotificationTurn? ownedTurn = null;
+
+        if (notificationTurn is null)
+        {
+            notificationTurn = ownedTurn = new NotificationTurn();
+
+            lock (_credentialLock)
+            {
+                ownedTurn.Number = _nextNotificationTurn++;
+            }
+        }
+
+        try
+        {
+            if (!notificationTurn.Entered)
+            {
+                await EnterNotificationTurnAsync(notificationTurn, cancellationToken).ConfigureAwait(false);
+            }
+
+            // From here this call owns the queue, and is responsible for raising anything a handler defers into it
+            // before it gives the turn up. Nothing else can drain those deferrals: a later caller is still waiting for
+            // its turn, and the handler which parked them has, by definition, already returned.
+            CredentialNotificationScope notificationScope = new();
+
+            _raisingCredentialNotification.Value = notificationScope;
+
+            try
+            {
+                AccessCredentials? credentialsToRaise = credentials;
+
+                try
+                {
+                    // Raise, then take whatever the handler deferred and raise that too, until nothing is left. A handler
+                    // which refreshes before it persists therefore sees the refreshed credentials last, which is what a
+                    // subscriber ends up storing.
+                    while (credentialsToRaise is not null)
+                    {
+                        AccessCredentials raising = credentialsToRaise;
+
+                        await RaiseCredentialsUpdatedIfCurrent(raising, cancellationToken).ConfigureAwait(false);
+
+                        credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false, notificationScope);
+                    }
+
+                    // Raised last, after everything a handler queued, so a handler which ended or replaced the session
+                    // cannot persist it afterwards. A subscriber which discards its stored credentials therefore discards
+                    // the last thing written for the session which is over.
+                    RaiseDeferredSessionEvents(swallowExceptions: false);
+                }
+                catch (Exception exception) when (exception is not OutOfMemoryException)
+                {
+                    // A handler which failed may have already triggered a refresh, spending the refresh token the agent
+                    // was holding. Whatever replaced it has to reach a handler, otherwise nothing is left which can
+                    // persist it and durable storage keeps a token the server will not honour.
+                    await DrainCommittedCredentialNotifications(credentialsToRaise, notificationScope).ConfigureAwait(false);
+
+                    // The session has already started or ended, so a subscriber is told even though the notification failed.
+                    RaiseDeferredSessionEvents(swallowExceptions: true);
+
+                    throw;
+                }
+            }
+            finally
+            {
+                _raisingCredentialNotification.Value = null;
+
+                lock (_credentialLock)
+                {
+                    // Closing the scope makes any later reentrant raise take a turn instead of deferring here, and the
+                    // slots are emptied because nothing after this point can drain them. In the normal case they are
+                    // already empty; anything still present was parked by work which outlived its handler and arrived
+                    // after the loop had stopped looking, and is dropped in preference to being raised out of order or
+                    // never raised at all.
+                    notificationScope.Active = false;
+                    _deferredCredentialNotification = null;
+                    _deferredCredentialNotificationCommitted = false;
+                    _deferredSessionEvents.Clear();
+                }
+            }
+        }
+        finally
+        {
+            FinishNotificationTurn(ownedTurn);
+        }
+    }
+
+    /// <summary>
+    /// Raises the credential update notification for <paramref name="credentials"/>, provided the agent still holds them.
+    /// </summary>
+    /// <param name="credentials">The credentials the notification is being raised for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private async Task RaiseCredentialsUpdatedIfCurrent(AccessCredentials credentials, CancellationToken cancellationToken)
+    {
+        bool agentStillHoldsCredentials;
+
+        lock (_credentialLock)
+        {
+            // The deferral slot is deliberately left alone. The drain loop empties it before each raise, and work
+            // which outlived a handler can fill it at any point, so clearing it here would discard a notification
+            // which nothing else is going to raise.
+            agentStillHoldsCredentials = !_atProtoAgentDisposed && ReferenceEquals(_credentials, credentials);
+        }
+
+        if (agentStillHoldsCredentials)
+        {
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Takes the credentials deferred by a notification raised from inside the one for <paramref name="justRaised"/>, if any.
+    /// </summary>
+    /// <param name="justRaised">The credentials whose notification has just finished.</param>
+    /// <param name="committedOnly">Whether to take the deferred credentials only if the agent has already published them.</param>
+    /// <param name="scopeToCloseWhenEmpty">
+    /// The scope to mark inactive if nothing is deferred, so that work which flowed out of the notification and raises
+    /// one after this point takes the queue rather than deferring to a notification which is about to finish.
+    /// </param>
+    /// <returns>The credentials to raise a notification for, or <see langword="null"/> if there are none.</returns>
+    private AccessCredentials? TakeDeferredCredentialNotification(
+        AccessCredentials? justRaised,
+        bool committedOnly,
+        CredentialNotificationScope? scopeToCloseWhenEmpty = null)
+    {
+        lock (_credentialLock)
+        {
+            AccessCredentials? deferred = _deferredCredentialNotification;
+
+            _deferredCredentialNotification = null;
+
+            bool committed = _deferredCredentialNotificationCommitted;
+
+            _deferredCredentialNotificationCommitted = false;
+
+            // A handler is given the credentials themselves, so a reentrant update to the instance it has just been
+            // handed, a DPoP nonce rotation for example, needs no notification of its own.
+            if (deferred is null || ReferenceEquals(deferred, justRaised) || (committedOnly && !committed))
+            {
+                // Closed under the same lock the deferral is taken under, so anything raising a notification either
+                // deferred before this point, and is taken above, or finds the scope closed and queues instead.
+                if (scopeToCloseWhenEmpty is not null)
+                {
+                    scopeToCloseWhenEmpty.Active = false;
+                }
+
+                return null;
+            }
+
+            return deferred;
+        }
+    }
+
+    /// <summary>
+    /// Raises notifications for any credentials the agent has already published which were deferred by a handler which
+    /// then failed, swallowing any exception a handler throws so the original failure is the one which propagates.
+    /// </summary>
+    /// <param name="justRaised">The credentials whose notification failed, if any.</param>
+    /// <param name="scope">The scope of the notification which failed, closed once there is nothing left to drain.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised, CredentialNotificationScope scope)
+    {
+        AccessCredentials? credentialsToRaise = TakeDeferredCredentialNotification(justRaised, committedOnly: true, scope);
+
+        while (credentialsToRaise is not null)
+        {
+            AccessCredentials raising = credentialsToRaise;
+
+            try
+            {
+                await RaiseCredentialsUpdatedIfCurrent(raising, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logger.CommittedCredentialsNotificationThrew(_logger, exception);
+            }
+
+            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true, scope);
+        }
+    }
+
+    /// <summary>
+    /// Raises <see cref="Unauthenticated"/> for a session which has ended, ordered behind any credential update
+    /// notification which is still running.
+    /// </summary>
+    /// <param name="e">The event arguments describing the session which has ended.</param>
+    /// <param name="notificationTurn">The place in the notification queue taken by the caller when it committed its change, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private Task RaiseUnauthenticatedAsync(UnauthenticatedEventArgs e, NotificationTurn? notificationTurn = null) =>
+        RaiseSessionEventAsync(() => OnUnauthenticated(e), notificationTurn);
+
+    /// <summary>
+    /// Raises <see cref="Authenticated"/> for a session which has started, ordered behind any credential update
+    /// notification which is still running.
+    /// </summary>
+    /// <param name="e">The event arguments describing the session which has started.</param>
+    /// <param name="notificationTurn">The place in the notification queue taken by the caller when it committed its change, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private Task RaiseAuthenticatedAsync(AuthenticatedEventArgs e, NotificationTurn? notificationTurn = null) =>
+        RaiseSessionEventAsync(() => OnAuthenticated(e), notificationTurn);
+
+    /// <summary>
+    /// Raises a session starting or ending, ordered behind any credential update notification which is still running.
+    /// </summary>
+    /// <param name="raise">The action which raises the event.</param>
+    /// <param name="notificationTurn">The place in the notification queue taken by the caller when it committed its change, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The credentials a notification carries are checked against the agent before the handler is given them, but a
+    ///   handler which suspends can still be running when the session it was told about is replaced or ends. Raising
+    ///   the event immediately would let that handler finish afterwards and write credentials for a session which is no
+    ///   longer current back to durable storage, with nothing following it to repair them. Ordering the event behind
+    ///   the notification queue makes it the last thing a handler sees, so a subscriber which discards or replaces its
+    ///   stored credentials discards the stale write with them.
+    /// </para>
+    /// <para>
+    ///   A session started or ended from inside a handler is deferred rather than raised inline, so that the handler
+    ///   which caused it, and anything it queued, still runs first. It cannot be waited on either, as the notification
+    ///   it came from holds the semaphore it would wait for.
+    /// </para>
+    /// <para>
+    ///   Whilst the event is raised a notification scope is opened, exactly as a credential update notification opens
+    ///   one, so that a subscriber which logs in or out from inside the handler defers its raises rather than waiting
+    ///   for a queue this call is already holding. Anything it defers is drained before the queue is given up.
+    /// </para>
+    /// </remarks>
+    private async Task RaiseSessionEventAsync(Action raise, NotificationTurn? notificationTurn = null)
+    {
+        // Invoked before the reentrancy check so that a test can hold a session event in the window between the change
+        // being committed and it being raised, which is where ordering against a concurrent change is decided.
+        if (SessionEventQueueing is Func<Task> sessionEventQueueing)
+        {
+            await sessionEventQueueing().ConfigureAwait(false);
+        }
+
+        bool deferred = false;
+
+        lock (_credentialLock)
+        {
+            if (_raisingCredentialNotification.Value is { Active: true })
+            {
+                _deferredSessionEvents.Enqueue(raise);
+                deferred = true;
+            }
+        }
+
+        if (deferred)
+        {
+            return;
+        }
+
+        NotificationTurn? ownedTurn = null;
+
+        if (notificationTurn is null)
+        {
+            notificationTurn = ownedTurn = new NotificationTurn();
+
+            lock (_credentialLock)
+            {
+                ownedTurn.Number = _nextNotificationTurn++;
+            }
+        }
+
+        try
+        {
+            if (!notificationTurn.Entered)
+            {
+                await EnterNotificationTurnAsync(notificationTurn, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            CredentialNotificationScope notificationScope = new();
+
+            _raisingCredentialNotification.Value = notificationScope;
+
+            try
+            {
+                raise();
+
+                // A subscriber is free to refresh the agent, and the notification for the credentials that published
+                // was deferred into this scope. Nothing else can raise it: this call owns the turn, and the slots are
+                // emptied when the scope closes, so a subscriber would never be told about a token pair which is
+                // already live and would go on storing one the server will not honour.
+                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
+
+                RaiseDeferredSessionEvents(swallowExceptions: false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // The session has already started or ended, so anything the failing subscriber queued is still raised
+                // rather than being dropped along with it.
+                await DrainCommittedCredentialNotifications(null, notificationScope).ConfigureAwait(false);
+
+                RaiseDeferredSessionEvents(swallowExceptions: true);
+
+                throw;
+            }
+            finally
+            {
+                _raisingCredentialNotification.Value = null;
+
+                lock (_credentialLock)
+                {
+                    notificationScope.Active = false;
+                    _deferredCredentialNotification = null;
+                    _deferredCredentialNotificationCommitted = false;
+                    _deferredSessionEvents.Clear();
+                }
+            }
+        }
+        finally
+        {
+            FinishNotificationTurn(ownedTurn);
+        }
+    }
+
+    /// <summary>
+    /// Raises the session events deferred by a login or logout called from inside a credential update notification,
+    /// in the order they happened.
+    /// </summary>
+    /// <param name="swallowExceptions">
+    /// Whether to swallow an exception thrown by a subscriber, so that a failure which is already propagating stays
+    /// the one which reaches the caller.
+    /// </param>
+    private void RaiseDeferredSessionEvents(bool swallowExceptions)
+    {
+        while (true)
+        {
+            Action? raise;
+
+            lock (_credentialLock)
+            {
+                raise = _deferredSessionEvents.Count == 0 ? null : _deferredSessionEvents.Dequeue();
+            }
+
+            if (raise is null)
+            {
+                return;
+            }
+
+            if (!swallowExceptions)
+            {
+                raise();
+
+                continue;
+            }
+
+            try
+            {
+                raise();
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logger.DeferredSessionEventThrew(_logger, exception);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears the agent credentials and raises <see cref="Unauthenticated"/> for the session they belonged to, if any.
+    /// </summary>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Used by the paths which end a session because an operation failed. The credentials are discarded either way,
+    ///   as an agent which kept them would report itself as authenticated against a session it can no longer use, but
+    ///   discarding them silently leaves a subscriber holding them in durable storage with nothing to say they are
+    ///   finished with, so the next start restores a session the server has already rejected.
+    /// </para>
+    /// </remarks>
+    private async Task ClearCredentialsAndRaiseUnauthenticatedAsync()
+    {
+        PendingSessionEnd pendingSessionEnd = new();
+
+        try
+        {
+            ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
+            await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
+        }
+        finally
+        {
+            FinishNotificationTurn(pendingSessionEnd.NotificationTurn);
+        }
+    }
+
+    /// <summary>
+    /// The end of a session whose credentials have been cleared, held until the notification for it can be raised.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Clearing the credentials and telling a subscriber about it are separate steps because a caller which is
+    ///   holding <see cref="_credentialRefreshSemaphore"/> must not wait for a notification turn. Such a caller clears
+    ///   into one of these, releases the semaphore, and raises afterwards.
+    /// </para>
+    /// </remarks>
+    private sealed class PendingSessionEnd
+    {
+        /// <summary>
+        /// Gets or sets the place in the notification queue taken when the credentials were cleared.
+        /// </summary>
+        public NotificationTurn? NotificationTurn { get; set; }
+
+        /// <summary>
+        /// Gets or sets the arguments describing the session which ended, or <see langword="null"/> if there was no
+        /// session to end or it has already been raised.
+        /// </summary>
+        public UnauthenticatedEventArgs? EventArgs { get; set; }
+    }
+
+    /// <summary>
+    /// Clears the agent credentials, recording the session they belonged to in <paramref name="pendingSessionEnd"/>
+    /// without raising anything for it.
+    /// </summary>
+    /// <param name="pendingSessionEnd">The pending session end to record what has to be raised in.</param>
+    /// <remarks>
+    /// <para>
+    ///   The notification turn is taken here, before the credentials are cleared, so that a login which commits after
+    ///   this point is reported after this session ends rather than the end of this session arriving after it and
+    ///   taking the new session with it. Taking a turn does not wait, so this is safe to call whilst
+    ///   <see cref="_credentialRefreshSemaphore"/> is held. Raising is not.
+    /// </para>
+    /// </remarks>
+    private void ClearCredentialsAndRecordSessionEnd(PendingSessionEnd pendingSessionEnd)
+    {
+        pendingSessionEnd.NotificationTurn ??= TakeNotificationTurn();
+
+        UnauthenticatedEventArgs? endedSession;
+
+        lock (_credentialLock)
+        {
+            endedSession = _credentials is AccessCredentials ended && ended.Did is Did did
+                ? new UnauthenticatedEventArgs(did, ended.Service)
+                : null;
+
+            _credentials = null;
+            _credentialGeneration++;
+            Service = OriginalService;
+        }
+
+        ForgetExchangedRefreshTokens();
+
+        // Kept if something has already been recorded, so that a path which clears twice still reports the session
+        // which was actually ended rather than the empty agent the second clear saw.
+        pendingSessionEnd.EventArgs ??= endedSession;
+    }
+
+    /// <summary>
+    /// Raises <see cref="Unauthenticated"/> for the session recorded in <paramref name="pendingSessionEnd"/>, if any.
+    /// </summary>
+    /// <param name="pendingSessionEnd">The pending session end to raise.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The session end is taken rather than read, so a caller which raises on both its success and its failure path
+    ///   reports it exactly once.
+    /// </para>
+    /// <para>
+    ///   Must not be called whilst <see cref="_credentialRefreshSemaphore"/> is held.
+    /// </para>
+    /// </remarks>
+    private async Task RaisePendingSessionEndAsync(PendingSessionEnd pendingSessionEnd)
+    {
+        UnauthenticatedEventArgs? endedSession = pendingSessionEnd.EventArgs;
+
+        pendingSessionEnd.EventArgs = null;
+
+        if (endedSession is not null)
+        {
+            await RaiseUnauthenticatedAsync(endedSession, pendingSessionEnd.NotificationTurn).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Clears the agent credentials if it is still holding <paramref name="refreshToken"/>, which the server has spent
+    /// without the agent receiving anything in return.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token which has already been exchanged.</param>
+    /// <param name="unauthenticatedEventArgs">The event args to raise for the session which has ended, if any.</param>
+    /// <returns><see langword="true"/> if the credentials were cleared, otherwise <see langword="false"/>.</returns>
+    private bool TryClearCredentialsForSpentRefreshToken(string refreshToken, out UnauthenticatedEventArgs? unauthenticatedEventArgs)
+    {
+        bool cleared;
+
+        lock (_credentialLock)
+        {
+            if (_credentials is not AccessCredentials currentCredentials ||
+                !string.Equals(currentCredentials.RefreshToken, refreshToken, StringComparison.Ordinal))
+            {
+                unauthenticatedEventArgs = null;
+                return false;
+            }
+
+            _credentials = null;
+            _credentialGeneration++;
+            Service = OriginalService;
+
+            unauthenticatedEventArgs = currentCredentials.Did is Did did
+                ? new UnauthenticatedEventArgs(did, currentCredentials.Service)
+                : null;
+
+            cleared = true;
+        }
+
+        // The remembered tokens record exchanges made by the session which has just ended, so they say nothing about
+        // whatever session comes next. Left in place, a later login whose refresh token happened to match one of them
+        // would have its first refresh treated as already spent and be cleared immediately.
+        ForgetExchangedRefreshTokens();
+
+        return cleared;
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether a refresh of a credential issued to <paramref name="expectedDid"/> would be a refresh
+    /// of an account other than the one the agent is currently authenticated as.
+    /// </summary>
+    /// <param name="expectedDid">The <see cref="Did"/> the credential being refreshed was issued to, if it is known.</param>
+    /// <param name="currentDid">The <see cref="Did"/> the agent is currently authenticated as, when the actors differ.</param>
+    /// <returns><see langword="true"/> if the actors are known to differ, otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Checked before the token endpoint is called, and not only afterwards in
+    ///   <see cref="TryPublishRefreshedCredentials(AccessCredentials, long, out bool)"/>. By the time the result comes back
+    ///   the refresh token has been exchanged and recorded as spent, so rejecting only at that point would leave the
+    ///   caller's stored session destroyed rather than untouched: the old token no longer works and its replacement has
+    ///   been discarded. Declining up front leaves the supplied credential exactly as it was and still usable elsewhere.
+    /// </para>
+    /// <para>
+    ///   The check is unavoidably advisory. A credential which carries no <see cref="Did"/> cannot be attributed to an
+    ///   actor without exchanging it, so the post-response check remains as the backstop for that, for a racing login and
+    ///   for an authorization server which answers with a token for the wrong subject.
+    /// </para>
+    /// </remarks>
+    private bool IsRefreshForADifferentActor(Did? expectedDid, [NotNullWhen(true)] out Did? currentDid)
+    {
+        currentDid = null;
+
+        if (expectedDid is null)
+        {
+            return false;
+        }
+
+        lock (_credentialLock)
+        {
+            if (_credentials is AccessCredentials currentCredentials &&
+                currentCredentials.Did is Did agentDid &&
+                agentDid != expectedDid)
+            {
+                currentDid = agentDid;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Announces credentials a refresh has already committed to the agent, raising <see cref="Authenticated"/> first when
+    /// the refresh started a session.
+    /// </summary>
+    /// <param name="credentials">The credentials the agent is now holding.</param>
+    /// <param name="sessionStarted">Whether the refresh started a session, rather than replacing the credentials of one.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <param name="notificationTurn">The place in the notification queue taken by the caller when it committed its change, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The credentials are live in the agent before either event is raised, and the refresh token they replaced has
+    ///   already been spent, so the credentials notification is the only thing which can bring durable storage back into
+    ///   step. It therefore runs even when an <see cref="Authenticated"/> subscriber throws; without that a subscriber
+    ///   failing on the session start would leave storage holding a refresh token the server will no longer honour.
+    /// </para>
+    /// <para>
+    ///   The original subscriber exception is propagated once the notification has been made. A failure of the
+    ///   notification itself is logged rather than thrown, so it cannot displace the exception the caller needs to see.
+    /// </para>
+    /// </remarks>
+    private async Task RaiseSessionStartAndCredentialsUpdatedAsync(AccessCredentials credentials, bool sessionStarted, CancellationToken cancellationToken, NotificationTurn? notificationTurn = null)
+    {
+        try
+        {
+            if (sessionStarted)
+            {
+                await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
+                    credentials.Did,
+                    credentials.Service,
+                    credentials), notificationTurn).ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            try
+            {
+                await RaiseCredentialsUpdatedAsync(credentials, credentialsCommitted: true, CancellationToken.None, notificationTurn).ConfigureAwait(false);
+            }
+            catch (Exception notificationException) when (notificationException is not OutOfMemoryException)
+            {
+                Logger.CommittedCredentialsNotificationThrew(_logger, notificationException);
+            }
+
+            throw;
+        }
+
+        await RaiseCredentialsUpdatedAsync(credentials, credentialsCommitted: true, cancellationToken, notificationTurn).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -975,8 +2183,8 @@ public partial class AtProtoAgent
                     Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
 
                     StopTokenRefreshTimer();
-                    ForgetExchangedRefreshTokens();
-                    Credentials = null;
+
+                    await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
 
                     return new AtProtoHttpResult<bool>
                     {
@@ -1095,8 +2303,8 @@ public partial class AtProtoAgent
                     Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
 
                     StopTokenRefreshTimer();
-                    ForgetExchangedRefreshTokens();
-                    Credentials = null;
+
+                    await ClearCredentialsAndRaiseUnauthenticatedAsync().ConfigureAwait(false);
 
                     return new AtProtoHttpResult<bool>
                     {
@@ -1189,15 +2397,48 @@ public partial class AtProtoAgent
     /// </remarks>
     public async Task Logout(CancellationToken cancellationToken = default)
     {
-        await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        // The session ending is raised after the refresh semaphore has been released, never whilst it is held.
+        // Waiting for a notification turn under that semaphore deadlocks: a credential update handler which calls back
+        // into the agent owns the turn and waits for the semaphore, whilst the logout holding the semaphore waits for
+        // the turn. Clearing the credentials does not wait, so that part stays where it is.
+        PendingSessionEnd pendingSessionEnd = new();
 
         try
         {
-            await InternalLogout(cancellationToken).ConfigureAwait(false);
+            await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                if (LogoutHoldingCredentialRefreshSemaphore is Func<Task> logoutHoldingSemaphore)
+                {
+                    await logoutHoldingSemaphore().ConfigureAwait(false);
+                }
+
+                await InternalLogout(pendingSessionEnd, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _credentialRefreshSemaphore.Release();
+            }
+
+            await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
         }
         finally
         {
-            _credentialRefreshSemaphore.Release();
+            // A logout which failed still discarded the credentials, so the session ending is reported rather than
+            // being lost along with the failure. Nothing is raised twice: the session end is taken by whichever call
+            // reaches it first, so this does nothing once the call above has made it. A subscriber which throws here
+            // is logged rather than allowed to displace the failure the caller needs to see.
+            try
+            {
+                await RaisePendingSessionEndAsync(pendingSessionEnd).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logger.SessionEndedNotificationThrew(_logger, exception);
+            }
+
+            FinishNotificationTurn(pendingSessionEnd.NotificationTurn);
         }
     }
 
@@ -1208,8 +2449,11 @@ public partial class AtProtoAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    private async Task InternalLogout(CancellationToken cancellationToken = default)
+    private async Task InternalLogout(PendingSessionEnd pendingSessionEnd, CancellationToken cancellationToken = default)
     {
+        // Clears into pendingSessionEnd rather than raising, because this runs with _credentialRefreshSemaphore held.
+        // The caller raises what is recorded here once it has released it.
+
         // The agent credentials are read once. Logout spans several awaits, and re-reading the property would let a
         // concurrent logout, or a background refresh landing part way through, revoke one credential having checked
         // another, or null the property and leave the later reads throwing a NullReferenceException.
@@ -1314,8 +2558,7 @@ public partial class AtProtoAgent
                         // The credentials are discarded even though the revocation failed, so that a failed logout does not
                         // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
                         // DeleteSession() below.
-                        ForgetExchangedRefreshTokens();
-                        Credentials = null;
+                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
                         throw new LogoutException()
                         {
@@ -1354,8 +2597,7 @@ public partial class AtProtoAgent
                         // The refresh token has already been revoked by this point, so the session is over whatever happens
                         // to the access token. Holding on to the credentials would leave the agent reporting itself as
                         // authenticated against a session which no longer exists.
-                        ForgetExchangedRefreshTokens();
-                        Credentials = null;
+                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
 
                         throw new LogoutException()
                         {
@@ -1365,13 +2607,9 @@ public partial class AtProtoAgent
                     }
                 }
 
-                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
-
-                ForgetExchangedRefreshTokens();
-                Credentials = null;
                 succeeded = true;
 
-                OnUnauthenticated(unauthenticatedEventArgs);
+                ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
             }
             finally
             {
@@ -1401,19 +2639,16 @@ public partial class AtProtoAgent
 
                 if (deleteSessionResult.Succeeded)
                 {
-                    var unauthenticatedEventArgs = new UnauthenticatedEventArgs(credentials.Did, credentials.Service);
-
-                    ForgetExchangedRefreshTokens();
-                    Credentials = null;
                     succeeded = true;
 
-                    OnUnauthenticated(unauthenticatedEventArgs);
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
                 }
                 else
                 {
                     Logger.LogoutFailed(_logger, credentials.Did, credentials.Service, deleteSessionResult.StatusCode);
-                    ForgetExchangedRefreshTokens();
-                    Credentials = null;
+
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
                     throw new LogoutException()
                     {
                         StatusCode = deleteSessionResult.StatusCode,
@@ -1460,7 +2695,7 @@ public partial class AtProtoAgent
         if (credentials.AuthenticationType == AuthenticationType.UsernamePassword ||
             credentials.AuthenticationType == AuthenticationType.UsernamePasswordAuthFactorToken)
         {
-            return await RefreshSessionIssuedCredentials(credentials, cancellationToken).ConfigureAwait(false);
+            return await RefreshSessionIssuedCredentials(credentials, credentials.Did, cancellationToken).ConfigureAwait(false);
         }
         else if (credentials.AuthenticationType == AuthenticationType.OAuth)
         {
@@ -1513,7 +2748,7 @@ public partial class AtProtoAgent
         return credential switch
         {
             DPoPRefreshCredential dPoPRefreshCredential => await RefreshOAuthIssuedCredentials(dPoPRefreshCredential, expectedDid, cancellationToken).ConfigureAwait(false),
-            RefreshCredential refreshCredential => await RefreshSessionIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false),
+            RefreshCredential refreshCredential => await RefreshSessionIssuedCredentials(refreshCredential, expectedDid, cancellationToken).ConfigureAwait(false),
             _ => throw new CredentialException(credential, "Cannot refresh credentials of this type."),
         };
     }
@@ -1639,25 +2874,104 @@ public partial class AtProtoAgent
         ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
         ArgumentNullException.ThrowIfNull(accessCredentials.Service);
 
+        UnauthenticatedEventArgs? replacedSession;
+
         await _credentialRefreshSemaphore.WaitAsync().ConfigureAwait(false);
+
+        // Taken before the credentials are published, and without waiting, so the refresh semaphore is not held across
+        // a wait for a turn. A login which published first and queued afterwards could be overtaken by a refresh which
+        // ended the previous session, so a subscriber would be told this session had started and then that the one
+        // before it had ended, and would discard the credentials it had just been given.
+        NotificationTurn? notificationTurn = TakeNotificationTurn();
 
         try
         {
-            Service = accessCredentials.Service;
-            Credentials = accessCredentials;
+            try
+            {
+                lock (_credentialLock)
+                {
+                    ObjectDisposedException.ThrowIf(_atProtoAgentDisposed, this);
 
-            StartTokenRefreshTimer();
+                    // Read and replaced in one step so that the session being displaced is described exactly as it was
+                    // when it was displaced, and cannot be reported twice by two logins racing each other.
+                    replacedSession = _credentials is AccessCredentials replaced && replaced.Did is Did replacedDid
+                        ? new UnauthenticatedEventArgs(replacedDid, replaced.Service)
+                        : null;
+
+                    _credentials = accessCredentials;
+                    _credentialGeneration++;
+                    Service = accessCredentials.Service;
+                }
+
+                // Any remembered token records an exchange made by a session which is not the one being started, whether
+                // this login displaced that session or it had already ended, so none of them describe the new session.
+                // Retaining them would let a refresh token matching one be treated as already spent on its first use.
+                ForgetExchangedRefreshTokens();
+
+                StartTokenRefreshTimer();
+            }
+            finally
+            {
+                _credentialRefreshSemaphore.Release();
+            }
+
+            // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it,
+            // and ordered behind any credential update notification still running so that a handler suspended part way
+            // through persisting the previous session cannot finish afterwards and write it over this one.
+            ExceptionDispatchInfo? replacedSessionFailure = null;
+
+            if (replacedSession is not null)
+            {
+                try
+                {
+                    await RaiseUnauthenticatedAsync(replacedSession, notificationTurn).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is not OutOfMemoryException)
+                {
+                    // The new credentials are already live, so the session which started is still reported rather than
+                    // being lost along with the failure to report the one it replaced. A subscriber which never hears
+                    // that this session started would go on holding the credentials for the previous one. The failure
+                    // is rethrown once it has been told.
+                    replacedSessionFailure = ExceptionDispatchInfo.Capture(exception);
+                }
+            }
+
+            // The subscriber for the replaced session is free to log in or out itself, and anything it did has already
+            // been raised by the time that returns. Announcing this session afterwards would describe credentials the
+            // agent no longer holds, putting a stale session start last, so it is announced only if it is still the
+            // live one. Whatever replaced it has announced itself.
+            bool sessionIsStillLive;
+
+            lock (_credentialLock)
+            {
+                sessionIsStillLive = ReferenceEquals(_credentials, accessCredentials);
+            }
+
+            try
+            {
+                if (sessionIsStillLive)
+                {
+                    await RaiseAuthenticatedAsync(new AuthenticatedEventArgs(
+                        accessCredentials.Did,
+                        accessCredentials.Service,
+                        accessCredentials), notificationTurn).ConfigureAwait(false);
+                }
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException && replacedSessionFailure is not null)
+            {
+                // Both notifications failed. The one for the session which started is the one the caller sees, as it
+                // describes the state the agent is actually in, so the earlier failure is logged rather than lost.
+                Logger.SessionEndedNotificationThrew(_logger, replacedSessionFailure.SourceException);
+
+                throw;
+            }
+
+            replacedSessionFailure?.Throw();
         }
         finally
         {
-            _credentialRefreshSemaphore.Release();
+            FinishNotificationTurn(notificationTurn);
         }
-
-        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-        OnAuthenticated(new AuthenticatedEventArgs(
-            accessCredentials.Did,
-            accessCredentials.Service,
-            accessCredentials));
     }
 
     internal async Task<bool> RefreshOAuthIssuedCredentials(DPoPRefreshCredential refreshCredential, Did? expectedDid = null, CancellationToken cancellationToken = default)
@@ -1679,12 +2993,33 @@ public partial class AtProtoAgent
             throw new CredentialException(refreshCredential);
         }
 
+        // Declined before anything is sent to the token endpoint, so the supplied credential is left unspent and still
+        // usable. Rejecting only after the exchange would destroy it.
+        if (IsRefreshForADifferentActor(expectedDid, out Did? agentDid))
+        {
+            Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, agentDid);
+
+            return false;
+        }
+
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        AccessCredentials? credentialsToNotify = null;
+        bool sessionStartedByRefresh = false;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
+        UnauthenticatedEventArgs? unauthenticatedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
+
+        // Taken at whichever commit this refresh makes, so that what it publishes reaches a subscriber in the order it
+        // was committed in rather than the order the raises happen to be reached in. Given up in the outer finally,
+        // including when nothing was ever committed, because a turn which is never given up stops the queue.
+        NotificationTurn? notificationTurn = null;
+
+        if (CredentialRefreshQueueing is Func<Task> credentialRefreshQueueing)
+        {
+            await credentialRefreshQueueing().ConfigureAwait(false);
+        }
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1692,114 +3027,157 @@ public partial class AtProtoAgent
 
         try
         {
-            using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
+            try
             {
-                Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
-
-                if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
                 {
-                    succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+                    Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
 
-                    if (!succeeded)
+                    // Rechecked under the refresh semaphore. The check made before waiting for it can be stale by the
+                    // time it is granted: a login or a refresh which was already holding it can have re-pointed the
+                    // agent at another account whilst this call queued. Exchanging on a stale check would spend the
+                    // caller's refresh token and leave only the post-response guard to reject the result, destroying
+                    // the stored session this call was asked to refresh.
+                    if (IsRefreshForADifferentActor(expectedDid, out Did? currentActor))
                     {
-                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+                        Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, currentActor);
+
+                        return false;
                     }
 
-                    return succeeded;
+                    if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                    {
+                        succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+
+                        if (!succeeded)
+                        {
+                            tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                            notificationTurn = TakeNotificationTurn();
+
+                            if (TryClearCredentialsForSpentRefreshToken(refreshCredential.RefreshToken, out unauthenticatedEventArgs))
+                            {
+                                StopTokenRefreshTimer();
+                            }
+                        }
+
+                        return succeeded;
+                    }
+
+                    StopTokenRefreshTimer();
+                    timerStopped = true;
+
+                    // Get authorization server
+                    Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
+                        throw new ArgumentException($"Authorization server cannot be found for {refreshCredential.Service}", nameof(refreshCredential));
+
+                    OAuthClient oAuthClient = CreateOAuthClient();
+
+                    DPoPAccessCredentials? refreshedCredentials = await oAuthClient.RefreshCredentials(
+                        refreshCredential: refreshCredential,
+                        authority: authorizationServer,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (refreshedCredentials is null)
+                    {
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        return false;
+                    }
+
+                    // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
+                    // a retry re-presents a token which has already been exchanged.
+                    RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
+                    // The refresh token was issued to one actor, so the tokens it is exchanged for must belong to that same actor.
+                    // Without this an authorization server which answered with a token for a different subject would silently
+                    // re-point the agent, and everything built on it, at another account.
+                    if (expectedDid is not null && refreshedCredentials.Did != expectedDid)
+                    {
+                        Logger.RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(_logger, expectedDid, refreshedCredentials.Did, refreshCredential.Service);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        throw new SecurityTokenValidationException("The issued access token was not issued for the account being refreshed.");
+                    }
+
+                    if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
+                    {
+                        Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
+
+                    Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                    notificationTurn = TakeNotificationTurn();
+
+                    if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration, out bool sessionStarted))
+                    {
+                        Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                        return false;
+                    }
+
+                    StartTokenRefreshTimer();
+                    succeeded = true;
+
+                    credentialsToNotify = refreshedCredentials;
+                    sessionStartedByRefresh = sessionStarted;
                 }
-
-                StopTokenRefreshTimer();
-                timerStopped = true;
-
-                // Get authorization server
-                Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
-                    throw new ArgumentException($"Authorization server cannot be found for {refreshCredential.Service}", nameof(refreshCredential));
-
-                OAuthClient oAuthClient = CreateOAuthClient();
-
-                DPoPAccessCredentials? refreshedCredentials = await oAuthClient.RefreshCredentials(
-                    refreshCredential: refreshCredential,
-                    authority: authorizationServer,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (refreshedCredentials is null)
-                {
-                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
-
-                    return false;
-                }
-
-                // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
-                // a retry re-presents a token which has already been exchanged.
-                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
-
-                // The refresh token was issued to one actor, so the tokens it is exchanged for must belong to that same actor.
-                // Without this an authorization server which answered with a token for a different subject would silently
-                // re-point the agent, and everything built on it, at another account.
-                if (expectedDid is not null && refreshedCredentials.Did != expectedDid)
-                {
-                    Logger.RefreshOAuthIssuedCredentialsReturnedUnexpectedDid(_logger, expectedDid, refreshedCredentials.Did, refreshCredential.Service);
-
-                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
-
-                    throw new SecurityTokenValidationException("The issued access token was not issued for the account being refreshed.");
-                }
-
-                if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
-                {
-                    Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
-
-                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
-
-                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
-                }
-
-                Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-                if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration))
-                {
-                    Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-                    return false;
-                }
-
-                StartTokenRefreshTimer();
-                succeeded = true;
-
-                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                    refreshedCredentials.Did,
-                    refreshedCredentials.Service,
-                    refreshedCredentials);
             }
-        }
-        finally
-        {
-            _credentialRefreshSemaphore.Release();
-
-            // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
-            // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
-            if (timerStopped && !succeeded)
+            finally
             {
-                RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+                _credentialRefreshSemaphore.Release();
+
+                // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
+                // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
+                if (timerStopped && !succeeded)
+                {
+                    RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+                }
+
+                // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+                // The session ending is raised first: the credentials have already been cleared, so a failure subscriber
+                // which throws must not be able to suppress it, and one which reauthenticates must not be able to make it
+                // arrive after the new session's Authenticated.
+                if (unauthenticatedEventArgs is not null)
+                {
+                    await RaiseUnauthenticatedAsync(unauthenticatedEventArgs, notificationTurn).ConfigureAwait(false);
+                }
+
+                if (tokenRefreshFailedEventArgs is not null)
+                {
+                    // The turn is given up before the failure is raised. TokenRefreshFailed is synchronous, so a
+                    // handler which reauthenticates does so on this thread, and a login which had to wait for a turn
+                    // this call was still holding would block the only thread able to give it up. Everything this call
+                    // had to order has been raised by the time it gets here, so the turn has nothing left to keep.
+                    FinishNotificationTurn(notificationTurn);
+
+                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                }
             }
 
             // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-            if (tokenRefreshFailedEventArgs is not null)
+            if (credentialsToNotify is not null)
             {
-                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                // A refresh of stored credentials on an agent which had no session starts one, so it is announced as a
+                // session starting before the credentials for it are notified. The notification is made even if that
+                // announcement fails, because the credentials are already live and the token they replaced is spent.
+                await RaiseSessionStartAndCredentialsUpdatedAsync(credentialsToNotify, sessionStartedByRefresh, cancellationToken, notificationTurn).ConfigureAwait(false);
             }
-        }
 
-        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-        if (credentialsUpdatedEventArgs is not null)
+            return true;
+        }
+        finally
         {
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+            FinishNotificationTurn(notificationTurn);
         }
-
-        return true;
     }
 
-    internal async Task<bool> RefreshSessionIssuedCredentials(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+    internal async Task<bool> RefreshSessionIssuedCredentials(RefreshCredential refreshCredential, Did? expectedDid = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(refreshCredential);
         ArgumentNullException.ThrowIfNull(refreshCredential.Service);
@@ -1817,12 +3195,31 @@ public partial class AtProtoAgent
             refreshCredential = new RefreshCredential(refreshCredential.Service, refreshCredential.AuthenticationType, refreshCredential.RefreshToken);
         }
 
+        // Declined before anything is sent to the server, so the supplied credential is left unspent and still usable.
+        // Rejecting only after the exchange would destroy it.
+        if (IsRefreshForADifferentActor(expectedDid, out Did? agentDid))
+        {
+            Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, agentDid);
+
+            return false;
+        }
+
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+        AccessCredentials? credentialsToNotify = null;
+        bool sessionStartedByRefresh = false;
         TokenRefreshFailedEventArgs? tokenRefreshFailedEventArgs = null;
         bool timerStopped = false;
         bool succeeded = false;
+
+        // Taken at the commit this refresh makes, so what it publishes reaches a subscriber in commit order. Given up
+        // in the outer finally, including when nothing was committed, because a turn never given up stops the queue.
+        NotificationTurn? notificationTurn = null;
+
+        if (CredentialRefreshQueueing is Func<Task> credentialRefreshQueueing)
+        {
+            await credentialRefreshQueueing().ConfigureAwait(false);
+        }
 
         await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1830,116 +3227,152 @@ public partial class AtProtoAgent
 
         try
         {
-            using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
+            try
             {
-                Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
-
-                if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
                 {
-                    succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+                    Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
 
-                    if (!succeeded)
+                    // Rechecked under the refresh semaphore. The check made before waiting for it can be stale by the
+                    // time it is granted: a login or a refresh which was already holding it can have re-pointed the
+                    // agent at another account whilst this call queued. Exchanging on a stale check would spend the
+                    // caller's refresh token and leave only the post-response guard to reject the result, destroying
+                    // the stored session this call was asked to refresh.
+                    if (IsRefreshForADifferentActor(expectedDid, out Did? currentActor))
                     {
-                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+                        Logger.RefreshedCredentialsDiscardedAsTheyAreForADifferentActor(_logger, expectedDid!, currentActor);
+
+                        return false;
                     }
 
-                    return succeeded;
+                    if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                    {
+                        succeeded = HasExchangeOfRefreshTokenProducedNewCredentials(refreshCredential.RefreshToken, tokenHash);
+
+                        if (!succeeded)
+                        {
+                            tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+                        }
+
+                        return succeeded;
+                    }
+
+                    StopTokenRefreshTimer();
+                    timerStopped = true;
+
+                    AtProtoHttpResult<Session> refreshSessionResult;
+                    try
+                    {
+                        refreshSessionResult = await AtProtoServer.RefreshSession(
+                            refreshCredential,
+                            HttpClient,
+                            credentialsUpdated: null,
+                            loggerFactory: LoggerFactory,
+                            maximumResponseSize: MaximumResponseSize,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.TokenRefreshApiThrew(_logger, e);
+                        throw;
+                    }
+
+                    if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
+                    {
+                        Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(
+                            refreshCredential,
+                            refreshSessionResult.StatusCode,
+                            refreshSessionResult.AtErrorDetail);
+
+                        return false;
+                    }
+
+                    // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
+                    // a retry re-presents a token which has already been exchanged.
+                    RememberExchangedRefreshToken(refreshCredential.RefreshToken);
+
+                    // The refresh token was issued to one actor, so the session it is exchanged for must belong to that
+                    // same actor. Without this a server which answered with a session for a different subject would
+                    // silently re-point the agent, and everything built on it, at another account. TryPublishRefreshedCredentials
+                    // cannot catch this on its own: an agent which holds no credentials, which is how a stored credential is
+                    // restored, has no current actor to compare against.
+                    if (expectedDid is not null && refreshSessionResult.Result.Did != expectedDid)
+                    {
+                        Logger.RefreshSessionIssuedCredentialsReturnedUnexpectedDid(_logger, expectedDid, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        throw new SecurityTokenValidationException("The issued access token was not issued for the account being refreshed.");
+                    }
+
+                    if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
+                    {
+                        Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                        tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
+
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
+
+                    AccessCredentials refreshedCredentials = new(
+                            refreshCredential.Service,
+                            refreshCredential.AuthenticationType,
+                            refreshSessionResult.Result.AccessJwt,
+                            refreshSessionResult.Result.RefreshJwt);
+
+                    Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                    notificationTurn = TakeNotificationTurn();
+
+                    if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration, out bool sessionStarted))
+                    {
+                        Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                        return false;
+                    }
+
+                    StartTokenRefreshTimer();
+                    succeeded = true;
+
+                    credentialsToNotify = refreshedCredentials;
+                    sessionStartedByRefresh = sessionStarted;
                 }
-
-                StopTokenRefreshTimer();
-                timerStopped = true;
-
-                AtProtoHttpResult<Session> refreshSessionResult;
-                try
-                {
-                    refreshSessionResult = await AtProtoServer.RefreshSession(
-                        refreshCredential,
-                        HttpClient,
-                        credentialsUpdated: null,
-                        loggerFactory: LoggerFactory,
-                        maximumResponseSize: MaximumResponseSize,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    Logger.TokenRefreshApiThrew(_logger, e);
-                    throw;
-                }
-
-                if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
-                {
-                    Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
-
-                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(
-                        refreshCredential,
-                        refreshSessionResult.StatusCode,
-                        refreshSessionResult.AtErrorDetail);
-
-                    return false;
-                }
-
-                // The server has spent the refresh token by this point, so record it before anything which can fail, otherwise
-                // a retry re-presents a token which has already been exchanged.
-                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
-
-                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
-                {
-                    Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
-
-                    tokenRefreshFailedEventArgs = CreateTokenRefreshFailedEventArgs(refreshCredential, null, null);
-
-                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
-                }
-
-                AccessCredentials refreshedCredentials = new(
-                        refreshCredential.Service,
-                        refreshCredential.AuthenticationType,
-                        refreshSessionResult.Result.AccessJwt,
-                        refreshSessionResult.Result.RefreshJwt);
-
-                Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-                if (!TryPublishRefreshedCredentials(refreshedCredentials, credentialGeneration))
-                {
-                    Logger.RefreshedCredentialsDiscardedAsAgentCredentialsChanged(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-                    return false;
-                }
-
-                StartTokenRefreshTimer();
-                succeeded = true;
-
-                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                    refreshedCredentials.Did,
-                    refreshedCredentials.Service,
-                    refreshedCredentials);
             }
-        }
-        finally
-        {
-            _credentialRefreshSemaphore.Release();
-
-            // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
-            // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
-            if (timerStopped && !succeeded)
+            finally
             {
-                RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+                _credentialRefreshSemaphore.Release();
+
+                // A refresh which stopped the timer and then failed must not leave it stopped, otherwise a single failed or
+                // throwing call to RefreshCredentials() silently ends background refresh for the lifetime of the agent.
+                if (timerStopped && !succeeded)
+                {
+                    RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, null);
+                }
+
+                // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+                if (tokenRefreshFailedEventArgs is not null)
+                {
+                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                }
             }
 
             // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-            if (tokenRefreshFailedEventArgs is not null)
+            if (credentialsToNotify is not null)
             {
-                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                // A refresh of stored credentials on an agent which had no session starts one, so it is announced as a
+                // session starting before the credentials for it are notified. The notification is made even if that
+                // announcement fails, because the credentials are already live and the token they replaced is spent.
+                await RaiseSessionStartAndCredentialsUpdatedAsync(credentialsToNotify, sessionStartedByRefresh, cancellationToken, notificationTurn).ConfigureAwait(false);
             }
-        }
 
-        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
-        if (credentialsUpdatedEventArgs is not null)
+            return true;
+        }
+        finally
         {
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+            FinishNotificationTurn(notificationTurn);
         }
-
-        return true;
     }
 
     /// <summary>
