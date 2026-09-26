@@ -11,6 +11,7 @@
 * Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
 * Made the notification for credentials a refresh has already committed uncancellable, so cancelling the caller cannot leave a superseded set of credentials as the last ones persisted.
 * Deferred credential update notifications raised from inside a handler until that handler has finished, so a handler which refreshes before it persists is given the refreshed credentials last.
+* Notified credentials committed by a refresh a handler triggered even when that handler then fails, so a failure cannot leave a spent refresh token as the last credentials a handler was given.
 
 ## 7.0.0 - 2026-09-24
 

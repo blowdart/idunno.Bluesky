@@ -319,6 +319,9 @@ internal static partial class Logger
     [LoggerMessage(301, LogLevel.Error, "Agent credentials update via OnCredentialsUpdatedCallBack() ignored, unexpected credentials type.")]
     internal static partial void OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(ILogger logger);
 
+    [LoggerMessage(302, LogLevel.Error, "A credentials updated handler threw whilst being notified of credentials a refresh had already committed.")]
+    internal static partial void CommittedCredentialsNotificationThrew(ILogger logger, Exception ex);
+
     // AtProtoServer logging
 
     // AtProtoServer Identity Logging

@@ -77,6 +77,15 @@ public partial class AtProtoAgent
     /// </remarks>
     private AccessCredentials? _deferredCredentialNotification;
 
+    /// <summary>
+    /// Whether <see cref="_deferredCredentialNotification"/> holds credentials the agent has already published, whose
+    /// notification is the only opportunity to persist them.
+    /// </summary>
+    /// <remarks>
+    /// <para>Guarded by <see cref="_credentialLock"/>.</para>
+    /// </remarks>
+    private bool _deferredCredentialNotificationCommitted;
+
     private AccessCredentials? _credentials;
 
     /// <summary>
@@ -400,7 +409,8 @@ public partial class AtProtoAgent
     ///   A handler is free to call back into the agent, and a call which refreshes credentials raises a notification of
     ///   its own. Raising that inline would let the outer handler, holding the credentials which have just been
     ///   replaced, finish last and persist them, so a reentrant notification is deferred and raised once the handler it
-    ///   came from has finished.
+    ///   came from has finished. A deferred notification for committed credentials is raised even if the handler it was
+    ///   deferred from fails, as the refresh token it replaced has already been spent.
     /// </para>
     /// </remarks>
     private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken)
@@ -415,6 +425,7 @@ public partial class AtProtoAgent
             lock (_credentialLock)
             {
                 _deferredCredentialNotification = credentials;
+                _deferredCredentialNotificationCommitted = _deferredCredentialNotificationCommitted || credentialsCommitted;
             }
 
             return;
@@ -428,31 +439,25 @@ public partial class AtProtoAgent
         {
             AccessCredentials? credentialsToRaise = credentials;
 
-            while (credentialsToRaise is not null)
+            try
             {
-                AccessCredentials raising = credentialsToRaise;
-                bool agentStillHoldsCredentials;
-
-                lock (_credentialLock)
+                while (credentialsToRaise is not null)
                 {
-                    agentStillHoldsCredentials = !_atProtoAgentDisposed && ReferenceEquals(_credentials, raising);
-                    _deferredCredentialNotification = null;
-                }
+                    AccessCredentials raising = credentialsToRaise;
 
-                if (agentStillHoldsCredentials)
-                {
-                    await OnCredentialsUpdatedAsync(
-                        new CredentialsUpdatedEventArgs(raising.Did, raising.Service, raising),
-                        cancellationToken).ConfigureAwait(false);
-                }
+                    await RaiseCredentialsUpdatedIfCurrent(raising, cancellationToken).ConfigureAwait(false);
 
-                lock (_credentialLock)
-                {
-                    // A handler is given the credentials themselves, so a reentrant update to the instance it has just
-                    // been handed, a DPoP nonce rotation for example, needs no notification of its own.
-                    credentialsToRaise = ReferenceEquals(_deferredCredentialNotification, raising) ? null : _deferredCredentialNotification;
-                    _deferredCredentialNotification = null;
+                    credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: false);
                 }
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                // A handler which failed may have already triggered a refresh, spending the refresh token the agent
+                // was holding. Whatever replaced it has to reach a handler, otherwise nothing is left which can
+                // persist it and durable storage keeps a token the server will not honour.
+                await DrainCommittedCredentialNotifications(credentialsToRaise).ConfigureAwait(false);
+
+                throw;
             }
         }
         finally
@@ -462,9 +467,91 @@ public partial class AtProtoAgent
             lock (_credentialLock)
             {
                 _deferredCredentialNotification = null;
+                _deferredCredentialNotificationCommitted = false;
             }
 
             _credentialNotificationSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Raises the credential update notification for <paramref name="credentials"/>, provided the agent still holds them.
+    /// </summary>
+    /// <param name="credentials">The credentials the notification is being raised for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private async Task RaiseCredentialsUpdatedIfCurrent(AccessCredentials credentials, CancellationToken cancellationToken)
+    {
+        bool agentStillHoldsCredentials;
+
+        lock (_credentialLock)
+        {
+            agentStillHoldsCredentials = !_atProtoAgentDisposed && ReferenceEquals(_credentials, credentials);
+            _deferredCredentialNotification = null;
+            _deferredCredentialNotificationCommitted = false;
+        }
+
+        if (agentStillHoldsCredentials)
+        {
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Takes the credentials deferred by a notification raised from inside the one for <paramref name="justRaised"/>, if any.
+    /// </summary>
+    /// <param name="justRaised">The credentials whose notification has just finished.</param>
+    /// <param name="committedOnly">Whether to take the deferred credentials only if the agent has already published them.</param>
+    /// <returns>The credentials to raise a notification for, or <see langword="null"/> if there are none.</returns>
+    private AccessCredentials? TakeDeferredCredentialNotification(AccessCredentials justRaised, bool committedOnly)
+    {
+        lock (_credentialLock)
+        {
+            AccessCredentials? deferred = _deferredCredentialNotification;
+
+            _deferredCredentialNotification = null;
+
+            bool committed = _deferredCredentialNotificationCommitted;
+
+            _deferredCredentialNotificationCommitted = false;
+
+            // A handler is given the credentials themselves, so a reentrant update to the instance it has just been
+            // handed, a DPoP nonce rotation for example, needs no notification of its own.
+            if (deferred is null || ReferenceEquals(deferred, justRaised) || (committedOnly && !committed))
+            {
+                return null;
+            }
+
+            return deferred;
+        }
+    }
+
+    /// <summary>
+    /// Raises notifications for any credentials the agent has already published which were deferred by a handler which
+    /// then failed, swallowing any exception a handler throws so the original failure is the one which propagates.
+    /// </summary>
+    /// <param name="justRaised">The credentials whose notification failed, if any.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    private async Task DrainCommittedCredentialNotifications(AccessCredentials? justRaised)
+    {
+        AccessCredentials? credentialsToRaise = justRaised is null ? null : TakeDeferredCredentialNotification(justRaised, committedOnly: true);
+
+        while (credentialsToRaise is not null)
+        {
+            AccessCredentials raising = credentialsToRaise;
+
+            try
+            {
+                await RaiseCredentialsUpdatedIfCurrent(raising, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                Logger.CommittedCredentialsNotificationThrew(_logger, exception);
+            }
+
+            credentialsToRaise = TakeDeferredCredentialNotification(raising, committedOnly: true);
         }
     }
 

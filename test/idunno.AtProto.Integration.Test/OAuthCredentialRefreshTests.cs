@@ -239,6 +239,44 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task AHandlerWhichRefreshesAndThenThrowsStillHasTheRefreshedCredentialsNotified()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        List<AccessCredentials> persisted = [];
+        bool refreshed = false;
+
+        agent.CredentialsUpdatedAsync = async (e, cancellationToken) =>
+        {
+            // A handler which spends the refresh token by calling back into the agent, and then fails. The credentials
+            // the refresh issued must still reach a handler, otherwise nothing can persist them.
+            if (!refreshed)
+            {
+                refreshed = true;
+                Assert.True(await agent.RefreshCredentials(cancellationToken));
+
+                throw new InvalidOperationException("Persistence failed.");
+            }
+
+            persisted.Add(e.AccessCredentials);
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken));
+
+        AccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        Assert.Same(refreshedCredentials, Assert.Single(persisted));
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
