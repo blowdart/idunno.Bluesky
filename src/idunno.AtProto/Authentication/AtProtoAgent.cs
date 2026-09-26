@@ -58,12 +58,24 @@ public partial class AtProtoAgent
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   A handler is free to call back into the agent, and a call which rotates the DPoP nonce raises another
-    ///   notification. Waiting on <see cref="_credentialNotificationSemaphore"/> for a notification raised from inside
-    ///   one which already holds it would deadlock the agent, so a reentrant notification is raised directly.
+    ///   A handler is free to call back into the agent, and a call which refreshes credentials or rotates the DPoP
+    ///   nonce raises another notification. Waiting on <see cref="_credentialNotificationSemaphore"/> for a notification
+    ///   raised from inside one which already holds it would deadlock the agent, so a reentrant notification is handed
+    ///   to <see cref="_deferredCredentialNotification"/> instead.
     /// </para>
     /// </remarks>
     private readonly AsyncLocal<bool> _raisingCredentialNotification = new();
+
+    /// <summary>
+    /// Credentials raised from inside a notification which is still running, to be notified once it has finished.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Guarded by <see cref="_credentialLock"/>. Only the newest credentials are held: an older reentrant update is
+    ///   of no interest to a handler which is about to be given a newer one.
+    /// </para>
+    /// </remarks>
+    private AccessCredentials? _deferredCredentialNotification;
 
     private AccessCredentials? _credentials;
 
@@ -384,6 +396,12 @@ public partial class AtProtoAgent
     ///   notification queued ahead of it free to persist credentials the server has already replaced, with nothing left
     ///   to follow and repair them.
     /// </para>
+    /// <para>
+    ///   A handler is free to call back into the agent, and a call which refreshes credentials raises a notification of
+    ///   its own. Raising that inline would let the outer handler, holding the credentials which have just been
+    ///   replaced, finish last and persist them, so a reentrant notification is deferred and raised once the handler it
+    ///   came from has finished.
+    /// </para>
     /// </remarks>
     private async Task RaiseCredentialsUpdatedAsync(AccessCredentials credentials, bool credentialsCommitted, CancellationToken cancellationToken)
     {
@@ -392,13 +410,12 @@ public partial class AtProtoAgent
             cancellationToken = CancellationToken.None;
         }
 
-        // A handler is free to call back into the agent, and a call which rotates the DPoP nonce raises another
-        // notification. Waiting for the semaphore this notification already holds would deadlock the agent.
         if (_raisingCredentialNotification.Value)
         {
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
-                cancellationToken).ConfigureAwait(false);
+            lock (_credentialLock)
+            {
+                _deferredCredentialNotification = credentials;
+            }
 
             return;
         }
@@ -409,21 +426,44 @@ public partial class AtProtoAgent
 
         try
         {
-            lock (_credentialLock)
+            AccessCredentials? credentialsToRaise = credentials;
+
+            while (credentialsToRaise is not null)
             {
-                if (_atProtoAgentDisposed || !ReferenceEquals(_credentials, credentials))
+                AccessCredentials raising = credentialsToRaise;
+                bool agentStillHoldsCredentials;
+
+                lock (_credentialLock)
                 {
-                    return;
+                    agentStillHoldsCredentials = !_atProtoAgentDisposed && ReferenceEquals(_credentials, raising);
+                    _deferredCredentialNotification = null;
+                }
+
+                if (agentStillHoldsCredentials)
+                {
+                    await OnCredentialsUpdatedAsync(
+                        new CredentialsUpdatedEventArgs(raising.Did, raising.Service, raising),
+                        cancellationToken).ConfigureAwait(false);
+                }
+
+                lock (_credentialLock)
+                {
+                    // A handler is given the credentials themselves, so a reentrant update to the instance it has just
+                    // been handed, a DPoP nonce rotation for example, needs no notification of its own.
+                    credentialsToRaise = ReferenceEquals(_deferredCredentialNotification, raising) ? null : _deferredCredentialNotification;
+                    _deferredCredentialNotification = null;
                 }
             }
-
-            await OnCredentialsUpdatedAsync(
-                new CredentialsUpdatedEventArgs(credentials.Did, credentials.Service, credentials),
-                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _raisingCredentialNotification.Value = false;
+
+            lock (_credentialLock)
+            {
+                _deferredCredentialNotification = null;
+            }
+
             _credentialNotificationSemaphore.Release();
         }
     }

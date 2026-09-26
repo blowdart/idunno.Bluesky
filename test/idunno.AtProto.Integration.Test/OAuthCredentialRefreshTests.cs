@@ -205,6 +205,40 @@ public class OAuthCredentialRefreshTests
     }
 
     [Fact]
+    public async Task AHandlerWhichRefreshesBeforePersistingIsGivenTheRefreshedCredentialsLast()
+    {
+        OAuthTestServer server = new();
+        using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
+
+        await Login(agent);
+
+        DPoPAccessCredentials originalCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+
+        List<AccessCredentials> persisted = [];
+        bool refreshed = false;
+
+        agent.CredentialsUpdatedAsync = async (e, cancellationToken) =>
+        {
+            // A handler which calls back into the agent before it persists what it was given. The refresh replaces the
+            // credentials this handler is holding, so its notification has to be the last one raised.
+            if (!refreshed)
+            {
+                refreshed = true;
+                Assert.True(await agent.RefreshCredentials(cancellationToken));
+            }
+
+            persisted.Add(e.AccessCredentials);
+        };
+
+        originalCredentials.DPoPNonce = "rotatedNonce";
+        await agent.NotifyCredentialsUpdated(originalCredentials, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, persisted.Count);
+        Assert.Same(originalCredentials, persisted[0]);
+        Assert.Same(agent.Credentials, persisted[1]);
+    }
+
+    [Fact]
     public async Task ARefreshWhichIssuesATokenForADifferentAccountIsRejected()
     {
         OAuthTestServer server = new() { IssuedDid = new Did(OtherDid) };
