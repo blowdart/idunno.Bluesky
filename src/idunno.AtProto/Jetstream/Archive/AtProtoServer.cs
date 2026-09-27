@@ -199,6 +199,7 @@ public static partial class AtProtoServer
             response.Dispose();
             if (destination is null || !destination.IsAbsoluteUri || destination.UserInfo.Length > 0 ||
                 destination.Scheme is not ("https" or "http") ||
+                (destination.Scheme == "http" && !destination.IsLoopback) ||
                 (message.RequestUri?.Scheme == "https" && destination.Scheme != "https"))
             {
                 throw new InvalidDataException("The archive returned an invalid download redirect.");
@@ -277,7 +278,10 @@ public static partial class AtProtoServer
         private readonly Stream _stream = stream;
         private readonly HttpResponseMessage _response = response;
 
-        internal long? ContentLength => _response.Content.Headers.ContentRange?.Length ?? _response.Content.Headers.ContentLength;
+        internal long? ContentLength => _response.Content.Headers.ContentRange?.Length ??
+            (_response.Content.Headers.ContentRange?.From is long from && _response.Content.Headers.ContentLength is long remaining
+                ? checked(from + remaining)
+                : _response.Content.Headers.ContentLength);
         internal string? ETag => _response.Headers.ETag?.ToString();
         internal HttpResponseHeaders Headers => _response.Headers;
 

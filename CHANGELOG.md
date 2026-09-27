@@ -75,6 +75,10 @@
 
 ### Fixed
 
+#### idunno.AtProto
+
+* Jetstream archive snapshots now validate resumed segment headers, reject remote plaintext redirects, and resume interrupted response bodies without discarding already downloaded bytes.
+
 #### idunno.AtProto.Types
 
 * `Bytes` now accepts a base64 string whose `=` padding has been omitted, which the AT Protocol data model allows.

@@ -4,6 +4,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics.Metrics;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 
 using idunno.AtProto.Jetstream;
@@ -60,6 +61,67 @@ public class JetstreamArchiveTests
         Assert.Equal([1, 2, 3], bytes);
         Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(850),
             $"Quota was bypassed: the download completed in {elapsed.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task DownloadResumesAfterAnInterruptedBody()
+    {
+        int requests = 0;
+        using HttpClient client = new(new ArchiveTestHandler(request =>
+        {
+            int attempt = Interlocked.Increment(ref requests);
+            if (attempt == 2)
+            {
+                Assert.Equal("bytes=2-", request.Headers.Range?.ToString());
+                Assert.Equal($"\"{Checksum}:0\"", request.Headers.IfRange?.ToString());
+            }
+
+            HttpResponseMessage response = new(attempt == 1 ? HttpStatusCode.OK : HttpStatusCode.PartialContent)
+            {
+                Content = new StreamContent(attempt == 1
+                    ? new InterruptedStream([1, 2])
+                    : new ChunkedStream([3, 4]))
+            };
+            response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
+            response.Content.Headers.ContentLength = attempt == 1 ? 4 : 2;
+            if (attempt == 2)
+            {
+                response.Content.Headers.ContentRange = new ContentRangeHeaderValue(2, 3);
+            }
+
+            return response;
+        }));
+        await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null));
+        byte[] bytes = new byte[4];
+        await download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2, 3, 4], bytes);
+        Assert.Equal(4, download.Position);
+        Assert.Equal(2, requests);
+    }
+
+    [Fact]
+    public async Task DownloadStopsAfterRepeatedInterruptedBodies()
+    {
+        int requests = 0;
+        using HttpClient client = new(new ArchiveTestHandler(_ =>
+        {
+            Interlocked.Increment(ref requests);
+            HttpResponseMessage response = new(HttpStatusCode.OK)
+            {
+                Content = new StreamContent(new InterruptedStream([]))
+            };
+            response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
+            response.Content.Headers.ContentLength = 1;
+            return response;
+        }));
+        await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null));
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
+        Assert.Equal(4, requests);
     }
 
     [Fact]
@@ -370,6 +432,86 @@ public class JetstreamArchiveTests
     }
 
     [Fact]
+    public async Task DownloadRejectsRemotePlaintextRedirectFromLoopback()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, context =>
+        {
+            context.Response.StatusCode = 307;
+            context.Response.Headers.Location = "http://archive.example/download?signature=secret";
+            return Task.CompletedTask;
+        });
+        using HttpClient client = server.CreateClient();
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(() => AtProtoServer.GetBlock(
+            Segment, 0, new Uri("http://localhost:1234"), "test-key", client,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("invalid download redirect", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("signature=secret", error.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(2, 1)]
+    [InlineData(1, 0)]
+    public async Task ResumedSegmentRejectsInvalidHeader(int version, int blockCount)
+    {
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        byte[] segment = new byte[256 + 8 + frame.Length];
+        "jss0"u8.CopyTo(segment);
+        BinaryPrimitives.WriteUInt16LittleEndian(segment.AsSpan(12, 2), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(segment.AsSpan(14, 4), 1);
+        BinaryPrimitives.WriteUInt64LittleEndian(segment.AsSpan(256, 8), checked((ulong)frame.Length));
+        frame.CopyTo(segment.AsSpan(264));
+        bool resuming = false;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    """{"plannedThroughSeq":11,"sealedTipSeq":11,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":11,"mode":"segment"}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}""");
+                return;
+            }
+
+            context.Response.Headers.ETag = $"\"{Checksum}\"";
+            if (resuming)
+            {
+                byte[] header = segment[..256];
+                BinaryPrimitives.WriteUInt16LittleEndian(header.AsSpan(12, 2), checked((ushort)version));
+                BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(14, 4), checked((uint)blockCount));
+                context.Response.ContentLength = header.Length;
+                await context.Response.Body.WriteAsync(header);
+            }
+            else
+            {
+                context.Response.ContentLength = segment.Length;
+                await context.Response.Body.WriteAsync(segment);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? checkpoint = null;
+        SnapshotRequest request = new();
+        await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(request,
+            onCheckpoint: progress => checkpoint = progress,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        Assert.NotNull(checkpoint);
+        Assert.Equal(1, checkpoint.NextBlockIndex);
+        resuming = true;
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(request, checkpoint,
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+    }
+
+    [Fact]
     public async Task PlanPagesKeepTheOriginalTipWhenResumingPastACompletedBlock()
     {
         List<(long After, long? Before)> plans = [];
@@ -472,6 +614,31 @@ public class JetstreamArchiveTests
     {
         Uri service = new("wss://user:password@jetstream.example:443/private?token=secret");
         Assert.Equal("wss://jetstream.example", AtProtoJetstream.ArchiveServerTag(service));
+    }
+
+    private sealed class ArchiveTestHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(respond(request));
+    }
+
+    private sealed class InterruptedStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (Position >= Length)
+            {
+                throw new IOException("The response body was interrupted.");
+            }
+
+            return base.ReadAsync(buffer[..Math.Min(buffer.Length, checked((int)(Length - Position)))], cancellationToken);
+        }
+    }
+
+    private sealed class ChunkedStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            base.ReadAsync(buffer[..Math.Min(buffer.Length, 1)], cancellationToken);
     }
 
     private static byte[] TwoRecordBlock()

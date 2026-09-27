@@ -18,6 +18,7 @@ internal sealed class ArchiveDownload(
     long offset,
     JetstreamMetrics metrics) : IAsyncDisposable
 {
+    private const int MaximumReadResumes = 3;
     private Stream? _stream;
     private long? _length;
     private long _burst = long.MaxValue;
@@ -68,21 +69,35 @@ internal sealed class ArchiveDownload(
             return 0;
         }
 
-        Memory<byte> limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
-        int read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
-        if (read == 0 && (_length is null || Position < _length))
+        int interruptions = 0;
+        while (true)
         {
-            await _stream.DisposeAsync().ConfigureAwait(false);
+            Memory<byte> limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                int read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
+                if (read > 0)
+                {
+                    Position += read;
+                    _downloaded += read;
+                    metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
+                    return read;
+                }
+            }
+            catch (IOException) when (!cancellationToken.IsCancellationRequested && interruptions < MaximumReadResumes)
+            {
+                // An interrupted body can throw instead of returning zero. Resume from the last successful read.
+            }
+
+            if (++interruptions > MaximumReadResumes)
+            {
+                throw new InvalidDataException("The archive response ended repeatedly before the requested block was complete.");
+            }
+
+            await _stream!.DisposeAsync().ConfigureAwait(false);
             _stream = null;
             await OpenAsync(cancellationToken).ConfigureAwait(false);
-            limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
-            read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
         }
-
-        Position += read;
-        _downloaded += read;
-        metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
-        return read;
     }
 
     private async Task<Memory<byte>> LimitToQuotaAsync(Memory<byte> buffer, CancellationToken cancellationToken)

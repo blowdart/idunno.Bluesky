@@ -180,17 +180,7 @@ public partial class AtProtoJetstream
                     {
                         byte[] header = new byte[256];
                         await download.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);
-                        if (!header.AsSpan(0, 4).SequenceEqual("jss0"u8) ||
-                            BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(12, 2)) != 1)
-                        {
-                            throw new InvalidDataException("The archive segment header is invalid.");
-                        }
-
-                        int blockCount = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(14, 4)));
-                        if (blockCount <= 0)
-                        {
-                            throw new InvalidDataException("The archive segment contains no blocks.");
-                        }
+                        int blockCount = ReadSegmentBlockCount(header);
 
                         for (int block = 0; block < blockCount; block++)
                         {
@@ -312,12 +302,24 @@ public partial class AtProtoJetstream
         await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
         byte[] header = new byte[256];
         await download.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);
-        if (!header.AsSpan(0, 4).SequenceEqual("jss0"u8))
+        return ReadSegmentBlockCount(header);
+    }
+
+    private static int ReadSegmentBlockCount(ReadOnlySpan<byte> header)
+    {
+        if (!header[..4].SequenceEqual("jss0"u8) ||
+            BinaryPrimitives.ReadUInt16LittleEndian(header.Slice(12, 2)) != 1)
         {
             throw new InvalidDataException("The archive segment header is invalid.");
         }
 
-        return checked((int)BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(14, 4)));
+        uint blockCount = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(14, 4));
+        if (blockCount is 0 or > int.MaxValue)
+        {
+            throw new InvalidDataException("The archive segment block count is invalid.");
+        }
+
+        return (int)blockCount;
     }
 
     private static bool MatchesSnapshot(JssRow row, SnapshotRequest request, long tip,

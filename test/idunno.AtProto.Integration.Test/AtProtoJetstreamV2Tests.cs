@@ -120,6 +120,25 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task LiveStreamPropagatesOutdatedCursorNotice()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start((socket, _, token) => SendText(socket,
+            """{"$type":"message","payload":{"$type":"network.bsky.jetstream.subscribeEvents#info","name":"OutdatedCursor"}}""",
+            token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 1, maximumReconnectAttempts: 1, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(
+            () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Contains("outside the server's retained events", error.Message, StringComparison.Ordinal);
+        Assert.Single(server.Connections);
+    }
+
+    [Fact]
     public async Task LiveStreamRetriesTransientUpgradeFailure()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
