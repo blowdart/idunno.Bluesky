@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Text;
+using System.Text.Json.Serialization;
 
 using Microsoft.Extensions.Logging;
 
@@ -13,6 +15,39 @@ namespace idunno.AtProto.Jetstream;
 /// </summary>
 public record JetstreamOptions
 {
+    /// <summary>
+    /// Gets the optional API key used only for HTTP archive access, never for the live WebSocket.
+    /// </summary>
+    /// <exception cref="ArgumentException">The key is empty or white space.</exception>
+    [JsonIgnore]
+    public string? ApiKey
+    {
+        get;
+
+        init
+        {
+            if (value is not null)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            }
+
+            field = value;
+        }
+    }
+
+    /// <summary>
+    /// Prints configuration without disclosing the archive API key.
+    /// </summary>
+    /// <param name="builder">The destination for the printable properties.</param>
+    /// <returns><see langword="true"/> when properties were printed.</returns>
+    /// <exception cref="ArgumentNullException">The destination is <see langword="null"/>.</exception>
+    protected virtual bool PrintMembers(StringBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.Append("ApiKey = [redacted]");
+        return true;
+    }
+
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
     /// </summary>

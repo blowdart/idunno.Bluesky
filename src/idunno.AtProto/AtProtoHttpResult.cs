@@ -54,7 +54,7 @@ public class AtProtoHttpResult<TResult>
     public AtErrorDetail? AtErrorDetail { get; internal set; }
 
     /// <summary>
-    /// A flag indicating if the https request returned a status code of OK or No Content and a result is present.
+    /// A flag indicating if the HTTP request returned a status code of OK, No Content, or Partial Content and a result is present.
     /// </summary>
     [MemberNotNullWhen(true, nameof(Result))]
     public bool Succeeded
@@ -62,7 +62,8 @@ public class AtProtoHttpResult<TResult>
         get
         {
             return (StatusCode == HttpStatusCode.OK ||
-                    StatusCode == HttpStatusCode.NoContent) && Result is not null;
+                    StatusCode == HttpStatusCode.NoContent ||
+                    StatusCode == HttpStatusCode.PartialContent) && Result is not null;
         }
     }
 

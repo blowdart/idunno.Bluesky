@@ -8,7 +8,9 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates the properties of a Jetstream account event.
 /// </summary>
-public sealed record AtJetstreamAccountEvent : AtJetstreamEvent
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamAccountEvent for Jetstream v2 events.")]
+public record AtJetstreamAccountEvent : JetstreamEvent
 {
     /// <summary>
     /// Gets the account state change that triggered the event.

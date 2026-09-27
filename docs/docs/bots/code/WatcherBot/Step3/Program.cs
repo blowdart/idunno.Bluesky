@@ -1,6 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using idunno.AtProto.Jetstream;
+
+#pragma warning disable CS0618 // The watcher bot illustrates the legacy Jetstream event type.
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

@@ -22,6 +22,18 @@ public class HttpResultTests
     }
 
     [Fact]
+    public void SucceededReturnsTrueWhenPartialContentContainsAResult()
+    {
+        AtProtoHttpResult<string> httpResult = new()
+        {
+            StatusCode = HttpStatusCode.PartialContent,
+            Result = "partial"
+        };
+
+        Assert.True(httpResult.Succeeded);
+    }
+
+    [Fact]
     public void SucceededReturnsFalseWhenStatusCodeIsOKAndResultIsNull()
     {
         var httpResult = new AtProtoHttpResult<string>

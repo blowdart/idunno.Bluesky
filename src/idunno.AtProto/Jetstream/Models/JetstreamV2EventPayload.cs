@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // The parser retains compatibility property types.
+
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -61,3 +63,5 @@ internal sealed record JetstreamV2EventPayload
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; }
 }
+
+#pragma warning restore CS0618

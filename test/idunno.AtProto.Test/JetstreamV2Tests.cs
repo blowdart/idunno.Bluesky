@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // Verify legacy event assignments alongside new v2 event types.
+
 using System.Buffers.Binary;
 using System.Globalization;
 
@@ -238,7 +240,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamCommitEvent commitEvent = Assert.IsType<AtJetstreamCommitEvent>(derivedEvent);
+        JetstreamCommitEvent commitEvent = Assert.IsType<JetstreamCommitEvent>(derivedEvent);
 
         Assert.Equal(JetStreamEventKind.Commit, commitEvent.Kind);
         Assert.Equal(TestDid, commitEvent.Did.ToString());
@@ -265,7 +267,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(derivedEvent);
+        JetstreamIdentityEvent identityEvent = Assert.IsType<JetstreamIdentityEvent>(derivedEvent);
 
         Assert.Equal("example.com", identityEvent.Identity.Handle?.ToString());
         Assert.Equal(42, identityEvent.Sequence);
@@ -280,7 +282,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamAccountEvent accountEvent = Assert.IsType<AtJetstreamAccountEvent>(derivedEvent);
+        JetstreamAccountEvent accountEvent = Assert.IsType<JetstreamAccountEvent>(derivedEvent);
 
         Assert.False(accountEvent.Account.Active);
     }
@@ -294,7 +296,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamSyncEvent syncEvent = Assert.IsType<AtJetstreamSyncEvent>(derivedEvent);
+        JetstreamSyncEvent syncEvent = Assert.IsType<JetstreamSyncEvent>(derivedEvent);
 
         Assert.Equal(JetStreamEventKind.Sync, syncEvent.Kind);
         Assert.Equal(TestDid, syncEvent.Sync.Did.ToString());
@@ -316,7 +318,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamSyncEvent syncEvent = Assert.IsType<AtJetstreamSyncEvent>(derivedEvent);
+        JetstreamSyncEvent syncEvent = Assert.IsType<JetstreamSyncEvent>(derivedEvent);
 
         Assert.NotNull(syncEvent.Sync.Blocks);
         Assert.Equal<byte[]>([0x01, 0x02, 0x03, 0x04, 0x05], syncEvent.Sync.Blocks.ToBytes());
@@ -343,7 +345,7 @@ public class JetstreamV2Tests
         Assert.True(jetstream.TryDeriveV2Event(Message("labels", ""","labels":[]"""), out AtJetstreamEvent? derivedEvent));
 
         Assert.NotNull(derivedEvent);
-        Assert.Equal(typeof(AtJetstreamEvent), derivedEvent.GetType());
+        Assert.Equal(typeof(JetstreamEvent), derivedEvent.GetType());
         Assert.Equal(JetStreamEventKind.Unknown, derivedEvent.Kind);
         Assert.Equal(42, derivedEvent.Sequence);
         Assert.NotNull(derivedEvent.ExtensionData);

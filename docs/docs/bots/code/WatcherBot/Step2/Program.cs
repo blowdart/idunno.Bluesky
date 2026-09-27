@@ -1,7 +1,9 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 
 using idunno.AtProto.Jetstream;
+
+#pragma warning disable CS0618 // The watcher bot illustrates the legacy Jetstream event type.
 
 CancellationTokenSource cancellationTokenSource = new();
 CancellationToken cancellationToken = cancellationTokenSource.Token;

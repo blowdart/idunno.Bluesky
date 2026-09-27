@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // These tests verify the legacy event callback contract.
+
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;

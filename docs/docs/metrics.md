@@ -126,6 +126,21 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 | --- | --- | --- | --- |
 | `total.connections_failed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream that failed by an `AtProtoJetstream` instance. |
 
+### Archive snapshot and replay metrics
+
+These counters use the same `idunno.AtProto.Jetstream` meter and a `server` tag. They are separate from the live WebSocket message counters above. Instrument names are prefixed with `idunno.atproto.jetstream.` (for example, `idunno.atproto.jetstream.total.archive_bytes`).
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `total.archive_plans` | Counter&lt;long&gt; | {plans} | Successfully validated archive plan pages, including resumed pages. |
+| `total.archive_blocks` | Counter&lt;long&gt; | {blocks} | Archive blocks decoded from either block or whole-segment downloads. |
+| `total.archive_segments` | Counter&lt;long&gt; | {segments} | Planned segments completed, including those with no matching rows. |
+| `total.archive_bytes` | Counter&lt;long&gt; | By | Archive response-body bytes read, including resumed reads and segment headers; excludes plan JSON and HTTP headers. |
+| `total.archive_rate_limits` | Counter&lt;long&gt; | {requests} | HTTP 429 responses from archive planning and downloads (each retry is counted). |
+| `total.archive_events` | Counter&lt;long&gt; | {events} | Archive events materialised and yielded after exact client-side filtering; at-least-once resume may count a row more than once. |
+| `total.archive_filtered_events` | Counter&lt;long&gt; | {events} | Decoded archive rows rejected by exact client-side filtering, including planner false positives. |
+| `total.replay_handoffs` | Counter&lt;long&gt; | {handoffs} | Attempts to connect to the live v2 stream after an archive snapshot or from a saved live checkpoint, including reconnects. |
+
 ## idunno.AtProto.Directory
 
 The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDirectory` service.

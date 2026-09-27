@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // Demonstrate the legacy Jetstream v1 event callback.
+
 using System.Globalization;
 using System.Text;
 

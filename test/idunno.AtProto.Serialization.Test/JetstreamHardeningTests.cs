@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // Exercise legacy Jetstream JSON models for compatibility.
+
 using System.Globalization;
 using System.Text.Json;
 

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // The v1 client and legacy event callback retain their compatibility types.
+
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -34,7 +36,7 @@ namespace idunno.AtProto.Jetstream;
 ///<para>See https://github.com/bluesky-social/jetstream.</para>
 /// </remarks>
 [SuppressMessage("Usage", "S8949:Cancellation tokens should be forwarded", Justification = "The stored token belongs to the connection the jetstream reconnects on behalf of, not to the caller of an unrelated method.")]
-public class AtProtoJetstream : IDisposable, IAsyncDisposable
+public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new ();
@@ -2317,7 +2319,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>Every parsing slot is taken, which can only happen once the parsers holding them have finished, and then
     /// all of them are given back.</para>
     /// </remarks>
-    private async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
+    internal async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
     {
         int slots = Options.MaximumConcurrentMessageParsers;
         int taken = 0;
@@ -2622,14 +2624,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamCommitEvent()
+                derivedEvent = new JetstreamCommitEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
                     Kind = JetStreamEventKind.Commit,
                     Sequence = eventPayload.Sequence,
                     WitnessedAt = eventPayload.WitnessedAt,
-                    Commit = new AtJetstreamCommit()
+                    Commit = new JetstreamCommit()
                     {
                         Operation = eventPayload.Operation.Value,
                         Collection = eventPayload.Collection,
@@ -2650,7 +2652,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamIdentityEvent()
+                derivedEvent = new JetstreamIdentityEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2670,7 +2672,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamAccountEvent()
+                derivedEvent = new JetstreamAccountEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2690,7 +2692,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamSyncEvent()
+                derivedEvent = new JetstreamSyncEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2714,7 +2716,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     extensionData["$type"] = payload.GetProperty("$type").Clone();
                 }
 
-                derivedEvent = new AtJetstreamEvent()
+                derivedEvent = new JetstreamEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2790,3 +2792,5 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private sealed record ConnectionSettings(HttpClient? HttpClient, CancellationToken CancellationToken);
 }
+
+#pragma warning restore CS0618

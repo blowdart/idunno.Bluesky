@@ -1,0 +1,298 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Buffers.Binary;
+using System.Diagnostics.Metrics;
+using System.Net;
+using System.Text;
+
+using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Archive;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
+
+using ZstdSharp;
+
+namespace idunno.AtProto.Integration.Test;
+
+[ExcludeFromCodeCoverage]
+public class JetstreamArchiveTests
+{
+    private const string Checksum = "0123456789abcdef";
+    private const string Segment = "seg_0000000000.jss";
+    private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
+    private static readonly Uri s_server = new("ws://test.internal:443/some/path?ignored=1");
+
+    [Theory]
+    [InlineData("blocks")]
+    [InlineData("segment")]
+    public async Task SnapshotUsesConfiguredHostAndDecodesBothPlanModes(string mode)
+    {
+        Dictionary<string, long> measurements = [];
+        using MeterListener listener = new();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Name == JetstreamMetrics.MeterName)
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
+        {
+            lock (measurements)
+            {
+                measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + measurement;
+            }
+        });
+        listener.Start();
+        List<string> requests = [];
+        bool rateLimited = false;
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        byte[] segment = new byte[256 + 8 + frame.Length];
+        "jss0"u8.CopyTo(segment);
+        BinaryPrimitives.WriteUInt16LittleEndian(segment.AsSpan(12, 2), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(segment.AsSpan(14, 4), 1);
+        BinaryPrimitives.WriteUInt64LittleEndian(segment.AsSpan(256, 8), checked((ulong)frame.Length));
+        frame.CopyTo(segment.AsSpan(264));
+
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal(context.Request.Query.ContainsKey("redirected") ? "" : "Bearer test-key",
+                context.Request.Headers.Authorization.ToString());
+            Assert.DoesNotContain("ignored", context.Request.QueryString.ToString(), StringComparison.Ordinal);
+            requests.Add(context.Request.Path.ToString());
+            string endpoint = context.Request.Path.ToString().Split('.').Last();
+            if (endpoint == "planSnapshot")
+            {
+                using StreamReader reader = new(context.Request.Body);
+                string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+                Assert.Contains("\"afterSeq\":0", body, StringComparison.Ordinal);
+                Assert.Contains("app.bsky.feed.post", body, StringComparison.Ordinal);
+                context.Response.ContentType = "application/json";
+                string plan = mode == "blocks"
+                    ? """{"plannedThroughSeq":42,"sealedTipSeq":42,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":42,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}"""
+                    : """{"plannedThroughSeq":42,"sealedTipSeq":42,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":42,"mode":"segment"}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}""";
+                await context.Response.WriteAsync(plan);
+            }
+            else
+            {
+                if (mode == "blocks" && !rateLimited)
+                {
+                    rateLimited = true;
+                    context.Response.StatusCode = 429;
+                    context.Response.Headers.RetryAfter = "0";
+                    return;
+                }
+
+                if (mode == "blocks" && !context.Request.Query.ContainsKey("redirected"))
+                {
+                    context.Response.StatusCode = 307;
+                    context.Response.Headers.Location =
+                        $"{TestServerBuilder.DefaultUri}/xrpc/network.bsky.jetstream.getBlock?redirected=1";
+                    return;
+                }
+
+                context.Response.Headers.ETag = mode == "blocks" ? $"\"{Checksum}:0\"" : $"\"{Checksum}\"";
+                context.Response.ContentType = "application/octet-stream";
+                context.Response.ContentLength = mode == "blocks" ? frame.Length : segment.Length;
+                await context.Response.Body.WriteAsync(mode == "blocks" ? frame : segment);
+            }
+        });
+
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server),
+            uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? saved = null;
+        List<JetstreamEvent> events = [];
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
+            new SnapshotRequest
+            {
+                AfterSeq = 0,
+                Collections = [new CollectionSelector("app.bsky.feed.post")]
+            }, onCheckpoint: progress => saved = progress,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        JetstreamCommitEvent received = Assert.IsType<JetstreamCommitEvent>(Assert.Single(events));
+        Assert.Equal(10, received.Sequence);
+        Assert.Equal("app.bsky.feed.post", received.Commit.Collection.ToString());
+        Assert.NotNull(saved);
+        Assert.Equal(42, saved.SealedTipSeq);
+        Assert.Equal(mode == "blocks" ? 4 : 2, requests.Count);
+        Assert.Equal("/xrpc/network.bsky.jetstream.planSnapshot", requests[0]);
+        Assert.Equal($"/xrpc/network.bsky.jetstream.get{(mode == "blocks" ? "Block" : "Segment")}", requests[1]);
+        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_plans"]);
+        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_blocks"]);
+        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_segments"]);
+        Assert.Equal(mode == "blocks" ? frame.Length : segment.Length,
+            measurements["idunno.atproto.jetstream.total.archive_bytes"]);
+        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_events"]);
+        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_filtered_events"]);
+        if (mode == "blocks")
+        {
+            Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_rate_limits"]);
+        }
+    }
+
+    [Fact]
+    public async Task MissingKeyFailsBeforeAnyRequest()
+    {
+        using AtProtoJetstream jetstream = new(options: new JetstreamOptions { UseCompression = false });
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(
+                new SnapshotRequest(), cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+        Assert.Contains("API key", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RangedDownloadFollowsSignedRedirectWithoutForwardingCredentials()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (!context.Request.Query.ContainsKey("redirected"))
+            {
+                Assert.Equal("Bearer test-key", context.Request.Headers.Authorization.ToString());
+                context.Response.StatusCode = 307;
+                context.Response.Headers.Location =
+                    $"{TestServerBuilder.DefaultUri}/xrpc/network.bsky.jetstream.getBlock?redirected=1";
+                return;
+            }
+
+            Assert.Empty(context.Request.Headers.Authorization.ToString());
+            Assert.Equal("bytes=3-", context.Request.Headers.Range.ToString());
+            Assert.Equal($"\"{Checksum}:7\"", context.Request.Headers.IfRange.ToString());
+            context.Response.StatusCode = 206;
+            context.Response.Headers.ContentRange = "bytes 3-5/6";
+            context.Response.Headers.ETag = $"\"{Checksum}:7\"";
+            context.Response.ContentLength = 3;
+            byte[] body = [4, 5, 6];
+            await context.Response.Body.WriteAsync(body);
+        });
+
+        using HttpClient client = server.CreateClient();
+        AtProtoHttpResult<Stream> result = await AtProtoServer.GetBlock(
+            Segment, 7, TestServerBuilder.DefaultUri, "test-key", client,
+            offset: 3, etag: $"\"{Checksum}:7\"", cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(result.Succeeded);
+        Assert.Equal(HttpStatusCode.PartialContent, result.StatusCode);
+        await using Stream stream = result.Result;
+        byte[] bytes = new byte[3];
+        await stream.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+        Assert.Equal([4, 5, 6], bytes);
+    }
+
+    [Fact]
+    public async Task PlanPagesKeepTheOriginalTipWhenResumingPastACompletedBlock()
+    {
+        List<(long After, long? Before)> plans = [];
+        int downloads = 0;
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                using StreamReader reader = new(context.Request.Body);
+                string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+                using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
+                long after = document.RootElement.GetProperty("afterSeq").GetInt64();
+                long? before = document.RootElement.TryGetProperty("beforeSeq", out System.Text.Json.JsonElement bound)
+                    ? bound.GetInt64() : null;
+                plans.Add((after, before));
+                context.Response.ContentType = "application/json";
+                string plan = after == 0
+                    ? """{"plannedThroughSeq":15,"sealedTipSeq":30,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":15,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}"""
+                    : """{"plannedThroughSeq":30,"sealedTipSeq":30,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""";
+                await context.Response.WriteAsync(plan);
+            }
+            else
+            {
+                downloads++;
+                context.Response.Headers.ETag = $"\"{Checksum}:0\"";
+                context.Response.ContentLength = frame.Length;
+                await context.Response.Body.WriteAsync(frame);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server),
+            uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? completedBlock = null;
+        List<long?> received = [];
+        SnapshotRequest request = new() { AfterSeq = 0 };
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request, onCheckpoint: progress =>
+        {
+            if (progress.SegmentName is not null)
+            {
+                completedBlock = progress;
+            }
+        }, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            received.Add(evt.Sequence);
+        }
+
+        Assert.Equal([10, 11], received);
+        Assert.Equal(30, completedBlock?.SealedTipSeq);
+        Assert.Equal(1, completedBlock?.NextBlockIndex);
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request, completedBlock,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            received.Add(evt.Sequence);
+        }
+
+        Assert.Equal([10, 11], received);
+        Assert.Equal(1, downloads);
+        Assert.Equal([(0, null), (15, 30), (0, 30), (15, 30)], plans);
+    }
+
+    private static byte[] TwoRecordBlock()
+    {
+        byte[] record = Convert.FromHexString("A164746573746178");
+        byte[] did = Encoding.UTF8.GetBytes(TestDid);
+        byte[] post = Encoding.UTF8.GetBytes("app.bsky.feed.post");
+        byte[] like = Encoding.UTF8.GetBytes("app.bsky.feed.like");
+        byte[] rkey = Encoding.UTF8.GetBytes("3mfrqvim56e25");
+        byte[] rev = Encoding.UTF8.GetBytes("3mpksbjhx5s26");
+        using MemoryStream stream = new();
+        using BinaryWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
+        writer.Write(2U);
+        writer.Write(10UL);
+        writer.Write(11UL);
+        writer.Write(123456L);
+        writer.Write(123457L);
+        writer.Write(0L);
+        writer.Write(0L);
+        writer.Write((byte)1);
+        writer.Write((byte)1);
+        writer.Write(checked((byte)post.Length));
+        writer.Write(checked((byte)like.Length));
+        writer.Write(checked((ushort)did.Length));
+        writer.Write(checked((ushort)did.Length));
+        writer.Write(checked((byte)rkey.Length));
+        writer.Write(checked((byte)rkey.Length));
+        writer.Write(checked((byte)rev.Length));
+        writer.Write(checked((byte)rev.Length));
+        writer.Write(checked((uint)record.Length));
+        writer.Write(checked((uint)record.Length));
+        writer.Write(post);
+        writer.Write(like);
+        writer.Write(did);
+        writer.Write(did);
+        writer.Write(rkey);
+        writer.Write(rkey);
+        writer.Write(rev);
+        writer.Write(rev);
+        writer.Write(record);
+        writer.Write(record);
+        return stream.ToArray();
+    }
+}

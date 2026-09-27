@@ -11,7 +11,9 @@ namespace idunno.AtProto.Jetstream;
 /// <remarks>
 /// <para>Only sent by <see cref="JetstreamProtocolVersion.V2"/> servers.</para>
 /// </remarks>
-public sealed record AtJetstreamSyncEvent : AtJetstreamEvent
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamSyncEvent for Jetstream v2 events.")]
+public record AtJetstreamSyncEvent : JetstreamEvent
 {
     /// <summary>
     /// Gets the sync operation that triggered the event.

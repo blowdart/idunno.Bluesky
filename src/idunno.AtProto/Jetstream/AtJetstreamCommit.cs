@@ -9,7 +9,9 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates the properties of a commit operation in a Jetstream event.
 /// </summary>
-public sealed record AtJetstreamCommit
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamCommit for Jetstream v2 records.")]
+public record AtJetstreamCommit
 {
     /// <summary>
     /// Gets the type of the operation the commit refers to.
@@ -100,5 +102,18 @@ public sealed record AtJetstreamCommit
     /// <summary>
     /// Gets the content identifier for the commit event.
     /// </summary>
-    public Cid? Cid { get; init; }
+    public Cid? Cid
+    {
+        get => field ?? _deferredCid?.Value;
+        init => field = value;
+    }
+
+    private Lazy<Cid>? _deferredCid;
+
+    internal void SetDagCborPayload(byte[] payload)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+        byte[] ownedPayload = (byte[])payload.Clone();
+        _deferredCid = new Lazy<Cid>(() => Cid.FromDagCbor(ownedPayload));
+    }
 }
