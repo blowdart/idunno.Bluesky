@@ -153,7 +153,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     private readonly object _decompressorLock = new();
 #endif
 
-    private List<Nsid> _collections = [];
+    private List<CollectionSelector> _collections = [];
 
     private List<Did> _dids = [];
 
@@ -204,7 +204,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
     /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
-    /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
+    /// <param name="collections">The collections, or namespaces ending in <c>.*</c>, to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
     /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
@@ -213,7 +213,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         JetstreamOptions? options = null,
         WebSocketOptions? webSocketOptions = null,
         HttpClientOptions? httpClientOptions = null,
-        ICollection<Nsid>? collections = null,
+        ICollection<CollectionSelector>? collections = null,
         ICollection<Did>? dids = null) : this(
             httpClientFactory: null,
             httpClientOptions: httpClientOptions,
@@ -233,7 +233,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V2"/>, or wss://jetstream1.us-west.bsky.network/ for <see cref="JetstreamProtocolVersion.V1"/>. Do not connect to untrusted jet stream servers.</param>
     /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
-    /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
+    /// <param name="collections">The collections, or namespaces ending in <c>.*</c>, to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
@@ -250,7 +250,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         Uri? uri = null,
         JetstreamOptions? options = null,
         WebSocketOptions? webSocketOptions = null,
-        ICollection<Nsid>? collections = null,
+        ICollection<CollectionSelector>? collections = null,
         ICollection<Did>? dids = null) : this(
             httpClientFactory: httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory)),
             httpClientOptions: null,
@@ -268,7 +268,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         Uri? uri,
         JetstreamOptions? options,
         WebSocketOptions? webSocketOptions,
-        ICollection<Nsid>? collections,
+        ICollection<CollectionSelector>? collections,
         ICollection<Did>? dids)
     {
         if (options is not null)
@@ -399,7 +399,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Gets or sets a list of <see cref="Nsid"/>s of collections to filter commit events on.
+    /// Gets or sets the collections to filter commit events on.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and the value being set has more collections than the server accepts.</exception>
@@ -407,10 +407,10 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>If the jetstream is connected the updated filters are applied in the background, so they may not take
     /// effect until after the property has been set. See <see cref="DidFilter"/> for how each protocol version applies them.</para>
     /// <para>With <see cref="JetstreamProtocolVersion.V2"/> a collection can end in <c>.*</c> to match every collection
-    /// under a prefix. The filter only constrains commit events, so combine it with a <see cref="KindFilter"/> of
-    /// <see cref="JetStreamEventKind.Commit"/> to receive nothing but commits.</para>
+    /// under a namespace, for example <c>app.bsky.feed.*</c>. The filter only constrains commit events, so combine it
+    /// with a <see cref="KindFilter"/> of <see cref="JetStreamEventKind.Commit"/> to receive nothing but commits.</para>
     /// </remarks>
-    public IReadOnlyCollection<Nsid> CollectionFilter
+    public IReadOnlyCollection<CollectionSelector> CollectionFilter
     {
         get
         {
@@ -1075,7 +1075,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         _server = uri;
 
-        List<Nsid> collections;
+        List<CollectionSelector> collections;
         List<Did> dids;
         List<JetStreamEventKind> kinds;
         int filterVersion;
@@ -1191,7 +1191,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     internal Uri BuildSubscriptionUri(
         Uri server,
         long? cursor,
-        IReadOnlyCollection<Nsid> collections,
+        IReadOnlyCollection<CollectionSelector> collections,
         IReadOnlyCollection<Did> dids,
         IReadOnlyCollection<JetStreamEventKind> kinds,
         uint dictionaryId)
@@ -1214,7 +1214,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         uriBuilder.Append(endpoint);
         uriBuilder.Append('?');
 
-        foreach (Nsid collection in collections)
+        foreach (CollectionSelector collection in collections)
         {
             uriBuilder.Append(
                 CultureInfo.InvariantCulture,
@@ -1526,6 +1526,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <remarks>
     /// <para>A graceful close needs the server to answer it. A server which never does is waited on for no longer than
     /// <see cref="JetstreamOptions.CloseTimeout"/>, after which the connection is aborted instead.</para>
+    /// <para>The close is serialised against connecting, so a reconnection which is already under way finishes before
+    /// the socket it installed is closed, and one which has not started yet finds a connection it should not reopen.</para>
     /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all to avoid a close failure propagating.")]
     public async Task CloseAsync(
@@ -1533,9 +1535,36 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         string statusDescription = "Client disconnect",
         CancellationToken cancellationToken = default)
     {
-        // Captured once, so a reconnection which replaces the field cannot leave this call inspecting one socket and
-        // aborting another.
-        await CloseSocketAsync(_client, status, statusDescription, recordAsGracefulDisconnection: true, stateChanges: null, cancellationToken).ConfigureAwait(false);
+        // State changes are collected rather than raised as they happen, so they can be raised once the connection
+        // semaphore is released. Raising them any earlier runs handler code inside it, where a handler which connects
+        // or closes waits on a semaphore its own caller is holding.
+        List<WebSocketState> stateChanges = [];
+
+        try
+        {
+            // Taken so a reconnection cannot be part way through replacing the socket. Without it a close can capture
+            // the socket a reconnection is already closing, close a socket which is closing anyway, and return whilst
+            // the reconnection goes on to open its replacement, leaving the jetstream connected after a requested close.
+            await _connectSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            try
+            {
+                // Read with the semaphore held, so it is whichever socket a reconnection finished installing rather
+                // than one captured before it ran.
+                await CloseSocketAsync(_client, status, statusDescription, recordAsGracefulDisconnection: true, stateChanges, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _connectSemaphore.Release();
+            }
+        }
+        finally
+        {
+            foreach (WebSocketState state in stateChanges)
+            {
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+            }
+        }
     }
 
     /// <summary>
@@ -2335,7 +2364,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
             MaxMessageSizeBytes = Options.MaxMessageSize
         };
 
-        List<Nsid> collections;
+        List<CollectionSelector> collections;
         List<Did> dids;
 
         lock (_syncLock)

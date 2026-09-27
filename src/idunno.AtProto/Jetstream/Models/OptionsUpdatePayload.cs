@@ -7,7 +7,7 @@ namespace idunno.AtProto.Jetstream.Models;
 
 internal sealed record OptionsUpdatePayload
 {
-    public Nsid[]? WantedCollections { get; set; }
+    public CollectionSelector[]? WantedCollections { get; set; }
 
     /// <summary>
     /// Gets or sets the <see cref="Did"/>s to limit commit events to.

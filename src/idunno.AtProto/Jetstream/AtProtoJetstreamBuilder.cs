@@ -228,10 +228,10 @@ public sealed class AtProtoJetstreamBuilder
     public ICollection<Did>? DidsToFilterOn { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="Nsid"/>s of any collections to limit commit events to.
+    /// Gets or sets the collections, or namespaces ending in <c>.*</c>, to limit commit events to.
     /// </summary>
     [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "This is meant to be settable.")]
-    public ICollection<Nsid>? CollectionsToFilterOn { get; set; }
+    public ICollection<CollectionSelector>? CollectionsToFilterOn { get; set; }
 
     /// <summary>
     /// Gets or sets the kinds of event to limit events to.
@@ -481,7 +481,7 @@ public sealed class AtProtoJetstreamBuilder
     /// <param name="dids">The <see cref="Did"/>s to filter on.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
-    /// <remarks><para>Can be combined with <see cref="FilterTo(Nsid[])"/>.</para></remarks>
+    /// <remarks><para>Can be combined with <see cref="FilterTo(CollectionSelector[])"/>.</para></remarks>
     public AtProtoJetstreamBuilder FilterTo(Did[] dids)
     {
         ArgumentNullException.ThrowIfNull(dids);
@@ -494,11 +494,11 @@ public sealed class AtProtoJetstreamBuilder
     /// <summary>
     /// Configures a filter for commit events to only raise events for the specified <paramref name="collections"/>.
     /// </summary>
-    /// <param name="collections">The <see cref="Nsid"/> of any collections to filter on.</param>
+    /// <param name="collections">The collections, or namespaces ending in <c>.*</c>, to filter on.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="collections"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Can be combined with <see cref="FilterTo(Did[])"/>.</para></remarks>
-    public AtProtoJetstreamBuilder FilterTo(Nsid[] collections)
+    public AtProtoJetstreamBuilder FilterTo(CollectionSelector[] collections)
     {
         ArgumentNullException.ThrowIfNull(collections);
 

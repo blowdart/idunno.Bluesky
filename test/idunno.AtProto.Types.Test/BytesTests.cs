@@ -50,9 +50,19 @@ public class BytesTests
     [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bYaZ")]
     [InlineData("=")]
     [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY===")]
+    // Partial padding is neither the padded nor the unpadded encoding, so it is not completed into something which
+    // decodes. "TQ=" needs "==" to be valid, and dropping the padding entirely would make it "TQ".
+    [InlineData("TQ=")]
+    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bYa=")]
     public void InvalidBase64StringShouldThrow(string invalidBase64String)
     {
         Assert.Throws<FormatException>(() => new Bytes(invalidBase64String));
+    }
+
+    [Fact]
+    public void BothEncodingsOfTheSameValueAreEqual()
+    {
+        Assert.Equal(new Bytes("TQ=="), new Bytes("TQ"));
     }
 
     [Theory]

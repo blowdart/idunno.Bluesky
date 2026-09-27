@@ -232,6 +232,74 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task ClosingWhilstAFilterChangeIsReconnectingLeavesTheJetstreamDisconnected()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        byte[] dictionary = new JetstreamOptions().Dictionary!;
+
+        TaskCompletionSource reconnecting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseReconnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var server = new TestJetstreamServer
+        {
+            Dictionary = dictionary,
+            BeforeUpgrade = async upgradeNumber =>
+            {
+                // The first upgrade belongs to the initial connection, which must be allowed to complete.
+                if (upgradeNumber == 2)
+                {
+                    reconnecting.TrySetResult();
+                    await releaseReconnection.Task;
+                }
+            }
+        };
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        Assert.True(jetstream.IsConnected);
+
+        TaskCompletionSource replacementOpened = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool closeRequested = false;
+
+        jetstream.ConnectionStateChanged += (sender, e) =>
+        {
+            if (closeRequested && e.State == WebSocketState.Open)
+            {
+                replacementOpened.TrySetResult();
+            }
+        };
+
+        // Changing a filter reconnects away from the caller, so this leaves a reconnection part way through replacing
+        // the socket, held at the upgrade of the replacement it has yet to install.
+        jetstream.DidFilter = [new Did(TestDid)];
+
+        await reconnecting.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        closeRequested = true;
+
+        Task close = jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+        // The close cannot complete until the reconnection has finished installing its replacement socket, so releasing
+        // it here is what lets the close find that replacement rather than the socket the reconnection replaced.
+        releaseReconnection.TrySetResult();
+
+        await close.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        // Waited for so the assertion is made once the reconnection has installed its replacement, rather than before
+        // it gets that far, which would pass whether or not the close covered the replacement.
+        await replacementOpened.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        Assert.False(jetstream.IsConnected);
+    }
+
+    [Fact]
     public async Task ConnectingToADifferentServerDiscardsTheSequenceThePreviousServerIssued()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -421,6 +489,7 @@ public class AtProtoJetstreamV2Tests
         private int _connectionCount;
         private int _dictionaryRequests;
         private int _upgradeAttempts;
+        private int _upgrades;
 
         public TestJetstreamServer()
         {
@@ -441,6 +510,12 @@ public class AtProtoJetstreamV2Tests
         /// copied and the web socket being opened.
         /// </summary>
         public Func<Task>? BeforeDictionary { get; init; }
+
+        /// <summary>
+        /// Awaited, with the number of the upgrade it is about to accept, before a web socket upgrade is completed, to
+        /// hold a connection open in the window where the client has yet to install the socket it is opening.
+        /// </summary>
+        public Func<int, Task>? BeforeUpgrade { get; init; }
 
         /// <summary>
         /// Decides, from the query and the number of upgrade attempts made so far, whether to refuse a subscription and
@@ -504,6 +579,11 @@ public class AtProtoJetstreamV2Tests
                     }
 
                     string? subProtocol = context.Request.Headers["Sec-WebSocket-Protocol"];
+
+                    if (BeforeUpgrade is not null)
+                    {
+                        await BeforeUpgrade(Interlocked.Increment(ref _upgrades)).ConfigureAwait(false);
+                    }
 
                     HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol);
 

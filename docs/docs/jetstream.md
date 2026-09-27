@@ -194,6 +194,23 @@ using (var jetStream = new AtProtoJetstream())
 
 Version 2 servers accept at most 100 collections and 10,000 DIDs, and setting a larger filter throws an `ArgumentException`.
 
+### Matching every collection in a namespace
+
+A collection filter entry is a `CollectionSelector`, which is either an exact collection or a namespace with a `.*` suffix, matching
+every collection in that namespace. A `CollectionSelector` converts implicitly from a `string` or an `Nsid`, so you rarely need to name
+the type.
+
+```c#
+using (var jetStream = new AtProtoJetstream(
+    collections: ["app.bsky.feed.*", "app.bsky.graph.follow"]))
+{
+}
+```
+
+The namespace before `.*` is validated more loosely than a collection, so `app.bsky.*` is accepted although `app.bsky` is not itself
+a valid collection name. A `*` anywhere other than as a whole final segment, such as `app.bsky.fo*` or `app.bsky.*.post`, is rejected
+with an `NsidFormatException`.
+
 You can also change the `CollectionFilter`, `DidFilter` and `KindFilter` properties on a running instance. Version 1 servers are sent the
 new filters on the open connection. Version 2 servers only accept filters when connecting, so `AtProtoJetstream` reconnects in the background,
 resuming from `LastSequence`. The events the old connection had already delivered are not raised again.
@@ -478,6 +495,27 @@ more DIDs than that you must filter the rest in your handler.
 With version 1 changing `CollectionFilter` or `DidFilter` on a running instance sent the new filters over the open connection. Version 2 only
 accepts filters when connecting, so `AtProtoJetstream` reconnects in the background, resuming from `LastSequence`. You do not need to change
 your code, but you will see `ConnectionStateChanged` raised as the old connection closes and the new one opens.
+
+### Collection filters are now selectors
+
+`CollectionFilter`, the `collections` constructor parameter and `AtProtoJetstreamBuilder.FilterTo()` now take `CollectionSelector` rather than
+`Nsid`, so a filter can name a wildcard namespace as well as an exact collection. String literals still convert implicitly, so
+
+```c#
+jetStream.CollectionFilter = ["app.bsky.feed.post"];
+```
+
+needs no change, but code which builds an array of `Nsid` first does:
+
+```c#
+// Before
+Nsid[] collections = [new Nsid("app.bsky.feed.post")];
+
+// After
+CollectionSelector[] collections = [new CollectionSelector("app.bsky.feed.post")];
+```
+
+An `Nsid` converts implicitly to a `CollectionSelector`, so `.Select(nsid => (CollectionSelector)nsid)` converts an existing sequence.
 
 ### Handling errors and notices from the server
 

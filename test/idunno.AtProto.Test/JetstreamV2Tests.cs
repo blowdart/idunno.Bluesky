@@ -106,7 +106,7 @@ public class JetstreamV2Tests
     {
         using AtProtoJetstream jetstream = CreateJetstream();
 
-        Nsid[] collections = [.. Enumerable.Range(0, AtProtoJetstream.MaximumV2Collections + 1).Select(i => new Nsid($"com.example.c{i}"))];
+        CollectionSelector[] collections = [.. Enumerable.Range(0, AtProtoJetstream.MaximumV2Collections + 1).Select(i => new CollectionSelector($"com.example.c{i}"))];
 
         Assert.Throws<ArgumentException>(() => jetstream.CollectionFilter = collections);
 
@@ -124,7 +124,7 @@ public class JetstreamV2Tests
     {
         using AtProtoJetstream jetstream = CreateJetstream(JetstreamProtocolVersion.V1);
 
-        Nsid[] collections = [.. Enumerable.Range(0, AtProtoJetstream.MaximumV2Collections + 1).Select(i => new Nsid($"com.example.c{i}"))];
+        CollectionSelector[] collections = [.. Enumerable.Range(0, AtProtoJetstream.MaximumV2Collections + 1).Select(i => new CollectionSelector($"com.example.c{i}"))];
 
         jetstream.CollectionFilter = collections;
 
@@ -149,6 +149,24 @@ public class JetstreamV2Tests
             dids: [new Did(TestDid)],
             kinds: kinds,
             dictionaryId: dictionaryId);
+
+        Assert.Equal(expected, uri.AbsoluteUri, ignoreCase: true);
+    }
+
+    [Theory]
+    [InlineData(JetstreamProtocolVersion.V1, "wss://jetstream.example.com/subscribe?wantedCollections=app.bsky.feed.*&maxMessageSizeBytes=1024")]
+    [InlineData(JetstreamProtocolVersion.V2, "wss://jetstream.example.com/xrpc/network.bsky.jetstream.subscribeEvents?collections=app.bsky.feed.*&maxMessageSizeBytes=1024")]
+    public void AWildcardCollectionReachesTheSubscriptionUri(JetstreamProtocolVersion protocolVersion, string expected)
+    {
+        using AtProtoJetstream jetstream = CreateJetstream(protocolVersion);
+
+        Uri uri = jetstream.BuildSubscriptionUri(
+            s_server,
+            cursor: null,
+            collections: [new CollectionSelector("app.bsky.feed.*")],
+            dids: [],
+            kinds: [],
+            dictionaryId: 0);
 
         Assert.Equal(expected, uri.AbsoluteUri, ignoreCase: true);
     }

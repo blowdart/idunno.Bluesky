@@ -49,6 +49,9 @@
   To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
 * **Breaking** `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
 * Version 2 jetstreams limit `CollectionFilter` to 100 collections and `DidFilter` to 10,000 DIDs, and larger filters throw an `ArgumentException`.
+* **Breaking** `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
+  `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact
+  collection. `CollectionSelector` converts implicitly from both `string` and `Nsid`, so only code which builds a typed `Nsid[]` needs changing.
 
 ### Fixed
 
@@ -62,6 +65,11 @@
   before it opened.
 * `AtProtoJetstream` now discards the last sequence number and the compression dictionary it downloaded when it connects
   to a different server, as neither means anything to another server.
+* `AtProtoJetstream.CloseAsync()` no longer leaves the jetstream connected when it races a reconnection. Previously it
+  could close the socket a filter change was already replacing and return whilst that reconnection went on to open its
+  replacement.
+* A wildcard collection filter, such as `app.bsky.feed.*`, is now usable. Collection filters were validated as an `Nsid`,
+  which rejects `*`, so the wildcards the servers support could not be sent.
 
 #### idunno.AtProto.Types
 
@@ -69,6 +77,7 @@
   Jetstream, and other Go based implementations, encode `$bytes` without the padding, which previously caused deserialization to
   throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
   Encoding is unchanged, and still emits the padding.
+  Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
 
 ## 7.0.0 - 2026-09-24
 

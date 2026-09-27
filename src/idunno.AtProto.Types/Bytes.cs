@@ -62,15 +62,24 @@ public sealed class Bytes : IEquatable<Bytes>
     /// <param name="s">The base64 string to decode.</param>
     /// <returns>The bytes <paramref name="s"/> encodes.</returns>
     /// <exception cref="FormatException">Thrown when the <paramref name="s"/> is not a valid Base64 format.</exception>
+    /// <remarks>
+    /// <para>Padding is only inferred for a string which carries none at all. A string which is partially padded, such
+    /// as <c>TQ=</c>, is neither a padded nor an unpadded encoding, so it is passed through as it is and rejected
+    /// rather than being completed into something which decodes.</para>
+    /// </remarks>
     private static byte[] FromBase64String(string s)
     {
+        if (s.Contains('=', StringComparison.Ordinal))
+        {
+            return Convert.FromBase64String(s);
+        }
+
         // Convert.FromBase64String() ignores white space, so the significant characters are counted, rather than
         // using the length of the string, to work out how much padding, if any, is missing.
         int characterCount = s.Count(static c => !char.IsWhiteSpace(c));
 
         string padding = (characterCount % 4) switch
         {
-            0 => string.Empty,
             2 => "==",
             3 => "=",
 
