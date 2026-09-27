@@ -4,11 +4,11 @@
 using System.Security.Claims;
 using System.Text;
 
-using idunno.AtProto;
-using idunno.AtProto.Authentication;
-
 using Duende.IdentityModel.OidcClient;
 using Duende.IdentityModel.OidcClient.DPoP;
+
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;

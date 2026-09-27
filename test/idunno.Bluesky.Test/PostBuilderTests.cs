@@ -5,8 +5,8 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
-using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Embed.Gallery;
+using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky.Test;

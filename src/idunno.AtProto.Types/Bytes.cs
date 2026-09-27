@@ -39,15 +39,56 @@ public sealed class Bytes : IEquatable<Bytes>
     /// <param name="s">The Base64 string to convert.</param>
     /// <exception cref="ArgumentException">Thrown when the <paramref name="s"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="FormatException">Thrown when the <paramref name="s"/> is not a valid Base64 format.</exception>
+    /// <remarks>
+    /// <para>The AT Protocol data model specifies base64 as defined in
+    /// <see href="https://datatracker.ietf.org/doc/html/rfc4648#section-4">RFC-4648, section 4</see>, where the <c>=</c> padding is
+    /// optional, so <paramref name="s"/> may be padded or unpadded.</para>
+    /// </remarks>
     [JsonConstructor]
     public Bytes(string s)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s);
 
-        _bytes = Convert.FromBase64String(s);
+        _bytes = FromBase64String(s);
 
-        // As Convert.FromBase64String() ignores spaces, reconvert back to a normalized form to ensure the string is in a consistent format.
+        // As FromBase64String() ignores spaces and allows the padding to be omitted, reconvert back to a normalized
+        // form to ensure the string is in a consistent format.
         Base64EncodedValue = Convert.ToBase64String(_bytes);
+    }
+
+    /// <summary>
+    /// Decodes a base64 string whose <c>=</c> padding may have been omitted.
+    /// </summary>
+    /// <param name="s">The base64 string to decode.</param>
+    /// <returns>The bytes <paramref name="s"/> encodes.</returns>
+    /// <exception cref="FormatException">Thrown when the <paramref name="s"/> is not a valid Base64 format.</exception>
+    /// <remarks>
+    /// <para>Padding is only inferred for a string which carries none at all. A string which is partially padded, such
+    /// as <c>TQ=</c>, is neither a padded nor an unpadded encoding, so it is passed through as it is and rejected
+    /// rather than being completed into something which decodes.</para>
+    /// </remarks>
+    private static byte[] FromBase64String(string s)
+    {
+        if (s.Contains('=', StringComparison.Ordinal))
+        {
+            return Convert.FromBase64String(s);
+        }
+
+        // Convert.FromBase64String() ignores white space, so the significant characters are counted, rather than
+        // using the length of the string, to work out how much padding, if any, is missing.
+        int characterCount = s.Count(static c => !char.IsWhiteSpace(c));
+
+        string padding = (characterCount % 4) switch
+        {
+            2 => "==",
+            3 => "=",
+
+            // A length of one more than a multiple of four cannot be produced by base64, and padding it would not make
+            // it valid, so it is left alone for Convert.FromBase64String() to reject.
+            _ => string.Empty
+        };
+
+        return Convert.FromBase64String(padding.Length == 0 ? s : s + padding);
     }
 
     /// <summary>

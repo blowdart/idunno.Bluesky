@@ -21,10 +21,63 @@
 * The relay-only sync methods (`GetHostStatus()`, `ListHosts()`, `ListReposByCollection()` and `RequestCrawl()`) on `AtProtoServer` accept optional access credentials, and the `AtProtoAgent` versions send the agent's credentials when authenticated and calling the service the agent is authenticated to.
 * Added `AtProtoServer.GetHostStatus()` and `AtProtoAgent.GetHostStatus()`, which query a relay for the status of an upstream host, returning a `HostDescription` and `HostStatus`.
 * Added `AtProtoServer.GetLatestCommit()` and `AtProtoAgent.GetLatestCommit()`, which get the current commit CID and revision of a repository.
+* Added Jetstream v2 support to `AtProtoJetstream`, selected with `JetstreamOptions.ProtocolVersion` or `AtProtoJetstreamBuilder.UseProtocolVersion()`.
+  * Added `KindFilter`, and `AtProtoJetstreamBuilder.FilterTo(JetStreamEventKind[])`, to filter events by kind.
+  * Added `AtJetstreamSyncEvent`, `AtJetstreamSync` and `JetStreamEventKind.Sync` for sync events.
+  * Added `AtJetstreamEvent.Sequence` and `AtJetstreamEvent.WitnessedAt`, and `AtProtoJetstream.LastSequence` to resume from the last event received.
+  * Added the `InfoReceived` event for informational notices, and `FaultRaisedEventArgs.Error` for errors sent by the server.
+  * Added `JetstreamConnectionException`, thrown when a server refuses a connection, carrying the status code and error the server returned.
+  * Compressed v2 connections download the server's current zstd dictionary.
+  * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
+
+* Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
+  representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
+
+#### idunno.AtProto.Types
+
+* Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
 
 #### Samples
 
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
+
+### Changed
+
+#### idunno.AtProto
+
+* **Breaking** `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
+  To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
+* **Breaking** `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
+* Version 2 jetstreams limit `CollectionFilter` to 100 collections and `DidFilter` to 10,000 DIDs, and larger filters throw an `ArgumentException`.
+* **Breaking** `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
+  `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact
+  collection. `CollectionSelector` converts implicitly from both `string` and `Nsid`, so only code which builds a typed `Nsid[]` needs changing.
+
+### Fixed
+
+#### idunno.AtProto
+
+* `AtProtoJetstream` no longer loses events when reconnecting to apply a filter change. Messages already queued for
+  parsing are now drained before the cursor for the new connection is taken, so an event whose parsing had not finished
+  is neither skipped by the new connection nor discarded as a duplicate.
+* `AtProtoJetstream` now applies a filter changed whilst a connection was being opened. Previously the change was
+  silently dropped, as filters are only applied to an open socket and the connection recorded the filter version copied
+  before it opened.
+* `AtProtoJetstream` now discards the last sequence number and the compression dictionary it downloaded when it connects
+  to a different server, as neither means anything to another server.
+* `AtProtoJetstream.CloseAsync()` no longer leaves the jetstream connected when it races a reconnection. Previously it
+  could close the socket a filter change was already replacing and return whilst that reconnection went on to open its
+  replacement.
+* A wildcard collection filter, such as `app.bsky.feed.*`, is now usable. Collection filters were validated as an `Nsid`,
+  which rejects `*`, so the wildcards the servers support could not be sent.
+
+#### idunno.AtProto.Types
+
+* `Bytes` now accepts a base64 string whose `=` padding has been omitted, which the AT Protocol data model allows.
+  Jetstream, and other Go based implementations, encode `$bytes` without the padding, which previously caused deserialization to
+  throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
+  Encoding is unchanged, and still emits the padding.
+  Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
 
 ## 7.0.0 - 2026-09-24
 

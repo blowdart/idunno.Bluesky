@@ -1,13 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
+using idunno.Bluesky.AspNet.Authentication;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-
 using Microsoft.Extensions.Logging;
-
-using idunno.Bluesky.AspNet.Authentication;
 
 namespace idunno.Bluesky.AspNet.Authentication.UI.Areas.Bluesky.Pages;
 

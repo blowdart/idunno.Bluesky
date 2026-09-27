@@ -16,18 +16,18 @@ namespace idunno.AtProto.Test;
 [ExcludeFromCodeCoverage]
 public class RepositoryResultTests
 {
-    private static readonly AtUri FirstUri = new("at://did:plc:abcdefghijklmnopqrstuvwx/blue.idunno.test/rkey1");
-    private static readonly AtUri SecondUri = new("at://did:plc:abcdefghijklmnopqrstuvwx/blue.idunno.test/rkey2");
-    private static readonly Cid FirstCid = "bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy";
-    private static readonly Cid SecondCid = "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya";
+    private static readonly AtUri s_firstUri = new("at://did:plc:abcdefghijklmnopqrstuvwx/blue.idunno.test/rkey1");
+    private static readonly AtUri s_secondUri = new("at://did:plc:abcdefghijklmnopqrstuvwx/blue.idunno.test/rkey2");
+    private static readonly Cid s_firstCid = "bafyreib2rxk3rh6kzwq6y7ug4eqhfhpqaqzqvuflstfpvgkzjt7b5yfkzy";
+    private static readonly Cid s_secondCid = "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya";
 
     [Theory]
     [InlineData(true, false, "uri")]
     [InlineData(false, true, "cid")]
     public void CreateRecordResultValidatesItsArguments(bool nullUri, bool nullCid, string expectedParameterName)
     {
-        AtUri uri = nullUri ? null! : FirstUri;
-        Cid cid = nullCid ? null! : FirstCid;
+        AtUri uri = nullUri ? null! : s_firstUri;
+        Cid cid = nullCid ? null! : s_firstCid;
 
         ArgumentNullException fromStringOverload =
             Assert.Throws<ArgumentNullException>(() => new CreateRecordResult(uri, cid, null, (string?)null));
@@ -58,38 +58,38 @@ public class RepositoryResultTests
     [Fact]
     public void ChangingTheUriOfARepositoryRecordChangesItsStrongReference()
     {
-        AtProtoRepositoryRecord record = new(FirstUri, FirstCid, null);
-        AtProtoRepositoryRecord changed = record with { Uri = SecondUri };
+        AtProtoRepositoryRecord record = new(s_firstUri, s_firstCid, null);
+        AtProtoRepositoryRecord changed = record with { Uri = s_secondUri };
 
-        Assert.Equal(SecondUri, changed.StrongReference.Uri);
-        Assert.Equal(FirstCid, changed.StrongReference.Cid);
+        Assert.Equal(s_secondUri, changed.StrongReference.Uri);
+        Assert.Equal(s_firstCid, changed.StrongReference.Cid);
     }
 
     [Fact]
     public void ChangingTheCidOfARepositoryRecordChangesItsStrongReference()
     {
-        AtProtoRepositoryRecord record = new(FirstUri, FirstCid, null);
-        AtProtoRepositoryRecord changed = record with { Cid = SecondCid };
+        AtProtoRepositoryRecord record = new(s_firstUri, s_firstCid, null);
+        AtProtoRepositoryRecord changed = record with { Cid = s_secondCid };
 
-        Assert.Equal(FirstUri, changed.StrongReference.Uri);
-        Assert.Equal(SecondCid, changed.StrongReference.Cid);
+        Assert.Equal(s_firstUri, changed.StrongReference.Uri);
+        Assert.Equal(s_secondCid, changed.StrongReference.Cid);
     }
 
     [Fact]
     public void ChangingTheUriOfAnApplyWritesUpdateResultChangesItsStrongReference()
     {
-        ApplyWritesUpdateResult result = new(new ApplyWritesUpdateResponse(FirstUri, FirstCid));
-        ApplyWritesUpdateResult changed = result with { Uri = SecondUri };
+        ApplyWritesUpdateResult result = new(new ApplyWritesUpdateResponse(s_firstUri, s_firstCid));
+        ApplyWritesUpdateResult changed = result with { Uri = s_secondUri };
 
-        Assert.Equal(SecondUri, changed.StrongReference.Uri);
-        Assert.Equal(FirstCid, changed.StrongReference.Cid);
+        Assert.Equal(s_secondUri, changed.StrongReference.Uri);
+        Assert.Equal(s_firstCid, changed.StrongReference.Cid);
     }
 
     [Fact]
     public void TwoRepositoryRecordsWithTheSameExtensionDataAreEqual()
     {
-        AtProtoRepositoryRecord left = new(FirstUri, FirstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
-        AtProtoRepositoryRecord right = new(FirstUri, FirstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+        AtProtoRepositoryRecord left = new(s_firstUri, s_firstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+        AtProtoRepositoryRecord right = new(s_firstUri, s_firstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
 
         Assert.Equal(left, right);
         Assert.Equal(left.GetHashCode(), right.GetHashCode());
@@ -98,8 +98,8 @@ public class RepositoryResultTests
     [Fact]
     public void TwoRepositoryRecordsWithDifferentExtensionDataAreNotEqual()
     {
-        AtProtoRepositoryRecord left = new(FirstUri, FirstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
-        AtProtoRepositoryRecord right = new(FirstUri, FirstCid, null) { ExtensionData = CreateExtensionData("key", "\"other\"") };
+        AtProtoRepositoryRecord left = new(s_firstUri, s_firstCid, null) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+        AtProtoRepositoryRecord right = new(s_firstUri, s_firstCid, null) { ExtensionData = CreateExtensionData("key", "\"other\"") };
 
         Assert.NotEqual(left, right);
     }
@@ -107,8 +107,8 @@ public class RepositoryResultTests
     [Fact]
     public void TwoRepositoryRecordsWithDifferentUrisAreNotEqual()
     {
-        AtProtoRepositoryRecord left = new(FirstUri, FirstCid, null);
-        AtProtoRepositoryRecord right = new(SecondUri, FirstCid, null);
+        AtProtoRepositoryRecord left = new(s_firstUri, s_firstCid, null);
+        AtProtoRepositoryRecord right = new(s_secondUri, s_firstCid, null);
 
         Assert.NotEqual(left, right);
     }
@@ -116,8 +116,8 @@ public class RepositoryResultTests
     [Fact]
     public void TwoRepositoryRecordsWithDifferentValuesAreNotEqual()
     {
-        AtProtoRepositoryRecord left = new(FirstUri, FirstCid, JsonNode.Parse("""{"key":"value"}""")!.AsObject());
-        AtProtoRepositoryRecord right = new(FirstUri, FirstCid, JsonNode.Parse("""{"key":"other"}""")!.AsObject());
+        AtProtoRepositoryRecord left = new(s_firstUri, s_firstCid, JsonNode.Parse("""{"key":"value"}""")!.AsObject());
+        AtProtoRepositoryRecord right = new(s_firstUri, s_firstCid, JsonNode.Parse("""{"key":"other"}""")!.AsObject());
 
         Assert.NotEqual(left, right);
     }
@@ -126,9 +126,9 @@ public class RepositoryResultTests
     public void TwoTypedRepositoryRecordsWithTheSameExtensionDataAreEqual()
     {
         AtProtoRepositoryRecord<AtProtoRecord> left =
-            new(FirstUri, FirstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+            new(s_firstUri, s_firstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
         AtProtoRepositoryRecord<AtProtoRecord> right =
-            new(FirstUri, FirstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+            new(s_firstUri, s_firstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
 
         Assert.Equal(left, right);
         Assert.Equal(left.GetHashCode(), right.GetHashCode());
@@ -138,9 +138,9 @@ public class RepositoryResultTests
     public void TwoTypedRepositoryRecordsWithDifferentExtensionDataAreNotEqual()
     {
         AtProtoRepositoryRecord<AtProtoRecord> left =
-            new(FirstUri, FirstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
+            new(s_firstUri, s_firstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"value\"") };
         AtProtoRepositoryRecord<AtProtoRecord> right =
-            new(FirstUri, FirstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"other\"") };
+            new(s_firstUri, s_firstCid, new AtProtoRecord()) { ExtensionData = CreateExtensionData("key", "\"other\"") };
 
         Assert.NotEqual(left, right);
     }

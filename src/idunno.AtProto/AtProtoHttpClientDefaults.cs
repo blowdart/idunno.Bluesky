@@ -17,12 +17,12 @@ internal static class AtProtoHttpClientDefaults
     /// <summary>
     /// The handler used when a caller has not attached their own function to be called when a request is about to be sent.
     /// </summary>
-    internal static readonly Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest =
+    internal static readonly Func<HttpRequestMessage, CancellationToken, Task> s_onSendingRequest =
         (requestMessage, cancellationToken) => Task.CompletedTask;
 
     /// <summary>
     /// The handler used when a caller has not attached their own function to be called when a response has been received.
     /// </summary>
-    internal static readonly Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived =
+    internal static readonly Func<HttpResponseMessage, CancellationToken, Task> s_onResponseReceived =
         (responseMessage, cancellationToken) => Task.CompletedTask;
 }

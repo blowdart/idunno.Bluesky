@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
-using System.Text;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 using idunno.AtProto;
 

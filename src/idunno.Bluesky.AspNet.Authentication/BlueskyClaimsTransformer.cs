@@ -2,17 +2,17 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
-
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using Microsoft.Extensions.Logging.Abstractions;
 using idunno.Bluesky.Actor;
-using System.Diagnostics.Metrics;
+
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

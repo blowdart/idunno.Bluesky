@@ -1,10 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Formats.Cbor;
 using System.CommandLine;
-using System.Security.Cryptography;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -112,8 +112,8 @@ public sealed class Program
             throw new InvalidDataException("The CAR root commit block is missing.");
         }
 
-        IReadOnlyDictionary<string, object?> commit = ReadMap(commitBlock.Data);
-        if (!commit.TryGetValue("data", out object? dataValue) || dataValue is not Cid dataRoot)
+        using JsonDocument commitDocument = DagCbor.ToJsonDocument(commitBlock.Data);
+        if (!TryGetLink(commitDocument.RootElement, "data", out Cid? dataRoot))
         {
             throw new InvalidDataException("The CAR root commit does not contain a valid MST data link.");
         }
@@ -153,8 +153,10 @@ public sealed class Program
             throw new InvalidDataException($"MST node '{treeCid}' is missing from the CAR.");
         }
 
-        IReadOnlyDictionary<string, object?> treeNode = ReadMap(treeBlock.Data);
-        if (treeNode.TryGetValue("l", out object? leftValue) && leftValue is Cid leftTree)
+        using JsonDocument treeDocument = DagCbor.ToJsonDocument(treeBlock.Data);
+        JsonElement treeNode = treeDocument.RootElement;
+
+        if (TryGetLink(treeNode, "l", out Cid? leftTree))
         {
             await WalkTreeAsync(
                 leftTree,
@@ -166,21 +168,19 @@ public sealed class Program
                 cancellationToken).ConfigureAwait(false);
         }
 
-        if (!treeNode.TryGetValue("e", out object? entriesValue) || entriesValue is not List<object?> entries)
+        if (!treeNode.TryGetProperty("e", out JsonElement entries) || entries.ValueKind != JsonValueKind.Array)
         {
             throw new InvalidDataException($"MST node '{treeCid}' does not contain entries.");
         }
 
         byte[] previousKey = [];
-        foreach (object? entryValue in entries)
+        foreach (JsonElement entry in entries.EnumerateArray())
         {
-            if (entryValue is not IReadOnlyDictionary<string, object?> entry ||
-                !entry.TryGetValue("p", out object? prefixValue) ||
-                prefixValue is not ulong prefixLength ||
-                !entry.TryGetValue("k", out object? keySuffixValue) ||
-                keySuffixValue is not byte[] keySuffix ||
-                !entry.TryGetValue("v", out object? recordCidValue) ||
-                recordCidValue is not Cid recordCid)
+            if (entry.ValueKind != JsonValueKind.Object ||
+                !entry.TryGetProperty("p", out JsonElement prefixValue) ||
+                !prefixValue.TryGetUInt64(out ulong prefixLength) ||
+                !TryGetBytes(entry, "k", out byte[]? keySuffix) ||
+                !TryGetLink(entry, "v", out Cid? recordCid))
             {
                 throw new InvalidDataException($"MST node '{treeCid}' contains an invalid entry.");
             }
@@ -215,16 +215,16 @@ public sealed class Program
                 collectionCounts[collection] = collectionCounts.GetValueOrDefault(collection) + 1;
             }
 
-            IReadOnlyDictionary<string, object?> record = ReadMap(recordBlock.Data);
+            using JsonDocument recordDocument = DagCbor.ToJsonDocument(recordBlock.Data);
             await PrintRecordAsync(
                 repoDid,
                 key,
                 recordCid,
-                record,
+                recordDocument.RootElement,
                 resolvedHandles,
                 cancellationToken).ConfigureAwait(false);
 
-            if (entry.TryGetValue("t", out object? rightTreeValue) && rightTreeValue is Cid rightTree)
+            if (TryGetLink(entry, "t", out Cid? rightTree))
             {
                 await WalkTreeAsync(
                     rightTree,
@@ -242,7 +242,7 @@ public sealed class Program
         Did repoDid,
         string key,
         Cid cid,
-        IReadOnlyDictionary<string, object?> record,
+        JsonElement record,
         Dictionary<Did, Task<Handle>> resolvedHandles,
         CancellationToken cancellationToken)
     {
@@ -254,9 +254,7 @@ public sealed class Program
 
         string collection = key[..separator];
         string atUri = $"at://{repoDid}/{key}";
-        string type = record.TryGetValue("$type", out object? typeValue) && typeValue is string recordType
-            ? recordType
-            : collection;
+        string type = TryGetString(record, "$type", out string? recordType) ? recordType : collection;
 
         Console.WriteLine($"Type     : {type}");
         Console.WriteLine($"AtUri    : {atUri}");
@@ -264,7 +262,7 @@ public sealed class Program
 
         if (type == "app.bsky.feed.post")
         {
-            if (record.TryGetValue("text", out object? textValue) && textValue is string text)
+            if (TryGetString(record, "text", out string? text))
             {
                 Console.WriteLine($"Text     : {text}");
             }
@@ -273,23 +271,24 @@ public sealed class Program
                 Console.WriteLine("Text     : (none)");
             }
 
-            if (record.TryGetValue("createdAt", out object? createdAtValue) && createdAtValue is string createdAt)
+            if (TryGetString(record, "createdAt", out string? createdAt))
             {
                 Console.WriteLine($"Date     : {createdAt}");
             }
 
-            if (record.TryGetValue("reply", out object? replyValue) && replyValue is IReadOnlyDictionary<string, object?> reply &&
-                reply.TryGetValue("parent", out object? parentValue) && parentValue is IReadOnlyDictionary<string, object?> parent &&
-                parent.TryGetValue("uri", out object? parentUri) && parentUri is not null &&
-                parent.TryGetValue("cid", out object? parentCid) && parentCid is not null)
+            if (record.TryGetProperty("reply", out JsonElement reply) &&
+                reply.ValueKind == JsonValueKind.Object &&
+                reply.TryGetProperty("parent", out JsonElement parent) &&
+                parent.ValueKind == JsonValueKind.Object &&
+                TryGetString(parent, "uri", out string? parentUri) &&
+                TryGetLink(parent, "cid", out Cid? parentCid))
             {
                 Console.WriteLine($"Reply To : {parentUri} / {parentCid}");
             }
         }
         else if (type is "app.bsky.graph.follow" or "app.bsky.graph.block")
         {
-            if (record.TryGetValue("subject", out object? subjectValue) &&
-                subjectValue is string subjectText &&
+            if (TryGetString(record, "subject", out string? subjectText) &&
                 Did.TryParse(subjectText, out Did? subjectDid) &&
                 subjectDid is not null)
             {
@@ -312,104 +311,52 @@ public sealed class Program
         Console.WriteLine();
     }
 
-    private static IReadOnlyDictionary<string, object?> ReadMap(ReadOnlyMemory<byte> data)
-    {
-        CborReader reader = new(data, CborConformanceMode.Canonical);
-        object? value = ReadValue(reader);
-        if (reader.BytesRemaining != 0 || value is not IReadOnlyDictionary<string, object?> map)
-        {
-            throw new InvalidDataException("A CAR block did not contain a CBOR map.");
-        }
-
-        return map;
-    }
-
     private static void VerifyBlockCid(CarBlock block)
     {
-        IReadOnlyList<byte> hash = block.Cid.Hash;
-        if (block.Cid.Version != 1 ||
-            block.Cid.Codec != 0x71 ||
-            hash.Count != 34 ||
-            hash[0] != 0x12 ||
-            hash[1] != 0x20 ||
-            !CryptographicOperations.FixedTimeEquals(
-                hash.Skip(2).ToArray(),
-                SHA256.HashData(block.Data.Span)))
+        if (block.Cid != Cid.FromDagCbor(block.Data.Span))
         {
             throw new InvalidDataException($"CAR block '{block.Cid}' does not match its DAG-CBOR SHA-256 CID.");
         }
     }
 
-    private static object? ReadValue(CborReader reader)
+    private static bool TryGetString(JsonElement element, string propertyName, [NotNullWhen(true)] out string? value)
     {
-        switch (reader.PeekState())
+        if (element.TryGetProperty(propertyName, out JsonElement property) &&
+            property.ValueKind == JsonValueKind.String)
         {
-            case CborReaderState.Tag:
-                ulong tag = (ulong)reader.ReadTag();
-                if (tag != 42)
-                {
-                    throw new InvalidDataException($"Unsupported DAG-CBOR tag '{tag}'.");
-                }
-
-                byte[] cidBytes = reader.ReadByteString();
-                if (cidBytes.Length < 2 || cidBytes[0] != 0)
-                {
-                    throw new InvalidDataException("A DAG-CBOR CID link had an invalid prefix.");
-                }
-
-                return new Cid(cidBytes.AsSpan(1).ToArray());
-            case CborReaderState.StartMap:
-                int? mapLength = reader.ReadStartMap();
-                Dictionary<string, object?> map = new(StringComparer.Ordinal);
-                int mapItemsRead = 0;
-                while (mapLength is null
-                    ? reader.PeekState() != CborReaderState.EndMap
-                    : mapItemsRead < mapLength.Value)
-                {
-                    string key = reader.ReadTextString();
-                    if (!map.TryAdd(key, ReadValue(reader)))
-                    {
-                        throw new InvalidDataException($"A DAG-CBOR map contains duplicate key '{key}'.");
-                    }
-
-                    mapItemsRead++;
-                }
-
-                reader.ReadEndMap();
-                return map;
-            case CborReaderState.StartArray:
-                int? arrayLength = reader.ReadStartArray();
-                List<object?> array = [];
-                while (arrayLength is null
-                    ? reader.PeekState() != CborReaderState.EndArray
-                    : array.Count < arrayLength.Value)
-                {
-                    array.Add(ReadValue(reader));
-                }
-
-                reader.ReadEndArray();
-                return array;
-            case CborReaderState.TextString:
-                return reader.ReadTextString();
-            case CborReaderState.ByteString:
-                return reader.ReadByteString();
-            case CborReaderState.UnsignedInteger:
-                return reader.ReadUInt64();
-            case CborReaderState.NegativeInteger:
-                return reader.ReadInt64();
-            case CborReaderState.Boolean:
-                return reader.ReadBoolean();
-            case CborReaderState.Null:
-                reader.ReadNull();
-                return null;
-            case CborReaderState.HalfPrecisionFloat:
-                return (double)reader.ReadHalf();
-            case CborReaderState.SinglePrecisionFloat:
-                return (double)reader.ReadSingle();
-            case CborReaderState.DoublePrecisionFloat:
-                return reader.ReadDouble();
-            default:
-                throw new InvalidDataException($"Unsupported DAG-CBOR value '{reader.PeekState()}'.");
+            value = property.GetString()!;
+            return true;
         }
+
+        value = null;
+        return false;
+    }
+
+    private static bool TryGetLink(JsonElement element, string propertyName, [NotNullWhen(true)] out Cid? cid)
+    {
+        if (element.TryGetProperty(propertyName, out JsonElement property) &&
+            property.ValueKind == JsonValueKind.Object &&
+            TryGetString(property, "$link", out string? link))
+        {
+            cid = new Cid(link);
+            return true;
+        }
+
+        cid = null;
+        return false;
+    }
+
+    private static bool TryGetBytes(JsonElement element, string propertyName, [NotNullWhen(true)] out byte[]? bytes)
+    {
+        if (element.TryGetProperty(propertyName, out JsonElement property) &&
+            property.ValueKind == JsonValueKind.Object &&
+            TryGetString(property, "$bytes", out string? encoded))
+        {
+            bytes = new Bytes(encoded).ToBytes();
+            return true;
+        }
+
+        bytes = null;
+        return false;
     }
 }

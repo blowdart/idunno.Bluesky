@@ -8,11 +8,11 @@ using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 
+using idunno.AtProto.Jetstream;
+
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
-
-using idunno.AtProto.Jetstream;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -46,7 +46,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.ConnectionStateChanged += (sender, e) =>
             {
@@ -114,7 +114,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             using (var httpClient = new HttpClient())
             {
@@ -172,6 +172,7 @@ public class AtProtoJetstreamConnectionTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 CloseTimeout = TimeSpan.FromSeconds(2)
             }))
@@ -206,7 +207,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: deadUri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             using (var httpClient = new HttpClient())
             {
@@ -238,7 +239,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory },
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory },
             collections: [watchedCollection],
             dids: [watchedDid]))
         {
@@ -276,7 +277,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: deadUri,
-            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory }))
         {
             using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.connections_failed");
 
@@ -325,6 +326,7 @@ public class AtProtoJetstreamConnectionTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 LoggerFactory = loggerFactory,
                 MaxMessageSize = 1024 * 1024
@@ -375,7 +377,7 @@ public class AtProtoJetstreamConnectionTests
 
         var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false });
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false });
 
         Task connect = Task.Run(
             async () => await jetstream.ConnectAsync(
@@ -422,7 +424,7 @@ public class AtProtoJetstreamConnectionTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.ConnectionStateChanged += (sender, e) =>
             {
@@ -493,6 +495,7 @@ public class AtProtoJetstreamConnectionTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 BufferSize = 512
             }))
@@ -714,7 +717,7 @@ public class AtProtoJetstreamConnectionTests
 
         await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
 
-        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1 });
 
         using var httpClient = new HttpClient();
 
@@ -749,7 +752,7 @@ public class AtProtoJetstreamConnectionTests
 
         await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
 
-        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1 });
 
         using var httpClient = new HttpClient();
 
