@@ -64,8 +64,17 @@ public class AtProtoJetstreamV2Tests
     public async Task LiveStreamExcludesEventHandlersConnectionsAndOtherEnumerators()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TaskCompletionSource secondConnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var server = new TestJetstreamServer();
-        await server.Start((socket, _, token) => SendText(socket, IdentityEvent(41), token));
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 2)
+            {
+                secondConnection.TrySetResult();
+            }
+
+            await SendText(socket, IdentityEvent(41), token);
+        });
         using var jetstream = new AtProtoJetstream(
             httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
         EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
@@ -87,6 +96,7 @@ public class AtProtoJetstreamV2Tests
 
         jetstream.RecordReceived += handler;
         await jetstream.ConnectAsync(cancellationToken);
+        await secondConnection.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
         Assert.Equal(2, server.Connections.Count);
         await jetstream.CloseAsync(cancellationToken: cancellationToken);
     }
