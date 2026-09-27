@@ -1,7 +1,7 @@
+#pragma warning disable IDE0005 // RequiredAttribute is used by generated Razor code.
 using System.ComponentModel.DataAnnotations;
+#pragma warning restore IDE0005
 using System.Diagnostics.CodeAnalysis;
-
-using idunno.Bluesky.AspNet.Authentication;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

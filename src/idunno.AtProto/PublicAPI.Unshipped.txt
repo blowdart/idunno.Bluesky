@@ -361,8 +361,22 @@ idunno.AtProto.Jetstream.JetstreamAccountEvent
 idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.JetstreamAccountEvent? other) -> bool
 idunno.AtProto.Jetstream.JetstreamAccountEvent.JetstreamAccountEvent() -> void
 idunno.AtProto.Jetstream.JetstreamCommit
+idunno.AtProto.Jetstream.JetstreamCommit.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamCommit!
+idunno.AtProto.Jetstream.JetstreamCommit.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.Jetstream.JetstreamCommit.Cid.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Collection.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Jetstream.JetstreamCommit.Collection.init -> void
 idunno.AtProto.Jetstream.JetstreamCommit.Equals(idunno.AtProto.Jetstream.JetstreamCommit? other) -> bool
 idunno.AtProto.Jetstream.JetstreamCommit.JetstreamCommit() -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Operation.get -> idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommit.Operation.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Record.get -> System.Text.Json.JsonElement?
+idunno.AtProto.Jetstream.JetstreamCommit.Record.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Rev.get -> string!
+idunno.AtProto.Jetstream.JetstreamCommit.Rev.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.RKey.get -> idunno.AtProto.RecordKey!
+idunno.AtProto.Jetstream.JetstreamCommit.RKey.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.ToAtJetstreamCommit() -> idunno.AtProto.Jetstream.AtJetstreamCommit!
 idunno.AtProto.Jetstream.JetstreamCommitEvent
 idunno.AtProto.Jetstream.JetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.JetstreamCommitEvent? other) -> bool
 idunno.AtProto.Jetstream.JetstreamCommitEvent.JetstreamCommitEvent() -> void
@@ -423,7 +437,6 @@ override idunno.AtProto.Jetstream.JetstreamAccountEvent.<Clone>$() -> idunno.AtP
 override idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(object? obj) -> bool
 override idunno.AtProto.Jetstream.JetstreamAccountEvent.GetHashCode() -> int
 override idunno.AtProto.Jetstream.JetstreamAccountEvent.ToString() -> string!
-override idunno.AtProto.Jetstream.JetstreamCommit.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamCommit!
 override idunno.AtProto.Jetstream.JetstreamCommit.Equals(object? obj) -> bool
 override idunno.AtProto.Jetstream.JetstreamCommit.GetHashCode() -> int
 override idunno.AtProto.Jetstream.JetstreamCommit.ToString() -> string!
@@ -459,7 +472,6 @@ override sealed idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Equals(idunno.
 override sealed idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
 override sealed idunno.AtProto.Jetstream.JetstreamAccount.Equals(idunno.AtProto.Jetstream.AtJetstreamAccount? other) -> bool
 override sealed idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamAccountEvent? other) -> bool
-override sealed idunno.AtProto.Jetstream.JetstreamCommit.Equals(idunno.AtProto.Jetstream.AtJetstreamCommit? other) -> bool
 override sealed idunno.AtProto.Jetstream.JetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamCommitEvent? other) -> bool
 override sealed idunno.AtProto.Jetstream.JetstreamEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
 override sealed idunno.AtProto.Jetstream.JetstreamIdentity.Equals(idunno.AtProto.Jetstream.AtJetStreamIdentity? other) -> bool
@@ -490,6 +502,9 @@ static idunno.AtProto.Jetstream.JetstreamAccount.operator !=(idunno.AtProto.Jets
 static idunno.AtProto.Jetstream.JetstreamAccount.operator ==(idunno.AtProto.Jetstream.JetstreamAccount? left, idunno.AtProto.Jetstream.JetstreamAccount? right) -> bool
 static idunno.AtProto.Jetstream.JetstreamAccountEvent.operator !=(idunno.AtProto.Jetstream.JetstreamAccountEvent? left, idunno.AtProto.Jetstream.JetstreamAccountEvent? right) -> bool
 static idunno.AtProto.Jetstream.JetstreamAccountEvent.operator ==(idunno.AtProto.Jetstream.JetstreamAccountEvent? left, idunno.AtProto.Jetstream.JetstreamAccountEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamCommit.FromAtJetstreamCommit(idunno.AtProto.Jetstream.AtJetstreamCommit! commit) -> idunno.AtProto.Jetstream.JetstreamCommit!
+static idunno.AtProto.Jetstream.JetstreamCommit.implicit operator idunno.AtProto.Jetstream.AtJetstreamCommit!(idunno.AtProto.Jetstream.JetstreamCommit! commit) -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+static idunno.AtProto.Jetstream.JetstreamCommit.implicit operator idunno.AtProto.Jetstream.JetstreamCommit!(idunno.AtProto.Jetstream.AtJetstreamCommit! commit) -> idunno.AtProto.Jetstream.JetstreamCommit!
 static idunno.AtProto.Jetstream.JetstreamCommit.operator !=(idunno.AtProto.Jetstream.JetstreamCommit? left, idunno.AtProto.Jetstream.JetstreamCommit? right) -> bool
 static idunno.AtProto.Jetstream.JetstreamCommit.operator ==(idunno.AtProto.Jetstream.JetstreamCommit? left, idunno.AtProto.Jetstream.JetstreamCommit? right) -> bool
 static idunno.AtProto.Jetstream.JetstreamCommitEvent.operator !=(idunno.AtProto.Jetstream.JetstreamCommitEvent? left, idunno.AtProto.Jetstream.JetstreamCommitEvent? right) -> bool

@@ -104,16 +104,18 @@ public record AtJetstreamCommit
     /// </summary>
     public Cid? Cid
     {
-        get => field ?? _deferredCid?.Value;
-        init => field = value;
+        get => ExplicitCid ?? DeferredCid?.Value;
+        init => ExplicitCid = value;
     }
 
-    private Lazy<Cid>? _deferredCid;
+    internal Cid? ExplicitCid { get; init; }
+
+    internal Lazy<Cid>? DeferredCid { get; set; }
 
     internal void SetDagCborPayload(byte[] payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
         byte[] ownedPayload = (byte[])payload.Clone();
-        _deferredCid = new Lazy<Cid>(() => Cid.FromDagCbor(ownedPayload));
+        DeferredCid = new Lazy<Cid>(() => Cid.FromDagCbor(ownedPayload));
     }
 }

@@ -141,8 +141,14 @@ internal sealed class ArchiveDownload(
             AtProtoServer.ArchiveResponseStream stream = (AtProtoServer.ArchiveResponseStream)response.Result;
             if (stream.ETag != _etag)
             {
+                string receivedEtag = stream.ETag ?? "(missing)";
                 await stream.DisposeAsync().ConfigureAwait(false);
-                throw new InvalidDataException("The archive segment checksum changed while downloading it.");
+                throw new InvalidDataException(
+                    $"Archive download ETag mismatch for segment '{name}', " +
+                    $"block {(blockIndex is int block ? block.ToString(CultureInfo.InvariantCulture) : "(whole segment)")}, " +
+                    $"offset {Position}: planned checksum '{checksum}', expected ETag {_etag}, " +
+                    $"response ETag {receivedEtag}, HTTP {(int)response.StatusCode}. " +
+                    "The segment may have been compacted since planning, or the download response may be missing its ETag.");
             }
 
             _length = stream.ContentLength;

@@ -1,8 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-#pragma warning disable CS0618 // Demonstrate the legacy Jetstream v1 event callback.
-
 using System.Globalization;
 using System.Text;
 
@@ -81,7 +79,7 @@ public sealed class Program
 
                 switch (e.ParsedEvent)
                 {
-                    case AtJetstreamCommitEvent commitEvent:
+                    case JetstreamCommitEvent commitEvent:
                         {
                             string eventBelongsTo = commitEvent.Did;
 
@@ -94,7 +92,7 @@ public sealed class Program
                             break;
                         }
 
-                    case AtJetstreamAccountEvent accountEvent:
+                    case JetstreamAccountEvent accountEvent:
                         {
                             string eventBelongsTo = accountEvent.Did;
 
@@ -146,7 +144,7 @@ public sealed class Program
                             break;
                         }
 
-                    case AtJetstreamIdentityEvent identityEvent:
+                    case JetstreamIdentityEvent identityEvent:
                         {
                             if (identityEvent.Identity.Handle is not null)
                             {
@@ -167,7 +165,7 @@ public sealed class Program
                             break;
                         }
 
-                    case AtJetstreamSyncEvent syncEvent:
+                    case JetstreamSyncEvent syncEvent:
                         {
                             Console.WriteLine($"SYNC      : {syncEvent.Did} needs resyncing from revision {syncEvent.Sync.Rev} at {timeStamp}");
                             break;

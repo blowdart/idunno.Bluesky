@@ -4,6 +4,9 @@ The event and payload class names now prefer `Jetstream*` rather than `AtJetstre
 `JetstreamEvent`, `JetstreamCommitEvent`, `JetstreamCommit`, `JetstreamIdentityEvent`,
 `JetstreamAccountEvent` and `JetstreamSyncEvent`. The old `AtJetstream*` types remain for existing
 consumer handlers and property signatures; migrate type patterns to the new names when updating code.
+The legacy `AtJetstreamCommitEvent.Commit` property remains typed as `AtJetstreamCommit`; assign it to a
+`JetstreamCommit` variable to convert it implicitly, including its lazily computed archive CID.
+`JetstreamCommit` also converts back to `AtJetstreamCommit` for existing event initializers.
 The `JetstreamCommitEvent.IsSyncBackfill` property identifies record assertions emitted during an archive
 sync. It does not indicate a new live create. See [network replay](jetstreamReplay.md) for archive-specific
 checkpointing, byte-metered downloads and live cutover.

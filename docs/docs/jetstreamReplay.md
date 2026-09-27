@@ -89,13 +89,24 @@ The archive may redirect a block download to a short-lived signed CDN URL. The c
 without forwarding the API key; the response ETag still has to match the planned segment checksum.
 
 Run the [Jetstream replay sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.JetstreamReplay)
-to resolve `bot.idunno.blue` and replay its posts, likes, follows, identity and account events from `afterSeq=0`
+to resolve the selected handle and replay its posts, likes, follows, identity and account events from `afterSeq=0`
 before tailing live:
 
 ```powershell
 $env:_JetstreamApiKey = '<your key>'
+$env:_BlueskyHandle = 'bot.idunno.blue'
 dotnet run --project samples\Samples.JetstreamReplay -- --host wss://jetstream.us-west.bsky.network
 ```
 
-The sample also accepts `--api-key` (overriding the environment variable) and saves an archive or live checkpoint
-to `jetstream-replay-checkpoint.json`. Never check in that file or an API key.
+The sample also accepts `--api-key` and `--handle` (each overriding its environment variable), and saves an archive or live checkpoint
+to `jetstream-replay-checkpoint.json`. It prints the collection for every commit, locally timed post text
+(or `No Text`) and like subjects (AT URI and CID). Other commits display their operation and local event time.
+Post and like records use the Bluesky source-generated JSON options. Deletes display the record's AT URI and
+local deletion time. The sample keeps the most recent 1000 distinct posts in memory, refreshing an entry on update.
+When a post is deleted while its entry is still cached, it prints the original post text and can use the cached
+record CID for a strong reference (archive delete events do not contain a CID). Unmatched deletes retain the
+AT URI and timestamp only. The cache is not stored in the checkpoint, so deletes after a restart can be unmatched.
+When a PDS record does not conform to the Bluesky lexicon and typed deserialization fails, the sample warns with
+the AT URI and Jetstream sequence, reads available display fields directly from the record JSON, and continues.
+If `createdAt` is unavailable, it labels the event's observed time rather than presenting it as the record date.
+Never check in the checkpoint file or an API key.

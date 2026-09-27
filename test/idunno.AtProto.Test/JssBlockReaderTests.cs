@@ -34,9 +34,16 @@ public class JssBlockReaderTests
         Assert.Equal(DateTimeOffset.UnixEpoch.AddTicks(1234560), evt.WitnessedAt);
         Assert.Equal("x", evt.Commit.Record?.GetProperty("test").GetString());
 
+#pragma warning disable CS0618 // Verify the compatibility conversion preserves the archive's deferred CID.
+        JetstreamCommit converted = evt.Commit;
+        Assert.False(converted.DeferredCid?.IsValueCreated);
+#pragma warning restore CS0618
         Array.Fill(row.Payload, (byte)0);
         Assert.Equal(ExpectedCid, evt.Commit.Cid?.ToString());
         Assert.Same(evt.Commit.Cid, evt.Commit.Cid);
+        Assert.Equal(ExpectedCid, converted.Cid?.ToString());
+        Assert.Same(converted.Cid, converted.Cid);
+        Assert.Same(evt.Commit.Cid, converted.Cid);
     }
 
     [Fact]

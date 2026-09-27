@@ -86,7 +86,7 @@ items:
 
   - name: Jetstream
     items:
-      - name: Live tail quickstart
+      - name: Jetstream Quickstart
         href: jetstream.md
       - name: Network replay and snapshots
         href: jetstreamReplay.md

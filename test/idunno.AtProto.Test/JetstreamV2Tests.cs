@@ -22,6 +22,54 @@ public class JetstreamV2Tests
     private static AtProtoJetstream CreateJetstream(JetstreamProtocolVersion protocolVersion = JetstreamProtocolVersion.V2, bool useCompression = false) =>
         new(uri: s_server, options: new JetstreamOptions { ProtocolVersion = protocolVersion, UseCompression = useCompression, MaxMessageSize = 1024 });
 
+    [Fact]
+    public void LegacyCommitImplicitlyConvertsToJetstreamCommitAndBack()
+    {
+        AtJetstreamCommit legacy = new()
+        {
+            Operation = JetstreamCommitOperation.Create,
+            Collection = new Nsid("app.bsky.feed.post"),
+            Rev = "3mpksbjhx5s26",
+            RKey = new RecordKey("3mfrqvim56e25"),
+            Cid = new Cid("bafyreiahoxao3topglxgvzelhwm6ldqudzmtvtljnlnyndtfvotpvgf6zm")
+        };
+
+        JetstreamCommit current = legacy;
+        Assert.NotSame(legacy, current);
+        Assert.Equal(legacy.Operation, current.Operation);
+        Assert.Equal(legacy.Collection, current.Collection);
+        Assert.Equal(legacy.Rev, current.Rev);
+        Assert.Equal(legacy.RKey, current.RKey);
+        Assert.Equal(legacy.Cid, current.Cid);
+        Assert.Equal(legacy, current.ToAtJetstreamCommit());
+        Assert.Equal(current, JetstreamCommit.FromAtJetstreamCommit(legacy));
+
+        AtJetstreamCommit roundTrip = current;
+        Assert.Equal(legacy, roundTrip);
+    }
+
+    [Fact]
+    public void CommitConversionsPreserveAnExplicitCidWithoutComputingADeferredCid()
+    {
+        Cid cid = new("bafyreiahoxao3topglxgvzelhwm6ldqudzmtvtljnlnyndtfvotpvgf6zm");
+        AtJetstreamCommit legacy = new()
+        {
+            Operation = JetstreamCommitOperation.Create,
+            Collection = new Nsid("app.bsky.feed.post"),
+            Rev = "3mpksbjhx5s26",
+            RKey = new RecordKey("3mfrqvim56e25"),
+            Cid = cid
+        };
+        legacy.SetDagCborPayload([0]);
+
+        JetstreamCommit current = legacy;
+        Assert.Same(cid, current.Cid);
+        Assert.False(current.DeferredCid?.IsValueCreated);
+        AtJetstreamCommit roundTrip = current;
+        Assert.Same(cid, roundTrip.Cid);
+        Assert.False(roundTrip.DeferredCid?.IsValueCreated);
+    }
+
     private static string Message(string kind, string body, long sequence = 42) =>
         $$$"""
         {"$type":"message","payload":{"$type":"{{{TypePrefix}}}{{{kind}}}","did":"{{{TestDid}}}","seq":{{{sequence}}},"time":"2026-09-26T00:19:35.411026Z","witnessedAt":"2026-09-26T00:19:35.5Z"{{{body}}}}}

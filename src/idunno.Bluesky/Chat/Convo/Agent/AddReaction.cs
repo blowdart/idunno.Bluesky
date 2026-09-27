@@ -1,15 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
-using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
 

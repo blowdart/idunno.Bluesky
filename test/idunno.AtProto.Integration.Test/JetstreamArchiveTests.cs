@@ -153,6 +153,57 @@ public class JetstreamArchiveTests
         Assert.Contains("API key", error.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("blocks", "\"fedcba9876543210:0\"", "\"0123456789abcdef:0\"", "0")]
+    [InlineData("blocks", null, "\"0123456789abcdef:0\"", "0")]
+    [InlineData("segment", "\"fedcba9876543210\"", "\"0123456789abcdef\"", "(whole segment)")]
+    [InlineData("segment", null, "\"0123456789abcdef\"", "(whole segment)")]
+    public async Task SnapshotIdentifiesMismatchedDownloadEtag(
+        string mode, string? responseEtag, string expectedEtag, string block)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                context.Response.ContentType = "application/json";
+                string plan = mode == "blocks"
+                    ? """{"plannedThroughSeq":42,"sealedTipSeq":42,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":42,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}"""
+                    : """{"plannedThroughSeq":42,"sealedTipSeq":42,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":42,"mode":"segment"}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}""";
+                await context.Response.WriteAsync(plan);
+            }
+            else
+            {
+                if (responseEtag is not null)
+                {
+                    context.Response.Headers.ETag = responseEtag;
+                }
+
+                context.Response.ContentLength = 1;
+                await context.Response.Body.WriteAsync(new byte[1]);
+            }
+        });
+
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server),
+            uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(
+                new SnapshotRequest(), cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+
+        Assert.Contains(Segment, error.Message, StringComparison.Ordinal);
+        Assert.Contains($"block {block}, offset 0", error.Message, StringComparison.Ordinal);
+        Assert.Contains($"planned checksum '{Checksum}'", error.Message, StringComparison.Ordinal);
+        Assert.Contains($"expected ETag {expectedEtag}", error.Message, StringComparison.Ordinal);
+        Assert.Contains($"response ETag {responseEtag ?? "(missing)"}", error.Message, StringComparison.Ordinal);
+        Assert.Contains("HTTP 200", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("test-key", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task RangedDownloadFollowsSignedRedirectWithoutForwardingCredentials()
     {

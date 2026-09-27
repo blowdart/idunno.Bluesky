@@ -36,6 +36,8 @@
   plans, blocks, segments, downloaded bytes, rate limits, delivered and filtered events, and live handoffs.
 * Jetstream archive checkpoints now bind to the original service, bounds and filters. Checkpoints saved before
   this change must be discarded and recreated; replay retries transient live connection failures.
+* `AtJetstreamCommit` now converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs;
+  the reverse conversion remains available when populating legacy event properties.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
 
