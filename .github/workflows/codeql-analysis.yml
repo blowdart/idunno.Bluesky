@@ -5,7 +5,8 @@ on:
   push:
     branches:
       - main
-      -  version/*
+      - version/*
+      - dev/*
     paths-ignore:
       - '.github/**'
   pull_request:
