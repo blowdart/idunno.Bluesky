@@ -286,6 +286,25 @@ public class JetstreamV2Tests
     }
 
     [Theory]
+    // Jetstream encodes $bytes with Go's base64.RawStdEncoding, which omits the '=' padding, and the AT Protocol
+    // data model makes the padding optional, so both forms must be accepted.
+    [InlineData("AQIDBAU")]
+    [InlineData("AQIDBAU=")]
+    public void AV2SyncWithUnpaddedBlocksIsDerived(string blocks)
+    {
+        using AtProtoJetstream jetstream = CreateJetstream();
+
+        string json = Message("sync", $$""","sync":{"did":"{{TestDid}}","rev":"3lomhhw5ccf2j","blocks":{"$bytes":"{{blocks}}"},"seq":7,"time":"2026-09-26T00:19:35Z"}""");
+
+        Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
+
+        AtJetstreamSyncEvent syncEvent = Assert.IsType<AtJetstreamSyncEvent>(derivedEvent);
+
+        Assert.NotNull(syncEvent.Sync.Blocks);
+        Assert.Equal<byte[]>([0x01, 0x02, 0x03, 0x04, 0x05], syncEvent.Sync.Blocks.ToBytes());
+    }
+
+    [Theory]
     [InlineData("commit")]
     [InlineData("identity")]
     [InlineData("account")]

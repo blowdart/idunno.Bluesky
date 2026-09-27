@@ -50,6 +50,15 @@
 * **Breaking** `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
 * Version 2 jetstreams limit `CollectionFilter` to 100 collections and `DidFilter` to 10,000 DIDs, and larger filters throw an `ArgumentException`.
 
+### Fixed
+
+#### idunno.AtProto.Types
+
+* `Bytes` now accepts a base64 string whose `=` padding has been omitted, which the AT Protocol data model allows.
+  Jetstream, and other Go based implementations, encode `$bytes` without the padding, which previously caused deserialization to
+  throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
+  Encoding is unchanged, and still emits the padding.
+
 ## 7.0.0 - 2026-09-24
 
 🎉 **New** ASP.NET Authentication support for Bluesky, including a default Razor Pages UI and MySQL, Redis and SQLite implementations of the identity store and correlation state cache.

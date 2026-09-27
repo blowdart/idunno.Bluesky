@@ -46,10 +46,67 @@ public class BytesTests
 
     [Theory]
     [InlineData("invalid_base64_string")]
-    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY")]
+    // A length one more than a multiple of four cannot be produced by base64, padded or unpadded.
+    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bYaZ")]
+    [InlineData("=")]
+    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY===")]
     public void InvalidBase64StringShouldThrow(string invalidBase64String)
     {
         Assert.Throws<FormatException>(() => new Bytes(invalidBase64String));
+    }
+
+    [Theory]
+    // Jetstream, and other Go implementations, encode $bytes with base64.RawStdEncoding, which omits the padding,
+    // and the AT Protocol data model makes the padding optional, so unpadded values must be accepted.
+    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY", new byte[] { 191, 93, 54, 117, 155, 5, 188, 92, 53, 160, 248, 232, 149, 196, 109, 22, 94, 16, 103, 186, 4, 253, 182 })]
+    [InlineData("XAiqHcuHBuUyh8OVx/XbZg", new byte[] { 92, 8, 170, 29, 203, 135, 6, 229, 50, 135, 195, 149, 199, 245, 219, 102 })]
+    [InlineData("fzjPSKEKJjzX4w", new byte[] { 127, 56, 207, 72, 161, 10, 38, 60, 215, 227 })]
+    [InlineData("X+5LK3RDNoRf", new byte[] { 95, 238, 75, 43, 116, 67, 54, 132, 95 })]
+    public void UnpaddedBase64StringShouldConstruct(string base64String, byte[] expectedBytes)
+    {
+        var bytes = new Bytes(base64String);
+
+        Assert.Equal(expectedBytes, bytes.Value);
+    }
+
+    [Theory]
+    // Convert.FromBase64String() ignores white space, so the padding has to be worked out from the significant
+    // characters rather than the length of the string.
+    [InlineData("XAiqHcuHBuUy h8OVx/XbZg")]
+    [InlineData("XAiqHcuHBuUy\nh8OVx/XbZg")]
+    [InlineData("XAiqHcuHBuUy h8OVx/XbZg==")]
+    [InlineData(" XAiqHcuHBuUyh8OVx/XbZg ")]
+    public void Base64StringContainingWhiteSpaceShouldConstruct(string base64String)
+    {
+        var bytes = new Bytes(base64String);
+
+        Assert.Equal<byte[]>([92, 8, 170, 29, 203, 135, 6, 229, 50, 135, 195, 149, 199, 245, 219, 102], bytes.ToBytes());
+    }
+
+    [Theory]
+    [InlineData("v102dZsFvFw1oPjolcRtFl4QZ7oE/bY=", "v102dZsFvFw1oPjolcRtFl4QZ7oE/bY")]
+    [InlineData("XAiqHcuHBuUyh8OVx/XbZg==", "XAiqHcuHBuUyh8OVx/XbZg")]
+    [InlineData("fzjPSKEKJjzX4w==", "fzjPSKEKJjzX4w")]
+    public void PaddedAndUnpaddedBase64StringsShouldBeEqual(string padded, string unpadded)
+    {
+        var paddedBytes = new Bytes(padded);
+        var unpaddedBytes = new Bytes(unpadded);
+
+        Assert.Equal(paddedBytes, unpaddedBytes);
+        Assert.Equal(paddedBytes.GetHashCode(), unpaddedBytes.GetHashCode());
+
+        // Whether the value was padded or not, it normalizes to the padded form.
+        Assert.Equal(padded, unpaddedBytes.ToString());
+    }
+
+    [Theory]
+    [InlineData("""{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY"}""")]
+    [InlineData("""{"$bytes":"v102dZsFvFw1oPjolcRtFl4QZ7oE/bY="}""")]
+    public void PaddedAndUnpaddedBase64StringsShouldDeserializeIdentically(string json)
+    {
+        var expected = new Bytes(new byte[] { 191, 93, 54, 117, 155, 5, 188, 92, 53, 160, 248, 232, 149, 196, 109, 22, 94, 16, 103, 186, 4, 253, 182 });
+
+        Assert.Equal(expected, JsonSerializer.Deserialize<Bytes>(json));
     }
 
     [Fact]
