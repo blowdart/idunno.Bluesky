@@ -187,3 +187,7 @@ idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.get -> System.Collections.G
 idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.LastSequence.get -> long?
 virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnInfoReceived(idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs! e) -> void
+idunno.AtProto.DagCbor
+static idunno.AtProto.DagCbor.ToJsonElement(System.ReadOnlyMemory<byte> value) -> System.Text.Json.JsonElement
+static idunno.AtProto.DagCbor.ToJsonDocument(System.ReadOnlyMemory<byte> value) -> System.Text.Json.JsonDocument!
+static idunno.AtProto.DagCbor.TryToJsonElement(System.ReadOnlyMemory<byte> value, out System.Text.Json.JsonElement result) -> bool

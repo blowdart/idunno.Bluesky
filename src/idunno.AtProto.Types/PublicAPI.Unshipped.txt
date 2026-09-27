@@ -1,1 +1,2 @@
 #nullable enable
+static idunno.AtProto.Cid.FromDagCbor(System.ReadOnlySpan<byte> content) -> idunno.AtProto.Cid!

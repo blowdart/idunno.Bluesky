@@ -30,6 +30,13 @@
   * Compressed v2 connections download the server's current zstd dictionary.
   * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
 
+* Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
+  representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
+
+#### idunno.AtProto.Types
+
+* Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
+
 #### Samples
 
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
