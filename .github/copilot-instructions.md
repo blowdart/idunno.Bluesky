@@ -65,6 +65,7 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 
 ## Key conventions
 
+* **Text file encoding.** Create new text files as UTF-8 without a byte-order mark (BOM), using CRLF line endings.
 * **Public API tracking.** Public surface is tracked by the Roslyn `PublicApiAnalyzers` in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` per project. When you add, change, or remove a public member the build will fail until you update `PublicAPI.Unshipped.txt` accordingly.
   Public `record` types also generate `Equals`, `GetHashCode`, `ToString`, `<Clone>$`, `==` and `!=`. All of these must be listed
   in `PublicAPI.Unshipped.txt`, alongside the properties and their `init` accessors.

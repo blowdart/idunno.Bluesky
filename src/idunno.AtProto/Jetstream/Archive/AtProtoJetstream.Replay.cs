@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
@@ -39,7 +40,15 @@ public partial class AtProtoJetstream
             throw new InvalidOperationException("Jetstream replay requires a v2 service and an archive API key.");
         }
 
-        ValidateSnapshotRequest(request, checkpoint?.LiveAfterSeq is null ? checkpoint : null);
+        ValidateSnapshotRequest(request, null, _uri);
+        if (checkpoint is not null && (checkpoint.RequestFingerprint != request.Fingerprint(_uri) ||
+            checkpoint.ReplayAfterSeq < (request.AfterSeq ?? 0) ||
+            (checkpoint.LiveAfterSeq is null && checkpoint.ReplayAfterSeq is null &&
+             checkpoint.PlanAfterSeq < (request.AfterSeq ?? 0))))
+        {
+            throw new ArgumentException("The replay checkpoint belongs to a different request or service.", nameof(checkpoint));
+        }
+
         if (checkpoint?.LiveAfterSeq is long liveAfterSeq &&
             (liveAfterSeq < checkpoint.SealedTipSeq || checkpoint.PlanAfterSeq < 0 ||
              checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || (request.BeforeSeq is not null &&
@@ -59,7 +68,10 @@ public partial class AtProtoJetstream
     {
         long lastDelivered = request.AfterSeq ?? 0;
         SnapshotCheckpoint? resume = checkpoint;
-        SnapshotRequest currentRequest = request;
+        SnapshotRequest currentRequest = checkpoint?.ReplayAfterSeq is long replayAfter
+            ? request with { AfterSeq = replayAfter, BeforeSeq = null }
+            : request;
+        string fingerprint = request.Fingerprint(_uri);
 
         while (true)
         {
@@ -71,11 +83,20 @@ public partial class AtProtoJetstream
             }
             else
             {
+                SnapshotCheckpoint? archiveResume = resume is null ? null : resume with
+                {
+                    RequestFingerprint = currentRequest.Fingerprint(_uri),
+                    ReplayAfterSeq = null
+                };
                 await foreach (JetstreamEvent item in SnapshotAsync(
-                    currentRequest, resume, progress =>
+                    currentRequest, archiveResume, progress =>
                     {
                         tip = progress.SealedTipSeq;
-                        onCheckpoint?.Invoke(progress);
+                        onCheckpoint?.Invoke(progress with
+                        {
+                            RequestFingerprint = fingerprint,
+                            ReplayAfterSeq = currentRequest == request ? null : currentRequest.AfterSeq
+                        });
                     }, cancellationToken).ConfigureAwait(false))
                 {
                     if (item.Sequence is long sequence)
@@ -95,7 +116,7 @@ public partial class AtProtoJetstream
             bool restartFromArchive = false;
             while (true)
             {
-                _metrics.ReplayHandoffs.Add(1, new KeyValuePair<string, object?>("server", _uri.ToString()));
+                _metrics.ReplayHandoffs.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
                 IAsyncEnumerator<JetstreamEvent> live = LiveEventsAsync(
                     currentRequest, Math.Max(tip.Value, lastDelivered), cancellationToken).GetAsyncEnumerator(cancellationToken);
                 await using ConfiguredAsyncDisposable liveDisposal = live.ConfigureAwait(false);
@@ -111,7 +132,23 @@ public partial class AtProtoJetstream
                         restartFromArchive = true;
                         break;
                     }
+                    catch (JetstreamConnectionException ex) when (!cancellationToken.IsCancellationRequested &&
+                        ex.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
+                            HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
+                    {
+                        break;
+                    }
                     catch (IOException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (WebSocketException) when (!cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+                    catch (HttpRequestException ex) when (!cancellationToken.IsCancellationRequested &&
+                        (ex.StatusCode is null or HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
+                            HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout))
                     {
                         break;
                     }
@@ -133,6 +170,7 @@ public partial class AtProtoJetstream
                     {
                         SealedTipSeq = tip.Value,
                         PlanAfterSeq = currentRequest.AfterSeq ?? 0,
+                        RequestFingerprint = fingerprint,
                         LiveAfterSeq = lastDelivered
                     });
                 }
@@ -142,7 +180,7 @@ public partial class AtProtoJetstream
                     break;
                 }
 
-                // Retry from the last event actually delivered before falling back to the archive.
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
             }
 
             if (restartFromArchive)

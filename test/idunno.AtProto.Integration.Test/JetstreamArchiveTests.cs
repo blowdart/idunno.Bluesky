@@ -252,6 +252,47 @@ public class JetstreamArchiveTests
         Assert.Equal([10, 11], received);
         Assert.Equal(1, downloads);
         Assert.Equal([(0, null), (15, 30), (0, 30), (15, 30)], plans);
+        SnapshotCheckpoint saved = Assert.IsType<SnapshotCheckpoint>(completedBlock);
+        Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(
+            request with { Collections = [new CollectionSelector("app.bsky.feed.post")] }, saved,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(
+            request with { AfterSeq = 1 }, saved, cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(request, saved with
+        {
+            RequestFingerprint = null
+        }, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ArchivePlanRejectsOversizedJson(bool declaredLength)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (declaredLength)
+            {
+                context.Response.ContentLength = 8 * 1024 * 1024 + 1;
+            }
+            else
+            {
+                await context.Response.Body.WriteAsync(
+                    new byte[8 * 1024 * 1024 + 1], TestContext.Current.CancellationToken);
+            }
+        });
+        using HttpClient client = server.CreateClient();
+        await Assert.ThrowsAsync<InvalidDataException>(() => AtProtoServer.PlanSnapshot(
+            new SnapshotRequest(), TestServerBuilder.DefaultUri, "test-key", client,
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void ArchiveMetricServerTagOmitsUserInfoAndRequestQuery()
+    {
+        Uri service = new("wss://user:password@jetstream.example:443/private?token=secret");
+        Assert.Equal("wss://jetstream.example", AtProtoJetstream.ArchiveServerTag(service));
     }
 
     private static byte[] TwoRecordBlock()

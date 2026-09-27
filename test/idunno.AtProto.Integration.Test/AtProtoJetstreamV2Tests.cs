@@ -110,11 +110,81 @@ public class AtProtoJetstreamV2Tests
             options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
         await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
             new SnapshotRequest { AfterSeq = 0 },
-            new SnapshotCheckpoint { PlanAfterSeq = 0, SealedTipSeq = 40, LiveAfterSeq = 41 },
+            new SnapshotCheckpoint
+            {
+                PlanAfterSeq = 0, SealedTipSeq = 40, LiveAfterSeq = 41,
+                RequestFingerprint = new SnapshotRequest { AfterSeq = 0 }.Fingerprint(server.Uri)
+            },
             cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
         Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Equal(42, replay.Current.Sequence);
         Assert.Contains("cursor=41", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayResumesFallbackArchiveWithOriginalRequestIdentity()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int plans = 0;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context =>
+            {
+                Interlocked.Increment(ref plans);
+                return TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                    Encoding.UTF8.GetBytes(
+                        """{"plannedThroughSeq":50,"sealedTipSeq":50,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""));
+            }
+        };
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(51), token);
+            await SendText(socket, IdentityEvent(52), token);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotRequest original = new() { AfterSeq = 0, BeforeSeq = 40 };
+        SnapshotCheckpoint checkpoint = new()
+        {
+            PlanAfterSeq = 25, SealedTipSeq = 50, ReplayAfterSeq = 25,
+            RequestFingerprint = original.Fingerprint(server.Uri)
+        };
+        SnapshotCheckpoint? saved = null;
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            original, checkpoint, progress => saved = progress,
+            cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(51, replay.Current.Sequence);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(1, plans);
+        Assert.Equal(original.Fingerprint(server.Uri), saved?.RequestFingerprint);
+        Assert.Contains("cursor=50", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(
+            original with { BeforeSeq = 41 }, checkpoint, cancellationToken: cancellationToken));
+    }
+
+    [Fact]
+    public async Task ReplayRetriesTransientUpgradeFailure()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""")),
+            RefuseWith = (_, attempt) => attempt == 1
+                ? (HttpStatusCode.ServiceUnavailable, """{"error":"Unavailable"}""") : null
+        };
+        await server.Start((socket, _, token) => SendText(socket, IdentityEvent(41), token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.Single(server.Connections);
     }
 
     [Fact]

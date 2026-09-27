@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Jetstream.Archive;
@@ -24,6 +26,34 @@ public sealed record SnapshotRequest
 
     /// <summary>Gets or sets the inclusive upper sequence bound.</summary>
     public long? BeforeSeq { get; init; }
+
+    internal string Fingerprint(Uri service)
+    {
+        using MemoryStream stream = new();
+        using (BinaryWriter writer = new(stream, Encoding.UTF8, leaveOpen: true))
+        {
+            writer.Write(service.Scheme);
+            writer.Write(service.IdnHost);
+            writer.Write(service.Port);
+            writer.Write(AfterSeq ?? -1);
+            writer.Write(BeforeSeq ?? -1);
+            WriteValues(writer, Kinds?.Select(kind => ((int)kind).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            WriteValues(writer, Dids?.Select(did => did.Value));
+            WriteValues(writer, Collections?.Select(collection => collection.ToString()));
+        }
+
+        return Convert.ToHexString(SHA256.HashData(stream.ToArray()));
+    }
+
+    private static void WriteValues(BinaryWriter writer, IEnumerable<string>? values)
+    {
+        string[] sorted = values?.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray() ?? [];
+        writer.Write(sorted.Length);
+        foreach (string value in sorted)
+        {
+            writer.Write(value);
+        }
+    }
 }
 
 /// <summary>
@@ -35,6 +65,11 @@ public sealed record SnapshotRequest
 /// </remarks>
 public sealed record SnapshotCheckpoint
 {
+    /// <summary>Gets the fingerprint of the original request and service used to create this checkpoint.</summary>
+    public string? RequestFingerprint { get; init; }
+
+    /// <summary>Gets the exclusive replay fallback starting sequence, if it differs from the original request.</summary>
+    public long? ReplayAfterSeq { get; init; }
     /// <summary>Gets the pinned sealed tip for this snapshot.</summary>
     [JsonRequired]
     public required long SealedTipSeq { get; init; }

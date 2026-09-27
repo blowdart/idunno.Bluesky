@@ -31,6 +31,7 @@ public class HttpResultTests
         };
 
         Assert.True(httpResult.Succeeded);
+        Assert.Same(httpResult, httpResult.EnsureSucceeded());
     }
 
     [Fact]

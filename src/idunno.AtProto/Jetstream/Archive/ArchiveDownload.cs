@@ -88,7 +88,7 @@ internal sealed class ArchiveDownload(
 
         Position += read;
         _downloaded += read;
-        metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", service.ToString()));
+        metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
         return read;
     }
 
@@ -104,7 +104,7 @@ internal sealed class ArchiveDownload(
                     Position, resumeEtag, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", service.ToString()));
+                metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
                 TimeSpan? retry = response.HttpResponseHeaders?.RetryAfter?.Delta;
                 if (retry is null && response.HttpResponseHeaders?.RetryAfter?.Date is DateTimeOffset date)
                 {

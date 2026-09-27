@@ -85,10 +85,10 @@ public class AtProtoHttpResult<TResult>
     [MemberNotNull(nameof(Result))]
     public AtProtoHttpResult<TResult> EnsureSucceeded()
     {
-        if (StatusCode != HttpStatusCode.OK && StatusCode != HttpStatusCode.NoContent)
+        if (StatusCode is not (HttpStatusCode.OK or HttpStatusCode.NoContent or HttpStatusCode.PartialContent))
         {
             throw new AtProtoHttpRequestException(
-                message: "Status code != OK || NoContent",
+                message: "Status code is not OK, NoContent or PartialContent",
                 innerException: null,
                 statusCode: StatusCode);
         }

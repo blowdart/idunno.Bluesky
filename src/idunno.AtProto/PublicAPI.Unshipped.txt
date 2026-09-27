@@ -292,6 +292,10 @@ idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextByteOffset.get -> long
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextByteOffset.init -> void
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.PlanAfterSeq.get -> long
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.PlanAfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.ReplayAfterSeq.get -> long?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.ReplayAfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.RequestFingerprint.get -> string?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.RequestFingerprint.init -> void
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SealedTipSeq.get -> long
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SealedTipSeq.init -> void
 idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SegmentChecksum.get -> string?

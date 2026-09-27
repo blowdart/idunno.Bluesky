@@ -45,6 +45,8 @@ advanced past all events in a block, with segment name, checksum, next block ind
 the next frame byte offset. Persist each checkpoint only after applying the preceding events. The server can compact
 a sealed segment and change its checksum; the client then starts that segment again rather than resuming stale bytes.
 Delivery is **at least once** across crashes: make record processing idempotent, for example by AT URI.
+Checkpoints are bound to the original service, sequence bounds and filters; changing any of them requires
+a new snapshot. Older checkpoints without a request fingerprint cannot be resumed safely and must be discarded.
 
 ```csharp
 SnapshotCheckpoint? saved = LoadCheckpoint();
@@ -75,7 +77,10 @@ computed from owned DAG-CBOR bytes on first access and cached; delete events hav
 `ReplayAsync` also emits checkpoints after live events have been consumed, recording `LiveAfterSeq` alongside
 the original sealed tip. Pass that checkpoint back to `ReplayAsync` after restarting: it reconnects directly
 at the inclusive live cursor, drops the repeated event, and falls back to the archive if the cursor has aged
-out. A live checkpoint is not valid input to `SnapshotAsync`.
+out. Archive checkpoints created during a fallback retain the original request fingerprint and record the
+fallback starting sequence in `ReplayAfterSeq`; resume them with the same original request. A live checkpoint
+is not valid input to `SnapshotAsync`. Transient connection failures are retried with a short delay; invalid
+credentials and other permanent server refusals are surfaced to the caller.
 
 Archive bandwidth is metered in downloaded bytes. The client paces downloads using advertised
 `headwind-quota-*` headers, waits for `Retry-After` on HTTP 429, and resumes interrupted downloads with a

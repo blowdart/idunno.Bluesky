@@ -128,7 +128,10 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 
 ### Archive snapshot and replay metrics
 
-These counters use the same `idunno.AtProto.Jetstream` meter and a `server` tag. They are separate from the live WebSocket message counters above. Instrument names are prefixed with `idunno.atproto.jetstream.` (for example, `idunno.atproto.jetstream.total.archive_bytes`).
+These counters use the same `idunno.AtProto.Jetstream` meter and a `server` tag containing only the
+service origin (scheme, host and port), never credentials, paths or query parameters. They are separate
+from the live WebSocket message counters above. Instrument names are prefixed with
+`idunno.atproto.jetstream.` (for example, `idunno.atproto.jetstream.total.archive_bytes`).
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
