@@ -149,7 +149,17 @@ public static class DagCbor
                     break;
 
                 case CborReaderState.UnsignedInteger:
-                    writer.WriteNumberValue(reader.ReadUInt64());
+                    ulong unsignedValue = reader.ReadUInt64();
+
+                    // The AT Proto data model's integers are signed and 64 bit, but CBOR can encode an unsigned integer
+                    // larger than that, which has no representation in the data model.
+                    if (unsignedValue > long.MaxValue)
+                    {
+                        throw new InvalidDataException(
+                            string.Create(CultureInfo.InvariantCulture, $"The value contains the integer {unsignedValue}, which is larger than the AT Proto data model allows."));
+                    }
+
+                    writer.WriteNumberValue((long)unsignedValue);
                     break;
 
                 case CborReaderState.NegativeInteger:

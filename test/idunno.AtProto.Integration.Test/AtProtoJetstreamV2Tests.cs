@@ -232,6 +232,146 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task ConnectingToADifferentServerDiscardsTheSequenceThePreviousServerIssued()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var firstServer = new TestJetstreamServer();
+        using var secondServer = new TestJetstreamServer();
+
+        await firstServer.Start(async (webSocket, connectionNumber, serverCancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(100), serverCancellationToken);
+        });
+
+        await secondServer.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        TaskCompletionSource firstReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource reconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var jetstream = new AtProtoJetstream(
+            uri: firstServer.Uri,
+            options: new JetstreamOptions { UseCompression = false, MaximumConcurrentMessageParsers = 1 });
+
+        jetstream.RecordReceived += (sender, e) => firstReceived.TrySetResult();
+
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(uri: firstServer.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        await firstReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        Assert.Equal(100, jetstream.LastSequence);
+
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+        await jetstream.ConnectAsync(uri: secondServer.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        Assert.Null(jetstream.LastSequence);
+
+        jetstream.ConnectionStateChanged += (sender, e) =>
+        {
+            if (e.State == WebSocketState.Open)
+            {
+                reconnected.TrySetResult();
+            }
+        };
+
+        jetstream.DidFilter = [new Did(TestDid)];
+
+        await reconnected.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        // The reconnection must not resume from a cursor the first server issued, which the second knows nothing about.
+        TestJetstreamServer.Connection reconnection = secondServer.Connections.Last();
+        Assert.DoesNotContain("cursor=", reconnection.Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConnectingToADifferentServerDownloadsThatServersDictionary()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        byte[] dictionary = new JetstreamOptions().Dictionary!;
+
+        using var firstServer = new TestJetstreamServer { Dictionary = dictionary };
+        using var secondServer = new TestJetstreamServer { Dictionary = dictionary };
+
+        static Task Silent(WebSocket webSocket, int connectionNumber, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        await firstServer.Start(Silent);
+        await secondServer.Start(Silent);
+
+        using var jetstream = new AtProtoJetstream(uri: firstServer.Uri);
+
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(uri: firstServer.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        Assert.Equal(1, firstServer.DictionaryRequests);
+
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+        await jetstream.ConnectAsync(uri: secondServer.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        // A dictionary ID only means anything to the server which issued it, so the second server must be asked for its own.
+        Assert.Equal(1, secondServer.DictionaryRequests);
+        Assert.Equal(1, firstServer.DictionaryRequests);
+    }
+
+    [Fact]
+    public async Task AFilterChangedWhilstConnectingIsAppliedOnceTheConnectionIsOpen()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        byte[] dictionary = new JetstreamOptions().Dictionary!;
+
+        TaskCompletionSource dictionaryRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseDictionary = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource filteredConnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using var server = new TestJetstreamServer
+        {
+            Dictionary = dictionary,
+            BeforeDictionary = async () =>
+            {
+                dictionaryRequested.TrySetResult();
+                await releaseDictionary.Task;
+            }
+        };
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) =>
+        {
+            if (connectionNumber == 2)
+            {
+                filteredConnection.TrySetResult();
+            }
+
+            return Task.CompletedTask;
+        });
+
+        using var jetstream = new AtProtoJetstream(uri: server.Uri);
+
+        using var httpClient = new HttpClient();
+
+        Task connect = jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        // The dictionary is fetched after the filters have been copied for the query string but before the web socket
+        // is opened, so holding it there changes a filter in the window where the change would otherwise be lost.
+        await dictionaryRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        jetstream.DidFilter = [new Did(TestDid)];
+
+        releaseDictionary.TrySetResult();
+
+        await connect.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        await filteredConnection.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        TestJetstreamServer.Connection reconnection = server.Connections.Last();
+        Assert.Contains("dids=did%3aplc%3ag6ylltenitt4tp27bpwalh7b", reconnection.Query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task AnErrorFrameIsRaisedAsAFault()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -297,6 +437,12 @@ public class AtProtoJetstreamV2Tests
         public byte[]? Dictionary { get; init; }
 
         /// <summary>
+        /// Awaited before the dictionary is served, to hold a connection open in the window between the filters being
+        /// copied and the web socket being opened.
+        /// </summary>
+        public Func<Task>? BeforeDictionary { get; init; }
+
+        /// <summary>
         /// Decides, from the query and the number of upgrade attempts made so far, whether to refuse a subscription and
         /// with what status and body. Consulted for both the upgrade and the plain request made afterwards to read why
         /// it was refused.
@@ -323,6 +469,12 @@ public class AtProtoJetstreamV2Tests
                     if (string.Equals(path, "/xrpc/network.bsky.jetstream.getZstdDictionary", StringComparison.Ordinal))
                     {
                         Interlocked.Increment(ref _dictionaryRequests);
+
+                        if (BeforeDictionary is not null)
+                        {
+                            await BeforeDictionary().ConfigureAwait(false);
+                        }
+
                         await Respond(context, HttpStatusCode.OK, "application/octet-stream", Dictionary ?? []);
                         continue;
                     }

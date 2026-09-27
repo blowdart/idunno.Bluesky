@@ -106,4 +106,10 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(39, LogLevel.Trace, "Skipped event {sequence}, which was delivered before reconnecting")]
     internal static partial void DuplicateEventSkipped(ILogger logger, long sequence);
+
+    [LoggerMessage(40, LogLevel.Information, "Applying filters which changed whilst the connection was being opened")]
+    internal static partial void ApplyingFiltersChangedWhilstConnecting(ILogger logger);
+
+    [LoggerMessage(41, LogLevel.Information, "Connecting to {uri}, which is a different server, so the sequence number and compression dictionary have been reset")]
+    internal static partial void ServerChanged(ILogger logger, Uri uri);
 }

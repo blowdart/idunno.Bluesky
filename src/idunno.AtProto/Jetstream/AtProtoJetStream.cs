@@ -488,6 +488,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// to <see cref="ConnectAsync(Uri?, long?, HttpClient?, CancellationToken)"/> to resume from it after a disconnection.
     /// The cursor is inclusive, and events are delivered at least once, so a consumer which must not act on an event
     /// twice needs to check <see cref="AtJetstreamEvent.Sequence"/> for itself.</para>
+    /// <para>A sequence number only means anything to the server which issued it, so this is reset to <see langword="null"/>
+    /// when the jetstream connects to a different server.</para>
     /// </remarks>
     public long? LastSequence
     {
@@ -875,6 +877,13 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     uri = _server;
                     httpClient = _connectionSettings?.HttpClient;
 
+                    // Parsing runs away from the receive loop, and parsers can finish out of order, so the old
+                    // connection may have received an event which has not been delivered whilst a later one has.
+                    // LastSequence would then name an event ahead of that gap, and the skip threshold taken from it
+                    // suppresses the earlier event when its parser finally runs, losing it. Waiting for the old
+                    // connection's parsers to finish leaves LastSequence naming everything it delivered.
+                    await DrainMessageParsersAsync(cancellationToken).ConfigureAwait(false);
+
                     // Taken after the close, so it includes everything the old connection delivered. The cursor is
                     // inclusive, so the event it names is dropped rather than delivered a second time.
                     cursor = LastSequence;
@@ -926,6 +935,17 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
             // The loop is given the socket this call connected rather than reading the field, so a later reconnection
             // which replaces the field does not hand this loop the new socket to read alongside the loop started for it.
             ReceiveLoop(connectedClient, cancellationToken).FireAndForget();
+
+            // A filter changed whilst the socket was connecting was not applied, as the setter does nothing whilst a
+            // socket is not open, and the connection records the filter version copied before it opened, so no
+            // reconnection is scheduled for it either. Applied here, with the socket open and the connect semaphore
+            // released, as applying it to a version 2 jetstream reconnects, which waits on that semaphore.
+            if (Volatile.Read(ref _connectedFilterVersion) != Volatile.Read(ref _filterVersion))
+            {
+                JetStreamLogger.ApplyingFiltersChangedWhilstConnecting(_logger);
+
+                ApplyUpdatedFilters();
+            }
         }
     }
 
@@ -1036,6 +1056,22 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         uri ??= _uri;
 
         ValidateJetstreamUri(uri);
+
+        // Sequence numbers and zstd dictionary IDs only mean anything to the server which issued them, so anything
+        // scoped to a server is discarded when the jetstream is pointed at a different one. Keeping the sequence would
+        // resume, or reconnect for a filter change, with a cursor the new server cannot place, and keeping the
+        // dictionary ID would ask it to compress with a dictionary that ID may not name on that server.
+        if (_server is not null && _server != uri)
+        {
+            JetStreamLogger.ServerChanged(_logger, uri);
+
+            Interlocked.Exchange(ref _lastSequence, long.MinValue);
+
+            lock (_decompressorLock)
+            {
+                _dictionaryId = 0;
+            }
+        }
 
         _server = uri;
 
@@ -2240,6 +2276,44 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         finally
         {
             _parseSemaphore.Release();
+        }
+    }
+
+    /// <summary>
+    /// Waits until every message parser which is running has finished.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>Every parsing slot is taken, which can only happen once the parsers holding them have finished, and then
+    /// all of them are given back.</para>
+    /// </remarks>
+    private async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
+    {
+        int slots = Options.MaximumConcurrentMessageParsers;
+        int taken = 0;
+
+        try
+        {
+            for (; taken < slots; taken++)
+            {
+                await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (taken > 0)
+            {
+                try
+                {
+                    _parseSemaphore.Release(taken);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The jetstream was disposed whilst the parsers were waited for. The slots belong to a semaphore
+                    // which has gone, so there is nothing to give back, and the disposal is not an error here.
+                }
+            }
         }
     }
 

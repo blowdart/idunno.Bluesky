@@ -38,6 +38,29 @@ public class DagCborTests
         Assert.Equal(Convert.ToBase64String([0x01, 0x02, 0x03, 0x04]), result.GetProperty("$bytes").GetString());
     }
 
+    [Theory]
+    [InlineData(long.MaxValue)]
+    [InlineData(0L)]
+    [InlineData(long.MinValue)]
+    public void IntegersAtTheBoundsOfTheDataModelAreConverted(long value)
+    {
+        JsonElement result = DagCbor.ToJsonElement(Encode(writer => writer.WriteInt64(value)));
+
+        Assert.Equal(value, result.GetInt64());
+    }
+
+    [Theory]
+    // The AT Proto data model's integers are signed and 64 bit, so an unsigned integer larger than long.MaxValue,
+    // which CBOR can encode, has no representation in the data model and is rejected.
+    [InlineData(long.MaxValue + 1UL)]
+    [InlineData(ulong.MaxValue)]
+    public void IntegersLargerThanTheDataModelAllowsAreRejected(ulong value)
+    {
+        byte[] encoded = Encode(writer => writer.WriteUInt64(value));
+
+        Assert.Throws<InvalidDataException>(() => DagCbor.ToJsonElement(encoded));
+    }
+
     [Fact]
     public void ByteStringsConvertToABytesObjectWhichDeserializesToBytes()
     {

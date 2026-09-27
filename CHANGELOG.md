@@ -52,6 +52,17 @@
 
 ### Fixed
 
+#### idunno.AtProto
+
+* `AtProtoJetstream` no longer loses events when reconnecting to apply a filter change. Messages already queued for
+  parsing are now drained before the cursor for the new connection is taken, so an event whose parsing had not finished
+  is neither skipped by the new connection nor discarded as a duplicate.
+* `AtProtoJetstream` now applies a filter changed whilst a connection was being opened. Previously the change was
+  silently dropped, as filters are only applied to an open socket and the connection recorded the filter version copied
+  before it opened.
+* `AtProtoJetstream` now discards the last sequence number and the compression dictionary it downloaded when it connects
+  to a different server, as neither means anything to another server.
+
 #### idunno.AtProto.Types
 
 * `Bytes` now accepts a base64 string whose `=` padding has been omitted, which the AT Protocol data model allows.
