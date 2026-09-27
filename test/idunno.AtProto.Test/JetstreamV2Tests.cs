@@ -316,6 +316,7 @@ public class JetstreamV2Tests
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
         JetstreamIdentityEvent identityEvent = Assert.IsType<JetstreamIdentityEvent>(derivedEvent);
+        Assert.IsType<JetstreamIdentity>(identityEvent.Identity);
 
         Assert.Equal("example.com", identityEvent.Identity.Handle?.ToString());
         Assert.Equal(42, identityEvent.Sequence);
@@ -333,6 +334,7 @@ public class JetstreamV2Tests
         JetstreamAccountEvent accountEvent = Assert.IsType<JetstreamAccountEvent>(derivedEvent);
 
         Assert.False(accountEvent.Account.Active);
+        Assert.IsType<JetstreamAccount>(accountEvent.Account);
     }
 
     [Fact]
@@ -348,6 +350,7 @@ public class JetstreamV2Tests
 
         Assert.Equal(JetStreamEventKind.Sync, syncEvent.Kind);
         Assert.Equal(TestDid, syncEvent.Sync.Did.ToString());
+        Assert.IsType<JetstreamSync>(syncEvent.Sync);
         Assert.Equal("3lomhhw5ccf2j", syncEvent.Sync.Rev);
         Assert.Equal(7, syncEvent.Sync.Sequence);
         Assert.NotNull(syncEvent.Sync.Blocks);

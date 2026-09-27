@@ -96,15 +96,17 @@ public class JssBlockReaderTests
         switch (kind)
         {
             case 4:
-                Assert.Equal(33_900_000_000UL, Assert.IsType<JetstreamIdentityEvent>(evt).Identity.Sequence);
+                Assert.Equal(33_900_000_000UL,
+                    Assert.IsType<JetstreamIdentity>(Assert.IsType<JetstreamIdentityEvent>(evt).Identity).Sequence);
                 break;
             case 5:
                 JetstreamAccountEvent account = Assert.IsType<JetstreamAccountEvent>(evt);
-                Assert.Equal(33_900_000_000UL, account.Account.Sequence);
+                Assert.Equal(33_900_000_000UL, Assert.IsType<JetstreamAccount>(account.Account).Sequence);
                 Assert.True(account.Account.Active);
                 break;
             case 6:
-                Assert.Equal(33_900_000_000, Assert.IsType<JetstreamSyncEvent>(evt).Sync.Sequence);
+                Assert.Equal(33_900_000_000,
+                    Assert.IsType<JetstreamSync>(Assert.IsType<JetstreamSyncEvent>(evt).Sync).Sequence);
                 break;
         }
     }

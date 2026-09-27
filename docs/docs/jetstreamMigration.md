@@ -15,6 +15,67 @@ checkpointing, byte-metered downloads and live cutover.
 From version 8.0.0 `AtProtoJetstream` connects with version 2 of the Jetstream protocol by default. Most code keeps working unchanged,
 but the following sections describe the changes you may want, or need, to make.
 
+### Migrating from event handlers to async enumeration
+
+The event-driven `ConnectAsync()` and `RecordReceived` APIs remain available. For a **live v2 tail**, you can
+instead consume `JetstreamEvent` values from `StreamAsync()` in a single `await foreach` loop. Move the
+work in your `RecordReceived` handler into that loop. You no longer call `ConnectAsync()` to start it or
+`CloseAsync()` to stop it:
+
+Before (event-driven):
+
+```csharp
+using var jetstream = new AtProtoJetstream(collections: ["app.bsky.feed.post"]);
+jetstream.RecordReceived += (_, args) =>
+{
+    if (args.ParsedEvent is JetstreamCommitEvent commit)
+    {
+        Console.WriteLine($"{commit.Did}: {commit.Commit.Operation}");
+    }
+};
+
+await jetstream.ConnectAsync(cancellationToken);
+await WaitForShutdownAsync(); // Your application's shutdown signal; events run in the background.
+await jetstream.CloseAsync();
+```
+
+After (async enumeration):
+
+```csharp
+await using var jetstream = new AtProtoJetstream(collections: ["app.bsky.feed.post"]);
+await foreach (JetstreamEvent evt in jetstream.StreamAsync(cancellationToken: cancellationToken))
+{
+    if (evt is JetstreamCommitEvent commit)
+    {
+        Console.WriteLine($"{commit.Did}: {commit.Commit.Operation}");
+    }
+}
+```
+
+`WaitForShutdownAsync` represents your application's existing lifetime management, not a Jetstream API.
+
+Iteration opens the connection; breaking the loop disposes its single enumerator and closes the
+connection. Cancellation ends iteration with `OperationCanceledException`, which you can catch when
+shutdown is expected. The enumerator processes events in sequence order and automatically reconnects
+after transient disconnects, starting at the last yielded sequence and suppressing the inclusive
+duplicate. Event callbacks may run concurrently and do not have the same ordering guarantee.
+Retries are unlimited by default; pass `maximumReconnectAttempts: 5` to `StreamAsync()` to stop
+after five consecutive retries with an `IOException`. Yielding an event resets the retry count.
+
+Choose **one model per active connection**: do not retain subscriptions to `RecordReceived`,
+`MessageReceived`, `ConnectionStateChanged`, `FaultRaised` or `InfoReceived` when starting `StreamAsync()`,
+and do not call `ConnectAsync()` or start a second enumerator while streaming. Remove handlers and close
+an existing event-driven connection before switching. You can use the event API again after disposing
+the enumerator. For v1, keep the event-driven model; `StreamAsync()` requires v2.
+
+If you previously persisted `LastSequence` in a handler, persist `evt.Sequence` instead **after**
+successfully processing each event, and supply that value as `StreamAsync(cursor: savedSequence)`.
+The server's cursor is inclusive; a restart may receive the saved event again, so make processing
+idempotent. Unlike `ConnectAsync()`, `StreamAsync()` handles transient reconnections itself, but
+an expired cursor raises `JetstreamConnectionException` rather than silently skipping events.
+For gaps beyond live lookback, use [archive-to-live replay](jetstreamReplay.md#replay-into-the-live-tail).
+See the [live tail quickstart](jetstream.md#quickstart-the-live-tail) for filtering, event types and shutdown.
+
 ### Staying on version 1
 
 If you are not ready to move, or you connect to a Jetstream server of your own that only speaks version 1, pin the protocol version.

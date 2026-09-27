@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace idunno.AtProto.Jetstream.Archive;
 
@@ -20,7 +21,7 @@ internal sealed class ArchiveDownload(
     private Stream? _stream;
     private long? _length;
     private long _burst = long.MaxValue;
-    private long _refill;
+    private double _refill;
     private long _downloaded;
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private readonly string _etag = blockIndex is int index ? $"\"{checksum}:{index}\"" : $"\"{checksum}\"";
@@ -67,29 +68,45 @@ internal sealed class ArchiveDownload(
             return 0;
         }
 
-        if (_refill > 0 && _downloaded > _burst)
-        {
-            double requiredSeconds = (double)(_downloaded - _burst) / _refill;
-            TimeSpan wait = TimeSpan.FromSeconds(requiredSeconds) - _elapsed.Elapsed;
-            if (wait > TimeSpan.Zero)
-            {
-                await Task.Delay(wait, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        int read = await _stream!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+        Memory<byte> limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
+        int read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
         if (read == 0 && (_length is null || Position < _length))
         {
             await _stream.DisposeAsync().ConfigureAwait(false);
             _stream = null;
             await OpenAsync(cancellationToken).ConfigureAwait(false);
-            read = await _stream!.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
+            read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
         }
 
         Position += read;
         _downloaded += read;
         metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
         return read;
+    }
+
+    private async Task<Memory<byte>> LimitToQuotaAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        if (_burst == long.MaxValue)
+        {
+            return buffer;
+        }
+
+        while (true)
+        {
+            double available = _burst + _refill * _elapsed.Elapsed.TotalSeconds - _downloaded;
+            if (available >= 1)
+            {
+                return buffer[..(int)Math.Min(buffer.Length, Math.Min(int.MaxValue, Math.Floor(available)))];
+            }
+
+            if (_refill <= 0)
+            {
+                throw new InvalidDataException("The archive quota has no available bytes or refill rate.");
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds((1 - available) / _refill), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task OpenAsync(CancellationToken cancellationToken)
@@ -105,11 +122,7 @@ internal sealed class ArchiveDownload(
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
-                TimeSpan? retry = response.HttpResponseHeaders?.RetryAfter?.Delta;
-                if (retry is null && response.HttpResponseHeaders?.RetryAfter?.Date is DateTimeOffset date)
-                {
-                    retry = date - DateTimeOffset.UtcNow;
-                }
+                TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders);
 
                 if (retry is null)
                 {
@@ -165,12 +178,18 @@ internal sealed class ArchiveDownload(
                 long.TryParse(period.FirstOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out long seconds) &&
                 seconds > 0)
             {
-                _refill = refillBytes / seconds;
+                _refill = (double)refillBytes / seconds;
             }
 
             _stream = stream;
             return;
         }
+    }
+
+    internal static TimeSpan? GetRetryAfter(HttpResponseHeaders? headers)
+    {
+        RetryConditionHeaderValue? retry = headers?.RetryAfter;
+        return retry?.Delta ?? (retry?.Date is DateTimeOffset date ? date - DateTimeOffset.UtcNow : null);
     }
 
     public async ValueTask DisposeAsync()

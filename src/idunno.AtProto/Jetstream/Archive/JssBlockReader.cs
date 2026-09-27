@@ -182,21 +182,21 @@ internal sealed record JssRow(
                 {
                     Did = did, Sequence = Seq, TimeStamp = stamp, WitnessedAt = witnessed,
                     Kind = JetStreamEventKind.Identity,
-                    Identity = Deserialize(Payload, SourceGenerationContext.Default.AtJetStreamIdentity)
+                    Identity = Deserialize(Payload, SourceGenerationContext.Default.JetstreamIdentity)
                 };
             case 5:
                 return new JetstreamAccountEvent
                 {
                     Did = did, Sequence = Seq, TimeStamp = stamp, WitnessedAt = witnessed,
                     Kind = JetStreamEventKind.Account,
-                    Account = Deserialize(Payload, SourceGenerationContext.Default.AtJetstreamAccount)
+                    Account = Deserialize(Payload, SourceGenerationContext.Default.JetstreamAccount)
                 };
             case 6:
                 return new JetstreamSyncEvent
                 {
                     Did = did, Sequence = Seq, TimeStamp = stamp, WitnessedAt = witnessed,
                     Kind = JetStreamEventKind.Sync,
-                    Sync = Deserialize(Payload, SourceGenerationContext.Default.AtJetstreamSync)
+                    Sync = Deserialize(Payload, SourceGenerationContext.Default.JetstreamSync)
                 };
             default:
                 return new JetstreamEvent

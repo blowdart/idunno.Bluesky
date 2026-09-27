@@ -61,6 +61,14 @@ public partial class AtProtoJetstream
         long? pinned = checkpoint?.SealedTipSeq;
         SnapshotCheckpoint? position = checkpoint;
         bool seeking = checkpoint?.SegmentName is not null;
+        HashSet<string>? dids = request.Dids is { Count: > 0 }
+            ? request.Dids.Select(did => did.Value).ToHashSet(StringComparer.Ordinal) : null;
+        HashSet<string>? collections = request.Collections is { Count: > 0 }
+            ? request.Collections.Where(collection => !collection.IsWildcard)
+                .Select(collection => collection.ToString()).ToHashSet(StringComparer.Ordinal) : null;
+        string[] wildcardPrefixes = request.Collections is { Count: > 0 }
+            ? request.Collections.Where(collection => collection.IsWildcard)
+                .Select(collection => collection.ToString()[..^1]).ToArray() : [];
 
         while (true)
         {
@@ -77,7 +85,7 @@ public partial class AtProtoJetstream
                 }
 
                 _metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
-                TimeSpan? retry = result.HttpResponseHeaders?.RetryAfter?.Delta;
+                TimeSpan? retry = ArchiveDownload.GetRetryAfter(result.HttpResponseHeaders);
                 TimeSpan delay = retry ?? throw new HttpRequestException(
                     "The Jetstream archive planner was rate limited without a Retry-After header.",
                     null, result.StatusCode);
@@ -88,7 +96,9 @@ public partial class AtProtoJetstream
             ThrowOnArchiveError(result);
             SnapshotPlan plan = result.Result ?? throw new InvalidDataException("The archive planner returned no plan.");
             pinned ??= plan.SealedTipSeq;
-            if (plan.SealedTipSeq != pinned || plan.PlannedThroughSeq < after ||
+            if (plan.SealedTipSeq != pinned ||
+                (request.BeforeSeq is long before && plan.SealedTipSeq > before) ||
+                plan.PlannedThroughSeq < after ||
                 (plan.PlannedThroughSeq == after && plan.PlannedThroughSeq < pinned))
             {
                 throw new InvalidDataException("The archive planner returned a non-progressing or unpinned page.");
@@ -136,7 +146,7 @@ public partial class AtProtoJetstream
                             foreach (JssRow row in JssBlockReader.Decode(frame))
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (MatchesSnapshot(row, request, pinned.Value))
+                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -186,7 +196,7 @@ public partial class AtProtoJetstream
                         {
                             await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
                             {
-                                if (MatchesSnapshot(row, request, pinned.Value))
+                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -218,7 +228,7 @@ public partial class AtProtoJetstream
                         {
                             await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
                             {
-                                if (MatchesSnapshot(row, request, pinned.Value))
+                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -310,10 +320,12 @@ public partial class AtProtoJetstream
         return checked((int)BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(14, 4)));
     }
 
-    private static bool MatchesSnapshot(JssRow row, SnapshotRequest request, long tip)
+    private static bool MatchesSnapshot(JssRow row, SnapshotRequest request, long tip,
+        HashSet<string>? dids, HashSet<string>? collections, string[] wildcardPrefixes)
     {
         if (row.Seq <= (request.AfterSeq ?? 0) || row.Seq > tip ||
-            (request.Dids is { Count: > 0 } && !request.Dids.Any(did => did.Value == row.Did)) ||
+            (request.BeforeSeq is long before && row.Seq > before) ||
+            (dids is not null && !dids.Contains(row.Did)) ||
             (request.Kinds is { Count: > 0 } && !request.Kinds.Contains(row.EventKind)))
         {
             return false;
@@ -321,9 +333,8 @@ public partial class AtProtoJetstream
 
         return row.EventKind != JetStreamEventKind.Commit ||
             request.Collections is not { Count: > 0 } ||
-            request.Collections.Any(collection => collection.IsWildcard
-                ? row.Collection.StartsWith(collection.ToString()[..^1], StringComparison.Ordinal)
-                : row.Collection == collection.ToString());
+            (collections is not null && collections.Contains(row.Collection) ||
+             wildcardPrefixes.Any(prefix => row.Collection.StartsWith(prefix, StringComparison.Ordinal)));
     }
 
     private static void ValidateSnapshotRequest(SnapshotRequest request, SnapshotCheckpoint? checkpoint, Uri service)

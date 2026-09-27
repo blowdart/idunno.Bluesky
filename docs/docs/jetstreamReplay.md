@@ -7,6 +7,7 @@ live tail without a gap. Both yield `JetstreamEvent` objects, including `Jetstre
 
 An archive API key is required for HTTP requests, but **not** for a live-only WebSocket subscription. Configure it
 with `JetstreamOptions.ApiKey` or `AtProtoJetstreamBuilder.WithApiKey()`. Do not store the key in source control.
+Archive requests require HTTPS or WSS for non-loopback services so the key is not transmitted in plaintext.
 The archive uses the same host configured for the live client, defaulting to `jetstream.us-west.bsky.network`.
 A v1 Jetstream host does not provide the archive endpoints.
 

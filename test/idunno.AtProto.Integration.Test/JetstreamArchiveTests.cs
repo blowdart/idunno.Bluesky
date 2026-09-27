@@ -22,7 +22,73 @@ public class JetstreamArchiveTests
     private const string Checksum = "0123456789abcdef";
     private const string Segment = "seg_0000000000.jss";
     private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
-    private static readonly Uri s_server = new("ws://test.internal:443/some/path?ignored=1");
+    private static readonly Uri s_server = new("wss://test.internal:443/some/path?ignored=1");
+
+    [Theory]
+    [InlineData("http://archive.example")]
+    [InlineData("ws://archive.example")]
+    public async Task ArchiveRefusesToSendApiKeyOverInsecureRemoteTransport(string service)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, _ =>
+            throw new InvalidOperationException("The archive request must not be sent."));
+        using HttpClient client = server.CreateClient();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => AtProtoServer.PlanSnapshot(
+            new SnapshotRequest(), new Uri(service), "test-key", client,
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task DownloadReadWaitsForQuotaBeforeRequestingMoreBytes()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.Headers.ETag = $"\"{Checksum}:0\"";
+            context.Response.Headers["headwind-quota-burst-bytes"] = "2";
+            context.Response.Headers["headwind-quota-refill-bytes"] = "1";
+            context.Response.Headers["headwind-quota-refill-period-seconds"] = "1";
+            context.Response.ContentLength = 3;
+            await context.Response.Body.WriteAsync(new byte[] { 1, 2, 3 });
+        });
+        using HttpClient client = server.CreateClient();
+        await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null));
+        byte[] bytes = new byte[3];
+        System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
+        await download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2, 3], bytes);
+        Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(850),
+            $"Quota was bypassed: the download completed in {elapsed.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task PlannerRetriesAnHttpDateRetryAfter()
+    {
+        int plans = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (Interlocked.Increment(ref plans) == 1)
+            {
+                context.Response.StatusCode = 429;
+                context.Response.Headers.RetryAfter = DateTimeOffset.UtcNow.AddSeconds(1).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                return;
+            }
+
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"plannedThroughSeq":0,"sealedTipSeq":0,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""");
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: TestContext.Current.CancellationToken))
+        {
+        }
+
+        Assert.Equal(2, plans);
+    }
 
     [Theory]
     [InlineData("blocks")]
@@ -30,10 +96,12 @@ public class JetstreamArchiveTests
     public async Task SnapshotUsesConfiguredHostAndDecodesBothPlanModes(string mode)
     {
         Dictionary<string, long> measurements = [];
+        using var meterFactory = new TestMeterFactory();
         using MeterListener listener = new();
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Name == JetstreamMetrics.MeterName)
+            if (instrument.Meter.Name == JetstreamMetrics.MeterName &&
+                ReferenceEquals(instrument.Meter.Scope, meterFactory))
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }
@@ -104,7 +172,7 @@ public class JetstreamArchiveTests
         using AtProtoJetstream jetstream = new(
             httpClientFactory: new TestHttpClientFactory(server),
             uri: s_server,
-            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false, MeterFactory = meterFactory });
         SnapshotCheckpoint? saved = null;
         List<JetstreamEvent> events = [];
         await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
@@ -137,6 +205,66 @@ public class JetstreamArchiveTests
         {
             Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_rate_limits"]);
         }
+    }
+
+    [Fact]
+    public async Task SnapshotFiltersRowsBeyondRequestedBoundAndUsesDidAndCollectionFilters()
+    {
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    """{"plannedThroughSeq":10,"sealedTipSeq":10,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":11,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}""");
+            }
+            else
+            {
+                context.Response.Headers.ETag = $"\"{Checksum}:0\"";
+                context.Response.ContentLength = frame.Length;
+                await context.Response.Body.WriteAsync(frame);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        List<long?> received = [];
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
+            new SnapshotRequest
+            {
+                BeforeSeq = 10,
+                Dids = [new Did("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa"), new Did(TestDid)],
+                Collections = [new CollectionSelector("app.bsky.feed.*")]
+            }, cancellationToken: TestContext.Current.CancellationToken))
+        {
+            received.Add(evt.Sequence);
+        }
+
+        Assert.Equal([10], received);
+    }
+
+    [Fact]
+    public async Task SnapshotRejectsPlannerTipBeyondRequestedBound()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"plannedThroughSeq":11,"sealedTipSeq":11,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""");
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(
+                new SnapshotRequest { BeforeSeq = 10 }, cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
     }
 
     [Fact]

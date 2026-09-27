@@ -23,7 +23,7 @@ public static partial class AtProtoServer
     /// <param name="httpClient">The client used to send the request.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The planned snapshot page or an HTTP error.</returns>
-    /// <exception cref="ArgumentException">An API key is missing or the service URI is invalid.</exception>
+    /// <exception cref="ArgumentException">An API key is missing or the service URI is invalid or insecure for a non-loopback host.</exception>
     /// <remarks><para>The archive requires a v2 Jetstream host. Collection and DID filters are approximate at plan time;
     /// consumers must filter the decoded rows again.</para></remarks>
     public static async Task<AtProtoHttpResult<SnapshotPlan>> PlanSnapshot(
@@ -137,9 +137,10 @@ public static partial class AtProtoServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
 
-        if (!service.IsAbsoluteUri || service.Scheme is not ("wss" or "ws" or "https" or "http"))
+        if (!service.IsAbsoluteUri || service.Scheme is not ("wss" or "ws" or "https" or "http") ||
+            (service.Scheme is "ws" or "http" && !service.IsLoopback))
         {
-            throw new ArgumentException("The archive service must be an absolute HTTP or WebSocket URI.", nameof(service));
+            throw new ArgumentException("The archive service must use HTTPS or WSS except on loopback.", nameof(service));
         }
 
         UriBuilder builder = new(service)

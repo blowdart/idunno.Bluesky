@@ -9,9 +9,10 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 
 * Requires the .NET SDK pinned in `global.json` (SDK 10). The solution file is `idunno.Bluesky.slnx`.
 * Build (also runs all code + documentation analyzers): `dotnet build` from the repository root.
+* Tests run on **Microsoft.Testing.Platform (MTP)**, selected by `global.json`, with xUnit v3. Use the [MTP `dotnet test` options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-mtp) and the test application's `dotnet test --help` for framework-specific filters; do not assume VSTest option formats or interpret MTP exit code 5 as zero tests.
 * Run the full test suite: `dotnet test` from the repository root.
-* Run a single test project: `dotnet test test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj`.
-* Run a single test or class: `dotnet test --filter "FullyQualifiedName~PostBuilderTests"` (or `--filter "DisplayName~..."`).
+* Run a single test project: `dotnet test --project test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj`.
+* Run a single test class: `dotnet test --project test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj --filter-class idunno.Bluesky.Test.PostBuilderTests`. Use `--filter-method` with a fully qualified method name for a single test.
 * Tests multi-target `net8.0;net9.0;net10.0`. Restrict to one framework with `-f net10.0` to iterate faster.
 * Linting is not a separate step: analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on, so a clean build is the lint gate.
 * **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.

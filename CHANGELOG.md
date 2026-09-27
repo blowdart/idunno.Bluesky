@@ -34,8 +34,16 @@
   distinguishes records asserted during sync from live creates. Added `JetstreamOptions.ApiKey` and
   `AtProtoJetstreamBuilder.WithApiKey()` for archive HTTP calls only. The Jetstream meter now reports archive
   plans, blocks, segments, downloaded bytes, rate limits, delivered and filtered events, and live handoffs.
+* Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
+  cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
+  exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
 * Jetstream archive checkpoints now bind to the original service, bounds and filters. Checkpoints saved before
   this change must be discarded and recreated; replay retries transient live connection failures.
+* Archive downloads now limit individual reads to the advertised byte quota, and planner retries accept
+  date-form `Retry-After` headers. Live and archive metadata events carry the preferred account, identity
+  and sync payload types.
+* Archive requests require HTTPS or WSS outside loopback so API keys are not sent over plaintext transport.
+  Snapshot row filtering uses precomputed DID and collection lookups and enforces the requested upper sequence bound.
 * `AtJetstreamCommit` now converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs;
   the reverse conversion remains available when populating legacy event properties.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
