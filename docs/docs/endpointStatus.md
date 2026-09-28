@@ -173,3 +173,12 @@
 | | [com.atproto.sync.listRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listRepos.json) | `AtProtoAgent.ListRepos()` | ✔ |
 | | [com.atproto.sync.listReposByCollection](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listReposByCollection.json) | `AtProtoAgent.ListReposByCollection()` | ✔ |
 | | [com.atproto.sync.requestCrawl](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/requestCrawl.json) | `AtProtoAgent.RequestCrawl()` | ✔ |
+
+## Jetstream v2 Archive Endpoints
+
+| Group | Endpoint | Class / Method | Status |
+| ----- | -------- | -------------- | ------ |
+| **Archive** | [network.bsky.jetstream.getBlock](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/getBlock.json) | `AtProtoServer.GetBlock()` | ✔ |
+| | [network.bsky.jetstream.getSegment](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/getSegment.json) | `AtProtoServer.GetSegment()` | ✔ |
+| | [network.bsky.jetstream.listSegments](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/listSegments.json) | `AtProtoServer.ListSegments()` | ✔ |
+| | [network.bsky.jetstream.planSnapshot](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/planSnapshot.json) | `AtProtoServer.PlanSnapshot()`; `AtProtoJetstream.SnapshotAsync()` / `ReplayAsync()` | ✔ |

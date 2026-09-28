@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // The shared callback retains its legacy base event type.
+
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -9,6 +11,7 @@ using System.Net.WebSockets;
 using System.Text;
 
 using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Archive;
 using idunno.AtProto.Jetstream.Events;
 
 using ZstdSharp;
@@ -25,6 +28,473 @@ public class AtProtoJetstreamV2Tests
         $$$"""
         {"$type":"message","payload":{"$type":"network.bsky.jetstream.subscribeEvents#identity","did":"{{{TestDid}}}","seq":{{{sequence}}},"time":"2026-09-26T00:19:35Z","identity":{"did":"{{{TestDid}}}","seq":1,"time":"2026-09-26T00:19:35Z"} } }
         """;
+
+    [Fact]
+    public async Task LiveStreamReconnectsFromLastYieldedSequenceWithoutDuplicates()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 1)
+            {
+                await SendText(socket, IdentityEvent(41), token);
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, token);
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(41), token);
+                await SendText(socket, IdentityEvent(42), token);
+            }
+        });
+
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(cursor: 40, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, stream.Current.Sequence);
+        Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, stream.Current.Sequence);
+        Assert.Equal(2, server.Connections.Count);
+        Assert.Contains("cursor=40", server.Connections.First().Query, StringComparison.Ordinal);
+        Assert.Contains("cursor=41", server.Connections.Last().Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveStreamExcludesEventHandlersConnectionsAndOtherEnumerators()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TaskCompletionSource secondConnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 2)
+            {
+                secondConnection.TrySetResult();
+            }
+
+            await SendText(socket, IdentityEvent(41), token);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
+        jetstream.RecordReceived += handler;
+        await using (IAsyncEnumerator<JetstreamEvent> refused = jetstream.StreamAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken))
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() => refused.MoveNextAsync().AsTask());
+        }
+
+        jetstream.RecordReceived -= handler;
+        await using (IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken))
+        {
+            Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Throws<InvalidOperationException>(() => jetstream.RecordReceived += handler);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => jetstream.ConnectAsync(cancellationToken));
+            await using IAsyncEnumerator<JetstreamEvent> second = jetstream.StreamAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => second.MoveNextAsync().AsTask());
+        }
+
+        jetstream.RecordReceived += handler;
+        await jetstream.ConnectAsync(cancellationToken);
+        await secondConnection.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.Equal(2, server.Connections.Count);
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+    }
+
+    [Fact]
+    public async Task LiveStreamWaitsForParsersFromClosedEventConnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        PausedTaskScheduler scheduler = new();
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, token) =>
+        {
+            await SendText(socket, IdentityEvent(connection == 1 ? 41 : 42), token);
+        });
+
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = false, MaximumConcurrentMessageParsers = 1,
+                TaskFactory = new TaskFactory(scheduler)
+            });
+        EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
+        jetstream.RecordReceived += handler;
+        await jetstream.ConnectAsync(cancellationToken);
+        await scheduler.Scheduled.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+        jetstream.RecordReceived -= handler;
+
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Task<bool> next = stream.MoveNextAsync().AsTask();
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+            Assert.Single(server.Connections);
+        }
+        finally
+        {
+            scheduler.RunPending();
+        }
+
+        Assert.True(await next.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, stream.Current.Sequence);
+        Assert.Equal(2, server.Connections.Count);
+    }
+
+    [Fact]
+    public async Task LiveStreamDoesNotDiscardAnExpiredCursor()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            RefuseWith = (_, _) => (HttpStatusCode.BadRequest, """{"error":"CursorTooOld"}""")
+        };
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(cursor: 1, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        JetstreamConnectionException error = await Assert.ThrowsAsync<JetstreamConnectionException>(
+            () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal("CursorTooOld", error.ErrorDetail?.Error);
+        Assert.Empty(server.Connections);
+    }
+
+    [Fact]
+    public async Task LiveStreamPropagatesOutdatedCursorNotice()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start((socket, _, token) => SendText(socket,
+            """{"$type":"message","payload":{"$type":"network.bsky.jetstream.subscribeEvents#info","name":"OutdatedCursor"}}""",
+            token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 1, maximumReconnectAttempts: 1, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(
+            () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Contains("outside the server's retained events", error.Message, StringComparison.Ordinal);
+        Assert.Single(server.Connections);
+    }
+
+    [Fact]
+    public async Task LiveStreamRetriesTransientUpgradeFailure()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            RefuseWith = (_, attempt) => attempt == 1
+                ? (HttpStatusCode.ServiceUnavailable, """{"error":"Unavailable"}""") : null
+        };
+        await server.Start((socket, _, token) => SendText(socket, IdentityEvent(42), token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(cursor: 41, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, stream.Current.Sequence);
+        Assert.Contains("cursor=41", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LiveStreamStopsAfterFiveTransientReconnectAttempts()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int attempts = 0;
+        using var server = new TestJetstreamServer
+        {
+            RefuseWith = (_, _) =>
+            {
+                Interlocked.Increment(ref attempts);
+                return (HttpStatusCode.ServiceUnavailable, """{"error":"Unavailable"}""");
+            }
+        };
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 41, cancellationToken: cancellationToken, maximumReconnectAttempts: 5).GetAsyncEnumerator(cancellationToken);
+
+        IOException error = await Assert.ThrowsAsync<IOException>(
+            () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Contains("5 reconnection attempts", error.Message, StringComparison.Ordinal);
+        Assert.Equal(12, attempts); // The rejected WebSocket upgrade and its error-detail request each count once.
+        Assert.Throws<ArgumentOutOfRangeException>(() => jetstream.StreamAsync(
+            cursor: null, maximumReconnectAttempts: -1, cancellationToken: cancellationToken));
+    }
+
+    [Fact]
+    public async Task LiveStreamRejectsExistingEventDrivenConnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await jetstream.ConnectAsync(cancellationToken);
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => stream.MoveNextAsync().AsTask());
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+    }
+
+    [Fact]
+    public async Task ReplayHandsOffFromPinnedArchiveTipWithoutRepeatingItsCursor()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, _, serverCancellationToken) =>
+        {
+            await SendText(socket, IdentityEvent(40), serverCancellationToken);
+            await SendText(socket, IdentityEvent(41), serverCancellationToken);
+        });
+
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(),
+            uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.Contains("cursor=40", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayReplansWhenLiveServerReportsOutdatedCursor()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int plans = 0;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(Interlocked.Increment(ref plans) == 1
+                    ? """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""
+                    : """{"plannedThroughSeq":50,"sealedTipSeq":50,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 1)
+            {
+                await SendText(socket,
+                    """{"$type":"message","payload":{"$type":"network.bsky.jetstream.subscribeEvents#info","name":"OutdatedCursor"}}""",
+                    token);
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(51), token);
+            }
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(51, replay.Current.Sequence);
+        Assert.Equal(2, plans);
+        Assert.Equal(2, server.Connections.Count);
+        Assert.Contains("cursor=40", server.Connections.First().Query, StringComparison.Ordinal);
+        Assert.Contains("cursor=50", server.Connections.Last().Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayKeepsOriginalFiltersAfterCallerMutatesLists()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        List<Did> dids = [new(TestDid)];
+        List<CollectionSelector> collections = [new("app.bsky.feed.post")];
+        List<JetStreamEventKind> kinds = [JetStreamEventKind.Commit, JetStreamEventKind.Identity];
+        SnapshotRequest request = new() { Dids = dids, Collections = collections, Kinds = kinds };
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context =>
+            {
+                Assert.Equal("POST", context.Request.HttpMethod);
+                using StreamReader reader = new(context.Request.InputStream);
+                string body = reader.ReadToEnd();
+                Assert.Contains(TestDid, body, StringComparison.Ordinal);
+                Assert.Contains("app.bsky.feed.post", body, StringComparison.Ordinal);
+                Assert.DoesNotContain("app.bsky.feed.like", body, StringComparison.Ordinal);
+                return TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                    Encoding.UTF8.GetBytes(
+                        """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""));
+            }
+        };
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(41), token);
+            await SendText(socket, IdentityEvent(42), token);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        string fingerprint = request.Fingerprint(server.Uri);
+        SnapshotCheckpoint? saved = null;
+        IAsyncEnumerable<JetstreamEvent> events = jetstream.ReplayAsync(
+            request, onCheckpoint: progress => saved = progress, cancellationToken: cancellationToken);
+        dids[0] = new Did("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa");
+        collections[0] = new CollectionSelector("app.bsky.feed.like");
+        kinds.Clear();
+
+        await using IAsyncEnumerator<JetstreamEvent> replay = events.GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, replay.Current.Sequence);
+        Assert.Equal(fingerprint, saved?.RequestFingerprint);
+        Assert.Contains(TestDid, Uri.UnescapeDataString(Assert.Single(server.Connections).Query), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayReconnectsFromLastDeliveredSequenceAfterLiveDisconnect()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, connectionNumber, serverCancellationToken) =>
+        {
+            await SendText(socket, IdentityEvent(connectionNumber == 1 ? 41 : 42), serverCancellationToken);
+            if (connectionNumber == 1)
+            {
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, serverCancellationToken);
+            }
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(),
+            uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? checkpoint = null;
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, onCheckpoint: progress => checkpoint = progress,
+            cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, replay.Current.Sequence);
+        Assert.Equal(41, checkpoint?.LiveAfterSeq);
+        Assert.Equal(2, server.Connections.Count);
+        Assert.Contains("cursor=41", server.Connections.Last().Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayResumesFromLiveCheckpointWithoutReplanningTheArchive()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = _ => throw new InvalidOperationException("Live checkpoints must not replan.")
+        };
+        await server.Start(async (socket, _, serverCancellationToken) =>
+        {
+            await SendText(socket, IdentityEvent(41), serverCancellationToken);
+            await SendText(socket, IdentityEvent(42), serverCancellationToken);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(),
+            uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 },
+            new SnapshotCheckpoint
+            {
+                PlanAfterSeq = 0, SealedTipSeq = 40, LiveAfterSeq = 41,
+                RequestFingerprint = new SnapshotRequest { AfterSeq = 0 }.Fingerprint(server.Uri)
+            },
+            cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, replay.Current.Sequence);
+        Assert.Contains("cursor=41", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReplayResumesFallbackArchiveWithOriginalRequestIdentity()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int plans = 0;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context =>
+            {
+                Interlocked.Increment(ref plans);
+                return TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                    Encoding.UTF8.GetBytes(
+                        """{"plannedThroughSeq":50,"sealedTipSeq":50,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""));
+            }
+        };
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(51), token);
+            await SendText(socket, IdentityEvent(52), token);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotRequest original = new() { AfterSeq = 0, BeforeSeq = 40 };
+        SnapshotCheckpoint checkpoint = new()
+        {
+            PlanAfterSeq = 25, SealedTipSeq = 50, ReplayAfterSeq = 25,
+            RequestFingerprint = original.Fingerprint(server.Uri)
+        };
+        SnapshotCheckpoint? saved = null;
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            original, checkpoint, progress => saved = progress,
+            cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(51, replay.Current.Sequence);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(1, plans);
+        Assert.Equal(original.Fingerprint(server.Uri), saved?.RequestFingerprint);
+        Assert.Equal(25, saved?.ReplayAfterSeq);
+        Assert.Equal(51, saved?.LiveAfterSeq);
+        Assert.Contains("cursor=50", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+        SnapshotCheckpoint liveCheckpoint = Assert.IsType<SnapshotCheckpoint>(saved);
+        Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(
+            original, liveCheckpoint with { ReplayAfterSeq = null }, cancellationToken: cancellationToken));
+        await using IAsyncEnumerator<JetstreamEvent> resumed = jetstream.ReplayAsync(
+            original, liveCheckpoint, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await resumed.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(52, resumed.Current.Sequence);
+        Assert.Equal(1, plans);
+        Assert.Contains("cursor=51", server.Connections.Last().Query, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(
+            original with { BeforeSeq = 41 }, checkpoint, cancellationToken: cancellationToken));
+    }
+
+    [Fact]
+    public async Task ReplayRetriesTransientUpgradeFailure()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""")),
+            RefuseWith = (_, attempt) => attempt == 1
+                ? (HttpStatusCode.ServiceUnavailable, """{"error":"Unavailable"}""") : null
+        };
+        await server.Start((socket, _, token) => SendText(socket, IdentityEvent(41), token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.Single(server.Connections);
+    }
 
     [Fact]
     public async Task AnUncompressedV2EventIsDelivered()
@@ -53,7 +523,7 @@ public class AtProtoJetstreamV2Tests
 
         AtJetstreamEvent received = await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
-        AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(received);
+        JetstreamIdentityEvent identityEvent = Assert.IsType<JetstreamIdentityEvent>(received);
         Assert.Equal(12, identityEvent.Sequence);
         Assert.Equal(12, jetstream.LastSequence);
 
@@ -481,6 +951,37 @@ public class AtProtoJetstreamV2Tests
     /// A minimal version 2 jetstream server, which serves a dictionary, can refuse upgrades, and accepts the
     /// subprotocol a client asks for.
     /// </summary>
+    private sealed class PausedTaskScheduler : TaskScheduler
+    {
+        private readonly ConcurrentQueue<Task> _pending = new();
+        private readonly TaskCompletionSource _scheduled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal Task Scheduled => _scheduled.Task;
+
+        protected override IEnumerable<Task> GetScheduledTasks() => _pending.ToArray();
+
+        protected override void QueueTask(Task task)
+        {
+            _pending.Enqueue(task);
+            _scheduled.TrySetResult();
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
+
+        internal void RunPending()
+        {
+            while (_pending.TryDequeue(out Task? task))
+            {
+                TryExecuteTask(task);
+            }
+        }
+    }
+
+    private sealed class LocalHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
+
     private sealed class TestJetstreamServer : IDisposable
     {
         private readonly HttpListener _listener = new();
@@ -491,17 +992,9 @@ public class AtProtoJetstreamV2Tests
         private int _upgradeAttempts;
         private int _upgrades;
 
-        public TestJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
-        }
-
         public sealed record Connection(string Path, string Query, string? SubProtocol);
 
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://localhost");
 
         public byte[]? Dictionary { get; init; }
 
@@ -524,13 +1017,15 @@ public class AtProtoJetstreamV2Tests
         /// </summary>
         public Func<string, int, (HttpStatusCode StatusCode, string Body)?>? RefuseWith { get; init; }
 
+        public Func<HttpListenerContext, Task>? ArchiveRequest { get; init; }
+
         public IReadOnlyCollection<Connection> Connections => [.. _connections];
 
         public int DictionaryRequests => _dictionaryRequests;
 
         public Task Start(Func<WebSocket, int, CancellationToken, Task> onConnected)
         {
-            _listener.Start();
+            StartListener();
 
             _ = Task.Run(async () =>
             {
@@ -556,6 +1051,12 @@ public class AtProtoJetstreamV2Tests
 
                     if (!context.Request.IsWebSocketRequest)
                     {
+                        if (ArchiveRequest is not null && path.EndsWith(".planSnapshot", StringComparison.Ordinal))
+                        {
+                            await ArchiveRequest(context);
+                            continue;
+                        }
+
                         (HttpStatusCode StatusCode, string Body)? refusal = RefuseWith?.Invoke(query, Volatile.Read(ref _upgradeAttempts));
 
                         if (refusal is not null)
@@ -627,7 +1128,33 @@ public class AtProtoJetstreamV2Tests
             return Task.CompletedTask;
         }
 
-        private static async Task Respond(HttpListenerContext context, HttpStatusCode statusCode, string contentType, byte[] body)
+        private void StartListener()
+        {
+            const int maximumAttempts = 20;
+
+            for (int attempt = 1; ; attempt++)
+            {
+                int port = FreePort();
+
+                _listener.Prefixes.Clear();
+                _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+
+                try
+                {
+                    _listener.Start();
+                }
+                catch (HttpListenerException) when (attempt < maximumAttempts)
+                {
+                    continue;
+                }
+
+                Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+
+                return;
+            }
+        }
+
+        internal static async Task Respond(HttpListenerContext context, HttpStatusCode statusCode, string contentType, byte[] body)
         {
             context.Response.StatusCode = (int)statusCode;
             context.Response.ContentType = contentType;

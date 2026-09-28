@@ -1,6 +1,6 @@
 root = false
 
-[.cs]
+[*.cs]
 # Enabled detection of unused usings
 dotnet_diagnostic.IDE0005.severity = error
 

@@ -10,6 +10,8 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates a record from an AtProto Jetstream.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamEvent for Jetstream v2 events.")]
 public record AtJetstreamEvent
 {
     /// <summary>

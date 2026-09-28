@@ -1,23 +1,21 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // The v1 client and legacy event callback retain their compatibility types.
+
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
-using System.Net.Security;
 using System.Net.WebSockets;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Web;
 
 using idunno.AtProto.Jetstream.Events;
 using idunno.AtProto.Jetstream.Models;
-using idunno.Security;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -34,7 +32,7 @@ namespace idunno.AtProto.Jetstream;
 ///<para>See https://github.com/bluesky-social/jetstream.</para>
 /// </remarks>
 [SuppressMessage("Usage", "S8949:Cancellation tokens should be forwarded", Justification = "The stored token belongs to the connection the jetstream reconnects on behalf of, not to the caller of an unrelated method.")]
-public class AtProtoJetstream : IDisposable, IAsyncDisposable
+public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new ();
@@ -43,6 +41,30 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 #endif
 
     private volatile bool _disposed;
+
+    private enum ConsumptionMode
+    {
+        None,
+        EventDriven,
+        AsyncEnumeration
+    }
+
+    // Transitions are guarded by _syncLock; the receive loop reads this without the lock.
+    private volatile ConsumptionMode _consumptionMode;
+    private int _pendingEventConnections;
+    private EventHandler<MessageReceivedEventArgs>? _messageReceived;
+    private EventHandler<ConnectionStateChangedEventArgs>? _connectionStateChanged;
+    private EventHandler<RecordReceivedEventArgs>? _recordReceived;
+    private EventHandler<FaultRaisedEventArgs>? _faultRaised;
+    private EventHandler<InfoReceivedEventArgs>? _infoReceived;
+
+    private void ThrowIfEnumerating()
+    {
+        if (_consumptionMode == ConsumptionMode.AsyncEnumeration)
+        {
+            throw new InvalidOperationException("The live Jetstream is being consumed by an async enumerator.");
+        }
+    }
 
     /// <summary>
     /// Serialises connection attempts.
@@ -189,6 +211,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     private readonly ServiceProvider? _serviceProvider;
     private readonly HttpClient _httpClient;
 
+
     // Written by whichever thread connects and read by the receive loop and the metrics it emits.
     private volatile Uri? _server;
 
@@ -242,6 +265,8 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     ///   The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
     ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>. Any other
     ///   registration produces a client without the SSRF protections a jetstream would otherwise apply for itself.
+    ///   Warning: disable automatic redirects on a custom handler used for archive requests; a handler can follow
+    ///   an unsafe destination before the Jetstream client has an opportunity to validate it.
     /// </para>
     /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
@@ -541,12 +566,20 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>Raised on the thread which read the message, before it is parsed, so handlers run one at a time and in the
     /// order the messages arrived. A handler which blocks stops the jetstream reading anything else.</para>
     /// </remarks>
-    public event EventHandler<MessageReceivedEventArgs>? MessageReceived;
+    public event EventHandler<MessageReceivedEventArgs>? MessageReceived
+    {
+        add { lock (_syncLock) { ThrowIfEnumerating(); _messageReceived += value; } }
+        remove { lock (_syncLock) { _messageReceived -= value; } }
+    }
 
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> receives a message.
     /// </summary>
-    public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
+    public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged
+    {
+        add { lock (_syncLock) { ThrowIfEnumerating(); _connectionStateChanged += value; } }
+        remove { lock (_syncLock) { _connectionStateChanged -= value; } }
+    }
 
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> parses a message and converts it to a record.
@@ -557,12 +590,20 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// do its own synchronisation, and one which cares about ordering needs to use
     /// <see cref="AtJetstreamEvent.TimeStamp"/> rather than the order it is called in.</para>
     /// </remarks>
-    public event EventHandler<RecordReceivedEventArgs>? RecordReceived;
+    public event EventHandler<RecordReceivedEventArgs>? RecordReceived
+    {
+        add { lock (_syncLock) { ThrowIfEnumerating(); _recordReceived += value; } }
+        remove { lock (_syncLock) { _recordReceived -= value; } }
+    }
 
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> encounters a fault.
     /// </summary>
-    public event EventHandler<FaultRaisedEventArgs>? FaultRaised;
+    public event EventHandler<FaultRaisedEventArgs>? FaultRaised
+    {
+        add { lock (_syncLock) { ThrowIfEnumerating(); _faultRaised += value; } }
+        remove { lock (_syncLock) { _faultRaised -= value; } }
+    }
 
     /// <summary>
     /// Raised when this instance of <see cref="AtProtoJetstream"/> receives an advisory notice from the server.
@@ -572,7 +613,11 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <c>OutdatedCursor</c> when a timestamp cursor was older than it keeps events for, and it resumed from the
     /// oldest event it has instead. A notice does not end the connection.</para>
     /// </remarks>
-    public event EventHandler<InfoReceivedEventArgs>? InfoReceived;
+    public event EventHandler<InfoReceivedEventArgs>? InfoReceived
+    {
+        add { lock (_syncLock) { ThrowIfEnumerating(); _infoReceived += value; } }
+        remove { lock (_syncLock) { _infoReceived -= value; } }
+    }
 
     /// <summary>
     /// Creates a new <see cref="AtProtoJetstreamBuilder"/>.
@@ -591,7 +636,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="e">The <see cref="MessageReceivedEventArgs"/> for the event.</param>
     protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
     {
-        EventHandler<MessageReceivedEventArgs>? messageReceived = MessageReceived;
+        EventHandler<MessageReceivedEventArgs>? messageReceived = _messageReceived;
         MessageLastReceived = DateTimeOffset.UtcNow;
 
         if (!_disposed)
@@ -606,7 +651,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="e">The <see cref="RecordReceivedEventArgs"/> for the event.</param>
     protected virtual void OnRecordReceived(RecordReceivedEventArgs e)
     {
-        EventHandler<RecordReceivedEventArgs>? messageParsed = RecordReceived;
+        EventHandler<RecordReceivedEventArgs>? messageParsed = _recordReceived;
 
         if (!_disposed)
         {
@@ -623,7 +668,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = ConnectionStateChanged;
+        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = _connectionStateChanged;
 
         if (!_disposed)
         {
@@ -639,7 +684,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="e">The <see cref="FaultRaisedEventArgs"/> for the event.</param>
     protected virtual void OnFaultRaised(FaultRaisedEventArgs e)
     {
-        EventHandler<FaultRaisedEventArgs>? faultRaised = FaultRaised;
+        EventHandler<FaultRaisedEventArgs>? faultRaised = _faultRaised;
         _metrics.Faults.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
 
         if (!_disposed)
@@ -654,7 +699,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="e">The <see cref="InfoReceivedEventArgs"/> for the event.</param>
     protected virtual void OnInfoReceived(InfoReceivedEventArgs e)
     {
-        EventHandler<InfoReceivedEventArgs>? infoReceived = InfoReceived;
+        EventHandler<InfoReceivedEventArgs>? infoReceived = _infoReceived;
 
         if (!_disposed)
         {
@@ -792,7 +837,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <exception cref="JetstreamConnectionException">Thrown when the server refused the connection with an HTTP error, for example because the cursor is older than the events it keeps.</exception>
     /// <exception cref="HttpRequestException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/>, compression is enabled, and the server's compression dictionary could not be downloaded.</exception>
     /// <exception cref="InvalidDataException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/>, compression is enabled, and the server's compression dictionary is not a zstd dictionary.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and a <see cref="CollectionFilter"/> is set alongside a <see cref="KindFilter"/> which does not include <see cref="JetStreamEventKind.Commit"/>.</exception>
+    /// <exception cref="InvalidOperationException">A collection filter conflicts with the kind filter, or an async enumerator is consuming this Jetstream.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when the jetstream has been disposed.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is relative, or does not use a web socket scheme.</exception>
     /// <remarks>
@@ -811,7 +856,29 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
         HttpClient? httpClient,
         CancellationToken cancellationToken = default)
     {
-        await ConnectCoreAsync(uri, cursor, httpClient, reconnectForUpdatedFilters: false, cancellationToken).ConfigureAwait(false);
+        lock (_syncLock)
+        {
+            ThrowIfEnumerating();
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            _consumptionMode = ConsumptionMode.EventDriven;
+            _pendingEventConnections++;
+        }
+
+        try
+        {
+            await ConnectCoreAsync(uri, cursor, httpClient, reconnectForUpdatedFilters: false, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            lock (_syncLock)
+            {
+                _pendingEventConnections--;
+                if (_pendingEventConnections == 0 && _client.State != WebSocketState.Open)
+                {
+                    _consumptionMode = ConsumptionMode.None;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -1564,6 +1631,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
             {
                 OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
             }
+
+            lock (_syncLock)
+            {
+                if (_consumptionMode == ConsumptionMode.EventDriven && _pendingEventConnections == 0 && _client.State != WebSocketState.Open)
+                {
+                    _consumptionMode = ConsumptionMode.None;
+                }
+            }
         }
     }
 
@@ -2063,25 +2138,33 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // lets the transport apply the back pressure the server needs to see.
                     await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    try
+                    if (_consumptionMode == ConsumptionMode.AsyncEnumeration)
                     {
-                        // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
-                        // never running the delegate, and the slot taken above is only given back by running it.
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        Options.TaskFactory.StartNew(() => ParseMessageAndReleaseSlot(messageAsString), CancellationToken.None);
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                        // Preserve sequence order for the single enumerator, including its resume cursor.
+                        await ParseMessageAndReleaseSlot(messageAsString).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        // The slot is only ever given back by the delegate, so a factory which refuses to run it keeps
-                        // the slot for good. Enough of those and this loop waits above forever with the socket still
-                        // open, reading nothing and reporting nothing.
-                        _parseSemaphore.Release();
+                        try
+                        {
+                            // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
+                            // never running the delegate, and the slot taken above is only given back by running it.
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                            Options.TaskFactory.StartNew(() => ParseMessageAndReleaseSlot(messageAsString), CancellationToken.None);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                        }
+                        catch (Exception ex)
+                        {
+                            // The slot is only ever given back by the delegate, so a factory which refuses to run it keeps
+                            // the slot for good. Enough of those and this loop waits above forever with the socket still
+                            // open, reading nothing and reporting nothing.
+                            _parseSemaphore.Release();
 
-                        JetStreamLogger.CouldNotStartMessageParser(_logger, ex);
-                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                            JetStreamLogger.CouldNotStartMessageParser(_logger, ex);
+                            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
 
-                        throw;
+                            throw;
+                        }
                     }
                 }
                 else
@@ -2317,7 +2400,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>Every parsing slot is taken, which can only happen once the parsers holding them have finished, and then
     /// all of them are given back.</para>
     /// </remarks>
-    private async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
+    internal async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
     {
         int slots = Options.MaximumConcurrentMessageParsers;
         int taken = 0;
@@ -2622,14 +2705,14 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamCommitEvent()
+                derivedEvent = new JetstreamCommitEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
                     Kind = JetStreamEventKind.Commit,
                     Sequence = eventPayload.Sequence,
                     WitnessedAt = eventPayload.WitnessedAt,
-                    Commit = new AtJetstreamCommit()
+                    Commit = new JetstreamCommit()
                     {
                         Operation = eventPayload.Operation.Value,
                         Collection = eventPayload.Collection,
@@ -2650,7 +2733,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamIdentityEvent()
+                derivedEvent = new JetstreamIdentityEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2670,7 +2753,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamAccountEvent()
+                derivedEvent = new JetstreamAccountEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2690,7 +2773,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     return true;
                 }
 
-                derivedEvent = new AtJetstreamSyncEvent()
+                derivedEvent = new JetstreamSyncEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2714,7 +2797,7 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
                     extensionData["$type"] = payload.GetProperty("$type").Clone();
                 }
 
-                derivedEvent = new AtJetstreamEvent()
+                derivedEvent = new JetstreamEvent()
                 {
                     Did = eventPayload.Did,
                     TimeStamp = timeStamp,
@@ -2790,3 +2873,5 @@ public class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private sealed record ConnectionSettings(HttpClient? HttpClient, CancellationToken CancellationToken);
 }
+
+#pragma warning restore CS0618

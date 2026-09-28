@@ -17,6 +17,11 @@ public sealed class AtProtoJetstreamBuilder
     private Uri? _service;
 
     /// <summary>
+    /// Gets or sets the optional API key for HTTP archive access.
+    /// </summary>
+    public string? ApiKey { get; set; }
+
+    /// <summary>
     /// Creates a new instance of <see cref="AtProtoJetstreamBuilder"/>.
     /// </summary>
     internal AtProtoJetstreamBuilder()
@@ -272,6 +277,19 @@ public sealed class AtProtoJetstreamBuilder
         ArgumentNullException.ThrowIfNull(service);
 
         Service = service;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the API key for snapshot and replay archive downloads.
+    /// </summary>
+    /// <param name="apiKey">The raw API key, without a Bearer prefix.</param>
+    /// <returns>The same builder for chaining.</returns>
+    /// <exception cref="ArgumentException">The key is empty or white space.</exception>
+    public AtProtoJetstreamBuilder WithApiKey(string apiKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(apiKey);
+        ApiKey = apiKey;
         return this;
     }
 
@@ -599,6 +617,7 @@ public sealed class AtProtoJetstreamBuilder
 
         JetstreamOptions options = new()
         {
+            ApiKey = ApiKey,
             ProtocolVersion = ProtocolVersion,
             LoggerFactory = LoggerFactory,
             MeterFactory = MeterFactory,

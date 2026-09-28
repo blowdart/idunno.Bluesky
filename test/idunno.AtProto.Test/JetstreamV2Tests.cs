@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // Verify legacy event assignments alongside new v2 event types.
+
 using System.Buffers.Binary;
 using System.Globalization;
 
@@ -20,6 +22,54 @@ public class JetstreamV2Tests
     private static AtProtoJetstream CreateJetstream(JetstreamProtocolVersion protocolVersion = JetstreamProtocolVersion.V2, bool useCompression = false) =>
         new(uri: s_server, options: new JetstreamOptions { ProtocolVersion = protocolVersion, UseCompression = useCompression, MaxMessageSize = 1024 });
 
+    [Fact]
+    public void LegacyCommitImplicitlyConvertsToJetstreamCommitAndBack()
+    {
+        AtJetstreamCommit legacy = new()
+        {
+            Operation = JetstreamCommitOperation.Create,
+            Collection = new Nsid("app.bsky.feed.post"),
+            Rev = "3mpksbjhx5s26",
+            RKey = new RecordKey("3mfrqvim56e25"),
+            Cid = new Cid("bafyreiahoxao3topglxgvzelhwm6ldqudzmtvtljnlnyndtfvotpvgf6zm")
+        };
+
+        JetstreamCommit current = legacy;
+        Assert.NotSame(legacy, current);
+        Assert.Equal(legacy.Operation, current.Operation);
+        Assert.Equal(legacy.Collection, current.Collection);
+        Assert.Equal(legacy.Rev, current.Rev);
+        Assert.Equal(legacy.RKey, current.RKey);
+        Assert.Equal(legacy.Cid, current.Cid);
+        Assert.Equal(legacy, current.ToAtJetstreamCommit());
+        Assert.Equal(current, JetstreamCommit.FromAtJetstreamCommit(legacy));
+
+        AtJetstreamCommit roundTrip = current;
+        Assert.Equal(legacy, roundTrip);
+    }
+
+    [Fact]
+    public void CommitConversionsPreserveAnExplicitCidWithoutComputingADeferredCid()
+    {
+        Cid cid = new("bafyreiahoxao3topglxgvzelhwm6ldqudzmtvtljnlnyndtfvotpvgf6zm");
+        AtJetstreamCommit legacy = new()
+        {
+            Operation = JetstreamCommitOperation.Create,
+            Collection = new Nsid("app.bsky.feed.post"),
+            Rev = "3mpksbjhx5s26",
+            RKey = new RecordKey("3mfrqvim56e25"),
+            Cid = cid
+        };
+        legacy.SetDagCborPayload([0]);
+
+        JetstreamCommit current = legacy;
+        Assert.Same(cid, current.Cid);
+        Assert.False(current.DeferredCid?.IsValueCreated);
+        AtJetstreamCommit roundTrip = current;
+        Assert.Same(cid, roundTrip.Cid);
+        Assert.False(roundTrip.DeferredCid?.IsValueCreated);
+    }
+
     private static string Message(string kind, string body, long sequence = 42) =>
         $$$"""
         {"$type":"message","payload":{"$type":"{{{TypePrefix}}}{{{kind}}}","did":"{{{TestDid}}}","seq":{{{sequence}}},"time":"2026-09-26T00:19:35.411026Z","witnessedAt":"2026-09-26T00:19:35.5Z"{{{body}}}}}
@@ -30,6 +80,27 @@ public class JetstreamV2Tests
     {
         Assert.Equal(JetstreamProtocolVersion.V2, new JetstreamOptions().ProtocolVersion);
         Assert.Equal(JetstreamProtocolVersion.V2, AtProtoJetstreamBuilder.Create().ProtocolVersion);
+    }
+
+    [Fact]
+    public void OptionsDiagnosticsKeepConfigurationButRedactApiKey()
+    {
+        JetstreamOptions options = new()
+        {
+            ApiKey = "private-test-key", ProtocolVersion = JetstreamProtocolVersion.V1,
+            UseCompression = false, BufferSize = 4096, MaxMessageSize = 8192
+        };
+
+        string printed = options.ToString();
+        Assert.Contains("ApiKey = [redacted]", printed, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-test-key", printed, StringComparison.Ordinal);
+        Assert.Contains("ProtocolVersion = V1", printed, StringComparison.Ordinal);
+        Assert.Contains("UseCompression = False", printed, StringComparison.Ordinal);
+        Assert.Contains("BufferSize = 4096", printed, StringComparison.Ordinal);
+        Assert.Contains("MaxMessageSize = 8192", printed, StringComparison.Ordinal);
+        Assert.Contains("CloseTimeout = ", printed, StringComparison.Ordinal);
+        Assert.Contains("SendTimeout = ", printed, StringComparison.Ordinal);
+        Assert.Contains("MaximumConcurrentMessageParsers = ", printed, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -238,7 +309,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamCommitEvent commitEvent = Assert.IsType<AtJetstreamCommitEvent>(derivedEvent);
+        JetstreamCommitEvent commitEvent = Assert.IsType<JetstreamCommitEvent>(derivedEvent);
 
         Assert.Equal(JetStreamEventKind.Commit, commitEvent.Kind);
         Assert.Equal(TestDid, commitEvent.Did.ToString());
@@ -265,7 +336,8 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(derivedEvent);
+        JetstreamIdentityEvent identityEvent = Assert.IsType<JetstreamIdentityEvent>(derivedEvent);
+        Assert.IsType<JetstreamIdentity>(identityEvent.Identity);
 
         Assert.Equal("example.com", identityEvent.Identity.Handle?.ToString());
         Assert.Equal(42, identityEvent.Sequence);
@@ -280,9 +352,10 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamAccountEvent accountEvent = Assert.IsType<AtJetstreamAccountEvent>(derivedEvent);
+        JetstreamAccountEvent accountEvent = Assert.IsType<JetstreamAccountEvent>(derivedEvent);
 
         Assert.False(accountEvent.Account.Active);
+        Assert.IsType<JetstreamAccount>(accountEvent.Account);
     }
 
     [Fact]
@@ -294,10 +367,11 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamSyncEvent syncEvent = Assert.IsType<AtJetstreamSyncEvent>(derivedEvent);
+        JetstreamSyncEvent syncEvent = Assert.IsType<JetstreamSyncEvent>(derivedEvent);
 
         Assert.Equal(JetStreamEventKind.Sync, syncEvent.Kind);
         Assert.Equal(TestDid, syncEvent.Sync.Did.ToString());
+        Assert.IsType<JetstreamSync>(syncEvent.Sync);
         Assert.Equal("3lomhhw5ccf2j", syncEvent.Sync.Rev);
         Assert.Equal(7, syncEvent.Sync.Sequence);
         Assert.NotNull(syncEvent.Sync.Blocks);
@@ -316,7 +390,7 @@ public class JetstreamV2Tests
 
         Assert.True(jetstream.TryDeriveV2Event(json, out AtJetstreamEvent? derivedEvent));
 
-        AtJetstreamSyncEvent syncEvent = Assert.IsType<AtJetstreamSyncEvent>(derivedEvent);
+        JetstreamSyncEvent syncEvent = Assert.IsType<JetstreamSyncEvent>(derivedEvent);
 
         Assert.NotNull(syncEvent.Sync.Blocks);
         Assert.Equal<byte[]>([0x01, 0x02, 0x03, 0x04, 0x05], syncEvent.Sync.Blocks.ToBytes());
@@ -343,7 +417,7 @@ public class JetstreamV2Tests
         Assert.True(jetstream.TryDeriveV2Event(Message("labels", ""","labels":[]"""), out AtJetstreamEvent? derivedEvent));
 
         Assert.NotNull(derivedEvent);
-        Assert.Equal(typeof(AtJetstreamEvent), derivedEvent.GetType());
+        Assert.Equal(typeof(JetstreamEvent), derivedEvent.GetType());
         Assert.Equal(JetStreamEventKind.Unknown, derivedEvent.Kind);
         Assert.Equal(42, derivedEvent.Sequence);
         Assert.NotNull(derivedEvent.ExtensionData);

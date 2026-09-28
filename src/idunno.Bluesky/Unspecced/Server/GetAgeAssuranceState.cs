@@ -2,13 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.Bluesky.Feed;
-using idunno.Bluesky.Graph;
 using idunno.Bluesky.Unspecced;
 using idunno.Bluesky.Unspecced.Model;
 

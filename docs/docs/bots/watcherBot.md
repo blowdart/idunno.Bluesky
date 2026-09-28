@@ -258,4 +258,3 @@ in [Using the Jetstream](../jetstream.md).
 > [!TIP]
 > If you want to watch for hash tags, or links to web sites, or mentions you should look at the
 `Post`'s [facets](https://docs.bsky.app/docs/advanced-guides/post-richtext), not the post text.
-

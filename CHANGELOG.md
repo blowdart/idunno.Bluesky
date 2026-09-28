@@ -2,6 +2,8 @@
 
 ## 8.0.0 - **unreleased**
 
+🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
+
 ### Added
 
 #### idunno.AtProto
@@ -29,6 +31,20 @@
   * Added `JetstreamConnectionException`, thrown when a server refuses a connection, carrying the status code and error the server returned.
   * Compressed v2 connections download the server's current zstd dictionary.
   * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
+  * Live and archive events expose the preferred account, identity and sync payload types. `AtJetstreamCommit`
+    converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs.
+* Added decoded Jetstream archive snapshots and live replay with bounded planning, resumable block and segment downloads,
+  byte-quota pacing, durable checkpoints, cancellation and lazy record CIDs. `JetstreamCommitEvent.IsSyncBackfill`
+  distinguishes records asserted during sync from live creates. Added `JetstreamOptions.ApiKey` and
+  `AtProtoJetstreamBuilder.WithApiKey()` for archive HTTP calls only. The Jetstream meter now reports archive
+  plans, blocks, segments, downloaded bytes, rate limits, delivered and filtered events, and live handoffs.
+  Archive downloads now use a configurable per-read inactivity timeout (`JetstreamOptions.ArchiveReadTimeout`,
+  default 30 seconds), and only SDK-created HTTP clients follow cross-origin signed download redirects.
+  Snapshot resume rejects unrelated above-tip checkpoints, and archive plans reject null segment entries and
+  non-nullable fields before processing.
+* Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
+  cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
+  exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
 
@@ -39,6 +55,8 @@
 #### Samples
 
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
+* Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
+  before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
 
 ### Breaking Changes
 
@@ -50,6 +68,9 @@
 * `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
   `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact
   collection. `CollectionSelector` converts implicitly from both `string` and `Nsid`, so only code which builds a typed `Nsid[]` needs changing.
+* The preferred Jetstream event and payload class names now start with `Jetstream` rather than `AtJetstream`
+  (including the former `AtJetStreamIdentity`). Old type names remain for compatibility; update event type
+  patterns and newly written code to use `JetstreamEvent`, `JetstreamCommitEvent` and the corresponding new names.
 
 ### Fixed
 

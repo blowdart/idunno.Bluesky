@@ -9,6 +9,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using WatcherBot;
 
+#pragma warning disable CS0618 // The watcher bot illustrates the legacy Jetstream event type.
+
 Console.OutputEncoding = Encoding.UTF8;
 
 HostApplicationBuilder builder = new(args);

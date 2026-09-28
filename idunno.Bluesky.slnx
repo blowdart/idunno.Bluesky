@@ -75,6 +75,8 @@
     <File Path="docs/docs/endpointStatus.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
+    <File Path="docs/docs/jetstreamMigration.md" />
+    <File Path="docs/docs/jetstreamReplay.md" />
     <File Path="docs/docs/labels.md" />
     <File Path="docs/docs/logging.md" />
     <File Path="docs/docs/metrics.md" />
@@ -221,6 +223,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.JetstreamReplay/Samples.JetstreamReplay.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

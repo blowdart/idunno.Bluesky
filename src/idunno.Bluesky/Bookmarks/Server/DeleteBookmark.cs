@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.Bluesky.Bookmarks;
 using idunno.Bluesky.Bookmarks.Model;
 
 using Microsoft.Extensions.Logging;

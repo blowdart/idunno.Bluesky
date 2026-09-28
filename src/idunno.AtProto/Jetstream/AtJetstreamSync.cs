@@ -12,7 +12,9 @@ namespace idunno.AtProto.Jetstream;
 /// <para>A sync event says the commit chain for a repo is broken, so a consumer which keeps a copy of the repo should
 /// fetch it again rather than apply further commits to the copy it has.</para>
 /// </remarks>
-public sealed record AtJetstreamSync
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamSync for Jetstream v2 events.")]
+public record AtJetstreamSync
 {
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> of the repo the event refers to.

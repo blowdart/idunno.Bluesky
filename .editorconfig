@@ -4,14 +4,15 @@
 root = true
 
 [*]
-insert_final_newline = true
+charset=utf-8
+end_of_line = crlf
 indent_style = space
 indent_size = 4
-trim_trailing_whitespace = true
+insert_final_newline = true
 spelling_exclusion_path = .\exclusion.dic
 spelling_checkable_types = strings,identifiers,comments
 spelling_error_severity = information
-charset=utf-8
+trim_trailing_whitespace = true
 
 # Generated code
 [*{_AssemblyInfo.cs,.notsupported.cs,AsmOffsets.cs}]
@@ -19,10 +20,6 @@ generated_code = true
 
 # C# files
 [*.cs]
-
-# General file settings
-insert_final_newline = false
-end_of_line = crlf
 
 # Organize usings
 dotnet_separate_import_directive_groups = true
@@ -162,14 +159,13 @@ csharp_space_between_method_declaration_parameter_list_parentheses = false
 csharp_space_between_parentheses = false
 csharp_space_between_square_brackets = false
 
+# CA1303: Do not pass literals as localized parameters
+dotnet_diagnostic.CA1303.severity = suggestion
+
 # License header
 file_header_template = Copyright (c) Barry Dorrans. All rights reserved.\nLicensed under the MIT License.
 
 # C++ Files
-
-# CA1303: Do not pass literals as localized parameters
-dotnet_diagnostic.CA1303.severity = suggestion
-
 [*.{cpp,h,in}]
 curly_bracket_next_line = true
 indent_brace_style = Allman
@@ -202,3 +198,9 @@ indent_size = 2
 end_of_line = lf
 [*.{cmd,bat}]
 end_of_line = crlf
+
+# markdown files
+[*.{md,mkdn}]
+indent_size = 2
+indent_style = space
+trim_trailing_whitespace = false
