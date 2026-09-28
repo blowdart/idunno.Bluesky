@@ -156,13 +156,14 @@ internal sealed class ArchiveDownload(
                     throw new InvalidOperationException("The configured Jetstream archive API key was rejected.");
                 }
 
-                if (response.StatusCode == HttpStatusCode.NotFound)
+                if (response.StatusCode == HttpStatusCode.NotFound &&
+                    response.AtErrorDetail?.Error is not ("SegmentNotFound" or "BlockNotFound"))
                 {
                     throw new InvalidOperationException("The configured Jetstream host does not serve the v2 archive API.");
                 }
 
                 throw new HttpRequestException(
-                    $"Jetstream archive download failed: {(int)response.StatusCode} {response.AtErrorDetail?.Error}",
+                    $"Jetstream archive download failed: {(int)response.StatusCode} {response.AtErrorDetail?.Error} {response.AtErrorDetail?.Message}",
                     null, response.StatusCode);
             }
 

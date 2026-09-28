@@ -112,6 +112,38 @@ public class JetstreamArchiveTests
             cancellationToken: TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData("SegmentNotFound", false)]
+    [InlineData("BlockNotFound", true)]
+    [InlineData("UnknownEndpoint", false)]
+    public async Task DownloadReportsNamedNotFoundErrors(string error, bool block)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 404;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$$"""{"error":"{{{error}}}","message":"Archive entry is missing"}""");
+        });
+        using HttpClient client = server.CreateClient();
+        await using ArchiveDownload download = new(Segment, block ? 0 : null, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null));
+
+        if (error == "UnknownEndpoint")
+        {
+            InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
+            Assert.Contains("does not serve", exception.Message, StringComparison.Ordinal);
+        }
+        else
+        {
+            HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
+                download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
+            Assert.Equal(HttpStatusCode.NotFound, exception.StatusCode);
+            Assert.Contains(error, exception.Message, StringComparison.Ordinal);
+            Assert.Contains("Archive entry is missing", exception.Message, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public async Task DownloadReadWaitsForQuotaBeforeRequestingMoreBytes()
     {
@@ -536,6 +568,107 @@ public class JetstreamArchiveTests
             {
             }
         });
+    }
+
+    [Theory]
+    [InlineData(50, 40, 40)]
+    [InlineData(50, 40, 50)]
+    [InlineData(40, 40, 40)]
+    public async Task SnapshotAfterSealedTipProducesResumableEmptyCheckpoint(long after, long tip, long through)
+    {
+        int plans = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Interlocked.Increment(ref plans);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$$"""
+                {"plannedThroughSeq":{{{through}}},"sealedTipSeq":{{{tip}}},"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}
+                """);
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotRequest request = new() { AfterSeq = after };
+        SnapshotCheckpoint? checkpoint = null;
+        await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(request,
+            onCheckpoint: progress => checkpoint = progress,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            Assert.Fail("No archive events exist after the sealed tip.");
+        }
+
+        Assert.NotNull(checkpoint);
+        Assert.Equal(after, checkpoint.PlanAfterSeq);
+        Assert.Equal(tip, checkpoint.SealedTipSeq);
+        Assert.NotNull(jetstream.ReplayAsync(request, checkpoint,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.NotNull(jetstream.ReplayAsync(request, checkpoint with { LiveAfterSeq = after },
+            cancellationToken: TestContext.Current.CancellationToken));
+        await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(request, checkpoint,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            Assert.Fail("A resumed empty snapshot must remain empty.");
+        }
+
+        Assert.Equal(1, plans);
+    }
+
+    [Fact]
+    public async Task SnapshotRejectsFutureCursorPlanContainingSegments()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$$"""
+                {"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":1,"maxSeq":40,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}
+                """);
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(new SnapshotRequest { AfterSeq = 50 },
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("null")]
+    public async Task SnapshotRejectsBlocksPlanWithoutRanges(string ranges)
+    {
+        int downloads = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (!context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref downloads);
+                return;
+            }
+
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$$"""
+                {"plannedThroughSeq":42,"sealedTipSeq":42,"segments":[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":1,"maxSeq":42,"mode":"blocks","blocks":{{{ranges}}}}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":0,"entries":1}}
+                """);
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+
+        InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(new SnapshotRequest(),
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+
+        Assert.Contains("no block ranges", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, downloads);
     }
 
     [Fact]

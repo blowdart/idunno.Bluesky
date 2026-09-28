@@ -33,7 +33,9 @@ await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request, cancellati
 ```
 
 The first plan pins a sealed tip. Following pages keep that tip as `beforeSeq`, so the archive window does not drift
-as the server seals new segments. The server may select whole `.jss` segments or individual compressed blocks.
+as the server seals new segments. If `AfterSeq` is at or ahead of the sealed tip, the snapshot is empty and its
+checkpoint can be resumed without replanning; replay still connects to the live stream from that cursor.
+The server may select whole `.jss` segments or individual compressed blocks.
 Planning is approximate: even a collection-filtered plan may download blocks with no matching events. The client
 filters **every decoded row** by DID, collection, kind and sequence; collection filters apply to records, **not**
 to identity, account or sync markers. Keep these markers if you need to fold account deletions or repo syncs.

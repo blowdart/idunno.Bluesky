@@ -72,6 +72,12 @@ public partial class AtProtoJetstream
             ? request.Collections.Where(collection => collection.IsWildcard)
                 .Select(collection => collection.ToString()[..^1]).ToArray() : [];
 
+        if (pinned is long sealedTip && after >= sealedTip && !seeking)
+        {
+            onCheckpoint?.Invoke(position!);
+            yield break;
+        }
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -100,8 +106,9 @@ public partial class AtProtoJetstream
             pinned ??= plan.SealedTipSeq;
             if (plan.SealedTipSeq != pinned ||
                 (request.BeforeSeq is long before && plan.SealedTipSeq > before) ||
-                plan.PlannedThroughSeq < after ||
-                (plan.PlannedThroughSeq == after && plan.PlannedThroughSeq < pinned))
+                (after >= pinned
+                    ? plan.Segments.Count != 0 || plan.PlannedThroughSeq < pinned || plan.PlannedThroughSeq > after
+                    : plan.PlannedThroughSeq <= after))
             {
                 throw new InvalidDataException("The archive planner returned a non-progressing or unpinned page.");
             }
@@ -130,13 +137,12 @@ public partial class AtProtoJetstream
                 long startOffset = sameGeneration ? checkpoint!.NextByteOffset : 0;
                 if (segment.Mode == "blocks")
                 {
-                    if (segment.Blocks is null)
+                    if (segment.Blocks is not { Count: > 0 })
                     {
-                        throw new InvalidDataException("A blocks plan omitted its block ranges.");
+                        throw new InvalidDataException("A blocks plan has no block ranges.");
                     }
 
-                    if (sameGeneration && (segment.Blocks.Count == 0 ||
-                        startBlock > segment.Blocks.Max(range => range.Last) + (long)1))
+                    if (sameGeneration && startBlock > segment.Blocks.Max(range => range.Last) + (long)1)
                     {
                         throw new InvalidDataException("The checkpoint block index exceeds the planned segment.");
                     }
@@ -372,7 +378,9 @@ public partial class AtProtoJetstream
         if (checkpoint is not null && (checkpoint.RequestFingerprint != request.Fingerprint(service) ||
             checkpoint.ReplayAfterSeq is not null || checkpoint.PlanAfterSeq < (request.AfterSeq ?? 0) ||
             checkpoint.SealedTipSeq < 0 || checkpoint.PlanAfterSeq < 0 ||
-            checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || checkpoint.NextByteOffset < 0 ||
+            (checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq &&
+             (checkpoint.SegmentName is not null || checkpoint.NextBlockIndex != 0 || checkpoint.NextByteOffset != 0)) ||
+            checkpoint.NextByteOffset < 0 ||
             checkpoint.NextBlockIndex < 0 || checkpoint.LiveAfterSeq is not null || (request.BeforeSeq is not null &&
             request.BeforeSeq < checkpoint.SealedTipSeq)))
         {

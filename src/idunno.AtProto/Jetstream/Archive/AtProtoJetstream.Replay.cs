@@ -55,7 +55,9 @@ public partial class AtProtoJetstream
 
         if (checkpoint?.LiveAfterSeq is long liveAfterSeq &&
             (liveAfterSeq < checkpoint.SealedTipSeq || checkpoint.PlanAfterSeq < 0 ||
-             checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || (checkpoint.ReplayAfterSeq is null &&
+             (checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq &&
+              (checkpoint.SegmentName is not null || checkpoint.NextBlockIndex != 0 || checkpoint.NextByteOffset != 0)) ||
+             (checkpoint.ReplayAfterSeq is null &&
              capturedRequest.BeforeSeq is not null &&
              capturedRequest.BeforeSeq < checkpoint.SealedTipSeq)))
         {
