@@ -104,7 +104,8 @@ public partial class AtProtoJetstream
             ThrowOnArchiveError(result);
             SnapshotPlan plan = result.Result ?? throw new InvalidDataException("The archive planner returned no plan.");
             pinned ??= plan.SealedTipSeq;
-            if (plan.SealedTipSeq != pinned ||
+            if (plan.SealedTipSeq < 0 || plan.PlannedThroughSeq < 0 ||
+                plan.SealedTipSeq != pinned ||
                 (request.BeforeSeq is long before && plan.SealedTipSeq > before) ||
                 (after >= pinned
                     ? plan.Segments.Count != 0 || plan.PlannedThroughSeq < pinned || plan.PlannedThroughSeq > after
