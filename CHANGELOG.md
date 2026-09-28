@@ -71,6 +71,10 @@
 
 * Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
 
+#### idunno.Bluesky
+
+* Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
+
 #### Samples
 
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event.
