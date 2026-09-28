@@ -225,6 +225,45 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task ReplayReplansWhenLiveServerReportsOutdatedCursor()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int plans = 0;
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(Interlocked.Increment(ref plans) == 1
+                    ? """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""
+                    : """{"plannedThroughSeq":50,"sealedTipSeq":50,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 1)
+            {
+                await SendText(socket,
+                    """{"$type":"message","payload":{"$type":"network.bsky.jetstream.subscribeEvents#info","name":"OutdatedCursor"}}""",
+                    token);
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(51), token);
+            }
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(51, replay.Current.Sequence);
+        Assert.Equal(2, plans);
+        Assert.Equal(2, server.Connections.Count);
+        Assert.Contains("cursor=40", server.Connections.First().Query, StringComparison.Ordinal);
+        Assert.Contains("cursor=50", server.Connections.Last().Query, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ReplayReconnectsFromLastDeliveredSequenceAfterLiveDisconnect()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;

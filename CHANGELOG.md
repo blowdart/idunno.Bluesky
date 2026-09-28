@@ -78,6 +78,7 @@
 #### idunno.AtProto
 
 * Jetstream archive snapshots now validate resumed segment headers, reject remote plaintext redirects, and resume interrupted response bodies without discarding already downloaded bytes.
+* Jetstream replay returns to the archive when the live server reports an outdated cursor. Archive HTTP methods default to an SSRF-protected client, accept `HttpClientOptions`, and require callers supplying their own client to disable automatic redirects and enforce SSRF protection. Jetstream options retain their diagnostic fields when redacting the archive API key.
 
 #### idunno.AtProto.Types
 

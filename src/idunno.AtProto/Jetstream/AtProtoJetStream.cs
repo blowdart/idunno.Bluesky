@@ -204,6 +204,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     private readonly ServiceProvider? _serviceProvider;
     private readonly HttpClient _httpClient;
 
+
     // Written by whichever thread connects and read by the receive loop and the metrics it emits.
     private volatile Uri? _server;
 
@@ -257,6 +258,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     ///   The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
     ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>. Any other
     ///   registration produces a client without the SSRF protections a jetstream would otherwise apply for itself.
+    ///   Warning: disable automatic redirects on a custom handler used for archive requests; a handler can follow
+    ///   an unsafe destination before the Jetstream client has an opportunity to validate it.
     /// </para>
     /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]

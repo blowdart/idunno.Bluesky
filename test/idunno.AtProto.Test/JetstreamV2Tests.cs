@@ -82,6 +82,27 @@ public class JetstreamV2Tests
         Assert.Equal(JetstreamProtocolVersion.V2, AtProtoJetstreamBuilder.Create().ProtocolVersion);
     }
 
+    [Fact]
+    public void OptionsDiagnosticsKeepConfigurationButRedactApiKey()
+    {
+        JetstreamOptions options = new()
+        {
+            ApiKey = "private-test-key", ProtocolVersion = JetstreamProtocolVersion.V1,
+            UseCompression = false, BufferSize = 4096, MaxMessageSize = 8192
+        };
+
+        string printed = options.ToString();
+        Assert.Contains("ApiKey = [redacted]", printed, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-test-key", printed, StringComparison.Ordinal);
+        Assert.Contains("ProtocolVersion = V1", printed, StringComparison.Ordinal);
+        Assert.Contains("UseCompression = False", printed, StringComparison.Ordinal);
+        Assert.Contains("BufferSize = 4096", printed, StringComparison.Ordinal);
+        Assert.Contains("MaxMessageSize = 8192", printed, StringComparison.Ordinal);
+        Assert.Contains("CloseTimeout = ", printed, StringComparison.Ordinal);
+        Assert.Contains("SendTimeout = ", printed, StringComparison.Ordinal);
+        Assert.Contains("MaximumConcurrentMessageParsers = ", printed, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(JetstreamProtocolVersion.V1, "wss://jetstream1.us-west.bsky.network/")]
     [InlineData(JetstreamProtocolVersion.V2, "wss://jetstream.us-west.bsky.network/")]

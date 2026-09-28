@@ -78,7 +78,7 @@ public partial class AtProtoJetstream
             {
                 result = await AtProtoServer.PlanSnapshot(
                     request with { AfterSeq = after, BeforeSeq = pinned ?? request.BeforeSeq },
-                    _uri, key, _httpClient, cancellationToken).ConfigureAwait(false);
+                    _uri, key, _httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
                 if (result.StatusCode != HttpStatusCode.TooManyRequests)
                 {
                     break;

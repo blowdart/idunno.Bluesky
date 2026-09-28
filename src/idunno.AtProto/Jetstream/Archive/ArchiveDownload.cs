@@ -131,9 +131,9 @@ internal sealed class ArchiveDownload(
             string? resumeEtag = Position == 0 ? null : _etag;
             AtProtoHttpResult<Stream> response = blockIndex is int index
                 ? await AtProtoServer.GetBlock(name, index, service, apiKey, httpClient,
-                    Position, resumeEtag, cancellationToken).ConfigureAwait(false)
+                    Position, resumeEtag, cancellationToken: cancellationToken).ConfigureAwait(false)
                 : await AtProtoServer.GetSegment(name, service, apiKey, httpClient,
-                    Position, resumeEtag, cancellationToken).ConfigureAwait(false);
+                    Position, resumeEtag, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));

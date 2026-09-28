@@ -44,7 +44,17 @@ public record JetstreamOptions
     protected virtual bool PrintMembers(StringBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        builder.Append("ApiKey = [redacted]");
+        builder.Append("ApiKey = [redacted], LoggerFactory = ").Append(LoggerFactory)
+            .Append(", MeterFactory = ").Append(MeterFactory)
+            .Append(", ProtocolVersion = ").Append(ProtocolVersion)
+            .Append(", UseCompression = ").Append(UseCompression)
+            .Append(", Dictionary = ").Append(Dictionary)
+            .Append(", TaskFactory = ").Append(TaskFactory)
+            .Append(", BufferSize = ").Append(BufferSize)
+            .Append(", MaxMessageSize = ").Append(MaxMessageSize)
+            .Append(", CloseTimeout = ").Append(CloseTimeout)
+            .Append(", SendTimeout = ").Append(SendTimeout)
+            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers);
         return true;
     }
 

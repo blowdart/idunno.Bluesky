@@ -36,7 +36,38 @@ public class JetstreamArchiveTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => AtProtoServer.PlanSnapshot(
             new SnapshotRequest(), new Uri(service), "test-key", client,
-            TestContext.Current.CancellationToken));
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ArchiveMethodsApplyOptionsOnlyWhenNoClientIsSupplied()
+    {
+        HttpClientOptions invalidTimeout = new(timeout: TimeSpan.Zero);
+        Uri service = TestServerBuilder.DefaultUri;
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => AtProtoServer.PlanSnapshot(
+            new SnapshotRequest(), service, "test-key", httpClientOptions: invalidTimeout,
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => AtProtoServer.ListSegments(
+            service, "test-key", httpClientOptions: invalidTimeout,
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => AtProtoServer.GetBlock(
+            Segment, 0, service, "test-key", httpClientOptions: invalidTimeout,
+            cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => AtProtoServer.GetSegment(
+            Segment, service, "test-key", httpClientOptions: invalidTimeout,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        using TestServer server = TestServerBuilder.CreateServer(service, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"plannedThroughSeq":0,"sealedTipSeq":0,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}""");
+        });
+        using HttpClient supplied = server.CreateClient();
+        AtProtoHttpResult<SnapshotPlan> plan = await AtProtoServer.PlanSnapshot(
+            new SnapshotRequest(), service, "test-key", supplied, httpClientOptions: invalidTimeout,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(plan.Succeeded);
     }
 
     [Fact]
@@ -449,6 +480,24 @@ public class JetstreamArchiveTests
         Assert.DoesNotContain("signature=secret", error.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task DownloadRejectsAClientThatAutomaticallyFollowsRedirects()
+    {
+        Uri redirected = new("http://archive.example/download");
+        using HttpClient client = new(new ArchiveTestHandler(request =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = new HttpRequestMessage(HttpMethod.Get, redirected),
+                Content = new ByteArrayContent([1])
+            }));
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(() => AtProtoServer.GetBlock(
+            Segment, 0, TestServerBuilder.DefaultUri, "test-key", client,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("disable automatic redirects", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(redirected.ToString(), error.Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(2, 1)]
     [InlineData(1, 0)]
@@ -606,7 +655,7 @@ public class JetstreamArchiveTests
         using HttpClient client = server.CreateClient();
         await Assert.ThrowsAsync<InvalidDataException>(() => AtProtoServer.PlanSnapshot(
             new SnapshotRequest(), TestServerBuilder.DefaultUri, "test-key", client,
-            TestContext.Current.CancellationToken));
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]

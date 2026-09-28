@@ -12,6 +12,8 @@ namespace idunno.AtProto.Jetstream;
 
 public partial class AtProtoJetstream
 {
+    private const string OutdatedLiveCursorMessage = "The live Jetstream cursor is outside the server's retained events.";
+
     /// <summary>
     /// Replays the sealed archive and then continues from its pinned tip on the live v2 stream.
     /// </summary>
@@ -132,6 +134,11 @@ public partial class AtProtoJetstream
                         restartFromArchive = true;
                         break;
                     }
+                    catch (InvalidDataException ex) when (ex.Message == OutdatedLiveCursorMessage)
+                    {
+                        restartFromArchive = true;
+                        break;
+                    }
                     catch (JetstreamConnectionException ex) when (!cancellationToken.IsCancellationRequested &&
                         ex.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
                             HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
@@ -198,6 +205,7 @@ public partial class AtProtoJetstream
     {
         Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(
             new BoundedChannelOptions(1024) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
+        int outdatedCursor = 0;
         AtProtoJetstream live = new(
             uri: _uri,
             options: Options with { MaximumConcurrentMessageParsers = 1 },
@@ -212,6 +220,11 @@ public partial class AtProtoJetstream
 
         live.RecordReceived += (_, args) =>
         {
+            if (Volatile.Read(ref outdatedCursor) != 0)
+            {
+                return;
+            }
+
             if (args.ParsedEvent is not JetstreamEvent parsed ||
                 !channel.Writer.TryWrite(parsed))
             {
@@ -235,11 +248,24 @@ public partial class AtProtoJetstream
         };
         live.FaultRaised += (_, args) =>
             channel.Writer.TryComplete(new IOException($"The live Jetstream reported an error: {args.Fault}"));
+        live.InfoReceived += (_, args) =>
+        {
+            if (args.Name == "OutdatedCursor")
+            {
+                Interlocked.Exchange(ref outdatedCursor, 1);
+                channel.Writer.TryComplete(new InvalidDataException(OutdatedLiveCursorMessage));
+            }
+        };
 
         await live.ConnectAsync(uri: null, cursor: cursor, httpClient: _httpClient,
             cancellationToken: cancellationToken).ConfigureAwait(false);
         await foreach (JetstreamEvent item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
         {
+            if (Volatile.Read(ref outdatedCursor) != 0)
+            {
+                throw new InvalidDataException(OutdatedLiveCursorMessage);
+            }
+
             yield return item;
         }
     }
