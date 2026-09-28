@@ -23,11 +23,14 @@ public partial class AtProtoJetstream
     /// <exception cref="NotSupportedException">The Jetstream uses version 1.</exception>
     /// <exception cref="InvalidOperationException">An event handler, connection, or another enumerator is active.</exception>
     /// <exception cref="ObjectDisposedException">The Jetstream has been disposed.</exception>
+    /// <exception cref="JetstreamConnectionException">The server rejects an expired cursor during the connection handshake.</exception>
+    /// <exception cref="InvalidDataException">The server reports an <c>OutdatedCursor</c> notice after the connection is established, or an event has no sequence cursor.</exception>
     /// <remarks>
     /// <para>Start enumeration with <c>await foreach</c>; disposing the enumerator closes its connection.
     /// This mode cannot be combined with event subscriptions or <see cref="ConnectAsync(Uri?, long?, HttpClient?, CancellationToken)"/>.
     /// The live service has limited cursor lookback: an expired cursor raises <see cref="JetstreamConnectionException"/>
-    /// rather than silently skipping events. Use <see cref="ReplayAsync"/> for archive-backed recovery.</para>
+    /// during the handshake or <see cref="InvalidDataException"/> if reported by an <c>OutdatedCursor</c> notice
+    /// after connection, rather than silently skipping events. Use <see cref="ReplayAsync"/> for archive-backed recovery.</para>
     /// <para>The cursor is inclusive on the server; events at or below the last yielded sequence are suppressed
     /// on reconnection. Persist a cursor only after processing its event. A process restart may repeat the last event.</para>
     /// </remarks>

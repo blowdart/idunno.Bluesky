@@ -72,7 +72,8 @@ If you previously persisted `LastSequence` in a handler, persist `evt.Sequence` 
 successfully processing each event, and supply that value as `StreamAsync(cursor: savedSequence)`.
 The server's cursor is inclusive; a restart may receive the saved event again, so make processing
 idempotent. Unlike `ConnectAsync()`, `StreamAsync()` handles transient reconnections itself, but
-an expired cursor raises `JetstreamConnectionException` rather than silently skipping events.
+an expired cursor raises `JetstreamConnectionException` if the handshake is rejected or
+`InvalidDataException` if the connected server sends an `OutdatedCursor` notice, rather than silently skipping events.
 For gaps beyond live lookback, use [archive-to-live replay](jetstreamReplay.md#replay-into-the-live-tail).
 See the [live tail quickstart](jetstream.md#quickstart-the-live-tail) for filtering, event types and shutdown.
 

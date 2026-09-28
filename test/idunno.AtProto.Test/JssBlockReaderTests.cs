@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers.Binary;
 using System.Formats.Cbor;
 using System.Text;
 using System.Text.Json;
@@ -151,6 +152,37 @@ public class JssBlockReaderTests
         using Compressor compressor = new();
         byte[] frame = compressor.Wrap([1, 0, 0, 0]).ToArray();
         Assert.Throws<InvalidDataException>(() => JssBlockReader.Decode(frame));
+    }
+
+    [Fact]
+    public void MaximumRowCountDecodes()
+    {
+        const int count = 8192;
+        byte[] data = new byte[4 + count * 34];
+        BinaryPrimitives.WriteUInt32LittleEndian(data, count);
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(data).ToArray();
+
+        IReadOnlyList<JssRow> rows = JssBlockReader.Decode(frame);
+
+        Assert.Equal(count, rows.Count);
+        Assert.All(rows, row => Assert.Empty(row.Payload));
+    }
+
+    [Theory]
+    [InlineData(8193U)]
+    [InlineData(1_900_000U)]
+    [InlineData(uint.MaxValue)]
+    public void ExcessiveRowCountIsRejectedBeforeAllocatingColumns(uint count)
+    {
+        byte[] data = new byte[4];
+        BinaryPrimitives.WriteUInt32LittleEndian(data, count);
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(data).ToArray();
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => JssBlockReader.Decode(frame));
+
+        Assert.Contains("event count", error.Message, StringComparison.Ordinal);
     }
 
     private static byte[] Block(

@@ -13,6 +13,7 @@ internal static class JssBlockReader
 {
     internal const int MaximumFrameSize = 16 * 1024 * 1024;
     private const int MaximumDecodedSize = 64 * 1024 * 1024;
+    private const uint MaximumRows = 8192;
     private static readonly UTF8Encoding s_utf8 = new(false, true);
 
     internal static IReadOnlyList<JssRow> Decode(ReadOnlySpan<byte> compressed)
@@ -24,16 +25,14 @@ internal static class JssBlockReader
             throw new InvalidDataException("The Jetstream block has no event count.");
         }
 
-        int count = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(data));
-        int headersLength;
-        try
+        uint rowCount = BinaryPrimitives.ReadUInt32LittleEndian(data);
+        if (rowCount > MaximumRows)
         {
-            headersLength = checked(4 + count * (8 + 8 + 8 + 1 + 1 + 2 + 1 + 1 + 4));
+            throw new InvalidDataException("The Jetstream block event count exceeds the supported limit.");
         }
-        catch (OverflowException ex)
-        {
-            throw new InvalidDataException("The Jetstream block event count is invalid.", ex);
-        }
+
+        int count = (int)rowCount;
+        int headersLength = 4 + count * (8 + 8 + 8 + 1 + 1 + 2 + 1 + 1 + 4);
 
         if (headersLength > data.Length)
         {
