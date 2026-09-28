@@ -699,6 +699,37 @@ public class AtProtoFirehoseTests
     }
 
     [Fact]
+    public async Task ARepeatedSequenceWithTheSamePayloadButADifferentTypeEndsTheStream()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(5)), token);
+            await Send(socket, Frame("#account", IdentityPayload(5)), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 2, cancellationToken));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0L)]
+    [InlineData(5L)]
+    public async Task LastSequenceIsTheStartingCursorUntilAnEventIsYielded(long? cursor)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) => await Send(socket, Frame("#info", Map(("name", "Hello"))), token));
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        List<FirehoseEvent> events = await Take(firehose.SubscribeReposAsync(cursor, cancellationToken: cancellationToken), 1, cancellationToken);
+
+        Assert.IsType<FirehoseInfoEvent>(Assert.Single(events));
+        Assert.Equal(cursor, firehose.LastRepoSequence);
+    }
+    [Fact]
     public async Task IdleConnectionsAreReconnected()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;

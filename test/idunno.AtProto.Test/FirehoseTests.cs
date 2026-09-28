@@ -50,6 +50,8 @@ public class FirehoseTests
     [InlineData(10L, new[] { "9a" }, new[] { "Violation" })]
     [InlineData(null, new[] { "5a", "5a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept" })]
     [InlineData(null, new[] { "5a", "5b" }, new[] { "Accept", "Violation" })]
+    [InlineData(null, new[] { "5a", "5a#account" }, new[] { "Accept", "Violation" })]
+    [InlineData(10L, new[] { "10a", "10a#account" }, new[] { "DropCursorEvent", "Violation" })]
     [InlineData(null, new[] { "5a", "6a", "5a" }, new[] { "Accept", "Accept", "Violation" })]
     [InlineData(null, new[] { "5a", "4a" }, new[] { "Accept", "Violation" })]
     public void SequenceStateRejectsDuplicatesAndOutOfOrderSequences(long? cursor, string[] frames, string[] expected)
@@ -57,8 +59,13 @@ public class FirehoseTests
         EventStreamReader.SequenceState state = new(cursor ?? 0);
         state.BeginConnection(cursor);
 
-        // Each frame is its sequence number followed by a letter which stands for its payload.
-        string[] decisions = [.. frames.Select(frame => state.Accept(long.Parse(frame[..^1], CultureInfo.InvariantCulture), Encoding.UTF8.GetBytes(frame)).ToString())];
+        // Each frame is its sequence number, a letter which stands for its payload, and optionally a message type other than #identity.
+        string[] decisions = [.. frames.Select(frame =>
+        {
+            string[] parts = frame.Split('#');
+            string type = parts.Length > 1 ? "#" + parts[1] : "#identity";
+            return state.Accept(long.Parse(parts[0][..^1], CultureInfo.InvariantCulture), type, Encoding.UTF8.GetBytes(parts[0])).ToString();
+        })];
 
         Assert.Equal(expected, decisions);
     }
@@ -68,12 +75,12 @@ public class FirehoseTests
     {
         EventStreamReader.SequenceState state = new(0);
         state.BeginConnection(null);
-        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(7, "a"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(7, "#identity", "a"u8.ToArray()));
 
         state.BeginConnection(state.Last);
 
-        Assert.Equal(EventStreamReader.SequenceDecision.DropCursorEvent, state.Accept(7, "a"u8.ToArray()));
-        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(8, "b"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.DropCursorEvent, state.Accept(7, "#identity", "a"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(8, "#identity", "b"u8.ToArray()));
         Assert.Equal(8, state.Last);
     }
 
@@ -207,6 +214,51 @@ public class FirehoseTests
         Assert.Equal(TimeSpan.Zero, time.Offset);
     }
 
+    [Theory]
+    [InlineData("1985-04-12T23:20:50.123Z", "1985-04-12T23:20:50.1230000+00:00")]
+    [InlineData("1985-04-12T23:20:50.123456Z", "1985-04-12T23:20:50.1234560+00:00")]
+    [InlineData("1985-04-12T23:20:50.120000Z", "1985-04-12T23:20:50.1200000+00:00")]
+    [InlineData("0001-01-01T00:00:00.000Z", "0001-01-01T00:00:00.0000000+00:00")]
+    [InlineData("1985-04-12T23:20:50.12345678912345Z", "1985-04-12T23:20:50.1234567+00:00")]
+    [InlineData("1985-04-12T23:20:50Z", "1985-04-12T23:20:50.0000000+00:00")]
+    [InlineData("1985-04-12T23:20:50.0Z", "1985-04-12T23:20:50.0000000+00:00")]
+    [InlineData("1985-04-12T23:20:50.123+00:00", "1985-04-12T23:20:50.1230000+00:00")]
+    [InlineData("1985-04-12T23:20:50.123-07:00", "1985-04-13T06:20:50.1230000+00:00")]
+    public void CborFieldsAcceptAtProtocolDateTimes(string value, string expected)
+    {
+        Assert.True(CborFields.TryParseDateTime(value, out DateTimeOffset result));
+        Assert.Equal(expected, result.ToString("O", CultureInfo.InvariantCulture));
+    }
+
+    [Theory]
+    [InlineData("1985-04-12")]
+    [InlineData("1985-04-12T23:20Z")]
+    [InlineData("1985-04-12T23:20:5Z")]
+    [InlineData("1985-04-12T23:20:50.123")]
+    [InlineData("+001985-04-12T23:20:50.123Z")]
+    [InlineData("23:20:50.123Z")]
+    [InlineData("-1985-04-12T23:20:50.123Z")]
+    [InlineData("1985-4-12T23:20:50.123Z")]
+    [InlineData("01985-04-12T23:20:50.123Z")]
+    [InlineData("1985-04-12T23:20:50.123+00")]
+    [InlineData("1985-04-12T23:20:50.123+0000")]
+    [InlineData("1985-04-12t23:20:50.123Z")]
+    [InlineData("1985-04-12T23:20:50.123z")]
+    [InlineData("1985-04-12T23:20:50.123-00:00")]
+    [InlineData("1985-04-12 23:20:50.123Z")]
+    [InlineData("1985-04-12T23:99:50.123Z")]
+    [InlineData("1985-00-12T23:20:50.123Z")]
+    [InlineData("0000-01-01T00:00:00+01:00")]
+    [InlineData("1985-04-12T23:20:50.Z")]
+    [InlineData("1985-04-12T23:20:50.123Z ")]
+    [InlineData("\u0661985-04-12T23:20:50.123Z")]
+    [InlineData("04/12/1985 23:20:50")]
+    [InlineData("Fri, 12 Apr 1985 23:20:50 GMT")]
+    public void CborFieldsRejectInvalidAtProtocolDateTimes(string value)
+    {
+        Assert.False(CborFields.TryParseDateTime(value, out _));
+        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("time", value))).GetDateTime("time"));
+    }
     [Fact]
     public void CborFieldsRejectInvalidDids() =>
         Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("did", "not a did"))).GetDid("did"));
@@ -287,6 +339,37 @@ public class FirehoseTests
         Assert.Throws<InvalidDataException>(() => reader.ReadBlock());
     }
 
+    [Fact]
+    public void CarReaderDoesNotSizeTheRootsFromTheDeclaredCount()
+    {
+        const int declaredRoots = 500_000;
+        byte[] header = Encode(writer =>
+        {
+            writer.WriteStartMap(2);
+            writer.WriteTextString("roots");
+            writer.WriteStartArray(declaredRoots);
+            for (int i = 0; i < declaredRoots; i++)
+            {
+                writer.WriteInt32(0);
+            }
+
+            writer.WriteEndArray();
+            writer.WriteTextString("version");
+            writer.WriteInt64(1);
+            writer.WriteEndMap();
+        });
+        using MemoryStream stream = new();
+        WriteSection(stream, header);
+        stream.Position = 0;
+        using CarReader reader = new(stream);
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        Assert.Throws<InvalidDataException>(() => reader.ReadHeader());
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        // Sizing the list from the declared count would allocate a further 4 MB on top of the half megabyte header.
+        Assert.True(allocated < 2 * 1024 * 1024, $"Reading the header allocated {allocated} bytes.");
+    }
     public static TheoryData<Func<FirehoseOptions>> InvalidOptions => new()
     {
         () => new FirehoseOptions { BufferSize = 0 },

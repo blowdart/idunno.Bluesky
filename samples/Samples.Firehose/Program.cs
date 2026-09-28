@@ -170,15 +170,16 @@ public sealed class Program
                 {
                     string timeStamp = FormatTime(identityEvent.Time) + sequence;
 
-                    // The handle in an identity event is not verified. Resolve it before trusting it.
+                    // The identity may have changed, so forget the cached handle. The handle in an identity event is not verified,
+                    // so it is not cached; the next account event resolves the DID document instead.
+                    didHandleCache.Remove(identityEvent.Did.Value);
+
                     if (identityEvent.Handle is not null)
                     {
-                        Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Handle} at {timeStamp}");
-                        CacheHandle(didHandleCache, identityEvent.Did, identityEvent.Handle);
+                        Console.WriteLine($"IDENTITY  : {identityEvent.Did} reported the unverified handle {identityEvent.Handle} at {timeStamp}");
                     }
                     else
                     {
-                        didHandleCache.Remove(identityEvent.Did.Value);
                         Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
                     }
 

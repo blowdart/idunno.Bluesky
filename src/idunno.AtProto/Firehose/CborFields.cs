@@ -138,11 +138,87 @@ internal sealed class CborFields(Dictionary<string, ReadOnlyMemory<byte>> fields
     /// </summary>
     /// <param name="name">The name of the field.</param>
     /// <returns>The value of the field.</returns>
-    /// <exception cref="InvalidDataException">The field is absent or not a valid datetime.</exception>
+    /// <exception cref="InvalidDataException">The field is absent or not a valid AT Protocol datetime.</exception>
     public DateTimeOffset GetDateTime(string name) =>
-        DateTimeOffset.TryParse(GetString(name), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTimeOffset value)
+        TryParseDateTime(GetString(name), out DateTimeOffset value)
             ? value
             : throw new InvalidDataException($"The '{name}' field is not a valid datetime.");
+
+    /// <summary>
+    /// Parses <paramref name="value"/> as an AT Protocol <c>datetime</c>.
+    /// </summary>
+    /// <param name="value">The string to parse.</param>
+    /// <param name="result">The parsed value, in UTC, if <paramref name="value"/> is valid.</param>
+    /// <returns><see langword="true"/> if <paramref name="value"/> is a valid datetime; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>The format is the intersection of RFC 3339 and ISO 8601: <c>yyyy-MM-ddTHH:mm:ss</c>, an optional fraction of any number of
+    /// digits, and a timezone of an upper-case <c>Z</c> or <c>±hh:mm</c>. A lower-case <c>t</c> or <c>z</c>, a space separator, a missing
+    /// timezone or seconds, and the negative zero offset <c>-00:00</c> are rejected. Fractions beyond the seven digits
+    /// <see cref="DateTimeOffset"/> holds are truncated. Datetimes <see cref="DateTimeOffset"/> cannot represent, such as the year 0, are rejected.</para>
+    /// </remarks>
+    internal static bool TryParseDateTime(string value, out DateTimeOffset result)
+    {
+        result = default;
+
+        const int secondsEnd = 19;
+        if (value.Length < secondsEnd + 1 ||
+            !IsDigits(value, 0, 4) || value[4] != '-' ||
+            !IsDigits(value, 5, 2) || value[7] != '-' ||
+            !IsDigits(value, 8, 2) || value[10] != 'T' ||
+            !IsDigits(value, 11, 2) || value[13] != ':' ||
+            !IsDigits(value, 14, 2) || value[16] != ':' ||
+            !IsDigits(value, 17, 2))
+        {
+            return false;
+        }
+
+        int index = secondsEnd;
+        int fractionDigits = 0;
+
+        if (value[index] == '.')
+        {
+            index++;
+            while (index < value.Length && char.IsAsciiDigit(value[index]))
+            {
+                index++;
+                fractionDigits++;
+            }
+
+            if (fractionDigits == 0)
+            {
+                return false;
+            }
+        }
+
+        string timezone = value[index..];
+        bool isOffset = timezone.Length == 6 && timezone[0] is '+' or '-' && IsDigits(timezone, 1, 2) && timezone[3] == ':' && IsDigits(timezone, 4, 2);
+
+        if ((timezone != "Z" && !isOffset) || timezone == "-00:00")
+        {
+            return false;
+        }
+
+        int keptDigits = Math.Min(fractionDigits, 7);
+        string normalized = fractionDigits == 0
+            ? string.Concat(value.AsSpan(0, secondsEnd), timezone)
+            : string.Concat(value.AsSpan(0, secondsEnd + 1 + keptDigits), timezone);
+        string format = fractionDigits == 0 ? "yyyy-MM-dd'T'HH:mm:ssK" : "yyyy-MM-dd'T'HH:mm:ss." + new string('f', keptDigits) + "K";
+
+        return DateTimeOffset.TryParseExact(normalized, format, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal, out result);
+    }
+
+    private static bool IsDigits(string value, int start, int length)
+    {
+        for (int i = start; i < start + length; i++)
+        {
+            if (!char.IsAsciiDigit(value[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Reads the optional datetime field called <paramref name="name"/>.

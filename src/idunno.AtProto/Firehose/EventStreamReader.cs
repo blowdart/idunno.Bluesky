@@ -46,7 +46,10 @@ internal sealed class EventStreamReader
     private readonly FirehoseMetrics _metrics;
     private readonly KeyValuePair<string, object?> _serverTag;
 
-    private long _lastSequence;
+    // Zero is a valid starting cursor, so a negative value means there is no sequence to resume from.
+    private const long NoSequence = -1;
+
+    private long _lastSequence = NoSequence;
     private int _active;
 
     /// <summary>
@@ -101,7 +104,7 @@ internal sealed class EventStreamReader
         get
         {
             long value = Interlocked.Read(ref _lastSequence);
-            return value == 0 ? null : value;
+            return value == NoSequence ? null : value;
         }
     }
 
@@ -189,7 +192,7 @@ internal sealed class EventStreamReader
         try
         {
             SequenceState state = new(cursor is > 0 ? cursor.Value : 0);
-            Interlocked.Exchange(ref _lastSequence, state.Last);
+            Interlocked.Exchange(ref _lastSequence, cursor ?? NoSequence);
 
             int attempts = 0;
 
@@ -595,7 +598,7 @@ internal sealed class EventStreamReader
                 string.Create(CultureInfo.InvariantCulture, $"The firehose sent sequence number {sequence}, which is outside the allowed range.")));
         }
 
-        switch (state.Accept(sequence, frame.Payload))
+        switch (state.Accept(sequence, type, frame.Payload))
         {
             case SequenceDecision.DropCursorEvent:
                 FirehoseLogger.CursorEventDropped(_logger, sequence);
@@ -688,8 +691,9 @@ internal sealed class EventStreamReader
     {
         private long? _connectionCursor;
 
-        // The payload of the last event accepted, or of the cursor event dropped since, so a repeat of it can be recognised.
+        // The type and payload of the last event accepted, or of the cursor event dropped since, so a repeat of it can be recognised.
         // It holds at most one message, which is bounded by the maximum message size.
+        private string? _lastType;
         private ReadOnlyMemory<byte> _lastPayload;
 
         /// <summary>
@@ -711,25 +715,27 @@ internal sealed class EventStreamReader
         /// Decides what to do with a frame with <paramref name="sequence"/>.
         /// </summary>
         /// <param name="sequence">The sequence number of the frame.</param>
+        /// <param name="type">The message type of the frame, without the endpoint NSID.</param>
         /// <param name="payload">The DAG-CBOR encoded payload of the frame.</param>
         /// <returns>What to do with the frame.</returns>
         /// <remarks>
         /// <para>A relay resuming from a cursor replays the events it holds and then switches to live events, and at that switch it
-        /// sends the last replayed event a second time, unchanged. A frame which repeats the last event's sequence number with an
-        /// identical payload is dropped. Any other repeated or earlier sequence number is a violation.</para>
+        /// sends the last replayed event a second time, unchanged. A frame which repeats the last event's sequence number, with the same
+        /// message type and an identical payload, is dropped. Any other repeated or earlier sequence number is a violation.</para>
         /// </remarks>
-        public SequenceDecision Accept(long sequence, ReadOnlyMemory<byte> payload)
+        public SequenceDecision Accept(long sequence, string type, ReadOnlyMemory<byte> payload)
         {
             long? cursor = _connectionCursor;
             _connectionCursor = null;
 
             if (cursor == sequence && sequence == Last)
             {
+                _lastType = type;
                 _lastPayload = payload;
                 return SequenceDecision.DropCursorEvent;
             }
 
-            if (sequence == Last && !_lastPayload.IsEmpty && payload.Span.SequenceEqual(_lastPayload.Span))
+            if (sequence == Last && _lastType is not null && string.Equals(type, _lastType, StringComparison.Ordinal) && payload.Span.SequenceEqual(_lastPayload.Span))
             {
                 return SequenceDecision.DropRepeatedEvent;
             }
@@ -740,6 +746,7 @@ internal sealed class EventStreamReader
             }
 
             Last = sequence;
+            _lastType = type;
             _lastPayload = payload;
             return SequenceDecision.Accept;
         }

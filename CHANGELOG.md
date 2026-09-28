@@ -50,8 +50,9 @@
   * Commit, sync, identity, account, info, labels, unknown and invalid events are surfaced as `FirehoseEvent` subtypes.
     Commit operations expose their record CID, previous CID and lazily decoded record.
   * Frames, CAR blocks, operations and label batches are size and count limited, block CIDs are recomputed, the commit must be
-    the first CAR root, and the commit's DID and revision must match the event. Sequence numbers must be strictly increasing,
-    apart from the cursor event and identical repeated events a relay sends when a connection resumes, which are dropped.
+    the first CAR root, and the commit's DID and revision must match the event. Timestamps must be strict AT Protocol datetimes.
+    Sequence numbers must be strictly increasing, apart from the cursor event and identical repeated events, of the same type and payload,
+    a relay sends when a connection resumes, which are dropped.
     Server-supplied error and info text is stripped of control and bidirectional formatting characters and truncated, but remains untrusted.
   * Optional commit and label signature verification with `FirehoseOptions.VerifySignatures`. Verification resolves signing keys inline and
     cannot keep up with the full relay; it suits labelers, a single PDS, or other low-volume streams.

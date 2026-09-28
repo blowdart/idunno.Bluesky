@@ -137,8 +137,9 @@ than the one before it. A duplicate or out-of-order sequence number ends the str
 There are two exceptions, both of which are dropped rather than yielded twice. When a connection resumes from a
 cursor, a relay sends the cursor event again, so the first event on a resumed connection may repeat the last
 sequence yielded. A relay also sends the last event it replays a second time, unchanged, when it switches from
-replaying to live events, so an event that repeats the previous event's sequence number with a byte-for-byte
-identical payload is dropped. A repeated sequence number with a different payload is still an error.
+replaying to live events, so an event that repeats the previous event's sequence number, with the same message
+type and a byte-for-byte identical payload, is dropped. A repeated sequence number with a different type or payload
+is still an error.
 
 Order the stream as a whole by `Sequence`, not by `Time`, which is the server's timestamp and is not guaranteed
 to increase.
@@ -189,8 +190,11 @@ A firehose server may be anyone's. `AtProtoFirehose` enforces these limits:
   batches to `MaximumLabelsPerMessage` labels, because the lexicon supplies no limit.
 * CBOR must be valid DAG-CBOR, nested at most 128 levels deep. Nesting is checked as the frame is read, so a deeply nested frame is rejected before it can use more memory than its own size.
 * Every CAR block's CID is recomputed, the commit must be the CAR's first root, the commit's DID and revision must
-  match the event, and each operation's record block must be present.
-* Sequence numbers must be between 1 and 2^53 and strictly increasing, apart from the cursor event and identical repeats a relay sends when resuming.
+  match the event, and each operation's record block must be present. The number of CAR roots a header declares is
+  not trusted to size any allocation.
+* Timestamps must be AT Protocol datetimes: RFC 3339 and ISO 8601 with an upper-case `T`, whole seconds, and a `Z` or
+  `±hh:mm` timezone other than `-00:00`. An event with any other timestamp format is yielded as `FirehoseInvalidEvent`.
+* Sequence numbers must be between 1 and 2^53 and strictly increasing, apart from the cursor event and identical repeats, of the same type and payload, a relay sends when resuming.
 * Redirects are not followed. A server that redirects the connection ends the stream with a
   `FirehoseConnectionException`, and the redirect is not retried.
 

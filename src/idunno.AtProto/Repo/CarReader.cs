@@ -226,7 +226,8 @@ public sealed class CarReader : IDisposable
             {
                 case "roots":
                     int? rootCount = reader.ReadStartArray() ?? throw new InvalidDataException("The CAR roots array must have a definite length.");
-                    List<Cid> parsedRoots = new(rootCount.Value);
+                    // The declared count is untrusted, so the list grows with the roots actually read rather than being sized from it.
+                    List<Cid> parsedRoots = [];
                     for (int rootIndex = 0; rootIndex < rootCount; rootIndex++)
                     {
                         parsedRoots.Add(ReadCid(reader));
