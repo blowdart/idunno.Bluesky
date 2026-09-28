@@ -208,7 +208,9 @@ public class FeedViewPostTests
                     "labels": [],
                     "createdAt": "2023-04-22T22:44:04.316Z"
                 }
-            }
+            },
+            "opThreadPostIndex": 2,
+            "opThreadPostCount": 4
         }
         """;
 
@@ -217,5 +219,7 @@ public class FeedViewPostTests
         Assert.NotNull(feedViewPost);
 
         Assert.Equal(1, feedViewPost.Post.BookmarkCount);
+        Assert.Equal(2, feedViewPost.OpThreadPostIndex);
+        Assert.Equal(4, feedViewPost.OpThreadPostCount);
     }
 }
