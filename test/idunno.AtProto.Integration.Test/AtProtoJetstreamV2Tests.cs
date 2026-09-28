@@ -984,7 +984,7 @@ public class AtProtoJetstreamV2Tests
 
     private sealed class TestJetstreamServer : IDisposable
     {
-        private readonly HttpListener _listener = new();
+        private HttpListener _listener = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly ConcurrentQueue<Connection> _connections = new();
         private int _connectionCount;
@@ -1136,7 +1136,13 @@ public class AtProtoJetstreamV2Tests
             {
                 int port = FreePort();
 
-                _listener.Prefixes.Clear();
+                // A listener that fails to start disposes itself, so each attempt needs a new one.
+                if (attempt > 1)
+                {
+                    _listener.Close();
+                    _listener = new HttpListener();
+                }
+
                 _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
 
                 try
