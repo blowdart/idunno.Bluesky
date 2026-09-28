@@ -213,7 +213,7 @@ public sealed class Program
                 Console.WriteLine($"  Post: {(string.IsNullOrWhiteSpace(text) ? "No Text" : text)}");
                 Console.WriteLine($"  Posted at: {post.CreatedAt.ToLocalTime():G}");
             }
-            catch (JsonException exception)
+            catch (Exception exception) when (exception is JsonException or ArgumentException)
             {
                 WarnInvalidRecord(evt, exception);
                 text = GetString(value, "text");
@@ -235,7 +235,7 @@ public sealed class Program
                     Console.WriteLine($"  Via: {like.Via}");
                 }
             }
-            catch (JsonException exception)
+            catch (Exception exception) when (exception is JsonException or ArgumentException)
             {
                 WarnInvalidRecord(evt, exception);
                 JsonElement subject = value.ValueKind == JsonValueKind.Object &&
@@ -248,7 +248,7 @@ public sealed class Program
         }
     }
 
-    private static void WarnInvalidRecord(JetstreamCommitEvent evt, JsonException exception)
+    private static void WarnInvalidRecord(JetstreamCommitEvent evt, Exception exception)
     {
         AtUri recordUri = new($"at://{evt.Did}/{evt.Commit.Collection}/{evt.Commit.RKey}");
         Console.Error.WriteLine($"Could not fully decode {recordUri} at Jetstream sequence {evt.Sequence}: {exception.Message}");
