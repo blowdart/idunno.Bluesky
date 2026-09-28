@@ -24,6 +24,7 @@ internal sealed class ArchiveDownload(
     private long _burst = long.MaxValue;
     private double _refill;
     private long _downloaded;
+    private int _readResumes;
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private readonly string _etag = blockIndex is int index ? $"\"{checksum}:{index}\"" : $"\"{checksum}\"";
 
@@ -69,7 +70,6 @@ internal sealed class ArchiveDownload(
             return 0;
         }
 
-        int interruptions = 0;
         while (true)
         {
             Memory<byte> limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
@@ -84,12 +84,12 @@ internal sealed class ArchiveDownload(
                     return read;
                 }
             }
-            catch (IOException) when (!cancellationToken.IsCancellationRequested && interruptions < MaximumReadResumes)
+            catch (IOException) when (!cancellationToken.IsCancellationRequested && _readResumes < MaximumReadResumes)
             {
                 // An interrupted body can throw instead of returning zero. Resume from the last successful read.
             }
 
-            if (++interruptions > MaximumReadResumes)
+            if (++_readResumes > MaximumReadResumes)
             {
                 throw new InvalidDataException("The archive response ended repeatedly before the requested block was complete.");
             }

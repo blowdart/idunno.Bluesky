@@ -98,6 +98,21 @@ public class JetstreamArchiveTests
     }
 
     [Fact]
+    public async Task ArchiveRejectsNullPlanStatistics()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"plannedThroughSeq":0,"sealedTipSeq":0,"segments":[],"stats":null}""");
+        });
+        using HttpClient client = server.CreateClient();
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => AtProtoServer.PlanSnapshot(
+            new SnapshotRequest(), TestServerBuilder.DefaultUri, "test-key", client,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task DownloadReadWaitsForQuotaBeforeRequestingMoreBytes()
     {
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
@@ -223,6 +238,43 @@ public class JetstreamArchiveTests
 
         await Assert.ThrowsAsync<IOException>(() =>
             download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
+        Assert.Equal(4, requests);
+    }
+
+    [Fact]
+    public async Task DownloadLimitsResumesAcrossSuccessfulShortReads()
+    {
+        int requests = 0;
+        using HttpClient client = new(new ArchiveTestHandler(request =>
+        {
+            int attempt = Interlocked.Increment(ref requests);
+            Assert.True(attempt <= 4, "The download exceeded its resume limit.");
+            if (attempt > 1)
+            {
+                Assert.Equal($"bytes={attempt - 1}-", request.Headers.Range?.ToString());
+            }
+
+            HttpResponseMessage response = new(attempt == 1 ? HttpStatusCode.OK : HttpStatusCode.PartialContent)
+            {
+                Content = new StreamContent(new InterruptedStream([checked((byte)attempt)]))
+            };
+            response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
+            response.Content.Headers.ContentLength = attempt == 1 ? 10 : 1;
+            if (attempt > 1)
+            {
+                response.Content.Headers.ContentRange = new ContentRangeHeaderValue(attempt - 1, attempt - 1, 10);
+            }
+
+            return response;
+        }));
+        await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null));
+        byte[] bytes = new byte[10];
+
+        await Assert.ThrowsAsync<IOException>(() =>
+            download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken));
+        Assert.Equal([1, 2, 3, 4], bytes[..4]);
+        Assert.Equal(4, download.Position);
         Assert.Equal(4, requests);
     }
 

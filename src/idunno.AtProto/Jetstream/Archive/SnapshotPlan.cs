@@ -12,6 +12,7 @@ namespace idunno.AtProto.Jetstream.Archive;
 public sealed record SnapshotPlan
 {
     private IReadOnlyList<PlannedSegment> _segments = [];
+    private SnapshotPlanStats _stats = null!;
 
     /// <summary>Gets the last sequence covered by this plan page.</summary>
     [JsonRequired]
@@ -31,8 +32,13 @@ public sealed record SnapshotPlan
     }
 
     /// <summary>Gets the planner statistics.</summary>
+    /// <exception cref="JsonException">The archive plan's statistics are <see langword="null"/>.</exception>
     [JsonRequired]
-    public required SnapshotPlanStats Stats { get; init; }
+    public required SnapshotPlanStats Stats
+    {
+        get => _stats;
+        init => _stats = value ?? throw new JsonException("The archive plan statistics cannot be null.");
+    }
 }
 
 /// <summary>
