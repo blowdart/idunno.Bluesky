@@ -2,6 +2,8 @@
 
 ## 8.0.0 - **unreleased**
 
+🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
+
 ### Added
 
 #### idunno.AtProto
