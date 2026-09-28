@@ -560,6 +560,66 @@ public class JetstreamArchiveTests
         });
     }
 
+    [Theory]
+    [InlineData("blocks")]
+    [InlineData("segment")]
+    public async Task SnapshotRejectsCheckpointBeyondPlannedSegment(string mode)
+    {
+        int downloads = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(mode == "blocks"
+                    ? """{"plannedThroughSeq":11,"sealedTipSeq":11,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":11,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}"""
+                    : """{"plannedThroughSeq":11,"sealedTipSeq":11,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":1,"maxSeq":11,"mode":"segment"}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}""");
+                return;
+            }
+
+            downloads++;
+            context.Response.Headers.ETag = $"\"{Checksum}\"";
+            byte[] header = new byte[256];
+            "jss0"u8.CopyTo(header);
+            BinaryPrimitives.WriteUInt16LittleEndian(header.AsSpan(12, 2), 1);
+            BinaryPrimitives.WriteUInt32LittleEndian(header.AsSpan(14, 4), 1);
+            context.Response.ContentLength = header.Length;
+            await context.Response.Body.WriteAsync(header);
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotRequest request = new();
+        SnapshotCheckpoint checkpoint = new()
+        {
+            SealedTipSeq = 11, PlanAfterSeq = 0, RequestFingerprint = request.Fingerprint(s_server),
+            SegmentName = Segment, SegmentChecksum = Checksum, NextBlockIndex = 2,
+            NextByteOffset = mode == "segment" ? 256 : 0
+        };
+
+        InvalidDataException error = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(request, checkpoint,
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+            }
+        });
+        Assert.Contains("checkpoint block index exceeds", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(mode == "segment" ? 1 : 0, downloads);
+    }
+
+    [Fact]
+    public void SnapshotRejectsReversedSequenceBoundsBeforePlanning()
+    {
+        using AtProtoJetstream jetstream = new(options: new JetstreamOptions { ApiKey = "test-key" });
+        SnapshotRequest request = new() { AfterSeq = 12, BeforeSeq = 11 };
+
+        Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(request,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(request,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task PlanPagesKeepTheOriginalTipWhenResumingPastACompletedBlock()
     {

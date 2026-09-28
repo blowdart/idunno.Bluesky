@@ -133,6 +133,12 @@ public partial class AtProtoJetstream
                         throw new InvalidDataException("A blocks plan omitted its block ranges.");
                     }
 
+                    if (sameGeneration && (segment.Blocks.Count == 0 ||
+                        startBlock > segment.Blocks.Max(range => range.Last) + (long)1))
+                    {
+                        throw new InvalidDataException("The checkpoint block index exceeds the planned segment.");
+                    }
+
                     foreach (BlockRange range in segment.Blocks)
                     {
                         if (range.First < 0 || range.Last < range.First)
@@ -181,6 +187,10 @@ public partial class AtProtoJetstream
                         byte[] header = new byte[256];
                         await download.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);
                         int blockCount = ReadSegmentBlockCount(header);
+                        if (sameGeneration && startBlock > blockCount)
+                        {
+                            throw new InvalidDataException("The checkpoint block index exceeds the segment header.");
+                        }
 
                         for (int block = 0; block < blockCount; block++)
                         {
@@ -214,6 +224,11 @@ public partial class AtProtoJetstream
                         // Resume by reading the block count from the header in a separate ranged request.
                         int blockCount = await GetSegmentBlockCount(
                             segment.Name, segment.Checksum, key, cancellationToken).ConfigureAwait(false);
+                        if (startBlock > blockCount)
+                        {
+                            throw new InvalidDataException("The checkpoint block index exceeds the segment header.");
+                        }
+
                         for (int block = startBlock; block < blockCount; block++)
                         {
                             await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
@@ -341,7 +356,9 @@ public partial class AtProtoJetstream
 
     private static void ValidateSnapshotRequest(SnapshotRequest request, SnapshotCheckpoint? checkpoint, Uri service)
     {
-        if (request.AfterSeq < 0 || request.BeforeSeq < 0 || request.Dids?.Count > MaximumV2Dids ||
+        if (request.AfterSeq < 0 || request.BeforeSeq < 0 ||
+            (request.AfterSeq is long after && request.BeforeSeq is long before && after > before) ||
+            request.Dids?.Count > MaximumV2Dids ||
             request.Collections?.Count > MaximumV2Collections || request.Kinds?.Count > 4 ||
             (request.Collections is { Count: > 0 } && request.Kinds is { Count: > 0 } &&
              !request.Kinds.Contains(JetStreamEventKind.Commit)) ||

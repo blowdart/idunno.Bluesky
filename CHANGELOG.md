@@ -56,7 +56,7 @@
 #### Samples
 
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
-* Added `Samples.JetstreamReplay`, which replays `bot.idunno.blue` records and account events from the archive
+* Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
 
 ### Breaking Changes
