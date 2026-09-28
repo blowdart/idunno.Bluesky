@@ -53,7 +53,8 @@ public partial class AtProtoJetstream
 
         if (checkpoint?.LiveAfterSeq is long liveAfterSeq &&
             (liveAfterSeq < checkpoint.SealedTipSeq || checkpoint.PlanAfterSeq < 0 ||
-             checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || (request.BeforeSeq is not null &&
+             checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || (checkpoint.ReplayAfterSeq is null &&
+             request.BeforeSeq is not null &&
              request.BeforeSeq < checkpoint.SealedTipSeq)))
         {
             throw new ArgumentException("The live replay checkpoint has invalid bounds.", nameof(checkpoint));
@@ -178,6 +179,7 @@ public partial class AtProtoJetstream
                         SealedTipSeq = tip.Value,
                         PlanAfterSeq = currentRequest.AfterSeq ?? 0,
                         RequestFingerprint = fingerprint,
+                        ReplayAfterSeq = currentRequest == request ? null : currentRequest.AfterSeq,
                         LiveAfterSeq = lastDelivered
                     });
                 }

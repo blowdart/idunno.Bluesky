@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Jetstream.Archive;
@@ -10,6 +11,8 @@ namespace idunno.AtProto.Jetstream.Archive;
 /// </summary>
 public sealed record SnapshotPlan
 {
+    private IReadOnlyList<PlannedSegment> _segments = [];
+
     /// <summary>Gets the last sequence covered by this plan page.</summary>
     [JsonRequired]
     public required long PlannedThroughSeq { get; init; }
@@ -19,8 +22,13 @@ public sealed record SnapshotPlan
     public required long SealedTipSeq { get; init; }
 
     /// <summary>Gets the segments to download.</summary>
+    /// <exception cref="JsonException">The archive plan's segments are <see langword="null"/>.</exception>
     [JsonRequired]
-    public required IReadOnlyList<PlannedSegment> Segments { get; init; }
+    public required IReadOnlyList<PlannedSegment> Segments
+    {
+        get => _segments;
+        init => _segments = value ?? throw new JsonException("The archive plan segments cannot be null.");
+    }
 
     /// <summary>Gets the planner statistics.</summary>
     [JsonRequired]
@@ -101,12 +109,19 @@ public sealed record SnapshotPlanStats
 /// </summary>
 public sealed record SegmentList
 {
+    private IReadOnlyList<SegmentInfo> _segments = [];
+
     /// <summary>Gets the cursor for the following page, if any.</summary>
     public string? Cursor { get; init; }
 
     /// <summary>Gets the segments in this page.</summary>
+    /// <exception cref="JsonException">The archive segment list is <see langword="null"/>.</exception>
     [JsonRequired]
-    public required IReadOnlyList<SegmentInfo> Segments { get; init; }
+    public required IReadOnlyList<SegmentInfo> Segments
+    {
+        get => _segments;
+        init => _segments = value ?? throw new JsonException("The archive segment list cannot be null.");
+    }
 }
 
 /// <summary>

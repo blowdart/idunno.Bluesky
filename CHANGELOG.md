@@ -29,6 +29,8 @@
   * Added `JetstreamConnectionException`, thrown when a server refuses a connection, carrying the status code and error the server returned.
   * Compressed v2 connections download the server's current zstd dictionary.
   * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
+  * Live and archive events expose the preferred account, identity and sync payload types. `AtJetstreamCommit`
+    converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs.
 * Added decoded Jetstream archive snapshots and live replay with bounded planning, resumable block and segment downloads,
   byte-quota pacing, durable checkpoints, cancellation and lazy record CIDs. `JetstreamCommitEvent.IsSyncBackfill`
   distinguishes records asserted during sync from live creates. Added `JetstreamOptions.ApiKey` and
@@ -37,16 +39,6 @@
 * Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
   cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
   exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
-* Jetstream archive checkpoints now bind to the original service, bounds and filters. Checkpoints saved before
-  this change must be discarded and recreated; replay retries transient live connection failures.
-* Archive downloads now limit individual reads to the advertised byte quota, and planner retries accept
-  date-form `Retry-After` headers. Live and archive metadata events carry the preferred account, identity
-  and sync payload types.
-* Archive requests require HTTPS or WSS outside loopback so API keys are not sent over plaintext transport.
-  Snapshot row filtering uses precomputed DID and collection lookups and enforces each plan page's sequence bounds.
-  Archive downloads reject partial responses whose starting offset does not match the requested position.
-* `AtJetstreamCommit` now converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs;
-  the reverse conversion remains available when populating legacy event properties.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
 
@@ -75,11 +67,6 @@
   patterns and newly written code to use `JetstreamEvent`, `JetstreamCommitEvent` and the corresponding new names.
 
 ### Fixed
-
-#### idunno.AtProto
-
-* Jetstream archive snapshots now validate resumed segment headers, reject remote plaintext redirects, and resume interrupted response bodies without discarding already downloaded bytes.
-* Jetstream replay returns to the archive when the live server reports an outdated cursor. Archive HTTP methods default to an SSRF-protected client, accept `HttpClientOptions`, and require callers supplying their own client to disable automatic redirects and enforce SSRF protection. Jetstream options retain their diagnostic fields when redacting the archive API key.
 
 #### idunno.AtProto.Types
 

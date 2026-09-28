@@ -70,6 +70,33 @@ public class JetstreamArchiveTests
         Assert.True(plan.Succeeded);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ArchiveRejectsNullSegmentLists(bool plan)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(plan
+                ? """{"plannedThroughSeq":0,"sealedTipSeq":0,"segments":null,"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""
+                : """{"cursor":null,"segments":null}""");
+        });
+        using HttpClient client = server.CreateClient();
+        if (plan)
+        {
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => AtProtoServer.PlanSnapshot(
+                new SnapshotRequest(), TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+        else
+        {
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => AtProtoServer.ListSegments(
+                TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
     [Fact]
     public async Task DownloadReadWaitsForQuotaBeforeRequestingMoreBytes()
     {

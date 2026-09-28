@@ -366,7 +366,18 @@ public class AtProtoJetstreamV2Tests
         Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Equal(1, plans);
         Assert.Equal(original.Fingerprint(server.Uri), saved?.RequestFingerprint);
+        Assert.Equal(25, saved?.ReplayAfterSeq);
+        Assert.Equal(51, saved?.LiveAfterSeq);
         Assert.Contains("cursor=50", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+        SnapshotCheckpoint liveCheckpoint = Assert.IsType<SnapshotCheckpoint>(saved);
+        Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(
+            original, liveCheckpoint with { ReplayAfterSeq = null }, cancellationToken: cancellationToken));
+        await using IAsyncEnumerator<JetstreamEvent> resumed = jetstream.ReplayAsync(
+            original, liveCheckpoint, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await resumed.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(52, resumed.Current.Sequence);
+        Assert.Equal(1, plans);
+        Assert.Contains("cursor=51", server.Connections.Last().Query, StringComparison.Ordinal);
         Assert.Throws<ArgumentException>(() => jetstream.ReplayAsync(
             original with { BeforeSeq = 41 }, checkpoint, cancellationToken: cancellationToken));
     }
