@@ -45,6 +45,25 @@
 * Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
   cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
   exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
+* Added `AtProtoFirehose`, an AOT- and trimming-safe AT Protocol event stream reader for `com.atproto.sync.subscribeRepos`
+  (`SubscribeReposAsync()`) and `com.atproto.label.subscribeLabels` (`SubscribeLabelsAsync()`), returning `IAsyncEnumerable<FirehoseEvent>`.
+  * Commit, sync, identity, account, info, labels, unknown and invalid events are surfaced as `FirehoseEvent` subtypes.
+    Commit operations expose their record CID, previous CID and lazily decoded record.
+  * Frames, CAR blocks, operations and label batches are size and count limited, block CIDs are recomputed, the commit must be
+    the first CAR root, and the commit's DID and revision must match the event. Sequence numbers must be strictly increasing,
+    apart from the cursor event and identical repeated events a relay sends when a connection resumes, which are dropped.
+    Server-supplied error and info text is stripped of control and bidirectional formatting characters and truncated, but remains untrusted.
+  * Optional commit and label signature verification with `FirehoseOptions.VerifySignatures`. Verification resolves signing keys inline and
+    cannot keep up with the full relay; it suits labelers, a single PDS, or other low-volume streams.
+    A labels message with labels from more than `MaximumLabelSourcesPerMessage` distinct sources is rejected before any are resolved.
+    Resolved signing keys are cached by default, bounded by `SigningKeyCacheSize` and `SigningKeyCacheDuration`, invalidated by `#identity` events,
+    and refreshed at most once every five minutes when a signature fails against a cached key. Set `CacheSigningKeys` to `false` to turn it off.
+  * Resumes from the last sequence after transport failures, idle timeouts, `ConsumerTooSlow` and retryable HTTP statuses,
+    with jittered backoff and `Retry-After` support. `FirehoseConnectionException` reports refused connections and server errors.
+    Only events with a sequence number reset the reconnection attempt count.
+  * Redirected connections are refused, not retried, including when a supplied client has already followed the redirect.
+  * Connects through its own SSRF-protected client by default, or through a supplied `IHttpClientFactory` or `HttpClient`.
+* Added `Label.ExpiresAt`, the optional label expiry time.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
 
@@ -54,6 +73,8 @@
 
 #### Samples
 
+* Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event.
+* Added `Samples.ModerationLabels`, which prints the labels the Bluesky moderation service applies and negates.
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.

@@ -24,10 +24,12 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
 * `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
 * `Samples.Feed` - a sample showing how to page through a feed.
+* `Samples.Firehose` - a live `SubscribeReposAsync()` firehose sample showing each event type, with a five-retry reconnection limit and Ctrl+C shutdown.
 * `Samples.Jetstream` - a live v2 `StreamAsync()` sample with ordered events, a five-retry reconnection limit, and Ctrl+C shutdown.
 * `Samples.JetstreamReplay` - a Jetstream v2 archive snapshot and live replay sample with checkpoints.
 * `Samples.Logging` - a sample showing how to configure logging with the .net console logger.
 * `Samples.LoginDiscovery` - a sample that walks through the various stages of how a handle is resolved to its Personal Data Store (PDS).
+* `Samples.ModerationLabels` - a `SubscribeLabelsAsync()` sample which shows the labels applied, and negated, by the Bluesky moderation service.
 * `Samples.Notifications` - a sample which shows notifications for the authenticated user.
 * `Samples.OAuth` - a sample that demonstrates how to login via OAuth.
 * `Samples.Posting` - a sample that shows how to make posts.

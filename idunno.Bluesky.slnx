@@ -73,6 +73,7 @@
     <File Path="docs/docs/customLexiconsAndRecords.md" />
     <File Path="docs/docs/drafts.md" />
     <File Path="docs/docs/endpointStatus.md" />
+    <File Path="docs/docs/firehose.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
     <File Path="docs/docs/jetstreamMigration.md" />
@@ -222,6 +223,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.Firehose/Samples.Firehose.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -235,6 +240,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.LoginDiscovery/Samples.LoginDiscovery.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ModerationLabels/Samples.ModerationLabels.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

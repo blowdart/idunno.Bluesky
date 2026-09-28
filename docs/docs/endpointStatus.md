@@ -146,6 +146,7 @@
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
 | **Identity** | * _Uses DNS and `.well-known/` endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
 | **Labels**   | [com.atproto.label.queryLabels](https://endpoints.bsky.app/#bluesky-app/tag/comatprotolabel/GET/xrpc/com.atproto.label.queryLabels) | `AtProtoAgent.QueryLabels()` | ✔ |
+| | [com.atproto.label.subscribeLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/subscribeLabels.json) | `AtProtoFirehose.SubscribeLabelsAsync()` | ✔ |
 | **Moderation**   | [com.atproto.moderation.createReport](https://endpoints.bsky.app/#bluesky-app/tag/comatprotomoderation/POST/xrpc/com.atproto.moderation.createReport) | `AtProtoAgent.CreateModerationReport()` | ✔ |
 | **Repo**     | [com.atproto.repo.applyWrites](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.applyWrites) | `AtProtoAgent.ApplyWrites()` | ✔ |
 | | [com.atproto.repo.createRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.createRecord) | `AtProtoAgent.CreateRecord()` | ✔ |
@@ -173,6 +174,7 @@
 | | [com.atproto.sync.listRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listRepos.json) | `AtProtoAgent.ListRepos()` | ✔ |
 | | [com.atproto.sync.listReposByCollection](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listReposByCollection.json) | `AtProtoAgent.ListReposByCollection()` | ✔ |
 | | [com.atproto.sync.requestCrawl](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/requestCrawl.json) | `AtProtoAgent.RequestCrawl()` | ✔ |
+| | [com.atproto.sync.subscribeRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/subscribeRepos.json) | `AtProtoFirehose.SubscribeReposAsync()` | ✔ |
 
 ## Jetstream v2 Archive Endpoints
 

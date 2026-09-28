@@ -70,6 +70,7 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 * **Public API tracking.** Public surface is tracked by the Roslyn `PublicApiAnalyzers` in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` per project. When you add, change, or remove a public member the build will fail until you update `PublicAPI.Unshipped.txt` accordingly.
   Public `record` types also generate `Equals`, `GetHashCode`, `ToString`, `<Clone>$`, `==` and `!=`. All of these must be listed
   in `PublicAPI.Unshipped.txt`, alongside the properties and their `init` accessors.
+* **Add new doc files to the solution.** When you create a documentation file under `docs/`, add a `<File Path="..." />` entry for it to the matching `<Folder>` in `idunno.Bluesky.slnx`, keeping entries in alphabetical order, and add it to the relevant `toc.yml`.
 * **Update the changelog.** Record user-visible additions/changes/removals under the unreleased section of `CHANGELOG.md`, grouped by package (`### idunno.AtProto`, `### idunno.Bluesky`, ...).
 * **Targeting & trimming.** Trimming/AOT (`IsTrimmable`, `IsAotCompatible`) is enabled for net9.0+ only (net8.0 is excluded). Keep new code trimming-safe.
 * **Strong naming / InternalsVisibleTo.** Assemblies are strong-named (`key.snk`). Internal members are exposed to matching test projects via `InternalsVisibleTo` in the csproj, so internal types are testable.

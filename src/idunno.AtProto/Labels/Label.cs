@@ -110,6 +110,13 @@ public sealed record Label : AtProtoObject
     public DateTimeOffset CreationTimestamp { get; init; }
 
     /// <summary>
+    /// Gets the timestamp at which this label expires and no longer applies, if any.
+    /// </summary>
+    /// <value>The expiry time of the label, or <see langword="null"/> if the label does not expire.</value>
+    [JsonPropertyName("exp")]
+    public DateTimeOffset? ExpiresAt { get; init; }
+
+    /// <summary>
     /// Signature of dag-cbor encoded label, if the label was signed.
     /// </summary>
     /// <remarks>

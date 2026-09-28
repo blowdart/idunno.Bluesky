@@ -738,6 +738,19 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
+    /// </remarks>
     public async Task ConnectAsync(
         HttpClient httpClient)
     {
@@ -756,6 +769,19 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
+    /// </remarks>
     public async Task ConnectAsync(
         HttpClient httpClient,
         CancellationToken cancellationToken)
@@ -849,6 +875,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// reconnects to apply them.</para>
     /// <para>If a <see cref="JetstreamProtocolVersion.V2"/> server says it no longer has the compression dictionary
     /// the jetstream downloaded, the current one is downloaded and the connection is tried once more.</para>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
     /// </remarks>
     public async Task ConnectAsync(
         Uri? uri,

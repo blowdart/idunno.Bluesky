@@ -535,3 +535,213 @@ virtual idunno.AtProto.Jetstream.AtJetstreamSync.Equals(idunno.AtProto.Jetstream
 virtual idunno.AtProto.Jetstream.AtJetstreamSync.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? other) -> bool
 virtual idunno.AtProto.Jetstream.JetstreamEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
+abstract idunno.AtProto.Firehose.FirehoseEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseEvent!
+const idunno.AtProto.Firehose.AtProtoFirehose.DefaultMaximumReconnectAttempts = 10 -> int
+const idunno.AtProto.Firehose.FirehoseInfoEvent.OutdatedCursor = "OutdatedCursor" -> string!
+idunno.AtProto.Firehose.AtProtoFirehose
+idunno.AtProto.Firehose.AtProtoFirehose.AtProtoFirehose(idunno.AtProto.Firehose.FirehoseOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null) -> void
+idunno.AtProto.Firehose.AtProtoFirehose.AtProtoFirehose(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.Firehose.FirehoseOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null) -> void
+idunno.AtProto.Firehose.AtProtoFirehose.AtProtoFirehose(System.Net.Http.HttpClient! httpClient, idunno.AtProto.Firehose.FirehoseOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null) -> void
+idunno.AtProto.Firehose.AtProtoFirehose.Dispose() -> void
+idunno.AtProto.Firehose.AtProtoFirehose.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.Firehose.AtProtoFirehose.LastLabelSequence.get -> long?
+idunno.AtProto.Firehose.AtProtoFirehose.LastRepoSequence.get -> long?
+idunno.AtProto.Firehose.AtProtoFirehose.Metrics.get -> idunno.AtProto.Firehose.FirehoseMetrics!
+idunno.AtProto.Firehose.AtProtoFirehose.Options.get -> idunno.AtProto.Firehose.FirehoseOptions!
+idunno.AtProto.Firehose.AtProtoFirehose.SubscribeLabelsAsync(long? cursor = null, int? maximumReconnectAttempts = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<idunno.AtProto.Firehose.FirehoseEvent!>!
+idunno.AtProto.Firehose.AtProtoFirehose.SubscribeReposAsync(long? cursor = null, int? maximumReconnectAttempts = 10, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<idunno.AtProto.Firehose.FirehoseEvent!>!
+idunno.AtProto.Firehose.AtProtoFirehose.WebSocketOptions.get -> idunno.AtProto.WebSocketOptions?
+idunno.AtProto.Firehose.FirehoseAccountEvent
+idunno.AtProto.Firehose.FirehoseAccountEvent.Active.get -> bool
+idunno.AtProto.Firehose.FirehoseAccountEvent.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Firehose.FirehoseAccountEvent.Equals(idunno.AtProto.Firehose.FirehoseAccountEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseAccountEvent.Status.get -> idunno.AtProto.Sync.RepoStatus?
+idunno.AtProto.Firehose.FirehoseAccountEvent.Time.get -> System.DateTimeOffset
+idunno.AtProto.Firehose.FirehoseCommitEvent
+idunno.AtProto.Firehose.FirehoseCommitEvent.Blobs.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Cid!>!
+idunno.AtProto.Firehose.FirehoseCommitEvent.Blocks.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Firehose.FirehoseCommitEvent.Commit.get -> idunno.AtProto.Cid!
+idunno.AtProto.Firehose.FirehoseCommitEvent.Data.get -> idunno.AtProto.Cid!
+idunno.AtProto.Firehose.FirehoseCommitEvent.Equals(idunno.AtProto.Firehose.FirehoseCommitEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseCommitEvent.Operations.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Firehose.FirehoseRepoOperation!>!
+idunno.AtProto.Firehose.FirehoseCommitEvent.PrevData.get -> idunno.AtProto.Cid?
+idunno.AtProto.Firehose.FirehoseCommitEvent.Rebase.get -> bool
+idunno.AtProto.Firehose.FirehoseCommitEvent.Repo.get -> idunno.AtProto.Did!
+idunno.AtProto.Firehose.FirehoseCommitEvent.Rev.get -> string!
+idunno.AtProto.Firehose.FirehoseCommitEvent.Since.get -> string?
+idunno.AtProto.Firehose.FirehoseCommitEvent.Time.get -> System.DateTimeOffset
+idunno.AtProto.Firehose.FirehoseCommitEvent.TooBig.get -> bool
+idunno.AtProto.Firehose.FirehoseConnectionException
+idunno.AtProto.Firehose.FirehoseConnectionException.ErrorDetail.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.Firehose.FirehoseConnectionException.FirehoseConnectionException() -> void
+idunno.AtProto.Firehose.FirehoseConnectionException.FirehoseConnectionException(string! message, System.Exception? innerException) -> void
+idunno.AtProto.Firehose.FirehoseConnectionException.FirehoseConnectionException(string! message) -> void
+idunno.AtProto.Firehose.FirehoseConnectionException.FirehoseConnectionException(System.Net.HttpStatusCode? statusCode, idunno.AtProto.AtErrorDetail? errorDetail, System.TimeSpan? retryAfter, System.Exception? innerException) -> void
+idunno.AtProto.Firehose.FirehoseConnectionException.RetryAfter.get -> System.TimeSpan?
+idunno.AtProto.Firehose.FirehoseConnectionException.StatusCode.get -> System.Net.HttpStatusCode?
+idunno.AtProto.Firehose.FirehoseEvent
+idunno.AtProto.Firehose.FirehoseEvent.FirehoseEvent(idunno.AtProto.Firehose.FirehoseEvent! original) -> void
+idunno.AtProto.Firehose.FirehoseEvent.Sequence.get -> long?
+idunno.AtProto.Firehose.FirehoseIdentityEvent
+idunno.AtProto.Firehose.FirehoseIdentityEvent.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Firehose.FirehoseIdentityEvent.Equals(idunno.AtProto.Firehose.FirehoseIdentityEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseIdentityEvent.Handle.get -> string?
+idunno.AtProto.Firehose.FirehoseIdentityEvent.Time.get -> System.DateTimeOffset
+idunno.AtProto.Firehose.FirehoseInfoEvent
+idunno.AtProto.Firehose.FirehoseInfoEvent.Equals(idunno.AtProto.Firehose.FirehoseInfoEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseInfoEvent.Message.get -> string?
+idunno.AtProto.Firehose.FirehoseInfoEvent.Name.get -> string!
+idunno.AtProto.Firehose.FirehoseInvalidEvent
+idunno.AtProto.Firehose.FirehoseInvalidEvent.Did.get -> idunno.AtProto.Did?
+idunno.AtProto.Firehose.FirehoseInvalidEvent.Equals(idunno.AtProto.Firehose.FirehoseInvalidEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseInvalidEvent.Payload.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Firehose.FirehoseInvalidEvent.Reason.get -> string!
+idunno.AtProto.Firehose.FirehoseInvalidEvent.Type.get -> string!
+idunno.AtProto.Firehose.FirehoseLabelsEvent
+idunno.AtProto.Firehose.FirehoseLabelsEvent.Equals(idunno.AtProto.Firehose.FirehoseLabelsEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseLabelsEvent.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.Label!>!
+idunno.AtProto.Firehose.FirehoseMetrics
+idunno.AtProto.Firehose.FirehoseOptions
+idunno.AtProto.Firehose.FirehoseOptions.<Clone>$() -> idunno.AtProto.Firehose.FirehoseOptions!
+idunno.AtProto.Firehose.FirehoseOptions.BufferSize.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.BufferSize.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.CloseTimeout.get -> System.TimeSpan
+idunno.AtProto.Firehose.FirehoseOptions.CloseTimeout.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.DidDocumentResolver.get -> System.Func<idunno.AtProto.Did!, System.Threading.CancellationToken, System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!>?
+idunno.AtProto.Firehose.FirehoseOptions.DidDocumentResolver.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.Equals(idunno.AtProto.Firehose.FirehoseOptions? other) -> bool
+idunno.AtProto.Firehose.FirehoseOptions.FirehoseOptions() -> void
+idunno.AtProto.Firehose.FirehoseOptions.IdleTimeout.get -> System.TimeSpan
+idunno.AtProto.Firehose.FirehoseOptions.IdleTimeout.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.LabelerUri.get -> System.Uri!
+idunno.AtProto.Firehose.FirehoseOptions.LabelerUri.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.AtProto.Firehose.FirehoseOptions.LoggerFactory.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MaximumCarBlocks.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.MaximumCarBlocks.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MaximumCarBlockSize.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.MaximumCarBlockSize.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MaximumLabelsPerMessage.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.MaximumLabelsPerMessage.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MaximumLabelSourcesPerMessage.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.MaximumLabelSourcesPerMessage.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MaxMessageSize.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.MaxMessageSize.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.AtProto.Firehose.FirehoseOptions.MeterFactory.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.RelayUri.get -> System.Uri!
+idunno.AtProto.Firehose.FirehoseOptions.RelayUri.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.VerifySignatures.get -> bool
+idunno.AtProto.Firehose.FirehoseOptions.VerifySignatures.init -> void
+idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoAction.Create = 0 -> idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoAction.Delete = 2 -> idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoAction.Unknown = 3 -> idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoAction.Update = 1 -> idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoOperation
+idunno.AtProto.Firehose.FirehoseRepoOperation.<Clone>$() -> idunno.AtProto.Firehose.FirehoseRepoOperation!
+idunno.AtProto.Firehose.FirehoseRepoOperation.Action.get -> idunno.AtProto.Firehose.FirehoseRepoAction
+idunno.AtProto.Firehose.FirehoseRepoOperation.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.Firehose.FirehoseRepoOperation.Collection.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Firehose.FirehoseRepoOperation.Equals(idunno.AtProto.Firehose.FirehoseRepoOperation? other) -> bool
+idunno.AtProto.Firehose.FirehoseRepoOperation.GetRecord() -> System.Text.Json.JsonElement?
+idunno.AtProto.Firehose.FirehoseRepoOperation.Path.get -> string!
+idunno.AtProto.Firehose.FirehoseRepoOperation.Prev.get -> idunno.AtProto.Cid?
+idunno.AtProto.Firehose.FirehoseRepoOperation.RecordData.get -> System.ReadOnlyMemory<byte>?
+idunno.AtProto.Firehose.FirehoseRepoOperation.RecordKey.get -> idunno.AtProto.RecordKey!
+idunno.AtProto.Firehose.FirehoseSyncEvent
+idunno.AtProto.Firehose.FirehoseSyncEvent.Blocks.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Firehose.FirehoseSyncEvent.Commit.get -> idunno.AtProto.Cid!
+idunno.AtProto.Firehose.FirehoseSyncEvent.Data.get -> idunno.AtProto.Cid!
+idunno.AtProto.Firehose.FirehoseSyncEvent.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Firehose.FirehoseSyncEvent.Equals(idunno.AtProto.Firehose.FirehoseSyncEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseSyncEvent.Rev.get -> string!
+idunno.AtProto.Firehose.FirehoseSyncEvent.Time.get -> System.DateTimeOffset
+idunno.AtProto.Firehose.FirehoseUnknownEvent
+idunno.AtProto.Firehose.FirehoseUnknownEvent.Equals(idunno.AtProto.Firehose.FirehoseUnknownEvent? other) -> bool
+idunno.AtProto.Firehose.FirehoseUnknownEvent.Payload.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Firehose.FirehoseUnknownEvent.Type.get -> string!
+idunno.AtProto.Labels.Label.ExpiresAt.get -> System.DateTimeOffset?
+idunno.AtProto.Labels.Label.ExpiresAt.init -> void
+override idunno.AtProto.Firehose.FirehoseAccountEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseAccountEvent!
+override idunno.AtProto.Firehose.FirehoseAccountEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseAccountEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseAccountEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseCommitEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseCommitEvent!
+override idunno.AtProto.Firehose.FirehoseCommitEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseCommitEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseCommitEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseIdentityEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseIdentityEvent!
+override idunno.AtProto.Firehose.FirehoseIdentityEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseIdentityEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseIdentityEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseInfoEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseInfoEvent!
+override idunno.AtProto.Firehose.FirehoseInfoEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseInfoEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseInfoEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseInvalidEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseInvalidEvent!
+override idunno.AtProto.Firehose.FirehoseInvalidEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseInvalidEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseInvalidEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseLabelsEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseLabelsEvent!
+override idunno.AtProto.Firehose.FirehoseLabelsEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseLabelsEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseLabelsEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseOptions.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseOptions.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseOptions.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseRepoOperation.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseRepoOperation.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseRepoOperation.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseSyncEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseSyncEvent!
+override idunno.AtProto.Firehose.FirehoseSyncEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseSyncEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseSyncEvent.ToString() -> string!
+override idunno.AtProto.Firehose.FirehoseUnknownEvent.<Clone>$() -> idunno.AtProto.Firehose.FirehoseUnknownEvent!
+override idunno.AtProto.Firehose.FirehoseUnknownEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Firehose.FirehoseUnknownEvent.GetHashCode() -> int
+override idunno.AtProto.Firehose.FirehoseUnknownEvent.ToString() -> string!
+override sealed idunno.AtProto.Firehose.FirehoseAccountEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseCommitEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseIdentityEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseInfoEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseInvalidEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseLabelsEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseSyncEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+override sealed idunno.AtProto.Firehose.FirehoseUnknownEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+static idunno.AtProto.Firehose.FirehoseAccountEvent.operator !=(idunno.AtProto.Firehose.FirehoseAccountEvent? left, idunno.AtProto.Firehose.FirehoseAccountEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseAccountEvent.operator ==(idunno.AtProto.Firehose.FirehoseAccountEvent? left, idunno.AtProto.Firehose.FirehoseAccountEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseCommitEvent.operator !=(idunno.AtProto.Firehose.FirehoseCommitEvent? left, idunno.AtProto.Firehose.FirehoseCommitEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseCommitEvent.operator ==(idunno.AtProto.Firehose.FirehoseCommitEvent? left, idunno.AtProto.Firehose.FirehoseCommitEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseEvent.operator !=(idunno.AtProto.Firehose.FirehoseEvent? left, idunno.AtProto.Firehose.FirehoseEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseEvent.operator ==(idunno.AtProto.Firehose.FirehoseEvent? left, idunno.AtProto.Firehose.FirehoseEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseIdentityEvent.operator !=(idunno.AtProto.Firehose.FirehoseIdentityEvent? left, idunno.AtProto.Firehose.FirehoseIdentityEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseIdentityEvent.operator ==(idunno.AtProto.Firehose.FirehoseIdentityEvent? left, idunno.AtProto.Firehose.FirehoseIdentityEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseInfoEvent.operator !=(idunno.AtProto.Firehose.FirehoseInfoEvent? left, idunno.AtProto.Firehose.FirehoseInfoEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseInfoEvent.operator ==(idunno.AtProto.Firehose.FirehoseInfoEvent? left, idunno.AtProto.Firehose.FirehoseInfoEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseInvalidEvent.operator !=(idunno.AtProto.Firehose.FirehoseInvalidEvent? left, idunno.AtProto.Firehose.FirehoseInvalidEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseInvalidEvent.operator ==(idunno.AtProto.Firehose.FirehoseInvalidEvent? left, idunno.AtProto.Firehose.FirehoseInvalidEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseLabelsEvent.operator !=(idunno.AtProto.Firehose.FirehoseLabelsEvent? left, idunno.AtProto.Firehose.FirehoseLabelsEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseLabelsEvent.operator ==(idunno.AtProto.Firehose.FirehoseLabelsEvent? left, idunno.AtProto.Firehose.FirehoseLabelsEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseMetrics.MeterName.get -> string!
+static idunno.AtProto.Firehose.FirehoseMetrics.MeterVersion.get -> string!
+static idunno.AtProto.Firehose.FirehoseOptions.operator !=(idunno.AtProto.Firehose.FirehoseOptions? left, idunno.AtProto.Firehose.FirehoseOptions? right) -> bool
+static idunno.AtProto.Firehose.FirehoseOptions.operator ==(idunno.AtProto.Firehose.FirehoseOptions? left, idunno.AtProto.Firehose.FirehoseOptions? right) -> bool
+static idunno.AtProto.Firehose.FirehoseRepoOperation.operator !=(idunno.AtProto.Firehose.FirehoseRepoOperation? left, idunno.AtProto.Firehose.FirehoseRepoOperation? right) -> bool
+static idunno.AtProto.Firehose.FirehoseRepoOperation.operator ==(idunno.AtProto.Firehose.FirehoseRepoOperation? left, idunno.AtProto.Firehose.FirehoseRepoOperation? right) -> bool
+static idunno.AtProto.Firehose.FirehoseSyncEvent.operator !=(idunno.AtProto.Firehose.FirehoseSyncEvent? left, idunno.AtProto.Firehose.FirehoseSyncEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseSyncEvent.operator ==(idunno.AtProto.Firehose.FirehoseSyncEvent? left, idunno.AtProto.Firehose.FirehoseSyncEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseUnknownEvent.operator !=(idunno.AtProto.Firehose.FirehoseUnknownEvent? left, idunno.AtProto.Firehose.FirehoseUnknownEvent? right) -> bool
+static idunno.AtProto.Firehose.FirehoseUnknownEvent.operator ==(idunno.AtProto.Firehose.FirehoseUnknownEvent? left, idunno.AtProto.Firehose.FirehoseUnknownEvent? right) -> bool
+virtual idunno.AtProto.Firehose.FirehoseEvent.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.Firehose.FirehoseEvent.Equals(idunno.AtProto.Firehose.FirehoseEvent? other) -> bool
+virtual idunno.AtProto.Firehose.FirehoseEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+idunno.AtProto.Firehose.FirehoseOptions.CacheSigningKeys.get -> bool
+idunno.AtProto.Firehose.FirehoseOptions.CacheSigningKeys.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheDuration.get -> System.TimeSpan
+idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheDuration.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.get -> int
+idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.init -> void

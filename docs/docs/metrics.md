@@ -144,6 +144,25 @@ from the live WebSocket message counters above. Instrument names are prefixed wi
 | `total.archive_filtered_events` | Counter&lt;long&gt; | {events} | Decoded archive rows rejected by exact client-side filtering, including planner false positives. |
 | `total.replay_handoffs` | Counter&lt;long&gt; | {handoffs} | Attempts to connect to the live v2 stream after an archive snapshot or from a saved live checkpoint, including reconnects. |
 
+## idunno.AtProto.Firehose
+
+The `idunno.AtProto.Firehose` Meter reports measures from the `idunno.AtProto.Firehose.AtProtoFirehose` client. Instrument names are prefixed with `idunno.atproto.firehose.` (for example, `idunno.atproto.firehose.total.signing_key_cache_hits`).
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `total.messages` | Counter&lt;long&gt; | {messages} | Frames received from the firehose. |
+| `total.events_parsed` | Counter&lt;long&gt; | {events} | Events parsed from the firehose. |
+| `total.unknown_events` | Counter&lt;long&gt; | {events} | Frames with an unknown operation or message type. |
+| `total.invalid_events` | Counter&lt;long&gt; | {events} | Events which failed validation and were yielded as `FirehoseInvalidEvent`. |
+| `total.connections_opened` | Counter&lt;long&gt; | {connections} | Firehose connections opened. |
+| `total.connections_closed` | Counter&lt;long&gt; | {connections} | Firehose connections closed. |
+| `total.connections_failed` | Counter&lt;long&gt; | {connections} | Connection failures. |
+| `total.reconnects` | Counter&lt;long&gt; | {connections} | Reconnection attempts. |
+| `total.protocol_errors` | Counter&lt;long&gt; | {errors} | Connections dropped because of malformed frames or sequence violations. |
+| `total.signing_key_cache_hits` | Counter&lt;long&gt; | {lookups} | Signing keys, or failures to resolve one, found in the signing key cache. Only recorded when `VerifySignatures` and `CacheSigningKeys` are both on. |
+| `total.signing_key_cache_misses` | Counter&lt;long&gt; | {lookups} | Signing keys not found in the signing key cache, each of which resolved a DID document inline and delayed the stream. Only recorded when `VerifySignatures` and `CacheSigningKeys` are both on. |
+| `total.signing_key_refreshes` | Counter&lt;long&gt; | {lookups} | Cached signing keys resolved again because a signature failed to verify against them, which may mean a key was rotated without an `#identity` event. |
+
 ## idunno.AtProto.Directory
 
 The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDirectory` service.
