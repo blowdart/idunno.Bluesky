@@ -109,7 +109,7 @@ public partial class AtProtoJetstream
                 (request.BeforeSeq is long before && plan.SealedTipSeq > before) ||
                 (after >= pinned
                     ? plan.Segments.Count != 0 || plan.PlannedThroughSeq < pinned || plan.PlannedThroughSeq > after
-                    : plan.PlannedThroughSeq <= after))
+                    : plan.PlannedThroughSeq <= after || plan.PlannedThroughSeq > pinned))
             {
                 throw new InvalidDataException("The archive planner returned a non-progressing or unpinned page.");
             }

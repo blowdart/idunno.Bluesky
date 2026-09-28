@@ -730,6 +730,38 @@ public class JetstreamArchiveTests
     }
 
     [Theory]
+    [InlineData(0, 10, 11)]
+    [InlineData(5, 10, 20)]
+    public async Task SnapshotRejectsPlanAdvancingBeyondSealedTip(long after, long tip, long through)
+    {
+        int plans = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Interlocked.Increment(ref plans);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$$"""
+                {"plannedThroughSeq":{{{through}}},"sealedTipSeq":{{{tip}}},"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}
+                """);
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? checkpoint = null;
+
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(new SnapshotRequest { AfterSeq = after },
+                onCheckpoint: progress => checkpoint = progress,
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+                Assert.Fail("An invalid plan must not deliver archive events.");
+            }
+        });
+        Assert.Null(checkpoint);
+        Assert.Equal(1, plans);
+    }
+
+    [Theory]
     [InlineData(50, 40, 40)]
     [InlineData(50, 40, 50)]
     [InlineData(40, 40, 40)]
