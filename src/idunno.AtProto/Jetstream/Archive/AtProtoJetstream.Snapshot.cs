@@ -29,7 +29,8 @@ public partial class AtProtoJetstream
     /// <exception cref="HttpRequestException">The archive request fails or is rate limited without retry instructions.</exception>
     /// <remarks><para>When resuming, persist checkpoints only after applying the preceding events. A changed segment
     /// checksum restarts that segment; its events can be delivered again. Collection filters do not suppress account,
-    /// identity or sync markers.</para></remarks>
+    /// identity or sync markers. Filter lists are copied when this method is called; later changes to the caller's
+    /// lists do not affect the snapshot or its checkpoints.</para></remarks>
     public IAsyncEnumerable<JetstreamEvent> SnapshotAsync(
         SnapshotRequest request,
         SnapshotCheckpoint? checkpoint = null,
@@ -45,8 +46,9 @@ public partial class AtProtoJetstream
 
         string key = Options.ApiKey ?? throw new InvalidOperationException(
             "Jetstream archive access requires an API key. Configure JetstreamOptions.ApiKey or AtProtoJetstreamBuilder.WithApiKey().");
-        ValidateSnapshotRequest(request, checkpoint, _uri);
-        return SnapshotCoreAsync(request, checkpoint, onCheckpoint, key, request.Fingerprint(_uri), cancellationToken);
+        SnapshotRequest capturedRequest = request.SnapshotFilters();
+        ValidateSnapshotRequest(capturedRequest, checkpoint, _uri);
+        return SnapshotCoreAsync(capturedRequest, checkpoint, onCheckpoint, key, capturedRequest.Fingerprint(_uri), cancellationToken);
     }
 
     private async IAsyncEnumerable<JetstreamEvent> SnapshotCoreAsync(

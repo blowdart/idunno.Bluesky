@@ -27,6 +27,13 @@ public sealed record SnapshotRequest
     /// <summary>Gets or sets the inclusive upper sequence bound.</summary>
     public long? BeforeSeq { get; init; }
 
+    internal SnapshotRequest SnapshotFilters() => this with
+    {
+        Kinds = Kinds is null ? null : Array.AsReadOnly(Kinds.ToArray()),
+        Dids = Dids is null ? null : Array.AsReadOnly(Dids.ToArray()),
+        Collections = Collections is null ? null : Array.AsReadOnly(Collections.ToArray())
+    };
+
     internal string Fingerprint(Uri service)
     {
         using MemoryStream stream = new();

@@ -307,6 +307,54 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task ReplayKeepsOriginalFiltersAfterCallerMutatesLists()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        List<Did> dids = [new(TestDid)];
+        List<CollectionSelector> collections = [new("app.bsky.feed.post")];
+        List<JetStreamEventKind> kinds = [JetStreamEventKind.Commit, JetStreamEventKind.Identity];
+        SnapshotRequest request = new() { Dids = dids, Collections = collections, Kinds = kinds };
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context =>
+            {
+                Assert.Equal("POST", context.Request.HttpMethod);
+                using StreamReader reader = new(context.Request.InputStream);
+                string body = reader.ReadToEnd();
+                Assert.Contains(TestDid, body, StringComparison.Ordinal);
+                Assert.Contains("app.bsky.feed.post", body, StringComparison.Ordinal);
+                Assert.DoesNotContain("app.bsky.feed.like", body, StringComparison.Ordinal);
+                return TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                    Encoding.UTF8.GetBytes(
+                        """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""));
+            }
+        };
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(41), token);
+            await SendText(socket, IdentityEvent(42), token);
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        string fingerprint = request.Fingerprint(server.Uri);
+        SnapshotCheckpoint? saved = null;
+        IAsyncEnumerable<JetstreamEvent> events = jetstream.ReplayAsync(
+            request, onCheckpoint: progress => saved = progress, cancellationToken: cancellationToken);
+        dids[0] = new Did("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa");
+        collections[0] = new CollectionSelector("app.bsky.feed.like");
+        kinds.Clear();
+
+        await using IAsyncEnumerator<JetstreamEvent> replay = events.GetAsyncEnumerator(cancellationToken);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, replay.Current.Sequence);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, replay.Current.Sequence);
+        Assert.Equal(fingerprint, saved?.RequestFingerprint);
+        Assert.Contains(TestDid, Uri.UnescapeDataString(Assert.Single(server.Connections).Query), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ReplayReconnectsFromLastDeliveredSequenceAfterLiveDisconnect()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;

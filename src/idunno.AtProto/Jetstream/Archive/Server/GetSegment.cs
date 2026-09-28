@@ -18,6 +18,7 @@ public static partial class AtProtoServer
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A response-owned segment stream, or an HTTP error. Dispose the stream after use.</returns>
     /// <exception cref="ArgumentException">The name or key is missing, or a resumed download has no <paramref name="etag"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The byte offset is negative.</exception>
     /// <remarks><para><c>SegmentNotFound</c> is returned in the HTTP result.
     /// The default client uses the agent's SSRF-protected, redirect-disabled transport. A supplied client can bypass
     /// those protections and follow redirects before the SDK validates them. Disable automatic redirects in the

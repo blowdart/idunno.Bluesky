@@ -42,8 +42,15 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private volatile bool _disposed;
 
-    // Guarded by _syncLock. An active enumerator and event-driven connection cannot share a socket.
-    private int _consumptionMode;
+    private enum ConsumptionMode
+    {
+        None,
+        EventDriven,
+        AsyncEnumeration
+    }
+
+    // Transitions are guarded by _syncLock; the receive loop reads this without the lock.
+    private volatile ConsumptionMode _consumptionMode;
     private int _pendingEventConnections;
     private EventHandler<MessageReceivedEventArgs>? _messageReceived;
     private EventHandler<ConnectionStateChangedEventArgs>? _connectionStateChanged;
@@ -53,7 +60,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private void ThrowIfEnumerating()
     {
-        if (_consumptionMode == 2)
+        if (_consumptionMode == ConsumptionMode.AsyncEnumeration)
         {
             throw new InvalidOperationException("The live Jetstream is being consumed by an async enumerator.");
         }
@@ -853,7 +860,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             ThrowIfEnumerating();
             ObjectDisposedException.ThrowIf(_disposed, this);
-            _consumptionMode = 1;
+            _consumptionMode = ConsumptionMode.EventDriven;
             _pendingEventConnections++;
         }
 
@@ -868,7 +875,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 _pendingEventConnections--;
                 if (_pendingEventConnections == 0 && _client.State != WebSocketState.Open)
                 {
-                    _consumptionMode = 0;
+                    _consumptionMode = ConsumptionMode.None;
                 }
             }
         }
@@ -1627,9 +1634,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             lock (_syncLock)
             {
-                if (_consumptionMode == 1 && _pendingEventConnections == 0 && _client.State != WebSocketState.Open)
+                if (_consumptionMode == ConsumptionMode.EventDriven && _pendingEventConnections == 0 && _client.State != WebSocketState.Open)
                 {
-                    _consumptionMode = 0;
+                    _consumptionMode = ConsumptionMode.None;
                 }
             }
         }
@@ -2131,7 +2138,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // lets the transport apply the back pressure the server needs to see.
                     await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    if (Volatile.Read(ref _consumptionMode) == 2)
+                    if (_consumptionMode == ConsumptionMode.AsyncEnumeration)
                     {
                         // Preserve sequence order for the single enumerator, including its resume cursor.
                         await ParseMessageAndReleaseSlot(messageAsString).ConfigureAwait(false);

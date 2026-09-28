@@ -462,6 +462,61 @@ public class JetstreamArchiveTests
     }
 
     [Fact]
+    public async Task SnapshotKeepsOriginalFiltersWhenCallerChangesLists()
+    {
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        List<JetStreamEventKind> kinds = [JetStreamEventKind.Commit];
+        List<Did> dids = [new(TestDid)];
+        List<CollectionSelector> collections = [new("app.bsky.feed.post")];
+        SnapshotRequest request = new() { Kinds = kinds, Dids = dids, Collections = collections };
+        string fingerprint = request.Fingerprint(s_server);
+        int plans = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                plans++;
+                using StreamReader reader = new(context.Request.Body);
+                string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+                Assert.Contains("app.bsky.feed.post", body, StringComparison.Ordinal);
+                Assert.DoesNotContain("app.bsky.feed.like", body, StringComparison.Ordinal);
+                Assert.Contains(TestDid, body, StringComparison.Ordinal);
+                Assert.DoesNotContain("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa", body, StringComparison.Ordinal);
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    """{"plannedThroughSeq":11,"sealedTipSeq":11,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"0123456789abcdef","minSeq":10,"maxSeq":11,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":2}}""");
+            }
+            else
+            {
+                context.Response.Headers.ETag = $"\"{Checksum}:0\"";
+                context.Response.ContentLength = frame.Length;
+                await context.Response.Body.WriteAsync(frame);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotCheckpoint? saved = null;
+        IAsyncEnumerable<JetstreamEvent> snapshot = jetstream.SnapshotAsync(
+            request, onCheckpoint: progress => saved = progress,
+            cancellationToken: TestContext.Current.CancellationToken);
+        kinds.Clear();
+        dids[0] = new Did("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa");
+        collections[0] = new CollectionSelector("app.bsky.feed.like");
+
+        List<long?> received = [];
+        await foreach (JetstreamEvent evt in snapshot)
+        {
+            received.Add(evt.Sequence);
+        }
+
+        Assert.Equal([10], received);
+        Assert.Equal(fingerprint, saved?.RequestFingerprint);
+        Assert.Equal(1, plans);
+    }
+
+    [Fact]
     public async Task SnapshotRejectsPlannerTipBeyondRequestedBound()
     {
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
@@ -822,6 +877,11 @@ public class JetstreamArchiveTests
     [InlineData("segment")]
     public async Task LaterPlanPageDoesNotRepeatRowsBeforeItsCursor(string mode)
     {
+        List<JetStreamEventKind> kinds = [JetStreamEventKind.Commit];
+        List<Did> dids = [new(TestDid)];
+        List<CollectionSelector> collections = [new("app.bsky.feed.post"), new("app.bsky.feed.like")];
+        SnapshotRequest request = new() { Kinds = kinds, Dids = dids, Collections = collections };
+        string fingerprint = request.Fingerprint(s_server);
         using Compressor compressor = new();
         byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
         byte[] segment = new byte[256 + 8 + frame.Length];
@@ -837,6 +897,9 @@ public class JetstreamArchiveTests
             {
                 using StreamReader reader = new(context.Request.Body);
                 string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+                Assert.Contains("app.bsky.feed.post", body, StringComparison.Ordinal);
+                Assert.Contains("app.bsky.feed.like", body, StringComparison.Ordinal);
+                Assert.Contains(TestDid, body, StringComparison.Ordinal);
                 using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
                 long after = document.RootElement.GetProperty("afterSeq").GetInt64();
                 plans.Add(after);
@@ -857,7 +920,16 @@ public class JetstreamArchiveTests
             httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
             options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
         List<long?> received = [];
-        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(new SnapshotRequest(),
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request, onCheckpoint: progress =>
+        {
+            Assert.Equal(fingerprint, progress.RequestFingerprint);
+            if (progress.PlanAfterSeq == 10)
+            {
+                kinds.Clear();
+                dids[0] = new Did("did:plc:aaaaaaaaaaaaaaaaaaaaaaaa");
+                collections.Clear();
+            }
+        },
             cancellationToken: TestContext.Current.CancellationToken))
         {
             received.Add(evt.Sequence);

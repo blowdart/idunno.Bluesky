@@ -28,7 +28,8 @@ public partial class AtProtoJetstream
     /// <exception cref="ObjectDisposedException">The Jetstream client has been disposed.</exception>
     /// <exception cref="InvalidDataException">The archive server returns an inconsistent plan.</exception>
     /// <remarks><para>A live cursor is inclusive. When its lookback is exhausted after a long backfill or outage,
-    /// replay returns to the archive from the last delivered sequence before reconnecting.</para></remarks>
+    /// replay returns to the archive from the last delivered sequence before reconnecting. Filter lists are copied
+    /// when this method is called, so later changes to the caller's lists do not affect replay or its checkpoints.</para></remarks>
     public IAsyncEnumerable<JetstreamEvent> ReplayAsync(
         SnapshotRequest request,
         SnapshotCheckpoint? checkpoint = null,
@@ -42,11 +43,12 @@ public partial class AtProtoJetstream
             throw new InvalidOperationException("Jetstream replay requires a v2 service and an archive API key.");
         }
 
-        ValidateSnapshotRequest(request, null, _uri);
-        if (checkpoint is not null && (checkpoint.RequestFingerprint != request.Fingerprint(_uri) ||
-            checkpoint.ReplayAfterSeq < (request.AfterSeq ?? 0) ||
+        SnapshotRequest capturedRequest = request.SnapshotFilters();
+        ValidateSnapshotRequest(capturedRequest, null, _uri);
+        if (checkpoint is not null && (checkpoint.RequestFingerprint != capturedRequest.Fingerprint(_uri) ||
+            checkpoint.ReplayAfterSeq < (capturedRequest.AfterSeq ?? 0) ||
             (checkpoint.LiveAfterSeq is null && checkpoint.ReplayAfterSeq is null &&
-             checkpoint.PlanAfterSeq < (request.AfterSeq ?? 0))))
+             checkpoint.PlanAfterSeq < (capturedRequest.AfterSeq ?? 0))))
         {
             throw new ArgumentException("The replay checkpoint belongs to a different request or service.", nameof(checkpoint));
         }
@@ -54,13 +56,13 @@ public partial class AtProtoJetstream
         if (checkpoint?.LiveAfterSeq is long liveAfterSeq &&
             (liveAfterSeq < checkpoint.SealedTipSeq || checkpoint.PlanAfterSeq < 0 ||
              checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq || (checkpoint.ReplayAfterSeq is null &&
-             request.BeforeSeq is not null &&
-             request.BeforeSeq < checkpoint.SealedTipSeq)))
+             capturedRequest.BeforeSeq is not null &&
+             capturedRequest.BeforeSeq < checkpoint.SealedTipSeq)))
         {
             throw new ArgumentException("The live replay checkpoint has invalid bounds.", nameof(checkpoint));
         }
 
-        return ReplayCoreAsync(request, checkpoint, onCheckpoint, cancellationToken);
+        return ReplayCoreAsync(capturedRequest, checkpoint, onCheckpoint, cancellationToken);
     }
 
     private async IAsyncEnumerable<JetstreamEvent> ReplayCoreAsync(

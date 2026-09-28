@@ -53,14 +53,14 @@ public partial class AtProtoJetstream
         lock (_syncLock)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_consumptionMode != 0 || _client.State == WebSocketState.Open ||
+            if (_consumptionMode != ConsumptionMode.None || _client.State == WebSocketState.Open ||
                 _messageReceived is not null || _connectionStateChanged is not null ||
                 _recordReceived is not null || _faultRaised is not null || _infoReceived is not null)
             {
                 throw new InvalidOperationException("Live async enumeration requires an unconnected Jetstream without event handlers or another enumerator.");
             }
 
-            _consumptionMode = 2;
+            _consumptionMode = ConsumptionMode.AsyncEnumeration;
         }
 
         long lastYielded = cursor is >= 0 and < TimestampCursorThreshold ? cursor.Value : long.MinValue;
@@ -174,7 +174,7 @@ public partial class AtProtoJetstream
         {
             lock (_syncLock)
             {
-                _consumptionMode = 0;
+                _consumptionMode = ConsumptionMode.None;
             }
         }
     }
