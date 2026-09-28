@@ -15,7 +15,7 @@ namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
-    private static readonly TimeSpan VideoUploadPollingInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan s_videoUploadPollingInterval = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/>.
@@ -300,7 +300,7 @@ public partial class BlueskyAgent
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            await Task.Delay(VideoUploadPollingInterval, cancellationToken: cancellationToken).ConfigureAwait(false);
+                            await Task.Delay(s_videoUploadPollingInterval, cancellationToken: cancellationToken).ConfigureAwait(false);
                             uploadResult = await GetJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // These tests verify the legacy event callback contract.
+
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -8,10 +10,10 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Events;
+
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 using ZstdSharp;
 
@@ -145,7 +147,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.ConnectionStateChanged += (sender, e) =>
             {
@@ -191,7 +193,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.MessageReceived += (sender, e) => messages.Enqueue(e.Message);
 
@@ -263,6 +265,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
 
                 // This server never reads, so it never answers the close the jetstream sends. Without a shorter deadline
@@ -335,7 +338,7 @@ public class AtProtoJetstreamReceiveTests
 
         using var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1) });
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1) });
 
         jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult();
 
@@ -370,6 +373,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = useCompression,
                 MaxMessageSize = maximumMessageSize
             }))
@@ -420,6 +424,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 MaxMessageSize = 2048,
 
@@ -484,7 +489,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, MaximumConcurrentMessageParsers = 1 }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MaximumConcurrentMessageParsers = 1 }))
         {
             jetstream.RecordReceived += (sender, e) =>
             {
@@ -544,7 +549,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory }))
         {
             using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.message_parsing_failures");
 
@@ -604,6 +609,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 MaximumConcurrentMessageParsers = 2,
                 TaskFactory = new TaskFactory(new RefusingTaskScheduler())

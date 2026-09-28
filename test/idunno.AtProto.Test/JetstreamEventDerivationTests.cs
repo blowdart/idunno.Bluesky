@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // These tests exercise the v1 compatibility event types.
+
 using System.Text.Json;
 
 using idunno.AtProto.Jetstream;

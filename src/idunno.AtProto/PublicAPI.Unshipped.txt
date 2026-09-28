@@ -1,1 +1,537 @@
 #nullable enable
+*REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Net.Http.IHttpClientFactory! httpClientFactory, System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+*REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+*REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>!
+*REMOVED*idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CollectionsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>?
+*REMOVED*idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Nsid![]! collections) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+const idunno.AtProto.Repo.CarHeader.Version = 1 -> ulong
+idunno.AtProto.AtProtoAgent.GetBlob(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Cid! cid, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.BlobContent!>!>!
+idunno.AtProto.AtProtoAgent.GetBlocks(idunno.AtProto.AtIdentifier! repo, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! cids, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+idunno.AtProto.AtProtoAgent.GetHostStatus(string! hostname, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.HostDescription!>!>!
+idunno.AtProto.AtProtoAgent.GetLatestCommit(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.GetRepo(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+idunno.AtProto.AtProtoAgent.GetRepoStatus(idunno.AtProto.AtIdentifier! repo, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.RepoHostingStatus!>!>!
+idunno.AtProto.AtProtoAgent.GetSyncRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+idunno.AtProto.AtProtoAgent.ListBlobs(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.TimestampIdentifier? since = null, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedCidCollection!>!>!
+idunno.AtProto.AtProtoAgent.ListHosts(int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostDescription!>!>!>!
+idunno.AtProto.AtProtoAgent.ListRepos(int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostedRepository!>!>!>!
+idunno.AtProto.AtProtoAgent.ListReposByCollection(idunno.AtProto.Nsid! collection, int? limit = null, string? cursor = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedDidCollection!>!>!
+idunno.AtProto.AtProtoAgent.RequestCrawl(string! hostname, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.AtProto.DagCbor
+idunno.AtProto.Jetstream.AtJetstreamEvent.Sequence.get -> long?
+idunno.AtProto.Jetstream.AtJetstreamEvent.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.WitnessedAt.get -> System.DateTimeOffset?
+idunno.AtProto.Jetstream.AtJetstreamEvent.WitnessedAt.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync
+idunno.AtProto.Jetstream.AtJetstreamSync.AtJetstreamSync() -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Blocks.get -> idunno.AtProto.Bytes?
+idunno.AtProto.Jetstream.AtJetstreamSync.Blocks.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Jetstream.AtJetstreamSync.Did.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Rev.get -> string?
+idunno.AtProto.Jetstream.AtJetstreamSync.Rev.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.Sequence.get -> long
+idunno.AtProto.Jetstream.AtJetstreamSync.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.TimeStamp.get -> System.DateTimeOffset
+idunno.AtProto.Jetstream.AtJetstreamSync.TimeStamp.init -> void
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.AtJetstreamSyncEvent() -> void
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Sync.get -> idunno.AtProto.Jetstream.AtJetstreamSync!
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Sync.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Net.Http.IHttpClientFactory! httpClientFactory, System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Jetstream.CollectionSelector!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Jetstream.CollectionSelector!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Jetstream.CollectionSelector!>!
+idunno.AtProto.Jetstream.AtProtoJetstream.InfoReceived -> System.EventHandler<idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Jetstream.JetStreamEventKind>!
+idunno.AtProto.Jetstream.AtProtoJetstream.KindFilter.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.LastSequence.get -> long?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CollectionsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Jetstream.CollectionSelector!>?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Jetstream.CollectionSelector![]! collections) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Jetstream.JetStreamEventKind[]! kinds) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.KindsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Jetstream.JetStreamEventKind>?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.KindsToFilterOn.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.get -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.UseProtocolVersion(idunno.AtProto.Jetstream.JetstreamProtocolVersion protocolVersion) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.CollectionSelector
+idunno.AtProto.Jetstream.CollectionSelector.Collection.get -> idunno.AtProto.Nsid?
+idunno.AtProto.Jetstream.CollectionSelector.CollectionSelector(idunno.AtProto.Nsid! collection) -> void
+idunno.AtProto.Jetstream.CollectionSelector.CollectionSelector(string! s) -> void
+idunno.AtProto.Jetstream.CollectionSelector.Equals(idunno.AtProto.Jetstream.CollectionSelector? other) -> bool
+idunno.AtProto.Jetstream.CollectionSelector.IsWildcard.get -> bool
+idunno.AtProto.Jetstream.CollectionSelectorConverter
+idunno.AtProto.Jetstream.CollectionSelectorConverter.CollectionSelectorConverter() -> void
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.Error.get -> string?
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.Error.init -> void
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.InfoReceivedEventArgs(string! name, string? message) -> void
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.Message.get -> string?
+idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs.Name.get -> string!
+idunno.AtProto.Jetstream.JetstreamConnectionException
+idunno.AtProto.Jetstream.JetstreamConnectionException.ErrorDetail.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException() -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(string! message, System.Exception? innerException) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(string! message) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.JetstreamConnectionException(System.Net.HttpStatusCode statusCode, idunno.AtProto.AtErrorDetail? errorDetail, System.Exception? innerException) -> void
+idunno.AtProto.Jetstream.JetstreamConnectionException.StatusCode.get -> System.Net.HttpStatusCode?
+idunno.AtProto.Jetstream.JetStreamEventKind.Sync = 4 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetstreamOptions.ProtocolVersion.get -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamOptions.ProtocolVersion.init -> void
+idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamProtocolVersion.V1 = 1 -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Jetstream.JetstreamProtocolVersion.V2 = 2 -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
+idunno.AtProto.Repo.CarBlock
+idunno.AtProto.Repo.CarBlock.CarBlock(idunno.AtProto.Cid! cid, System.ReadOnlyMemory<byte> data) -> void
+idunno.AtProto.Repo.CarBlock.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.CarBlock.Data.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.Repo.CarHeader
+idunno.AtProto.Repo.CarHeader.CarHeader(System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! roots) -> void
+idunno.AtProto.Repo.CarHeader.Roots.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Cid!>!
+idunno.AtProto.Repo.CarReader
+idunno.AtProto.Repo.CarReader.CarReader(System.IO.Stream! stream, bool leaveOpen = false) -> void
+idunno.AtProto.Repo.CarReader.Dispose() -> void
+idunno.AtProto.Repo.CarReader.ReadBlock() -> idunno.AtProto.Repo.CarBlock?
+idunno.AtProto.Repo.CarReader.ReadHeader() -> idunno.AtProto.Repo.CarHeader!
+idunno.AtProto.Repo.CarWriter
+idunno.AtProto.Repo.CarWriter.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.Repo.CarWriter.WriteBlockAsync(idunno.AtProto.Repo.CarBlock! block, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Sync.BlobContent
+idunno.AtProto.Sync.BlobContent.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Sync.BlobContent.Content.get -> System.IO.Stream!
+idunno.AtProto.Sync.BlobContent.ContentLength.get -> long?
+idunno.AtProto.Sync.BlobContent.ContentType.get -> System.Net.Http.Headers.MediaTypeHeaderValue?
+idunno.AtProto.Sync.BlobContent.Dispose() -> void
+idunno.AtProto.Sync.BlobContent.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.Sync.HostDescription
+idunno.AtProto.Sync.HostDescription.AccountCount.get -> long?
+idunno.AtProto.Sync.HostDescription.AccountCount.init -> void
+idunno.AtProto.Sync.HostDescription.Equals(idunno.AtProto.Sync.HostDescription? other) -> bool
+idunno.AtProto.Sync.HostDescription.Hostname.get -> string!
+idunno.AtProto.Sync.HostDescription.Hostname.init -> void
+idunno.AtProto.Sync.HostDescription.Seq.get -> long?
+idunno.AtProto.Sync.HostDescription.Seq.init -> void
+idunno.AtProto.Sync.HostDescription.Status.get -> idunno.AtProto.Sync.HostStatus?
+idunno.AtProto.Sync.HostDescription.Status.init -> void
+idunno.AtProto.Sync.HostedRepository
+idunno.AtProto.Sync.HostedRepository.Active.get -> bool?
+idunno.AtProto.Sync.HostedRepository.Active.init -> void
+idunno.AtProto.Sync.HostedRepository.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Sync.HostedRepository.Did.init -> void
+idunno.AtProto.Sync.HostedRepository.Equals(idunno.AtProto.Sync.HostedRepository? other) -> bool
+idunno.AtProto.Sync.HostedRepository.Head.get -> idunno.AtProto.Cid!
+idunno.AtProto.Sync.HostedRepository.Head.init -> void
+idunno.AtProto.Sync.HostedRepository.Rev.get -> string!
+idunno.AtProto.Sync.HostedRepository.Rev.init -> void
+idunno.AtProto.Sync.HostedRepository.Status.get -> idunno.AtProto.Sync.RepoStatus?
+idunno.AtProto.Sync.HostedRepository.Status.init -> void
+idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Active = 0 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Banned = 4 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Idle = 1 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Offline = 2 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Throttled = 3 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.HostStatus.Unknown = 5 -> idunno.AtProto.Sync.HostStatus
+idunno.AtProto.Sync.PagedCidCollection
+idunno.AtProto.Sync.PagedCidCollection.Cursor.get -> string?
+idunno.AtProto.Sync.PagedCidCollection.PagedCidCollection(System.Collections.Generic.IList<idunno.AtProto.Cid!>! list, string? cursor = null) -> void
+idunno.AtProto.Sync.PagedDidCollection
+idunno.AtProto.Sync.PagedDidCollection.Cursor.get -> string?
+idunno.AtProto.Sync.PagedDidCollection.PagedDidCollection(System.Collections.Generic.IList<idunno.AtProto.Did!>! list, string? cursor = null) -> void
+idunno.AtProto.Sync.RepoHostingStatus
+idunno.AtProto.Sync.RepoHostingStatus.<Clone>$() -> idunno.AtProto.Sync.RepoHostingStatus!
+idunno.AtProto.Sync.RepoHostingStatus.Active.get -> bool
+idunno.AtProto.Sync.RepoHostingStatus.Active.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Sync.RepoHostingStatus.Did.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Equals(idunno.AtProto.Sync.RepoHostingStatus? other) -> bool
+idunno.AtProto.Sync.RepoHostingStatus.Rev.get -> string?
+idunno.AtProto.Sync.RepoHostingStatus.Rev.init -> void
+idunno.AtProto.Sync.RepoHostingStatus.Status.get -> idunno.AtProto.Sync.RepoStatus?
+idunno.AtProto.Sync.RepoHostingStatus.Status.init -> void
+idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Deactivated = 3 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Deleted = 2 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Desynchronized = 4 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Suspended = 1 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Takendown = 0 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Throttled = 5 -> idunno.AtProto.Sync.RepoStatus
+idunno.AtProto.Sync.RepoStatus.Unknown = 6 -> idunno.AtProto.Sync.RepoStatus
+override idunno.AtProto.Jetstream.AtJetstreamSync.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSync.GetHashCode() -> int
+override idunno.AtProto.Jetstream.AtJetstreamSync.ToString() -> string!
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamSyncEvent!
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.ToString() -> string!
+override idunno.AtProto.Jetstream.CollectionSelector.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.CollectionSelector.GetHashCode() -> int
+override idunno.AtProto.Jetstream.CollectionSelector.ToString() -> string!
+override idunno.AtProto.Jetstream.CollectionSelectorConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Jetstream.CollectionSelector?
+override idunno.AtProto.Jetstream.CollectionSelectorConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Jetstream.CollectionSelector! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override idunno.AtProto.Sync.HostDescription.<Clone>$() -> idunno.AtProto.Sync.HostDescription!
+override idunno.AtProto.Sync.HostDescription.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.HostDescription.GetHashCode() -> int
+override idunno.AtProto.Sync.HostDescription.ToString() -> string!
+override idunno.AtProto.Sync.HostedRepository.<Clone>$() -> idunno.AtProto.Sync.HostedRepository!
+override idunno.AtProto.Sync.HostedRepository.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.HostedRepository.GetHashCode() -> int
+override idunno.AtProto.Sync.HostedRepository.ToString() -> string!
+override idunno.AtProto.Sync.RepoHostingStatus.Equals(object? obj) -> bool
+override idunno.AtProto.Sync.RepoHostingStatus.GetHashCode() -> int
+override idunno.AtProto.Sync.RepoHostingStatus.ToString() -> string!
+override sealed idunno.AtProto.Sync.HostDescription.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+override sealed idunno.AtProto.Sync.HostedRepository.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+static idunno.AtProto.AtProtoServer.GetBlob(idunno.AtProto.Did! did, idunno.AtProto.Cid! cid, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.BlobContent!>!>!
+static idunno.AtProto.AtProtoServer.GetBlocks(idunno.AtProto.Did! did, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! cids, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetHostStatus(string! hostname, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.HostDescription!>!>!
+static idunno.AtProto.AtProtoServer.GetLatestCommit(idunno.AtProto.Did! did, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+static idunno.AtProto.AtProtoServer.GetRepo(idunno.AtProto.Did! repo, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetRepoStatus(idunno.AtProto.Did! did, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.RepoHostingStatus!>!>!
+static idunno.AtProto.AtProtoServer.GetSyncRecord(idunno.AtProto.Did! did, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, System.Uri! service, System.Net.Http.HttpClient! httpClient, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.ListBlobs(idunno.AtProto.Did! did, idunno.AtProto.TimestampIdentifier? since, int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedCidCollection!>!>!
+static idunno.AtProto.AtProtoServer.ListHosts(int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostDescription!>!>!>!
+static idunno.AtProto.AtProtoServer.ListRepos(int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Sync.HostedRepository!>!>!>!
+static idunno.AtProto.AtProtoServer.ListReposByCollection(idunno.AtProto.Nsid! collection, int? limit, string? cursor, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Sync.PagedDidCollection!>!>!
+static idunno.AtProto.AtProtoServer.RequestCrawl(string! hostname, System.Uri! service, System.Net.Http.HttpClient! httpClient, idunno.AtProto.Authentication.AccessCredentials? accessCredentials = null, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.AtProto.DagCbor.ToJsonDocument(System.ReadOnlyMemory<byte> value) -> System.Text.Json.JsonDocument!
+static idunno.AtProto.DagCbor.ToJsonElement(System.ReadOnlyMemory<byte> value) -> System.Text.Json.JsonElement
+static idunno.AtProto.DagCbor.TryToJsonElement(System.ReadOnlyMemory<byte> value, out System.Text.Json.JsonElement result) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSync.operator !=(idunno.AtProto.Jetstream.AtJetstreamSync? left, idunno.AtProto.Jetstream.AtJetstreamSync? right) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSync.operator ==(idunno.AtProto.Jetstream.AtJetstreamSync? left, idunno.AtProto.Jetstream.AtJetstreamSync? right) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSyncEvent.operator !=(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? left, idunno.AtProto.Jetstream.AtJetstreamSyncEvent? right) -> bool
+static idunno.AtProto.Jetstream.AtJetstreamSyncEvent.operator ==(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? left, idunno.AtProto.Jetstream.AtJetstreamSyncEvent? right) -> bool
+static idunno.AtProto.Jetstream.CollectionSelector.FromNsid(idunno.AtProto.Nsid! collection) -> idunno.AtProto.Jetstream.CollectionSelector!
+static idunno.AtProto.Jetstream.CollectionSelector.FromString(string! s) -> idunno.AtProto.Jetstream.CollectionSelector!
+static idunno.AtProto.Jetstream.CollectionSelector.implicit operator idunno.AtProto.Jetstream.CollectionSelector!(idunno.AtProto.Nsid! collection) -> idunno.AtProto.Jetstream.CollectionSelector!
+static idunno.AtProto.Jetstream.CollectionSelector.implicit operator idunno.AtProto.Jetstream.CollectionSelector!(string! s) -> idunno.AtProto.Jetstream.CollectionSelector!
+static idunno.AtProto.Jetstream.CollectionSelector.operator !=(idunno.AtProto.Jetstream.CollectionSelector? lhs, idunno.AtProto.Jetstream.CollectionSelector? rhs) -> bool
+static idunno.AtProto.Jetstream.CollectionSelector.operator ==(idunno.AtProto.Jetstream.CollectionSelector? lhs, idunno.AtProto.Jetstream.CollectionSelector? rhs) -> bool
+static idunno.AtProto.Jetstream.CollectionSelector.TryParse(string! s, out idunno.AtProto.Jetstream.CollectionSelector? result) -> bool
+static idunno.AtProto.Repo.CarReader.CreateAsync(System.IO.Stream! stream, bool validateSignature = false, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarReader!>!
+static idunno.AtProto.Repo.CarReader.CreateAsync(System.IO.Stream! stream, System.Func<idunno.AtProto.Did!, System.Threading.CancellationToken, System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!>! didDocumentResolver, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarReader!>!
+static idunno.AtProto.Repo.CarWriter.CreateAsync(System.IO.Stream! stream, idunno.AtProto.Repo.CarHeader! header, bool leaveOpen = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Repo.CarWriter!>!
+static idunno.AtProto.Sync.HostDescription.operator !=(idunno.AtProto.Sync.HostDescription? left, idunno.AtProto.Sync.HostDescription? right) -> bool
+static idunno.AtProto.Sync.HostDescription.operator ==(idunno.AtProto.Sync.HostDescription? left, idunno.AtProto.Sync.HostDescription? right) -> bool
+static idunno.AtProto.Sync.HostedRepository.operator !=(idunno.AtProto.Sync.HostedRepository? left, idunno.AtProto.Sync.HostedRepository? right) -> bool
+static idunno.AtProto.Sync.HostedRepository.operator ==(idunno.AtProto.Sync.HostedRepository? left, idunno.AtProto.Sync.HostedRepository? right) -> bool
+static idunno.AtProto.Sync.RepoHostingStatus.operator !=(idunno.AtProto.Sync.RepoHostingStatus? left, idunno.AtProto.Sync.RepoHostingStatus? right) -> bool
+static idunno.AtProto.Sync.RepoHostingStatus.operator ==(idunno.AtProto.Sync.RepoHostingStatus? left, idunno.AtProto.Sync.RepoHostingStatus? right) -> bool
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnInfoReceived(idunno.AtProto.Jetstream.Events.InfoReceivedEventArgs! e) -> void
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamAccountEvent? other) -> bool
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommit.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommit.Equals(idunno.AtProto.Jetstream.AtJetstreamCommit? other) -> bool
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamCommitEvent? other) -> bool
+*REMOVED*idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamIdentityEvent? other) -> bool
+*REMOVED*override sealed idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
+*REMOVED*override sealed idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
+*REMOVED*override sealed idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
+idunno.AtProto.Jetstream.Archive.BlockRange
+idunno.AtProto.Jetstream.Archive.BlockRange.<Clone>$() -> idunno.AtProto.Jetstream.Archive.BlockRange!
+idunno.AtProto.Jetstream.Archive.BlockRange.BlockRange() -> void
+idunno.AtProto.Jetstream.Archive.BlockRange.Equals(idunno.AtProto.Jetstream.Archive.BlockRange? other) -> bool
+idunno.AtProto.Jetstream.Archive.BlockRange.First.get -> int
+idunno.AtProto.Jetstream.Archive.BlockRange.First.init -> void
+idunno.AtProto.Jetstream.Archive.BlockRange.Last.get -> int
+idunno.AtProto.Jetstream.Archive.BlockRange.Last.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment
+idunno.AtProto.Jetstream.Archive.PlannedSegment.<Clone>$() -> idunno.AtProto.Jetstream.Archive.PlannedSegment!
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Blocks.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Jetstream.Archive.BlockRange!>?
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Blocks.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Checksum.get -> string!
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Checksum.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Equals(idunno.AtProto.Jetstream.Archive.PlannedSegment? other) -> bool
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Index.get -> long
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Index.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.MaxSeq.get -> long
+idunno.AtProto.Jetstream.Archive.PlannedSegment.MaxSeq.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.MinSeq.get -> long
+idunno.AtProto.Jetstream.Archive.PlannedSegment.MinSeq.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Mode.get -> string!
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Mode.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Name.get -> string!
+idunno.AtProto.Jetstream.Archive.PlannedSegment.Name.init -> void
+idunno.AtProto.Jetstream.Archive.PlannedSegment.PlannedSegment() -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo
+idunno.AtProto.Jetstream.Archive.SegmentInfo.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SegmentInfo!
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Checksum.get -> string!
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Checksum.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Equals(idunno.AtProto.Jetstream.Archive.SegmentInfo? other) -> bool
+idunno.AtProto.Jetstream.Archive.SegmentInfo.EventCount.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.EventCount.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Index.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Index.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MaxSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MaxSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MaxWitnessedAt.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MaxWitnessedAt.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MinSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MinSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MinWitnessedAt.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.MinWitnessedAt.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Name.get -> string!
+idunno.AtProto.Jetstream.Archive.SegmentInfo.Name.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.SegmentInfo() -> void
+idunno.AtProto.Jetstream.Archive.SegmentInfo.SizeBytes.get -> long
+idunno.AtProto.Jetstream.Archive.SegmentInfo.SizeBytes.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentList
+idunno.AtProto.Jetstream.Archive.SegmentList.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SegmentList!
+idunno.AtProto.Jetstream.Archive.SegmentList.Cursor.get -> string?
+idunno.AtProto.Jetstream.Archive.SegmentList.Cursor.init -> void
+idunno.AtProto.Jetstream.Archive.SegmentList.Equals(idunno.AtProto.Jetstream.Archive.SegmentList? other) -> bool
+idunno.AtProto.Jetstream.Archive.SegmentList.SegmentList() -> void
+idunno.AtProto.Jetstream.Archive.SegmentList.Segments.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Jetstream.Archive.SegmentInfo!>!
+idunno.AtProto.Jetstream.Archive.SegmentList.Segments.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint!
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.Equals(idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? other) -> bool
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.LiveAfterSeq.get -> long?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.LiveAfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextBlockIndex.get -> int
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextBlockIndex.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextByteOffset.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.NextByteOffset.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.PlanAfterSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.PlanAfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.ReplayAfterSeq.get -> long?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.ReplayAfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.RequestFingerprint.get -> string?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.RequestFingerprint.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SealedTipSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SealedTipSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SegmentChecksum.get -> string?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SegmentChecksum.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SegmentName.get -> string?
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SegmentName.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.SnapshotCheckpoint() -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlan
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SnapshotPlan!
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.Equals(idunno.AtProto.Jetstream.Archive.SnapshotPlan? other) -> bool
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.PlannedThroughSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.PlannedThroughSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.SealedTipSeq.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.SealedTipSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.Segments.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Jetstream.Archive.PlannedSegment!>!
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.Segments.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.SnapshotPlan() -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.Stats.get -> idunno.AtProto.Jetstream.Archive.SnapshotPlanStats!
+idunno.AtProto.Jetstream.Archive.SnapshotPlan.Stats.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SnapshotPlanStats!
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.BlocksMatched.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.BlocksMatched.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.Entries.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.Entries.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.Equals(idunno.AtProto.Jetstream.Archive.SnapshotPlanStats? other) -> bool
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.SegmentsExamined.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.SegmentsExamined.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.SegmentsMatched.get -> long
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.SegmentsMatched.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.SnapshotPlanStats() -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.<Clone>$() -> idunno.AtProto.Jetstream.Archive.SnapshotRequest!
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.AfterSeq.get -> long?
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.AfterSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.BeforeSeq.get -> long?
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.BeforeSeq.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Collections.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Jetstream.CollectionSelector!>?
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Collections.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Dids.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>?
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Dids.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Equals(idunno.AtProto.Jetstream.Archive.SnapshotRequest? other) -> bool
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Kinds.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Jetstream.JetStreamEventKind>?
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.Kinds.init -> void
+idunno.AtProto.Jetstream.Archive.SnapshotRequest.SnapshotRequest() -> void
+idunno.AtProto.Jetstream.AtJetstreamAccountEvent.AtJetstreamAccountEvent(idunno.AtProto.Jetstream.AtJetstreamAccountEvent! original) -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.AtJetstreamCommit(idunno.AtProto.Jetstream.AtJetstreamCommit! original) -> void
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.AtJetstreamCommitEvent(idunno.AtProto.Jetstream.AtJetstreamCommitEvent! original) -> void
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.IsSyncBackfill.get -> bool
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.IsSyncBackfill.init -> void
+idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.AtJetstreamIdentityEvent(idunno.AtProto.Jetstream.AtJetstreamIdentityEvent! original) -> void
+idunno.AtProto.Jetstream.AtJetstreamSync.AtJetstreamSync(idunno.AtProto.Jetstream.AtJetstreamSync! original) -> void
+idunno.AtProto.Jetstream.AtJetstreamSyncEvent.AtJetstreamSyncEvent(idunno.AtProto.Jetstream.AtJetstreamSyncEvent! original) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.ReplayAsync(idunno.AtProto.Jetstream.Archive.SnapshotRequest! request, idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? checkpoint = null, System.Action<idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint!>? onCheckpoint = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<idunno.AtProto.Jetstream.JetstreamEvent!>!
+idunno.AtProto.Jetstream.AtProtoJetstream.StreamAsync(long? cursor = null, int? maximumReconnectAttempts = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<idunno.AtProto.Jetstream.JetstreamEvent!>!
+idunno.AtProto.Jetstream.AtProtoJetstream.SnapshotAsync(idunno.AtProto.Jetstream.Archive.SnapshotRequest! request, idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? checkpoint = null, System.Action<idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint!>? onCheckpoint = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<idunno.AtProto.Jetstream.JetstreamEvent!>!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ApiKey.get -> string?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ApiKey.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithApiKey(string! apiKey) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamAccount
+idunno.AtProto.Jetstream.JetstreamAccount.Equals(idunno.AtProto.Jetstream.JetstreamAccount? other) -> bool
+idunno.AtProto.Jetstream.JetstreamAccount.JetstreamAccount() -> void
+idunno.AtProto.Jetstream.JetstreamAccountEvent
+idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.JetstreamAccountEvent? other) -> bool
+idunno.AtProto.Jetstream.JetstreamAccountEvent.JetstreamAccountEvent() -> void
+idunno.AtProto.Jetstream.JetstreamCommit
+idunno.AtProto.Jetstream.JetstreamCommit.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamCommit!
+idunno.AtProto.Jetstream.JetstreamCommit.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.Jetstream.JetstreamCommit.Cid.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Collection.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Jetstream.JetstreamCommit.Collection.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Equals(idunno.AtProto.Jetstream.JetstreamCommit? other) -> bool
+idunno.AtProto.Jetstream.JetstreamCommit.JetstreamCommit() -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Operation.get -> idunno.AtProto.Jetstream.JetstreamCommitOperation
+idunno.AtProto.Jetstream.JetstreamCommit.Operation.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Record.get -> System.Text.Json.JsonElement?
+idunno.AtProto.Jetstream.JetstreamCommit.Record.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.Rev.get -> string!
+idunno.AtProto.Jetstream.JetstreamCommit.Rev.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.RKey.get -> idunno.AtProto.RecordKey!
+idunno.AtProto.Jetstream.JetstreamCommit.RKey.init -> void
+idunno.AtProto.Jetstream.JetstreamCommit.ToAtJetstreamCommit() -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+idunno.AtProto.Jetstream.JetstreamCommitEvent
+idunno.AtProto.Jetstream.JetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.JetstreamCommitEvent? other) -> bool
+idunno.AtProto.Jetstream.JetstreamCommitEvent.JetstreamCommitEvent() -> void
+idunno.AtProto.Jetstream.JetstreamEvent
+idunno.AtProto.Jetstream.JetstreamEvent.JetstreamEvent() -> void
+idunno.AtProto.Jetstream.JetstreamEvent.JetstreamEvent(idunno.AtProto.Jetstream.JetstreamEvent! original) -> void
+idunno.AtProto.Jetstream.JetstreamIdentity
+idunno.AtProto.Jetstream.JetstreamIdentity.Equals(idunno.AtProto.Jetstream.JetstreamIdentity? other) -> bool
+idunno.AtProto.Jetstream.JetstreamIdentity.JetstreamIdentity() -> void
+idunno.AtProto.Jetstream.JetstreamIdentityEvent
+idunno.AtProto.Jetstream.JetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.JetstreamIdentityEvent? other) -> bool
+idunno.AtProto.Jetstream.JetstreamIdentityEvent.JetstreamIdentityEvent() -> void
+idunno.AtProto.Jetstream.JetstreamOptions.ApiKey.get -> string?
+idunno.AtProto.Jetstream.JetstreamOptions.ApiKey.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.ArchiveReadTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.JetstreamOptions.ArchiveReadTimeout.init -> void
+idunno.AtProto.Jetstream.JetstreamSync
+idunno.AtProto.Jetstream.JetstreamSync.Equals(idunno.AtProto.Jetstream.JetstreamSync? other) -> bool
+idunno.AtProto.Jetstream.JetstreamSync.JetstreamSync() -> void
+idunno.AtProto.Jetstream.JetstreamSyncEvent
+idunno.AtProto.Jetstream.JetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.JetstreamSyncEvent? other) -> bool
+idunno.AtProto.Jetstream.JetstreamSyncEvent.JetstreamSyncEvent() -> void
+override idunno.AtProto.Jetstream.Archive.BlockRange.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.BlockRange.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.BlockRange.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.PlannedSegment.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.PlannedSegment.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.PlannedSegment.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SegmentInfo.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SegmentInfo.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SegmentInfo.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SegmentList.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SegmentList.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SegmentList.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SnapshotPlan.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SnapshotPlan.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SnapshotPlan.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.ToString() -> string!
+override idunno.AtProto.Jetstream.Archive.SnapshotRequest.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.Archive.SnapshotRequest.GetHashCode() -> int
+override idunno.AtProto.Jetstream.Archive.SnapshotRequest.ToString() -> string!
+override idunno.AtProto.Jetstream.AtJetstreamAccountEvent.EqualityContract.get -> System.Type!
+override idunno.AtProto.Jetstream.AtJetstreamAccountEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamCommitEvent.EqualityContract.get -> System.Type!
+override idunno.AtProto.Jetstream.AtJetstreamCommitEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.EqualityContract.get -> System.Type!
+override idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.EqualityContract.get -> System.Type!
+override idunno.AtProto.Jetstream.AtJetstreamSyncEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.AtProto.Jetstream.JetstreamAccount.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamAccount!
+override idunno.AtProto.Jetstream.JetstreamAccount.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamAccount.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamAccount.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamAccountEvent.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamAccountEvent!
+override idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamAccountEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamAccountEvent.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamCommit.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamCommit.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamCommit.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamCommitEvent.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamCommitEvent!
+override idunno.AtProto.Jetstream.JetstreamCommitEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamCommitEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamCommitEvent.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamEvent.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamEvent!
+override idunno.AtProto.Jetstream.JetstreamEvent.EqualityContract.get -> System.Type!
+override idunno.AtProto.Jetstream.JetstreamEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.AtProto.Jetstream.JetstreamEvent.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamIdentity.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamIdentity!
+override idunno.AtProto.Jetstream.JetstreamIdentity.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamIdentity.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamIdentity.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamIdentityEvent.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamIdentityEvent!
+override idunno.AtProto.Jetstream.JetstreamIdentityEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamIdentityEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamIdentityEvent.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamSync.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamSync!
+override idunno.AtProto.Jetstream.JetstreamSync.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamSync.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamSync.ToString() -> string!
+override idunno.AtProto.Jetstream.JetstreamSyncEvent.<Clone>$() -> idunno.AtProto.Jetstream.JetstreamSyncEvent!
+override idunno.AtProto.Jetstream.JetstreamSyncEvent.Equals(object? obj) -> bool
+override idunno.AtProto.Jetstream.JetstreamSyncEvent.GetHashCode() -> int
+override idunno.AtProto.Jetstream.JetstreamSyncEvent.ToString() -> string!
+override sealed idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamAccount.Equals(idunno.AtProto.Jetstream.AtJetstreamAccount? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamAccountEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamCommitEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamIdentity.Equals(idunno.AtProto.Jetstream.AtJetStreamIdentity? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamIdentityEvent? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamSync.Equals(idunno.AtProto.Jetstream.AtJetstreamSync? other) -> bool
+override sealed idunno.AtProto.Jetstream.JetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? other) -> bool
+static idunno.AtProto.AtProtoServer.GetBlock(string! segment, int blockIndex, System.Uri! service, string! apiKey, System.Net.Http.HttpClient? httpClient = null, long offset = 0, string? etag = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.GetSegment(string! name, System.Uri! service, string! apiKey, System.Net.Http.HttpClient? httpClient = null, long offset = 0, string? etag = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.IO.Stream!>!>!
+static idunno.AtProto.AtProtoServer.ListSegments(System.Uri! service, string! apiKey, System.Net.Http.HttpClient? httpClient = null, int limit = 100, string? cursor = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Jetstream.Archive.SegmentList!>!>!
+static idunno.AtProto.AtProtoServer.PlanSnapshot(idunno.AtProto.Jetstream.Archive.SnapshotRequest! request, System.Uri! service, string! apiKey, System.Net.Http.HttpClient? httpClient = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Jetstream.Archive.SnapshotPlan!>!>!
+static idunno.AtProto.Jetstream.Archive.BlockRange.operator !=(idunno.AtProto.Jetstream.Archive.BlockRange? left, idunno.AtProto.Jetstream.Archive.BlockRange? right) -> bool
+static idunno.AtProto.Jetstream.Archive.BlockRange.operator ==(idunno.AtProto.Jetstream.Archive.BlockRange? left, idunno.AtProto.Jetstream.Archive.BlockRange? right) -> bool
+static idunno.AtProto.Jetstream.Archive.PlannedSegment.operator !=(idunno.AtProto.Jetstream.Archive.PlannedSegment? left, idunno.AtProto.Jetstream.Archive.PlannedSegment? right) -> bool
+static idunno.AtProto.Jetstream.Archive.PlannedSegment.operator ==(idunno.AtProto.Jetstream.Archive.PlannedSegment? left, idunno.AtProto.Jetstream.Archive.PlannedSegment? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SegmentInfo.operator !=(idunno.AtProto.Jetstream.Archive.SegmentInfo? left, idunno.AtProto.Jetstream.Archive.SegmentInfo? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SegmentInfo.operator ==(idunno.AtProto.Jetstream.Archive.SegmentInfo? left, idunno.AtProto.Jetstream.Archive.SegmentInfo? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SegmentList.operator !=(idunno.AtProto.Jetstream.Archive.SegmentList? left, idunno.AtProto.Jetstream.Archive.SegmentList? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SegmentList.operator ==(idunno.AtProto.Jetstream.Archive.SegmentList? left, idunno.AtProto.Jetstream.Archive.SegmentList? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.operator !=(idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? left, idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint.operator ==(idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? left, idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotPlan.operator !=(idunno.AtProto.Jetstream.Archive.SnapshotPlan? left, idunno.AtProto.Jetstream.Archive.SnapshotPlan? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotPlan.operator ==(idunno.AtProto.Jetstream.Archive.SnapshotPlan? left, idunno.AtProto.Jetstream.Archive.SnapshotPlan? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.operator !=(idunno.AtProto.Jetstream.Archive.SnapshotPlanStats? left, idunno.AtProto.Jetstream.Archive.SnapshotPlanStats? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotPlanStats.operator ==(idunno.AtProto.Jetstream.Archive.SnapshotPlanStats? left, idunno.AtProto.Jetstream.Archive.SnapshotPlanStats? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotRequest.operator !=(idunno.AtProto.Jetstream.Archive.SnapshotRequest? left, idunno.AtProto.Jetstream.Archive.SnapshotRequest? right) -> bool
+static idunno.AtProto.Jetstream.Archive.SnapshotRequest.operator ==(idunno.AtProto.Jetstream.Archive.SnapshotRequest? left, idunno.AtProto.Jetstream.Archive.SnapshotRequest? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamAccount.operator !=(idunno.AtProto.Jetstream.JetstreamAccount? left, idunno.AtProto.Jetstream.JetstreamAccount? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamAccount.operator ==(idunno.AtProto.Jetstream.JetstreamAccount? left, idunno.AtProto.Jetstream.JetstreamAccount? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamAccountEvent.operator !=(idunno.AtProto.Jetstream.JetstreamAccountEvent? left, idunno.AtProto.Jetstream.JetstreamAccountEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamAccountEvent.operator ==(idunno.AtProto.Jetstream.JetstreamAccountEvent? left, idunno.AtProto.Jetstream.JetstreamAccountEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamCommit.FromAtJetstreamCommit(idunno.AtProto.Jetstream.AtJetstreamCommit! commit) -> idunno.AtProto.Jetstream.JetstreamCommit!
+static idunno.AtProto.Jetstream.JetstreamCommit.implicit operator idunno.AtProto.Jetstream.AtJetstreamCommit!(idunno.AtProto.Jetstream.JetstreamCommit! commit) -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+static idunno.AtProto.Jetstream.JetstreamCommit.implicit operator idunno.AtProto.Jetstream.JetstreamCommit!(idunno.AtProto.Jetstream.AtJetstreamCommit! commit) -> idunno.AtProto.Jetstream.JetstreamCommit!
+static idunno.AtProto.Jetstream.JetstreamCommit.operator !=(idunno.AtProto.Jetstream.JetstreamCommit? left, idunno.AtProto.Jetstream.JetstreamCommit? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamCommit.operator ==(idunno.AtProto.Jetstream.JetstreamCommit? left, idunno.AtProto.Jetstream.JetstreamCommit? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamCommitEvent.operator !=(idunno.AtProto.Jetstream.JetstreamCommitEvent? left, idunno.AtProto.Jetstream.JetstreamCommitEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamCommitEvent.operator ==(idunno.AtProto.Jetstream.JetstreamCommitEvent? left, idunno.AtProto.Jetstream.JetstreamCommitEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamEvent.operator !=(idunno.AtProto.Jetstream.JetstreamEvent? left, idunno.AtProto.Jetstream.JetstreamEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamEvent.operator ==(idunno.AtProto.Jetstream.JetstreamEvent? left, idunno.AtProto.Jetstream.JetstreamEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamIdentity.operator !=(idunno.AtProto.Jetstream.JetstreamIdentity? left, idunno.AtProto.Jetstream.JetstreamIdentity? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamIdentity.operator ==(idunno.AtProto.Jetstream.JetstreamIdentity? left, idunno.AtProto.Jetstream.JetstreamIdentity? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamIdentityEvent.operator !=(idunno.AtProto.Jetstream.JetstreamIdentityEvent? left, idunno.AtProto.Jetstream.JetstreamIdentityEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamIdentityEvent.operator ==(idunno.AtProto.Jetstream.JetstreamIdentityEvent? left, idunno.AtProto.Jetstream.JetstreamIdentityEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamSync.operator !=(idunno.AtProto.Jetstream.JetstreamSync? left, idunno.AtProto.Jetstream.JetstreamSync? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamSync.operator ==(idunno.AtProto.Jetstream.JetstreamSync? left, idunno.AtProto.Jetstream.JetstreamSync? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamSyncEvent.operator !=(idunno.AtProto.Jetstream.JetstreamSyncEvent? left, idunno.AtProto.Jetstream.JetstreamSyncEvent? right) -> bool
+static idunno.AtProto.Jetstream.JetstreamSyncEvent.operator ==(idunno.AtProto.Jetstream.JetstreamSyncEvent? left, idunno.AtProto.Jetstream.JetstreamSyncEvent? right) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamAccountEvent? other) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamCommit.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+virtual idunno.AtProto.Jetstream.AtJetstreamCommit.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.Jetstream.AtJetstreamCommit.Equals(idunno.AtProto.Jetstream.AtJetstreamCommit? other) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamCommit.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamCommitEvent? other) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamIdentityEvent? other) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamSync.<Clone>$() -> idunno.AtProto.Jetstream.AtJetstreamSync!
+virtual idunno.AtProto.Jetstream.AtJetstreamSync.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.Jetstream.AtJetstreamSync.Equals(idunno.AtProto.Jetstream.AtJetstreamSync? other) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamSync.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.Jetstream.AtJetstreamSyncEvent.Equals(idunno.AtProto.Jetstream.AtJetstreamSyncEvent? other) -> bool
+virtual idunno.AtProto.Jetstream.JetstreamEvent.Equals(idunno.AtProto.Jetstream.JetstreamEvent? other) -> bool

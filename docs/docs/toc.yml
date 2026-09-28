@@ -66,8 +66,6 @@ items:
         href: labels.md
       - name: Saving & restoring authentication state
         href: savingAndRestoringAuthentication.md
-      - name: Using the Jetstream
-        href: jetstream.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
       - name: Sending "raw" requests
@@ -85,6 +83,15 @@ items:
         href: bots/scheduledPostBot.md
       - name: Writing a watcher bot
         href: bots/watcherBot.md
+
+  - name: Jetstream
+    items:
+      - name: Jetstream Quickstart
+        href: jetstream.md
+      - name: Network replay and snapshots
+        href: jetstreamReplay.md
+      - name: Migrating from v1 to v2
+        href: jetstreamMigration.md
 
   - name: Reference
     items:

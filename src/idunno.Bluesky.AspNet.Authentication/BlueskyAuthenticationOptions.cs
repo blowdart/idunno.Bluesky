@@ -4,12 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.AspNet.Authentication.Events;
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-
-using idunno.Bluesky.AspNet.Authentication.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

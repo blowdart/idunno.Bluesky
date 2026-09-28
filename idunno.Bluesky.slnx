@@ -30,6 +30,9 @@
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
     <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
   </Folder>
+  <Folder Name="/.github/instructions/">
+    <File Path=".github/instructions/docs.instructions.md" />
+  </Folder>
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
   </Folder>
@@ -72,6 +75,8 @@
     <File Path="docs/docs/endpointStatus.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
+    <File Path="docs/docs/jetstreamMigration.md" />
+    <File Path="docs/docs/jetstreamReplay.md" />
     <File Path="docs/docs/labels.md" />
     <File Path="docs/docs/logging.md" />
     <File Path="docs/docs/metrics.md" />
@@ -221,6 +226,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.JetstreamReplay/Samples.JetstreamReplay.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Logging/Samples.Logging.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -246,6 +255,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.RepoCar/Samples.RepoCar.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // Old serialized event contracts remain registered for compatibility.
+
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
@@ -8,6 +10,7 @@ using idunno.AtProto.Admin;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Archive;
 using idunno.AtProto.Jetstream.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
@@ -63,6 +66,17 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(Server.Links))]
 [JsonSerializable(typeof(Server.Contact))]
 
+[JsonSerializable(typeof(Sync.HostDescription))]
+[JsonSerializable(typeof(Sync.HostStatus))]
+[JsonSerializable(typeof(Sync.RepoHostingStatus))]
+[JsonSerializable(typeof(Sync.RepoStatus))]
+[JsonSerializable(typeof(Sync.Model.ListBlobsResponse))]
+[JsonSerializable(typeof(Sync.Model.ListHostsResponse))]
+[JsonSerializable(typeof(Sync.HostedRepository))]
+[JsonSerializable(typeof(Sync.Model.ListReposResponse))]
+[JsonSerializable(typeof(Sync.Model.ListReposByCollectionResponse))]
+[JsonSerializable(typeof(Sync.Model.RequestCrawlRequest))]
+
 [JsonSerializable(typeof(RepoDescription))]
 
 [JsonSerializable(typeof(BaseSessionResponse))]
@@ -95,12 +109,32 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(ServiceToken))]
 
 [JsonSerializable(typeof(AtJetstreamEvent))]
+[JsonSerializable(typeof(JetstreamEvent))]
+[JsonSerializable(typeof(JetstreamCommitEvent))]
+[JsonSerializable(typeof(JetstreamAccountEvent))]
+[JsonSerializable(typeof(JetstreamIdentityEvent))]
+[JsonSerializable(typeof(JetstreamSyncEvent))]
+[JsonSerializable(typeof(JetstreamCommit))]
+[JsonSerializable(typeof(JetstreamAccount))]
+[JsonSerializable(typeof(JetstreamIdentity))]
+[JsonSerializable(typeof(JetstreamSync))]
 [JsonSerializable(typeof(JetStreamEventKind))]
 [JsonSerializable(typeof(JetstreamCommitOperation))]
 [JsonSerializable(typeof(AtJetstreamAccountEvent))]
 [JsonSerializable(typeof(AtJetstreamCommitEvent))]
 [JsonSerializable(typeof(AtJetstreamIdentityEvent))]
+[JsonSerializable(typeof(AtJetstreamSyncEvent))]
+[JsonSerializable(typeof(AtJetstreamSync))]
+[JsonSerializable(typeof(JetstreamV2EventPayload))]
 [JsonSerializable(typeof(OptionsUpdateMessage))]
+[JsonSerializable(typeof(SnapshotPlan))]
+[JsonSerializable(typeof(PlannedSegment))]
+[JsonSerializable(typeof(BlockRange))]
+[JsonSerializable(typeof(SnapshotPlanStats))]
+[JsonSerializable(typeof(SegmentList))]
+[JsonSerializable(typeof(SegmentInfo))]
+[JsonSerializable(typeof(SnapshotRequest))]
+[JsonSerializable(typeof(SnapshotCheckpoint))]
 
 [JsonSerializable(typeof(OAuthLoginState))]
 
@@ -110,3 +144,5 @@ namespace idunno.AtProto;
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }
+
+#pragma warning restore CS0618

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 using idunno.Bluesky.Graph;
 
 namespace idunno.Bluesky;

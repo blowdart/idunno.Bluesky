@@ -4,13 +4,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Unspecced;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.Bluesky.Integration.Test;
 

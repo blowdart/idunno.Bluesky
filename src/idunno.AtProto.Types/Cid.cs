@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto;
@@ -19,6 +20,12 @@ public sealed class Cid : IEquatable<Cid>
 {
     // The multiformats unsigned-varint specification limits values to 9 bytes / 63 bits.
     private const int MaximumVarIntLength = 9;
+
+    // The multicodec identifier for DAG-CBOR encoded content.
+    private const ulong DagCborCodec = 0x71;
+
+    // The multihash identifier for SHA-256.
+    private const byte Sha256MultihashCode = 0x12;
 
     /// <summary>
     /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
@@ -135,6 +142,29 @@ public sealed class Cid : IEquatable<Cid>
         Version = version;
         Codec = codec;
         Hash = (byte[])hash.Clone();
+    }
+
+    /// <summary>
+    /// Creates the <see cref="Cid"/> which identifies the specified DAG-CBOR encoded <paramref name="content"/>.
+    /// </summary>
+    /// <param name="content">The DAG-CBOR encoded block to create a content identifier for.</param>
+    /// <returns>A version 1 <see cref="Cid"/> over the SHA-256 hash of <paramref name="content"/>, using the DAG-CBOR codec.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="content"/> is empty.</exception>
+    /// <remarks>
+    /// <para>The content identifier is calculated over the bytes exactly as supplied. As DAG-CBOR is a deterministic encoding
+    /// re-encoding a decoded block before calling this method may produce a different, and incorrect, identifier.</para>
+    /// </remarks>
+    public static Cid FromDagCbor(ReadOnlySpan<byte> content)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(content.Length);
+
+        // A multihash is the hash function identifier, the digest length, then the digest itself.
+        byte[] multihash = new byte[2 + SHA256.HashSizeInBytes];
+        multihash[0] = Sha256MultihashCode;
+        multihash[1] = SHA256.HashSizeInBytes;
+        SHA256.HashData(content, multihash.AsSpan(2));
+
+        return new Cid(1, DagCborCodec, multihash);
     }
 
     /// <summary>

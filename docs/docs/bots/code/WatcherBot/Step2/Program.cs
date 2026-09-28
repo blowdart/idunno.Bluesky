@@ -1,41 +1,31 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 
 using idunno.AtProto.Jetstream;
 
-CancellationTokenSource cancellationTokenSource = new();
-CancellationToken cancellationToken = cancellationTokenSource.Token;
-Console.CancelKeyPress += (sender, e) =>
+using CancellationTokenSource cancellation = new();
+Console.CancelKeyPress += (_, e) =>
 {
-    cancellationTokenSource?.Cancel();
     e.Cancel = true;
+    cancellation.Cancel();
 };
 
 Console.OutputEncoding = Encoding.UTF8;
 
-using var jetStream = new AtProtoJetstream();
+await using var jetStream = new AtProtoJetstream();
 
-jetStream.RecordReceived += (sender, e) =>
+try
 {
-    string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-    switch (e.ParsedEvent)
+    await foreach (JetstreamEvent evt in jetStream.StreamAsync(cancellationToken: cancellation.Token))
     {
-        case AtJetstreamCommitEvent commitEvent:
+        if (evt is JetstreamCommitEvent commitEvent)
+        {
+            string timeStamp = evt.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.CurrentCulture);
             Console.WriteLine($"{commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-            break;
-
-        default:
-            break;
+        }
     }
-};
-
-await jetStream.ConnectAsync(cancellationToken: cancellationToken);
-
-while (!cancellationToken.IsCancellationRequested)
-{
 }
-
-await jetStream.CloseAsync();
-
-return 0;
+catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+{
+    // Ctrl+C stops the live stream.
+}

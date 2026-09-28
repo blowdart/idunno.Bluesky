@@ -1,10 +1,12 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
+
 using idunno.AtProto.Jetstream;
-using idunno.AtProto.Jetstream.Events;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
 using WatcherBot;
 
 Console.OutputEncoding = Encoding.UTF8;
@@ -20,70 +22,29 @@ builder.Services
 
 builder.Services.AddHostedService<Worker>();
 
-IHost host = builder.Build();
-host.Run();
+using IHost host = builder.Build();
+await host.RunAsync();
 
-return 0;
-
-internal sealed class Worker : BackgroundService, IDisposable
+internal sealed class Worker : BackgroundService
 {
-    internal readonly AtProtoJetstream _jetStream = new();
-
-    private volatile bool _disposed = false;
-
-    private void OnRecordReceived(object? sender, RecordReceivedEventArgs e)
-    {
-        string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-        switch (e.ParsedEvent)
-        {
-            case AtJetstreamCommitEvent commitEvent:
-                Console.WriteLine($"{commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-                break;
-
-            default:
-                break;
-        }
-
-    }
-
-    public override async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _jetStream.RecordReceived += OnRecordReceived;
-
-        await base.StartAsync(cancellationToken);
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _jetStream.ConnectAsync(cancellationToken: stoppingToken);
+        await using var jetStream = new AtProtoJetstream();
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
+            await foreach (JetstreamEvent evt in jetStream.StreamAsync(cancellationToken: stoppingToken))
+            {
+                if (evt is JetstreamCommitEvent commitEvent)
+                {
+                    string timeStamp = evt.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.CurrentCulture);
+                    Console.WriteLine($"{commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
+                }
+            }
         }
-    }
-
-    public override async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await _jetStream.CloseAsync();
-
-        await base.StopAsync(cancellationToken);
-    }
-
-    void Dispose(bool disposing)
-    {
-        if (disposing && !_disposed)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            _jetStream?.Dispose();
+            // Host shutdown stops the live stream.
         }
-
-        _disposed = true;
-    }
-
-    public override void Dispose()
-    {
-        Dispose(true);
-        base.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

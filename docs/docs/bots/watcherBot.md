@@ -12,6 +12,8 @@ For this example we're going to write a bot that watches for posts that contain 
 ## Create a .NET project and add the idunno.Bluesky NuGet package
 
 Let's start by creating a .NET project for our bot and adding the idunno.Bluesky package.
+The `StreamAsync` API used below requires idunno.Bluesky 8.0.0 or newer. Until that version is published,
+the five example projects in this repository build against the SDK source directly.
 
 # [Command Line](#tab/commandLine)
 
@@ -27,7 +29,7 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 1. Create a new .NET Command Line project by opening the File menu, and choosing **New ▶ Project**.
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `WatcherBot` and click Next.
-1. In the "**Additional information**" dialog choose the Framework as .NET 9.0, uncheck the "Do not use top level statements" check box then click **Create**.
+1. In the "**Additional information**" dialog choose the Framework as .NET 10.0, uncheck the "Do not use top level statements" check box then click **Create**.
 1. Under the **Project** menu Select **Manage NuGet packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
 1. Close the **Manage NuGet packages** dialog.
 
@@ -45,12 +47,16 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 
 ---
 
-## Listen to the jetstream
+## Listen to the Jetstream
 
-Now let's listen to the jetstream. The [Jetstream](https://github.com/bluesky-social/jetstream) is a streaming service that provides information on activity on the ATProto network.
+Now let's listen to the Jetstream. The [Jetstream](https://github.com/bluesky-social/jetstream) is a streaming service that provides information on activity on the ATProto network.
 It lists commits to records (for example creating a post, favoriting or unfavoriting a post, following or unfollowing a user), updates to an identity (for example changing a handle)
 and account operations (for example an account takedown). It encompasses the entire ATProto network, not just Bluesky operations, so you might see [WhiteWind](https://whtwnd.com)
 blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages if you watch the commit stream.
+The v2 `StreamAsync` API opens a live connection when `await foreach` begins, yields `JetstreamEvent` values, and
+automatically reconnects after transient disconnections. This step prints commit events; other event kinds are ignored.
+`await using` disposes the client and closes the connection when the loop ends. Pressing `CTRL+C` cancels the
+enumeration rather than leaving an empty loop running.
 
 # [Command Line](#tab/listen/commandLine)
 
@@ -76,12 +82,12 @@ blog records or [Tangled](https://blog.tangled.sh/intro) collaboration messages 
 ---
 
 > [!TIP]
-> You may have noticed there's no authentication. The JetStream, and its older sibling the Firehose, are open access. No authentication is needed. This is part
+> You may have noticed there's no authentication. The live Jetstream, and its older sibling the Firehose, are open access. No authentication is needed. This is part
 > of why Bluesky is described as a public network.
 
 ## Move to the application host model
 
-Now we have our watch words configured we need to change our console application a hosted service, using .NET's
+Next, change our console application to a hosted service, using .NET's
 [HostApplicationBuilder](https://learn.microsoft.com/en-us/dotnet/core/extensions/generic-host?tabs=appbuilder). This will allow
 us to use configuration, application startup and shutdown and dependency injection (DI).
 
@@ -108,7 +114,7 @@ us to use configuration, application startup and shutdown and dependency injecti
 
 # [Visual Studio Code](#tab/apphost/vsCode)
 1. Open the Command Palette (Ctrl + Shift + P) and then search for and select **Nuget: Add**
-1. Enter `Microsoft.Extensions.Hosting` in the package search dialog and choose the latest 9.x version.
+1. Enter `Microsoft.Extensions.Hosting` in the package search dialog and choose the latest 10.x version.
 1. Click on `Program.cs` and replace its contents with the following
    [!code-csharp[](code/WatcherBot/Step3/Program.cs)]
 1. Press `f5` to compile and run the program to start watching the jetstream.
@@ -116,8 +122,10 @@ us to use configuration, application startup and shutdown and dependency injecti
 
 ---
 
-What we've done is move the code to watch the jetstream into a `BackgroundService`, and then created a host to contain that service and run it.
-You get the `CTRL-C` close functionality for free with a `HostApplicationBuilder` so that code has been removed.
+We have moved the `await foreach` loop into `BackgroundService.ExecuteAsync` and created a host to run it.
+The host supplies the stopping token and handles `CTRL+C`, so we no longer need our own console cancellation handler.
+`StreamAsync` uses that token to stop the live connection during host shutdown; it also retries transient
+disconnections while the host is running.
 
 ## Add a settings file to contain watch words
 
@@ -146,11 +154,11 @@ This time around we're going to have a setting, `WatchWords`, which will be word
 1. Open `ValidateBotOptions.cs` in your editor of choice and change the contents to the following
    [!code-csharp[](code/WatcherBot/Step4/ValidateBotOptions.cs)]
 1. Open `WatcherBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
-   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L17-L21)]
+   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L18-L22)]
 1. Still in `WatcherBot.csproj` add the following lines before the closing `</project>`
-   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L23-L26)]
+   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L24-L27)]
 1. Click on `Program.cs` and make the following changes
-   [!code-xml[](code/WatcherBot/Step4/Program.cs?highlight=17-22,31-92)]
+   [!code-csharp[](code/WatcherBot/Step4/Program.cs?highlight=16-21,25-50)]
 1. At the command line enter `dotnet build` to make sure there aren't any mistakes.
 
 # [Visual Studio](#tab/settings/visualStudio)
@@ -169,10 +177,10 @@ This time around we're going to have a setting, `WatchWords`, which will be word
 1. In the name input box enter `ValidateBotOptions.cs`
 1. Replace the generated contents with the following
    [!code-csharp[](code/WatcherBot/Step4/ValidateBotOptions.cs)]
-1. Click on the BlueskyBot project file to open it and add the following lines before the closing `</project>`
-   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L23-L26)]
+1. Click on the WatcherBot project file to open it and add the following lines before the closing `</Project>`
+   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L24-L27)]
 1. Click on `Program.cs` and make the following changes
-   [!code-xml[](code/WatcherBot/Step4/Program.cs?highlight=17-22,31-92)]
+   [!code-csharp[](code/WatcherBot/Step4/Program.cs?highlight=16-21,25-50)]
 1. Choose **File ▶ Save All**
 1. In the main VS menu choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
 
@@ -182,7 +190,7 @@ This time around we're going to have a setting, `WatchWords`, which will be word
 1. Replace the generated contents with the following
    [!code-json[](code/WatcherBot/Step4/appsettings.json)]
 1. Open the `WatcherBot.csproj` file to open it and add the following before the `</Project>` line
-   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L17-L21)]
+   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L18-L22)]
 1. Right click on the WatcherBot folder in the Explorer window and choose **New File..**, then call the new file `BotOptions.cs`
 1. Replace the generated contents with the following
    [!code-csharp[](code/WatcherBot/Step4/BotOptions.cs)]
@@ -190,72 +198,67 @@ This time around we're going to have a setting, `WatchWords`, which will be word
 1. Replace the generated contents with the following
    [!code-csharp[](code/WatcherBot/Step4/ValidateBotOptions.cs)]
 1. Open `WatcherBot.csproj` add the following lines before the closing `</project>`
-   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L23-L26)]
+   [!code-xml[](code/WatcherBot/Step4/Step4.csproj#L24-L27)]
 1. Click on `Program.cs` and make the following changes
-   [!code-xml[](code/WatcherBot/Step4/Program.cs?highlight=17-22,31-92)]
+   [!code-csharp[](code/WatcherBot/Step4/Program.cs?highlight=16-21,25-50)]
 1. Choose **File ▶ Save All**
 1. Open the Command Palette (Ctrl + Shift + P) and search for, and select **.NET: build** to make sure there aren't any mistakes.
 
 ---
 
+This step binds the watch words to `BotOptions`; the worker starts using them in the next step.
+
 ## Examine and react to new Bluesky posts that contain a watch word
 
 Jetstream commit events can be limited by collection [NSIDs](../commonTerms.md#records) or by the [DID](../commonTerms.md#dids) of the actor performing the event.
-As we want to watch for posts we will limit the jetstream to only tell us about commits to post collections, which have an NSID of `app.bsky.feed.post`.
+As we want to watch for posts we will limit commit events to the `app.bsky.feed.post` collection.
+Collection filtering does not exclude identity, account, or sync events, so the bot still checks for a
+`JetstreamCommitEvent` with a create operation and a record before trying to deserialize a `Post`.
+The options monitor reads the current watch words from `appsettings.json`; it can supply updated values
+without restarting the worker.
 
 # [Command Line](#tab/limitJetstreamToPosts/commandLine)
-1. Open `Program.cs` in the editor of your choice and change the `Worker` class initialization of `_jetstream` to add a parameter, `collections`, which will limit
-   the commit events raised to events in the Bluesky posts collection.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L35)]
-1. Now change the `Worker` class to have a primary constructor that takes `IOptionsMonitor<BotOptions>` parameter. This parameter will be injected by the host.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L33)]
-1. Finally build out `OnRecordReceived` so
-    1. Looks for a create operation, indicating a new record has been created in an `app.bsky.feed.post` collection
-    1. Try to convert the `Record` in `CommitEventArgs` to a `Post`
-    1. If the conversion is successful, scans the post text, if the post has any text for the watched words from our `appsettings.json`.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L38-L81)]
+1. Open `Program.cs` and change the `Worker` class to take `IOptionsMonitor<BotOptions>` through its primary constructor.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L30)]
+1. In `ExecuteAsync`, filter for new post commits, deserialize each record, and compare its text with the watch words.
+   Use `StreamAsync` with the host's stopping token.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L32-L76)]
 1. Save `Program.cs`
-1. At the command line enter `dotnet run` to make sure there aren't any mistakes and watch the console output to see when posts are made on Bluesky that contain your watch words.
+1. At the command line enter `dotnet run` and watch for posts containing your watch words. Press `CTRL+C` to stop.
 
 # [Visual Studio](#tab/limitJetstreamToPosts/visualStudio)
 
-1. Open `Program.cs` and change the `Worker` class initialization of `_jetstream` to add a parameter, `collections`, which will limit
-   the commit events raised to events in the Bluesky posts collection.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L35)]
-1. Now change the `Worker` class to have a primary constructor that takes `IOptionsMonitor<BotOptions>` parameter. This parameter will be injected by the host.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L33)]
-1. Finally build out `OnRecordReceived` so
-    1. Looks for a create operation, indicating a new record has been created in an `app.bsky.feed.post` collection
-    1. Try to convert the `Record` in `CommitEventArgs` to a `Post`
-    1. If the conversion is successful, scans the post text, if the post has any text for the watched words from our `appsettings.json`.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L38-L81)]
+1. Open `Program.cs` and give `Worker` a primary constructor that takes `IOptionsMonitor<BotOptions>`.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L30)]
+1. In `ExecuteAsync`, filter for new post commits, deserialize each record, and compare its text with the watch words.
+   Use `StreamAsync` with the host's stopping token.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L32-L76)]
 1. Choose **File ▶ Save All**
-1. Press `f5` to compile and run the program, and watch the console output to see when posts are made on Bluesky that contain your watch words.
+1. Press `F5` to compile and run the program, and watch for matching posts. Stop debugging to exit.
 
 # [Visual Studio Code](#tab/limitJetstreamToPosts/vsCode)
 
-1. Open `Program.cs` and change the `Worker` class initialization of `_jetstream` to add a parameter, `collections`, which will limit
-   the commit events raised to events in the Bluesky posts collection.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L35)]
-1. Now change the `Worker` class to have a primary constructor that takes `IOptionsMonitor<BotOptions>` parameter. This parameter will be injected by the host.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L33)]
-1. Finally build out `OnRecordReceived` so
-    1. Looks for a create operation, indicating a new record has been created in an `app.bsky.feed.post` collection
-    1. Try to convert the `Record` in `CommitEventArgs` to a `Post`
-    1. If the conversion is successful, scans the post text, if the post has any text for the watched words from our `appsettings.json`.
-   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L38-L81)]
+1. Open `Program.cs` and give `Worker` a primary constructor that takes `IOptionsMonitor<BotOptions>`.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L30)]
+1. In `ExecuteAsync`, filter for new post commits, deserialize each record, and compare its text with the watch words.
+   Use `StreamAsync` with the host's stopping token.
+   [!code-csharp[](code/WatcherBot/Step5/Program.cs#L32-L76)]
 1. Choose **File ▶ Save All**
-1. Press `f5` to compile and run the program, and watch the console output to see when posts are made on Bluesky that contain your watch words.
+1. Press `F5` to compile and run the program, and watch for matching posts. Stop debugging to exit.
 
 ---
 
 Now that you have your bot detecting posts with your watched words in them you can expand it to flag the post for examination, or even to send a reply to the
 post, or whatever else you want to do.
 
-The bot will exit if its connection to the jetstream is interrupted. If you want to add retry logic for your jetstream connection see [retry logic](../jetstream.md#retry)
-in [Using the Jetstream](../jetstream.md).
+`StreamAsync` reconnects after transient interruptions and suppresses the repeated event from its inclusive
+cursor during this run. It does not persist a cursor between restarts; after a restart this tutorial bot starts
+at the live tail, so it can miss posts while stopped. For durable processing, save the sequence **after**
+handling each event and see [resuming where you left off](../jetstream.md#resuming-where-you-left-off).
+An expired live cursor is surfaced rather than skipped; use [archive-to-live replay](../jetstreamReplay.md#replay-into-the-live-tail)
+if you need to recover beyond the live service's lookback window.
+The example checks for case-insensitive substrings in post text, not word boundaries.
 
 > [!TIP]
 > If you want to watch for hash tags, or links to web sites, or mentions you should look at the
 `Post`'s [facets](https://docs.bsky.app/docs/advanced-guides/post-richtext), not the post text.
-

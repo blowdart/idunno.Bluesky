@@ -1,17 +1,17 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
+using idunno.AtProto;
+using idunno.Bluesky;
+using idunno.Bluesky.AspNet.Authentication;
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using idunno.Bluesky.AspNet.Authentication;
-using idunno.Bluesky;
-using idunno.AtProto;
-using System.Diagnostics.CodeAnalysis;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Microsoft.Extensions.DependencyInjection;

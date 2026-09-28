@@ -7,7 +7,6 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.Bluesky.Actor;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
 
