@@ -1,15 +1,15 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+
 using idunno.AtProto.Jetstream;
-using idunno.AtProto.Jetstream.Events;
 using idunno.Bluesky;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using WatcherBot;
 
-#pragma warning disable CS0618 // The watcher bot illustrates the legacy Jetstream event type.
+using WatcherBot;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -24,99 +24,54 @@ builder.Services
 
 builder.Services.AddHostedService<Worker>();
 
-IHost host = builder.Build();
-host.Run();
+using IHost host = builder.Build();
+await host.RunAsync();
 
-return 0;
-
-internal sealed class Worker(IOptionsMonitor<BotOptions> optionsDelegate) : BackgroundService, IDisposable
+internal sealed class Worker(IOptionsMonitor<BotOptions> options) : BackgroundService
 {
-    private readonly AtProtoJetstream _jetStream = new(collections: ["app.bsky.feed.post"]);
-    private volatile bool _disposed = false;
-
-    private void OnRecordReceived(object? sender, RecordReceivedEventArgs e)
-    {
-        switch (e.ParsedEvent)
-        {
-            case AtJetstreamCommitEvent commitEvent:
-                if (commitEvent.Commit.Operation == JetstreamCommitOperation.Create &&
-                    commitEvent.Commit.Record is not null)
-                {
-                    // A new record has been created in the monitored collections.
-                    // Let's try to convert it to a Bluesky post
-
-                    try
-                    {
-                        Post? post = JsonSerializer.Deserialize<Post>(
-                            commitEvent.Commit.Record.Value,
-                            BlueskyServer.BlueskyJsonSerializerOptions);
-
-                        if (post != null && !string.IsNullOrEmpty(post.Text))
-                        {
-                            // We have a post, and the post has text, so look for our watched words.
-                            if (optionsDelegate.CurrentValue.WatchWords.Any(
-                                watchWord => post.Text.Contains(watchWord, StringComparison.InvariantCultureIgnoreCase)))
-                            {
-                                string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-                                // We have a post that contains what we're looking for.
-                                Console.WriteLine($"{commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-                                Console.WriteLine($"{post.Text}");
-                            }
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // If we encounter a record in the post collection which
-                        // can't be deserialized as a post, just skip it.
-                    }
-                }
-
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    public override async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _jetStream.RecordReceived += OnRecordReceived;
-
-        await base.StartAsync(cancellationToken);
-    }
-
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await _jetStream.ConnectAsync(cancellationToken: stoppingToken);
+        await using var jetStream = new AtProtoJetstream(collections: ["app.bsky.feed.post"]);
 
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
+            await foreach (JetstreamEvent evt in jetStream.StreamAsync(cancellationToken: stoppingToken))
+            {
+                if (evt is not JetstreamCommitEvent { Commit.Operation: JetstreamCommitOperation.Create } commitEvent ||
+                    commitEvent.Commit.Record is not JsonElement record)
+                {
+                    continue;
+                }
+
+                Post? post;
+                try
+                {
+                    post = JsonSerializer.Deserialize<Post>(record, BlueskyServer.BlueskyJsonSerializerOptions);
+                }
+                catch (JsonException ex)
+                {
+                    Console.Error.WriteLine($"Skipping invalid post from {commitEvent.Did}: {ex.Message}");
+                    continue;
+                }
+                catch (ArgumentException ex)
+                {
+                    Console.Error.WriteLine($"Skipping invalid post from {commitEvent.Did}: {ex.Message}");
+                    continue;
+                }
+
+                if (post is not null && !string.IsNullOrEmpty(post.Text) &&
+                    options.CurrentValue.WatchWords.Any(word =>
+                        post.Text.Contains(word, StringComparison.OrdinalIgnoreCase)))
+                {
+                    string timeStamp = evt.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.CurrentCulture);
+                    Console.WriteLine($"{commitEvent.Did} posted in {commitEvent.Commit.Collection} at {timeStamp}");
+                    Console.WriteLine(post.Text);
+                }
+            }
         }
-    }
-
-    public override async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await _jetStream.CloseAsync(cancellationToken: cancellationToken);
-
-        await base.StopAsync(cancellationToken);
-    }
-
-    void Dispose(bool disposing)
-    {
-        if (disposing && !_disposed)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            _jetStream?.Dispose();
+            // Host shutdown stops the live stream.
         }
-
-        _disposed = true;
-    }
-
-    public override void Dispose()
-    {
-        Dispose(true);
-        base.Dispose();
-        GC.SuppressFinalize(this);
     }
 }
