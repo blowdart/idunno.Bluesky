@@ -51,7 +51,7 @@
     Commit operations expose their record CID, previous CID and lazily decoded record.
   * Frames, CAR blocks, operations and label batches are size and count limited, block CIDs are recomputed, the commit must be
     the first CAR root, and the commit's DID and revision must match the event. Timestamps must be strict AT Protocol datetimes.
-    Sequence numbers must be strictly increasing, apart from the cursor event and identical repeated events, of the same type and payload,
+    Sequence numbers must be strictly increasing, apart from the cursor event and a single identical repeated event, of the same type and payload,
     a relay sends when a connection resumes, which are dropped.
     Server-supplied error and info text is stripped of control and bidirectional formatting characters and truncated, but remains untrusted.
   * Optional commit and label signature verification with `FirehoseOptions.VerifySignatures`. Verification resolves signing keys inline and

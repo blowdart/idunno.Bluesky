@@ -33,6 +33,19 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
 
     private static readonly string[] s_fragments = [SigningKeyVerifier.RepositorySigningKeyFragment, SigningKeyVerifier.LabelSigningKeyFragment];
 
+    // Invalidation generations, striped by DID so they take bounded memory. A resolution which began before its DID's stripe was
+    // invalidated is not cached, so a key resolved before an #identity event cannot be cached after it. Unrelated DIDs sharing a
+    // stripe only cost an extra resolution.
+    private const int GenerationStripes = 256;
+
+    private readonly long[] _generations = new long[GenerationStripes];
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _cacheLock = new();
+#else
+    private readonly object _cacheLock = new();
+#endif
+
     private readonly Func<Did, CancellationToken, Task<DidDocument?>> _resolver;
     private readonly FirehoseMetrics? _metrics;
     private readonly TimeProvider _timeProvider;
@@ -151,9 +164,14 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
             return;
         }
 
-        foreach (string fragment in s_fragments)
+        lock (_cacheLock)
         {
-            _cache.Remove((did, fragment));
+            _generations[Stripe(did)]++;
+
+            foreach (string fragment in s_fragments)
+            {
+                _cache.Remove((did, fragment));
+            }
         }
     }
 
@@ -189,8 +207,18 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
         }
     }
 
+    private static int Stripe(Did did) => (int)((uint)did.GetHashCode() % GenerationStripes);
+
     private async Task<CachedKey> ResolveAndCacheAsync((Did Did, string Fragment) cacheKey, CancellationToken cancellationToken)
     {
+        int stripe = Stripe(cacheKey.Did);
+        long generation;
+
+        lock (_cacheLock)
+        {
+            generation = _generations[stripe];
+        }
+
         CachedKey entry;
 
         try
@@ -204,11 +232,18 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
             entry = new CachedKey(null, exception, _timeProvider.GetUtcNow(), duration);
         }
 
-        _cache!.Set(cacheKey, entry, new MemoryCacheEntryOptions
+        lock (_cacheLock)
         {
-            Size = 1,
-            AbsoluteExpirationRelativeToNow = entry.ExpiresAt - entry.ResolvedAt
-        });
+            // The key is still used for this verification, but is not cached if the DID was invalidated whilst it was resolved.
+            if (_generations[stripe] == generation)
+            {
+                _cache!.Set(cacheKey, entry, new MemoryCacheEntryOptions
+                {
+                    Size = 1,
+                    AbsoluteExpirationRelativeToNow = entry.ExpiresAt - entry.ResolvedAt
+                });
+            }
+        }
 
         return entry;
     }

@@ -18,7 +18,7 @@ public class FirehoseTests
     [InlineData("wss://bsky.network", null, "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos")]
     [InlineData("https://relay.example:8443/some/path?x=1#frag", 42L, "wss://relay.example:8443/xrpc/com.atproto.sync.subscribeRepos?cursor=42")]
     [InlineData("http://localhost:2470", 0L, "ws://localhost:2470/xrpc/com.atproto.sync.subscribeRepos?cursor=0")]
-    [InlineData("ws://localhost", 9_007_199_254_740_992L, "ws://localhost/xrpc/com.atproto.sync.subscribeRepos?cursor=9007199254740992")]
+    [InlineData("ws://localhost", 9_007_199_254_740_991L, "ws://localhost/xrpc/com.atproto.sync.subscribeRepos?cursor=9007199254740991")]
     public void BuildSubscriptionUriMapsSchemesAndAppendsTheCursor(string host, long? cursor, string expected)
     {
         Uri uri = EventStreamReader.BuildSubscriptionUri(new Uri(host), "com.atproto.sync.subscribeRepos", cursor);
@@ -49,6 +49,9 @@ public class FirehoseTests
     [InlineData(10L, new[] { "10a", "10b" }, new[] { "DropCursorEvent", "Violation" })]
     [InlineData(10L, new[] { "9a" }, new[] { "Violation" })]
     [InlineData(null, new[] { "5a", "5a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept" })]
+    [InlineData(null, new[] { "5a", "5a", "5a" }, new[] { "Accept", "DropRepeatedEvent", "Violation" })]
+    [InlineData(10L, new[] { "10a", "10a", "10a" }, new[] { "DropCursorEvent", "DropRepeatedEvent", "Violation" })]
+    [InlineData(null, new[] { "5a", "5a", "6a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept", "DropRepeatedEvent" })]
     [InlineData(null, new[] { "5a", "5b" }, new[] { "Accept", "Violation" })]
     [InlineData(null, new[] { "5a", "5a#account" }, new[] { "Accept", "Violation" })]
     [InlineData(10L, new[] { "10a", "10a#account" }, new[] { "DropCursorEvent", "Violation" })]

@@ -24,9 +24,9 @@ namespace idunno.AtProto.Firehose;
 internal sealed class EventStreamReader
 {
     /// <summary>
-    /// The largest sequence number allowed, 2^53, the largest integer a JavaScript number holds exactly.
+    /// The largest sequence number allowed, 2^53 - 1, the largest integer a JavaScript number holds safely.
     /// </summary>
-    internal const long MaximumSequence = 9_007_199_254_740_992;
+    internal const long MaximumSequence = 9_007_199_254_740_991;
 
     /// <summary>
     /// The longest error or message accepted from a server before it is truncated.
@@ -619,7 +619,8 @@ internal sealed class EventStreamReader
         }
         catch (InvalidDataException exception)
         {
-            string reason = exception.Message;
+            // Decoders can include server-controlled text in their messages.
+            string reason = Sanitize(exception.Message);
             _metrics.InvalidEventsReceived.Add(1, _serverTag);
             FirehoseLogger.InvalidEvent(_logger, type, sequence, reason);
             return ReceiveStep.Deliver(new FirehoseInvalidEvent(sequence, type, _decoder.GetSubject(type, payload), reason, frame.Payload));
@@ -634,9 +635,10 @@ internal sealed class EventStreamReader
         }
         catch (InvalidDataException exception)
         {
+            string reason = Sanitize(exception.Message);
             _metrics.InvalidEventsReceived.Add(1, _serverTag);
-            FirehoseLogger.InvalidEvent(_logger, InfoType, null, exception.Message);
-            return new FirehoseInvalidEvent(null, InfoType, null, exception.Message, encoded);
+            FirehoseLogger.InvalidEvent(_logger, InfoType, null, reason);
+            return new FirehoseInvalidEvent(null, InfoType, null, reason, encoded);
         }
     }
 
@@ -721,7 +723,8 @@ internal sealed class EventStreamReader
         /// <remarks>
         /// <para>A relay resuming from a cursor replays the events it holds and then switches to live events, and at that switch it
         /// sends the last replayed event a second time, unchanged. A frame which repeats the last event's sequence number, with the same
-        /// message type and an identical payload, is dropped. Any other repeated or earlier sequence number is a violation.</para>
+        /// message type and an identical payload, is dropped, once. Any other repeated or earlier sequence number, including a second repeat,
+        /// is a violation.</para>
         /// </remarks>
         public SequenceDecision Accept(long sequence, string type, ReadOnlyMemory<byte> payload)
         {
@@ -737,6 +740,9 @@ internal sealed class EventStreamReader
 
             if (sequence == Last && _lastType is not null && string.Equals(type, _lastType, StringComparison.Ordinal) && payload.Span.SequenceEqual(_lastPayload.Span))
             {
+                // Only one repeat is allowed, so a server cannot stall the stream by sending the same frame forever.
+                _lastType = null;
+                _lastPayload = default;
                 return SequenceDecision.DropRepeatedEvent;
             }
 

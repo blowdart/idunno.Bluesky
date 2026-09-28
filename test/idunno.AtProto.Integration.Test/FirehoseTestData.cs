@@ -65,6 +65,13 @@ internal static class FirehoseTestData
         return stream.ToArray();
     }
 
+    public static byte[] CarHeader(params (string Key, object? Value)[] fields)
+    {
+        using MemoryStream stream = new();
+        WriteSection(stream, Encode(Map(fields)));
+        return stream.ToArray();
+    }
+
     public static byte[] RecordBytes(string text = "hello") =>
         Encode(Map(("$type", "app.bsky.feed.post"), ("text", text), ("createdAt", Time)));
 

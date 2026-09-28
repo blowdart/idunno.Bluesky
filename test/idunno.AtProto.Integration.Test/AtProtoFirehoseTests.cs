@@ -172,7 +172,7 @@ public class AtProtoFirehoseTests
         { "payload not a map", [.. Encode(Map(("op", 1L), ("t", "#identity"))), .. Encode(new object?[] { 1L })] },
         { "missing sequence", Frame("#identity", Map(("did", TestDid), ("time", Time))) },
         { "zero sequence", Frame("#identity", IdentityPayload(0)) },
-        { "sequence beyond 2^53", Frame("#identity", IdentityPayload(9_007_199_254_740_993)) },
+        { "sequence of 2^53", Frame("#identity", IdentityPayload(9_007_199_254_740_992)) },
         { "deep nesting", [.. Encode(Map(("op", 1L), ("t", "#identity"))), .. Nested(200)] },
         { "error without error", Frame(null, Map(("message", "no error")), operation: -1) },
     };
@@ -264,6 +264,7 @@ public class AtProtoFirehoseTests
     [InlineData("delete with cid", "has a record CID")]
     [InlineData("create without cid", "no record CID")]
     [InlineData("missing cid", "no 'cid' field")]
+    [InlineData("hostile car header field", "Unknown CAR header field")]
     [InlineData("invalid path", "path")]
     [InlineData("invalid rev", "TID")]
     [InlineData("missing since", "'since'")]
@@ -296,6 +297,7 @@ public class AtProtoFirehoseTests
             Assert.Equal(1, invalid.Sequence);
             Assert.Equal("#commit", invalid.Type);
             Assert.Contains(reason, invalid.Reason, StringComparison.Ordinal);
+            Assert.DoesNotContain(invalid.Reason, c => char.IsControl(c) || c == '\u202E');
             Assert.False(invalid.Payload.IsEmpty);
         }
 
@@ -940,7 +942,7 @@ public class AtProtoFirehoseTests
 
     [Theory]
     [InlineData(-1L, 10)]
-    [InlineData(9_007_199_254_740_993L, 10)]
+    [InlineData(9_007_199_254_740_992L, 10)]
     [InlineData(null, -1)]
     public void InvalidArgumentsAreRejected(long? cursor, int attempts)
     {
@@ -1001,6 +1003,9 @@ public class AtProtoFirehoseTests
                 break;
             case "missing cid":
                 commit.Operations[0].Remove("cid");
+                break;
+            case "hostile car header field":
+                commit.Configure = payload => payload["blocks"] = CarHeader(("roots", Array.Empty<object?>()), ("\u202Ex\n", 1L));
                 break;
             case "invalid path":
                 commit.Operations[0]["path"] = "app.bsky.feed.post/a/b";

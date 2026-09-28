@@ -110,6 +110,35 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     }
 
     [Fact]
+    public async Task KeysResolvedWhilstTheirDidIsInvalidatedAreNotCached()
+    {
+        FirehoseSignatureVerifier? verifier = null;
+        int resolutions = 0;
+
+        using (verifier = new FirehoseSignatureVerifier(
+            (_, _) =>
+            {
+                if (Interlocked.Increment(ref resolutions) == 1)
+                {
+                    // An #identity event on another subscription arrives whilst the key is being resolved.
+                    verifier!.Invalidate(_did);
+                }
+
+                return Task.FromResult(_document());
+            },
+            new FirehoseOptions(),
+            _metrics,
+            _time))
+        {
+            await Verify(verifier, _key);
+            await Verify(verifier, _key);
+            await Verify(verifier, _key);
+        }
+
+        Assert.Equal(2, resolutions);
+    }
+
+    [Fact]
     public async Task KeysAreCachedPerFragment()
     {
         using FirehoseSignatureVerifier verifier = CreateVerifier();

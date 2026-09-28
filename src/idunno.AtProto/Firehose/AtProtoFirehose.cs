@@ -249,7 +249,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">A token which stops the connection and enumeration.</param>
     /// <returns>An ordered sequence of <see cref="FirehoseCommitEvent"/>, <see cref="FirehoseSyncEvent"/>, <see cref="FirehoseIdentityEvent"/>,
     /// <see cref="FirehoseAccountEvent"/>, <see cref="FirehoseInfoEvent"/>, <see cref="FirehoseUnknownEvent"/> and <see cref="FirehoseInvalidEvent"/>s.</returns>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="cursor"/> is negative or greater than 2^53, or <paramref name="maximumReconnectAttempts"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="cursor"/> is negative or greater than 2^53 - 1, or <paramref name="maximumReconnectAttempts"/> is negative.</exception>
     /// <exception cref="ObjectDisposedException">The firehose has been disposed.</exception>
     /// <exception cref="InvalidOperationException">Another enumeration of repository events is active.</exception>
     /// <exception cref="FirehoseConnectionException">The server refuses the connection with a status which is not retried, or sends an error such as <c>FutureCursor</c>.</exception>
@@ -285,7 +285,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
     /// </param>
     /// <param name="cancellationToken">A token which stops the connection and enumeration.</param>
     /// <returns>An ordered sequence of <see cref="FirehoseLabelsEvent"/>, <see cref="FirehoseInfoEvent"/>, <see cref="FirehoseUnknownEvent"/> and <see cref="FirehoseInvalidEvent"/>s.</returns>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="cursor"/> is negative or greater than 2^53, or <paramref name="maximumReconnectAttempts"/> is negative.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="cursor"/> is negative or greater than 2^53 - 1, or <paramref name="maximumReconnectAttempts"/> is negative.</exception>
     /// <exception cref="ObjectDisposedException">The firehose has been disposed.</exception>
     /// <exception cref="InvalidOperationException">Another enumeration of label events is active.</exception>
     /// <exception cref="FirehoseConnectionException">The server refuses the connection with a status which is not retried, or sends an error such as <c>FutureCursor</c>.</exception>
@@ -363,7 +363,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
 
         if (cursor is < 0 or > EventStreamReader.MaximumSequence)
         {
-            throw new ArgumentOutOfRangeException(nameof(cursor), cursor, "The cursor must be between 0 and 2^53.");
+            throw new ArgumentOutOfRangeException(nameof(cursor), cursor, "The cursor must be between 0 and 2^53 - 1.");
         }
 
         if (maximumReconnectAttempts is < 0)

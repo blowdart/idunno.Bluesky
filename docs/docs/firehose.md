@@ -138,8 +138,8 @@ There are two exceptions, both of which are dropped rather than yielded twice. W
 cursor, a relay sends the cursor event again, so the first event on a resumed connection may repeat the last
 sequence yielded. A relay also sends the last event it replays a second time, unchanged, when it switches from
 replaying to live events, so an event that repeats the previous event's sequence number, with the same message
-type and a byte-for-byte identical payload, is dropped. A repeated sequence number with a different type or payload
-is still an error.
+type and a byte-for-byte identical payload, is dropped once. A second repeat, or a repeated sequence number with a
+different type or payload, is still an error.
 
 Order the stream as a whole by `Sequence`, not by `Time`, which is the server's timestamp and is not guaranteed
 to increase.
@@ -194,7 +194,7 @@ A firehose server may be anyone's. `AtProtoFirehose` enforces these limits:
   not trusted to size any allocation.
 * Timestamps must be AT Protocol datetimes: RFC 3339 and ISO 8601 with an upper-case `T`, whole seconds, and a `Z` or
   `±hh:mm` timezone other than `-00:00`. An event with any other timestamp format is yielded as `FirehoseInvalidEvent`.
-* Sequence numbers must be between 1 and 2^53 and strictly increasing, apart from the cursor event and identical repeats, of the same type and payload, a relay sends when resuming.
+* Sequence numbers must be between 1 and 2^53 - 1 and strictly increasing, apart from the cursor event and a single identical repeat, of the same type and payload, a relay sends when resuming.
 * Redirects are not followed. A server that redirects the connection ends the stream with a
   `FirehoseConnectionException`, and the redirect is not retried.
 
