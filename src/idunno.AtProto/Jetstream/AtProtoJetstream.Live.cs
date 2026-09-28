@@ -67,6 +67,8 @@ public partial class AtProtoJetstream
         int reconnectAttempts = 0;
         try
         {
+            await DrainMessageParsersAsync(cancellationToken).ConfigureAwait(false);
+
             while (true)
             {
                 Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(

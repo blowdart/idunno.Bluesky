@@ -102,6 +102,49 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task LiveStreamWaitsForParsersFromClosedEventConnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        PausedTaskScheduler scheduler = new();
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, token) =>
+        {
+            await SendText(socket, IdentityEvent(connection == 1 ? 41 : 42), token);
+        });
+
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = false, MaximumConcurrentMessageParsers = 1,
+                TaskFactory = new TaskFactory(scheduler)
+            });
+        EventHandler<RecordReceivedEventArgs> handler = (_, _) => { };
+        jetstream.RecordReceived += handler;
+        await jetstream.ConnectAsync(cancellationToken);
+        await scheduler.Scheduled.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+        jetstream.RecordReceived -= handler;
+
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Task<bool> next = stream.MoveNextAsync().AsTask();
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(200), cancellationToken);
+            Assert.Single(server.Connections);
+        }
+        finally
+        {
+            scheduler.RunPending();
+        }
+
+        Assert.True(await next.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(42, stream.Current.Sequence);
+        Assert.Equal(2, server.Connections.Count);
+    }
+
+    [Fact]
     public async Task LiveStreamDoesNotDiscardAnExpiredCursor()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -860,6 +903,32 @@ public class AtProtoJetstreamV2Tests
     /// A minimal version 2 jetstream server, which serves a dictionary, can refuse upgrades, and accepts the
     /// subprotocol a client asks for.
     /// </summary>
+    private sealed class PausedTaskScheduler : TaskScheduler
+    {
+        private readonly ConcurrentQueue<Task> _pending = new();
+        private readonly TaskCompletionSource _scheduled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal Task Scheduled => _scheduled.Task;
+
+        protected override IEnumerable<Task> GetScheduledTasks() => _pending.ToArray();
+
+        protected override void QueueTask(Task task)
+        {
+            _pending.Enqueue(task);
+            _scheduled.TrySetResult();
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
+
+        internal void RunPending()
+        {
+            while (_pending.TryDequeue(out Task? task))
+            {
+                TryExecuteTask(task);
+            }
+        }
+    }
+
     private sealed class LocalHttpClientFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new();
