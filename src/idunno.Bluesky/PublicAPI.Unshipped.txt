@@ -1,1 +1,5 @@
 #nullable enable
+idunno.Bluesky.Feed.FeedViewPost.OpThreadPostCount.get -> int?
+idunno.Bluesky.Feed.FeedViewPost.OpThreadPostCount.init -> void
+idunno.Bluesky.Feed.FeedViewPost.OpThreadPostIndex.get -> int?
+idunno.Bluesky.Feed.FeedViewPost.OpThreadPostIndex.init -> void

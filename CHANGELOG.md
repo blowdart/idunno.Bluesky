@@ -1,5 +1,13 @@
 # Version History
 
+## 8.0.0 - Unreleased
+
+### Added
+
+#### idunno.Bluesky
+
+* Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
+
 ## 7.0.1 - 2026-09-26
 
 ### Fixed
