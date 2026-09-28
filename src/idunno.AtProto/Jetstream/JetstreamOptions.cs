@@ -54,6 +54,7 @@ public record JetstreamOptions
             .Append(", MaxMessageSize = ").Append(MaxMessageSize)
             .Append(", CloseTimeout = ").Append(CloseTimeout)
             .Append(", SendTimeout = ").Append(SendTimeout)
+            .Append(", ArchiveReadTimeout = ").Append(ArchiveReadTimeout)
             .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers);
         return true;
     }
@@ -213,6 +214,26 @@ public record JetstreamOptions
         init
         {
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets how long an archive response body may make no progress during a single read. Defaults to 30 seconds.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is less than or equal to zero or exceeds the timer's maximum duration.</exception>
+    /// <remarks><para>This timeout applies to each network read, not to quota pacing or a server's
+    /// <c>Retry-After</c> delay. A stalled read is retried from the last byte received within the bounded
+    /// archive download resume limit.</para></remarks>
+    public TimeSpan ArchiveReadTimeout
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, TimeSpan.FromMilliseconds(uint.MaxValue - 1));
 
             field = value;
         }

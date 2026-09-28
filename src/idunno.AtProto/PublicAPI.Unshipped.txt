@@ -392,6 +392,8 @@ idunno.AtProto.Jetstream.JetstreamIdentityEvent.Equals(idunno.AtProto.Jetstream.
 idunno.AtProto.Jetstream.JetstreamIdentityEvent.JetstreamIdentityEvent() -> void
 idunno.AtProto.Jetstream.JetstreamOptions.ApiKey.get -> string?
 idunno.AtProto.Jetstream.JetstreamOptions.ApiKey.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.ArchiveReadTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.JetstreamOptions.ArchiveReadTimeout.init -> void
 idunno.AtProto.Jetstream.JetstreamSync
 idunno.AtProto.Jetstream.JetstreamSync.Equals(idunno.AtProto.Jetstream.JetstreamSync? other) -> bool
 idunno.AtProto.Jetstream.JetstreamSync.JetstreamSync() -> void

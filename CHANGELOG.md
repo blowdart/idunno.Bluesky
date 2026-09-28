@@ -38,6 +38,8 @@
   distinguishes records asserted during sync from live creates. Added `JetstreamOptions.ApiKey` and
   `AtProtoJetstreamBuilder.WithApiKey()` for archive HTTP calls only. The Jetstream meter now reports archive
   plans, blocks, segments, downloaded bytes, rate limits, delivered and filtered events, and live handoffs.
+  Archive downloads now use a configurable per-read inactivity timeout (`JetstreamOptions.ArchiveReadTimeout`,
+  default 30 seconds), and only SDK-created HTTP clients follow cross-origin signed download redirects.
 * Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
   cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
   exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.

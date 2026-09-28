@@ -188,7 +188,8 @@ public partial class AtProtoJetstream
                 {
                     long offset = startOffset > 0 ? startOffset : 0;
                     ArchiveDownload download = new(
-                        segment.Name, null, segment.Checksum, key, _uri, _httpClient, offset, _metrics);
+                        segment.Name, null, segment.Checksum, key, _uri, _httpClient, offset, _metrics,
+                        Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
                     await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
                     if (offset == 0)
                     {
@@ -313,7 +314,8 @@ public partial class AtProtoJetstream
     private async Task<byte[]> DownloadFrame(
         string name, int index, string checksum, string key, CancellationToken cancellationToken)
     {
-        ArchiveDownload download = new(name, index, checksum, key, _uri, _httpClient, 0, _metrics);
+        ArchiveDownload download = new(name, index, checksum, key, _uri, _httpClient, 0, _metrics,
+            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
         await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
         return await download.ReadFrameAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -321,7 +323,8 @@ public partial class AtProtoJetstream
     private async Task<int> GetSegmentBlockCount(
         string name, string checksum, string key, CancellationToken cancellationToken)
     {
-        ArchiveDownload download = new(name, null, checksum, key, _uri, _httpClient, 0, _metrics);
+        ArchiveDownload download = new(name, null, checksum, key, _uri, _httpClient, 0, _metrics,
+            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
         await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
         byte[] header = new byte[256];
         await download.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);

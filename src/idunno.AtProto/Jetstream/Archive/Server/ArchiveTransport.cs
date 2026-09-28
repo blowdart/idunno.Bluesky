@@ -75,7 +75,8 @@ public static partial class AtProtoServer
     }
 
     private static async Task<AtProtoHttpResult<Stream>> SendArchiveBinary(
-        HttpRequestMessage message, HttpClient httpClient, long offset, string? etag, CancellationToken cancellationToken)
+        HttpRequestMessage message, HttpClient httpClient, long offset, string? etag,
+        bool allowCrossOriginRedirect, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
@@ -101,10 +102,15 @@ public static partial class AtProtoServer
         {
             Uri? destination = response.Headers.Location;
             response.Dispose();
+            bool sameOrigin = destination is { IsAbsoluteUri: true } && message.RequestUri is Uri origin &&
+                string.Equals(origin.Scheme, destination.Scheme, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(origin.IdnHost, destination.IdnHost, StringComparison.OrdinalIgnoreCase) &&
+                origin.Port == destination.Port;
             if (destination is null || !destination.IsAbsoluteUri || destination.UserInfo.Length > 0 ||
                 destination.Scheme is not ("https" or "http") ||
                 (destination.Scheme == "http" && !destination.IsLoopback) ||
-                (message.RequestUri?.Scheme == "https" && destination.Scheme != "https"))
+                (message.RequestUri?.Scheme == "https" && destination.Scheme != "https") ||
+                (!sameOrigin && (!allowCrossOriginRedirect || destination.Scheme != "https")))
             {
                 throw new InvalidDataException("The archive returned an invalid download redirect.");
             }

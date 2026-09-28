@@ -90,6 +90,13 @@ Archive bandwidth is metered in downloaded bytes. The client paces downloads usi
 validated byte range and ETag. No quota is consumed for bytes skipped by a successful range request.
 The archive may redirect a block download to a short-lived signed CDN URL. The client follows the redirect
 without forwarding the API key; the response ETag still has to match the planned segment checksum.
+Cross-origin CDN redirects are followed only when the SDK creates its SSRF-protected HTTP client; clients
+provided through a factory or to the low-level server methods follow same-origin redirects only. Supplied
+clients must disable automatic redirects. This does not verify that the redirect hostname belongs to Bluesky:
+an archive server can choose any public HTTPS destination permitted by the SDK's SSRF-protected transport.
+Each archive-body read has a configurable inactivity timeout
+(`JetstreamOptions.ArchiveReadTimeout`, 30 seconds by default). Stalled reads resume with a validated
+range and ETag within the bounded retry limit; quota and `Retry-After` waits do not count toward it.
 
 Run the [Jetstream replay sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.JetstreamReplay)
 to resolve the selected handle and replay its posts, likes, follows, identity and account events from `afterSeq=0`

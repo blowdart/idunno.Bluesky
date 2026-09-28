@@ -23,10 +23,11 @@ public static partial class AtProtoServer
     /// <exception cref="ArgumentException">The segment or key is missing, or a resumed download has no <paramref name="etag"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The block index or byte offset is negative.</exception>
     /// <remarks><para><c>SegmentNotFound</c> and <c>BlockNotFound</c> are returned in the HTTP result.
-    /// The default client uses the agent's SSRF-protected, redirect-disabled transport. A supplied client can bypass
-    /// those protections and follow redirects before the SDK validates them. Disable automatic redirects in the
-    /// supplied handler before making archive requests.</para></remarks>
-    public static async Task<AtProtoHttpResult<Stream>> GetBlock(
+    /// The default client uses the agent's SSRF-protected, redirect-disabled transport and allows one HTTPS
+    /// cross-origin redirect. A supplied client can bypass those protections and follow redirects before the SDK
+    /// validates them, so it is limited to same-origin redirects. Disable automatic redirects in the supplied
+    /// handler before making archive requests.</para></remarks>
+    public static Task<AtProtoHttpResult<Stream>> GetBlock(
         string segment,
         int blockIndex,
         Uri service,
@@ -35,7 +36,14 @@ public static partial class AtProtoServer
         long offset = 0,
         string? etag = null,
         HttpClientOptions? httpClientOptions = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GetBlockCore(segment, blockIndex, service, apiKey, httpClient, offset, etag, httpClientOptions,
+            allowCrossOriginRedirect: httpClient is null, cancellationToken);
+
+    internal static async Task<AtProtoHttpResult<Stream>> GetBlockCore(
+        string segment, int blockIndex, Uri service, string apiKey, HttpClient? httpClient,
+        long offset, string? etag, HttpClientOptions? httpClientOptions,
+        bool allowCrossOriginRedirect, CancellationToken cancellationToken)
     {
         HttpClient? configuredClient = httpClient is null && httpClientOptions is not null
             ? CreateArchiveClient(httpClientOptions) : null;
@@ -48,7 +56,7 @@ public static partial class AtProtoServer
                 $"segment={Uri.EscapeDataString(segment)}&blockIndex={blockIndex.ToString(CultureInfo.InvariantCulture)}");
             AtProtoHttpResult<Stream> result = await SendArchiveBinary(message,
                 httpClient ?? configuredClient ?? s_archiveClient, offset, etag,
-                cancellationToken).ConfigureAwait(false);
+                allowCrossOriginRedirect, cancellationToken).ConfigureAwait(false);
             if (configuredClient is not null)
             {
                 if (result.Succeeded)

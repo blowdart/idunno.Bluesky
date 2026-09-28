@@ -16,7 +16,9 @@ internal sealed class ArchiveDownload(
     Uri service,
     HttpClient httpClient,
     long offset,
-    JetstreamMetrics metrics) : IAsyncDisposable
+    JetstreamMetrics metrics,
+    TimeSpan? readTimeout = null,
+    bool allowCrossOriginRedirect = false) : IAsyncDisposable
 {
     private const int MaximumReadResumes = 3;
     private Stream? _stream;
@@ -27,6 +29,7 @@ internal sealed class ArchiveDownload(
     private int _readResumes;
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private readonly string _etag = blockIndex is int index ? $"\"{checksum}:{index}\"" : $"\"{checksum}\"";
+    private readonly TimeSpan _readTimeout = ValidateReadTimeout(readTimeout);
 
     internal long Position { get; private set; } = offset;
 
@@ -75,7 +78,7 @@ internal sealed class ArchiveDownload(
             Memory<byte> limited = await LimitToQuotaAsync(buffer, cancellationToken).ConfigureAwait(false);
             try
             {
-                int read = await _stream!.ReadAsync(limited, cancellationToken).ConfigureAwait(false);
+                int read = await ReadWithTimeoutAsync(limited, cancellationToken).ConfigureAwait(false);
                 if (read > 0)
                 {
                     Position += read;
@@ -98,6 +101,29 @@ internal sealed class ArchiveDownload(
             _stream = null;
             await OpenAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private async Task<int> ReadWithTimeoutAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource readCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        readCancellation.CancelAfter(_readTimeout);
+        try
+        {
+            return await _stream!.ReadAsync(buffer, readCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested &&
+            readCancellation.IsCancellationRequested)
+        {
+            throw new IOException("The Jetstream archive response body stalled.", ex);
+        }
+    }
+
+    private static TimeSpan ValidateReadTimeout(TimeSpan? timeout)
+    {
+        TimeSpan value = timeout ?? TimeSpan.FromSeconds(30);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value, TimeSpan.FromMilliseconds(uint.MaxValue - 1));
+        return value;
     }
 
     private async Task<Memory<byte>> LimitToQuotaAsync(Memory<byte> buffer, CancellationToken cancellationToken)
@@ -130,10 +156,10 @@ internal sealed class ArchiveDownload(
         {
             string? resumeEtag = Position == 0 ? null : _etag;
             AtProtoHttpResult<Stream> response = blockIndex is int index
-                ? await AtProtoServer.GetBlock(name, index, service, apiKey, httpClient,
-                    Position, resumeEtag, cancellationToken: cancellationToken).ConfigureAwait(false)
-                : await AtProtoServer.GetSegment(name, service, apiKey, httpClient,
-                    Position, resumeEtag, cancellationToken: cancellationToken).ConfigureAwait(false);
+                ? await AtProtoServer.GetBlockCore(name, index, service, apiKey, httpClient,
+                    Position, resumeEtag, null, allowCrossOriginRedirect, cancellationToken).ConfigureAwait(false)
+                : await AtProtoServer.GetSegmentCore(name, service, apiKey, httpClient,
+                    Position, resumeEtag, null, allowCrossOriginRedirect, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));

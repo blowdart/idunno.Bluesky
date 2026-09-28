@@ -20,10 +20,11 @@ public static partial class AtProtoServer
     /// <exception cref="ArgumentException">The name or key is missing, or a resumed download has no <paramref name="etag"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The byte offset is negative.</exception>
     /// <remarks><para><c>SegmentNotFound</c> is returned in the HTTP result.
-    /// The default client uses the agent's SSRF-protected, redirect-disabled transport. A supplied client can bypass
-    /// those protections and follow redirects before the SDK validates them. Disable automatic redirects in the
-    /// supplied handler before making archive requests.</para></remarks>
-    public static async Task<AtProtoHttpResult<Stream>> GetSegment(
+    /// The default client uses the agent's SSRF-protected, redirect-disabled transport and allows one HTTPS
+    /// cross-origin redirect. A supplied client can bypass those protections and follow redirects before the SDK
+    /// validates them, so it is limited to same-origin redirects. Disable automatic redirects in the supplied
+    /// handler before making archive requests.</para></remarks>
+    public static Task<AtProtoHttpResult<Stream>> GetSegment(
         string name,
         Uri service,
         string apiKey,
@@ -31,7 +32,14 @@ public static partial class AtProtoServer
         long offset = 0,
         string? etag = null,
         HttpClientOptions? httpClientOptions = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        GetSegmentCore(name, service, apiKey, httpClient, offset, etag, httpClientOptions,
+            allowCrossOriginRedirect: httpClient is null, cancellationToken);
+
+    internal static async Task<AtProtoHttpResult<Stream>> GetSegmentCore(
+        string name, Uri service, string apiKey, HttpClient? httpClient,
+        long offset, string? etag, HttpClientOptions? httpClientOptions,
+        bool allowCrossOriginRedirect, CancellationToken cancellationToken)
     {
         HttpClient? configuredClient = httpClient is null && httpClientOptions is not null
             ? CreateArchiveClient(httpClientOptions) : null;
@@ -42,7 +50,7 @@ public static partial class AtProtoServer
                 HttpMethod.Get, service, "getSegment", apiKey, $"name={Uri.EscapeDataString(name)}");
             AtProtoHttpResult<Stream> result = await SendArchiveBinary(message,
                 httpClient ?? configuredClient ?? s_archiveClient, offset, etag,
-                cancellationToken).ConfigureAwait(false);
+                allowCrossOriginRedirect, cancellationToken).ConfigureAwait(false);
             if (configuredClient is not null)
             {
                 if (result.Succeeded)
