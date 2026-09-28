@@ -318,8 +318,13 @@ public static partial class AtProtoServer
         {
             try
             {
+                if (response.StatusCode == HttpStatusCode.PartialContent &&
+                    response.Content.Headers.ContentRange?.From != offset)
+                {
+                    throw new InvalidDataException("The archive server returned a partial response from an unexpected offset.");
+                }
+
                 if (offset > 0 && (response.StatusCode != HttpStatusCode.PartialContent ||
-                    response.Content.Headers.ContentRange?.From != offset ||
                     response.Headers.ETag?.ToString() != etag))
                 {
                     throw new InvalidDataException("The archive server did not resume the expected segment generation.");

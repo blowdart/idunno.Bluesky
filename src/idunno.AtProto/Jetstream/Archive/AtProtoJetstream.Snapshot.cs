@@ -152,7 +152,7 @@ public partial class AtProtoJetstream
                             foreach (JssRow row in JssBlockReader.Decode(frame))
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
-                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
+                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -196,7 +196,7 @@ public partial class AtProtoJetstream
                         {
                             await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
                             {
-                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
+                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -233,7 +233,7 @@ public partial class AtProtoJetstream
                         {
                             await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
                             {
-                                if (MatchesSnapshot(row, request, pinned.Value, dids, collections, wildcardPrefixes))
+                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
@@ -337,10 +337,10 @@ public partial class AtProtoJetstream
         return (int)blockCount;
     }
 
-    private static bool MatchesSnapshot(JssRow row, SnapshotRequest request, long tip,
+    private static bool MatchesSnapshot(JssRow row, SnapshotRequest request, long after, long through, long tip,
         HashSet<string>? dids, HashSet<string>? collections, string[] wildcardPrefixes)
     {
-        if (row.Seq <= (request.AfterSeq ?? 0) || row.Seq > tip ||
+        if (row.Seq <= after || row.Seq > through || row.Seq > tip ||
             (request.BeforeSeq is long before && row.Seq > before) ||
             (dids is not null && !dids.Contains(row.Did)) ||
             (request.Kinds is { Count: > 0 } && !request.Kinds.Contains(row.EventKind)))

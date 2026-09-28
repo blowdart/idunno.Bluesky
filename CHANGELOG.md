@@ -43,7 +43,8 @@
   date-form `Retry-After` headers. Live and archive metadata events carry the preferred account, identity
   and sync payload types.
 * Archive requests require HTTPS or WSS outside loopback so API keys are not sent over plaintext transport.
-  Snapshot row filtering uses precomputed DID and collection lookups and enforces the requested upper sequence bound.
+  Snapshot row filtering uses precomputed DID and collection lookups and enforces each plan page's sequence bounds.
+  Archive downloads reject partial responses whose starting offset does not match the requested position.
 * `AtJetstreamCommit` now converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs;
   the reverse conversion remains available when populating legacy event properties.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,

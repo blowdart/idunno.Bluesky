@@ -132,6 +132,50 @@ public class JetstreamArchiveTests
         Assert.Equal(2, requests);
     }
 
+    [Theory]
+    [InlineData(true, 0, true)]
+    [InlineData(true, 1, false)]
+    [InlineData(true, -1, false)]
+    [InlineData(false, 0, true)]
+    [InlineData(false, 1, false)]
+    [InlineData(false, -1, false)]
+    public async Task InitialPartialDownloadRequiresRangeStartingAtZero(bool block, int rangeStart, bool valid)
+    {
+        using HttpClient client = new(new ArchiveTestHandler(request =>
+        {
+            Assert.Null(request.Headers.Range);
+            HttpResponseMessage response = new(HttpStatusCode.PartialContent)
+            {
+                Content = new ByteArrayContent([1, 2])
+            };
+            response.Headers.ETag = new EntityTagHeaderValue(
+                block ? $"\"{Checksum}:0\"" : $"\"{Checksum}\"");
+            if (rangeStart >= 0)
+            {
+                response.Content.Headers.ContentRange = new ContentRangeHeaderValue(rangeStart, rangeStart + 1, 4);
+            }
+
+            return response;
+        }));
+
+        Task<AtProtoHttpResult<Stream>> get = block
+            ? AtProtoServer.GetBlock(Segment, 0, TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken)
+            : AtProtoServer.GetSegment(Segment, TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken);
+        if (valid)
+        {
+            AtProtoHttpResult<Stream> result = await get;
+            Assert.True(result.Succeeded);
+            await using Stream stream = result.Result;
+            Assert.Equal(1, stream.ReadByte());
+        }
+        else
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => get);
+        }
+    }
+
     [Fact]
     public async Task DownloadStopsAfterRepeatedInterruptedBodies()
     {
@@ -692,6 +736,56 @@ public class JetstreamArchiveTests
         {
             RequestFingerprint = null
         }, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("blocks")]
+    [InlineData("segment")]
+    public async Task LaterPlanPageDoesNotRepeatRowsBeforeItsCursor(string mode)
+    {
+        using Compressor compressor = new();
+        byte[] frame = compressor.Wrap(TwoRecordBlock()).ToArray();
+        byte[] segment = new byte[256 + 8 + frame.Length];
+        "jss0"u8.CopyTo(segment);
+        BinaryPrimitives.WriteUInt16LittleEndian(segment.AsSpan(12, 2), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(segment.AsSpan(14, 4), 1);
+        BinaryPrimitives.WriteUInt64LittleEndian(segment.AsSpan(256, 8), checked((ulong)frame.Length));
+        frame.CopyTo(segment.AsSpan(264));
+        List<long> plans = [];
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                using StreamReader reader = new(context.Request.Body);
+                string body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+                using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(body);
+                long after = document.RootElement.GetProperty("afterSeq").GetInt64();
+                plans.Add(after);
+                context.Response.ContentType = "application/json";
+                string ranges = mode == "blocks" ? ""","blocks":[{"first":0,"last":0}]""" : "";
+                await context.Response.WriteAsync(
+                    $$$"""{"plannedThroughSeq":{{{(after == 0 ? 10 : 11)}}},"sealedTipSeq":11,"segments":[{"name":"seg_0000000000.jss","index":0,"checksum":"{{{Checksum}}}","minSeq":10,"maxSeq":11,"mode":"{{{mode}}}"{{{ranges}}} }],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":2} }""");
+            }
+            else
+            {
+                context.Response.Headers.ETag = mode == "blocks" ? $"\"{Checksum}:0\"" : $"\"{Checksum}\"";
+                byte[] content = mode == "blocks" ? frame : segment;
+                context.Response.ContentLength = content.Length;
+                await context.Response.Body.WriteAsync(content);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        List<long?> received = [];
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(new SnapshotRequest(),
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            received.Add(evt.Sequence);
+        }
+
+        Assert.Equal([0, 10], plans);
+        Assert.Equal([10, 11], received);
     }
 
     [Theory]
