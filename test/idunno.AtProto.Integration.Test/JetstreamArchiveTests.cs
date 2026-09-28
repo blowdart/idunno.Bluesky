@@ -113,6 +113,52 @@ public class JetstreamArchiveTests
     }
 
     [Theory]
+    [InlineData(true, "segments", "null")]
+    [InlineData(true, "segments", "[null]")]
+    [InlineData(true, "name", "null")]
+    [InlineData(true, "checksum", "null")]
+    [InlineData(true, "blocks", "[null]")]
+    [InlineData(false, "segments", "[null]")]
+    [InlineData(false, "name", "null")]
+    [InlineData(false, "checksum", "null")]
+    public async Task ArchiveRejectsNullPlannerFieldsAndEntries(bool plan, string field, string replacement)
+    {
+        string body = plan
+            ? $$$"""{"plannedThroughSeq":1,"sealedTipSeq":1,"segments":[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":0,"maxSeq":1,"mode":"blocks","blocks":[{"first":0,"last":0}]}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":1,"entries":1}}"""
+            : $$$"""{"cursor":null,"segments":[{"name":"{{{Segment}}}","index":0,"sizeBytes":1,"checksum":"{{{Checksum}}}","eventCount":1,"minSeq":0,"maxSeq":1,"minWitnessedAt":0,"maxWitnessedAt":0}]}""";
+        string original = field switch
+        {
+            "segments" => plan
+                ? $$$"""[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":0,"maxSeq":1,"mode":"blocks","blocks":[{"first":0,"last":0}]}]"""
+                : $$$"""[{"name":"{{{Segment}}}","index":0,"sizeBytes":1,"checksum":"{{{Checksum}}}","eventCount":1,"minSeq":0,"maxSeq":1,"minWitnessedAt":0,"maxWitnessedAt":0}]""",
+            "name" => $"\"{Segment}\"",
+            "checksum" => $"\"{Checksum}\"",
+            "blocks" => """[{"first":0,"last":0}]""",
+            _ => throw new ArgumentOutOfRangeException(nameof(field))
+        };
+        body = body.Replace($"\"{field}\":{original}", $"\"{field}\":{replacement}", StringComparison.Ordinal);
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(body);
+        });
+        using HttpClient client = server.CreateClient();
+
+        if (plan)
+        {
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => AtProtoServer.PlanSnapshot(
+                new SnapshotRequest(), TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+        else
+        {
+            await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => AtProtoServer.ListSegments(
+                TestServerBuilder.DefaultUri, "test-key", client,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Theory]
     [InlineData("SegmentNotFound", false)]
     [InlineData("BlockNotFound", true)]
     [InlineData("UnknownEndpoint", false)]
@@ -791,6 +837,15 @@ public class JetstreamArchiveTests
         Assert.NotNull(checkpoint);
         Assert.Equal(after, checkpoint.PlanAfterSeq);
         Assert.Equal(tip, checkpoint.SealedTipSeq);
+        if (after > tip)
+        {
+            Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(request,
+                checkpoint with { PlanAfterSeq = after + 1 },
+                cancellationToken: TestContext.Current.CancellationToken));
+            Assert.Throws<ArgumentException>(() => jetstream.SnapshotAsync(request,
+                checkpoint with { PlanAfterSeq = tip + 1 },
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
         Assert.NotNull(jetstream.ReplayAsync(request, checkpoint,
             cancellationToken: TestContext.Current.CancellationToken));
         Assert.NotNull(jetstream.ReplayAsync(request, checkpoint with { LiveAfterSeq = after },

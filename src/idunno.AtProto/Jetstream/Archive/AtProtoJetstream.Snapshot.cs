@@ -383,7 +383,8 @@ public partial class AtProtoJetstream
             checkpoint.ReplayAfterSeq is not null || checkpoint.PlanAfterSeq < (request.AfterSeq ?? 0) ||
             checkpoint.SealedTipSeq < 0 || checkpoint.PlanAfterSeq < 0 ||
             (checkpoint.PlanAfterSeq > checkpoint.SealedTipSeq &&
-             (checkpoint.SegmentName is not null || checkpoint.NextBlockIndex != 0 || checkpoint.NextByteOffset != 0)) ||
+             (checkpoint.PlanAfterSeq != (request.AfterSeq ?? 0) ||
+              checkpoint.SegmentName is not null || checkpoint.NextBlockIndex != 0 || checkpoint.NextByteOffset != 0)) ||
             checkpoint.NextByteOffset < 0 ||
             checkpoint.NextBlockIndex < 0 || checkpoint.LiveAfterSeq is not null || (request.BeforeSeq is not null &&
             request.BeforeSeq < checkpoint.SealedTipSeq)))

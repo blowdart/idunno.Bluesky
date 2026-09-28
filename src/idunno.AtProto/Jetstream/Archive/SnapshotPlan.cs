@@ -23,12 +23,20 @@ public sealed record SnapshotPlan
     public required long SealedTipSeq { get; init; }
 
     /// <summary>Gets the segments to download.</summary>
-    /// <exception cref="JsonException">The archive plan's segments are <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">The archive plan's segments or a segment entry are <see langword="null"/>.</exception>
     [JsonRequired]
     public required IReadOnlyList<PlannedSegment> Segments
     {
         get => _segments;
-        init => _segments = value ?? throw new JsonException("The archive plan segments cannot be null.");
+        init
+        {
+            if (value is null || value.Any(segment => segment is null))
+            {
+                throw new JsonException("The archive plan segments cannot contain null.");
+            }
+
+            _segments = value;
+        }
     }
 
     /// <summary>Gets the planner statistics.</summary>
@@ -71,7 +79,20 @@ public sealed record PlannedSegment
     public required string Mode { get; init; }
 
     /// <summary>Gets inclusive block ranges when <see cref="Mode"/> is <c>blocks</c>.</summary>
-    public IReadOnlyList<BlockRange>? Blocks { get; init; }
+    /// <exception cref="JsonException">A block range in the archive plan is <see langword="null"/>.</exception>
+    public IReadOnlyList<BlockRange>? Blocks
+    {
+        get;
+        init
+        {
+            if (value?.Any(range => range is null) == true)
+            {
+                throw new JsonException("The archive plan block ranges cannot contain null.");
+            }
+
+            field = value;
+        }
+    }
 }
 
 /// <summary>
@@ -121,12 +142,20 @@ public sealed record SegmentList
     public string? Cursor { get; init; }
 
     /// <summary>Gets the segments in this page.</summary>
-    /// <exception cref="JsonException">The archive segment list is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">The archive segment list or a segment entry is <see langword="null"/>.</exception>
     [JsonRequired]
     public required IReadOnlyList<SegmentInfo> Segments
     {
         get => _segments;
-        init => _segments = value ?? throw new JsonException("The archive segment list cannot be null.");
+        init
+        {
+            if (value is null || value.Any(segment => segment is null))
+            {
+                throw new JsonException("The archive segment list cannot contain null.");
+            }
+
+            _segments = value;
+        }
     }
 }
 
