@@ -71,7 +71,8 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 ## Checkin conventions
 
 * Run the pre-commit gate above (full `Debug` `--no-incremental` solution build plus the whole test suite) and require it to be clean before committing. Never commit on the strength of a partial or incremental build.
+* **Branch naming.** When the branch-creation mechanism supports slash-separated names, name new work branches `wip/{github-username}/{short-kebab-case-subject}` (for example, `wip/blowdart/add-feed-filter`). Determine the username from the authenticated GitHub account; do not guess it. Keep the subject concise and descriptive. If the mechanism requires a different format, follow its constraints; do not use raw Git commands or other workarounds to force the requested format.
 * Do not make verbose commit messages. Use the imperative mood and keep it short (e.g., "Add X", "Fix Y", "Update Z").
 * Never commit directly to `main`. Use a feature branch and open a pull request. The PR description should summarize the change, link to any relevant issues, and note any breaking changes.
 * Never create unsigned commits. All commits must be signed with a GPG key or SSH key.
-* Do not attempt to work around signing failures, report them, and ask if you should retry the commit. If you cannot sign commits, do not commit until the issue is resolved.
+* If commit signing fails because the configured signer (including 1Password) requires interaction or returns an error, stop and report the error. Do not retry, change signing methods or configuration, or delegate a retry. Wait for explicit user instructions in the active session; if the user instructs you to try again, resume the signing attempt. Do not work around signing failures or commit unsigned.
