@@ -992,17 +992,9 @@ public class AtProtoJetstreamV2Tests
         private int _upgradeAttempts;
         private int _upgrades;
 
-        public TestJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
-        }
-
         public sealed record Connection(string Path, string Query, string? SubProtocol);
 
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://localhost");
 
         public byte[]? Dictionary { get; init; }
 
@@ -1033,7 +1025,7 @@ public class AtProtoJetstreamV2Tests
 
         public Task Start(Func<WebSocket, int, CancellationToken, Task> onConnected)
         {
-            _listener.Start();
+            StartListener();
 
             _ = Task.Run(async () =>
             {
@@ -1134,6 +1126,32 @@ public class AtProtoJetstreamV2Tests
             }, _cancellationTokenSource.Token);
 
             return Task.CompletedTask;
+        }
+
+        private void StartListener()
+        {
+            const int maximumAttempts = 20;
+
+            for (int attempt = 1; ; attempt++)
+            {
+                int port = FreePort();
+
+                _listener.Prefixes.Clear();
+                _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+
+                try
+                {
+                    _listener.Start();
+                }
+                catch (HttpListenerException) when (attempt < maximumAttempts)
+                {
+                    continue;
+                }
+
+                Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+
+                return;
+            }
         }
 
         internal static async Task Respond(HttpListenerContext context, HttpStatusCode statusCode, string contentType, byte[] body)
