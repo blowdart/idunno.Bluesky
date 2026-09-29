@@ -174,7 +174,8 @@ public sealed class Program
         bool listenForQuitKey = !Console.IsInputRedirected;
 
         Console.WriteLine(
-            $"Watching labels from {labelerDid} at {labelerService}. Press {(listenForQuitKey ? "Q" : "Ctrl+C")} to stop.");
+            $"Watching labels from {labelerDid} at {Sanitize(labelerService.ToString())}. " +
+            $"Press {(listenForQuitKey ? "Q" : "Ctrl+C")} to stop.");
 
         IReadOnlyList<string>? declaredLabelValues;
 
@@ -227,11 +228,12 @@ public sealed class Program
                         break;
 
                     case FirehoseInfoEvent infoEvent:
-                        Console.WriteLine($"INFO: {infoEvent.Name} {infoEvent.Message}");
+                        Console.WriteLine($"INFO: {Sanitize(infoEvent.Name)} {Sanitize(infoEvent.Message)}");
                         break;
 
                     case FirehoseInvalidEvent invalidEvent:
-                        Console.WriteLine($"INVALID: Ignored an invalid {invalidEvent.Type} event: {invalidEvent.Reason}");
+                        Console.WriteLine(
+                            $"INVALID: Ignored an invalid {Sanitize(invalidEvent.Type)} event: {Sanitize(invalidEvent.Reason)}");
                         break;
                 }
             }
@@ -441,8 +443,11 @@ public sealed class Program
 
             if (!page.Succeeded)
             {
+                // The error name and message come from the server, and the caller prints them, so sanitize them here
+                // rather than at the point they are written, where their origin is no longer obvious.
                 throw new InvalidOperationException(
-                    $"{s_relay} could not list {LabelerServiceCollection} repositories: {page.StatusCode} {page.AtErrorDetail?.Error} {page.AtErrorDetail?.Message}".TrimEnd());
+                    $"{s_relay} could not list {LabelerServiceCollection} repositories: {page.StatusCode} " +
+                    $"{Sanitize(page.AtErrorDetail?.Error)} {Sanitize(page.AtErrorDetail?.Message)}".TrimEnd());
             }
 
             dids.AddRange(page.Result);
@@ -813,10 +818,17 @@ public sealed class Program
     }
 
     // Remote text is written straight to the terminal, where an escape sequence can move the cursor or recolour the
-    // line, and a bidirectional override can reorder what the rest of it appears to say. Neither belongs in a name or
-    // a label value, so replace both. Zero width joiners are kept, because emoji are built out of them.
-    private static string Sanitize(string value)
+    // line, and a bidirectional override can reorder what the rest of it appears to say. Neither belongs in a name,
+    // a label value, a service endpoint or a server's error text, so replace both. Zero width joiners are kept,
+    // because emoji are built out of them. Optional fields are accepted so that a caller does not have to decide
+    // whether an absent value is worth sanitizing; a null becomes empty, which prints as nothing.
+    private static string Sanitize(string? value)
     {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
         StringBuilder builder = new(value.Length);
 
         foreach (Rune rune in value.EnumerateRunes())
