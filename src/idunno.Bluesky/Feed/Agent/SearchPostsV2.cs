@@ -47,7 +47,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when both <paramref name="repliesOnly"/> and <paramref name="excludeReplies"/> are set.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference in summary.")]
     public async Task<AtProtoHttpResult<SearchV2Results>> SearchPostsV2(
         string? cursor = null,
@@ -82,11 +81,6 @@ public partial class BlueskyAgent
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         if (repliesOnly is not null && excludeReplies is not null)
         {
             throw new ArgumentException($"Cannot set both {nameof(repliesOnly)} and {nameof(excludeReplies)}.");
@@ -128,7 +122,8 @@ public partial class BlueskyAgent
             repliesOnly,
             following,
             queryLanguage,
-            AuthenticatedOrUnauthenticatedServiceUri,
+            // The public AppView rejects search requests, so unauthenticated searches go to the agent's original service.
+            Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,

@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
 using idunno.Bluesky.Video.Model;
 
@@ -18,13 +19,14 @@ public static partial class BlueskyServer
     /// </summary>
     /// <param name="jobId">The job id whose status should be queried.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to query the status against.</param>
+    /// <param name="serviceCredential">The credentials to use for the service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="serviceCredential"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -35,6 +37,7 @@ public static partial class BlueskyServer
     public static async Task<AtProtoHttpResult<UploadStatus>> GetUploadStatus(
         string jobId,
         Uri service,
+        ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
@@ -42,6 +45,7 @@ public static partial class BlueskyServer
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
         ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(serviceCredential);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         // AppView proxy is not needed as we're hitting the video service directly.
@@ -50,8 +54,10 @@ public static partial class BlueskyServer
         AtProtoHttpResult<GetUploadStatusResponse> response = await client.Get(
             service,
             $"/xrpc/app.bsky.video.getUploadStatus?jobId={Uri.EscapeDataString(jobId)}",
+            credentials: serviceCredential,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            onCredentialsUpdated: null, // Service credentials don't get updates
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         UploadStatus? result = null;

@@ -255,7 +255,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -268,11 +267,6 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
 
         if (post.RecordKey is null)
         {
@@ -314,7 +308,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     /// <remarks>
     /// <para>Unlike <see cref="GetThreadGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
     /// <see cref="UpdateThreadGate(ThreadGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
@@ -333,11 +326,6 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(post);
 
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         if (post.RecordKey is null)
         {
             throw new ArgumentException("RecordKey is null", nameof(post));
@@ -348,13 +336,14 @@ public partial class BlueskyAgent
             throw new ArgumentException("Does not point to a Post record", nameof(post));
         }
 
+        // Gate records live in the repository of the post's author, using the post's record key.
         return await GetRecord<ThreadGate>(
-            repo: Did,
+            repo: post.Repo,
             collection: CollectionNsid.ThreadGate,
             rKey: post.RecordKey,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             cid: null,
-            service: Service,
+            service: IsAuthenticated ? Service : null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -509,7 +498,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     [UnconditionalSuppressMessage(
          "Trimming",
          "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -522,11 +510,6 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
 
         if (post.RecordKey is null)
         {
@@ -568,7 +551,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
     /// <remarks>
     /// <para>Unlike <see cref="GetPostGate(AtUri, CancellationToken)"/> the returned record carries its <see cref="Cid"/>, which
     /// <see cref="UpdatePostGate(PostGate, Cid?, CancellationToken)"/> takes as a <c>swapRecord</c> to make an update conditional.</para>
@@ -587,11 +569,6 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(post);
 
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         if (post.RecordKey is null)
         {
             throw new ArgumentException("RecordKey is null", nameof(post));
@@ -602,13 +579,14 @@ public partial class BlueskyAgent
             throw new ArgumentException("Does not point to a Post record", nameof(post));
         }
 
+        // Gate records live in the repository of the post's author, using the post's record key.
         return await GetRecord<PostGate>(
-            repo: Did,
+            repo: post.Repo,
             collection: CollectionNsid.PostGate,
             rKey: post.RecordKey,
             cid: null,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-            service: Service,
+            service: IsAuthenticated ? Service : null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
