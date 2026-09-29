@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -109,10 +110,13 @@ public class AuthenticationRequirementTests
     }
 
     [Theory]
-    [InlineData("app.bsky.feed.threadgate")]
-    [InlineData("app.bsky.feed.postgate")]
-    public async Task GateRecordsAreReadFromThePostAuthorsRepository(string gateCollection)
+    [InlineData("app.bsky.feed.threadgate", true)]
+    [InlineData("app.bsky.feed.threadgate", false)]
+    [InlineData("app.bsky.feed.postgate", true)]
+    [InlineData("app.bsky.feed.postgate", false)]
+    public async Task GateRecordsAreReadFromThePostAuthorsRepositoryOnTheirPds(string gateCollection, bool authenticated)
     {
+        const string authorPdsHost = "author.pds.test";
         string response =
             $$"""
             {
@@ -128,8 +132,40 @@ public class AuthenticationRequirementTests
 
         CapturedRequest? captured = null;
 
-        using TestServer testServer = CreateCapturingServer("/xrpc/com.atproto.repo.getRecord", response, r => captured = r);
-        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri };
+        using TestServer testServer = TestServerBuilder.CreateServer(
+            TestServerBuilder.DefaultUri,
+            async context =>
+            {
+                HttpRequest request = context.Request;
+                HttpResponse httpResponse = context.Response;
+
+                if (request.Host.Host == "plc.directory" && request.Path == $"/{s_otherPost.Repo}")
+                {
+                    DidDocument didDocument = new(
+                        id: s_otherPost.Repo.ToString(),
+                        context: ["https://www.w3.org/ns/did/v1"],
+                        alsoKnownAs: null,
+                        verificationMethods: null,
+                        services: [new(id: "#atproto_pds", type: "AtprotoPersonalDataServer", serviceEndpoint: new Uri($"https://{authorPdsHost}/"))]);
+                    await httpResponse.WriteAsJsonAsync(didDocument, new JsonSerializerOptions(JsonSerializerDefaults.Web), TestContext.Current.CancellationToken);
+                }
+                else if (request.Path == "/xrpc/com.atproto.repo.getRecord")
+                {
+                    captured = new CapturedRequest(request.Host.Host, request.QueryString.Value ?? string.Empty, request.Headers.Authorization.Count != 0);
+
+                    httpResponse.StatusCode = (int)HttpStatusCode.OK;
+                    httpResponse.ContentType = "application/json";
+                    await httpResponse.WriteAsync(response, TestContext.Current.CancellationToken);
+                }
+                else
+                {
+                    httpResponse.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            });
+
+        using BlueskyAgent agent = authenticated
+            ? new(new TestHttpClientFactory(testServer)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri }
+            : new(new TestHttpClientFactory(testServer));
 
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
@@ -139,6 +175,8 @@ public class AuthenticationRequirementTests
 
         Assert.True(succeeded);
         Assert.NotNull(captured);
+        Assert.Equal(authorPdsHost, captured.Host);
+        Assert.False(captured.HadAuthorization);
         Assert.Contains($"repo={Uri.EscapeDataString(s_otherPost.Repo.ToString())}", captured.QueryString, StringComparison.Ordinal);
         Assert.Contains($"collection={Uri.EscapeDataString(gateCollection)}", captured.QueryString, StringComparison.Ordinal);
         Assert.Contains("rkey=3lcf6ry7xy22x", captured.QueryString, StringComparison.Ordinal);

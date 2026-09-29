@@ -343,7 +343,7 @@ public partial class BlueskyAgent
             rKey: post.RecordKey,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             cid: null,
-            service: IsAuthenticated ? Service : null,
+            service: GetGateService(post),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -586,7 +586,7 @@ public partial class BlueskyAgent
             rKey: post.RecordKey,
             cid: null,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-            service: IsAuthenticated ? Service : null,
+            service: GetGateService(post),
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -707,4 +707,8 @@ public partial class BlueskyAgent
 
         return resolvedDid is not null && resolvedDid == did;
     }
+
+    // Gate records live in the post author's repository, so they must be read from the author's PDS.
+    // A null service lets GetRecord resolve that PDS; the current user's own posts use the authenticated service.
+    private Uri? GetGateService(AtUri post) => IsAuthenticated && post.Repo is Did postDid && postDid == Did ? Service : null;
 }

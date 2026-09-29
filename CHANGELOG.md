@@ -129,8 +129,8 @@
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
-* `BlueskyAgent.GetThreadGate()`, `GetThreadGateRecord()`, `GetPostGate()` and `GetPostGateRecord()` now read the gate from the repository of
-  the post's author, rather than the authenticated user's repository, and no longer require authentication.
+* `BlueskyAgent.GetThreadGate()`, `GetThreadGateRecord()`, `GetPostGate()` and `GetPostGateRecord()` now read the gate from
+  the post author's repository, on the author's PDS, rather than the authenticated user's repository, and no longer require authentication.
 * `BlueskyAgent.GetUploadStatus()` now sends a service authentication token to the video service, which previously rejected the request,
   and throws `AuthenticationRequiredException` when the agent is unauthenticated.
 
