@@ -26,6 +26,8 @@ internal readonly record struct FirehoseFrame(long Operation, string? Type, Read
     /// </summary>
     internal const long ErrorOperation = -1;
 
+    private static readonly CborFieldNames s_headerFields = new("op", "t");
+
     /// <summary>
     /// Splits <paramref name="message"/> into its header and payload.
     /// </summary>
@@ -69,7 +71,7 @@ internal readonly record struct FirehoseFrame(long Operation, string? Type, Read
             return (encodedHeader, encodedPayload);
         });
 
-        CborFields headerFields = FirehoseCbor.ReadFields(header);
+        CborFields headerFields = FirehoseCbor.ReadFields(header, s_headerFields);
         long operation = headerFields.GetInteger("op");
         string? type = headerFields.GetOptionalString("t");
 

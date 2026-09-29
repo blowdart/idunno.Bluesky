@@ -14,6 +14,11 @@ internal interface IFirehosePayloadDecoder
     string Nsid { get; }
 
     /// <summary>
+    /// Gets the names of the payload fields the decoder reads, across all of its message types.
+    /// </summary>
+    CborFieldNames PayloadFields { get; }
+
+    /// <summary>
     /// Gets a value that indicates whether messages of <paramref name="type"/> are known and carry a sequence number.
     /// </summary>
     /// <param name="type">The short message type, such as <c>#commit</c>.</param>

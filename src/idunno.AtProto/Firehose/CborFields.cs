@@ -7,23 +7,13 @@ using System.Globalization;
 namespace idunno.AtProto.Firehose;
 
 /// <summary>
-/// The fields of a DAG-CBOR map, with typed accessors which throw <see cref="InvalidDataException"/> for missing or mistyped values.
+/// The known fields of a DAG-CBOR map, with typed accessors which throw <see cref="InvalidDataException"/> for missing or mistyped values.
 /// </summary>
-/// <param name="fields">The encoded value of each field, by name.</param>
+/// <param name="fields">The encoded value of each known field present, by name.</param>
 internal sealed class CborFields(Dictionary<string, ReadOnlyMemory<byte>> fields)
 {
     // The single byte encoding of a CBOR null.
     private const byte NullByte = 0xF6;
-
-    /// <summary>
-    /// Gets the number of fields in the map.
-    /// </summary>
-    public int Count => fields.Count;
-
-    /// <summary>
-    /// Gets the names of the fields in the map.
-    /// </summary>
-    public IEnumerable<string> Names => fields.Keys;
 
     /// <summary>
     /// Gets a value that indicates whether the map contains a field called <paramref name="name"/>, even if its value is null.

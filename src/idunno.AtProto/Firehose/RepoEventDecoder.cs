@@ -41,8 +41,18 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
     private const string IdentityType = "#identity";
     private const string AccountType = "#account";
 
+    private static readonly CborFieldNames s_payloadFields = new(
+        "active", "blobs", "blocks", "commit", "did", "handle", "ops", "prevData", "rebase", "repo", "rev", "since", "status", "time", "tooBig");
+
+    private static readonly CborFieldNames s_operationFields = new("action", "cid", "path", "prev");
+
+    private static readonly CborFieldNames s_commitFields = new("data", "rev");
+
     /// <inheritdoc/>
     public string Nsid => EndpointNsid;
+
+    /// <inheritdoc/>
+    public CborFieldNames PayloadFields => s_payloadFields;
 
     /// <inheritdoc/>
     public bool IsSequenced(string type) => type is CommitType or SyncType or IdentityType or AccountType;
@@ -144,7 +154,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         List<FirehoseRepoOperation> operations = new(encodedOperations.Count);
         foreach (ReadOnlyMemory<byte> encodedOperation in encodedOperations)
         {
-            operations.Add(DecodeOperation(FirehoseCbor.ReadFields(encodedOperation), carBlocks));
+            operations.Add(DecodeOperation(FirehoseCbor.ReadFields(encodedOperation, s_operationFields), carBlocks));
         }
 
         return new FirehoseCommitEvent(
@@ -304,7 +314,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
             throw new InvalidDataException("The commit DID does not match the event.");
         }
 
-        CborFields commitFields = FirehoseCbor.ReadFields(commitBlock);
+        CborFields commitFields = FirehoseCbor.ReadFields(commitBlock, s_commitFields);
 
         if (!string.Equals(commitFields.GetString("rev"), rev, StringComparison.Ordinal))
         {

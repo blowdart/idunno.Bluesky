@@ -184,7 +184,7 @@ public class FirehoseTests
             writer.WriteTextString("cid");
             writer.WriteNull();
             writer.WriteEndMap();
-        }));
+        }), new CborFieldNames("cid", "prev"));
 
         Assert.True(fields.Contains("cid"));
         Assert.True(fields.IsAbsentOrNull("cid"));
@@ -198,13 +198,13 @@ public class FirehoseTests
     public void CborFieldsBytesAreCopiedAndLimited()
     {
         byte[] encoded = EncodeMap(("blocks", new byte[] { 1, 2, 3 }));
-        CborFields fields = FirehoseCbor.ReadFields(encoded);
+        CborFields fields = FirehoseCbor.ReadFields(encoded, new CborFieldNames("blocks"));
 
         byte[] blocks = fields.GetBytes("blocks", 3);
         encoded.AsSpan().Clear();
 
         Assert.Equal([1, 2, 3], blocks);
-        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("blocks", new byte[] { 1, 2, 3 }))).GetBytes("blocks", 2));
+        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("blocks", new byte[] { 1, 2, 3 })), new CborFieldNames("blocks")).GetBytes("blocks", 2));
     }
 
     [Theory]
@@ -212,7 +212,7 @@ public class FirehoseTests
     [InlineData("2026-09-28T01:02:03.123+01:00")]
     public void CborFieldsReadDateTimesAsUniversal(string value)
     {
-        DateTimeOffset time = FirehoseCbor.ReadFields(EncodeMap(("time", value))).GetDateTime("time");
+        DateTimeOffset time = FirehoseCbor.ReadFields(EncodeMap(("time", value)), new CborFieldNames("time")).GetDateTime("time");
 
         Assert.Equal(TimeSpan.Zero, time.Offset);
     }
@@ -260,11 +260,11 @@ public class FirehoseTests
     public void CborFieldsRejectInvalidAtProtocolDateTimes(string value)
     {
         Assert.False(CborFields.TryParseDateTime(value, out _));
-        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("time", value))).GetDateTime("time"));
+        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("time", value)), new CborFieldNames("time")).GetDateTime("time"));
     }
     [Fact]
     public void CborFieldsRejectInvalidDids() =>
-        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("did", "not a did"))).GetDid("did"));
+        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("did", "not a did")), new CborFieldNames("did")).GetDid("did"));
 
     [Fact]
     public void GetUnsignedLabelRemovesOnlyTheSignature()
@@ -289,7 +289,7 @@ public class FirehoseTests
             ("sig", new byte[] { 1, 2 }),
             ("src", "did:plc:ewvi7nxzyoun6zhxsrcy6jgr"),
             ("uri", "at://did:plc:ewvi7nxzyoun6zhxsrcy6jgr"),
-            ("val", "!hide")));
+            ("val", "!hide")), LabelEventDecoder.LabelFields);
 
         Labels.Label label = LabelEventDecoder.DecodeLabel(fields);
 
@@ -307,7 +307,7 @@ public class FirehoseTests
             ("cts", "2026-09-28T01:02:03Z"),
             ("src", "did:plc:ewvi7nxzyoun6zhxsrcy6jgr"),
             ("uri", "at://x"),
-            ("val", "spam")))));
+            ("val", "spam")), LabelEventDecoder.LabelFields)));
 
     [Theory]
     [InlineData("takendown", RepoStatus.Takendown)]
@@ -373,6 +373,46 @@ public class FirehoseTests
         // Sizing the list from the declared count would allocate a further 4 MB on top of the half megabyte header.
         Assert.True(allocated < 2 * 1024 * 1024, $"Reading the header allocated {allocated} bytes.");
     }
+
+    [Fact]
+    public void ReadFieldsSkipsUnknownFieldsWithoutAllocatingThem()
+    {
+        const int unknownFields = 200_000;
+        byte[] map = Encode(writer =>
+        {
+            writer.WriteStartMap(unknownFields + 1);
+            writer.WriteTextString("seq");
+            writer.WriteInt64(7);
+            for (int i = 0; i < unknownFields; i++)
+            {
+                writer.WriteTextString(string.Create(CultureInfo.InvariantCulture, $"u{i}"));
+                writer.WriteInt32(0);
+            }
+
+            writer.WriteEndMap();
+        });
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        CborFields fields = FirehoseCbor.ReadFields(map, new CborFieldNames("seq"));
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(7, fields.GetInteger("seq"));
+        Assert.False(fields.Contains("u0"));
+
+        // Keeping every field would allocate megabytes of names and dictionary entries for this map of about 1.4 MB.
+        Assert.True(allocated < 64 * 1024, $"Reading the map allocated {allocated} bytes.");
+    }
+
+    [Fact]
+    public void GetUnsignedLabelRejectsLabelsWithTooManyFields()
+    {
+        (string Key, object Value)[] fields = [.. Enumerable.Range(0, LabelEventDecoder.MaximumSignedLabelFields + 1)
+            .Select(i => (string.Create(CultureInfo.InvariantCulture, $"f{i:D3}"), (object)"x"))];
+
+        Assert.Throws<InvalidDataException>(() => LabelEventDecoder.GetUnsignedLabel(EncodeMap(fields)));
+        Assert.NotEmpty(LabelEventDecoder.GetUnsignedLabel(EncodeMap(fields[..LabelEventDecoder.MaximumSignedLabelFields])));
+    }
+
     public static TheoryData<Func<FirehoseOptions>> InvalidOptions => new()
     {
         () => new FirehoseOptions { BufferSize = 0 },

@@ -64,12 +64,18 @@ internal static class FirehoseCbor
     });
 
     /// <summary>
-    /// Reads the fields of the DAG-CBOR map in <paramref name="value"/>, keeping each field's value encoded.
+    /// Reads the fields named in <paramref name="knownFields"/> from the DAG-CBOR map in <paramref name="value"/>, keeping each field's value encoded.
     /// </summary>
     /// <param name="value">The encoded map.</param>
-    /// <returns>The fields of the map.</returns>
+    /// <param name="knownFields">The fields to read. Any others are skipped.</param>
+    /// <returns>The known fields present in the map.</returns>
     /// <exception cref="InvalidDataException"><paramref name="value"/> is not a DAG-CBOR map.</exception>
-    internal static CborFields ReadFields(ReadOnlyMemory<byte> value) => Wrap(() =>
+    /// <remarks>
+    /// <para>The map's declared length is controlled by the server, so nothing is sized from it, and unknown fields, which the
+    /// specification says must be ignored, are skipped without allocating their names. Memory used is bounded by the known fields,
+    /// however many fields the map has.</para>
+    /// </remarks>
+    internal static CborFields ReadFields(ReadOnlyMemory<byte> value, CborFieldNames knownFields) => Wrap(() =>
     {
         CborReader reader = new(value, CborConformanceMode.Canonical);
 
@@ -79,7 +85,7 @@ internal static class FirehoseCbor
         }
 
         int length = reader.ReadStartMap() ?? throw new InvalidDataException("The value is an indefinite length map.");
-        Dictionary<string, ReadOnlyMemory<byte>> fields = new(length, StringComparer.Ordinal);
+        Dictionary<string, ReadOnlyMemory<byte>> fields = new(StringComparer.Ordinal);
 
         for (int i = 0; i < length; i++)
         {
@@ -88,8 +94,16 @@ internal static class FirehoseCbor
                 throw new InvalidDataException("The value contains a map key which is not a string.");
             }
 
-            string key = reader.ReadTextString();
-            fields[key] = reader.ReadEncodedValue();
+            string? key = knownFields.Find(reader.ReadDefiniteLengthTextStringBytes().Span);
+
+            if (key is null)
+            {
+                reader.SkipValue();
+            }
+            else
+            {
+                fields[key] = reader.ReadEncodedValue();
+            }
         }
 
         reader.ReadEndMap();
@@ -127,7 +141,8 @@ internal static class FirehoseCbor
                 string.Create(CultureInfo.InvariantCulture, $"The '{name}' field has {length} items, more than the maximum of {maximumLength}."));
         }
 
-        List<ReadOnlyMemory<byte>> items = new(length);
+        // Not sized from the declared length, which is only bounded by the size of the frame when there is no maximum.
+        List<ReadOnlyMemory<byte>> items = [];
 
         for (int i = 0; i < length; i++)
         {

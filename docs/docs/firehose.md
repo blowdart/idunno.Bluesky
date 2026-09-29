@@ -189,6 +189,9 @@ A firehose server may be anyone's. `AtProtoFirehose` enforces these limits:
   lexicon specifies. CARs are limited to `MaximumCarBlocks` blocks of at most `MaximumCarBlockSize` bytes, and label
   batches to `MaximumLabelsPerMessage` labels, because the lexicon supplies no limit.
 * CBOR must be valid DAG-CBOR, nested at most 128 levels deep. Nesting is checked as the frame is read, so a deeply nested frame is rejected before it can use more memory than its own size.
+* Only the fields the reader understands are kept from each map; unknown fields are skipped without allocating their
+  names, and no map or array is sized from the length the server declares. Labels whose signatures are checked keep
+  every field, as the signature covers them all, so a label with more than 64 fields is yielded as FirehoseInvalidEvent.
 * Every CAR block's CID is recomputed, the commit must be the CAR's first root, the commit's DID and revision must
   match the event, and each operation's record block must be present. The number of CAR roots a header declares is
   not trusted to size any allocation.

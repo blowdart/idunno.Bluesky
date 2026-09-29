@@ -37,6 +37,9 @@ internal sealed class EventStreamReader
 
     private const string ConsumerTooSlow = "ConsumerTooSlow";
 
+    // The payload fields read here, for errors, info messages and sequence numbers, rather than by the decoder.
+    private static readonly CborFieldNames s_readerPayloadFields = new("error", "message", "name", "seq");
+
     private readonly Uri _host;
     private readonly FirehoseOptions _options;
     private readonly WebSocketOptions? _webSocketOptions;
@@ -45,6 +48,7 @@ internal sealed class EventStreamReader
     private readonly ILogger _logger;
     private readonly FirehoseMetrics _metrics;
     private readonly KeyValuePair<string, object?> _serverTag;
+    private readonly CborFieldNames _payloadFields;
 
     // Zero is a valid starting cursor, so a negative value means there is no sequence to resume from.
     private const long NoSequence = -1;
@@ -79,6 +83,7 @@ internal sealed class EventStreamReader
         _logger = logger;
         _metrics = metrics;
         _serverTag = new KeyValuePair<string, object?>("server", host.GetLeftPart(UriPartial.Authority));
+        _payloadFields = s_readerPayloadFields.Union(decoder.PayloadFields);
     }
 
     /// <summary>
@@ -515,7 +520,7 @@ internal sealed class EventStreamReader
     {
         try
         {
-            return FirehoseCbor.ReadFields(frame.Payload);
+            return FirehoseCbor.ReadFields(frame.Payload, _payloadFields);
         }
         catch (InvalidDataException exception)
         {

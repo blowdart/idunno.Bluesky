@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Formats.Cbor;
+using System.Globalization;
 
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
@@ -24,8 +25,24 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
 
     private const string SignatureField = "sig";
 
+    /// <summary>
+    /// The most fields a label can have for its signature to be checked. Every field is covered by the signature, so none can be
+    /// skipped, and a label defines nine.
+    /// </summary>
+    internal const int MaximumSignedLabelFields = 64;
+
+    private static readonly CborFieldNames s_payloadFields = new("labels");
+
+    /// <summary>
+    /// The label fields read when decoding a label.
+    /// </summary>
+    internal static CborFieldNames LabelFields { get; } = new("cid", "cts", "exp", "neg", SignatureField, "src", "uri", "val", "ver");
+
     /// <inheritdoc/>
     public string Nsid => EndpointNsid;
+
+    /// <inheritdoc/>
+    public CborFieldNames PayloadFields => s_payloadFields;
 
     /// <inheritdoc/>
     public bool IsSequenced(string type) => type == LabelsType;
@@ -46,7 +63,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
 
         foreach (ReadOnlyMemory<byte> encodedLabel in encodedLabels)
         {
-            labels.Add(DecodeLabel(FirehoseCbor.ReadFields(encodedLabel)));
+            labels.Add(DecodeLabel(FirehoseCbor.ReadFields(encodedLabel, LabelFields)));
         }
 
         if (verifier is not null)
@@ -137,10 +154,18 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
     /// </summary>
     /// <param name="encodedLabel">The DAG-CBOR encoded label.</param>
     /// <returns>The DAG-CBOR encoded label without its <c>sig</c> field.</returns>
+    /// <exception cref="InvalidDataException">The label is not a DAG-CBOR map, or has more than <see cref="MaximumSignedLabelFields"/> fields.</exception>
     internal static byte[] GetUnsignedLabel(ReadOnlyMemory<byte> encodedLabel) => FirehoseCbor.Wrap(() =>
     {
         CborReader reader = new(encodedLabel, CborConformanceMode.Canonical);
         int length = reader.ReadStartMap() ?? throw new InvalidDataException("The label is an indefinite length map.");
+
+        if (length > MaximumSignedLabelFields)
+        {
+            throw new InvalidDataException(
+                string.Create(CultureInfo.InvariantCulture, $"The label has {length} fields, more than the maximum of {MaximumSignedLabelFields}."));
+        }
+
         List<(string Key, ReadOnlyMemory<byte> Value)> fields = new(length);
 
         for (int i = 0; i < length; i++)
