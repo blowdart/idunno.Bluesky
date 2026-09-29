@@ -180,7 +180,7 @@ public sealed class Program
         {
             string prefix = $"{labelerDid} declares it can emit: ";
 
-            Console.WriteLine($"{prefix}{FormatLabelValues(declaredLabelValues, prefix.Length)}");
+            Console.WriteLine($"{prefix}{FormatLabelValues(declaredLabelValues, DisplayWidth(prefix))}");
         }
         else
         {
@@ -292,7 +292,21 @@ public sealed class Program
         {
             if (service.Type == LabelerServiceType || service.Id.EndsWith(LabelerServiceId, StringComparison.Ordinal))
             {
-                return (did, service.ServiceEndpoint);
+                Uri endpoint = service.ServiceEndpoint;
+
+                // A DID document is published by whoever controls the DID, so its endpoint is untrusted. Anything which
+                // is not an absolute HTTP(S) URL with a host cannot be queried or subscribed to, and passing one on
+                // would throw from somewhere further away, so refuse it here as a labeler which cannot be used.
+                if (!endpoint.IsAbsoluteUri ||
+                    (endpoint.Scheme != Uri.UriSchemeHttp && endpoint.Scheme != Uri.UriSchemeHttps) ||
+                    string.IsNullOrEmpty(endpoint.Host) ||
+                    !string.IsNullOrEmpty(endpoint.UserInfo))
+                {
+                    throw new InvalidOperationException(
+                        $"{did} declares a labeler service endpoint which is not an absolute http or https URL, so it cannot be used.");
+                }
+
+                return (did, endpoint);
             }
         }
 
@@ -555,7 +569,7 @@ public sealed class Program
             {
                 string prefix = $"  {LabelSymbol}  {labelValues.Count} label {(labelValues.Count == 1 ? "value" : "values")}: ";
 
-                Console.WriteLine($"{prefix}{FormatLabelValues(labelValues, prefix.Length)}");
+                Console.WriteLine($"{prefix}{FormatLabelValues(labelValues, DisplayWidth(prefix))}");
             }
         }
     }
@@ -579,16 +593,18 @@ public sealed class Program
 
         StringBuilder builder = new();
         int shown = 0;
+        int width = 0;
 
         foreach (string labelValue in labelValues)
         {
             // A label value is remote text, so what is measured has to be what is written.
             string sanitized = Sanitize(labelValue);
+            int sanitizedWidth = DisplayWidth(sanitized);
 
             // Budget for the text describing what was left out as if this value is the last one shown, which is the longest it can be.
             int remainingWidth = $", and {labelValues.Count - shown} more".Length;
 
-            if (shown != 0 && builder.Length + ", ".Length + sanitized.Length + remainingWidth > budget)
+            if (shown != 0 && width + ", ".Length + sanitizedWidth + remainingWidth > budget)
             {
                 break;
             }
@@ -596,9 +612,11 @@ public sealed class Program
             if (shown != 0)
             {
                 builder.Append(", ");
+                width += ", ".Length;
             }
 
             builder.Append(sanitized);
+            width += sanitizedWidth;
             shown++;
         }
 
@@ -610,12 +628,106 @@ public sealed class Program
         string formatted = builder.ToString();
 
         // The first value is always shown, even when it is longer than the budget on its own, so trim whatever is left over.
-        if (formatted.Length > budget)
+        if (DisplayWidth(formatted) > budget)
         {
-            formatted = string.Concat(formatted.AsSpan(0, budget - 1), EllipsisSymbol);
+            formatted = TruncateToWidth(formatted, budget - 1) + EllipsisSymbol;
         }
 
         return formatted;
+    }
+
+    // A terminal lays text out in cells, not in UTF-16 code units. A CJK ideograph or an emoji occupies two of them,
+    // and a combining mark none at all, so counting string.Length would both wrap lines and truncate short.
+    private static int DisplayWidth(string value)
+    {
+        int width = 0;
+
+        foreach (string grapheme in EnumerateGraphemes(value))
+        {
+            width += GraphemeWidth(grapheme);
+        }
+
+        return width;
+    }
+
+    // Cuts text to a number of terminal cells, never splitting a grapheme cluster, and so never splitting a surrogate
+    // pair or orphaning a combining mark from the character it belongs to.
+    private static string TruncateToWidth(string value, int maximumWidth)
+    {
+        StringBuilder builder = new();
+        int width = 0;
+
+        foreach (string grapheme in EnumerateGraphemes(value))
+        {
+            int graphemeWidth = GraphemeWidth(grapheme);
+
+            if (width + graphemeWidth > maximumWidth)
+            {
+                break;
+            }
+
+            builder.Append(grapheme);
+            width += graphemeWidth;
+        }
+
+        return builder.ToString();
+    }
+
+    private static IEnumerable<string> EnumerateGraphemes(string value)
+    {
+        TextElementEnumerator enumerator = StringInfo.GetTextElementEnumerator(value);
+
+        while (enumerator.MoveNext())
+        {
+            yield return enumerator.GetTextElement();
+        }
+    }
+
+    // A cluster is drawn as one glyph, so it is as wide as the character it is built around, whatever is joined onto it.
+    private static int GraphemeWidth(string grapheme)
+    {
+        foreach (Rune rune in grapheme.EnumerateRunes())
+        {
+            int runeWidth = RuneWidth(rune);
+
+            if (runeWidth != 0)
+            {
+                return runeWidth;
+            }
+        }
+
+        return 0;
+    }
+
+    private static int RuneWidth(Rune rune)
+    {
+        // A mark is drawn onto the character before it, and a format character is not drawn at all.
+        if (Rune.GetUnicodeCategory(rune) is UnicodeCategory.NonSpacingMark or UnicodeCategory.EnclosingMark or UnicodeCategory.Format)
+        {
+            return 0;
+        }
+
+        // The East Asian Wide and Fullwidth ranges, plus the emoji which are drawn at the same size.
+        return rune.Value switch
+        {
+            >= 0x1100 and <= 0x115F => 2,
+            >= 0x2E80 and <= 0x303E => 2,
+            >= 0x3041 and <= 0x33FF => 2,
+            >= 0x3400 and <= 0x4DBF => 2,
+            >= 0x4E00 and <= 0x9FFF => 2,
+            >= 0xA000 and <= 0xA4CF => 2,
+            >= 0xA960 and <= 0xA97F => 2,
+            >= 0xAC00 and <= 0xD7A3 => 2,
+            >= 0xF900 and <= 0xFAFF => 2,
+            >= 0xFE10 and <= 0xFE19 => 2,
+            >= 0xFE30 and <= 0xFE6F => 2,
+            >= 0xFF00 and <= 0xFF60 => 2,
+            >= 0xFFE0 and <= 0xFFE6 => 2,
+            >= 0x1F300 and <= 0x1F64F => 2,
+            >= 0x1F900 and <= 0x1F9FF => 2,
+            >= 0x20000 and <= 0x3FFFD => 2,
+            _ => 1
+        };
     }
 
     // Remote text is written straight to the terminal, where an escape sequence can move the cursor or recolour the
