@@ -311,6 +311,12 @@ public sealed record FirehoseOptions
             throw new ArgumentException("A firehose host must be an absolute ws, wss, http or https uri.", nameof(value));
         }
 
+        // Uri refuses to parse an http, https, ws or wss uri without a host, so this is defence in depth.
+        if (value.Host.Length == 0)
+        {
+            throw new ArgumentException("A firehose host must include a host name.", nameof(value));
+        }
+
         if (value.UserInfo.Length > 0)
         {
             throw new ArgumentException("A firehose host must not contain user information.", nameof(value));
