@@ -109,6 +109,7 @@
 #### idunno.Bluesky
 
 * `ThreadGate` and `PostGate` now derive from `BlueskyRecord` instead of directly from `AtProtoRecord`. Their `Type` properties have been removed because the record discriminator is written by `System.Text.Json` polymorphism.
+* `ThreadGate` and `PostGate` are no longer `sealed`. `System.Text.Json` does not support polymorphism metadata on sealed types, and that metadata is what writes the lexicon `$type` when a gate is serialized as its own concrete type.
 
 ### Fixed
 
