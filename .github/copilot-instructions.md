@@ -37,6 +37,18 @@ The SDK is layered; understanding the layers requires reading across `Agent`, `*
 * **Source-generated JSON.** Serialization is AOT/trimming-safe: `JsonSerializerIsReflectionEnabledByDefault` is `false` and types are registered in a `SourceGenerationContext` (`JsonSerializerContext`). New serializable types must be added to the appropriate context; do not rely on reflection-based `System.Text.Json`.
 * **Packages.** `idunno.AtProto.Types` (base types) → `idunno.AtProto` (protocol client, Jetstream, DID/handle resolution) → `idunno.Bluesky` (Bluesky client). `idunno.AtProto.OAuthCallback` provides a local OAuth callback server; `idunno.Bluesky.AspNet.Authentication` provides ASP.NET auth handlers. Samples live in `samples/` (mostly console apps sharing `--handle`/`--password`/`--authcode` args and `Samples.Common`).
 
+## Adding lexicon generated types
+
+When adding a lexicon repository record, register both the concrete record type and its `AtProtoRepositoryRecord<TRecord>` envelope in the appropriate `SourceGenerationContext`. For example, register `Generator` and `AtProtoRepositoryRecord<Generator>` in `idunno.Bluesky`'s context. Repository APIs such as `GetBlueskyRecord<TRecord>` and `ListBlueskyRecords<TRecord>` deserialize the envelope, so registering only the record type is not sufficient; reflection-based serialization is disabled. Follow nearby registrations for `TypeInfoPropertyName` naming.
+
+Register each type separately: the concrete record registration supports direct serialization and record values, while the envelope registration supports typed repository reads. For lexicon DTOs that are not repository records (such as definitions and views), register the DTO and any response/request models that use it as appropriate; they do not need a repository-record envelope.
+
+Add serialization tests that deserialize a repository record through `AtProtoRepositoryRecord<TRecord>` using the library's configured source-generated serializer options. Testing the record type alone does not verify that the closed generic envelope has source-generated metadata.
+
+For records derived from `BlueskyRecord`, also register the concrete type and its lexicon `$type` discriminator on `BlueskyRecord`, and test deserialization through the base type to verify polymorphic dispatch. This discriminator registration is separate from source-generation registration.
+
+Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDerivedType(typeof(Self), "<lexicon-nsid>")]` metadata. Base-type polymorphism metadata does not ensure that serializing a value directly as its concrete type writes the lexicon `$type`. Keep these types non-sealed because `System.Text.Json` does not support polymorphism metadata on sealed types. Add a direct concrete-serialization test for every record that verifies the serialized `$type` equals its lexicon NSID; a data-driven test matrix is appropriate when adding or auditing multiple records.
+
 ### Adding XRPC endpoints
 
 * **Directory layout.** Group endpoints by lexicon namespace in a feature directory with three subfolders:

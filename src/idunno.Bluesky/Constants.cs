@@ -647,6 +647,11 @@ public static class CollectionNsid
     public static Nsid PostGate => new("app.bsky.feed.postgate");
 
     /// <summary>
+    /// The NSID for a user's feed generators collection.
+    /// </summary>
+    public static Nsid Generator => new("app.bsky.feed.generator");
+
+    /// <summary>
     /// The NSID for an actor's profile.
     /// </summary>
     public static Nsid Profile => new("app.bsky.actor.profile");
@@ -726,6 +731,11 @@ public static class RecordType
     /// Indicates a post record.
     /// </summary>
     public const string Post = "app.bsky.feed.post";
+
+    /// <summary>
+    /// Indicates a feed generator record.
+    /// </summary>
+    public const string Generator = "app.bsky.feed.generator";
 
     /// <summary>
     /// Indicates a like record.

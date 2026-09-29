@@ -77,6 +77,8 @@
 #### idunno.Bluesky
 
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
+* Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
+* Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
 
 #### Samples
 
@@ -104,6 +106,10 @@
   that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
   Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
 
+#### idunno.Bluesky
+
+* `ThreadGate` and `PostGate` now derive from `BlueskyRecord` instead of directly from `AtProtoRecord`. Their `Type` properties have been removed because the record discriminator is written by `System.Text.Json` polymorphism.
+
 ### Fixed
 
 #### idunno.AtProto.Types
@@ -113,6 +119,10 @@
   throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
   Encoding is unchanged, and still emits the padding.
   Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
+
+#### idunno.Bluesky
+
+* Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 
 ## 7.0.1 - 2026-09-26
 

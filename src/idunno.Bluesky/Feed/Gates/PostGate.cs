@@ -4,7 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Feed.Gates;
 
@@ -14,7 +14,10 @@ namespace idunno.Bluesky.Feed.Gates;
 /// Record defining interaction rules for a post.
 /// The record key (rkey) of the post gate record must match the record key of the post, and that record must be in the same repository.
 /// </summary>
-public sealed record PostGate : AtProtoRecord
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(PostGate), typeDiscriminator: RecordType.PostGate)]
+public record PostGate : BlueskyRecord
 {
     /// <summary>
     /// Creates a new instance of <see cref="PostGate"/>.
@@ -60,18 +63,12 @@ public sealed record PostGate : AtProtoRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created on.</param>
     /// <param name="rules">The list of rules for post gate, if any.</param>
     /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
+    [JsonConstructor]
     public PostGate(AtUri post, DateTimeOffset createdAt, ICollection<PostGateRule>? rules, ICollection<AtUri>? detachedEmbeddingUris) :
         this(post, rules, detachedEmbeddingUris)
     {
         CreatedAt = createdAt;
     }
-
-    /// <summary>
-    /// The JavaScript object type for the record.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static, as json serializer will not include it.")]
-    [JsonInclude]
-    public string Type => RecordType.PostGate;
 
     /// <summary>
     /// Gets the <see cref="AtUri"/> reference to the post to be gated.

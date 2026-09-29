@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Labeler;
 
@@ -17,8 +18,11 @@ namespace idunno.Bluesky.Record;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(Post), RecordType.Post)]
+[JsonDerivedType(typeof(Generator), RecordType.Generator)]
 [JsonDerivedType(typeof(Follow), RecordType.Follow)]
 [JsonDerivedType(typeof(Repost), RecordType.Repost)]
+[JsonDerivedType(typeof(ThreadGate), RecordType.ThreadGate)]
+[JsonDerivedType(typeof(PostGate), RecordType.PostGate)]
 [JsonDerivedType(typeof(Feed.Like), RecordType.Like)]
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(Profile), RecordType.Profile)]

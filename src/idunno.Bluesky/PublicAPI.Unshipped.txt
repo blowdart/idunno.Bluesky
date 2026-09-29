@@ -1,4 +1,57 @@
 #nullable enable
+const idunno.Bluesky.RecordType.Generator = "app.bsky.feed.generator" -> string!
+static idunno.Bluesky.CollectionNsid.Generator.get -> idunno.AtProto.Nsid!
+idunno.Bluesky.Feed.Generator
+idunno.Bluesky.Feed.Generator.AcceptsInteractions.get -> bool?
+idunno.Bluesky.Feed.Generator.AcceptsInteractions.init -> void
+idunno.Bluesky.Feed.Generator.Avatar.get -> idunno.AtProto.Blob?
+idunno.Bluesky.Feed.Generator.Avatar.init -> void
+idunno.Bluesky.Feed.Generator.ContentMode.get -> idunno.Bluesky.Feed.GeneratorContentMode?
+idunno.Bluesky.Feed.Generator.ContentMode.init -> void
+idunno.Bluesky.Feed.Generator.CreatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Feed.Generator.CreatedAt.init -> void
+idunno.Bluesky.Feed.Generator.Description.get -> string?
+idunno.Bluesky.Feed.Generator.Description.init -> void
+idunno.Bluesky.Feed.Generator.DescriptionFacets.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.RichText.Facet!>?
+idunno.Bluesky.Feed.Generator.DescriptionFacets.init -> void
+idunno.Bluesky.Feed.Generator.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.Feed.Generator.Did.init -> void
+idunno.Bluesky.Feed.Generator.DisplayName.get -> string!
+idunno.Bluesky.Feed.Generator.DisplayName.init -> void
+virtual idunno.Bluesky.Feed.Generator.Equals(idunno.Bluesky.Feed.Generator? other) -> bool
+idunno.Bluesky.Feed.Generator.Generator() -> void
+idunno.Bluesky.Feed.Generator.Generator(idunno.Bluesky.Feed.Generator! original) -> void
+idunno.Bluesky.Feed.Generator.Labels.get -> idunno.AtProto.Labels.SelfLabels?
+idunno.Bluesky.Feed.Generator.Labels.init -> void
+idunno.Bluesky.Feed.GeneratorContentMode
+idunno.Bluesky.Feed.GeneratorContentMode.Unknown = 2 -> idunno.Bluesky.Feed.GeneratorContentMode
+idunno.Bluesky.Feed.GeneratorContentMode.Unspecified = 0 -> idunno.Bluesky.Feed.GeneratorContentMode
+idunno.Bluesky.Feed.GeneratorContentMode.Video = 1 -> idunno.Bluesky.Feed.GeneratorContentMode
+override idunno.Bluesky.Feed.Generator.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.Generator.GetHashCode() -> int
+override idunno.Bluesky.Feed.Generator.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Feed.Generator.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Feed.Generator.<Clone>$() -> idunno.Bluesky.Feed.Generator!
+override idunno.Bluesky.Feed.Generator.ToString() -> string!
+override sealed idunno.Bluesky.Feed.Generator.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+override idunno.Bluesky.Feed.Gates.PostGate.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Feed.Gates.PostGate.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Feed.Gates.ThreadGate.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Feed.Gates.ThreadGate.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override sealed idunno.Bluesky.Feed.Gates.PostGate.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+override sealed idunno.Bluesky.Feed.Gates.ThreadGate.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+virtual idunno.Bluesky.Feed.Gates.PostGate.Equals(idunno.Bluesky.Feed.Gates.PostGate? other) -> bool
+idunno.Bluesky.Feed.Gates.PostGate.PostGate(idunno.Bluesky.Feed.Gates.PostGate! original) -> void
+virtual idunno.Bluesky.Feed.Gates.ThreadGate.Equals(idunno.Bluesky.Feed.Gates.ThreadGate? other) -> bool
+idunno.Bluesky.Feed.Gates.ThreadGate.ThreadGate(idunno.Bluesky.Feed.Gates.ThreadGate! original) -> void
+static idunno.Bluesky.Feed.Generator.operator !=(idunno.Bluesky.Feed.Generator? left, idunno.Bluesky.Feed.Generator? right) -> bool
+static idunno.Bluesky.Feed.Generator.operator ==(idunno.Bluesky.Feed.Generator? left, idunno.Bluesky.Feed.Generator? right) -> bool
+*REMOVED*idunno.Bluesky.Feed.Gates.PostGate.Type.get -> string!
+*REMOVED*idunno.Bluesky.Feed.Gates.ThreadGate.Type.get -> string!
+*REMOVED*override sealed idunno.Bluesky.Feed.Gates.PostGate.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
+*REMOVED*override sealed idunno.Bluesky.Feed.Gates.ThreadGate.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
+*REMOVED*idunno.Bluesky.Feed.Gates.PostGate.Equals(idunno.Bluesky.Feed.Gates.PostGate? other) -> bool
+*REMOVED*idunno.Bluesky.Feed.Gates.ThreadGate.Equals(idunno.Bluesky.Feed.Gates.ThreadGate? other) -> bool
 idunno.Bluesky.Feed.FeedViewPost.OpThreadPostCount.get -> int?
 idunno.Bluesky.Feed.FeedViewPost.OpThreadPostCount.init -> void
 idunno.Bluesky.Feed.FeedViewPost.OpThreadPostIndex.get -> int?
