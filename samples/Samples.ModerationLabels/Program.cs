@@ -56,6 +56,17 @@ public sealed class Program
     // Shown in place of a character in remote text which is not safe to write to a terminal.
     private const string ReplacementSymbol = "\uFFFD";
 
+    // U+FE0F, the variation selector which asks for a character to be drawn as an emoji rather than as text.
+    private const int EmojiPresentationSelector = 0xFE0F;
+
+    // U+20E3, which turns the character before it into a keycap.
+    private const int CombiningEnclosingKeycap = 0x20E3;
+
+    // A pair of characters from this range is drawn as a single flag.
+    private const int RegionalIndicatorFirst = 0x1F1E6;
+
+    private const int RegionalIndicatorLast = 0x1F1FF;
+
     static async Task<int> Main(string[] args)
     {
         Option<string> labelerOption = new("--labeler", "-l", "/l")
@@ -165,7 +176,7 @@ public sealed class Program
         Console.WriteLine(
             $"Watching labels from {labelerDid} at {labelerService}. Press {(listenForQuitKey ? "Q" : "Ctrl+C")} to stop.");
 
-        IReadOnlyList<string> declaredLabelValues;
+        IReadOnlyList<string>? declaredLabelValues;
 
         try
         {
@@ -176,7 +187,11 @@ public sealed class Program
             return 0;
         }
 
-        if (declaredLabelValues.Count != 0)
+        if (declaredLabelValues is null)
+        {
+            Console.WriteLine($"Could not read the declaration for {labelerDid}, so the labels it can emit are unknown.");
+        }
+        else if (declaredLabelValues.Count != 0)
         {
             string prefix = $"{labelerDid} declares it can emit: ";
 
@@ -348,10 +363,18 @@ public sealed class Program
 
             Console.WriteLine($"Found {labelerDids.Count} labeler declarations. Getting their details...");
 
-            IReadOnlyDictionary<Did, LabelerView> views = await GetLabelerViewsAsync(labelerDids, loggerFactory, cancellationToken).ConfigureAwait(false);
+            (IReadOnlyDictionary<Did, LabelerView> views, IReadOnlySet<Did> unavailable) =
+                await GetLabelerViewsAsync(labelerDids, loggerFactory, cancellationToken).ConfigureAwait(false);
+
+            if (unavailable.Count != 0)
+            {
+                Console.Error.WriteLine(
+                    $"The appview did not answer for {unavailable.Count} labeler{(unavailable.Count == 1 ? string.Empty : "s")}, so their details are unknown.");
+            }
 
             // A labeler whose handle no longer resolves in both directions is reported as handle.invalid, which cannot be used
-            // to reach it, so there is nothing useful to show for it.
+            // to reach it, so there is nothing useful to show for it. A labeler the appview did not answer for is not excluded,
+            // because nothing is known about its handle either way.
             IReadOnlyList<Did> resolvedDids = [.. labelerDids.Where(did => views.GetValueOrDefault(did)?.Creator.Handle.IsValid != false)];
 
             int excludedCount = labelerDids.Count - resolvedDids.Count;
@@ -373,7 +396,7 @@ public sealed class Program
 
             foreach (Did did in didsToShow)
             {
-                WriteLabelerSummary(did, views.GetValueOrDefault(did));
+                WriteLabelerSummary(did, views.GetValueOrDefault(did), unavailable.Contains(did));
             }
 
             Console.WriteLine();
@@ -430,7 +453,10 @@ public sealed class Program
     }
 
     // app.bsky.labeler.getServices needs no authentication, so the agent calls the public appview anonymously.
-    private static async Task<IReadOnlyDictionary<Did, LabelerView>> GetLabelerViewsAsync(
+    // A chunk which fails is reported separately from one which simply had nothing to say, because the two mean
+    // different things: the appview not knowing a labeler is a fact about that labeler, whereas a failed request
+    // says nothing about it at all, and treating the second as the first quietly reports guesses as findings.
+    private static async Task<(IReadOnlyDictionary<Did, LabelerView> Views, IReadOnlySet<Did> Unavailable)> GetLabelerViewsAsync(
         IReadOnlyList<Did> labelers,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -438,15 +464,23 @@ public sealed class Program
         using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = loggerFactory });
 
         Dictionary<Did, LabelerView> views = [];
+        HashSet<Did> unavailable = [];
 
         foreach (Did[] chunk in labelers.Chunk(Maximum.ProfilesToGet))
         {
             AtProtoHttpResult<ICollection<LabelerView>> result =
                 await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
 
-            // The appview does not know every declared labeler, so a chunk may come back short, or fail entirely.
+            // A single request covers a whole chunk, so one transient failure would otherwise misreport every labeler
+            // in it. Retry once before giving up, which is enough for the occasional failure seen in practice.
             if (!result.Succeeded)
             {
+                result = await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (!result.Succeeded)
+            {
+                unavailable.UnionWith(chunk);
                 continue;
             }
 
@@ -456,7 +490,7 @@ public sealed class Program
             }
         }
 
-        return views;
+        return (views, unavailable);
     }
 
     // A labeler which still answers queryLabels is running; a declaration on its own only proves it once was.
@@ -532,7 +566,7 @@ public sealed class Program
         }
     }
 
-    private static void WriteLabelerSummary(Did did, LabelerView? view)
+    private static void WriteLabelerSummary(Did did, LabelerView? view, bool detailsUnavailable)
     {
         ConsoleColor originalColor = Console.ForegroundColor;
 
@@ -558,7 +592,9 @@ public sealed class Program
             Console.ForegroundColor = ConsoleColor.White;
             Console.Write(did);
             Console.ForegroundColor = originalColor;
-            Console.WriteLine(" (the appview has no record of this labeler)");
+            Console.WriteLine(detailsUnavailable
+                ? " (the appview did not answer, so its details are unknown)"
+                : " (the appview has no record of this labeler)");
         }
 
         if (view is LabelerViewDetailed detailed)
@@ -683,9 +719,31 @@ public sealed class Program
         }
     }
 
-    // A cluster is drawn as one glyph, so it is as wide as the character it is built around, whatever is joined onto it.
+    // A cluster is drawn as one glyph. Emoji presentation is a property of the cluster rather than of any one rune in
+    // it: a variation selector, a keycap combiner or a pair of regional indicators all turn characters which are one
+    // cell on their own into a single double width glyph, so those forms are recognised before falling back to the
+    // width of the character the cluster is built around.
     private static int GraphemeWidth(string grapheme)
     {
+        bool firstRune = true;
+
+        foreach (Rune rune in grapheme.EnumerateRunes())
+        {
+            switch (rune.Value)
+            {
+                // A variation selector requesting emoji presentation, or the combiner which builds a keycap.
+                case EmojiPresentationSelector:
+                case CombiningEnclosingKeycap:
+                    return 2;
+
+                // A flag is a pair of regional indicators drawn as one double width glyph.
+                case >= RegionalIndicatorFirst and <= RegionalIndicatorLast when firstRune:
+                    return 2;
+            }
+
+            firstRune = false;
+        }
+
         foreach (Rune rune in grapheme.EnumerateRunes())
         {
             int runeWidth = RuneWidth(rune);
@@ -707,10 +765,26 @@ public sealed class Program
             return 0;
         }
 
-        // The East Asian Wide and Fullwidth ranges, plus the emoji which are drawn at the same size.
+        // The East Asian Wide and Fullwidth ranges, plus the emoji blocks which are drawn at the same size. This is the
+        // Unicode East Asian Width property reduced to the ranges which occur in practice, rather than the full table.
         return rune.Value switch
         {
             >= 0x1100 and <= 0x115F => 2,
+            0x231A or 0x231B => 2,
+            >= 0x23E9 and <= 0x23EC => 2,
+            0x23F0 or 0x23F3 => 2,
+            0x25FD or 0x25FE => 2,
+            0x2614 or 0x2615 => 2,
+            >= 0x2648 and <= 0x2653 => 2,
+            0x267F or 0x2693 or 0x26A1 => 2,
+            0x26AA or 0x26AB or 0x26BD or 0x26BE or 0x26C4 or 0x26C5 => 2,
+            0x26CE or 0x26D4 or 0x26EA or 0x26F2 or 0x26F3 or 0x26F5 or 0x26FA or 0x26FD => 2,
+            0x2705 or 0x270A or 0x270B or 0x2728 or 0x274C or 0x274E => 2,
+            >= 0x2753 and <= 0x2755 => 2,
+            0x2757 => 2,
+            >= 0x2795 and <= 0x2797 => 2,
+            0x27B0 or 0x27BF => 2,
+            0x2B1B or 0x2B1C or 0x2B50 or 0x2B55 => 2,
             >= 0x2E80 and <= 0x303E => 2,
             >= 0x3041 and <= 0x33FF => 2,
             >= 0x3400 and <= 0x4DBF => 2,
@@ -723,8 +797,16 @@ public sealed class Program
             >= 0xFE30 and <= 0xFE6F => 2,
             >= 0xFF00 and <= 0xFF60 => 2,
             >= 0xFFE0 and <= 0xFFE6 => 2,
+            0x16FE0 or 0x16FE1 or 0x16FE2 or 0x16FE3 => 2,
+            >= 0x17000 and <= 0x18AFF => 2,
+            0x1F004 or 0x1F0CF or 0x1F18E => 2,
+            >= 0x1F191 and <= 0x1F19A => 2,
+            >= 0x1F200 and <= 0x1F2FF => 2,
             >= 0x1F300 and <= 0x1F64F => 2,
-            >= 0x1F900 and <= 0x1F9FF => 2,
+            >= 0x1F680 and <= 0x1F6FF => 2,
+            >= 0x1F7E0 and <= 0x1F7EB => 2,
+            >= 0x1F90C and <= 0x1F9FF => 2,
+            >= 0x1FA70 and <= 0x1FAFF => 2,
             >= 0x20000 and <= 0x3FFFD => 2,
             _ => 1
         };
@@ -769,7 +851,8 @@ public sealed class Program
     }
 
     // A labeler publishes the label values it can emit in the policies of its app.bsky.labeler.service record.
-    private static async Task<IReadOnlyList<string>> GetDeclaredLabelValuesAsync(
+    // Returns null when the record could not be read, which is not the same as a labeler which declares no values.
+    private static async Task<IReadOnlyList<string>?> GetDeclaredLabelValuesAsync(
         Did labeler,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -780,7 +863,7 @@ public sealed class Program
 
         if (!declarationResult.Succeeded || declarationResult.Result is null)
         {
-            return [];
+            return null;
         }
 
         return [.. declarationResult.Result.Policies.LabelValues.Order(StringComparer.Ordinal)];
