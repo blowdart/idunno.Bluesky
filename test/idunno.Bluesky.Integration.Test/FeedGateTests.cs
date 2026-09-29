@@ -66,6 +66,7 @@ public class FeedGateTests
 
         await agent.UpdateThreadGate(new ThreadGate(s_ownPost), swapRecord, TestContext.Current.CancellationToken);
 
+        Assert.Contains("\"$type\":\"app.bsky.feed.threadgate\"", body, StringComparison.Ordinal);
         Assert.Contains("swapRecord", body, StringComparison.Ordinal);
         Assert.Contains(swapRecord.Value, body, StringComparison.Ordinal);
     }
@@ -82,6 +83,7 @@ public class FeedGateTests
 
         await agent.UpdatePostGate(new PostGate(s_ownPost, null), swapRecord, TestContext.Current.CancellationToken);
 
+        Assert.Contains("\"$type\":\"app.bsky.feed.postgate\"", body, StringComparison.Ordinal);
         Assert.Contains("swapRecord", body, StringComparison.Ordinal);
         Assert.Contains(swapRecord.Value, body, StringComparison.Ordinal);
     }
@@ -96,6 +98,7 @@ public class FeedGateTests
 
         await agent.UpdateThreadGate(new ThreadGate(s_ownPost), TestContext.Current.CancellationToken);
 
+        Assert.Contains("\"$type\":\"app.bsky.feed.threadgate\"", body, StringComparison.Ordinal);
         Assert.DoesNotContain("swapRecord", body, StringComparison.Ordinal);
     }
 

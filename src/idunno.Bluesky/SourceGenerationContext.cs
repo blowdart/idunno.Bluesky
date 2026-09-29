@@ -227,6 +227,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(FollowingRule))]
 [JsonSerializable(typeof(ListRule))]
 [JsonSerializable(typeof(MentionRule))]
+[JsonSerializable(typeof(Generator))]
+[JsonSerializable(typeof(GeneratorContentMode))]
 [JsonSerializable(typeof(PostGate))]
 [JsonSerializable(typeof(PostGateRule))]
 [JsonSerializable(typeof(ThreadGate))]

@@ -4,7 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Feed.Gates;
 
@@ -13,7 +13,10 @@ namespace idunno.Bluesky.Feed.Gates;
 /// The record key (rkey) of the threadgate record must match the record key of the thread's root post,
 /// and that record must be in the same repository
 /// </summary>
-public sealed record ThreadGate : AtProtoRecord
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(ThreadGate), typeDiscriminator: RecordType.ThreadGate)]
+public record ThreadGate : BlueskyRecord
 {
     /// <summary>
     /// Creates a new instance of <see cref="ThreadGate"/>.
@@ -61,13 +64,6 @@ public sealed record ThreadGate : AtProtoRecord
     {
         CreatedAt = createdAt;
     }
-
-    /// <summary>
-    /// The JavaScript object type for the record.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static, as json serializer will not include it.")]
-    [JsonInclude]
-    public string Type => RecordType.ThreadGate;
 
     /// <summary>
     /// Gets the <see cref="AtUri"/> reference to the post to be gated.
