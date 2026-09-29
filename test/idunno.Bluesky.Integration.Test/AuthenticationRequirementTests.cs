@@ -92,6 +92,26 @@ public class AuthenticationRequirementTests
     }
 
     [Fact]
+    public async Task SearchPostsV2UsesTheAppViewWhenAnUnauthenticatedAgentsServiceIsAPds()
+    {
+        CapturedRequest? captured = null;
+
+        using TestServer testServer = CreateCapturingServer("/xrpc/app.bsky.feed.searchPostsV2", """{"posts":[]}""", r => captured = r);
+        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = new Uri("https://former.pds.test/") };
+
+        Assert.False(agent.IsAuthenticated);
+
+        AtProtoHttpResult<Feed.SearchV2Results> result = await agent.SearchPostsV2(
+            query: "bluesky",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(captured);
+        Assert.Equal("api.bsky.app", captured.Host);
+        Assert.False(captured.HadAuthorization);
+    }
+
+    [Fact]
     public async Task GetLabelerServicesDoesNotImposeAnUpperBoundOnTheDidsItIsSupplied()
     {
         // app.bsky.labeler.getServices declares no maximum on dids and the service applies none, so a large collection must not be rejected.

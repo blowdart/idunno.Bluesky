@@ -122,8 +122,8 @@ public partial class BlueskyAgent
             repliesOnly,
             following,
             queryLanguage,
-            // The public AppView rejects search requests, so unauthenticated searches go to the agent's original service.
-            Service,
+            // The public AppView rejects search requests; the agent's service may still be a former PDS after logout.
+            IsAuthenticated ? Service : DefaultServiceUris.BlueskyApiUri,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
