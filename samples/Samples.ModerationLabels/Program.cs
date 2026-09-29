@@ -282,16 +282,20 @@ public sealed class Program
         AtIdentifier labeler,
         CancellationToken cancellationToken)
     {
-        Did did = labeler switch
+        Did? did = labeler switch
         {
             Did labelerDid => labelerDid,
-            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Could not resolve the handle '{handle}' to a DID."),
+            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidOperationException($"'{labeler}' is not a DID or a handle.")
         };
 
-        DidDocument didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
+        cancellationToken.ThrowIfCancellationRequested();
+        did = did ?? throw new InvalidOperationException($"Could not resolve the handle '{labeler}' to a DID.");
+
+        DidDocument? didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        didDocument = didDocument ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
 
         // A DID document comes from whoever controls the DID, and neither JsonRequired nor RespectNullableAnnotations
         // reaches inside a collection, so an entry can be null however the property is annotated. The same limitation
