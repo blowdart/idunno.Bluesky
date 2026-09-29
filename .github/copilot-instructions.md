@@ -47,6 +47,8 @@ Add serialization tests that deserialize a repository record through `AtProtoRep
 
 For records derived from `BlueskyRecord`, also register the concrete type and its lexicon `$type` discriminator on `BlueskyRecord`, and test deserialization through the base type to verify polymorphic dispatch. This discriminator registration is separate from source-generation registration.
 
+Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDerivedType(typeof(Self), "<lexicon-nsid>")]` metadata. Base-type polymorphism metadata does not ensure that serializing a value directly as its concrete type writes the lexicon `$type`. Keep these types non-sealed because `System.Text.Json` does not support polymorphism metadata on sealed types. Add a direct concrete-serialization test for every record that verifies the serialized `$type` equals its lexicon NSID; a data-driven test matrix is appropriate when adding or auditing multiple records.
+
 ### Adding XRPC endpoints
 
 * **Directory layout.** Group endpoints by lexicon namespace in a feature directory with three subfolders:

@@ -14,6 +14,29 @@ namespace idunno.Bluesky.Serialization.Test;
 [ExcludeFromCodeCoverage]
 public class GeneratorRecordTests
 {
+    public static TheoryData<string> BlueskyRecordDiscriminatorDocuments =>
+    [
+        """{"$type":"app.bsky.feed.post","text":"Test post","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.feed.generator","did":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","displayName":"Test Generator","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.follow","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.feed.repost","subject":{"uri":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.post/3lndpysuow22f","cid":"bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i"},"createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.feed.threadgate","post":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.post/3lndpysuow22f","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.feed.postgate","post":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.post/3lndpysuow22f","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.feed.like","subject":{"uri":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.post/3lndpysuow22f","cid":"bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i"},"createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.block","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.actor.profile"}""",
+        """{"$type":"app.bsky.graph.starterpack","name":"Test starter pack","list":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.labeler.service","policies":{"labelValues":[]},"createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.verification","handle":"example.com","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","displayName":"Example","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.list","name":"Test list","purpose":"app.bsky.graph.defs#curatelist","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.listitem","list":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz"}""",
+        """{"$type":"app.bsky.notification.declaration"}""",
+        """{"$type":"app.bsky.actor.status","status":"app.bsky.actor.status#live","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.referencelistoptout","subject":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.graph.listblock","subject":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
+        """{"$type":"app.bsky.actor.contentVisibilityDeclaration","hideFromAlgorithmicRecommendations":false}"""
+    ];
+
     [Fact]
     public void LiveGeneratorRecordDeserializesAndSerializesWithSourceGeneratedJsonContext()
     {
@@ -55,6 +78,24 @@ public class GeneratorRecordTests
         BlueskyRecord? roundTripped = JsonSerializer.Deserialize<BlueskyRecord>(serialized, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.IsType<Generator>(roundTripped);
+    }
+
+    [Theory]
+    [MemberData(nameof(BlueskyRecordDiscriminatorDocuments))]
+    public void BlueskyRecordSerializesEveryConcreteLexiconDiscriminator(string json)
+    {
+        using JsonDocument sourceDocument = JsonDocument.Parse(json);
+        string expectedDiscriminator = sourceDocument.RootElement.GetProperty("$type").GetString()!;
+
+        BlueskyRecord? record = JsonSerializer.Deserialize<BlueskyRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(record);
+        Assert.NotEqual(typeof(BlueskyRecord), record.GetType());
+
+        string serialized = JsonSerializer.Serialize(record, record.GetType(), BlueskyServer.BlueskyJsonSerializerOptions);
+
+        using JsonDocument serializedDocument = JsonDocument.Parse(serialized);
+        Assert.Equal(expectedDiscriminator, serializedDocument.RootElement.GetProperty("$type").GetString());
     }
 
     [Fact]
