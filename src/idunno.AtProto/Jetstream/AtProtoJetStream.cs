@@ -229,7 +229,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
     /// <param name="collections">The collections, or namespaces ending in <c>.*</c>, to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
-    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the jetstream does not support, or when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
     public AtProtoJetstream(
         Uri? uri = null,
@@ -259,7 +259,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="collections">The collections, or namespaces ending in <c>.*</c>, to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the jetstream does not support, or when the protocol version is <see cref="JetstreamProtocolVersion.V2"/> and <paramref name="collections"/> or <paramref name="dids"/> has more entries than the server accepts.</exception>
     /// <remarks>
     /// <para>
     ///   The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
@@ -296,6 +296,15 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         ICollection<CollectionSelector>? collections,
         ICollection<Did>? dids)
     {
+        // Checked first, before anything disposable is created. Every connection goes through an HttpMessageInvoker, and a web socket
+        // which connects through one cannot have a proxy of its own.
+        if (webSocketOptions?.Proxy is not null)
+        {
+            throw new ArgumentException(
+                $"{nameof(AtProto.WebSocketOptions.Proxy)} is not supported by the jetstream. Use {nameof(HttpClientOptions)}.{nameof(HttpClientOptions.ProxyUri)}, or configure the proxy on the handler of the HttpClient you supply.",
+                nameof(webSocketOptions));
+        }
+
         if (options is not null)
         {
             Options = options;
@@ -738,6 +747,19 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
+    /// </remarks>
     public async Task ConnectAsync(
         HttpClient httpClient)
     {
@@ -756,6 +778,19 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
+    /// </remarks>
     public async Task ConnectAsync(
         HttpClient httpClient,
         CancellationToken cancellationToken)
@@ -849,6 +884,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// reconnects to apply them.</para>
     /// <para>If a <see cref="JetstreamProtocolVersion.V2"/> server says it no longer has the compression dictionary
     /// the jetstream downloaded, the current one is downloaded and the connection is tried once more.</para>
+    /// <para>
+    ///   Warning: <paramref name="httpClient"/> is used as it is, for the web socket connection and for any other request the jetstream
+    ///   makes, so it has none of the SSRF protections the jetstream would otherwise apply for itself, unless it was created by an
+    ///   <see cref="IHttpClientFactory"/> configured with <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>.
+    ///   Without them the jetstream can be made to connect to loopback, link local or private network addresses, such as a cloud metadata
+    ///   service, through the server uri, a host name which resolves to one of them, or a redirect.
+    /// </para>
+    /// <para>
+    ///   Warning: disable automatic redirects on the handler <paramref name="httpClient"/> was created with. An <see cref="HttpClient"/>
+    ///   created without a handler follows redirects, and the jetstream does not check where a connection was redirected to.
+    /// </para>
     /// </remarks>
     public async Task ConnectAsync(
         Uri? uri,
@@ -1938,11 +1984,6 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (WebSocketOptions is not null)
         {
-            if (WebSocketOptions.Proxy is not null)
-            {
-                client.Options.Proxy = WebSocketOptions.Proxy;
-            }
-
             client.Options.KeepAliveInterval = WebSocketOptions.KeepAliveInterval ?? s_defaultKeepAliveInterval;
 
 #if NET9_0_OR_GREATER

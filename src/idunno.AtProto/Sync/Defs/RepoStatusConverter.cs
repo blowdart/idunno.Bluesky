@@ -28,17 +28,24 @@ internal sealed class RepoStatusConverter : JsonConverter<RepoStatus>
             throw new JsonException($"Expected a string when reading a {nameof(RepoStatus)}, found {reader.TokenType}.");
         }
 
-        return reader.GetString() switch
-        {
-            "takendown" => RepoStatus.Takendown,
-            "suspended" => RepoStatus.Suspended,
-            "deleted" => RepoStatus.Deleted,
-            "deactivated" => RepoStatus.Deactivated,
-            "desynchronized" => RepoStatus.Desynchronized,
-            "throttled" => RepoStatus.Throttled,
-            _ => RepoStatus.Unknown
-        };
+        return Parse(reader.GetString());
     }
+
+    /// <summary>
+    /// Maps the wire representation of a repository status to a <see cref="RepoStatus"/>.
+    /// </summary>
+    /// <param name="value">The status as sent by the server.</param>
+    /// <returns>The matching <see cref="RepoStatus"/>, or <see cref="RepoStatus.Unknown"/> if the status is not recognized.</returns>
+    internal static RepoStatus Parse(string? value) => value switch
+    {
+        "takendown" => RepoStatus.Takendown,
+        "suspended" => RepoStatus.Suspended,
+        "deleted" => RepoStatus.Deleted,
+        "deactivated" => RepoStatus.Deactivated,
+        "desynchronized" => RepoStatus.Desynchronized,
+        "throttled" => RepoStatus.Throttled,
+        _ => RepoStatus.Unknown
+    };
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, RepoStatus value, JsonSerializerOptions options)

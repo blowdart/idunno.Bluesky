@@ -11,8 +11,15 @@ namespace idunno.AtProto;
 public sealed record WebSocketOptions
 {
     /// <summary>
-    /// Gets the proxy for WebSocket requests.
+    /// Gets the proxy for WebSocket requests. Not supported.
     /// </summary>
+    /// <remarks>
+    /// <para>The jetstream and firehose connect their web sockets through an HTTP client, and a web socket which does that cannot have
+    /// a proxy of its own, so both throw an <see cref="ArgumentException"/> if this is set. Set <see cref="HttpClientOptions.ProxyUri"/>
+    /// instead, or configure the proxy on the handler of an <see cref="System.Net.Http.HttpClient"/> you supply.</para>
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility; setting it throws.")]
+    [Obsolete("WebSocketOptions.Proxy is not supported and causes an ArgumentException. Use HttpClientOptions.ProxyUri, or configure the proxy on your HttpClient's handler.")]
     public IWebProxy? Proxy { get; init; }
 
     /// <summary>

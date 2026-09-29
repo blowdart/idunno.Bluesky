@@ -105,10 +105,8 @@ public class AtProtoJetstreamBuilderTests
     [InlineData(false)]
     public void BuildPassesTheWebSocketOptionsToTheJetstream(bool withHttpClientFactory)
     {
-        WebProxy proxy = new("http://localhost:8866");
         WebSocketOptions webSocketOptions = new()
         {
-            Proxy = proxy,
             KeepAliveInterval = TimeSpan.FromSeconds(42),
         };
 
@@ -121,8 +119,25 @@ public class AtProtoJetstreamBuilderTests
 
         using AtProtoJetstream jetstream = builder.Build();
 
-        Assert.Same(proxy, jetstream.WebSocketOptions.Proxy);
+        Assert.Same(webSocketOptions, jetstream.WebSocketOptions);
         Assert.Equal(TimeSpan.FromSeconds(42), jetstream.WebSocketOptions.KeepAliveInterval);
+    }
+
+    [Fact]
+    public void WebSocketProxiesAreRejected()
+    {
+#pragma warning disable CS0618 // Proxy is obsolete because it is rejected.
+        WebSocketOptions webSocketOptions = new() { Proxy = new WebProxy("http://localhost:8866") };
+#pragma warning restore CS0618
+
+        Assert.Throws<ArgumentException>("webSocketOptions", () => AtProtoJetstreamBuilder.Create().WithWebSocketOptions(webSocketOptions));
+        Assert.Throws<ArgumentException>("webSocketOptions", () => new AtProtoJetstream(webSocketOptions: webSocketOptions));
+        Assert.Throws<ArgumentException>("webSocketOptions", () => new AtProtoJetstream(new RecordingHttpClientFactory(), webSocketOptions: webSocketOptions));
+
+        // The builder's property can be set directly, bypassing WithWebSocketOptions, so Build is rejected by the constructor instead.
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        builder.WebSocketOptions = webSocketOptions;
+        Assert.Throws<ArgumentException>("webSocketOptions", () => builder.Build());
     }
 
     [Fact]

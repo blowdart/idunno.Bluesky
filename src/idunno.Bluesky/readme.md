@@ -48,6 +48,10 @@ if (loginResult.Succeeded)
 }
 ```
 
+## Related Packages
+
+* [idunno.Bluesky.AspNet.Authentication](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication) which provides an ASP.NET Core authentication handler for Bluesky.
+
 ## Documentation
 [Documentation](https://bluesky.idunno.dev/) is available, including API references.
 

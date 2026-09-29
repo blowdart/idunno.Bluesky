@@ -93,6 +93,11 @@ items:
       - name: Migrating from v1 to v2
         href: jetstreamMigration.md
 
+  - name: Firehose
+    items:
+      - name: Reading the firehose and labels
+        href: firehose.md
+
   - name: Reference
     items:
       - name: Endpoint implementation status

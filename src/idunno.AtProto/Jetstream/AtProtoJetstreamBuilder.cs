@@ -484,9 +484,19 @@ public sealed class AtProtoJetstreamBuilder
     /// <param name="webSocketOptions">The <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="webSocketOptions"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the jetstream does not support.</exception>
     public AtProtoJetstreamBuilder WithWebSocketOptions(WebSocketOptions webSocketOptions)
     {
         ArgumentNullException.ThrowIfNull(webSocketOptions);
+
+#pragma warning disable CS0618 // Proxy is obsolete because it is rejected here.
+        if (webSocketOptions.Proxy is not null)
+        {
+            throw new ArgumentException(
+                $"{nameof(AtProto.WebSocketOptions.Proxy)} is not supported by the jetstream. Use {nameof(ConfigureHttpClientOptions)} to set {nameof(AtProto.HttpClientOptions.ProxyUri)} instead.",
+                nameof(webSocketOptions));
+        }
+#pragma warning restore CS0618
 
         WebSocketOptions = webSocketOptions;
 
@@ -596,7 +606,7 @@ public sealed class AtProtoJetstreamBuilder
     /// Builds a new instance of <see cref="AtProtoJetstream"/>.
     /// </summary>
     /// <returns>A configured <see cref="AtProtoJetstream"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when the filters are larger than <see cref="ProtocolVersion"/> allows.</exception>
+    /// <exception cref="ArgumentException">Thrown when the filters are larger than <see cref="ProtocolVersion"/> allows, or <see cref="WebSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>.</exception>
     /// <exception cref="InvalidOperationException">Thrown when <see cref="KindsToFilterOn"/> contains a kind which cannot be filtered on.</exception>
     /// <exception cref="NotSupportedException">Thrown when <see cref="KindsToFilterOn"/> is not empty and <see cref="ProtocolVersion"/> is <see cref="JetstreamProtocolVersion.V1"/>.</exception>
     public AtProtoJetstream Build()

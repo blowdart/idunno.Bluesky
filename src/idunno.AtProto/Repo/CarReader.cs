@@ -3,8 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Formats.Cbor;
-using System.Globalization;
-using System.Numerics;
 using System.Security.Cryptography;
 
 namespace idunno.AtProto.Repo;
@@ -20,6 +18,7 @@ public sealed class CarReader : IDisposable
     private readonly Stream? _sourceStreamToDispose;
     private bool _disposed;
     private bool _headerRead;
+    private readonly int _maximumBlockSize = int.MaxValue;
 
     /// <summary>
     /// Creates a new <see cref="CarReader"/>.
@@ -30,6 +29,21 @@ public sealed class CarReader : IDisposable
     public CarReader(Stream stream, bool leaveOpen = false)
         : this(stream, leaveOpen, sourceStreamToDispose: null)
     {
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="CarReader"/> which rejects any block section larger than <paramref name="maximumBlockSize"/> bytes.
+    /// </summary>
+    /// <param name="stream">The readable stream.</param>
+    /// <param name="maximumBlockSize">The largest block section, in bytes, to read.</param>
+    /// <remarks>
+    /// <para>The limit is checked against the declared section length before any buffer is allocated, so a hostile length
+    /// prefix cannot cause a large allocation.</para>
+    /// </remarks>
+    internal CarReader(Stream stream, int maximumBlockSize) : this(stream, leaveOpen: false, sourceStreamToDispose: null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumBlockSize);
+        _maximumBlockSize = maximumBlockSize;
     }
 
     private CarReader(Stream stream, bool leaveOpen, Stream? sourceStreamToDispose)
@@ -212,7 +226,8 @@ public sealed class CarReader : IDisposable
             {
                 case "roots":
                     int? rootCount = reader.ReadStartArray() ?? throw new InvalidDataException("The CAR roots array must have a definite length.");
-                    List<Cid> parsedRoots = new(rootCount.Value);
+                    // The declared count is untrusted, so the list grows with the roots actually read rather than being sized from it.
+                    List<Cid> parsedRoots = [];
                     for (int rootIndex = 0; rootIndex < rootCount; rootIndex++)
                     {
                         parsedRoots.Add(ReadCid(reader));
@@ -264,7 +279,9 @@ public sealed class CarReader : IDisposable
             throw new InvalidDataException("A CAR block cannot have a zero length.");
         }
 
-        if (sectionLength > int.MaxValue)
+        if (sectionLength > int.MaxValue ||
+            sectionLength > (ulong)_maximumBlockSize ||
+            (_maximumBlockSize != int.MaxValue && _stream.CanSeek && sectionLength > (ulong)(_stream.Length - _stream.Position)))
         {
             throw new InvalidDataException("The CAR block is too large.");
         }
@@ -487,98 +504,15 @@ public sealed class CarReader : IDisposable
 
         (Did did, byte[] unsignedCommit, byte[] signature) = ReadUnsignedCommit(block.Data);
         DidDocument? didDocument = await didDocumentResolver(did, cancellationToken).ConfigureAwait(false);
-        if (didDocument is null || didDocument.Id != did)
-        {
-            throw new InvalidDataException($"The DID document for repository '{did}' could not be resolved.");
-        }
-
-        VerificationMethod? verificationMethod = null;
-        foreach (VerificationMethod method in didDocument.VerificationMethods ?? [])
-        {
-            if (method.Id == $"{did}#atproto")
-            {
-                if (verificationMethod is not null)
-                {
-                    throw new InvalidDataException($"The DID document for repository '{did}' contains multiple #atproto verification keys.");
-                }
-
-                verificationMethod = method;
-            }
-        }
-
-        if (verificationMethod is null ||
-            verificationMethod.Controller != did ||
-            string.IsNullOrEmpty(verificationMethod.PublicKeyMultibase))
-        {
-            throw new InvalidDataException($"The DID document for repository '{did}' has no usable #atproto verification key.");
-        }
-
-        byte[] publicKeyBytes;
-        try
-        {
-            publicKeyBytes = SimpleBase.Multibase.Decode(verificationMethod.PublicKeyMultibase);
-        }
-        catch (Exception exception) when (exception is FormatException or ArgumentException)
-        {
-            throw new InvalidDataException("The DID document contains an invalid multibase public key.", exception);
-        }
-
-        string curveOid;
-        BigInteger prime;
-        BigInteger curveA;
-        BigInteger curveB;
-        if (publicKeyBytes.Length != 35)
-        {
-            throw new InvalidDataException("The repository signing key must be a compressed P-256 or secp256k1 multikey.");
-        }
-
-        if (publicKeyBytes[0] == 0xE7 && publicKeyBytes[1] == 0x01)
-        {
-            curveOid = "1.3.132.0.10";
-            prime = (BigInteger.One << 256) - (BigInteger.One << 32) - 977;
-            curveA = BigInteger.Zero;
-            curveB = 7;
-        }
-        else if (publicKeyBytes[0] == 0x80 && publicKeyBytes[1] == 0x24)
-        {
-            curveOid = "1.2.840.10045.3.1.7";
-            prime = (BigInteger.One << 256) - (BigInteger.One << 224) + (BigInteger.One << 192) +
-                (BigInteger.One << 96) - 1;
-            curveA = prime - 3;
-            curveB = BigInteger.Parse(
-                "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B",
-                NumberStyles.HexNumber,
-                CultureInfo.InvariantCulture);
-        }
-        else
-        {
-            throw new InvalidDataException("The repository signing key uses an unsupported multikey curve.");
-        }
-
-        byte[] compressedPoint = publicKeyBytes.AsSpan(2).ToArray();
-        if (compressedPoint[0] is not 0x02 and not 0x03)
-        {
-            throw new InvalidDataException("The repository signing key is not a compressed elliptic curve public key.");
-        }
-
-        byte[] x = compressedPoint.AsSpan(1).ToArray();
-        byte[] y = DecompressPoint(compressedPoint[0], x, prime, curveA, curveB);
-        using ECDsa verifier = ECDsa.Create(new ECParameters
-        {
-            Curve = ECCurve.CreateFromValue(curveOid),
-            Q = new ECPoint { X = x, Y = y }
-        });
-
-        byte[] digest = SHA256.HashData(unsignedCommit);
-        if (signature.Length != 64 ||
-            !verifier.VerifyHash(digest, signature, DSASignatureFormat.IeeeP1363FixedFieldConcatenation))
-        {
-            throw new InvalidDataException("The CAR root repository commit signature is invalid.");
-        }
+        SigningKeyVerifier.Verify(didDocument, did, SigningKeyVerifier.RepositorySigningKeyFragment, unsignedCommit, signature, "CAR root repository commit");
     }
 
-    private static (Did Did, byte[] UnsignedCommit, byte[] Signature) ReadUnsignedCommit(ReadOnlyMemory<byte> data)
+    internal static (Did Did, byte[] UnsignedCommit, byte[] Signature) ReadUnsignedCommit(ReadOnlyMemory<byte> data)
     {
+        // Checked with the depth limited validator first, as reading a deeply nested field with ReadEncodedValue allocates
+        // many times the size of the block.
+        Firehose.FirehoseCbor.ValidateDataModel(data);
+
         CborReader reader = new(data, CborConformanceMode.Canonical);
         int? fieldCount = reader.ReadStartMap();
         if (fieldCount != 6)
@@ -648,43 +582,5 @@ public sealed class CarReader : IDisposable
         }
 
         return (did, unsignedWriter.Encode(), signature);
-    }
-
-    private static byte[] DecompressPoint(byte prefix, byte[] xBytes, BigInteger prime, BigInteger curveA, BigInteger curveB)
-    {
-        BigInteger x = new(xBytes, isUnsigned: true, isBigEndian: true);
-        if (x >= prime)
-        {
-            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
-        }
-
-        BigInteger ySquared = Mod(BigInteger.Pow(x, 3) + (curveA * x) + curveB, prime);
-        BigInteger y = BigInteger.ModPow(ySquared, (prime + 1) >> 2, prime);
-        if (Mod(BigInteger.Pow(y, 2), prime) != ySquared)
-        {
-            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
-        }
-
-        bool yIsOdd = !y.IsEven;
-        if (yIsOdd != (prefix == 0x03))
-        {
-            y = prime - y;
-        }
-
-        if (y >= prime)
-        {
-            throw new InvalidDataException("The repository signing key has an invalid elliptic curve point.");
-        }
-
-        byte[] yBytes = y.ToByteArray(isUnsigned: true, isBigEndian: true);
-        byte[] paddedY = new byte[32];
-        yBytes.CopyTo(paddedY, paddedY.Length - yBytes.Length);
-        return paddedY;
-    }
-
-    private static BigInteger Mod(BigInteger value, BigInteger modulus)
-    {
-        BigInteger result = value % modulus;
-        return result.Sign < 0 ? result + modulus : result;
     }
 }
