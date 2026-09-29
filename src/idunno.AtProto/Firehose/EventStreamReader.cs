@@ -304,11 +304,6 @@ internal sealed class EventStreamReader
         // without making a second request to ask it why.
         socket.Options.CollectHttpResponseDetails = true;
 
-        if (_webSocketOptions?.Proxy is not null)
-        {
-            socket.Options.Proxy = _webSocketOptions.Proxy;
-        }
-
         socket.Options.KeepAliveInterval = _webSocketOptions?.KeepAliveInterval ?? TimeSpan.FromSeconds(30);
 
 #if NET9_0_OR_GREATER

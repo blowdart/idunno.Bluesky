@@ -54,7 +54,7 @@
     Unknown map fields are skipped without being allocated, and nothing is sized from a server-declared length.
     Sequence numbers must be strictly increasing, apart from the cursor event and a single identical repeated event, of the same type and payload,
     a relay sends on each connection opened with a cursor, which are dropped.
-    Server-supplied error and info text is stripped of control and bidirectional formatting characters and truncated, but remains untrusted.
+    Server-supplied error and info text, and identity handles, are stripped of control and bidirectional formatting characters and truncated, but remain untrusted.
   * Optional commit and label signature verification with `FirehoseOptions.VerifySignatures`. Verification resolves signing keys inline and
     cannot keep up with the full relay; it suits labelers, a single PDS, or other low-volume streams.
     A labels message with labels from more than `MaximumLabelSourcesPerMessage` distinct sources is rejected before any are resolved.
@@ -98,6 +98,10 @@
 * The preferred Jetstream event and payload class names now start with `Jetstream` rather than `AtJetstream`
   (including the former `AtJetStreamIdentity`). Old type names remain for compatibility; update event type
   patterns and newly written code to use `JetstreamEvent`, `JetstreamCommitEvent` and the corresponding new names.
+* `WebSocketOptions.Proxy` is obsolete. `AtProtoJetstream`, `AtProtoJetstreamBuilder.WithWebSocketOptions()` and `AtProtoFirehose` now throw
+  `ArgumentException` when it is set. Both connect their web sockets through an `HttpClient`, and .NET does not allow a web socket which does
+  that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
+  Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
 
 ### Fixed
 

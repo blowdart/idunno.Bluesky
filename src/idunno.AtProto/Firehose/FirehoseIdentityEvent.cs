@@ -41,7 +41,8 @@ public sealed record FirehoseIdentityEvent : FirehoseEvent
     /// </summary>
     /// <value>The reported handle, which may be <c>handle.invalid</c>, or <see langword="null"/> if none was sent.</value>
     /// <remarks>
-    /// <para>The handle may be passed through from upstream without validation, so it is untrusted and is exposed as a string.</para>
+    /// <para>The handle may be passed through from upstream without validation, so it is untrusted and is exposed as a string.
+    /// Control and bidirectional formatting characters are removed and it is truncated, but it is not otherwise validated or encoded.</para>
     /// </remarks>
     public string? Handle { get; }
 }

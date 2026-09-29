@@ -59,7 +59,7 @@ The events are:
 | ----- | ------- |
 | `FirehoseCommitEvent` | A repository commit. `Operations` lists the created, updated and deleted records; `Blocks` holds the raw CAR. |
 | `FirehoseSyncEvent` | The current state of a repository, sent when it must be resynchronised. |
-| `FirehoseIdentityEvent` | An identity change. The optional `Handle` is unverified; resolve it before trusting it. |
+| `FirehoseIdentityEvent` | An identity change. The optional `Handle` is unverified, with control and bidirectional formatting characters removed; resolve it before trusting it. |
 | `FirehoseAccountEvent` | An account's hosting status changed. |
 | `FirehoseLabelsEvent` | A batch of labels from `SubscribeLabelsAsync()`. |
 | `FirehoseInfoEvent` | An informational message, such as `OutdatedCursor`. It has no sequence number. |
@@ -316,9 +316,13 @@ full relay.
 ## Configuration
 
 Pass `FirehoseOptions` to the constructor to configure logging (`LoggerFactory`), metrics (`MeterFactory`), hosts,
-limits and timeouts, and `WebSocketOptions` to configure the WebSocket, such as a proxy. By default,
+limits and timeouts, and `WebSocketOptions` to configure the WebSocket's keep-alive. By default,
 `AtProtoFirehose` uses an HTTP client that refuses connections to private and loopback addresses and does not
 follow redirects.
+
+To connect through a proxy, pass `HttpClientOptions` with a `ProxyUri`, which keeps those protections, or configure the
+proxy on the handler of an `HttpClient` you supply. `WebSocketOptions.Proxy` cannot be used, because the firehose connects
+through an HTTP client, and the constructor throws an `ArgumentException` if it is set.
 
 ### Supplying your own HTTP client
 

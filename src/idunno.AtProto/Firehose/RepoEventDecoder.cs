@@ -82,7 +82,8 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
 
     private FirehoseIdentityEvent DecodeIdentity(long sequence, CborFields fields)
     {
-        FirehoseIdentityEvent identity = new(sequence, fields.GetDid("did"), fields.GetDateTime("time"), fields.GetOptionalString("handle"));
+        // The handle is passed on unvalidated, so it is sanitized like other server text to stop it corrupting logs or consoles.
+        FirehoseIdentityEvent identity = new(sequence, fields.GetDid("did"), fields.GetDateTime("time"), EventStreamReader.Sanitize(fields.GetOptionalString("handle")));
 
         // An identity event can announce a rotated signing key, so any cached key is dropped rather than trusted until it expires.
         // A malicious server can abuse this to force a resolution for every event, but only when signature verification is on.

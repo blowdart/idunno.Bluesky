@@ -142,6 +142,32 @@ public class AtProtoFirehoseTests
     }
 
     [Fact]
+    public async Task IdentityHandlesAreSanitized()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) => await Send(socket, Frame("#identity", IdentityPayload(1, handle: "evil\u001b[2J\r\n\u202Etest")), token));
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        FirehoseEvent identity = Assert.Single(await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 1, cancellationToken));
+
+        Assert.Equal("evil[2Jtest", Assert.IsType<FirehoseIdentityEvent>(identity).Handle);
+    }
+
+    [Fact]
+    public void WebSocketProxiesAreRejected()
+    {
+#pragma warning disable CS0618 // Proxy is obsolete because it is rejected.
+        WebSocketOptions webSocketOptions = new() { Proxy = new WebProxy("http://proxy.invalid") };
+#pragma warning restore CS0618
+        using HttpClient httpClient = new();
+
+        Assert.Equal("webSocketOptions", Assert.Throws<ArgumentException>(() => new AtProtoFirehose(webSocketOptions: webSocketOptions)).ParamName);
+        Assert.Equal("webSocketOptions", Assert.Throws<ArgumentException>(() => new AtProtoFirehose(httpClient, webSocketOptions: webSocketOptions)).ParamName);
+        Assert.Equal("webSocketOptions", Assert.Throws<ArgumentException>(() => new AtProtoFirehose(new LocalHttpClientFactory(), webSocketOptions: webSocketOptions)).ParamName);
+    }
+
+    [Fact]
     public async Task UnknownOperationsAreSkippedAndUnknownTypesSurfaced()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -1264,8 +1290,9 @@ public class AtProtoFirehoseTests
                         continue;
                     }
 
-                    HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
+                    // Recorded before the upgrade is accepted, so a client which has seen the upgrade complete always finds it recorded.
                     _connections.Enqueue(new Connection(context.Request.Url?.AbsolutePath ?? string.Empty, context.Request.Url?.Query ?? string.Empty));
+                    HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
                     int connectionNumber = Interlocked.Increment(ref _connectionCount);
 
                     _ = Task.Run(async () =>

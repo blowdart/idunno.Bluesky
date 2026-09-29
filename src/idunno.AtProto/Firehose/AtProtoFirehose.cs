@@ -43,6 +43,10 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
     /// <param name="options">Any options to configure this instance.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying web sockets.</param>
     /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal HTTP client the web sockets connect through.</param>
+    /// <exception cref="ArgumentException"><paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the firehose does not support.</exception>
+    /// <remarks>
+    /// <para>To connect through a proxy set <see cref="HttpClientOptions.ProxyUri"/>.</para>
+    /// </remarks>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
     public AtProtoFirehose(
         FirehoseOptions? options = null,
@@ -59,6 +63,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
     /// <param name="options">Any options to configure this instance.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying web sockets.</param>
     /// <exception cref="ArgumentNullException"><paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the firehose does not support.</exception>
     /// <remarks>
     /// <para>The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
     /// <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(IServiceCollection)"/>. Any other registration produces a client without
@@ -90,6 +95,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
     /// <param name="options">Any options to configure this instance.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying web sockets.</param>
     /// <exception cref="ArgumentNullException"><paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="webSocketOptions"/> sets <see cref="WebSocketOptions.Proxy"/>, which the firehose does not support.</exception>
     /// <remarks>
     /// <para>The firehose does not dispose <paramref name="httpClient"/>. It belongs to the caller, who has to keep it alive for as long as the firehose is used.</para>
     /// <para>Warning: <paramref name="httpClient"/> is used as it is, so it has none of the SSRF protections the firehose would otherwise
@@ -123,6 +129,16 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
         FirehoseOptions? options,
         WebSocketOptions? webSocketOptions)
     {
+#pragma warning disable CS0618 // Proxy is obsolete because it is rejected here.
+        if (webSocketOptions?.Proxy is not null)
+        {
+            // A web socket which connects through an HttpMessageInvoker cannot have its own proxy, and the firehose always connects through one.
+            throw new ArgumentException(
+                $"{nameof(AtProto.WebSocketOptions.Proxy)} is not supported by the firehose. Use {nameof(HttpClientOptions)}.{nameof(HttpClientOptions.ProxyUri)}, or configure the proxy on the handler of the HttpClient you supply.",
+                nameof(webSocketOptions));
+        }
+#pragma warning restore CS0618
+
         Options = options ?? new FirehoseOptions();
         WebSocketOptions = webSocketOptions;
 
