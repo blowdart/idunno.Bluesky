@@ -231,7 +231,7 @@ internal sealed class EventStreamReader
                                     Interlocked.Exchange(ref _lastSequence, sequence);
 
                                     // Only a sequenced event shows the stream is making progress. A server which sends an info or
-                                    // unknown frame and then drops the connection would otherwise keep the enumeration reconnecting forever.
+                                    // unsequenced unknown frame and then drops the connection would otherwise keep the enumeration reconnecting forever.
                                     attempts = 0;
                                 }
 
@@ -581,9 +581,19 @@ internal sealed class EventStreamReader
         if (!_decoder.IsSequenced(type))
         {
             string sanitizedType = Sanitize(type);
+
+            // A new message type may be sequenced, so a valid seq is honoured to keep ordering and resumption intact. Anything
+            // else in the field could mean something different in a type this library does not know, so it is left alone.
+            long? unknownSequence = TryGetSequence(payload);
+
+            if (unknownSequence is long unknownSequenceValue && !AcceptSequence(unknownSequenceValue, type, frame.Payload, state))
+            {
+                return ReceiveStep.Skip;
+            }
+
             _metrics.UnknownEventsReceived.Add(1, _serverTag);
             FirehoseLogger.UnknownMessageType(_logger, sanitizedType);
-            return ReceiveStep.Deliver(new FirehoseUnknownEvent(sanitizedType, frame.Payload));
+            return ReceiveStep.Deliver(new FirehoseUnknownEvent(unknownSequence, sanitizedType, frame.Payload));
         }
 
         long sequence;
@@ -603,19 +613,9 @@ internal sealed class EventStreamReader
                 string.Create(CultureInfo.InvariantCulture, $"The firehose sent sequence number {sequence}, which is outside the allowed range.")));
         }
 
-        switch (state.Accept(sequence, type, frame.Payload))
+        if (!AcceptSequence(sequence, type, frame.Payload, state))
         {
-            case SequenceDecision.DropCursorEvent:
-                FirehoseLogger.CursorEventDropped(_logger, sequence);
-                return ReceiveStep.Skip;
-
-            case SequenceDecision.DropRepeatedEvent:
-                FirehoseLogger.RepeatedEventDropped(_logger, sequence);
-                return ReceiveStep.Skip;
-
-            case SequenceDecision.Violation:
-                throw ProtocolError(new InvalidDataException(
-                    string.Create(CultureInfo.InvariantCulture, $"The firehose sent sequence number {sequence} after {state.Last}; sequence numbers must increase.")));
+            return ReceiveStep.Skip;
         }
 
         try
@@ -629,6 +629,45 @@ internal sealed class EventStreamReader
             _metrics.InvalidEventsReceived.Add(1, _serverTag);
             FirehoseLogger.InvalidEvent(_logger, type, sequence, reason);
             return ReceiveStep.Deliver(new FirehoseInvalidEvent(sequence, type, _decoder.GetSubject(type, payload), reason, frame.Payload));
+        }
+    }
+
+    private bool AcceptSequence(long sequence, string type, ReadOnlyMemory<byte> payload, SequenceState state)
+    {
+        switch (state.Accept(sequence, type, payload))
+        {
+            case SequenceDecision.DropCursorEvent:
+                FirehoseLogger.CursorEventDropped(_logger, sequence);
+                return false;
+
+            case SequenceDecision.DropRepeatedEvent:
+                FirehoseLogger.RepeatedEventDropped(_logger, sequence);
+                return false;
+
+            case SequenceDecision.Violation:
+                throw ProtocolError(new InvalidDataException(
+                    string.Create(CultureInfo.InvariantCulture, $"The firehose sent sequence number {sequence} after {state.Last}; sequence numbers must increase.")));
+
+            default:
+                return true;
+        }
+    }
+
+    private static long? TryGetSequence(CborFields payload)
+    {
+        if (payload.IsAbsentOrNull("seq"))
+        {
+            return null;
+        }
+
+        try
+        {
+            long sequence = payload.GetInteger("seq");
+            return sequence is >= 1 and <= MaximumSequence ? sequence : null;
+        }
+        catch (InvalidDataException)
+        {
+            return null;
         }
     }
 

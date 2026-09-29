@@ -206,7 +206,9 @@ A firehose server may be anyone's. `AtProtoFirehose` enforces these limits:
 Frames that cannot be parsed, text frames, and sequence violations end the stream with an `InvalidDataException`,
 because the reader can no longer trust the connection. Messages that parse but fail content validation are yielded
 as `FirehoseInvalidEvent` and the stream continues. Unknown message types and operations are skipped or yielded as
-`FirehoseUnknownEvent`, as the specification requires.
+`FirehoseUnknownEvent`, as the specification requires. An unknown message type whose payload has a valid `seq` is
+sequenced like any other event: it must be in order, sets `Sequence`, and advances the resume cursor. One without a valid
+`seq` is yielded unsequenced.
 
 ### Signatures
 

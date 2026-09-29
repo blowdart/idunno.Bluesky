@@ -176,7 +176,7 @@ public class AtProtoFirehoseTests
         {
             await Send(socket, Frame("#identity", IdentityPayload(1), operation: 2), token);
             await Send(socket, Frame(null, Map(("anything", 1L)), operation: 7), token);
-            await Send(socket, Frame("#brandNew", Map(("seq", 99L), ("extra", "field"))), token);
+            await Send(socket, Frame("#brandNew", Map(("seq", 1L), ("extra", "field"))), token);
             await Send(socket, Frame("com.atproto.sync.subscribeRepos#identity", Map(("seq", 2L), ("did", TestDid), ("time", Time), ("unknownField", true))), token);
         });
         await using AtProtoFirehose firehose = CreateFirehose(server);
@@ -184,8 +184,59 @@ public class AtProtoFirehoseTests
         List<FirehoseEvent> events = await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 2, cancellationToken);
 
         Assert.Equal("#brandNew", Assert.IsType<FirehoseUnknownEvent>(events[0]).Type);
-        Assert.Null(events[0].Sequence);
+        Assert.Equal(1, events[0].Sequence);
         Assert.Equal(2, Assert.IsType<FirehoseIdentityEvent>(events[1]).Sequence);
+    }
+
+    public static TheoryData<string, object?> MalformedUnknownSequences => new()
+    {
+        { "absent", null },
+        { "string", "5" },
+        { "zero", 0L },
+        { "negative", -5L },
+        { "2^53", 9_007_199_254_740_992L },
+        { "boolean", true },
+    };
+
+    [Theory]
+    [MemberData(nameof(MalformedUnknownSequences))]
+    public async Task UnknownTypesWithoutAValidSequenceAreUnsequenced(string reason, object? sequence)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(5)), token);
+            await Send(socket, Frame("#brandNew", sequence is null ? Map(("extra", "field")) : Map(("seq", sequence), ("extra", "field"))), token);
+            await Send(socket, Frame("#identity", IdentityPayload(6)), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        List<FirehoseEvent> events = await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 3, cancellationToken);
+
+        Assert.IsType<FirehoseUnknownEvent>(events[1]);
+        Assert.True(events[1].Sequence is null, reason);
+        Assert.Equal(6, events[2].Sequence);
+    }
+
+    [Theory]
+    [InlineData("#brandNew", 5L, "#identity", 4L)]
+    [InlineData("#brandNew", 5L, "#identity", 5L)]
+    [InlineData("#identity", 5L, "#brandNew", 4L)]
+    public async Task SequencedUnknownTypesMustBeInOrder(string firstType, long first, string secondType, long second)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(1)), token);
+            await Send(socket, Frame(firstType, firstType == "#identity" ? IdentityPayload(first) : Map(("seq", first))), token);
+            await Send(socket, Frame(secondType, secondType == "#identity" ? IdentityPayload(second, handle: "bob.test") : Map(("seq", second), ("extra", "field"))), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 3, cancellationToken));
+        Assert.Single(server.Connections);
     }
 
     public static TheoryData<string, byte[]> TerminalFrames => new()
@@ -668,6 +719,33 @@ public class AtProtoFirehoseTests
         Assert.Equal(["", "?cursor=10"], server.Connections.Select(c => c.Query));
     }
 
+    [Fact]
+    public async Task SequencedUnknownTypesAdvanceTheCursorAndAreNotRepeated()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 1)
+            {
+                await Send(socket, Frame("#identity", IdentityPayload(10)), token);
+                await Send(socket, Frame("#brandNew", Map(("seq", 11L))), token);
+                await Send(socket, ErrorFrame("ConsumerTooSlow"), token);
+            }
+            else
+            {
+                await Send(socket, Frame("#brandNew", Map(("seq", 11L))), token);
+                await Send(socket, Frame("#identity", IdentityPayload(12)), token);
+            }
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+
+        List<FirehoseEvent> events = await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 3, cancellationToken);
+
+        Assert.Equal([10L, 11L, 12L], events.Select(e => e.Sequence!.Value));
+        Assert.IsType<FirehoseUnknownEvent>(events[1]);
+        Assert.Equal(["", "?cursor=11"], server.Connections.Select(c => c.Query));
+    }
     [Fact]
     public async Task ResumesAfterTheServerClosesWithoutDuplicates()
     {

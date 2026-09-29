@@ -47,7 +47,8 @@
   exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
 * Added `AtProtoFirehose`, an AOT- and trimming-safe AT Protocol event stream reader for `com.atproto.sync.subscribeRepos`
   (`SubscribeReposAsync()`) and `com.atproto.label.subscribeLabels` (`SubscribeLabelsAsync()`), returning `IAsyncEnumerable<FirehoseEvent>`.
-  * Commit, sync, identity, account, info, labels, unknown and invalid events are surfaced as `FirehoseEvent` subtypes.
+  * Commit, sync, identity, account, info, labels, unknown and invalid events are surfaced as `FirehoseEvent` subtypes. Unknown events
+    with a valid `seq` are sequenced and advance the cursor.
     Commit operations expose their record CID, previous CID and lazily decoded record.
   * Frames, CAR blocks, operations and label batches are size and count limited, block CIDs are recomputed, the commit must be
     the first CAR root, and the commit's DID and revision must match the event. Timestamps must be strict AT Protocol datetimes.
