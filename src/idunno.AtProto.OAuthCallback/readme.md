@@ -1,4 +1,4 @@
-﻿# idunno.AtProto.OAuthCallback
+# idunno.AtProto.OAuthCallback
 
 ## About
 
