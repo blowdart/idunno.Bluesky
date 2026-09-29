@@ -2,10 +2,23 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="System.CommandLine" />
   </ItemGroup>
+
+  <!--
+    Publishing produces a single native executable. Ordinary builds do not publish, because the native link step
+    needs a platform C/C++ toolchain which building the rest of the repository does not, so run dotnet publish to
+    produce it. IsPublishable overrides the samples default, which otherwise makes publishing this project a no-op.
+  -->
+  <PropertyGroup>
+    <IsPublishable>true</IsPublishable>
+    <PublishAot>true</PublishAot>
+    <UseCurrentRuntimeIdentifier>true</UseCurrentRuntimeIdentifier>
+  </PropertyGroup>
 
 </Project>

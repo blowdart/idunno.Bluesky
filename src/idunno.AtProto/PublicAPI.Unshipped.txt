@@ -745,3 +745,7 @@ idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheDuration.get -> System.Ti
 idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheDuration.init -> void
 idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.get -> int
 idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.init -> void
+*REMOVED*idunno.AtProto.Labels.Label.Label(int? version, idunno.AtProto.Did! source, string! uri, idunno.AtProto.Cid? cid, string! value, bool isNegationLabel, System.DateTimeOffset creationTimestamp, System.Collections.Generic.IEnumerable<byte>! signature) -> void
+*REMOVED*idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>?
+idunno.AtProto.Labels.Label.Label(int? version, idunno.AtProto.Did! source, string! uri, idunno.AtProto.Cid? cid, string! value, bool isNegationLabel, System.DateTimeOffset creationTimestamp, idunno.AtProto.Bytes? signature) -> void
+idunno.AtProto.Labels.Label.Signature.get -> idunno.AtProto.Bytes?

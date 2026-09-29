@@ -347,7 +347,7 @@ public class FirehoseTests
         Assert.Null(label.Cid);
         Assert.Null(label.ExpiresAt);
         Assert.True(label.IsNegationLabel);
-        Assert.Equal([1, 2], label.Signature!);
+        Assert.Equal<byte>([1, 2], label.Signature!.Value);
     }
 
     [Fact]

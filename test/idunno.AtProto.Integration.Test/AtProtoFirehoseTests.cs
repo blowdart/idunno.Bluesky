@@ -495,7 +495,7 @@ public class AtProtoFirehoseTests
                 Assert.Equal(1, label.Version);
                 Assert.False(label.IsNegationLabel);
                 Assert.Equal(new DateTimeOffset(2027, 1, 1, 0, 0, 0, TimeSpan.Zero), label.ExpiresAt);
-                Assert.Equal(64, label.Signature!.Count());
+                Assert.Equal(64, label.Signature!.Value.Count);
             },
             label => Assert.Equal("porn", label.Value));
         Assert.Equal("SomethingNew", Assert.IsType<FirehoseInfoEvent>(events[1]).Name);

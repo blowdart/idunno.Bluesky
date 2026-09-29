@@ -81,6 +81,10 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty.</exception>
+    /// <remarks>
+    /// <para>This method does not require authentication. When the agent is not authenticated the request is made
+    /// against the public appview, which serves it anonymously.</para>
+    /// </remarks>
     public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(
         IEnumerable<Did> dids,
         bool getDetailedViews = false,

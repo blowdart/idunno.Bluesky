@@ -142,7 +142,7 @@ public class NotificationMappingTests
             value: "spam",
             isNegationLabel: false,
             creationTimestamp: DateTimeOffset.UtcNow,
-            signature: [])];
+            signature: null)];
 
         Notification notification = new(
             new AtUri("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3l5w6ldfnud2g"),
