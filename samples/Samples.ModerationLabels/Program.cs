@@ -655,8 +655,8 @@ public sealed class Program
             string sanitized = Sanitize(labelValue);
             int sanitizedWidth = DisplayWidth(sanitized);
 
-            // Budget for the text describing what was left out as if this value is the last one shown, which is the longest it can be.
-            int remainingWidth = $", and {labelValues.Count - shown} more".Length;
+            int remaining = labelValues.Count - shown - 1;
+            int remainingWidth = remaining == 0 ? 0 : $", and {remaining} more".Length;
 
             if (shown != 0 && width + ", ".Length + sanitizedWidth + remainingWidth > budget)
             {
