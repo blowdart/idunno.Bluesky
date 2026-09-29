@@ -425,8 +425,9 @@ internal sealed class EventStreamReader
         {
             if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
+                // CloseAsync, unlike CloseOutputAsync, waits for the server's answer, so the timeout bounds the whole handshake.
                 using CancellationTokenSource timeout = new(_options.CloseTimeout);
-                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token).ConfigureAwait(false);
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token).ConfigureAwait(false);
             }
         }
         catch (Exception exception)

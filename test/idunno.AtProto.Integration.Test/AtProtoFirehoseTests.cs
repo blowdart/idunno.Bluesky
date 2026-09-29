@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -731,6 +732,59 @@ public class AtProtoFirehoseTests
         Assert.IsType<FirehoseInfoEvent>(Assert.Single(events));
         Assert.Equal(cursor, firehose.LastRepoSequence);
     }
+    [Fact]
+    public async Task ClosingWaitsForTheServerToAnswerTheCloseHandshake()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TimeSpan replyDelay = TimeSpan.FromMilliseconds(500);
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(1)), token);
+
+            byte[] buffer = new byte[1024];
+            while ((await socket.ReceiveAsync(buffer, token)).MessageType != WebSocketMessageType.Close)
+            {
+            }
+
+            await Task.Delay(replyDelay, token);
+            await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions { CloseTimeout = TimeSpan.FromSeconds(30) });
+
+        IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        await events.DisposeAsync().AsTask().WaitAsync(s_timeout, cancellationToken);
+
+        Assert.True(stopwatch.Elapsed >= replyDelay - TimeSpan.FromMilliseconds(50), $"Closing took {stopwatch.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task ClosingIsAbortedWhenTheServerDoesNotAnswerTheCloseHandshake()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TimeSpan closeTimeout = TimeSpan.FromMilliseconds(300);
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(1)), token);
+
+            // Never answer the close, holding the connection open until the server is disposed.
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions { CloseTimeout = closeTimeout });
+
+        IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        await events.DisposeAsync().AsTask().WaitAsync(s_timeout, cancellationToken);
+
+        Assert.True(stopwatch.Elapsed >= closeTimeout - TimeSpan.FromMilliseconds(50), $"Closing took {stopwatch.Elapsed}.");
+    }
+
     [Fact]
     public async Task IdleConnectionsAreReconnected()
     {
