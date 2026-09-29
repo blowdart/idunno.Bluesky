@@ -110,6 +110,9 @@
 
 * `ThreadGate` and `PostGate` now derive from `BlueskyRecord` instead of directly from `AtProtoRecord`. Their `Type` properties have been removed because the record discriminator is written by `System.Text.Json` polymorphism.
 * `ThreadGate` and `PostGate` are no longer `sealed`. `System.Text.Json` does not support polymorphism metadata on sealed types, and that metadata is what writes the lexicon `$type` when a gate is serialized as its own concrete type.
+* `BlueskyServer.GetUploadStatus()` now takes a `ServiceCredential`, because the video service rejects unauthenticated upload status requests.
+* `BlueskyServer.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices()`, `GetSuggestions()` and `SearchPostsV2()`
+  now take an optional `AccessCredentials?`, rather than a required one.
 
 ### Fixed
 
@@ -124,6 +127,13 @@
 #### idunno.Bluesky
 
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
+* `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
+  `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
+* Unauthenticated `SearchPostsV2()` now uses `api.bsky.app` even if the agent's service still points to a former PDS after logout.
+* `BlueskyAgent.GetThreadGate()`, `GetThreadGateRecord()`, `GetPostGate()` and `GetPostGateRecord()` now read the gate from
+  the post author's repository, on the author's PDS, rather than the authenticated user's repository, and no longer require authentication.
+* `BlueskyAgent.GetUploadStatus()` now sends a service authentication token to the video service, which previously rejected the request,
+  and throws `AuthenticationRequiredException` when the agent is unauthenticated.
 
 ## 7.0.1 - 2026-09-26
 

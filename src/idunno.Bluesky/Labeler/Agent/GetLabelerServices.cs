@@ -81,7 +81,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(
         IEnumerable<Did> dids,
         bool getDetailedViews = false,
@@ -97,15 +96,10 @@ public partial class BlueskyAgent
             throw new ArgumentOutOfRangeException(nameof(dids), "At least one Did must be specified.");
         }
 
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
         return await BlueskyServer.GetLabelerServices(
             dids: didList,
             getDetailedViews: getDetailedViews,
-            service: Service,
+            service: AuthenticatedOrUnauthenticatedServiceUri,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,

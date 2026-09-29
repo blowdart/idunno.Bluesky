@@ -49,7 +49,7 @@ public static partial class BlueskyServer
     /// <param name="following">Optional flag indicating whether to include only posts from accounts followed by the viewer.</param>
     /// <param name="queryLanguage">Optional Language analyzer hint for the query text. If unset, the server auto-detects when possible.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve search information from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">Optional <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -57,7 +57,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown if any of the provided arguments are invalid.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference in summary.")]
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "The api demands lowercase.")]
@@ -99,7 +99,7 @@ public static partial class BlueskyServer
         bool? following,
         string? queryLanguage,
         Uri service,
-        AccessCredentials accessCredentials,
+        AccessCredentials? accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -108,7 +108,6 @@ public static partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         if (repliesOnly is not null && excludeReplies is not null)

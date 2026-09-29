@@ -28,7 +28,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="anchor"/> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="below"/> or <paramref name="branchingFactor"/> are out of range.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
     public async Task<AtProtoHttpResult<PostThreadV2>> GetPostThreadV2(
         AtUri anchor,
@@ -49,11 +48,6 @@ public partial class BlueskyAgent
         if (branchingFactor is not null && (branchingFactor.Value < 0 || branchingFactor.Value > Maximum.PostThreadV2BranchingFactor))
         {
             throw new ArgumentOutOfRangeException(nameof(branchingFactor), branchingFactor.Value, "Value must be between 0 and " + Maximum.PostThreadV2BranchingFactor.ToString(CultureInfo.InvariantCulture) + ".");
-        }
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
         }
 
 #pragma warning disable BSKYUnspecced

@@ -26,7 +26,7 @@ public static partial class BlueskyServer
     /// <param name="branchingFactor">Maximum of replies to include at each level of the thread, except for the direct replies to the anchor, which are (NOTE: currently, during unspecced phase) all returned (NOTE: later they might be paginated).</param>
     /// <param name="sort">The sort order for the thread.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">Optional <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -34,7 +34,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="anchor"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="anchor"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="below"/> or <paramref name="branchingFactor"/> are negative or greater than their maximum permitted values.</exception>
     [UnconditionalSuppressMessage("Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -51,7 +51,7 @@ public static partial class BlueskyServer
         int? branchingFactor,
         string? sort,
         Uri service,
-        AccessCredentials accessCredentials,
+        AccessCredentials? accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -71,7 +71,6 @@ public static partial class BlueskyServer
             throw new ArgumentOutOfRangeException(nameof(branchingFactor), branchingFactor.Value, "Value must be between 0 and " + Maximum.PostThreadV2BranchingFactor.ToString(CultureInfo.InvariantCulture) + ".");
         }
 
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
