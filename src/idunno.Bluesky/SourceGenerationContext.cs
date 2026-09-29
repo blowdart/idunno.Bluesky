@@ -229,6 +229,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(MentionRule))]
 [JsonSerializable(typeof(Generator))]
 [JsonSerializable(typeof(GeneratorContentMode))]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Generator>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedGenerator")]
 [JsonSerializable(typeof(PostGate))]
 [JsonSerializable(typeof(PostGateRule))]
 [JsonSerializable(typeof(ThreadGate))]

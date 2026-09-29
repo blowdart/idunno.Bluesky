@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Record;
@@ -51,6 +52,30 @@ public class GeneratorRecordTests
         BlueskyRecord? roundTripped = JsonSerializer.Deserialize<BlueskyRecord>(serialized, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.IsType<Generator>(roundTripped);
+    }
+
+    [Fact]
+    public void GeneratorRepositoryRecordDeserializesWithSourceGeneratedJsonContext()
+    {
+        string json = """
+            {
+                "uri": "at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/test",
+                "cid": "bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i",
+                "value": {
+                    "$type": "app.bsky.feed.generator",
+                    "did": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+                    "displayName": "Test Generator",
+                    "createdAt": "2025-04-21T10:49:31.969Z"
+                }
+            }
+            """;
+
+        AtProtoRepositoryRecord<Generator>? actual =
+            JsonSerializer.Deserialize<AtProtoRepositoryRecord<Generator>>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+        Assert.Equal("at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.feed.generator/test", actual.Uri.ToString());
+        Assert.Equal("Test Generator", actual.Value.DisplayName);
     }
 
     [Theory]
