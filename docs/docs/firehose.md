@@ -235,7 +235,8 @@ repository or labeler rather than once per event.
   the next event.
 * If a signature fails against a cached key, the key is resolved again in case it was rotated without an
   announcement, and the event is verified against the new key. This happens at most once every five minutes per
-  DID, so a stream of bad signatures cannot become a stream of DID resolutions.
+  DID, so a stream of bad signatures cannot become a stream of DID resolutions. If that resolution fails, the
+  cached key is kept until it expires, and the attempt still counts towards the five minute limit.
 
 Set `CacheSigningKeys` to `false` to turn the cache off, for example when your `DidDocumentResolver` does its own
 caching. Without a cache every commit, sync event and labels message resolves a DID document.

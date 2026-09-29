@@ -244,7 +244,8 @@ public sealed record FirehoseOptions
     /// <para>Keys are cached for <see cref="SigningKeyCacheDuration"/>, and at most <see cref="SigningKeyCacheSize"/> are held.
     /// A failure to resolve a usable key is also cached, for a minute, so a DID which cannot be resolved is not resolved for every event.</para>
     /// <para>An <c>#identity</c> event removes the cached keys of its DID. A signature which fails to verify against a cached key causes
-    /// the key to be resolved again, at most once every five minutes for each DID, in case the key has been rotated.</para>
+    /// the key to be resolved again, at most once every five minutes for each DID, in case the key has been rotated. If that resolution fails
+    /// the cached key is kept until it expires.</para>
     /// <para>Disable the cache when <see cref="DidDocumentResolver"/> does its own caching. Without a cache every commit, sync event
     /// and label source resolves a DID document.</para>
     /// <para>The cache only helps against well behaved servers. A malicious server can send malicious data which defeats it, forcing a

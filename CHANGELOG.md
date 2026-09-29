@@ -59,7 +59,7 @@
     cannot keep up with the full relay; it suits labelers, a single PDS, or other low-volume streams.
     A labels message with labels from more than `MaximumLabelSourcesPerMessage` distinct sources is rejected before any are resolved.
     Resolved signing keys are cached by default, bounded by `SigningKeyCacheSize` and `SigningKeyCacheDuration`, invalidated by `#identity` events,
-    and refreshed at most once every five minutes when a signature fails against a cached key. Set `CacheSigningKeys` to `false` to turn it off.
+    and refreshed at most once every five minutes when a signature fails against a cached key, keeping the cached key if the refresh fails. Set `CacheSigningKeys` to `false` to turn it off.
   * Resumes from the last sequence after transport failures, idle timeouts, `ConsumerTooSlow` and retryable HTTP statuses,
     with jittered backoff and `Retry-After` support. `FirehoseConnectionException` reports refused connections and server errors.
     Only events with a sequence number reset the reconnection attempt count.

@@ -42,6 +42,20 @@ public class FirehoseTests
     }
 
     [Theory]
+    [InlineData(2, true)]
+    [InlineData(1, false)]
+    public void SanitizeDoesNotSplitSurrogatePairsWhenTruncating(int space, bool emojiKept)
+    {
+        string prefix = new('a', EventStreamReader.MaximumServerTextLength - space);
+        string sanitized = EventStreamReader.Sanitize(prefix + "\U0001F600tail");
+
+        Assert.Equal(emojiKept ? prefix + "\U0001F600" : prefix, sanitized);
+    }
+
+    [Fact]
+    public void SanitizeReplacesUnpairedSurrogates() => Assert.Equal("a\uFFFDb", EventStreamReader.Sanitize("a\uD800b"));
+
+    [Theory]
     [InlineData(null, new[] { "1a", "2a", "5a" }, new[] { "Accept", "Accept", "Accept" })]
     [InlineData(10L, new[] { "10a", "11a" }, new[] { "DropCursorEvent", "Accept" })]
     [InlineData(10L, new[] { "11a", "12a" }, new[] { "Accept", "Accept" })]

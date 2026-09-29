@@ -93,6 +93,29 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     }
 
     [Fact]
+    public async Task FailedRefreshesKeepTheCachedKeyAndCountAsARefresh()
+    {
+        using FirehoseSignatureVerifier verifier = CreateVerifier();
+
+        await Verify(verifier, _key);
+        _time.Advance(FirehoseSignatureVerifier.MinimumRefreshInterval);
+        _document = () => throw new HttpRequestException("resolution failed");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => Verify(verifier, _rotatedKey));
+        Assert.Equal(2, _resolutions);
+
+        await Verify(verifier, _key);
+        _time.Advance(FirehoseSignatureVerifier.MinimumRefreshInterval - TimeSpan.FromSeconds(1));
+        await Assert.ThrowsAsync<InvalidDataException>(() => Verify(verifier, _rotatedKey));
+        await Verify(verifier, _key);
+        Assert.Equal(2, _resolutions);
+
+        _time.Advance(TimeSpan.FromSeconds(1));
+        await Assert.ThrowsAsync<InvalidDataException>(() => Verify(verifier, _rotatedKey));
+        Assert.Equal(3, _resolutions);
+    }
+
+    [Fact]
     public async Task FailedResolutionsAreCachedBriefly()
     {
         _document = () => throw new HttpRequestException("resolution failed");

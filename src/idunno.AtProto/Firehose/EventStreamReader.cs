@@ -156,17 +156,19 @@ internal sealed class EventStreamReader
         }
 
         StringBuilder builder = new(Math.Min(value.Length, MaximumServerTextLength));
+        Span<char> utf16 = stackalloc char[2];
 
-        foreach (char c in value)
+        // Runes rather than chars, so truncation never splits a surrogate pair. An unpaired surrogate becomes U+FFFD.
+        foreach (Rune rune in value.EnumerateRunes())
         {
-            if (builder.Length == MaximumServerTextLength)
+            if (builder.Length + rune.Utf16SequenceLength > MaximumServerTextLength)
             {
                 break;
             }
 
-            if (!char.IsControl(c) && !IsBidirectionalFormattingCharacter(c))
+            if (!Rune.IsControl(rune) && !IsBidirectionalFormattingCharacter(rune.Value))
             {
-                builder.Append(c);
+                builder.Append(utf16[..rune.EncodeToUtf16(utf16)]);
             }
         }
 
@@ -174,7 +176,7 @@ internal sealed class EventStreamReader
     }
 
     // The explicit directional marks, embeddings, overrides and isolates, which can make text display in a different order to how it is stored.
-    private static bool IsBidirectionalFormattingCharacter(char c) => c is '\u061C' or '\u200E' or '\u200F' or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
+    private static bool IsBidirectionalFormattingCharacter(int c) => c is 0x061C or 0x200E or 0x200F or (>= 0x202A and <= 0x202E) or (>= 0x2066 and <= 0x2069);
 
     /// <summary>
     /// Streams events from the endpoint, reconnecting when the connection is lost.

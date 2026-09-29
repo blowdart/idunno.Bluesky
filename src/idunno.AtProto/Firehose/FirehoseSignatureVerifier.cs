@@ -144,7 +144,7 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
             // The key may have been rotated since it was cached, so it is resolved again, at most once per refresh interval
             // so a stream of bad signatures cannot turn into a stream of DID resolutions.
             _metrics?.SigningKeyRefreshes.Add(1);
-            cached = await ResolveAndCacheAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+            cached = await ResolveAndCacheAsync(cacheKey, cancellationToken, cached).ConfigureAwait(false);
             Verify(cached.GetKey(did), signedData, signature, subject);
         }
     }
@@ -209,7 +209,10 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
 
     private static int Stripe(Did did) => (int)((uint)did.GetHashCode() % GenerationStripes);
 
-    private async Task<CachedKey> ResolveAndCacheAsync((Did Did, string Fragment) cacheKey, CancellationToken cancellationToken)
+    private async Task<CachedKey> ResolveAndCacheAsync(
+        (Did Did, string Fragment) cacheKey,
+        CancellationToken cancellationToken,
+        CachedKey? refreshing = null)
     {
         int stripe = Stripe(cacheKey.Did);
         long generation;
@@ -228,8 +231,19 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
         }
         catch (InvalidDataException exception)
         {
-            TimeSpan duration = _cacheDuration < FailedResolutionDuration ? _cacheDuration : FailedResolutionDuration;
-            entry = new CachedKey(null, exception, _timeProvider.GetUtcNow(), duration);
+            DateTimeOffset now = _timeProvider.GetUtcNow();
+
+            if (refreshing is { Key: SigningKey previous } && refreshing.ExpiresAt > now)
+            {
+                // A failed refresh keeps the key it was refreshing until that key expires, and counts as a refresh, so a resolver which
+                // keeps failing is still only asked once per refresh interval and events signed with the cached key still verify.
+                entry = new CachedKey(previous, null, now, refreshing.ExpiresAt - now);
+            }
+            else
+            {
+                TimeSpan duration = _cacheDuration < FailedResolutionDuration ? _cacheDuration : FailedResolutionDuration;
+                entry = new CachedKey(null, exception, now, duration);
+            }
         }
 
         lock (_cacheLock)
