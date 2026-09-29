@@ -43,7 +43,7 @@ public sealed record Label : AtProtoObject
         string value,
         bool isNegationLabel,
         DateTimeOffset creationTimestamp,
-        IEnumerable<byte> signature)
+        Bytes? signature)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(uri);
@@ -122,9 +122,11 @@ public sealed record Label : AtProtoObject
     /// <remarks>
     /// <para>The <c>sig</c> property is optional in <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/defs.json">com.atproto.label.defs</see>,
     /// so this will be <see langword="null" /> for labels which carry no signature.</para>
+    /// <para>Over JSON a signature is encoded as a <c>$bytes</c> object, as the AT Protocol data model specifies, and over
+    /// DAG-CBOR it is raw bytes. <see cref="Bytes"/> represents both.</para>
     /// </remarks>
     [JsonPropertyName("sig")]
-    public IEnumerable<byte>? Signature { get; init; }
+    public Bytes? Signature { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => '{' + Value + '}';

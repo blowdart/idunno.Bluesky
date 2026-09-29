@@ -29,6 +29,11 @@ public static partial class BlueskyServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="dids"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty.</exception>
+    /// <remarks>
+    /// <para>The underlying endpoint does not require authentication. Calls to an appview, such as
+    /// <see cref="DefaultServiceUris.PublicAppViewUri"/>, succeed when <paramref name="accessCredentials"/> is
+    /// <see langword="null"/>, whereas a personal data server requires credentials before it will proxy the request.</para>
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",

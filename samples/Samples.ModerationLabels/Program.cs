@@ -1,23 +1,49 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
 using System.Globalization;
+using System.Net;
 using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Firehose;
 using idunno.AtProto.Labels;
+using idunno.AtProto.Sync;
+using idunno.Bluesky;
+using idunno.Bluesky.Labeler;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Samples.ModerationLabels;
 
 public sealed class Program
 {
     // moderation.bsky.app, the Bluesky moderation service.
-    private static readonly Did s_moderationLabeler = new("did:plc:ar7c4by46qjdydhdevvrndac");
+    private const string ModerationLabelerDid = "did:plc:ar7c4by46qjdydhdevvrndac";
 
-    private static readonly Uri s_moderationLabelerService = new("wss://mod.bsky.app");
+    // The service entry in a labeler's DID document which carries its subscribeLabels endpoint.
+    private const string LabelerServiceType = "AtprotoLabeler";
+
+    private const string LabelerServiceId = "#atproto_labeler";
+
+    // Every labeler publishes a declaration in this collection, so a relay can enumerate them.
+    private const string LabelerServiceCollection = "app.bsky.labeler.service";
+
+    // listReposByCollection is only implemented by relays and collection directories, not by personal data servers.
+    private static readonly Uri s_relay = new("https://relay1.us-west.bsky.network");
+
+    // Dead labelers are common, so a liveness check needs a short timeout of its own.
+    private static readonly TimeSpan s_livenessTimeout = TimeSpan.FromSeconds(5);
+
+    // Console.ReadKey() blocks, so the quit key is polled for instead, leaving the firehose free to run.
+    private static readonly TimeSpan s_quitKeyPollInterval = TimeSpan.FromMilliseconds(100);
+
+    private const int MaximumConcurrentLookups = 16;
+
+    // Used when the console has no width of its own, because its output is redirected.
+    private const int DefaultConsoleWidth = 80;
 
     private const string LabelSymbol = "\U0001F3F7";
 
@@ -25,7 +51,66 @@ public sealed class Program
 
     private const string StopwatchSymbol = "\u23F1";
 
-    static async Task<int> Main()
+    private const string EllipsisSymbol = "\u2026";
+
+    static async Task<int> Main(string[] args)
+    {
+        Option<string> labelerOption = new("--labeler", "-l", "/l")
+        {
+            Description = $"The DID or handle of the labeler to watch (defaults to the Bluesky moderation service, {ModerationLabelerDid}).",
+            DefaultValueFactory = _ => ModerationLabelerDid,
+            HelpName = "did|handle"
+        };
+        labelerOption.Validators.Add(result =>
+        {
+            string? value = result.GetValue(labelerOption);
+
+            if (string.IsNullOrWhiteSpace(value) || !AtIdentifier.TryParse(value, out _))
+            {
+                result.AddError($"'{value}' is not a valid DID or handle.");
+            }
+        });
+
+        Option<bool> listOption = new("--list")
+        {
+            Description = "List every labeler which has published a labeler declaration, with its handle and label values, then exit."
+        };
+
+        Option<bool> liveOption = new("--live")
+        {
+            Description = "With --list, query each labeler and list only those which answer."
+        };
+
+        RootCommand rootCommand = new("Watch the labels a labeler applies and negates, or list the labelers which publish them.")
+        {
+            labelerOption,
+            listOption,
+            liveOption
+        };
+        rootCommand.Validators.Add(result =>
+        {
+            bool listing = result.GetValue(listOption);
+
+            if (result.GetValue(liveOption) && !listing)
+            {
+                result.AddError("--live can only be used with --list.");
+            }
+
+            // An explicit labeler is meaningless when listing them all; an implicit default is not.
+            if (listing && result.GetResult(labelerOption) is { Implicit: false })
+            {
+                result.AddError("--labeler cannot be used with --list.");
+            }
+        });
+        rootCommand.SetAction((parseResult, cancellationToken) =>
+            parseResult.GetValue(listOption)
+                ? ListLabelersAsync(parseResult.GetValue(liveOption), cancellationToken)
+                : WatchLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken));
+
+        return await rootCommand.Parse(args).InvokeAsync().ConfigureAwait(false);
+    }
+
+    private static async Task<int> WatchLabelsAsync(AtIdentifier labeler, CancellationToken parseCancellationToken)
     {
         using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
         {
@@ -37,7 +122,7 @@ public sealed class Program
             configure.SetMinimumLevel(LogLevel.Warning);
         });
 
-        using CancellationTokenSource cancellationTokenSource = new();
+        using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
         CancellationToken cancellationToken = cancellationTokenSource.Token;
         Console.CancelKeyPress += (_, e) =>
         {
@@ -46,14 +131,53 @@ public sealed class Program
         };
         Console.OutputEncoding = Encoding.UTF8;
 
+        Did labelerDid;
+        Uri labelerService;
+
+        try
+        {
+            (labelerDid, labelerService) = await ResolveLabelerAsync(labeler, loggerFactory, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return 0;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 1;
+        }
+
         await using var firehose = new AtProtoFirehose(
             options: new FirehoseOptions
             {
-                LabelerUri = s_moderationLabelerService,
+                LabelerUri = labelerService,
                 LoggerFactory = loggerFactory
             });
 
-        Console.WriteLine($"Watching labels from {s_moderationLabeler} at {s_moderationLabelerService}. Press Ctrl+C to stop.");
+        // Ctrl+C stops the sample, but it also tears down the pipeline of the shell which launched it, which some
+        // prompts then report as a failed command. Quitting with a key press lets the sample exit normally instead.
+        bool listenForQuitKey = !Console.IsInputRedirected;
+
+        Console.WriteLine(
+            $"Watching labels from {labelerDid} at {labelerService}. Press {(listenForQuitKey ? "Q" : "Ctrl+C")} to stop.");
+
+        IReadOnlyList<string> declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, loggerFactory, cancellationToken).ConfigureAwait(false);
+
+        if (declaredLabelValues.Count != 0)
+        {
+            string prefix = $"{labelerDid} declares it can emit: ";
+
+            Console.WriteLine($"{prefix}{FormatLabelValues(declaredLabelValues, prefix.Length)}");
+        }
+        else
+        {
+            Console.WriteLine($"{labelerDid} does not declare the labels it can emit.");
+        }
+
+        Task quitKeyWatcher = listenForQuitKey
+            ? WatchForQuitKeyAsync(cancellationTokenSource, cancellationToken)
+            : Task.CompletedTask;
 
         try
         {
@@ -64,8 +188,8 @@ public sealed class Program
                     case FirehoseLabelsEvent labelsEvent:
                         foreach (Label label in labelsEvent.Labels)
                         {
-                            // A labeler normally only emits its own labels, but only show those issued by the Bluesky moderation service.
-                            if (label.Source != s_moderationLabeler)
+                            // A labeler normally only emits its own labels, but only show those issued by the labeler being watched.
+                            if (label.Source != labelerDid)
                             {
                                 continue;
                             }
@@ -99,8 +223,400 @@ public sealed class Program
             Console.Error.WriteLine($"Gave up reconnecting: {ex.Message}");
             return 1;
         }
+        finally
+        {
+            // Stop the key watcher, whether the firehose ended because the user quit or because it failed.
+            await cancellationTokenSource.CancelAsync().ConfigureAwait(false);
+            await quitKeyWatcher.ConfigureAwait(false);
+        }
 
         return 0;
+    }
+
+    // Polls for a quit key, rather than blocking on Console.ReadKey(), so the firehose keeps being read.
+    private static async Task WatchForQuitKeyAsync(CancellationTokenSource cancellationTokenSource, CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                if (Console.KeyAvailable && Console.ReadKey(intercept: true).Key is ConsoleKey.Q or ConsoleKey.Escape)
+                {
+                    await cancellationTokenSource.CancelAsync().ConfigureAwait(false);
+                    return;
+                }
+
+                await Task.Delay(s_quitKeyPollInterval, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The firehose stopped for its own reasons, so there is nothing left to quit.
+        }
+        catch (InvalidOperationException)
+        {
+            // The console input was redirected after the check which started this, so no key can arrive.
+        }
+    }
+
+    // A labeler publishes its subscribeLabels endpoint as an AtprotoLabeler service in its DID document.
+    private static async Task<(Did Did, Uri Service)> ResolveLabelerAsync(
+        AtIdentifier labeler,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        Did did = labeler switch
+        {
+            Did labelerDid => labelerDid,
+            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Could not resolve the handle '{handle}' to a DID."),
+            _ => throw new InvalidOperationException($"'{labeler}' is not a DID or a handle.")
+        };
+
+        DidDocument didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
+
+        foreach (DidDocService service in didDocument.Services)
+        {
+            if (service.Type == LabelerServiceType || service.Id.EndsWith(LabelerServiceId, StringComparison.Ordinal))
+            {
+                return (did, service.ServiceEndpoint);
+            }
+        }
+
+        throw new InvalidOperationException($"{did} does not declare a labeler service, so it is not a labeler.");
+    }
+
+    private static async Task<int> ListLabelersAsync(bool liveOnly, CancellationToken parseCancellationToken)
+    {
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
+        {
+            configure.AddSimpleConsole(options =>
+            {
+                options.TimestampFormat = "G";
+                options.UseUtcTimestamp = false;
+            });
+            configure.SetMinimumLevel(LogLevel.Warning);
+        });
+
+        using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cancellationTokenSource.Cancel();
+        };
+        Console.OutputEncoding = Encoding.UTF8;
+
+        try
+        {
+            Console.WriteLine($"Asking {s_relay.Host} which repositories publish {LabelerServiceCollection} records...");
+
+            IReadOnlyList<Did> labelerDids = await ListLabelerDidsAsync(loggerFactory, cancellationToken).ConfigureAwait(false);
+
+            if (labelerDids.Count == 0)
+            {
+                Console.Error.WriteLine("The relay returned no labeler declarations.");
+                return 1;
+            }
+
+            Console.WriteLine($"Found {labelerDids.Count} labeler declarations. Getting their details...");
+
+            IReadOnlyDictionary<Did, LabelerView> views = await GetLabelerViewsAsync(labelerDids, loggerFactory, cancellationToken).ConfigureAwait(false);
+
+            // A labeler whose handle no longer resolves in both directions is reported as handle.invalid, which cannot be used
+            // to reach it, so there is nothing useful to show for it.
+            IReadOnlyList<Did> resolvedDids = [.. labelerDids.Where(did => views.GetValueOrDefault(did)?.Creator.Handle.IsValid != false)];
+
+            int excludedCount = labelerDids.Count - resolvedDids.Count;
+
+            if (excludedCount != 0)
+            {
+                Console.WriteLine($"Excluding {excludedCount} labeler{(excludedCount == 1 ? string.Empty : "s")} whose handle does not resolve.");
+            }
+
+            IReadOnlyList<Did> didsToShow = resolvedDids;
+
+            if (liveOnly)
+            {
+                Console.WriteLine($"Querying each labeler, with a {s_livenessTimeout.TotalSeconds:N0} second timeout, to see which are live...");
+                didsToShow = await FilterToLiveLabelersAsync(resolvedDids, cancellationToken).ConfigureAwait(false);
+            }
+
+            Console.WriteLine();
+
+            foreach (Did did in didsToShow)
+            {
+                WriteLabelerSummary(did, views.GetValueOrDefault(did));
+            }
+
+            Console.WriteLine();
+
+            if (liveOnly)
+            {
+                Console.WriteLine($"{didsToShow.Count} of {resolvedDids.Count} declared labelers answered.");
+            }
+            else
+            {
+                Console.WriteLine($"{didsToShow.Count} labelers have published a declaration. Not all of them are still running; use --live to check.");
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return 0;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 1;
+        }
+
+        return 0;
+    }
+
+    // Only relays and collection directories implement listReposByCollection; a personal data server returns an error.
+    private static async Task<IReadOnlyList<Did>> ListLabelerDidsAsync(ILoggerFactory loggerFactory, CancellationToken cancellationToken)
+    {
+        using AtProtoAgent agent = new(s_relay, new AtProtoAgentOptions { LoggerFactory = loggerFactory });
+
+        List<Did> dids = [];
+        string? cursor = null;
+
+        do
+        {
+            AtProtoHttpResult<PagedDidCollection> page = await agent.ListReposByCollection(
+                collection: LabelerServiceCollection,
+                limit: 2000,
+                cursor: cursor,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!page.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"{s_relay} could not list {LabelerServiceCollection} repositories: {page.StatusCode} {page.AtErrorDetail?.Error} {page.AtErrorDetail?.Message}".TrimEnd());
+            }
+
+            dids.AddRange(page.Result);
+            cursor = page.Result.Count != 0 ? page.Result.Cursor : null;
+        } while (!string.IsNullOrEmpty(cursor));
+
+        return dids;
+    }
+
+    // app.bsky.labeler.getServices needs no authentication, so the agent calls the public appview anonymously.
+    private static async Task<IReadOnlyDictionary<Did, LabelerView>> GetLabelerViewsAsync(
+        IReadOnlyList<Did> labelers,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = loggerFactory });
+
+        Dictionary<Did, LabelerView> views = [];
+
+        foreach (Did[] chunk in labelers.Chunk(Maximum.ProfilesToGet))
+        {
+            AtProtoHttpResult<ICollection<LabelerView>> result =
+                await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
+
+            // The appview does not know every declared labeler, so a chunk may come back short, or fail entirely.
+            if (!result.Succeeded)
+            {
+                continue;
+            }
+
+            foreach (LabelerView view in result.Result)
+            {
+                views[view.Creator.Did] = view;
+            }
+        }
+
+        return views;
+    }
+
+    // A labeler which still answers queryLabels is running; a declaration on its own only proves it once was.
+    // Most declared labelers are gone, so the probes log nothing: a failure here is an answer, not a problem.
+    private static async Task<IReadOnlyList<Did>> FilterToLiveLabelersAsync(
+        IReadOnlyList<Did> labelers,
+        CancellationToken cancellationToken)
+    {
+        System.Collections.Concurrent.ConcurrentBag<Did> live = [];
+
+        await Parallel.ForEachAsync(
+            labelers,
+            new ParallelOptions { MaxDegreeOfParallelism = MaximumConcurrentLookups, CancellationToken = cancellationToken },
+            async (labeler, token) =>
+            {
+                if (await IsLabelerLiveAsync(labeler, token).ConfigureAwait(false))
+                {
+                    live.Add(labeler);
+                }
+            }).ConfigureAwait(false);
+
+        // Parallel completion order is arbitrary, so restore the relay's ordering.
+        HashSet<Did> liveSet = [.. live];
+
+        return [.. labelers.Where(liveSet.Contains)];
+    }
+
+    private static async Task<bool> IsLabelerLiveAsync(Did labeler, CancellationToken cancellationToken)
+    {
+        try
+        {
+            (_, Uri labelerService) = await ResolveLabelerAsync(labeler, NullLoggerFactory.Instance, cancellationToken).ConfigureAwait(false);
+
+            using AtProtoAgent agent = new(
+                labelerService,
+                new AtProtoAgentOptions
+                {
+                    LoggerFactory = NullLoggerFactory.Instance,
+                    HttpClientOptions = new HttpClientOptions { Timeout = s_livenessTimeout }
+                });
+
+            AtProtoHttpResult<PagedReadOnlyCollection<Label>> result = await agent.QueryLabels(
+                uriPatterns: ["*"],
+                sources: null,
+                limit: 1,
+                cursor: null,
+                service: labelerService,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // A refusal still proves something is listening; only a dead host or a broken endpoint does not.
+            return result.Succeeded || result.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The per-request timeout expired.
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            // The labeler does not declare a labeler service, so there is nothing to query.
+            return false;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+    }
+
+    private static void WriteLabelerSummary(Did did, LabelerView? view)
+    {
+        ConsoleColor originalColor = Console.ForegroundColor;
+
+        if (view is not null)
+        {
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write($"@{view.Creator.Handle}");
+            Console.ForegroundColor = originalColor;
+
+            if (view.Creator.DisplayName is string displayName && !string.IsNullOrWhiteSpace(displayName))
+            {
+                Console.Write($" ({displayName})");
+            }
+
+            Console.WriteLine();
+
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine($"  {did}");
+            Console.ForegroundColor = originalColor;
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.Write(did);
+            Console.ForegroundColor = originalColor;
+            Console.WriteLine(" (the appview has no record of this labeler)");
+        }
+
+        if (view is LabelerViewDetailed detailed)
+        {
+            IReadOnlyList<string> labelValues = [.. detailed.Policies.LabelValues.Order(StringComparer.Ordinal)];
+
+            if (labelValues.Count != 0)
+            {
+                string prefix = $"  {LabelSymbol}  {labelValues.Count} label {(labelValues.Count == 1 ? "value" : "values")}: ";
+
+                Console.WriteLine($"{prefix}{FormatLabelValues(labelValues, prefix.Length)}");
+            }
+        }
+    }
+
+    // The console wraps a line longer than its width, so only show the label values which fit on the rest of the line.
+    private static string FormatLabelValues(IReadOnlyList<string> labelValues, int prefixWidth)
+    {
+        // Writing to the final column wraps in some terminals, so stop one short of it.
+        int budget = ConsoleWidth - prefixWidth - 1;
+
+        StringBuilder builder = new();
+        int shown = 0;
+
+        foreach (string labelValue in labelValues)
+        {
+            // Budget for the text describing what was left out as if this value is the last one shown, which is the longest it can be.
+            int remainingWidth = $", and {labelValues.Count - shown} more".Length;
+
+            if (shown != 0 && builder.Length + ", ".Length + labelValue.Length + remainingWidth > budget)
+            {
+                break;
+            }
+
+            if (shown != 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(labelValue);
+            shown++;
+        }
+
+        if (shown != labelValues.Count)
+        {
+            builder.Append(CultureInfo.CurrentCulture, $", and {labelValues.Count - shown} more");
+        }
+
+        string formatted = builder.ToString();
+
+        // The first value is always shown, even when it is longer than the budget on its own, so trim whatever is left over.
+        if (budget > 1 && formatted.Length > budget)
+        {
+            formatted = string.Concat(formatted.AsSpan(0, budget - 1), EllipsisSymbol);
+        }
+
+        return formatted;
+    }
+
+    // A console whose output is redirected has no width, and reports either zero or throws, depending on the platform.
+    private static int ConsoleWidth
+    {
+        get
+        {
+            try
+            {
+                return Console.WindowWidth > 0 ? Console.WindowWidth : DefaultConsoleWidth;
+            }
+            catch (IOException)
+            {
+                return DefaultConsoleWidth;
+            }
+        }
+    }
+
+    // A labeler publishes the label values it can emit in the policies of its app.bsky.labeler.service record.
+    private static async Task<IReadOnlyList<string>> GetDeclaredLabelValuesAsync(
+        Did labeler,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = loggerFactory });
+
+        AtProtoHttpResult<Service> declarationResult = await agent.GetLabelerDeclaration(labeler, cancellationToken).ConfigureAwait(false);
+
+        if (!declarationResult.Succeeded || declarationResult.Result is null)
+        {
+            return [];
+        }
+
+        return [.. declarationResult.Result.Policies.LabelValues.Order(StringComparer.Ordinal)];
     }
 
     // label.Uri is the AT URI of a labelled record, or the DID of a labelled account.

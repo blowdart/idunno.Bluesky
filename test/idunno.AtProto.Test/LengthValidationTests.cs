@@ -51,7 +51,7 @@ public class LengthValidationTests
             value: value,
             isNegationLabel: false,
             creationTimestamp: DateTimeOffset.UtcNow,
-            signature: []));
+            signature: null));
 
         Assert.Equal("value.GetUtf8Length()", caughtException.ParamName);
     }
@@ -67,7 +67,7 @@ public class LengthValidationTests
             value: Families(5),
             isNegationLabel: false,
             creationTimestamp: DateTimeOffset.UtcNow,
-            signature: []);
+            signature: null);
 
         Assert.Equal(Families(5), label.Value);
     }

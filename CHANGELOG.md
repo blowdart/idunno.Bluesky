@@ -83,7 +83,9 @@
 #### Samples
 
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event.
-* Added `Samples.ModerationLabels`, which prints the labels the Bluesky moderation service applies and negates.
+* Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
+  selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
+  display name and declared label values, and `--live` narrows that list to the labelers which answer a query.
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
@@ -105,6 +107,10 @@
   `ArgumentException` when it is set. Both connect their web sockets through an `HttpClient`, and .NET does not allow a web socket which does
   that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
   Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
+* `Label.Signature`, and the `signature` parameter of the `Label` constructor, are now `Bytes?` rather than `IEnumerable<byte>`.
+  Over JSON the AT Protocol data model encodes bytes as a `$bytes` object, which `IEnumerable<byte>` cannot read, so every signed
+  label failed to deserialize. Use `Signature.Value` for the bytes as a collection, or `Signature.ToBytes()` for a `byte[]`, and pass
+  `null` rather than an empty collection for an unsigned label.
 
 #### idunno.Bluesky
 
@@ -115,6 +121,12 @@
   now take an optional `AccessCredentials?`, rather than a required one.
 
 ### Fixed
+
+#### idunno.AtProto
+
+* Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
+  but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
+  with an `OK` status code. See the breaking change above for the new type.
 
 #### idunno.AtProto.Types
 

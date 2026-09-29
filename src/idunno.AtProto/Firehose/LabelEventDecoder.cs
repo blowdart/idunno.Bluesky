@@ -89,7 +89,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
                     label.Source,
                     SigningKeyVerifier.LabelSigningKeyFragment,
                     GetUnsignedLabel(encodedLabels[i]),
-                    [.. label.Signature],
+                    label.Signature.ToBytes(),
                     "label",
                     documents,
                     cancellationToken).ConfigureAwait(false);
@@ -137,10 +137,10 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
                 fields.GetString("val"),
                 negation,
                 fields.GetDateTime("cts"),
-                signature: [])
+                signature: null)
             {
                 ExpiresAt = fields.GetOptionalDateTime("exp"),
-                Signature = signature
+                Signature = signature is null ? null : new Bytes(signature)
             };
         }
         catch (ArgumentException exception)
