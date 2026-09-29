@@ -146,6 +146,9 @@
   the post author's repository, on the author's PDS, rather than the authenticated user's repository, and no longer require authentication.
 * `BlueskyAgent.GetUploadStatus()` now sends a service authentication token to the video service, which previously rejected the request,
   and throws `AuthenticationRequiredException` when the agent is unauthenticated.
+* `LabelerPolicies.LabelValues` and `LabelValueDefinitions` now drop any `null` entries a labeler returns.
+  Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
+  collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
 
 ## 7.0.1 - 2026-09-26
 

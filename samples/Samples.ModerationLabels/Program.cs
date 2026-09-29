@@ -458,7 +458,13 @@ public sealed class Program
             }
 
             dids.AddRange(page.Result);
-            cursor = page.Result.Count != 0 ? page.Result.Cursor : null;
+
+            // The cursor, not the size of the page, says whether there is more to come: a relay can return an empty
+            // page and still continue. Stopping when a cursor repeats guards the one hazard that introduces, which is
+            // a server which never advances it turning this into an endless loop.
+            string? nextCursor = page.Result.Cursor;
+
+            cursor = nextCursor != cursor ? nextCursor : null;
         } while (!string.IsNullOrEmpty(cursor));
 
         return dids;
