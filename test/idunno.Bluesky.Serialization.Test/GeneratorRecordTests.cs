@@ -76,6 +76,23 @@ public class GeneratorRecordTests
     }
 
     [Theory]
+    [InlineData(GeneratorContentMode.Unspecified, "app.bsky.feed.defs#contentModeUnspecified")]
+    [InlineData(GeneratorContentMode.Video, "app.bsky.feed.defs#contentModeVideo")]
+    public void KnownGeneratorContentModesRoundTrip(GeneratorContentMode contentMode, string expected)
+    {
+        string json = JsonSerializer.Serialize(contentMode, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.Equal($"\"{expected}\"", json);
+        Assert.Equal(contentMode, JsonSerializer.Deserialize<GeneratorContentMode>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Fact]
+    public void SerializingUnknownGeneratorContentModeThrows()
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize(GeneratorContentMode.Unknown, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Theory]
     [InlineData(RecordType.Generator, typeof(Generator))]
     [InlineData(RecordType.ThreadGate, typeof(ThreadGate))]
     [InlineData(RecordType.PostGate, typeof(PostGate))]
