@@ -13,7 +13,6 @@ using idunno.AtProto.Sync;
 using idunno.Bluesky;
 using idunno.Bluesky.Labeler;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Samples.ModerationLabels;
@@ -126,16 +125,6 @@ public sealed class Program
 
     private static async Task<int> WatchLabelsAsync(AtIdentifier labeler, CancellationToken parseCancellationToken)
     {
-        using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
-        {
-            configure.AddSimpleConsole(options =>
-            {
-                options.TimestampFormat = "G";
-                options.UseUtcTimestamp = false;
-            });
-            configure.SetMinimumLevel(LogLevel.Warning);
-        });
-
         using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
         CancellationToken cancellationToken = cancellationTokenSource.Token;
         Console.CancelKeyPress += (_, e) =>
@@ -150,7 +139,7 @@ public sealed class Program
 
         try
         {
-            (labelerDid, labelerService) = await ResolveLabelerAsync(labeler, loggerFactory, cancellationToken).ConfigureAwait(false);
+            (labelerDid, labelerService) = await ResolveLabelerAsync(labeler, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -158,7 +147,7 @@ public sealed class Program
         }
         catch (InvalidOperationException ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            Console.Error.WriteLine(Sanitize(ex.Message));
             return 1;
         }
 
@@ -166,7 +155,7 @@ public sealed class Program
             options: new FirehoseOptions
             {
                 LabelerUri = labelerService,
-                LoggerFactory = loggerFactory
+                LoggerFactory = NullLoggerFactory.Instance
             });
 
         // Ctrl+C stops the sample, but it also tears down the pipeline of the shell which launched it, which some
@@ -181,7 +170,7 @@ public sealed class Program
 
         try
         {
-            declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, loggerFactory, cancellationToken).ConfigureAwait(false);
+            declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -244,12 +233,12 @@ public sealed class Program
         }
         catch (FirehoseConnectionException ex)
         {
-            Console.Error.WriteLine($"The labeler refused the connection: {ex.Message}");
+            Console.Error.WriteLine($"The labeler refused the connection: {Sanitize(ex.Message)}");
             return 1;
         }
         catch (IOException ex)
         {
-            Console.Error.WriteLine($"Gave up reconnecting: {ex.Message}");
+            Console.Error.WriteLine($"Gave up reconnecting: {Sanitize(ex.Message)}");
             return 1;
         }
         finally
@@ -291,18 +280,17 @@ public sealed class Program
     // A labeler publishes its subscribeLabels endpoint as an AtprotoLabeler service in its DID document.
     private static async Task<(Did Did, Uri Service)> ResolveLabelerAsync(
         AtIdentifier labeler,
-        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         Did did = labeler switch
         {
             Did labelerDid => labelerDid,
-            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false)
+            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Could not resolve the handle '{handle}' to a DID."),
             _ => throw new InvalidOperationException($"'{labeler}' is not a DID or a handle.")
         };
 
-        DidDocument didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false)
+        DidDocument didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
 
         // A DID document comes from whoever controls the DID, and neither JsonRequired nor RespectNullableAnnotations
@@ -339,16 +327,6 @@ public sealed class Program
 
     private static async Task<int> ListLabelersAsync(bool liveOnly, CancellationToken parseCancellationToken)
     {
-        using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
-        {
-            configure.AddSimpleConsole(options =>
-            {
-                options.TimestampFormat = "G";
-                options.UseUtcTimestamp = false;
-            });
-            configure.SetMinimumLevel(LogLevel.Warning);
-        });
-
         using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
         CancellationToken cancellationToken = cancellationTokenSource.Token;
         Console.CancelKeyPress += (_, e) =>
@@ -362,7 +340,7 @@ public sealed class Program
         {
             Console.WriteLine($"Asking {s_relay.Host} which repositories publish {LabelerServiceCollection} records...");
 
-            IReadOnlyList<Did> labelerDids = await ListLabelerDidsAsync(loggerFactory, cancellationToken).ConfigureAwait(false);
+            IReadOnlyList<Did> labelerDids = await ListLabelerDidsAsync(cancellationToken).ConfigureAwait(false);
 
             if (labelerDids.Count == 0)
             {
@@ -373,7 +351,7 @@ public sealed class Program
             Console.WriteLine($"Found {labelerDids.Count} labeler declarations. Getting their details...");
 
             (IReadOnlyDictionary<Did, LabelerView> views, IReadOnlySet<Did> unavailable) =
-                await GetLabelerViewsAsync(labelerDids, loggerFactory, cancellationToken).ConfigureAwait(false);
+                await GetLabelerViewsAsync(labelerDids, cancellationToken).ConfigureAwait(false);
 
             if (unavailable.Count != 0)
             {
@@ -425,7 +403,7 @@ public sealed class Program
         }
         catch (InvalidOperationException ex)
         {
-            Console.Error.WriteLine(ex.Message);
+            Console.Error.WriteLine(Sanitize(ex.Message));
             return 1;
         }
 
@@ -433,9 +411,9 @@ public sealed class Program
     }
 
     // Only relays and collection directories implement listReposByCollection; a personal data server returns an error.
-    private static async Task<IReadOnlyList<Did>> ListLabelerDidsAsync(ILoggerFactory loggerFactory, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<Did>> ListLabelerDidsAsync(CancellationToken cancellationToken)
     {
-        using AtProtoAgent agent = new(s_relay, new AtProtoAgentOptions { LoggerFactory = loggerFactory });
+        using AtProtoAgent agent = new(s_relay, new AtProtoAgentOptions { LoggerFactory = NullLoggerFactory.Instance });
 
         List<Did> dids = [];
         string? cursor = null;
@@ -476,10 +454,9 @@ public sealed class Program
     // says nothing about it at all, and treating the second as the first quietly reports guesses as findings.
     private static async Task<(IReadOnlyDictionary<Did, LabelerView> Views, IReadOnlySet<Did> Unavailable)> GetLabelerViewsAsync(
         IReadOnlyList<Did> labelers,
-        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = loggerFactory });
+        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = NullLoggerFactory.Instance });
 
         Dictionary<Did, LabelerView> views = [];
         HashSet<Did> unavailable = [];
@@ -547,7 +524,7 @@ public sealed class Program
 
         try
         {
-            (_, Uri labelerService) = await ResolveLabelerAsync(labeler, NullLoggerFactory.Instance, timeoutToken).ConfigureAwait(false);
+            (_, Uri labelerService) = await ResolveLabelerAsync(labeler, timeoutToken).ConfigureAwait(false);
 
             using AtProtoAgent agent = new(
                 labelerService,
@@ -879,19 +856,34 @@ public sealed class Program
     // Returns null when the record could not be read, which is not the same as a labeler which declares no values.
     private static async Task<IReadOnlyList<string>?> GetDeclaredLabelValuesAsync(
         Did labeler,
-        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = loggerFactory });
+        // The PDS controls error text logged by the SDK; this optional lookup must not write it to the terminal.
+        using BlueskyAgent agent = new(new BlueskyAgentOptions { LoggerFactory = NullLoggerFactory.Instance });
 
-        AtProtoHttpResult<Service> declarationResult = await agent.GetLabelerDeclaration(labeler, cancellationToken).ConfigureAwait(false);
-
-        if (!declarationResult.Succeeded || declarationResult.Result is null)
+        try
         {
-            return null;
+            AtProtoHttpResult<Service> declarationResult = await agent.GetLabelerDeclaration(labeler, cancellationToken).ConfigureAwait(false);
+
+            if (declarationResult.Succeeded && declarationResult.Result is not null)
+            {
+                return [.. declarationResult.Result.Policies.LabelValues.Order(StringComparer.Ordinal)];
+            }
+        }
+        catch (ArgumentException)
+        {
+            // A malformed or unavailable PDS cannot supply optional declaration metadata.
+        }
+        catch (HttpRequestException)
+        {
+            // The label stream can still work when the PDS cannot be reached.
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // An HTTP-client timeout is not a request to stop watching labels.
         }
 
-        return [.. declarationResult.Result.Policies.LabelValues.Order(StringComparer.Ordinal)];
+        return null;
     }
 
     // label.Uri is the AT URI of a labelled record, or the DID of a labelled account.
