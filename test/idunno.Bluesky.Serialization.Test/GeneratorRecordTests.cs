@@ -48,6 +48,9 @@ public class GeneratorRecordTests
         Assert.True(actual.AcceptsInteractions);
         Assert.Equal(DateTimeOffset.Parse("2026-05-06T01:45:56.996858+00:00"), actual.CreatedAt);
 
+        string concreteSerialized = JsonSerializer.Serialize(actual, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.Contains("\"$type\":\"app.bsky.feed.generator\"", concreteSerialized, StringComparison.Ordinal);
+
         string serialized = JsonSerializer.Serialize<BlueskyRecord>(actual, BlueskyServer.BlueskyJsonSerializerOptions);
         BlueskyRecord? roundTripped = JsonSerializer.Deserialize<BlueskyRecord>(serialized, BlueskyServer.BlueskyJsonSerializerOptions);
 
