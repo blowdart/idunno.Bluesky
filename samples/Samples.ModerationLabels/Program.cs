@@ -53,6 +53,9 @@ public sealed class Program
 
     private const string EllipsisSymbol = "\u2026";
 
+    // Shown in place of a character in remote text which is not safe to write to a terminal.
+    private const string ReplacementSymbol = "\uFFFD";
+
     static async Task<int> Main(string[] args)
     {
         Option<string> labelerOption = new("--labeler", "-l", "/l")
@@ -162,7 +165,16 @@ public sealed class Program
         Console.WriteLine(
             $"Watching labels from {labelerDid} at {labelerService}. Press {(listenForQuitKey ? "Q" : "Ctrl+C")} to stop.");
 
-        IReadOnlyList<string> declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, loggerFactory, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> declaredLabelValues;
+
+        try
+        {
+            declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, loggerFactory, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return 0;
+        }
 
         if (declaredLabelValues.Count != 0)
         {
@@ -460,9 +472,16 @@ public sealed class Program
 
     private static async Task<bool> IsLabelerLiveAsync(Did labeler, CancellationToken cancellationToken)
     {
+        // Resolving a DID document reaches out to a directory, or to the labeler's own host for did:web, and that
+        // lookup is as likely to hang as the query which follows it, so both share the one liveness timeout.
+        using CancellationTokenSource timeoutTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutTokenSource.CancelAfter(s_livenessTimeout);
+
+        CancellationToken timeoutToken = timeoutTokenSource.Token;
+
         try
         {
-            (_, Uri labelerService) = await ResolveLabelerAsync(labeler, NullLoggerFactory.Instance, cancellationToken).ConfigureAwait(false);
+            (_, Uri labelerService) = await ResolveLabelerAsync(labeler, NullLoggerFactory.Instance, timeoutToken).ConfigureAwait(false);
 
             using AtProtoAgent agent = new(
                 labelerService,
@@ -478,14 +497,14 @@ public sealed class Program
                 limit: 1,
                 cursor: null,
                 service: labelerService,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+                cancellationToken: timeoutToken).ConfigureAwait(false);
 
             // A refusal still proves something is listening; only a dead host or a broken endpoint does not.
             return result.Succeeded || result.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // The per-request timeout expired.
+            // The liveness timeout expired, so nothing answered in time.
             return false;
         }
         catch (InvalidOperationException)
@@ -511,7 +530,7 @@ public sealed class Program
 
             if (view.Creator.DisplayName is string displayName && !string.IsNullOrWhiteSpace(displayName))
             {
-                Console.Write($" ({displayName})");
+                Console.Write($" ({Sanitize(displayName)})");
             }
 
             Console.WriteLine();
@@ -547,15 +566,29 @@ public sealed class Program
         // Writing to the final column wraps in some terminals, so stop one short of it.
         int budget = ConsoleWidth - prefixWidth - 1;
 
+        // There is no room for anything at all, or only room to say that everything was left out.
+        if (budget <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (budget == 1)
+        {
+            return EllipsisSymbol;
+        }
+
         StringBuilder builder = new();
         int shown = 0;
 
         foreach (string labelValue in labelValues)
         {
+            // A label value is remote text, so what is measured has to be what is written.
+            string sanitized = Sanitize(labelValue);
+
             // Budget for the text describing what was left out as if this value is the last one shown, which is the longest it can be.
             int remainingWidth = $", and {labelValues.Count - shown} more".Length;
 
-            if (shown != 0 && builder.Length + ", ".Length + labelValue.Length + remainingWidth > budget)
+            if (shown != 0 && builder.Length + ", ".Length + sanitized.Length + remainingWidth > budget)
             {
                 break;
             }
@@ -565,7 +598,7 @@ public sealed class Program
                 builder.Append(", ");
             }
 
-            builder.Append(labelValue);
+            builder.Append(sanitized);
             shown++;
         }
 
@@ -577,12 +610,34 @@ public sealed class Program
         string formatted = builder.ToString();
 
         // The first value is always shown, even when it is longer than the budget on its own, so trim whatever is left over.
-        if (budget > 1 && formatted.Length > budget)
+        if (formatted.Length > budget)
         {
             formatted = string.Concat(formatted.AsSpan(0, budget - 1), EllipsisSymbol);
         }
 
         return formatted;
+    }
+
+    // Remote text is written straight to the terminal, where an escape sequence can move the cursor or recolour the
+    // line, and a bidirectional override can reorder what the rest of it appears to say. Neither belongs in a name or
+    // a label value, so replace both. Zero width joiners are kept, because emoji are built out of them.
+    private static string Sanitize(string value)
+    {
+        StringBuilder builder = new(value.Length);
+
+        foreach (Rune rune in value.EnumerateRunes())
+        {
+            bool safeToDisplay = Rune.GetUnicodeCategory(rune) switch
+            {
+                UnicodeCategory.Format => rune.Value is 0x200C or 0x200D,
+                UnicodeCategory.Control or UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator => false,
+                _ => true
+            };
+
+            builder.Append(safeToDisplay ? rune.ToString() : ReplacementSymbol);
+        }
+
+        return builder.ToString();
     }
 
     // A console whose output is redirected has no width, and reports either zero or throws, depending on the platform.
@@ -637,11 +692,11 @@ public sealed class Program
         }
 
         Console.ForegroundColor = ConsoleColor.White;
-        Console.Write(label.Value);
+        Console.Write(Sanitize(label.Value));
         Console.ForegroundColor = originalColor;
         Console.Write(' ');
         Console.ForegroundColor = ConsoleColor.Gray;
-        Console.Write(label.Uri);
+        Console.Write(Sanitize(label.Uri));
         Console.ForegroundColor = originalColor;
         Console.Write($" @ {FormatTime(label.CreationTimestamp)}");
 
