@@ -463,17 +463,32 @@ public sealed class Program
 
         foreach (Did[] chunk in labelers.Chunk(Maximum.ProfilesToGet))
         {
-            AtProtoHttpResult<ICollection<LabelerView>> result =
-                await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
-
             // A single request covers a whole chunk, so one transient failure would otherwise misreport every labeler
             // in it. Retry once before giving up, which is enough for the occasional failure seen in practice.
-            if (!result.Succeeded)
+            AtProtoHttpResult<ICollection<LabelerView>>? result = null;
+
+            for (int attempt = 0; attempt < 2; attempt++)
             {
-                result = await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    result = await agent.GetLabelerServices(chunk, getDetailedViews: true, cancellationToken).ConfigureAwait(false);
+
+                    if (result.Succeeded)
+                    {
+                        break;
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    // Treat a failed connection like an unsuccessful response so the next attempt can retry it.
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // An HTTP timeout is not a request to stop listing labelers.
+                }
             }
 
-            if (!result.Succeeded)
+            if (result is null || !result.Succeeded)
             {
                 unavailable.UnionWith(chunk);
                 continue;
