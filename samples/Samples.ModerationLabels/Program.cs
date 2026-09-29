@@ -305,12 +305,19 @@ public sealed class Program
         DidDocument didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
 
-        foreach (DidDocService service in didDocument.Services)
+        // A DID document comes from whoever controls the DID, and neither JsonRequired nor RespectNullableAnnotations
+        // reaches inside a collection, so an entry can be null however the property is annotated. The same limitation
+        // is handled in the SDK by AtProtoServer.WithoutNullEntries. A missing serviceEndpoint lands the same way,
+        // because nothing is assigned to check. Treat either as a malformed entry rather than a labeler service.
+        foreach (DidDocService? service in didDocument.Services ?? [])
         {
+            if (service?.ServiceEndpoint is not Uri endpoint || service.Id is null)
+            {
+                continue;
+            }
+
             if (service.Type == LabelerServiceType || service.Id.EndsWith(LabelerServiceId, StringComparison.Ordinal))
             {
-                Uri endpoint = service.ServiceEndpoint;
-
                 // A DID document is published by whoever controls the DID, so its endpoint is untrusted. Anything which
                 // is not an absolute HTTP(S) URL with a host cannot be queried or subscribed to, and passing one on
                 // would throw from somewhere further away, so refuse it here as a labeler which cannot be used.
