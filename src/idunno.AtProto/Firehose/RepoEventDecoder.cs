@@ -36,6 +36,9 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
     /// </summary>
     internal const int MaximumOperations = 200;
 
+    // The lexicon does not bound the deprecated blobs array, so it is held to the operation limit to stop a hostile frame forcing large allocations.
+    internal const int MaximumBlobs = 200;
+
     private const string CommitType = "#commit";
     private const string SyncType = "#sync";
     private const string IdentityType = "#identity";
@@ -135,7 +138,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         Cid? prevData = fields.GetOptionalCidLink("prevData");
         byte[] blocks = fields.GetBytes("blocks", MaximumCommitBlocksLength);
         IReadOnlyList<ReadOnlyMemory<byte>> encodedOperations = fields.GetArray("ops", MaximumOperations);
-        IReadOnlyList<ReadOnlyMemory<byte>> encodedBlobs = fields.GetArray("blobs", int.MaxValue);
+        IReadOnlyList<ReadOnlyMemory<byte>> encodedBlobs = fields.GetArray("blobs", MaximumBlobs);
 
         List<Cid> blobs = new(encodedBlobs.Count);
         foreach (ReadOnlyMemory<byte> encodedBlob in encodedBlobs)

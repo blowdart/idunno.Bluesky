@@ -129,6 +129,9 @@ public sealed record FirehoseCommitEvent : FirehoseEvent
     /// <summary>
     /// Gets the deprecated list of blobs referenced by the commit.
     /// </summary>
+    /// <remarks>
+    /// <para>The lexicon does not limit this list, but a commit with more than 200 blobs is surfaced as a <see cref="FirehoseInvalidEvent"/>.</para>
+    /// </remarks>
     [Obsolete("Deprecated by the com.atproto.sync.subscribeRepos lexicon. Current servers send an empty list.")]
     public IReadOnlyList<Cid> Blobs { get; }
 }

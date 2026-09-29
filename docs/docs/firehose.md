@@ -187,8 +187,9 @@ A firehose server may be anyone's. `AtProtoFirehose` enforces these limits:
 
 * Frames larger than `FirehoseOptions.MaxMessageSize` (5 MiB by default) are rejected while they are received.
 * Commit CARs are limited to 2,000,000 bytes, sync CARs to 10,000 bytes and commits to 200 operations, as the
-  lexicon specifies. CARs are limited to `MaximumCarBlocks` blocks of at most `MaximumCarBlockSize` bytes, and label
-  batches to `MaximumLabelsPerMessage` labels, because the lexicon supplies no limit.
+  lexicon specifies. CARs are limited to `MaximumCarBlocks` blocks of at most `MaximumCarBlockSize` bytes, label
+  batches to `MaximumLabelsPerMessage` labels, and the deprecated commit `blobs` list to 200 entries, because the
+  lexicon supplies no limit.
 * CBOR must be valid DAG-CBOR, nested at most 128 levels deep. Nesting is checked as the frame is read, so a deeply nested frame is rejected before it can use more memory than its own size.
 * Only the fields the reader understands are kept from each map; unknown fields are skipped without allocating their
   names, and no map or array is sized from the length the server declares. Labels whose signatures are checked keep

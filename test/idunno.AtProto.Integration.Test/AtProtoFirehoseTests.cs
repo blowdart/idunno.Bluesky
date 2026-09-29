@@ -288,6 +288,8 @@ public class AtProtoFirehoseTests
     [InlineData("record block missing", "record block")]
     [InlineData("blocks too large", "blocks")]
     [InlineData("too many operations", "ops")]
+    [InlineData("maximum blobs", "")]
+    [InlineData("too many blobs", "blobs")]
     [InlineData("create with prev", "unexpected 'prev'")]
     [InlineData("update with null prev", "unexpected 'prev'")]
     [InlineData("delete with cid", "has a record CID")]
@@ -316,7 +318,7 @@ public class AtProtoFirehoseTests
 
         List<FirehoseEvent> events = await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 2, cancellationToken);
 
-        if (breakage == "valid")
+        if (breakage is "valid" or "maximum blobs")
         {
             Assert.IsType<FirehoseCommitEvent>(events[0]);
         }
@@ -1093,6 +1095,12 @@ public class AtProtoFirehoseTests
                 break;
             case "too many operations":
                 commit.Operations.AddRange(Enumerable.Repeat(commit.Operations[0], 200));
+                break;
+            case "maximum blobs":
+                commit.Configure = payload => payload["blobs"] = Enumerable.Repeat<object?>(commit.RecordCid, 200).ToArray();
+                break;
+            case "too many blobs":
+                commit.Configure = payload => payload["blobs"] = Enumerable.Repeat<object?>(commit.RecordCid, 201).ToArray();
                 break;
             case "create with prev":
                 commit.Operations[0]["prev"] = commit.RecordCid;
