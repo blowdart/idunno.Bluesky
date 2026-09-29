@@ -48,10 +48,12 @@ public class FirehoseTests
     [InlineData(10L, new[] { "10a", "10a" }, new[] { "DropCursorEvent", "DropRepeatedEvent" })]
     [InlineData(10L, new[] { "10a", "10b" }, new[] { "DropCursorEvent", "Violation" })]
     [InlineData(10L, new[] { "9a" }, new[] { "Violation" })]
-    [InlineData(null, new[] { "5a", "5a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept" })]
-    [InlineData(null, new[] { "5a", "5a", "5a" }, new[] { "Accept", "DropRepeatedEvent", "Violation" })]
+    [InlineData(null, new[] { "5a", "5a" }, new[] { "Accept", "Violation" })]
+    [InlineData(0L, new[] { "5a", "5a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept" })]
+    [InlineData(0L, new[] { "5a", "5a", "5a" }, new[] { "Accept", "DropRepeatedEvent", "Violation" })]
     [InlineData(10L, new[] { "10a", "10a", "10a" }, new[] { "DropCursorEvent", "DropRepeatedEvent", "Violation" })]
-    [InlineData(null, new[] { "5a", "5a", "6a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept", "DropRepeatedEvent" })]
+    [InlineData(0L, new[] { "5a", "5a", "6a", "6a" }, new[] { "Accept", "DropRepeatedEvent", "Accept", "Violation" })]
+    [InlineData(10L, new[] { "11a", "11a", "12a", "12a" }, new[] { "Accept", "DropRepeatedEvent", "Accept", "Violation" })]
     [InlineData(null, new[] { "5a", "5b" }, new[] { "Accept", "Violation" })]
     [InlineData(null, new[] { "5a", "5a#account" }, new[] { "Accept", "Violation" })]
     [InlineData(10L, new[] { "10a", "10a#account" }, new[] { "DropCursorEvent", "Violation" })]
@@ -73,6 +75,22 @@ public class FirehoseTests
         Assert.Equal(expected, decisions);
     }
 
+    [Theory]
+    [InlineData("5", 5L)]
+    [InlineData(" 5 ", 5L)]
+    [InlineData("99999999999", 2147483647L)]
+    [InlineData("-5", null)]
+    [InlineData("-9223372036854775808", null)]
+    [InlineData("+5", null)]
+    [InlineData("5.5", null)]
+    [InlineData("soon", null)]
+    public void GetRetryAfterAcceptsOnlyNonNegativeDeltaSeconds(string value, long? expectedSeconds)
+    {
+        Dictionary<string, IEnumerable<string>> headers = new() { ["retry-after"] = [value] };
+
+        Assert.Equal(expectedSeconds is long seconds ? TimeSpan.FromSeconds(seconds) : null, EventStreamReader.GetRetryAfter(headers));
+    }
+
     [Fact]
     public void SequenceStateOnlyDropsTheFirstFrameOfEachConnection()
     {
@@ -85,6 +103,24 @@ public class FirehoseTests
         Assert.Equal(EventStreamReader.SequenceDecision.DropCursorEvent, state.Accept(7, "#identity", "a"u8.ToArray()));
         Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(8, "#identity", "b"u8.ToArray()));
         Assert.Equal(8, state.Last);
+    }
+
+    [Fact]
+    public void SequenceStateAllowsOneRepeatOnEachResumedConnection()
+    {
+        EventStreamReader.SequenceState state = new(0);
+        state.BeginConnection(0);
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(7, "#identity", "a"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.DropRepeatedEvent, state.Accept(7, "#identity", "a"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(8, "#identity", "b"u8.ToArray()));
+
+        state.BeginConnection(state.Last);
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(9, "#identity", "c"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.DropRepeatedEvent, state.Accept(9, "#identity", "c"u8.ToArray()));
+
+        state.BeginConnection(null);
+        Assert.Equal(EventStreamReader.SequenceDecision.Accept, state.Accept(10, "#identity", "d"u8.ToArray()));
+        Assert.Equal(EventStreamReader.SequenceDecision.Violation, state.Accept(10, "#identity", "d"u8.ToArray()));
     }
 
     [Fact]

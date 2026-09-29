@@ -208,13 +208,14 @@ internal sealed class EventStreamReader
 
                 ClientWebSocket socket = CreateWebSocket();
                 ConnectionFailure? failure;
+                bool opened = false;
 
                 try
                 {
                     failure = await ConnectAsync(socket, connectCursor, cancellationToken).ConfigureAwait(false);
-
                     if (failure is null)
                     {
+                        opened = true;
                         using CancellationTokenSource idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
                         while (true)
@@ -244,7 +245,7 @@ internal sealed class EventStreamReader
                 }
                 finally
                 {
-                    await CloseAsync(socket).ConfigureAwait(false);
+                    await CloseAsync(socket, opened).ConfigureAwait(false);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -385,7 +386,7 @@ internal sealed class EventStreamReader
         return null;
     }
 
-    private static TimeSpan? GetRetryAfter(IReadOnlyDictionary<string, IEnumerable<string>>? headers)
+    internal static TimeSpan? GetRetryAfter(IReadOnlyDictionary<string, IEnumerable<string>>? headers)
     {
         if (headers is null)
         {
@@ -419,7 +420,7 @@ internal sealed class EventStreamReader
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A close failure is logged and the socket aborted.")]
-    private async Task CloseAsync(ClientWebSocket socket)
+    private async Task CloseAsync(ClientWebSocket socket, bool opened)
     {
         try
         {
@@ -437,7 +438,8 @@ internal sealed class EventStreamReader
         }
         finally
         {
-            if (socket.State != WebSocketState.None)
+            // Only a connection counted as opened is counted as closed, so a refused upgrade does not unbalance the two.
+            if (opened)
             {
                 _metrics.ConnectionsClosed.Add(1, _serverTag);
             }
@@ -698,6 +700,7 @@ internal sealed class EventStreamReader
     internal sealed class SequenceState(long last)
     {
         private long? _connectionCursor;
+        private bool _repeatAllowed;
 
         // The type and payload of the last event accepted, or of the cursor event dropped since, so a repeat of it can be recognised.
         // It holds at most one message, which is bounded by the maximum message size.
@@ -716,8 +719,14 @@ internal sealed class EventStreamReader
         /// <remarks>
         /// <para>Relays treat a cursor as inclusive, and send the event it names again, whilst labelers treat it as exclusive.
         /// So the first sequenced frame of a resumed connection may repeat the cursor, and only that one is dropped.</para>
+        /// <para>A connection opened with a cursor, including a cursor of 0, replays events before switching to live ones,
+        /// so it is allowed to repeat one event at that switch. A connection opened without a cursor is not.</para>
         /// </remarks>
-        public void BeginConnection(long? cursor) => _connectionCursor = cursor is > 0 ? cursor : null;
+        public void BeginConnection(long? cursor)
+        {
+            _connectionCursor = cursor is > 0 ? cursor : null;
+            _repeatAllowed = cursor is not null;
+        }
 
         /// <summary>
         /// Decides what to do with a frame with <paramref name="sequence"/>.
@@ -729,8 +738,8 @@ internal sealed class EventStreamReader
         /// <remarks>
         /// <para>A relay resuming from a cursor replays the events it holds and then switches to live events, and at that switch it
         /// sends the last replayed event a second time, unchanged. A frame which repeats the last event's sequence number, with the same
-        /// message type and an identical payload, is dropped, once. Any other repeated or earlier sequence number, including a second repeat,
-        /// is a violation.</para>
+        /// message type and an identical payload, is dropped, once for each connection opened with a cursor. Any other repeated or earlier
+        /// sequence number, including a second repeat or a repeat on a connection opened without a cursor, is a violation.</para>
         /// </remarks>
         public SequenceDecision Accept(long sequence, string type, ReadOnlyMemory<byte> payload)
         {
@@ -744,9 +753,10 @@ internal sealed class EventStreamReader
                 return SequenceDecision.DropCursorEvent;
             }
 
-            if (sequence == Last && _lastType is not null && string.Equals(type, _lastType, StringComparison.Ordinal) && payload.Span.SequenceEqual(_lastPayload.Span))
+            if (_repeatAllowed && sequence == Last && _lastType is not null && string.Equals(type, _lastType, StringComparison.Ordinal) && payload.Span.SequenceEqual(_lastPayload.Span))
             {
-                // Only one repeat is allowed, so a server cannot stall the stream by sending the same frame forever.
+                // Only one repeat is allowed, so a server cannot stall the stream, or double its traffic, by sending frames again.
+                _repeatAllowed = false;
                 _lastType = null;
                 _lastPayload = default;
                 return SequenceDecision.DropRepeatedEvent;

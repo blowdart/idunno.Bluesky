@@ -15,6 +15,8 @@ using idunno.AtProto.Firehose;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Sync;
 
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+
 using static idunno.AtProto.Integration.Test.FirehoseTestData;
 
 namespace idunno.AtProto.Integration.Test;
@@ -820,6 +822,30 @@ public class AtProtoFirehoseTests
 
         Assert.Equal(1, identity.Sequence);
         Assert.Equal(2, server.UpgradeAttempts);
+    }
+
+    [Fact]
+    public async Task RefusedUpgradesAreNotCountedAsClosedConnections()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestFirehoseServer
+        {
+            RefuseWith = attempt => attempt <= 2 ? (HttpStatusCode.ServiceUnavailable, "0", "<html>unavailable</html>") : null
+        };
+        server.Start(async (socket, _, token) => await Send(socket, Frame("#identity", IdentityPayload(1)), token));
+        await using AtProtoFirehose firehose = CreateFirehose(server);
+        using MetricCollector<long> opened = new(firehose.Metrics.ConnectionsOpened);
+        using MetricCollector<long> closed = new(firehose.Metrics.ConnectionsClosed);
+
+        Assert.Single(await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 1, cancellationToken));
+
+        string authority = server.Uri.GetLeftPart(UriPartial.Authority);
+        Assert.Equal(3, server.UpgradeAttempts);
+        Assert.Equal(1, ForServer(opened, authority));
+        Assert.Equal(1, ForServer(closed, authority));
+
+        static long ForServer(MetricCollector<long> collector, string authority) =>
+            collector.GetMeasurementSnapshot().Where(m => Equals(m.Tags["server"], authority)).Sum(m => m.Value);
     }
 
     [Theory]
