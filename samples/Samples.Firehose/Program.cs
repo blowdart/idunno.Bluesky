@@ -105,7 +105,8 @@ public sealed class Program
 
                     foreach (FirehoseRepoOperation operation in commitEvent.Operations)
                     {
-                        // The commit carries the record itself, which operation.GetRecord() decodes to a JsonElement.
+                        // The commit carries the record itself: for create/update operations, operation.GetRecord()
+                        // decodes it to a JsonElement (deletes return null, since there is no record to carry).
                         // This sample only prints the operation, as the firehose carries records from every lexicon in
                         // use, not just Bluesky's. To decode the records you care about into Bluesky types, filter on
                         // operation.Collection and deserialize with idunno.Bluesky's source generated type information.

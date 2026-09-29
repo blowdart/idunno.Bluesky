@@ -140,16 +140,16 @@ foreach (FirehoseRepoOperation operation in commit.Operations)
         {
             switch (record)
             {
-                case Post post:
+                case Post post when operation.Collection == CollectionNsid.Post:
                     Console.WriteLine($"{commit.Repo} posted {post.Text}");
                     break;
 
-                case Like like:
+                case Like like when operation.Collection == CollectionNsid.Like:
                     Console.WriteLine($"{commit.Repo} liked {like.Subject.Uri}");
                     break;
 
                 default:
-                    Console.WriteLine($"{commit.Repo} wrote a {record.GetType().Name}");
+                    Console.WriteLine($"{operation.Path} is in {operation.Collection} but its $type dispatched as {record.GetType().Name}");
                     break;
             }
         }
@@ -162,18 +162,30 @@ foreach (FirehoseRepoOperation operation in commit.Operations)
     {
         Console.WriteLine($"{operation.Path} is not the record it claims to be: {ex.Message}");
     }
+    catch (ArgumentException ex)
+    {
+        Console.WriteLine($"{operation.Path} deserialized but failed the record's own validation: {ex.Message}");
+    }
 }
 ```
 
-`BlueskyRecord` deserializes polymorphically on the record's `$type`, so a filtered `app.bsky.feed.post` arrives as
-a `Post`. A record whose `$type` is not one Bluesky declares deserializes to the nearest type the SDK does know,
-which for an unrecognised collection is `BlueskyRecord` itself. The `default` arm above is reachable, and it is
-where a record from another lexicon ends up if it reaches the switch. This is also why filtering matters: without
-it, most of the stream falls through to `BlueskyRecord` and the properties you want are not there.
+`BlueskyRecord` deserializes polymorphically on the record's `$type`, not on `operation.Collection`. Filtering on
+`Collection` only limits which paths you attempt to decode; it does not confirm that a record's content matches the
+collection it was written to. A repository is free to write a structurally valid `app.bsky.feed.like` payload under
+an `app.bsky.feed.post` path, and `Deserialize` will happily produce a `Like` for it. The `when` clauses above check
+that the two agree, so a mismatched record falls to the `default` arm instead of being reported as the wrong kind of
+operation. A record whose `$type` is not one Bluesky declares deserializes to the nearest type the SDK does know,
+which for an unrecognised collection is `BlueskyRecord` itself; that also reaches `default`. This is also why
+filtering matters: without it, most of the stream falls through to `BlueskyRecord` and the properties you want are
+not there.
 
-Both `catch` blocks are needed. Record contents are written by the repository's owner and are not validated by the
-relay, so a record can be malformed DAG-CBOR, or can carry a `$type` which does not match the shape of its data.
-Neither should end the subscription.
+All three `catch` blocks are needed. Record contents are written by the repository's owner and are not validated by
+the relay, so a record can be malformed DAG-CBOR, or can carry a `$type` which does not match the shape of its data.
+A record can also have a `$type` that matches its declared shape but still fail that record's own invariants, for
+example an `app.bsky.feed.post` with no text and no embed: `Post`'s constructor rejects that combination directly
+with `ArgumentNullException`, and an oversized `text` with `ArgumentOutOfRangeException`. `System.Text.Json` does not
+wrap exceptions thrown by a record's own `[JsonConstructor]` as `JsonException`, so catch `ArgumentException`
+separately to handle them. None of the three should end the subscription.
 
 Deletes carry no record: `GetRecord()` returns `null` for them, which the `is JsonElement` pattern handles.
 
