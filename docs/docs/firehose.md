@@ -75,6 +75,108 @@ and the previous record CID, `Prev`. Deletes have no `Cid` and no record. Create
 are interested in are decoded. `RecordData` gives you the raw block. Records come from other users' repositories:
 validate them before deserializing them as a particular type.
 
+<a name="decodingRecords"></a>
+
+### Decoding records to Bluesky types
+
+The firehose carries every record written to every repository the relay serves, not just Bluesky records. Any
+application can define its own lexicon and write records into a repository, so alongside `app.bsky.feed.post` and
+`app.bsky.graph.follow` you will see collections such as `site.standard.publication` from
+[standard.site](https://standard.site), `place.stream.livestream` from [Streamplace](https://stream.place),
+`sh.tangled.repo` from [Tangled](https://tangled.org), and collections from lexicons which did not exist when your
+application was written. Note that a collection is an [NSID](https://atproto.com/specs/nsid), which is written in
+reverse domain name order, so records from `standard.site` appear as `site.standard.…` and records from
+`stream.place` appear as `place.stream.…`. The AT Protocol firehose is a protocol level stream; Bluesky records
+are only a subset of it.
+
+Filter on the operation's `Collection` before you decode anything. Filtering first keeps you from decoding records
+you have no type for, and, because `GetRecord()` decodes on every call, it avoids the cost of decoding the majority
+of the stream you are going to discard:
+
+```csharp
+if (operation.Collection != CollectionNsid.Post)
+{
+    continue;
+}
+```
+
+To turn a record into a Bluesky type, deserialize the `JsonElement` from `GetRecord()` with the type information
+`BlueskyJsonSerializerOptions` publishes. Use the `JsonTypeInfo<T>` overload of `Deserialize`, not the
+reflection based overloads, so that the code stays trimming and native AOT safe. Resolve the options and the type
+information once and cache them: `BlueskyJsonSerializerOptions.Options` builds a new `JsonSerializerOptions` every
+time it is read, and each new instance starts with an empty metadata cache.
+
+This needs a reference to the `idunno.Bluesky` package. `idunno.AtProto`, which the firehose lives in, has no
+knowledge of Bluesky's lexicons.
+
+```csharp
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+
+using idunno.AtProto.Firehose;
+using idunno.Bluesky;
+using idunno.Bluesky.Feed;
+using idunno.Bluesky.Record;
+
+private static readonly JsonSerializerOptions s_blueskyOptions = BlueskyJsonSerializerOptions.Options;
+
+private static readonly JsonTypeInfo<BlueskyRecord> s_blueskyRecordTypeInfo =
+    (JsonTypeInfo<BlueskyRecord>)s_blueskyOptions.GetTypeInfo(typeof(BlueskyRecord));
+
+// …
+
+foreach (FirehoseRepoOperation operation in commit.Operations)
+{
+    if (operation.Collection != CollectionNsid.Post &&
+        operation.Collection != CollectionNsid.Like)
+    {
+        continue;
+    }
+
+    try
+    {
+        if (operation.GetRecord() is JsonElement json &&
+            json.Deserialize(s_blueskyRecordTypeInfo) is BlueskyRecord record)
+        {
+            switch (record)
+            {
+                case Post post:
+                    Console.WriteLine($"{commit.Repo} posted {post.Text}");
+                    break;
+
+                case Like like:
+                    Console.WriteLine($"{commit.Repo} liked {like.Subject.Uri}");
+                    break;
+
+                default:
+                    Console.WriteLine($"{commit.Repo} wrote a {record.GetType().Name}");
+                    break;
+            }
+        }
+    }
+    catch (InvalidDataException ex)
+    {
+        Console.WriteLine($"{operation.Path} is not valid DAG-CBOR: {ex.Message}");
+    }
+    catch (JsonException ex)
+    {
+        Console.WriteLine($"{operation.Path} is not the record it claims to be: {ex.Message}");
+    }
+}
+```
+
+`BlueskyRecord` deserializes polymorphically on the record's `$type`, so a filtered `app.bsky.feed.post` arrives as
+a `Post`. A record whose `$type` is not one Bluesky declares deserializes to the nearest type the SDK does know,
+which for an unrecognised collection is `BlueskyRecord` itself. The `default` arm above is reachable, and it is
+where a record from another lexicon ends up if it reaches the switch. This is also why filtering matters: without
+it, most of the stream falls through to `BlueskyRecord` and the properties you want are not there.
+
+Both `catch` blocks are needed. Record contents are written by the repository's owner and are not validated by the
+relay, so a record can be malformed DAG-CBOR, or can carry a `$type` which does not match the shape of its data.
+Neither should end the subscription.
+
+Deletes carry no record: `GetRecord()` returns `null` for them, which the `is JsonElement` pattern handles.
+
 ## Reading labels
 
 ```csharp
