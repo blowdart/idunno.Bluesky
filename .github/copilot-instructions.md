@@ -17,6 +17,20 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 * **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.
 * **Never trust an incremental build as a pre-commit gate.** If you have just built an individual project, a subsequent solution build reuses that result and silently skips its analyzers. Pass `--no-incremental`.
 
+### GitHub Actions failed-test protocol
+
+When a GitHub Actions workflow fails, especially its test stage:
+
+1. Do not rerun, rerun failed jobs, or dispatch the workflow until the original failure has been fully diagnosed or the user explicitly authorizes a rerun.
+2. Treat the original workflow attempt as perishable evidence. Before any rerun, record the workflow run ID, job IDs, attempt number, commit SHA, and failing check names. Retrieve the failed job logs with `gh run view <run-id> --log-failed`, inspect check-run annotations and summaries with `gh api`, and list and download all workflow artifacts, especially test-result, JUnit, TRX, coverage, and diagnostic artifacts. Save relevant output locally if GitHub only exposes it transiently.
+3. Identify and record each failing test, target framework, test project, exception, and stack trace before taking recovery action.
+4. If logs are unavailable because the run is still in progress, wait for the run to finalize. Do not rerun merely because one job is failed while another job remains in progress.
+5. Only after preserving the evidence may a failed job be rerun. Report clearly that a rerun tests for flakiness but does not diagnose or fix the original failure.
+6. If the original test name or failure details cannot be recovered, state that explicitly. Do not infer the failing test from aggregate counts or claim that a green rerun fixes the issue.
+7. A PR may be merged only after the original failure has been diagnosed or explicitly accepted as an unresolvable infrastructure/flaky failure, the required checks pass on the final commit, and any required CodeQL/Copilot review conditions are satisfied.
+
+Never use `gh run rerun --failed` as the first response to a failed CI test job. Preserve the original logs, annotations, artifacts, and failing-test identity first. A rerun can overwrite or obscure the diagnostic context.
+
 ## Pre-commit gate
 
 Before *every* commit, run both of these from the repository root and require both to be clean:
