@@ -3,6 +3,7 @@
 
 using System.CommandLine;
 using System.Globalization;
+using System.IO.Enumeration;
 using System.Net;
 using System.Text;
 
@@ -84,10 +85,19 @@ public sealed class Program
             }
         });
 
-        Option<bool> listOption = new("--list")
+        Option<string?> listOption = new("--list")
         {
-            Description = "List every labeler which has published a labeler declaration, with its handle and label values, then exit."
+            Description = "List labelers which have published a labeler declaration, optionally filtering their handles with a wildcard pattern.",
+            Arity = ArgumentArity.ZeroOrOne,
+            HelpName = "pattern"
         };
+        listOption.Validators.Add(result =>
+        {
+            if (result.GetValue(listOption) is string pattern && string.IsNullOrWhiteSpace(pattern))
+            {
+                result.AddError("The --list pattern cannot be empty.");
+            }
+        });
 
         Option<bool> liveOption = new("--live")
         {
@@ -96,7 +106,7 @@ public sealed class Program
 
         Option<bool> labelsOption = new("--labels")
         {
-            Description = "Print every label the labeler declares it can emit, one per line, then exit."
+            Description = "Print every label the labeler declares it can emit, one per line."
         };
 
         RootCommand rootCommand = new("Watch the labels a labeler applies and negates, or list the labelers which publish them.")
@@ -108,7 +118,7 @@ public sealed class Program
         };
         rootCommand.Validators.Add(result =>
         {
-            bool listing = result.GetValue(listOption);
+            bool listing = result.GetResult(listOption) is not null;
 
             if (result.GetValue(liveOption) && !listing)
             {
@@ -127,8 +137,8 @@ public sealed class Program
             }
         });
         rootCommand.SetAction((parseResult, cancellationToken) =>
-            parseResult.GetValue(listOption)
-                ? ListLabelersAsync(parseResult.GetValue(liveOption), cancellationToken)
+            parseResult.GetResult(listOption) is not null
+                ? ListLabelersAsync(parseResult.GetValue(listOption), parseResult.GetValue(liveOption), cancellationToken)
                 : parseResult.GetValue(labelsOption)
                     ? PrintLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken)
                     : WatchLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken));
@@ -395,7 +405,10 @@ public sealed class Program
         throw new InvalidOperationException($"{did} does not declare a labeler service, so it is not a labeler.");
     }
 
-    private static async Task<int> ListLabelersAsync(bool liveOnly, CancellationToken parseCancellationToken)
+    private static async Task<int> ListLabelersAsync(
+        string? handlePattern,
+        bool liveOnly,
+        CancellationToken parseCancellationToken)
     {
         using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
         CancellationToken cancellationToken = cancellationTokenSource.Token;
@@ -443,10 +456,26 @@ public sealed class Program
 
             IReadOnlyList<Did> didsToShow = resolvedDids;
 
+            if (handlePattern is not null)
+            {
+                didsToShow =
+                [
+                    .. resolvedDids.Where(did =>
+                        views.GetValueOrDefault(did)?.Creator.Handle is Handle handle &&
+                        MatchesWildcard(handle.ToString(), handlePattern))
+                ];
+
+                Console.WriteLine(
+                    $"{didsToShow.Count} labeler{(didsToShow.Count == 1 ? string.Empty : "s")} matched the handle pattern '{Sanitize(handlePattern)}'.");
+            }
+
+            int candidateCount = didsToShow.Count;
+
             if (liveOnly)
             {
                 Console.WriteLine($"Querying each labeler, with a {s_livenessTimeout.TotalSeconds:N0} second timeout, to see which are live...");
-                didsToShow = await FilterToLiveLabelersAsync(resolvedDids, cancellationToken).ConfigureAwait(false);
+                IReadOnlyList<Did> candidates = didsToShow;
+                didsToShow = await FilterToLiveLabelersAsync(candidates, cancellationToken).ConfigureAwait(false);
             }
 
             Console.WriteLine();
@@ -460,7 +489,7 @@ public sealed class Program
 
             if (liveOnly)
             {
-                Console.WriteLine($"{didsToShow.Count} of {resolvedDids.Count} declared labelers answered.");
+                Console.WriteLine($"{didsToShow.Count} of {candidateCount} declared labelers answered.");
             }
             else
             {
@@ -479,6 +508,9 @@ public sealed class Program
 
         return 0;
     }
+
+    private static bool MatchesWildcard(string value, string pattern) =>
+        FileSystemName.MatchesSimpleExpression(pattern, value, ignoreCase: true);
 
     // Only relays and collection directories implement listReposByCollection; a personal data server returns an error.
     private static async Task<IReadOnlyList<Did>> ListLabelerDidsAsync(CancellationToken cancellationToken)
