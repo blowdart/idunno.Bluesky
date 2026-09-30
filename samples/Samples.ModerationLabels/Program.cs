@@ -94,11 +94,17 @@ public sealed class Program
             Description = "With --list, query each labeler and list only those which answer."
         };
 
+        Option<bool> labelsOption = new("--labels")
+        {
+            Description = "Print every label the labeler declares it can emit, one per line, then exit."
+        };
+
         RootCommand rootCommand = new("Watch the labels a labeler applies and negates, or list the labelers which publish them.")
         {
             labelerOption,
             listOption,
-            liveOption
+            liveOption,
+            labelsOption
         };
         rootCommand.Validators.Add(result =>
         {
@@ -114,11 +120,18 @@ public sealed class Program
             {
                 result.AddError("--labeler cannot be used with --list.");
             }
+
+            if (listing && result.GetValue(labelsOption))
+            {
+                result.AddError("--labels cannot be used with --list.");
+            }
         });
         rootCommand.SetAction((parseResult, cancellationToken) =>
             parseResult.GetValue(listOption)
                 ? ListLabelersAsync(parseResult.GetValue(liveOption), cancellationToken)
-                : WatchLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken));
+                : parseResult.GetValue(labelsOption)
+                    ? PrintLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken)
+                    : WatchLabelsAsync(AtIdentifier.Create(parseResult.GetValue(labelerOption)!), cancellationToken));
 
         return await rootCommand.Parse(args).InvokeAsync().ConfigureAwait(false);
     }
@@ -246,6 +259,59 @@ public sealed class Program
             // Stop the key watcher, whether the firehose ended because the user quit or because it failed.
             await cancellationTokenSource.CancelAsync().ConfigureAwait(false);
             await quitKeyWatcher.ConfigureAwait(false);
+        }
+
+        return 0;
+    }
+
+    // Prints the labels a single labeler declares it can emit, one per line, then exits.
+    private static async Task<int> PrintLabelsAsync(AtIdentifier labeler, CancellationToken parseCancellationToken)
+    {
+        using CancellationTokenSource cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parseCancellationToken);
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            cancellationTokenSource.Cancel();
+        };
+        Console.OutputEncoding = Encoding.UTF8;
+
+        Did labelerDid;
+
+        try
+        {
+            (labelerDid, _) = await ResolveLabelerAsync(labeler, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return 0;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(Sanitize(ex.Message));
+            return 1;
+        }
+
+        IReadOnlyList<string>? declaredLabelValues;
+
+        try
+        {
+            declaredLabelValues = await GetDeclaredLabelValuesAsync(labelerDid, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return 0;
+        }
+
+        if (declaredLabelValues is null)
+        {
+            Console.Error.WriteLine($"Could not read the declaration for {labelerDid}, so the labels it can emit are unknown.");
+            return 1;
+        }
+
+        foreach (string labelValue in declaredLabelValues)
+        {
+            Console.WriteLine(Sanitize(labelValue));
         }
 
         return 0;
