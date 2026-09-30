@@ -156,19 +156,16 @@ public sealed class Program
 
             case JetstreamIdentityEvent identityEvent:
                 {
+                    // The identity may have changed, so forget the cached handle. The handle in an identity event is not verified,
+                    // so it is not cached; the next account event resolves the DID document instead.
+                    didHandleCache.Remove(identityEvent.Did);
+
                     if (identityEvent.Identity.Handle is not null)
                     {
-                        Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
-
-                        didHandleCache.Set(identityEvent.Did, identityEvent.Identity.Handle, new MemoryCacheEntryOptions
-                        {
-                            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                            Size = 1
-                        });
+                        Console.WriteLine($"IDENTITY  : {identityEvent.Did} reported the unverified handle {identityEvent.Identity.Handle} at {timeStamp}");
                     }
                     else
                     {
-                        didHandleCache.Remove(identityEvent.Did);
                         Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
                     }
                     break;
