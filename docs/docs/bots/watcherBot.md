@@ -49,6 +49,8 @@ the five example projects in this repository build against the SDK source direct
 
 ## Listen to the Jetstream
 
+[!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
+
 Now let's listen to the Jetstream. The [Jetstream](https://github.com/bluesky-social/jetstream) is a streaming service that provides information on activity on the ATProto network.
 It lists commits to records (for example creating a post, favoriting or unfavoriting a post, following or unfollowing a user), updates to an identity (for example changing a handle)
 and account operations (for example an account takedown). It encompasses the entire ATProto network, not just Bluesky operations, so you might see [WhiteWind](https://whtwnd.com)

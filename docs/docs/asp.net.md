@@ -270,8 +270,7 @@ claims from the profile to the identity. The potential claims are defined in `id
 * `idunno.Bluesky.ClaimTypes.Avatar` - a URI to the user's uploaded avatar and
 * `idunno.Bluesky.ClaimTypes.Banner` - a URI to the user's profile banner.
 
-> [!WARNING]
-> You should validate, and protect against XSS when rendering these values on a web page, as they are freeform text (except for avatar and banner).
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
 
 To use the transformer configure it in your application in `Program.cs` like so;
 

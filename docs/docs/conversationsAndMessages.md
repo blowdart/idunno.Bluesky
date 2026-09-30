@@ -8,6 +8,8 @@
 >
 > If you are using [OAuth](connecting.md#oauth) you must request the `transition:chat.bsky` scope.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 To get a list of conversations for the authenticated user use the `ListConversations()` API:
 
 ```c#
