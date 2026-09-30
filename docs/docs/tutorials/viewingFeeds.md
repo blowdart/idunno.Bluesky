@@ -6,6 +6,8 @@ Feeds are lists of posts, [paginated by cursors](../cursorsAndPagination.md). Bl
 * **feed generators**: custom feeds made by users and organizations
 * **author feeds**: a feed of posts by a single author
 
+[!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
+
 ## Viewing a user's timeline
 
 The Bluesky agent you created in the [Get Started](../../index.md) section has a dedicated `GetTimeline()` method that returns the authenticated user's timeline.

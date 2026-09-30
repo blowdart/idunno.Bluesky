@@ -96,6 +96,9 @@
     <File Path="docs/docs/userPreferences.md" />
     <File Path="docs/docs/video.md" />
   </Folder>
+  <Folder Name="/docs/docs/includes/">
+    <File Path="docs/docs/includes/untrusted-data-warning.md" />
+  </Folder>
   <Folder Name="/docs/docs/bots/">
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />

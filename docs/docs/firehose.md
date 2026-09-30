@@ -12,6 +12,8 @@ Unlike [Jetstream](jetstream.md), the firehose is not filtered or converted to J
 carries a CAR file of the changed repository blocks, which `AtProtoFirehose` validates and decodes for you.
 Expect considerably more traffic than a filtered Jetstream connection.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ## Reading repository events
 
 ```csharp

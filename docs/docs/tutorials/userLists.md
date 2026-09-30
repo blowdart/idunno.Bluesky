@@ -5,6 +5,8 @@ User lists are collections of users created by users. When lists are created the
 * Curation: a list of users to drive custom feeds, or to set [thread gates](threadgates.md).
 * Moderation : a list of users used for muting or blocking.
 
+[!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
+
 ## Viewing a user's lists
 
 To view lists created by a user use the `GetLists()` method.

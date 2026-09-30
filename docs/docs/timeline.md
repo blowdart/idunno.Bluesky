@@ -4,6 +4,8 @@
 
 To get the timeline for a logged in account you call `agent.GetTimeline()`.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ```c#
 AtProtoHttpResult<Timeline> timelineResult = await agent.GetTimeline();
 if (timelineResult.Succeeded && timelineResult.Result.Count != 0)

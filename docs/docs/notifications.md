@@ -1,5 +1,7 @@
 # <a name="checkingNotifications">Checking your notifications</a>
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 Like the [timeline](timeline.md), notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#

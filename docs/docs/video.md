@@ -1,5 +1,7 @@
 # Adding videos and animated GIFs to your posts
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ## Uploading videos
 
 Like images, videos need to be uploaded as a blob before they can be used in a post. However, unlike images, videos undergo processing after you upload them,

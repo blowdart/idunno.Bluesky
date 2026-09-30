@@ -10,6 +10,8 @@ can recover beyond the live server's lookback window, see [network replay and sn
 If you are upgrading an existing event-driven client or a v1 connection, see the
 [Jetstream migration guide](jetstreamMigration.md).
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ## Quickstart: the live tail
 
 Create a v2 client (the default), select a collection, and iterate over its events:

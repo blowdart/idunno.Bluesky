@@ -1,5 +1,7 @@
 # <a name="posting">Posting</a>
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ## <a name="creatingAPost">Creating a post</a>
 
 Let's start off by creating a simple post with the `Post()` method.
