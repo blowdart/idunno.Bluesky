@@ -1,5 +1,5 @@
 > [!WARNING]
-> Treat data received from Bluesky, AT Protocol services, and streams such as Jetstream as untrusted. This includes post and message text, profile and
+> Treat data received from Bluesky, AT Protocol services, and streams such as Jetstream and the firehose as untrusted. This includes post and message text, profile and
 > list metadata, labels, and raw JSON. Before displaying it, encode it for the output context (for example, HTML-encode it for a web page), and validate
 > URLs and other values before using them in links or other active contexts.
 >

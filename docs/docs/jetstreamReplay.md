@@ -11,6 +11,8 @@ Archive requests require HTTPS or WSS for non-loopback services so the key is no
 The archive uses the same host configured for the live client, defaulting to `jetstream.us-west.bsky.network`.
 A v1 Jetstream host does not provide the archive endpoints.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ```csharp
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Archive;
