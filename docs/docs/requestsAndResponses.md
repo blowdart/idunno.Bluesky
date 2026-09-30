@@ -4,6 +4,8 @@ Making requests to Bluesky is done through the `BlueskyAgent` class. Once you au
 the agent manages your "session", the tokens necessary to make authenticated requests are stored, refreshed automatically
 and added to any authenticated API requests.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 ## <a name="understandingResults">Understanding responses from Bluesky</a>
 
 Almost every API call through an agent returns an `AtProtoHttpResult<T>`. This approach, which you may recognize from ASP.NET Core,
