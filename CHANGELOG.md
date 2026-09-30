@@ -85,7 +85,8 @@
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event.
 * Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
   selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
-  display name and declared label values, and `--live` narrows that list to the labelers which answer a query.
+  display name and declared label values, with an optional case-insensitive wildcard pattern to filter handles. `--live` narrows that list
+  to the labelers which answer a query. `--labels` prints the selected labeler's declared label values, one per line.
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
