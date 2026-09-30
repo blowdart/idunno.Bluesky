@@ -674,19 +674,11 @@ public class AtProtoJetstreamReceiveTests
 
     private sealed class TestJetstreamServer : IDisposable
     {
-        private readonly HttpListener _listener = new();
+        private HttpListener _listener = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private int _connectionCount;
 
-        public TestJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
-        }
-
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://localhost");
 
         public string? RequestQuery { get; private set; }
 
@@ -702,7 +694,7 @@ public class AtProtoJetstreamReceiveTests
 
         public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
         {
-            _listener.Start();
+            StartListener();
 
             _ = Task.Run(async () =>
             {
@@ -746,6 +738,43 @@ public class AtProtoJetstreamReceiveTests
             }, _cancellationTokenSource.Token);
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Binds the listener to a free port, retrying when another listener takes the port between it being found
+        /// and the listener binding it. <see cref="HttpListener"/> has no equivalent of binding port zero, so the
+        /// window cannot be closed, only retried out of.
+        /// </summary>
+        private void StartListener()
+        {
+            const int maximumAttempts = 20;
+
+            for (int attempt = 1; ; attempt++)
+            {
+                int port = FreePort();
+
+                // A listener that fails to start disposes itself, so each attempt needs a new one.
+                if (attempt > 1)
+                {
+                    _listener.Close();
+                    _listener = new HttpListener();
+                }
+
+                _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+
+                try
+                {
+                    _listener.Start();
+                }
+                catch (HttpListenerException) when (attempt < maximumAttempts)
+                {
+                    continue;
+                }
+
+                Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+
+                return;
+            }
         }
 
         public void Dispose()
