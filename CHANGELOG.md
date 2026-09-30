@@ -155,8 +155,8 @@
 
 * Added warnings that data returned from Bluesky and AT Protocol APIs, Jetstream, the firehose, and other remote sources is untrusted and must be
   encoded or validated before display, and that sample code does not sanitize or validate the data it uses.
-* Added a warning to the logging documentation that log messages can contain remote or request controlled values which may pollute plain text logs,
-  and a recommendation to use a production quality structured logger.
+* Added a warning to the logging documentation that log messages can contain remote or request-controlled values which may pollute plain text logs,
+  and a recommendation to use a production-quality structured logger.
 
 ## 7.0.1 - 2026-09-26
 
