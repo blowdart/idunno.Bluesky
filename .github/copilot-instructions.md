@@ -31,6 +31,10 @@ When a GitHub Actions workflow fails, especially its test stage:
 
 Never use `gh run rerun --failed` as the first response to a failed CI test job. Preserve the original logs, annotations, artifacts, and failing-test identity first. A rerun can overwrite or obscure the diagnostic context.
 
+## Requesting Copilot code review
+
+To request Copilot code review on a pull request, run `gh pr edit <number> --repo <owner/repo> --add-reviewer '@copilot'`, then verify with `gh pr view <number> --repo <owner/repo> --json reviewRequests`. Do not claim success unless Copilot is present in `reviewRequests`. If it is not present, report that the request could not be verified and use the PR page's reviewer UI or explain that Copilot code review may be disabled or unavailable for the repository. Do not use `gh pr review` to request Copilot: it submits a review as the authenticated user instead.
+
 ## Pre-commit gate
 
 Before *every* commit, run both of these from the repository root and require both to be clean:
