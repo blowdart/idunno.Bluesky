@@ -123,7 +123,7 @@ public partial class AtProtoJetstream
             bool restartFromArchive = false;
             while (true)
             {
-                _metrics.ReplayHandoffs.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                _metrics.ReplayHandoffs.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                 IAsyncEnumerator<JetstreamEvent> live = LiveEventsAsync(
                     currentRequest, Math.Max(tip.Value, lastDelivered), cancellationToken).GetAsyncEnumerator(cancellationToken);
                 await using ConfiguredAsyncDisposable liveDisposal = live.ConfigureAwait(false);

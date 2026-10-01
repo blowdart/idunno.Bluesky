@@ -69,7 +69,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
         if (verifier is not null)
         {
             // Every source is counted before any is resolved, so a message claiming many sources costs no resolutions.
-            if (labels.Select(label => label.Source).Distinct().Skip(options.MaximumLabelSourcesPerMessage).Any())
+            if (HasMoreSourcesThan(labels, options.MaximumLabelSourcesPerMessage))
             {
                 throw new InvalidDataException($"The labels message has labels from more than {options.MaximumLabelSourcesPerMessage} sources.");
             }
@@ -97,6 +97,25 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
         }
 
         return new FirehoseLabelsEvent(sequence, labels.AsReadOnly());
+    }
+
+    private static bool HasMoreSourcesThan(List<Label> labels, int maximum)
+    {
+        if (labels.Count <= maximum)
+        {
+            return false;
+        }
+
+        HashSet<Did> sources = [];
+        foreach (Label label in labels)
+        {
+            if (sources.Add(label.Source) && sources.Count > maximum)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

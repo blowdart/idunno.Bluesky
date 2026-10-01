@@ -14,6 +14,11 @@ public partial class AtProtoJetstream
     internal static string ArchiveServerTag(Uri service) =>
         new UriBuilder(service.Scheme, service.IdnHost, service.Port).Uri.GetLeftPart(UriPartial.Authority);
 
+    // The archive metric tag for _uri, which never changes, so it is only built once.
+    private string ArchiveTag => _archiveServerTag ??= ArchiveServerTag(_uri);
+
+    private string? _archiveServerTag;
+
     /// <summary>
     /// Reads a bounded, decoded snapshot of the sealed Jetstream archive.
     /// </summary>
@@ -92,7 +97,7 @@ public partial class AtProtoJetstream
                     break;
                 }
 
-                _metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                _metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                 TimeSpan? retry = ArchiveDownload.GetRetryAfter(result.HttpResponseHeaders);
                 TimeSpan delay = retry ?? throw new HttpRequestException(
                     "The Jetstream archive planner was rate limited without a Retry-After header.",
@@ -114,7 +119,7 @@ public partial class AtProtoJetstream
                 throw new InvalidDataException("The archive planner returned a non-progressing or unpinned page.");
             }
 
-            _metrics.ArchivePlans.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+            _metrics.ArchivePlans.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
             if (position is null)
             {
                 position = new SnapshotCheckpoint { SealedTipSeq = pinned.Value, PlanAfterSeq = after, RequestFingerprint = fingerprint };
@@ -164,16 +169,16 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
                                 }
                                 else
                                 {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                 }
                             }
 
-                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
                                 SealedTipSeq = pinned.Value, PlanAfterSeq = after,
@@ -209,16 +214,16 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
                                 }
                                 else
                                 {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                 }
                             }
 
-                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
                                 SealedTipSeq = pinned.Value, PlanAfterSeq = after,
@@ -246,16 +251,16 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
                                 }
                                 else
                                 {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                 }
                             }
 
-                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                            _metrics.ArchiveBlocks.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                             position = new SnapshotCheckpoint
                             {
                                 SealedTipSeq = pinned.Value, PlanAfterSeq = after,
@@ -272,7 +277,7 @@ public partial class AtProtoJetstream
                     throw new InvalidDataException($"Unknown archive download mode '{segment.Mode}'.");
                 }
 
-                _metrics.ArchiveSegments.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
+                _metrics.ArchiveSegments.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                 checkpoint = null;
             }
 

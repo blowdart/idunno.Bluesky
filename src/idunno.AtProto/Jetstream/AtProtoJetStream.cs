@@ -215,6 +215,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     // Written by whichever thread connects and read by the receive loop and the metrics it emits.
     private volatile Uri? _server;
 
+    // The metric tag for _server, so the receive loop does not format the URI for every message.
+    private volatile string? _serverTag;
+
     // DateTimeOffset is too wide to read or write atomically, so the timestamp is held as ticks, which are not.
     private long _messageLastReceivedTicks;
 
@@ -694,7 +697,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     protected virtual void OnFaultRaised(FaultRaisedEventArgs e)
     {
         EventHandler<FaultRaisedEventArgs>? faultRaised = _faultRaised;
-        _metrics.Faults.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+        _metrics.Faults.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
         if (!_disposed)
         {
@@ -1187,6 +1190,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
 
         _server = uri;
+        _serverTag = uri.ToString();
 
         List<CollectionSelector> collections;
         List<Did> dids;
@@ -1238,7 +1242,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Tagged with the server rather than with the subscription uri. The subscription uri carries every did and
             // collection the caller is following, and a cursor, so tagging with it would both publish who is being
             // watched to whatever collects the metrics and give the tag an unbounded set of values.
-            _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
         }
         catch (Exception ex)
         {
@@ -1249,7 +1253,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             // Counted once here, however the connection failed, rather than again below, and tagged with the server
             // rather than with the subscription uri for the reasons given above.
-            _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
             if (client.State != previousState)
             {
@@ -1285,7 +1289,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
 
         JetStreamLogger.ConnectionFailed(_logger, client.State);
-        _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+        _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
         return null;
     }
@@ -1743,7 +1747,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 }
 
                 DisconnectedGracefully = recordAsGracefulDisconnection;
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (ObjectDisposedException)
             {
@@ -1755,7 +1759,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // being left open waiting on a server which is not answering.
                 JetStreamLogger.CloseTimedOut(_logger, Options.CloseTimeout);
                 client.Abort();
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (OperationCanceledException)
             {
@@ -1779,7 +1783,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             try
             {
                 client.Abort();
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (ObjectDisposedException)
             {
@@ -2085,7 +2089,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                     JetStreamLogger.CloseMessageReceived(_logger);
 
-                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
                     // A connection being replaced to apply updated filters is announced by the reconnection instead.
                     if (!ReferenceEquals(client, _replacedClient))
@@ -2138,7 +2142,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     catch (ZstdException ex)
                     {
                         // Can't decompress so ignore this message.
-                        _metrics.MessageDecompressionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                        _metrics.MessageDecompressionFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
                         JetStreamLogger.DecompressionException(_logger, ex);
                         continue;
                     }
@@ -2155,7 +2159,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 if (!string.IsNullOrEmpty(messageAsString))
                 {
-                    _metrics.MessagesReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                    _metrics.MessagesReceived.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
                     OnMessageReceived(new MessageReceivedEventArgs(messageAsString));
 
@@ -2188,7 +2192,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                             _parseSemaphore.Release();
 
                             JetStreamLogger.CouldNotStartMessageParser(_logger, ex);
-                            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
                             throw;
                         }
@@ -2199,7 +2203,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     if (client.State == WebSocketState.Open)
                     {
                         LogFault("Message conversion to string failed.");
-                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
                         JetStreamLogger.MessageLoopFailedToConvert(_logger);
                     }
                 }
@@ -2321,7 +2325,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             JetStreamLogger.ParseMessageGotNullOrEmptyMessage(logger);
             return Task.FromException(ex);
         }
@@ -2371,13 +2375,13 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 else
                 {
                     JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, ForLogging(json));
-                    _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                    _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
                 }
             }
             else
             {
                 JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, ForLogging(json));
-                _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             }
 
             return Task.CompletedTask;
@@ -2385,7 +2389,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         catch (JsonException ex)
         {
             JetStreamLogger.ParseMessageCouldNotProcessAsJson(logger, ForLogging(json), ex);
-            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             return Task.FromException(ex);
         }
         catch (ObjectDisposedException)
@@ -2394,7 +2398,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             JetStreamLogger.ParseMessageThrewException(logger, ex);
             return Task.FromException(ex);
         }
@@ -2574,7 +2578,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     ExtensionData = ExtensionDataExcept(extensionData, "account")
                 };
 
-                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "account"), new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "account"), new KeyValuePair<string, object?>("server", _serverTag));
                 break;
 
             case JetStreamEventKind.Commit:
@@ -2601,7 +2605,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     ExtensionData = ExtensionDataExcept(extensionData, "commit")
                 };
 
-                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "commit"), new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "commit"), new KeyValuePair<string, object?>("server", _serverTag));
 
                 break;
 
@@ -2629,12 +2633,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     ExtensionData = ExtensionDataExcept(extensionData, "identity")
                 };
 
-                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "identity"), new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "identity"), new KeyValuePair<string, object?>("server", _serverTag));
 
                 break;
 
             default:
-                _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
                 break;
         }
 
@@ -2817,7 +2821,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             default:
                 // An event kind added to the jetstream after this library was built. It is raised as it is, in the
                 // same way as an unknown kind from a version 1 server, so a consumer can still see it and its sequence.
-                _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
 
                 if (payloadType is not null)
                 {
@@ -2865,7 +2869,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     }
 
     private void RecordEventParsed(string eventType) =>
-        _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", eventType), new KeyValuePair<string, object?>("server", _server?.ToString()));
+        _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", eventType), new KeyValuePair<string, object?>("server", _serverTag));
 
     private static string? GetStringProperty(JsonElement element, string propertyName) =>
         element.ValueKind == JsonValueKind.Object &&
@@ -2909,7 +2913,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
         catch
         {
-            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
             throw;
         }
     }

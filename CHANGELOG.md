@@ -111,6 +111,10 @@
 * Firehose and Jetstream web socket messages are now received into pooled buffers. A message that arrives in a single fragment is copied once, rather than
   being assembled in a `MemoryStream`, and compressed Jetstream messages are decoded without an intermediate copy.
 * Reduced allocations when merging request headers, recording XRPC metrics, and copying Jetstream extension data.
+* Firehose commit and sync events now take their CAR block and record data from the event's `Blocks` rather than copying each block, reducing
+  allocations when decoding a commit by about 16%.
+* Jetstream archive blocks are decoded without copying the decompressed block or its columns, and Jetstream metrics no longer format the server
+  address for every message or archive event.
 
 #### idunno.AtProto.Types
 

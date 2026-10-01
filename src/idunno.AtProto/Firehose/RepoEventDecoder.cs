@@ -263,7 +263,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         {
             return FirehoseCbor.Wrap(() =>
             {
-                using CarReader reader = new(new MemoryStream(car, writable: false), options.MaximumCarBlockSize);
+                using CarReader reader = new(car, options.MaximumCarBlockSize);
                 CarHeader header = reader.ReadHeader();
 
                 if (header.Roots.Count == 0)

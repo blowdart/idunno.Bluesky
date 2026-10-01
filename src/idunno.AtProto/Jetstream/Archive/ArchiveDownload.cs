@@ -30,6 +30,7 @@ internal sealed class ArchiveDownload(
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private readonly string _etag = blockIndex is int index ? $"\"{checksum}:{index}\"" : $"\"{checksum}\"";
     private readonly TimeSpan _readTimeout = ValidateReadTimeout(readTimeout);
+    private readonly string _serverTag = AtProtoJetstream.ArchiveServerTag(service);
 
     internal long Position { get; private set; } = offset;
 
@@ -83,7 +84,7 @@ internal sealed class ArchiveDownload(
                 {
                     Position += read;
                     _downloaded += read;
-                    metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
+                    metrics.ArchiveBytes.Add(read, new KeyValuePair<string, object?>("server", _serverTag));
                     return read;
                 }
             }
@@ -162,7 +163,7 @@ internal sealed class ArchiveDownload(
                     Position, resumeEtag, null, allowCrossOriginRedirect, cancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", AtProtoJetstream.ArchiveServerTag(service)));
+                metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
                 TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders);
 
                 if (retry is null)

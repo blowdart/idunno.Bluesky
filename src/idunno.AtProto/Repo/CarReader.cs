@@ -19,6 +19,7 @@ public sealed class CarReader : IDisposable
     private bool _disposed;
     private bool _headerRead;
     private readonly int _maximumBlockSize = int.MaxValue;
+    private readonly byte[]? _buffer;
 
     /// <summary>
     /// Creates a new <see cref="CarReader"/>.
@@ -44,6 +45,21 @@ public sealed class CarReader : IDisposable
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumBlockSize);
         _maximumBlockSize = maximumBlockSize;
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="CarReader"/> over an in-memory CAR, which rejects any block section larger than <paramref name="maximumBlockSize"/> bytes.
+    /// </summary>
+    /// <param name="car">The CAR bytes.</param>
+    /// <param name="maximumBlockSize">The largest block section, in bytes, to read.</param>
+    /// <remarks>
+    /// <para>Block data is sliced from <paramref name="car"/> rather than copied, so the returned blocks share its memory and
+    /// <paramref name="car"/> must not be changed while they are in use.</para>
+    /// </remarks>
+    internal CarReader(byte[] car, int maximumBlockSize)
+        : this(new MemoryStream(car, 0, car.Length, writable: false, publiclyVisible: true), maximumBlockSize)
+    {
+        _buffer = car;
     }
 
     private CarReader(Stream stream, bool leaveOpen, Stream? sourceStreamToDispose)
@@ -286,14 +302,14 @@ public sealed class CarReader : IDisposable
             throw new InvalidDataException("The CAR block is too large.");
         }
 
-        byte[] section = ReadExactly((int)sectionLength.Value);
-        int cidLength = GetCidLength(section);
+        ReadOnlyMemory<byte> section = ReadSection((int)sectionLength.Value);
+        int cidLength = GetCidLength(section.Span);
         if (cidLength == section.Length)
         {
             throw new InvalidDataException("A CAR block must contain data after its CID.");
         }
 
-        return new CarBlock(ParseCid(section.AsSpan(0, cidLength)), section.AsMemory(cidLength));
+        return new CarBlock(ParseCid(section.Span[..cidLength]), section[cidLength..]);
     }
 
     /// <summary>
@@ -351,6 +367,24 @@ public sealed class CarReader : IDisposable
         }
 
         throw new InvalidDataException("The CAR block length varint is too long.");
+    }
+
+    private ReadOnlyMemory<byte> ReadSection(int length)
+    {
+        if (_buffer is null)
+        {
+            return ReadExactly(length);
+        }
+
+        int position = (int)_stream.Position;
+        if (length > _buffer.Length - position)
+        {
+            throw new EndOfStreamException("The CAR block is truncated.");
+        }
+
+        _stream.Position = position + length;
+
+        return _buffer.AsMemory(position, length);
     }
 
     private byte[] ReadExactly(int length)

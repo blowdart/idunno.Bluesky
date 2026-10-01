@@ -38,7 +38,7 @@ public class AllocationBudgetTests
         { "Jetstream.V2", 5_500 },                 // 4,793 / 4,921
         { "Firehose.FrameParse", 3_100 },          // 2,762
         { "Firehose.ReadFields", 5_000 },          // 4,514
-        { "Firehose.FullDecode", 42_500 },         // 38,366 / 38,406
+        { "Firehose.FullDecode", 35_000 },         // 31,786 / 31,746
     };
 
     [Theory]

@@ -392,6 +392,70 @@ public class FirehoseTests
         Assert.Throws<InvalidDataException>(() => reader.ReadBlock());
     }
 
+    [Theory]
+    [InlineData(64, false)]
+    [InlineData(1024, true)]
+    public void InMemoryCarReaderSlicesBlocksAndAppliesTheLimit(int maximumBlockSize, bool expectBlock)
+    {
+        byte[] data = new byte[100];
+        data[0] = 0xA0;
+        Cid cid = Cid.FromDagCbor(data);
+        using MemoryStream stream = new();
+        WriteSection(stream, Encode(writer =>
+        {
+            writer.WriteStartMap(2);
+            writer.WriteTextString("roots");
+            writer.WriteStartArray(0);
+            writer.WriteEndArray();
+            writer.WriteTextString("version");
+            writer.WriteInt64(1);
+            writer.WriteEndMap();
+        }));
+        WriteSection(stream, [.. cid.ToBytes(), .. data]);
+        byte[] car = stream.ToArray();
+
+        using CarReader reader = new(car, maximumBlockSize);
+        reader.ReadHeader();
+
+        if (!expectBlock)
+        {
+            Assert.Throws<InvalidDataException>(() => reader.ReadBlock());
+            return;
+        }
+
+        CarBlock block = Assert.IsType<CarBlock>(reader.ReadBlock());
+        Assert.Equal(cid, block.Cid);
+        Assert.Equal(data, block.Data.ToArray());
+        Assert.True(System.Runtime.InteropServices.MemoryMarshal.TryGetArray(block.Data, out ArraySegment<byte> segment));
+        Assert.Same(car, segment.Array);
+        Assert.Null(reader.ReadBlock());
+    }
+
+    [Fact]
+    public void InMemoryCarReaderRejectsATruncatedBlock()
+    {
+        byte[] data = new byte[100];
+        Cid cid = Cid.FromDagCbor(data);
+        using MemoryStream stream = new();
+        WriteSection(stream, Encode(writer =>
+        {
+            writer.WriteStartMap(2);
+            writer.WriteTextString("roots");
+            writer.WriteStartArray(0);
+            writer.WriteEndArray();
+            writer.WriteTextString("version");
+            writer.WriteInt64(1);
+            writer.WriteEndMap();
+        }));
+        WriteSection(stream, [.. cid.ToBytes(), .. data]);
+        byte[] car = stream.ToArray()[..^10];
+
+        using CarReader reader = new(car, int.MaxValue);
+        reader.ReadHeader();
+
+        Assert.Throws<EndOfStreamException>(() => reader.ReadBlock());
+    }
+
     [Fact]
     public void CarReaderDoesNotSizeTheRootsFromTheDeclaredCount()
     {
