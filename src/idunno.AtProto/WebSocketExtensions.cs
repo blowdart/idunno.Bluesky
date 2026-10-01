@@ -29,7 +29,7 @@ internal static class WebSocketExtensions
     /// or the web socket is no longer open, and returns the final <see cref="WebSocketReceiveResult"/>
     /// and a byte array containing the read message.
     /// </summary>
-    /// <param name="webSocket">The <see cref="ClientWebSocket"/> to read the message from.</param>
+    /// <param name="webSocket">The <see cref="WebSocket"/> to read the message from.</param>
     /// <param name="bufferSize">The maximum block size, in bytes, to read from <paramref name="webSocket"/>.</param>
     /// <param name="maxMessageSize">The maximum total message size, in bytes. Defaults to 1 MB.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging, if any.</param>
@@ -42,7 +42,7 @@ internal static class WebSocketExtensions
     /// socket, so a <see cref="WebSocketMessageAbandonedException"/> means the connection can no longer be read from.</para>
     /// </remarks>
     public static async Task<(WebSocketReceiveResult Result, byte[] Message)> ReceiveNextMessageAsync(
-        this ClientWebSocket webSocket,
+        this WebSocket webSocket,
         int bufferSize,
         int maxMessageSize = DefaultMaxMessageSize,
         ILogger? logger = null,

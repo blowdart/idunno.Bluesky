@@ -8,4 +8,10 @@
     <EmbeddedResource Include="Fixtures\JetstreamArchiveLikes.json" />
   </ItemGroup>
 
+  <!-- The allocation budget tests replay the benchmark corpora through the benchmark helpers. -->
+  <ItemGroup>
+    <Compile Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Shared\*.cs" LinkBase="Benchmarks" />
+    <None Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Corpus\*.bin.gz" LinkBase="Corpus" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
