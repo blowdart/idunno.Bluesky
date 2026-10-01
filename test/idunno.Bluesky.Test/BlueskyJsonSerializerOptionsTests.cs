@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Feed.Gates;
 
@@ -55,5 +56,53 @@ public class BlueskyJsonSerializerOptionsTests
 
         ListRule listRule = Assert.IsType<ListRule>(rule);
         Assert.Equal("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.list/3kzmmwnqk2s2b", listRule.List.ToString());
+    }
+
+    [Fact]
+    public void DefaultIsTheSameReadOnlyInstanceOnEveryCall()
+    {
+        JsonSerializerOptions options = BlueskyJsonSerializerOptions.Default;
+
+        Assert.Same(options, BlueskyJsonSerializerOptions.Default);
+        Assert.True(options.IsReadOnly);
+        Assert.True(options.AllowOutOfOrderMetadataProperties);
+        Assert.Throws<InvalidOperationException>(() => options.Converters.Add(new JsonStringEnumConverter()));
+    }
+
+    [Fact]
+    public void BlueskyServerOptionsAreTheDefaultInstance()
+    {
+        Assert.Same(BlueskyJsonSerializerOptions.Default, BlueskyServer.BlueskyJsonSerializerOptions);
+    }
+
+    [Fact]
+    public void OptionsReturnsANewMutableInstanceOnEveryCall()
+    {
+        JsonSerializerOptions first = BlueskyJsonSerializerOptions.Options;
+        int defaultConverterCount = BlueskyJsonSerializerOptions.Default.Converters.Count;
+
+        Assert.NotSame(first, BlueskyJsonSerializerOptions.Options);
+        Assert.NotSame(BlueskyJsonSerializerOptions.Default, first);
+        Assert.False(first.IsReadOnly);
+        Assert.Equal(defaultConverterCount, first.Converters.Count);
+
+        first.Converters.Add(new JsonStringEnumConverter());
+
+        Assert.Equal(defaultConverterCount, BlueskyJsonSerializerOptions.Default.Converters.Count);
+    }
+
+    [Fact]
+    public void TypeInfoResolverIsTheSameInstanceOnEveryCall()
+    {
+        Assert.Same(BlueskyJsonSerializerOptions.Default.TypeInfoResolver, BlueskyJsonSerializerOptions.TypeInfoResolver);
+        Assert.Same(BlueskyJsonSerializerOptions.TypeInfoResolver, BlueskyJsonSerializerOptions.TypeInfoResolver);
+    }
+
+    [Fact]
+    public void DefaultReadsAPolymorphicTypeWhoseDiscriminatorComesLast()
+    {
+        ThreadGateRule? rule = JsonSerializer.Deserialize<ThreadGateRule>(ListRuleWithTrailingTypeDiscriminator, BlueskyJsonSerializerOptions.Default);
+
+        Assert.IsType<ListRule>(rule);
     }
 }

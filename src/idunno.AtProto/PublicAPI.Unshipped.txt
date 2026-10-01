@@ -749,3 +749,4 @@ idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.init -> void
 *REMOVED*idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>?
 idunno.AtProto.Labels.Label.Label(int? version, idunno.AtProto.Did! source, string! uri, idunno.AtProto.Cid? cid, string! value, bool isNegationLabel, System.DateTimeOffset creationTimestamp, idunno.AtProto.Bytes? signature) -> void
 idunno.AtProto.Labels.Label.Signature.get -> idunno.AtProto.Bytes?
+static idunno.AtProto.AtProtoJsonSerializerOptions.Default.get -> System.Text.Json.JsonSerializerOptions!

@@ -8,7 +8,11 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     /// <summary>
-    /// Gets a <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.
+    /// Gets a shared, read only <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.
     /// </summary>
-    public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = global::idunno.Bluesky.BlueskyJsonSerializerOptions.Options;
+    /// <remarks>
+    /// <para>This is the same instance as <see cref="Bluesky.BlueskyJsonSerializerOptions.Default"/>. It cannot be changed; use
+    /// <see cref="Bluesky.BlueskyJsonSerializerOptions.Options"/> to get a copy which can.</para>
+    /// </remarks>
+    public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = global::idunno.Bluesky.BlueskyJsonSerializerOptions.Default;
 }

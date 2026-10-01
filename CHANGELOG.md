@@ -69,6 +69,10 @@
 * Added `Label.ExpiresAt`, the optional label expiry time.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
+* Added `AtProtoJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `AtProtoJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+* The JSON serializer options used internally for every XRPC request and response are now cached, rather than rebuilt for each call,
+  so their type metadata is resolved once rather than on every request.
 
 #### idunno.AtProto.Types
 
@@ -79,6 +83,9 @@
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
+* Added `BlueskyJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `BlueskyJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+  `BlueskyJsonSerializerOptions.TypeInfoResolver` no longer builds a new set of options each time it is read.
 
 #### Samples
 
@@ -120,6 +127,9 @@
 * `BlueskyServer.GetUploadStatus()` now takes a `ServiceCredential`, because the video service rejects unauthenticated upload status requests.
 * `BlueskyServer.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices()`, `GetSuggestions()` and `SearchPostsV2()`
   now take an optional `AccessCredentials?`, rather than a required one.
+* `BlueskyServer.BlueskyJsonSerializerOptions` now returns the shared, read-only `BlueskyJsonSerializerOptions.Default`.
+  Changing it, for example by adding a converter or a type info resolver, now throws `InvalidOperationException`.
+  Use `BlueskyJsonSerializerOptions.Options` to get a copy you can change.
 
 ### Fixed
 

@@ -10,9 +10,35 @@ namespace idunno.AtProto;
 public partial class AtProtoServer
 {
     /// <summary>
-    /// Gets a <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes
+    /// Gets a shared, read only <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.
     /// </summary>
-    internal static JsonSerializerOptions AtProtoJsonSerializerOptions => new(JsonSerializerDefaults.Web)
+    /// <remarks>
+    /// <para>The instance is shared so the type metadata it resolves is cached across calls, rather than rebuilt for every
+    /// request. It is read only, so use <see cref="CreateAtProtoJsonSerializerOptions"/> for options which need to be changed.</para>
+    /// </remarks>
+    internal static JsonSerializerOptions AtProtoJsonSerializerOptions { get; } = MakeReadOnly(CreateAtProtoJsonSerializerOptions());
+
+    /// <summary>
+    /// Gets a shared <see cref="JsonSerializerOptions"/> without a type resolver.
+    /// </summary>
+    /// <remarks>
+    /// <para>The instance is shared so the reflection based type metadata it builds is cached across calls, rather than rebuilt
+    /// for every record. It becomes read only when it is first used.</para>
+    /// </remarks>
+    internal static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution { get; } = new(JsonSerializerDefaults.Web)
+    {
+        AllowOutOfOrderMetadataProperties = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        IgnoreReadOnlyProperties = false,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        RespectNullableAnnotations = true
+    };
+
+    /// <summary>
+    /// Creates a new, mutable <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.
+    /// </summary>
+    /// <returns>A new <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.</returns>
+    internal static JsonSerializerOptions CreateAtProtoJsonSerializerOptions() => new(JsonSerializerDefaults.Web)
     {
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -20,18 +46,6 @@ public partial class AtProtoServer
         RespectNullableAnnotations = true,
         TypeInfoResolver = SourceGenerationContext.Default,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
-    };
-
-    /// <summary>
-    /// Gets a <see cref="JsonSerializerOptions"/> without a type resolver.
-    /// </summary>
-    internal static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution => new(JsonSerializerDefaults.Web)
-    {
-        AllowOutOfOrderMetadataProperties = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IgnoreReadOnlyProperties = false,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
-        RespectNullableAnnotations = true
     };
 
     /// <summary>
@@ -58,7 +72,7 @@ public partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-        JsonSerializerOptions result = AtProtoJsonSerializerOptions;
+        JsonSerializerOptions result = CreateAtProtoJsonSerializerOptions();
 
         foreach (JsonSerializerOptions options in jsonSerializerOptions)
         {
@@ -81,10 +95,16 @@ public partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(jsonTypeInfoResolver);
 
-        JsonSerializerOptions options = AtProtoJsonSerializerOptions;
+        JsonSerializerOptions options = CreateAtProtoJsonSerializerOptions();
 
         options.TypeInfoResolverChain.Insert(0, jsonTypeInfoResolver);
 
+        return options;
+    }
+
+    private static JsonSerializerOptions MakeReadOnly(JsonSerializerOptions options)
+    {
+        options.MakeReadOnly();
         return options;
     }
 }

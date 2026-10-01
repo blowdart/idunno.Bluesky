@@ -10,7 +10,7 @@ internal static class JsonSerializerOptions
     static JsonSerializerOptions()
     {
         Options = AtProtoJsonSerializerOptions.Options;
-        Options.TypeInfoResolverChain.Insert(0, BlueskyJsonSerializerOptions.Options.TypeInfoResolver!);
+        Options.TypeInfoResolverChain.Insert(0, BlueskyJsonSerializerOptions.TypeInfoResolver);
         Options.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
     }
 
