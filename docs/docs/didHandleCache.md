@@ -57,7 +57,9 @@ string Describe(Did did) =>
 
 ### Concurrent lookups and cancellation
 
-Concurrent calls to `ResolveHandleAsync()` for the same DID share a single resolution. Cancelling the token passed to
+Concurrent calls to `ResolveHandleAsync()` for the same DID share a single resolution. To bound memory, at most
+`DidHandleCacheOptions.Size` resolutions can be shared at once; once that many are in progress, lookups for other DIDs still
+resolve and are cached, but concurrent lookups for the same DID each start their own resolution until the number in progress falls. Cancelling the token passed to
 `ResolveHandleAsync()` stops that caller waiting, but does not cancel the shared resolution, which continues for any other
 callers and is cached when it completes. Each resolution is bounded by `DidHandleCacheOptions.ResolutionTimeout`, and
 disposing the cache cancels any resolutions in progress.

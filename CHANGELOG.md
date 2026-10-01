@@ -71,8 +71,8 @@
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
 * Added `DidHandleCache`, an `IDidHandleResolver` which resolves the handle for a DID, bidirectionally verifying it, and caches the result.
   Handles which cannot be resolved or verified return `Handle.Invalid`, which is cached for a shorter time. The cache is bounded by
-  `DidHandleCacheOptions.Size` and `Duration`, concurrent lookups for the same DID share a single resolution, and each resolution
-  is bounded by `ResolutionTimeout`. Set `FirehoseOptions.DidHandleResolver`, `JetstreamOptions.DidHandleResolver` or call
+  `DidHandleCacheOptions.Size` and `Duration`, concurrent lookups for the same DID share a single resolution while fewer than `Size`
+  resolutions are in progress, and each resolution is bounded by `ResolutionTimeout`. Set `FirehoseOptions.DidHandleResolver`, `JetstreamOptions.DidHandleResolver` or call
   `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
   Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
 * Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
@@ -90,6 +90,8 @@
 #### Samples
 
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
+* `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
+  cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
 * Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
   selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
   display name and declared label values, with an optional case-insensitive wildcard pattern to filter handles. `--live` narrows that list

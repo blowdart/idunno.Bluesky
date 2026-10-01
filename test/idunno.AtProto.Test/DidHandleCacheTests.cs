@@ -218,6 +218,28 @@ public class DidHandleCacheTests
     }
 
     [Fact]
+    public async Task LookupsAreNotSharedOnceSizeResolutionsAreInProgress()
+    {
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Size = 1 });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> shared = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> other = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+        ValueTask<Handle> unshared = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, resolver.Calls);
+
+        completion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await first);
+        Assert.Equal(s_handle, await shared);
+        Assert.Equal(s_handle, await other);
+        Assert.Equal(s_handle, await unshared);
+    }
+
+    [Fact]
     public async Task ConcurrentLookupsShareOneResolution()
     {
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);

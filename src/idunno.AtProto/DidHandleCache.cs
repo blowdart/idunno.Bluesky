@@ -16,7 +16,9 @@ namespace idunno.AtProto;
 /// <para>A handle is resolved with <see cref="IdentityResolution.ResolveVerifiedHandleAsync(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>,
 /// so it is only returned once the handle the DID document declares has been resolved back to the same DID. Any failure to resolve or verify
 /// a handle results in <see cref="Handle.Invalid"/>, which is cached for <see cref="DidHandleCacheOptions.FailedResolutionDuration"/>.</para>
-/// <para>Concurrent lookups for the same DID share a single resolution. Cancelling a lookup stops the caller waiting, but does not cancel the
+/// <para>Concurrent lookups for the same DID share a single resolution while fewer than <see cref="DidHandleCacheOptions.Size"/>
+/// resolutions are in progress. Once that many are in progress, concurrent lookups for a DID which is not already being resolved each
+/// start their own resolution. Cancelling a lookup stops the caller waiting, but does not cancel the
 /// shared resolution, which is bounded by <see cref="DidHandleCacheOptions.ResolutionTimeout"/> and cancelled when the cache is disposed.</para>
 /// <para>Set <see cref="Firehose.FirehoseOptions.DidHandleResolver"/> or <see cref="Jetstream.JetstreamOptions.DidHandleResolver"/> to
 /// have a stream call <see cref="Invalidate(Did)"/> for each <c>#identity</c> event it receives. A handle being resolved when its DID is
