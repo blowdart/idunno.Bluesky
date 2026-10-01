@@ -88,5 +88,6 @@ public sealed record FirehoseRepoOperation
     /// <para>The conversion is performed on every call, so cache the result if it is needed more than once.
     /// The record content comes from the repository owner and is untrusted.</para>
     /// </remarks>
+    // Not cached. This is a record type, so a cache field would take part in the generated Equals and GetHashCode.
     public JsonElement? GetRecord() => RecordData is ReadOnlyMemory<byte> data ? DagCbor.ToJsonElement(data) : null;
 }

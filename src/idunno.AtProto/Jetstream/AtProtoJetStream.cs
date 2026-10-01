@@ -2157,6 +2157,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     messageAsString = DecodeMessage(message);
                 }
 
+                // The message is deliberately decoded to a string, rather than parsed straight from the received bytes. The string is
+                // part of the protected virtual OnMessageReceived contract that derived classes depend on, and it is what is logged
+                // when parsing fails.
                 if (!string.IsNullOrEmpty(messageAsString))
                 {
                     _metrics.MessagesReceived.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
@@ -2178,6 +2181,10 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     {
                         try
                         {
+                            // A task per message is deliberate. Handlers may run concurrently with this loop and each other, and
+                            // a custom TaskFactory can choose where they run, so batching or a dedicated consumer would change
+                            // when and where handlers are called.
+                            //
                             // Deliberately started with no cancellation token. A token which is already cancelled leaves StartNew
                             // never running the delegate, and the slot taken above is only given back by running it.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -2702,6 +2709,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             return false;
         }
 
+        // The frame is parsed as a document first and the payload deserialized from it, rather than in a single pass. A single pass
+        // would change how duplicate or out of order $type properties, info payloads missing required fields, and error frames
+        // are handled.
         JetstreamV2EventPayload? eventPayload = payload.Deserialize(SourceGenerationContext.Default.JetstreamV2EventPayload);
 
         if (eventPayload is null)
