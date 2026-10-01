@@ -60,6 +60,44 @@ public class ExpiredEntrySweepThrottleTests
     }
 
     [Fact]
+    public void AMaximumIntervalDoesNotOverflow()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(TimeSpan.MaxValue, "interval", timeProvider);
+
+        Assert.False(throttle.TryClaimSweep());
+
+        timeProvider.Advance(TimeSpan.FromDays(365 * 100));
+
+        Assert.False(throttle.TryClaimSweep());
+    }
+
+    [Fact]
+    public void AMaximumIntervalThatIsDueImmediatelyIsClaimableOnce()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(TimeSpan.MaxValue, "interval", dueImmediately: true, timeProvider);
+
+        Assert.True(throttle.TryClaimSweep());
+        Assert.False(throttle.TryClaimSweep());
+    }
+
+    [Fact]
+    public void ASweepDueImmediatelyStartsANewInterval()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", dueImmediately: true, timeProvider);
+
+        Assert.True(throttle.TryClaimSweep());
+
+        timeProvider.Advance(s_shortInterval - TimeSpan.FromTicks(1));
+        Assert.False(throttle.TryClaimSweep());
+
+        timeProvider.Advance(TimeSpan.FromTicks(1));
+        Assert.True(throttle.TryClaimSweep());
+    }
+
+    [Fact]
     public void AZeroIntervalDisablesSweeping()
     {
         ExpiredEntrySweepThrottle throttle = new(TimeSpan.Zero, "interval");

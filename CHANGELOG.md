@@ -77,6 +77,10 @@
   `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
   Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
 * Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
+* Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
+  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache and reconnection delays, and the
+  jetstream for its reconnection, receive failure and archive retry delays.
+* Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
 #### idunno.AtProto.Types
 
@@ -87,6 +91,15 @@
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`, used to expire cached claims.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Added `SqliteCorrelationStateCache.CreateWithTimeProvider()` and `SqliteIdentityStore.CreateWithTimeProvider()`, which create stores that
+  use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
 
 #### Samples
 

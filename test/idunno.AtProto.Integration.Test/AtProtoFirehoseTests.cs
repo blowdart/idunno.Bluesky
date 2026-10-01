@@ -16,6 +16,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Sync;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 using static idunno.AtProto.Integration.Test.FirehoseTestData;
 
@@ -591,6 +592,48 @@ public class AtProtoFirehoseTests
 
         Assert.Equal(3, events.OfType<FirehoseCommitEvent>().Count());
         Assert.Equal(expectedResolutions, resolutions);
+    }
+
+    [Fact]
+    public async Task SigningKeyCacheExpiryUsesTheConfiguredTimeProvider()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        DidDocument document = DidDocumentFor(TestDid, "atproto", key);
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        TaskCompletionSource timeAdvanced = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int resolutions = 0;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#commit", new TestCommit(1) { SigningKey = key }.Build()), token);
+            await timeAdvanced.Task.WaitAsync(token);
+            await Send(socket, Frame("#commit", new TestCommit(2) { SigningKey = key }.Build()), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            VerifySignatures = true,
+            SigningKeyCacheDuration = TimeSpan.FromMinutes(5),
+            TimeProvider = timeProvider,
+            DidDocumentResolver = (_, _) =>
+            {
+                Interlocked.Increment(ref resolutions);
+                return Task.FromResult<DidDocument?>(document);
+            }
+        });
+
+        await using IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+        Assert.IsType<FirehoseCommitEvent>(events.Current);
+        Assert.Equal(1, resolutions);
+
+        timeProvider.Advance(TimeSpan.FromMinutes(5));
+        timeAdvanced.SetResult();
+
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+        Assert.IsType<FirehoseCommitEvent>(events.Current);
+        Assert.Equal(2, resolutions);
     }
 
     [Fact]

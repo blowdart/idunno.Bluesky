@@ -22,7 +22,8 @@ internal sealed class ExpiredEntrySweepThrottle
 {
     private readonly TimeSpan _interval;
     private readonly TimeProvider _timeProvider;
-    private long _nextSweepAt;
+    private long _lastSweepAt;
+    private int _dueImmediately;
 
     /// <summary>
     /// Creates a new instance of <see cref="ExpiredEntrySweepThrottle"/>.
@@ -40,7 +41,7 @@ internal sealed class ExpiredEntrySweepThrottle
 
         _interval = interval;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _nextSweepAt = _timeProvider.GetTimestamp() + ToTimestampTicks(interval);
+        _lastSweepAt = _timeProvider.GetTimestamp();
     }
 
     /// <summary>
@@ -55,10 +56,7 @@ internal sealed class ExpiredEntrySweepThrottle
     internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately, TimeProvider? timeProvider = null)
         : this(interval, paramName, timeProvider)
     {
-        if (dueImmediately)
-        {
-            _nextSweepAt = _timeProvider.GetTimestamp();
-        }
+        _dueImmediately = dueImmediately ? 1 : 0;
     }
 
     /// <summary>
@@ -85,16 +83,21 @@ internal sealed class ExpiredEntrySweepThrottle
             return false;
         }
 
+        long lastSweepAt = Interlocked.Read(ref _lastSweepAt);
         long now = _timeProvider.GetTimestamp();
-        long nextSweepAt = Interlocked.Read(ref _nextSweepAt);
 
-        if (now < nextSweepAt)
+        if (Interlocked.CompareExchange(ref _dueImmediately, 0, 1) == 1)
+        {
+            Interlocked.Exchange(ref _lastSweepAt, now);
+            return true;
+        }
+
+        // Comparing elapsed time, rather than adding the interval to a timestamp, cannot overflow however large the interval is.
+        if (_timeProvider.GetElapsedTime(lastSweepAt, now) < _interval)
         {
             return false;
         }
 
-        return Interlocked.CompareExchange(ref _nextSweepAt, now + ToTimestampTicks(_interval), nextSweepAt) == nextSweepAt;
+        return Interlocked.CompareExchange(ref _lastSweepAt, now, lastSweepAt) == lastSweepAt;
     }
-
-    private long ToTimestampTicks(TimeSpan duration) => (long)(duration.TotalSeconds * _timeProvider.TimestampFrequency);
 }
