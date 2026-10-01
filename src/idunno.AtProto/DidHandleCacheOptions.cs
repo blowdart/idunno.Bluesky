@@ -42,7 +42,8 @@ public sealed record DidHandleCacheOptions
     /// <remarks>
     /// <para>Lookups beyond this limit wait for a resolution to finish. Time spent waiting counts against <see cref="ResolutionTimeout"/>,
     /// and a lookup which times out waiting returns <see cref="Handle.Invalid"/>, which is not cached.</para>
-    /// <para>This bounds the outbound requests a source of DIDs can cause, such as a firehose relay sending many distinct DIDs.</para>
+    /// <para>A resolution holds its slot until it finishes, even if the lookup waiting for it has timed out, so this bounds the outbound
+    /// requests a source of DIDs can cause, such as a firehose relay sending many distinct DIDs.</para>
     /// </remarks>
     public int MaximumConcurrentResolutions
     {

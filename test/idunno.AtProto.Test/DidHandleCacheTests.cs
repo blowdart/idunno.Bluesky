@@ -291,6 +291,53 @@ public class DidHandleCacheTests
     }
 
     [Fact]
+    public async Task ATimedOutResolverWhichIgnoresCancellationHoldsItsSlotUntilItFinishes()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        ManualTimerProvider timeProvider = new();
+        TaskCompletionSource<Handle> ignoresCancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int calls = 0;
+        TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? ignoresCancellation.Task : Task.FromResult(s_handle));
+        Did thirdDid = new("did:web:third.example.com");
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            MaximumConcurrentResolutions = 1,
+            MeterFactory = meterFactory,
+            TimeProvider = timeProvider
+        });
+
+        ValueTask<Handle> timedOut = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Timers[0].Fire();
+        Assert.Equal(Handle.Invalid, await timedOut.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        ValueTask<Handle> blocked = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+        Assert.False(blocked.IsCompleted);
+        Assert.Equal(1, resolver.Calls);
+
+        timeProvider.Timers[1].Fire();
+        Assert.Equal(Handle.Invalid, await blocked.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(1, resolver.Calls);
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+
+        ignoresCancellation.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(thirdDid, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
+    }
+
+    [Fact]
+    public async Task AResolverWhichThrowsSynchronouslyReleasesItsSlot()
+    {
+        int calls = 0;
+        TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? throw new InvalidOperationException("Resolver failed.") : Task.FromResult(s_handle));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MaximumConcurrentResolutions = 1 });
+
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ALookupWhichTimesOutWaitingToStartIsRejectedButNotCached()
     {
         using RecordingMeterFactory meterFactory = new();

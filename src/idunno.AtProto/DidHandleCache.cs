@@ -215,7 +215,9 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             plcDirectory: _options.PlcDirectory,
             loggerFactory: _options.LoggerFactory,
             httpClient: _options.HttpClient,
-            timeout: _options.ResolutionTimeout,
+            // ResolutionTimeout is enforced by a cancellation token driven by the configured TimeProvider. HttpClient.Timeout always
+            // measures wall-clock time, so it is disabled rather than set to the same value.
+            timeout: Timeout.InfiniteTimeSpan,
             cancellationToken: cancellationToken);
 
     // Must be called whilst holding _lock, and only when the cache has not been disposed.
@@ -289,7 +291,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
         try
         {
             // WaitAsync bounds the wait even if the resolver ignores cancellation.
-            handle = await _resolver(did, linkedTokenSource.Token).WaitAsync(linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
+            handle = await StartResolution(did, linkedTokenSource.Token).WaitAsync(linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
         }
         catch (OperationCanceledException) when (_disposalToken.IsCancellationRequested)
         {
@@ -305,13 +307,6 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             DidHandleCacheLogger.ResolutionFailed(_logger, exception, did);
             handle = Handle.Invalid;
         }
-        finally
-        {
-            // Released once the cache stops waiting, even if a resolver which ignores cancellation is still running, so a stuck
-            // resolver cannot hold a slot forever.
-            _resolutionSlots.Release();
-        }
-
         if (!handle.IsValid)
         {
             DidHandleCacheLogger.HandleNotVerified(_logger, did);
@@ -320,6 +315,38 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
         }
 
         return (handle, true);
+    }
+
+    // Starts the resolver, releasing the resolution slot the caller holds when the resolver finishes. The slot is held until then, rather
+    // than until the cache stops waiting for it, so MaximumConcurrentResolutions bounds the resolutions actually running even when a
+    // resolver is slow to observe cancellation.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A resolver which throws must still release its slot.")]
+    private Task<Handle> StartResolution(Did did, CancellationToken cancellationToken)
+    {
+        Task<Handle> resolution;
+
+        try
+        {
+            resolution = _resolver(did, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            resolution = Task.FromException<Handle>(exception);
+        }
+
+        _ = resolution.ContinueWith(
+            static (completed, state) =>
+            {
+                // Observed so a resolver which fails after the cache stopped waiting for it does not raise UnobservedTaskException.
+                _ = completed.Exception;
+                ((SemaphoreSlim)state!).Release();
+            },
+            _resolutionSlots,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        return resolution;
     }
 
     // Must not throw, as it is called from a finally block to complete the lookup.

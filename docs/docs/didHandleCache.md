@@ -58,7 +58,8 @@ string Describe(Did did) =>
 ### Concurrent lookups and cancellation
 
 Concurrent calls to `ResolveHandleAsync()` for the same DID share a single resolution. At most
-`DidHandleCacheOptions.MaximumConcurrentResolutions` resolutions run at once, and other lookups wait for one to finish.
+`DidHandleCacheOptions.MaximumConcurrentResolutions` resolutions run at once, and other lookups wait for one to finish. A resolution
+holds its slot until it actually finishes, even after the lookup waiting for it has timed out.
 To bound memory, at most `DidHandleCacheOptions.Size` lookups can be pending at once; once that many are pending, a lookup for a DID
 which is not already being resolved returns `handle.invalid` immediately, without caching it, so a later lookup tries again.
 
