@@ -211,6 +211,34 @@ await foreach (FirehoseEvent evt in firehose.SubscribeLabelsAsync())
 The default labeler is `wss://mod.bsky.app`, the Bluesky moderation service. Set `FirehoseOptions.LabelerUri`
 to read from another labeler.
 
+## Showing handles
+
+Events identify accounts by DID. To show handles, use a [`DidHandleCache`](didHandleCache.md), which resolves, verifies and
+caches handles. Set `FirehoseOptions.DidHandleResolver` and the firehose invalidates a cached handle when it receives an
+`#identity` event for its DID:
+
+```csharp
+using var didHandleCache = new DidHandleCache();
+
+await using var firehose = new AtProtoFirehose(
+    options: new FirehoseOptions
+    {
+        DidHandleResolver = didHandleCache
+    });
+
+await foreach (FirehoseEvent evt in firehose.SubscribeReposAsync())
+{
+    if (evt is FirehoseAccountEvent account)
+    {
+        Handle handle = await didHandleCache.ResolveHandleAsync(account.Did);
+        Console.WriteLine($"{account.Did} ({handle}) active: {account.Active}");
+    }
+}
+```
+
+Resolving a handle for every commit cannot keep up with the relay. Use `TryGetCachedHandle()`, which never makes a network request,
+for frequent events.
+
 ## Samples
 
 * [Samples.Firehose](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Firehose) reads the relay and

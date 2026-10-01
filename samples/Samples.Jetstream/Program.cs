@@ -7,7 +7,6 @@ using System.Text;
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Samples.Jetstream;
@@ -36,13 +35,15 @@ public sealed class Program
         };
         Console.OutputEncoding = Encoding.UTF8;
 
-        using var didHandleCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 1024 });
+        // Resolves and verifies handles, caching them. The jetstream invalidates a cached handle when it sees an identity event for its DID.
+        using var didHandleCache = new DidHandleCache(new DidHandleCacheOptions { LoggerFactory = loggerFactory });
         await using var jetStream = new AtProtoJetstream(
             options: new JetstreamOptions
             {
                 ProtocolVersion = JetstreamProtocolVersion.V2,
                 UseCompression = true,
-                LoggerFactory = loggerFactory
+                LoggerFactory = loggerFactory,
+                DidHandleResolver = didHandleCache
             });
 
         const int maximumRetries = 5;
@@ -56,7 +57,7 @@ public sealed class Program
                     await foreach (JetstreamEvent evt in jetStream.StreamAsync(
                         cursor: cursor, cancellationToken: cancellationToken, maximumReconnectAttempts: maximumRetries))
                     {
-                        await PrintEventAsync(evt, didHandleCache, loggerFactory).ConfigureAwait(false);
+                        await PrintEventAsync(evt, didHandleCache, cancellationToken).ConfigureAwait(false);
                         cursor = evt.Sequence;
                     }
                 }
@@ -82,8 +83,8 @@ public sealed class Program
 
     private static async Task PrintEventAsync(
         JetstreamEvent evt,
-        MemoryCache didHandleCache,
-        ILoggerFactory loggerFactory)
+        DidHandleCache didHandleCache,
+        CancellationToken cancellationToken)
     {
         string timeStamp = $"{evt.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture)} (#{evt.Sequence})";
 
@@ -91,12 +92,11 @@ public sealed class Program
         {
             case JetstreamCommitEvent commitEvent:
                 {
-                    string eventBelongsTo = commitEvent.Did;
-
-                    if (didHandleCache.TryGetValue(commitEvent.Did, out string? handle))
-                    {
-                        eventBelongsTo += $"/({handle})";
-                    }
+                    // Commits are too frequent to resolve every DID, so only use a handle an earlier account event has cached.
+                    // A handle which could not be verified is shown as handle.invalid.
+                    string eventBelongsTo = didHandleCache.TryGetCachedHandle(commitEvent.Did, out Handle? handle)
+                        ? $"{commitEvent.Did}/({handle})"
+                        : commitEvent.Did;
 
                     Console.WriteLine($"COMMIT    : {eventBelongsTo} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
                     break;
@@ -104,36 +104,8 @@ public sealed class Program
 
             case JetstreamAccountEvent accountEvent:
                 {
-                    string eventBelongsTo = accountEvent.Did;
-
-                    if (didHandleCache.TryGetValue(accountEvent.Did, out string? handle))
-                    {
-                        eventBelongsTo += $"/({handle})";
-                    }
-                    else
-                    {
-                        DidDocument? didDoc = await Resolution.ResolveDidDocument(
-                            accountEvent.Did,
-                            loggerFactory: loggerFactory).ConfigureAwait(false);
-
-                        if (didDoc is not null)
-                        {
-                            foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
-                            {
-                                if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
-                                {
-                                    didHandleCache.Set(accountEvent.Did, alsoKnownAs[5..], new MemoryCacheEntryOptions
-                                    {
-                                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                                        Size = 1
-                                    });
-                                    eventBelongsTo += "/";
-                                    eventBelongsTo += alsoKnownAs[5..];
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    Handle handle = await didHandleCache.ResolveHandleAsync(accountEvent.Did, cancellationToken).ConfigureAwait(false);
+                    string eventBelongsTo = $"{accountEvent.Did}/({handle})";
 
                     if (accountEvent.Account.Active)
                     {
@@ -156,9 +128,8 @@ public sealed class Program
 
             case JetstreamIdentityEvent identityEvent:
                 {
-                    // The identity may have changed, so forget the cached handle. The handle in an identity event is not verified,
-                    // so it is not cached; the next account event resolves the DID document instead.
-                    didHandleCache.Remove(identityEvent.Did);
+                    // The jetstream has already invalidated any cached handle. The handle in an identity event is not verified,
+                    // so it is only printed; the next account event resolves and verifies the handle instead.
 
                     if (identityEvent.Identity.Handle is not null)
                     {

@@ -70,7 +70,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Assert.True(await Resolution.VerifyHandle(
+        Assert.True(await IdentityResolution.VerifyHandleAsync(
             handle,
             new Did(Did),
             httpClient: httpClient,
@@ -86,7 +86,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring("at://someone.else.invalid"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Assert.False(await Resolution.VerifyHandle(
+        Assert.False(await IdentityResolution.VerifyHandleAsync(
             handle,
             new Did(Did),
             httpClient: httpClient,
@@ -102,7 +102,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), OtherDid);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Assert.False(await Resolution.VerifyHandle(
+        Assert.False(await IdentityResolution.VerifyHandleAsync(
             handle,
             new Did(Did),
             httpClient: httpClient,
@@ -118,7 +118,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), wellKnownDid: null);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Assert.False(await Resolution.VerifyHandle(
+        Assert.False(await IdentityResolution.VerifyHandleAsync(
             handle,
             new Did(Did),
             httpClient: httpClient,
@@ -132,7 +132,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Handle handle = await Resolution.ResolveVerifiedHandle(
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             new Did(Did),
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -142,21 +142,82 @@ public class HandleVerificationTests
     }
 
     [Fact]
-    public async Task ResolveVerifiedHandleReturnsTheFirstDeclaredHandleWhichResolvesBack()
+    public async Task TheObsoleteResolutionClassForwardsToIdentityResolution()
+    {
+        Handle expectedHandle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
+        using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), Did);
+        using HttpClient httpClient = testServer.CreateClient();
+
+#pragma warning disable CS0618 // Type or member is obsolete
+        Handle handle = await Resolution.ResolveVerifiedHandle(
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        bool verified = await Resolution.VerifyHandle(
+            expectedHandle,
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        Assert.Equal(expectedHandle, handle);
+        Assert.True(verified);
+    }
+
+    [Fact]
+    public async Task ResolveVerifiedHandleOnlyResolvesTheClaimedHandle()
     {
         using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(
-            DidDocumentDeclaring("at://someone.else.invalid", $"at://{TestServerBuilder.DefaultDomainName}"),
+            DidDocumentDeclaring("at://someone.else.example", $"at://{TestServerBuilder.DefaultDomainName}"),
             Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Handle handle = await Resolution.ResolveVerifiedHandle(
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(Handle.Invalid, handle);
+    }
+
+    [Fact]
+    public async Task ResolveVerifiedHandleSkipsEntriesWhichAreNotValidHandles()
+    {
+        using TestDns dns = TestDns.WithNoTextRecords();
+        using TestServer testServer = CreateServer(
+            DidDocumentDeclaring("https://example.invalid", "at://", $"at://{TestServerBuilder.DefaultDomainName}"),
+            Did);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             new Did(Did),
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(handle.IsValid);
         Assert.Equal(TestServerBuilder.DefaultDomainName, handle.Value);
+    }
+
+    [Fact]
+    public async Task VerifyHandleReturnsFalseForAHandleListedAfterTheClaimedHandle()
+    {
+        Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
+        using TestServer testServer = CreateServer(
+            DidDocumentDeclaring("at://someone.else.example", $"at://{TestServerBuilder.DefaultDomainName}"),
+            Did);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        Assert.False(await IdentityResolution.VerifyHandleAsync(
+            handle,
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -166,7 +227,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring($"at://{TestServerBuilder.DefaultDomainName}"), OtherDid);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Handle handle = await Resolution.ResolveVerifiedHandle(
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             new Did(Did),
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -185,7 +246,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring(alsoKnownAs), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Handle handle = await Resolution.ResolveVerifiedHandle(
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             new Did(Did),
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -205,7 +266,7 @@ public class HandleVerificationTests
         using TestServer testServer = CreateServer(DidDocumentDeclaring(alsoKnownAs), Did);
         using HttpClient httpClient = testServer.CreateClient();
 
-        Handle handle = await Resolution.ResolveVerifiedHandle(
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
             new Did(Did),
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);

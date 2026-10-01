@@ -55,9 +55,20 @@ public record JetstreamOptions
             .Append(", CloseTimeout = ").Append(CloseTimeout)
             .Append(", SendTimeout = ").Append(SendTimeout)
             .Append(", ArchiveReadTimeout = ").Append(ArchiveReadTimeout)
-            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers);
+            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers)
+            .Append(", DidHandleResolver = ").Append(DidHandleResolver);
         return true;
     }
+
+    /// <summary>
+    /// Gets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <value>A DID handle resolver, or <see langword="null"/> to not invalidate any handles. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>The resolver is not disposed by the jetstream. Events from a jetstream's archive also invalidate handles.</para>
+    /// <para>A malicious server can send an <c>#identity</c> event before each event for a DID so its handle is never cached.</para>
+    /// </remarks>
+    public IDidHandleResolver? DidHandleResolver { get; init; }
 
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.

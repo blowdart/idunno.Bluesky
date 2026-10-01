@@ -80,7 +80,7 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
         if (options is { CacheSigningKeys: true })
         {
             _cacheDuration = options.SigningKeyCacheDuration;
-            _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = options.SigningKeyCacheSize });
+            _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = options.SigningKeyCacheSize, Clock = new TimeProviderSystemClock(_timeProvider) });
         }
     }
 

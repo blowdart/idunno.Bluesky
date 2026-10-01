@@ -131,7 +131,7 @@ public class ResolutionHardeningTests
 
         using HttpClient httpClient = testServer.CreateClient();
 
-        await Assert.ThrowsAsync<ArgumentException>(async () => await Resolution.ResolveDidDocument(
+        await Assert.ThrowsAsync<ArgumentException>(async () => await IdentityResolution.ResolveDidDocumentAsync(
             handle,
             httpClient: httpClient,
             maximumWellKnownResponseSize: maximumWellKnownResponseSize,
@@ -196,7 +196,7 @@ public class ResolutionHardeningTests
 
         using (HttpClient httpClient = testServer.CreateClient())
         {
-            Did? did = await Resolution.ResolveHandle(
+            Did? did = await IdentityResolution.ResolveHandleAsync(
                 handle,
                 httpClient: httpClient,
                 cancellationToken: TestContext.Current.CancellationToken);

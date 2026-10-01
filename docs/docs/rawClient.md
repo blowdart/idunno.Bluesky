@@ -41,7 +41,7 @@ for example
 ```
 
 > [!TIP]
-> You can resolve the PDS for a handle using `Resolution.ResolvePds(handle)`, and the DID for a handle with `Resolution.ResolveDid(handle)`.
+> You can resolve the PDS for a handle using `IdentityResolution.ResolvePdsAsync(handle)`, and the DID for a handle with `IdentityResolution.ResolveHandleAsync(handle)`.
 > There is no need to spin up a full agent to do this.
 
 ## Making POST requests

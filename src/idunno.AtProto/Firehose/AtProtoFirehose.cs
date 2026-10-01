@@ -177,7 +177,7 @@ public sealed class AtProtoFirehose : IDisposable, IAsyncDisposable
         if (Options.VerifySignatures)
         {
             Func<Did, CancellationToken, Task<DidDocument?>> resolver = Options.DidDocumentResolver ??
-                ((did, token) => Resolution.ResolveDidDocument(did, loggerFactory: loggerFactory, cancellationToken: token));
+                ((did, token) => IdentityResolution.ResolveDidDocumentAsync(did, loggerFactory: loggerFactory, cancellationToken: token));
 
             verifier = new FirehoseSignatureVerifier(resolver, Options, Metrics, null);
         }
