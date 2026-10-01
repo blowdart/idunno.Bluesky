@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace idunno.AtProto;
 
@@ -20,10 +19,23 @@ public sealed partial class TimestampIdentifier :
     IEqualityComparer<TimestampIdentifier>,
     IParsable<TimestampIdentifier>
 {
-    [GeneratedRegex("^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.None, 100)]
-    private static partial Regex s_Validator();
+    /// <summary>
+    /// A regular expression which checks the syntax of a timestamp identifier.
+    /// </summary>
+    /// <remarks>
+    /// <para>The expression is suitable for client side validation, for example with a <c>RegularExpressionAttribute</c>.
+    /// Use <see cref="TryParse(string?, out TimestampIdentifier)"/> to validate a timestamp identifier in code.</para>
+    /// </remarks>
+    public const string ValidationRegex = "^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$";
 
     private const int TidLength = 13;
+
+    private const int TimeStampLength = 11;
+
+    private const string Base32Alphabet = "234567abcdefghijklmnopqrstuvwxyz";
+
+    // The largest timestamp a double holds exactly, which fits in 11 base32 characters.
+    private const long MaximumTimeStamp = (1L << 53) - 1;
 
     // The final 10 bits of a TID are a random clock identifier, giving 1024 possible values.
     private const int ClockIdentifierRange = 1024;
@@ -47,8 +59,17 @@ public sealed partial class TimestampIdentifier :
     /// </summary>
     public TimestampIdentifier()
     {
-        RecordKey next = Next();
-        _value = next.ToString();
+        _value = NextValue();
+    }
+
+    private TimestampIdentifier(string s, bool validate)
+    {
+        if (validate && !IsValidSyntax(s))
+        {
+            throw new ArgumentException("not a valid TimeStampIdentifier", nameof(s));
+        }
+
+        _value = s;
     }
 
     /// <summary>
@@ -61,8 +82,7 @@ public sealed partial class TimestampIdentifier :
     {
         ArgumentNullException.ThrowIfNull(s);
 
-        if (s.Length != TidLength ||
-            !s_Validator().IsMatch(s))
+        if (!IsValidSyntax(s))
         {
             throw new ArgumentException("not a valid TimeStampIdentifier", nameof(s));
         }
@@ -80,12 +100,14 @@ public sealed partial class TimestampIdentifier :
     {
         ArgumentNullException.ThrowIfNull(recordKey);
 
-        if (recordKey.ToString().Length != TidLength || !s_Validator().IsMatch(recordKey.ToString()))
+        string value = recordKey.ToString();
+
+        if (!IsValidSyntax(value))
         {
             throw new ArgumentException("not a valid TimeStampIdentifier", nameof(recordKey));
         }
 
-        _value = recordKey.ToString();
+        _value = value;
     }
 
     /// <summary>
@@ -96,6 +118,25 @@ public sealed partial class TimestampIdentifier :
     /// <returns></returns>
     internal static string FromTime(double timeStamp, long clockId)
     {
+        if (timeStamp is >= 0 and <= MaximumTimeStamp && double.IsInteger(timeStamp) && clockId is >= 0 and < ClockIdentifierRange)
+        {
+            // Encode directly into the string, rather than encoding each part into its own string, padding it and then
+            // joining them.
+            return string.Create(TidLength, ((long)timeStamp, clockId), static (span, state) =>
+            {
+                (long time, long clock) = state;
+
+                span[TidLength - 1] = Base32Alphabet[(int)(clock & 31)];
+                span[TidLength - 2] = Base32Alphabet[(int)(clock >> 5)];
+
+                for (int i = TimeStampLength - 1; i >= 0; i--)
+                {
+                    span[i] = Base32Alphabet[(int)(time & 31)];
+                    time >>= 5;
+                }
+            });
+        }
+
         string encodedTimeStamp = SortableBase32Encoding.ToString(timeStamp).PadLeft(11, '2');
         string encodedClockId = SortableBase32Encoding.ToString(clockId).PadLeft(2, '2');
 
@@ -107,7 +148,10 @@ public sealed partial class TimestampIdentifier :
     /// </summary>
     /// <returns>A unique <see cref="TimestampIdentifier"/> from the current time.</returns>
     [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographic function.")]
-    public static TimestampIdentifier Next()
+    public static TimestampIdentifier Next() => new(NextValue(), false);
+
+    [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographic function.")]
+    private static string NextValue()
     {
         TimeSpan duration = DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch;
         double microsecondsSinceEpoch = Math.Round(duration.TotalMicroseconds);
@@ -133,7 +177,7 @@ public sealed partial class TimestampIdentifier :
     /// Returns a string that represents the current <see cref="TimestampIdentifier"/> object.
     /// </summary>
     /// <returns>A string representation of the current <see cref="TimestampIdentifier"/>.</returns>
-    public override string ToString() => $"{_value}";
+    public override string ToString() => _value;
 
     /// <summary>
     /// Creates a <see cref="TimestampIdentifier"/> from the specified string.
@@ -228,13 +272,12 @@ public sealed partial class TimestampIdentifier :
     {
         ArgumentNullException.ThrowIfNull(s);
 
-        if (s.Length != TidLength ||
-            !s_Validator().IsMatch(s))
+        if (!IsValidSyntax(s))
         {
             throw new FormatException("Invalid format");
         }
 
-        return new TimestampIdentifier(s);
+        return new TimestampIdentifier(s, false);
     }
 
     /// <summary>
@@ -260,21 +303,13 @@ public sealed partial class TimestampIdentifier :
     {
         result = null;
 
-        if (s is null)
+        if (s is null || !IsValidSyntax(s))
         {
             return false;
         }
 
-        try
-        {
-            result = Parse(s, provider);
-            return true;
-
-        }
-        catch
-        {
-            return false;
-        }
+        result = new TimestampIdentifier(s, false);
+        return true;
     }
 
     /// <summary>
@@ -454,5 +489,27 @@ public sealed partial class TimestampIdentifier :
         }
 
         public int GetHashCode(TimestampIdentifier obj) => obj._value.GetHashCode(StringComparison.InvariantCulture);
+    }
+
+    // This is a hand written equivalent of ValidationRegex,
+    //   ^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$
+    // from https://atproto.com/specs/tid. Checking the characters directly is several times faster than the regex, even a
+    // source generated one. CanonicalRegexEquivalenceTests checks it accepts exactly what the regex does.
+    internal static bool IsValidSyntax(ReadOnlySpan<char> s)
+    {
+        if (s.Length != TidLength || s[0] is not ((>= '2' and <= '7') or (>= 'a' and <= 'j')))
+        {
+            return false;
+        }
+
+        foreach (char c in s[1..])
+        {
+            if (c is not ((>= '2' and <= '7') or (>= 'a' and <= 'z')))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

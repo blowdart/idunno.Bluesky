@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+extern alias AtProto;
+
 using System.Text;
 using System.Text.Json;
 
@@ -93,7 +95,7 @@ public class JetstreamBenchmarks
     private int ParseV1(byte[] message)
     {
         string json = Encoding.UTF8.GetString(message);
-        AtJetstreamEvent? atJetstreamEvent = JsonSerializer.Deserialize(json, SourceGenerationContext.Default.AtJetstreamEvent);
+        AtJetstreamEvent? atJetstreamEvent = JsonSerializer.Deserialize(json, AtProto::idunno.AtProto.SourceGenerationContext.Default.AtJetstreamEvent);
         return atJetstreamEvent is not null && _v1Jetstream.DeriveEvent(atJetstreamEvent) is not null ? 1 : 0;
     }
 }

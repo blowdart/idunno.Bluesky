@@ -77,6 +77,9 @@
 #### idunno.AtProto.Types
 
 * Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
+* Added `Nsid.ValidationRegex`, `RecordKey.ValidationRegex` and `TimestampIdentifier.ValidationRegex`, the syntax regular expressions from the
+  AT Protocol specifications, for client side validation. Like `Did.ValidationRegex` and `Handle.ValidationRegex` they check syntax only;
+  use `TryParse()` to validate a value fully.
 
 #### idunno.Bluesky
 
@@ -115,6 +118,9 @@
   `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
 * `Cid.Hash` now returns a read-only view of the hash, rather than the array itself, so it can no longer be cast to `byte[]` and changed.
 * `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
+* `Did`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
+  parsing between five and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
+  no longer split the NSID. Generating a `TimestampIdentifier` no longer validates the value it has just built.
 
 #### idunno.Bluesky
 
@@ -168,6 +174,8 @@
   throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
   Encoding is unchanged, and still emits the padding.
   Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
+* `Did`, `RecordKey` and `AtUri` no longer accept a value with a trailing new line, such as `"did:plc:abc\n"`. Their regular
+  expressions ended in `$`, which in .NET also matches before a final new line.
 
 #### idunno.Bluesky
 

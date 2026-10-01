@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace idunno.AtProto;
 
@@ -26,38 +25,22 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
     private const string DidPrefix = "did:";
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private const string InvalidMethod = "INVALID";
-
-    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private const int MaximumLength = 2048;
 
     /// <summary>
-    /// A regular expression suitable for use when validating a handle.
+    /// A regular expression which checks the syntax of a DID.
     /// </summary>
+    /// <remarks>
+    /// <para>The expression is suitable for client side validation, for example with a <c>RegularExpressionAttribute</c>.
+    /// It checks syntax only, and does not limit the length of the DID. Use <see cref="TryParse(string, out Did?)"/> to
+    /// validate a DID fully.</para>
+    /// </remarks>
     public const string ValidationRegex = @"^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$";
 
-    [GeneratedRegex(ValidationRegex, RegexOptions.CultureInvariant, 5000)]
-    private static partial Regex s_validationRegex();
-
-    private Did(string s, bool validate)
+    private Did(string value, string method)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(s);
-
-        if (validate)
-        {
-            if (!Parse(s, validate, out Did? did))
-            {
-                throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
-            }
-
-            Value = s;
-            Method = did!.Method;
-        }
-        else
-        {
-            Value = s;
-            Method = GetMethodFromString(s);
-        }
+        Value = value;
+        Method = method;
     }
 
     /// <summary>
@@ -67,8 +50,12 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> does not pass validation.</exception>
     [JsonConstructor]
-    public Did(string s) : this(s, true)
+    public Did(string s)
     {
+        Validate(s, throwOnError: true, out int methodEnd);
+
+        Value = s;
+        Method = GetMethod(s.AsSpan(DidPrefix.Length, methodEnd - DidPrefix.Length));
     }
 
     /// <summary>
@@ -222,17 +209,28 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
 
     internal static bool Parse(string s, bool throwOnError, out Did? result)
     {
+        if (!Validate(s, throwOnError, out int methodEnd))
+        {
+            result = null;
+            return false;
+        }
+
+        result = new Did(s, GetMethod(s.AsSpan(DidPrefix.Length, methodEnd - DidPrefix.Length)));
+        return true;
+    }
+
+    private static bool Validate(string s, bool throwOnError, out int methodEnd)
+    {
+        methodEnd = 0;
+
         if (string.IsNullOrWhiteSpace(s))
         {
             if (throwOnError)
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(s);
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
         if (s.Length > MaximumLength)
@@ -241,58 +239,88 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
             {
                 throw new ArgumentException($"\"{s}\" length is greater than {MaximumLength}.", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
-        if (!s.StartsWith(DidPrefix, StringComparison.InvariantCulture))
+        if (!IsValidSyntax(s, out methodEnd))
         {
             if (throwOnError)
             {
                 throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
-        if (!s_validationRegex().IsMatch(s))
-        {
-            if (throwOnError)
-            {
-                throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
-            }
-            else
-            {
-                result = null;
-                return false;
-            }
-        }
-
-        result = new Did(s, false);
         return true;
     }
 
-    private static string GetMethodFromString(string s)
+    // This is a hand written equivalent of ValidationRegex,
+    //   ^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$
+    // from https://atproto.com/specs/did, except that it does not accept a trailing new line, which $ matches before.
+    // A single pass over the characters is several times faster than the regex, even a source generated one, and does
+    // not allocate. CanonicalRegexEquivalenceTests checks it accepts exactly what the regex does.
+    internal static bool IsValidSyntax(ReadOnlySpan<char> s, out int methodEnd)
     {
-        string[] segments = s.Split(':');
+        methodEnd = 0;
 
-        // A DID may contain more than three colon separated segments. did:web uses them for path segments and
-        // for ports, so anything from three upwards is valid and the method is always the second segment.
-        if (segments.Length >= 3)
+        if (!s.StartsWith(DidPrefix, StringComparison.Ordinal))
         {
-            return segments[1];
+            return false;
         }
-        else
+
+        // The method, [a-z0-9]+, followed by a colon.
+        int i = DidPrefix.Length;
+        while (i < s.Length && (char.IsAsciiLetterLower(s[i]) || char.IsAsciiDigit(s[i])))
         {
-            return InvalidMethod;
+            i++;
         }
+
+        if (i == DidPrefix.Length || i >= s.Length || s[i] != ':' || s[^1] == ':')
+        {
+            return false;
+        }
+
+        methodEnd = i;
+
+        // The method specific identifier, made of [a-zA-Z0-9._:-] and %XX escapes with upper case hex digits.
+        i++;
+        while (i < s.Length)
+        {
+            char c = s[i];
+            if (c == '%')
+            {
+                if (i + 2 >= s.Length || !IsUpperHexDigit(s[i + 1]) || !IsUpperHexDigit(s[i + 2]))
+                {
+                    return false;
+                }
+
+                i += 3;
+            }
+            else if (char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or ':' or '-')
+            {
+                i++;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
+
+    private static bool IsUpperHexDigit(char c) => char.IsAsciiDigit(c) || c is >= 'A' and <= 'F';
+
+    // The method is a slice of the DID. The two methods AT Proto supports are returned as constants, so they are not
+    // allocated for every DID.
+    private static string GetMethod(ReadOnlySpan<char> method) => method switch
+    {
+        "plc" => "plc",
+        "web" => "web",
+        _ => new string(method)
+    };
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();

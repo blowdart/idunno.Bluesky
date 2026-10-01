@@ -1,10 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace idunno.AtProto;
 
@@ -20,18 +20,34 @@ public sealed partial class Nsid : IEquatable<Nsid>
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly string _value;
 
-    [GeneratedRegex(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$", RegexOptions.CultureInvariant, 5000)]
-    private static partial Regex s_validationRegex();
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private const int MaximumLength = 253 + 1 + 63;
 
-    [GeneratedRegex("^[a-zA-Z0-9.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, 5000)]
-    private static partial Regex s_characters();
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private const int MaximumSegmentLength = 63;
+
+    private static readonly SearchValues<char> s_nameCharacters =
+        SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+
+    private static readonly SearchValues<char> s_segmentCharacters =
+        SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-");
+
+    /// <summary>
+    /// A regular expression which checks the syntax of an NSID.
+    /// </summary>
+    /// <remarks>
+    /// <para>The expression is suitable for client side validation, for example with a <c>RegularExpressionAttribute</c>.
+    /// It checks syntax only, and does not limit the length of the NSID. Use <see cref="TryParse(string, out Nsid?)"/> to
+    /// validate an NSID fully.</para>
+    /// </remarks>
+    public const string ValidationRegex = @"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$";
 
     private Nsid(string s, bool validate)
     {
         if (validate)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(s);
-            if (Parse(s, true, out _))
+            if (Validate(s, true))
             {
                 _value = s;
             }
@@ -63,7 +79,7 @@ public sealed partial class Nsid : IEquatable<Nsid>
     /// The NSID authority for this instance.
     /// </value>
     [JsonIgnore]
-    public string Authority => string.Join('.', _value.Split('.')[..^1]);
+    public string Authority => _value[.._value.LastIndexOf('.')];
 
     /// <summary>
     /// Gets the NSID name for this instance.
@@ -72,7 +88,7 @@ public sealed partial class Nsid : IEquatable<Nsid>
     /// The NSID name for this instance.
     /// </value>
     [JsonIgnore]
-    public string Name => _value.Split('.')[^1];
+    public string Name => _value[(_value.LastIndexOf('.') + 1)..];
 
     /// <summary>
     /// Returns a string representation of the <see cref="Nsid"/> current instance.
@@ -165,7 +181,7 @@ public sealed partial class Nsid : IEquatable<Nsid>
         }
 
         // Return true if the fields match.
-        return string.Equals(Name, other.Name, StringComparison.Ordinal) && string.Equals(Authority, other.Authority, StringComparison.Ordinal);
+        return string.Equals(_value, other._value, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -199,136 +215,89 @@ public sealed partial class Nsid : IEquatable<Nsid>
 
     internal static bool Parse(string s, bool throwOnError, out Nsid? result)
     {
-        result = null;
+        if (!Validate(s, throwOnError))
+        {
+            result = null;
+            return false;
+        }
 
+        result = new Nsid(s, false);
+        return true;
+    }
+
+    private static bool Validate(string s, bool throwOnError)
+    {
         if (string.IsNullOrWhiteSpace(s))
         {
             if (throwOnError)
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(s);
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
-        if (s.Length > 253 + 1 + 63)
+        if (s.Length > MaximumLength)
         {
             if (throwOnError)
             {
                 throw new NsidFormatException($"{s} is too long.");
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
-        if (!s_validationRegex().IsMatch(s))
+        if (!IsValidSyntax(s))
         {
             if (throwOnError)
             {
                 throw new NsidFormatException($"{s} is not a valid nsid.");
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
-        if (!s_characters().IsMatch(s))
-        {
-            if (throwOnError)
-            {
-                throw new NsidFormatException($"{s} is not a valid nsid.");
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        string[] labels = s.Split('.');
-
-        if (labels.Length < 3)
-        {
-            if (throwOnError)
-            {
-                throw new NsidFormatException($"{s} needs at least three parts.");
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        for (int i = 0; i < labels.Length; i++)
-        {
-            string label = labels[i];
-
-            if (label.Length == 0)
-            {
-                if (throwOnError)
-                {
-                    throw new NsidFormatException($"NSID parts can not be empty.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (label.Length > 63)
-            {
-                if (throwOnError)
-                {
-                    throw new NsidFormatException($"NSID part too long (max 63 chars)");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (label.EndsWith('-') || label.StartsWith('-'))
-            {
-                if (throwOnError)
-                {
-                    throw new NsidFormatException($"NSID parts can not start or end with hyphen.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (i == 0 && char.IsDigit(label[0]))
-            {
-                if (throwOnError)
-                {
-                    throw new NsidFormatException($"NSID first part may not start with a digit.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if (i + 1 == labels.Length && !label.IsOnlyAsciiLettersAndNumbers())
-            {
-                if (throwOnError)
-                {
-                    throw new NsidFormatException($"NSID name part must be only letters and numbers.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-
-        result = new Nsid(s, false);
         return true;
+    }
+
+    // This is a hand written equivalent of ValidationRegex,
+    //   ^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$
+    // from https://atproto.com/specs/nsid, except that it does not accept a trailing new line, which $ matches before.
+    // It replaces that regex, a second regex which checked the characters, and splitting the NSID into segments to check
+    // each one. A single pass over the characters is several times faster than the regexes, even source generated ones,
+    // and does not allocate. CanonicalRegexEquivalenceTests checks it accepts exactly what the regex does.
+    //
+    // An NSID is at least three dot separated segments of 1 to 63 characters. The first segment starts with a letter. The
+    // last segment, the name, is a letter followed by letters and digits. Every other segment is letters, digits and
+    // hyphens, and neither starts nor ends with a hyphen.
+    internal static bool IsValidSyntax(ReadOnlySpan<char> s)
+    {
+        int segments = 0;
+
+        while (true)
+        {
+            int length = s.IndexOf('.');
+            bool isName = length < 0;
+            ReadOnlySpan<char> segment = isName ? s : s[..length];
+
+            if (segment.IsEmpty || segment.Length > MaximumSegmentLength)
+            {
+                return false;
+            }
+
+            if (isName)
+            {
+                return segments >= 2 && char.IsAsciiLetter(segment[0]) && !segment.ContainsAnyExcept(s_nameCharacters);
+            }
+
+            bool validStart = segments == 0 ? char.IsAsciiLetter(segment[0]) : char.IsAsciiLetterOrDigit(segment[0]);
+            if (!validStart || !char.IsAsciiLetterOrDigit(segment[^1]) || segment.ContainsAnyExcept(s_segmentCharacters))
+            {
+                return false;
+            }
+
+            segments++;
+            s = s[(length + 1)..];
+        }
     }
 }

@@ -62,6 +62,7 @@
   </Folder>
   <Folder Name="/devnotes/">
     <File Path="devnotes/credential-lifecycle-and-locking.md" />
+    <File Path="devnotes/prototyping-performance-improvements.md" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
