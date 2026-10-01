@@ -16,15 +16,14 @@ using idunno.Bluesky.Feed.Model;
 namespace idunno.AtProto.Benchmarks;
 
 /// <summary>
-/// Measures the LINQ queries which compute self labels for every post and author, against loop based replacements which
-/// return the same results.
+/// Measures computing self labels for every post and author, which used to be LINQ queries.
 /// </summary>
 /// <remarks>
 /// <para>The <c>Corpus</c> scenario uses the posts and authors from the captured timeline and author feed exactly as the
 /// AppView returned them, where most have no labels. The <c>Labelled</c> scenario gives every author two self labels and a
 /// labeler's label, and every post a self label and a labeler's label, to show the cost when there is work to do.</para>
-/// <para>Profile self labels call the real <see cref="ProfileViewBasic.SelfLabels"/> property. Post self labels are cached
-/// after the first call, so the baseline is a copy of the query the property runs.</para>
+/// <para>Profile self labels call the real <see cref="ProfileViewBasic.SelfLabels"/> property. <see cref="PostView.SelfLabels"/>
+/// is cached after the first read, so post self labels make the same <c>SelfLabelReader</c> call the property makes.</para>
 /// </remarks>
 [MemoryDiagnoser]
 [CategoriesColumn]
@@ -43,8 +42,8 @@ public class LinqBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        JsonTypeInfo<GetTimelineResponse> timelineTypeInfo = (JsonTypeInfo<GetTimelineResponse>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(GetTimelineResponse));
-        JsonTypeInfo<GetAuthorFeedResponse> authorFeedTypeInfo = (JsonTypeInfo<GetAuthorFeedResponse>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(GetAuthorFeedResponse));
+        JsonTypeInfo<GetTimelineResponse> timelineTypeInfo = (JsonTypeInfo<GetTimelineResponse>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(GetTimelineResponse));
+        JsonTypeInfo<GetAuthorFeedResponse> authorFeedTypeInfo = (JsonTypeInfo<GetAuthorFeedResponse>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(GetAuthorFeedResponse));
 
         PostView[] posts =
         [
@@ -67,13 +66,11 @@ public class LinqBenchmarks
 
         _posts = posts;
         _authors = [.. posts.Select(post => post.Author)];
-
-        Verify();
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     [BenchmarkCategory("ProfileSelfLabels")]
-    public int ProfileSelfLabelsCurrent()
+    public int ProfileSelfLabels()
     {
         int count = 0;
         foreach (ProfileViewBasic author in _authors)
@@ -85,107 +82,16 @@ public class LinqBenchmarks
     }
 
     [Benchmark]
-    [BenchmarkCategory("ProfileSelfLabels")]
-    public int ProfileSelfLabelsLoop()
-    {
-        int count = 0;
-        foreach (ProfileViewBasic author in _authors)
-        {
-            count += ProfileSelfLabels(author).Count;
-        }
-
-        return count;
-    }
-
-    [Benchmark(Baseline = true)]
     [BenchmarkCategory("PostSelfLabels")]
-    public int PostSelfLabelsCurrent()
+    public int PostSelfLabels()
     {
         int count = 0;
         foreach (PostView post in _posts)
         {
-            count += CurrentPostSelfLabels(post).Count;
+            count += post.Labels.Count == 0 ? 0 : SelfLabelReader.Read(post.Labels, post.Author.Did, post.Uri.ToString(), matchCid: true, post.Cid).Count;
         }
 
         return count;
-    }
-
-    [Benchmark]
-    [BenchmarkCategory("PostSelfLabels")]
-    public int PostSelfLabelsLoop()
-    {
-        int count = 0;
-        foreach (PostView post in _posts)
-        {
-            count += PostSelfLabels(post).Count;
-        }
-
-        return count;
-    }
-
-    // A copy of the query PostView.SelfLabels runs the first time it is read.
-    private static IReadOnlyList<string> CurrentPostSelfLabels(PostView post) =>
-        post.Labels
-            .Where(label => post.Author.Did == label.Source &&
-                            post.Uri.ToString() == label.Uri &&
-                            post.Cid == label.Cid)
-            .Select(label => label.Value)
-            .Distinct().ToList().AsReadOnly();
-
-    // Skips the work when there are no labels, and builds the self URI once rather than once per label.
-    private static IReadOnlyList<string> ProfileSelfLabels(ProfileViewBasic profile)
-    {
-        if (profile.Labels.Count == 0)
-        {
-            return [];
-        }
-
-        string? selfUri = null;
-        List<string>? values = null;
-
-        foreach (Label label in profile.Labels)
-        {
-            if (label.Source != profile.Did)
-            {
-                continue;
-            }
-
-            selfUri ??= $"at://{profile.Did}/app.bsky.actor.profile/self";
-            if (label.Uri == selfUri && !(values?.Contains(label.Value) ?? false))
-            {
-                (values ??= []).Add(label.Value);
-            }
-        }
-
-        return values is null ? [] : values;
-    }
-
-    // Skips the work when there are no labels, and turns the post URI into a string once rather than once per label.
-    private static IReadOnlyList<string> PostSelfLabels(PostView post)
-    {
-        if (post.Labels.Count == 0)
-        {
-            return [];
-        }
-
-        string? uri = null;
-        List<string>? values = null;
-
-        foreach (Label label in post.Labels)
-        {
-            if (label.Source != post.Author.Did || label.Cid != post.Cid)
-            {
-                continue;
-            }
-
-            uri ??= post.Uri.ToString();
-            if (label.Uri == uri && !(values?.Contains(label.Value) ?? false))
-            {
-                (values ??= []).Add(label.Value);
-            }
-        }
-
-        return values is null ? [] : values.AsReadOnly();
     }
 
     private static ProfileViewBasic WithSelfLabels(ProfileViewBasic author)
@@ -204,23 +110,4 @@ public class LinqBenchmarks
 
     private static Label NewLabel(Did source, string uri, Cid? cid, string value) =>
         new(1, source, uri, cid, value, false, s_labelled, null);
-
-    private void Verify()
-    {
-        foreach (ProfileViewBasic author in _authors)
-        {
-            if (!author.SelfLabels.SequenceEqual(ProfileSelfLabels(author)))
-            {
-                throw new InvalidOperationException($"Profile self labels differ for {author.Did}.");
-            }
-        }
-
-        foreach (PostView post in _posts)
-        {
-            if (!post.SelfLabels.SequenceEqual(PostSelfLabels(post)) || !CurrentPostSelfLabels(post).SequenceEqual(PostSelfLabels(post)))
-            {
-                throw new InvalidOperationException($"Post self labels differ for {post.Uri}.");
-            }
-        }
-    }
 }

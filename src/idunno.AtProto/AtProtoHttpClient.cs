@@ -1631,7 +1631,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     ///   headers to it would accumulate them on every call.
     /// </para>
     /// </remarks>
-    private ICollection<NameValueHeaderValue>? MergeRequestHeaders(ICollection<NameValueHeaderValue>? requestHeaders)
+    internal ICollection<NameValueHeaderValue>? MergeRequestHeaders(ICollection<NameValueHeaderValue>? requestHeaders)
     {
         if (_extraRequestHeaders is null || _extraRequestHeaders.Count == 0)
         {

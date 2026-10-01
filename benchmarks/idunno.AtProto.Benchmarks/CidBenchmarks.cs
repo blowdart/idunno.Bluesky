@@ -7,8 +7,7 @@ using BenchmarkDotNet.Configs;
 namespace idunno.AtProto.Benchmarks;
 
 /// <summary>
-/// Measures the <see cref="Cid"/> operations the firehose relies on, comparing the current implementation, the baseline,
-/// with a proposed alternative which produces identical results.
+/// Measures the <see cref="Cid"/> operations the firehose relies on.
 /// </summary>
 /// <remarks>
 /// <para>Every firehose commit reads a CAR into a <see cref="Dictionary{TKey, TValue}"/> keyed by <see cref="Cid"/>, and then
@@ -21,65 +20,28 @@ public class CidBenchmarks
 {
     private const int Count = 64;
 
+    private byte[][] _contents = null!;
     private Cid[] _cids = null!;
 
     [GlobalSetup]
     public void Setup()
     {
         Random random = new(42);
+        _contents = new byte[Count][];
         _cids = new Cid[Count];
-        byte[] content = new byte[256];
         for (int i = 0; i < Count; i++)
         {
-            random.NextBytes(content);
-            _cids[i] = Cid.FromDagCbor(content);
-        }
-
-        foreach (Cid cid in _cids)
-        {
-            if (ProposedToString(cid) != cid.ToString() || ProposedComparer.Instance.GetHashCode(cid) != cid.GetHashCode())
-            {
-                throw new InvalidOperationException("The proposed implementation does not match the current one.");
-            }
+            _contents[i] = new byte[256];
+            random.NextBytes(_contents[i]);
+            _cids[i] = Cid.FromDagCbor(_contents[i]);
         }
     }
-
-    [Benchmark(Baseline = true, OperationsPerInvoke = Count)]
-    [BenchmarkCategory("CarBlockDictionary")]
-    public int DictionaryCurrent() => FillAndLookUp(new Dictionary<Cid, int>(Count));
 
     [Benchmark(OperationsPerInvoke = Count)]
     [BenchmarkCategory("CarBlockDictionary")]
-    public int DictionaryProposedHash() => FillAndLookUp(new Dictionary<Cid, int>(Count, ProposedComparer.Instance));
-
-    [Benchmark(Baseline = true, OperationsPerInvoke = Count)]
-    [BenchmarkCategory("ToString")]
-    public int ToStringCurrent()
+    public int CarBlockDictionary()
     {
-        int length = 0;
-        foreach (Cid cid in _cids)
-        {
-            length += cid.ToString().Length;
-        }
-
-        return length;
-    }
-
-    [Benchmark(OperationsPerInvoke = Count)]
-    [BenchmarkCategory("ToString")]
-    public int ToStringProposed()
-    {
-        int length = 0;
-        foreach (Cid cid in _cids)
-        {
-            length += ProposedToString(cid).Length;
-        }
-
-        return length;
-    }
-
-    private int FillAndLookUp(Dictionary<Cid, int> blocks)
-    {
+        Dictionary<Cid, int> blocks = new(Count);
         for (int i = 0; i < _cids.Length; i++)
         {
             blocks.TryAdd(_cids[i], i);
@@ -97,64 +59,29 @@ public class CidBenchmarks
         return found;
     }
 
-    // The hash is a byte[] whenever the Cid built it, so it can be hashed in place rather than copied.
-    private sealed class ProposedComparer : IEqualityComparer<Cid>
+    // A Cid caches its string form, so this measures reading the cached value.
+    [Benchmark(OperationsPerInvoke = Count)]
+    [BenchmarkCategory("ToString")]
+    public int CachedToString()
     {
-        public static ProposedComparer Instance { get; } = new();
-
-        public bool Equals(Cid? x, Cid? y) => x == y;
-
-        public int GetHashCode(Cid obj)
+        int length = 0;
+        foreach (Cid cid in _cids)
         {
-            HashCode hashAlgorithm = default;
-            hashAlgorithm.Add(obj.Version);
-            hashAlgorithm.Add(obj.Codec);
-            hashAlgorithm.AddBytes(obj.Hash is byte[] hash ? hash : [.. obj.Hash]);
-            return hashAlgorithm.ToHashCode();
-        }
-    }
-
-    // Writes the CID bytes into a stack buffer rather than a List<byte>, and lower cases while copying, rather than
-    // allocating an upper case string, a lower case string and then the prefixed result.
-    private static string ProposedToString(Cid cid)
-    {
-        byte[] hash = cid.Hash is byte[] array ? array : [.. cid.Hash];
-
-        Span<byte> buffer = stackalloc byte[128];
-        int length = 1 + VarIntLength(cid.Codec) + hash.Length;
-        Span<byte> bytes = length <= buffer.Length ? buffer[..length] : new byte[length];
-
-        bytes[0] = cid.Version;
-        int offset = 1;
-        ulong codec = cid.Codec;
-        while (codec >= 0x80)
-        {
-            bytes[offset++] = (byte)(codec | 0x80);
-            codec >>= 7;
+            length += cid.ToString().Length;
         }
 
-        bytes[offset++] = (byte)codec;
-        hash.CopyTo(bytes[offset..]);
-
-        string upper = SimpleBase.Base32.Rfc4648.Encode(bytes);
-
-        return string.Create(upper.Length + 1, upper, static (destination, source) =>
-        {
-            destination[0] = 'b';
-            for (int i = 0; i < source.Length; i++)
-            {
-                destination[i + 1] = char.ToLowerInvariant(source[i]);
-            }
-        });
+        return length;
     }
 
-    private static int VarIntLength(ulong value)
+    // Hashing a block and formatting the new Cid, which is what happens the first time a firehose block's Cid is used.
+    [Benchmark(OperationsPerInvoke = Count)]
+    [BenchmarkCategory("CreateAndFormat")]
+    public int CreateAndFormat()
     {
-        int length = 1;
-        while (value >= 0x80)
+        int length = 0;
+        foreach (byte[] content in _contents)
         {
-            value >>= 7;
-            length++;
+            length += Cid.FromDagCbor(content).ToString().Length;
         }
 
         return length;

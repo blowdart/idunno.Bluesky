@@ -2886,7 +2886,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <see cref="MessageReceived"/> and missing from the one handed to <see cref="RecordReceived"/>. The key the
     /// derived type was built from is left out, as its value is already available as a property.</para>
     /// </remarks>
-    private static Dictionary<string, JsonElement> ExtensionDataExcept(IDictionary<string, JsonElement> extensionData, string consumedKey)
+    internal static Dictionary<string, JsonElement> ExtensionDataExcept(IDictionary<string, JsonElement> extensionData, string consumedKey)
     {
         Dictionary<string, JsonElement> remaining = new(extensionData, StringComparer.Ordinal);
         remaining.Remove(consumedKey);

@@ -3,7 +3,6 @@
 
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
@@ -23,7 +22,7 @@ namespace idunno.AtProto.Benchmarks;
 /// </summary>
 /// <remarks>
 /// <para>The <c>EndToEnd</c> category is a whole call through the public API. The other categories isolate a single step of
-/// that call, comparing what the client does today, the baseline, with a proposed alternative.</para>
+/// that call, performed the way the client performs it.</para>
 /// </remarks>
 [MemoryDiagnoser]
 [CategoriesColumn]
@@ -59,9 +58,9 @@ public class XrpcBenchmarks
         // The replay handler ignores authorization, so an unsigned token which never expires is enough to authenticate the request.
         _credentials = new AccessCredentials(s_service, AuthenticationType.UsernamePassword, UnsignedJwt(CaptureScrubber.PlaceholderDid), "refresh");
 
-        _authorFeedTypeInfo = (JsonTypeInfo<GetAuthorFeedResponse>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(GetAuthorFeedResponse));
-        _timelineTypeInfo = (JsonTypeInfo<GetTimelineResponse>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(GetTimelineResponse));
-        _postTypeInfo = (JsonTypeInfo<Post>)BlueskyJsonSerializerOptions.Options.GetTypeInfo(typeof(Post));
+        _authorFeedTypeInfo = (JsonTypeInfo<GetAuthorFeedResponse>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(GetAuthorFeedResponse));
+        _timelineTypeInfo = (JsonTypeInfo<GetTimelineResponse>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(GetTimelineResponse));
+        _postTypeInfo = (JsonTypeInfo<Post>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(Post));
         _post = new Post("A post of an ordinary length, with a little text in it, which is what most create record calls send. 🦋");
     }
 
@@ -100,80 +99,32 @@ public class XrpcBenchmarks
         return result.Result!.Count;
     }
 
-    // Today the bounded read produces a UTF-16 string, which is then deserialized.
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("ResponseDecode")]
-    public object? DecodeViaString() =>
-        JsonSerializer.Deserialize(Encoding.UTF8.GetString(_authorFeed), _authorFeedTypeInfo);
-
-    // Deserializing the UTF-8 bytes the bounded read already holds skips the string, which is twice the size of the body.
+    // The client deserializes the UTF-8 bytes of the bounded read.
     [Benchmark]
     [BenchmarkCategory("ResponseDecode")]
-    public object? DecodeViaUtf8() =>
+    public object? AuthorFeedDecode() =>
         JsonSerializer.Deserialize(_authorFeed, _authorFeedTypeInfo);
 
-    // The same comparison for an authenticated timeline, whose entries also carry viewer state.
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("TimelineDecode")]
-    public object? TimelineDecodeViaString() =>
-        JsonSerializer.Deserialize(Encoding.UTF8.GetString(_timeline), _timelineTypeInfo);
-
+    // An authenticated timeline, whose entries also carry viewer state.
     [Benchmark]
-    [BenchmarkCategory("TimelineDecode")]
-    public object? TimelineDecodeViaUtf8() =>
+    [BenchmarkCategory("ResponseDecode")]
+    public object? TimelineDecode() =>
         JsonSerializer.Deserialize(_timeline, _timelineTypeInfo);
 
-    // Today a record is serialized to a string, which StringContent then encodes back to UTF-8.
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("RequestEncode")]
-    public async Task EncodeViaString()
-    {
-        using StringContent content = new(JsonSerializer.Serialize(_post, _postTypeInfo), Encoding.UTF8, "application/json");
-        await content.CopyToAsync(Stream.Null).ConfigureAwait(false);
-    }
-
+    // The client serializes a record straight to UTF-8 bytes for the request body.
     [Benchmark]
     [BenchmarkCategory("RequestEncode")]
-    public async Task EncodeViaUtf8Bytes()
+    public async Task RequestEncode()
     {
         using ByteArrayContent content = new(JsonSerializer.SerializeToUtf8Bytes(_post, _postTypeInfo));
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json") { CharSet = "utf-8" };
         await content.CopyToAsync(Stream.Null).ConfigureAwait(false);
     }
 
-    // JsonContent serializes straight into the request stream. It cannot be replayed for a DPoP nonce retry without
-    // buffering, which the client already does for caller supplied content.
-    [Benchmark]
-    [BenchmarkCategory("RequestEncode")]
-    public async Task EncodeViaJsonContent()
-    {
-        using JsonContent content = JsonContent.Create(_post, _postTypeInfo);
-        await content.CopyToAsync(Stream.Null).ConfigureAwait(false);
-    }
-
-    // Today the endpoint name used to tag metrics is found by splitting the whole path and query string.
-    [Benchmark(Baseline = true)]
-    [BenchmarkCategory("MetricsEndpointName")]
-    public string EndpointNameViaSplit()
-    {
-        string xrpcEndpoint = AuthorFeedEndpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? string.Empty;
-
-        if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
-        {
-            xrpcEndpoint = xrpcEndpoint.Split('?')[0];
-        }
-
-        return xrpcEndpoint;
-    }
-
+    // The endpoint name used to tag metrics.
     [Benchmark]
     [BenchmarkCategory("MetricsEndpointName")]
-    public string EndpointNameViaSpan()
-    {
-        ReadOnlySpan<char> name = AuthorFeedEndpoint.AsSpan("/xrpc/".Length);
-        int end = name.IndexOfAny('/', '?');
-        return (end < 0 ? name : name[..end]).ToString();
-    }
+    public string MetricsEndpointName() => AtProtoHttpClient<object>.GetXrpcEndpointName(AuthorFeedEndpoint);
 
     private static string UnsignedJwt(string subject)
     {
