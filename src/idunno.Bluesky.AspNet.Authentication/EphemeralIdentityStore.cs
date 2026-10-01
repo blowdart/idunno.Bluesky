@@ -92,7 +92,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     }
 
     // Lets tests control when entries and refresh locks expire, rather than waiting on the system clock.
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
     internal EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive,

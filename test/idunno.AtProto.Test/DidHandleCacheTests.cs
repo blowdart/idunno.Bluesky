@@ -49,6 +49,21 @@ public class DidHandleCacheTests
     }
 
     [Fact]
+    public async Task HandlesDoNotExpireWhileTheTimeProviderHasNotAdvanced()
+    {
+        ManualTimeProvider timeProvider = new();
+        TestResolver resolver = new(_ => Task.FromResult(s_handle));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Duration = TimeSpan.FromMilliseconds(50), TimeProvider = timeProvider });
+
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+
+        Assert.True(cache.TryGetCachedHandle(s_did, out _));
+        Assert.Equal(1, resolver.Calls);
+    }
+
+    [Fact]
     public async Task AnInvalidHandleIsCachedForTheFailedResolutionDuration()
     {
         ManualTimeProvider timeProvider = new();
