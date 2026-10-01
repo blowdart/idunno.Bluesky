@@ -1,12 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.SQLite.Test;
 
 public class ExpiredEntrySweepThrottleTests
 {
     private static readonly TimeSpan s_shortInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan s_afterShortIntervalElapses = TimeSpan.FromMilliseconds(250);
 
     [Fact]
     public void ASweepIsNotClaimableUntilAnIntervalHasElapsed()
@@ -17,21 +18,23 @@ public class ExpiredEntrySweepThrottleTests
     }
 
     [Fact]
-    public async Task ASweepIsClaimableOnceAnIntervalHasElapsed()
+    public void ASweepIsClaimableOnceAnIntervalHasElapsed()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", timeProvider);
 
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        timeProvider.Advance(s_shortInterval);
 
         Assert.True(throttle.TryClaimSweep());
     }
 
     [Fact]
-    public async Task ClaimingASweepConsumesTheInterval()
+    public void ClaimingASweepConsumesTheInterval()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", timeProvider);
 
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        timeProvider.Advance(s_shortInterval);
 
         Assert.True(throttle.TryClaimSweep());
         Assert.False(throttle.TryClaimSweep());

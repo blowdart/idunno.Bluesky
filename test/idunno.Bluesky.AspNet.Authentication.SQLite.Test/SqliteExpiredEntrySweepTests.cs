@@ -8,6 +8,8 @@ using Duende.IdentityModel.OidcClient;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.SQLite.Test;
 
 /// <summary>
@@ -26,7 +28,6 @@ public class SqliteExpiredEntrySweepTests
     private const string CorrelationStatesTable = "idunno_bluesky_correlation_states";
 
     private static readonly TimeSpan s_shortSweepInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan s_afterSweepIntervalElapses = TimeSpan.FromMilliseconds(250);
 
     [Fact]
     public async Task WritingAnIdentitySweepsIdentitiesWhichHaveExpired()
@@ -34,15 +35,21 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
             database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: null,
+            meterFactory: null,
+            loggerFactory: null,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
         Assert.Equal(1, database.CountRows(IdentitiesTable));
 
         database.ExpireRows(IdentitiesTable);
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -55,14 +62,19 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
             database.ConnectionString,
+            timeProvider,
             entryTimeToLive: TimeSpan.FromDays(1),
+            refreshLockLength: null,
+            meterFactory: null,
+            loggerFactory: null,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -75,15 +87,21 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
             database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: null,
+            meterFactory: null,
+            loggerFactory: null,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         Assert.NotNull(await store.StartRefresh(NewDid(), cancellationToken));
         Assert.Equal(1, database.CountRows(RefreshLocksTable));
 
         database.ExpireRows(RefreshLocksTable);
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -96,14 +114,19 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
             database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
             refreshLockLength: TimeSpan.FromMinutes(5),
+            meterFactory: null,
+            loggerFactory: null,
             expiredEntrySweepInterval: s_shortSweepInterval);
 
         Assert.NotNull(await store.StartRefresh(NewDid(), cancellationToken));
 
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await store.Add(ClaimsIdentityFor(NewDid()), cancellationToken);
 
@@ -135,15 +158,19 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteCorrelationStateCache cache = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteCorrelationStateCache cache = SqliteCorrelationStateCache.CreateWithTimeProvider(
             database.ConnectionString,
-            expiredEntrySweepInterval: s_shortSweepInterval);
+            timeProvider,
+            entryTimeToLive: null,
+            expiredEntrySweepInterval: s_shortSweepInterval,
+            loggerFactory: null);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
         Assert.Equal(1, database.CountRows(CorrelationStatesTable));
 
         database.ExpireRows(CorrelationStatesTable);
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
@@ -156,14 +183,17 @@ public class SqliteExpiredEntrySweepTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteCorrelationStateCache cache = new(
+        FakeTimeProvider timeProvider = new();
+        SqliteCorrelationStateCache cache = SqliteCorrelationStateCache.CreateWithTimeProvider(
             database.ConnectionString,
+            timeProvider,
             entryTimeToLive: TimeSpan.FromMinutes(15),
-            expiredEntrySweepInterval: s_shortSweepInterval);
+            expiredEntrySweepInterval: s_shortSweepInterval,
+            loggerFactory: null);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 
-        await Task.Delay(s_afterSweepIntervalElapses, cancellationToken);
+        timeProvider.Advance(s_shortSweepInterval);
 
         await cache.AddOAuthLoginState(Guid.NewGuid(), LoginState(), cancellationToken);
 

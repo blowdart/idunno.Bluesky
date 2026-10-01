@@ -193,7 +193,7 @@ public partial class AtProtoJetstream
                     break;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(1), Options.TimeProvider, cancellationToken).ConfigureAwait(false);
             }
 
             if (restartFromArchive)

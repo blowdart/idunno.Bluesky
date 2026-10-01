@@ -346,6 +346,8 @@ public partial class AtProtoAgent : Agent
     /// </summary>
     protected internal AtProtoAgentOptions? Options { get; init; }
 
+    private TimeProvider Clock => Options?.TimeProvider ?? System.TimeProvider.System;
+
     /// <summary>
     /// Gets the maximum number of bytes to read from an XRPC response body, as configured by
     /// <see cref="AtProtoAgentOptions.MaximumResponseSize"/>.

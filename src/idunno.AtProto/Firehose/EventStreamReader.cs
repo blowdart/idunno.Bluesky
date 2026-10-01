@@ -265,7 +265,7 @@ internal sealed class EventStreamReader
                 _metrics.Reconnections.Add(1, _serverTag);
                 FirehoseLogger.Reconnecting(_logger, attempts, delay);
 
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(delay, _options.TimeProvider, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -358,7 +358,7 @@ internal sealed class EventStreamReader
 
             FirehoseLogger.ConnectionRefused(_logger, (int)statusCode);
 
-            TimeSpan? retryAfter = GetRetryAfter(socket.HttpResponseHeaders);
+            TimeSpan? retryAfter = GetRetryAfter(socket.HttpResponseHeaders, _options.TimeProvider);
             FirehoseConnectionException refused = new(statusCode, null, retryAfter, exception);
 
             if (statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or HttpStatusCode.InternalServerError or
@@ -383,7 +383,9 @@ internal sealed class EventStreamReader
         return null;
     }
 
-    internal static TimeSpan? GetRetryAfter(IReadOnlyDictionary<string, IEnumerable<string>>? headers)
+    internal static TimeSpan? GetRetryAfter(
+        IReadOnlyDictionary<string, IEnumerable<string>>? headers,
+        TimeProvider? timeProvider = null)
     {
         if (headers is null)
         {
@@ -406,7 +408,7 @@ internal sealed class EventStreamReader
 
             if (DateTimeOffset.TryParseExact(value, "r", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset date))
             {
-                TimeSpan wait = date - DateTimeOffset.UtcNow;
+                TimeSpan wait = date - (timeProvider ?? TimeProvider.System).GetUtcNow();
                 return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
             }
 

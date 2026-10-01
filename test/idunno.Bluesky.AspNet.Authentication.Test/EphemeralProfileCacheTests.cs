@@ -4,6 +4,7 @@
 using idunno.AtProto;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -50,15 +51,16 @@ public class EphemeralProfileCacheTests
     {
         // Sharing storage meant sharing the expiry stamped on an entry at write time, so a cache configured with a
         // short timeout would happily serve an entry a long lived cache had written.
-        using EphemeralProfileCache longLived = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMinutes(30));
-        using EphemeralProfileCache shortLived = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMilliseconds(50));
+        FakeTimeProvider timeProvider = new();
+        using EphemeralProfileCache longLived = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMinutes(30), sizeLimit: null, timeProvider: timeProvider);
+        using EphemeralProfileCache shortLived = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMilliseconds(50), sizeLimit: null, timeProvider: timeProvider);
 
         Did did = TestData.NewDid();
 
         await longLived.Add(did, Profile());
         await shortLived.Add(did, Profile());
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(51));
 
         Assert.Null(await shortLived.GetCachedValue(did));
         Assert.NotNull(await longLived.GetCachedValue(did));
@@ -67,12 +69,13 @@ public class EphemeralProfileCacheTests
     [Fact]
     public async Task AProfileExpiresAfterItsTimeToLive()
     {
-        using EphemeralProfileCache cache = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMilliseconds(50));
+        FakeTimeProvider timeProvider = new();
+        using EphemeralProfileCache cache = new(NullLoggerFactory.Instance, entryTimeToLive: TimeSpan.FromMilliseconds(50), sizeLimit: null, timeProvider: timeProvider);
 
         Did did = TestData.NewDid();
         await cache.Add(did, Profile());
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(51));
 
         Assert.Null(await cache.GetCachedValue(did));
     }

@@ -1,4 +1,11 @@
 #nullable enable
+idunno.AtProto.AtProtoAgentOptions.TimeProvider.get -> System.TimeProvider!
+idunno.AtProto.AtProtoAgentOptions.TimeProvider.set -> void
+idunno.AtProto.Authentication.IAccessCredential.IsExpiredAt(System.TimeProvider! timeProvider) -> bool
+idunno.AtProto.Firehose.FirehoseOptions.TimeProvider.get -> System.TimeProvider!
+idunno.AtProto.Firehose.FirehoseOptions.TimeProvider.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.TimeProvider.get -> System.TimeProvider!
+idunno.AtProto.Jetstream.JetstreamOptions.TimeProvider.init -> void
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Net.Http.IHttpClientFactory! httpClientFactory, System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
 *REMOVED*idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>!
@@ -767,6 +774,8 @@ idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.get -> System.Time
 idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.init -> void
 idunno.AtProto.DidHandleCacheOptions.HttpClient.get -> System.Net.Http.HttpClient?
 idunno.AtProto.DidHandleCacheOptions.HttpClient.init -> void
+idunno.AtProto.DidHandleCacheOptions.MaximumConcurrentResolutions.get -> int
+idunno.AtProto.DidHandleCacheOptions.MaximumConcurrentResolutions.init -> void
 idunno.AtProto.DidHandleCacheOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
 idunno.AtProto.DidHandleCacheOptions.LoggerFactory.init -> void
 idunno.AtProto.DidHandleCacheOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?

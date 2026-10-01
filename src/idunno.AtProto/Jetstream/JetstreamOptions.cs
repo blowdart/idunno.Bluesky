@@ -46,6 +46,7 @@ public record JetstreamOptions
         ArgumentNullException.ThrowIfNull(builder);
         builder.Append("ApiKey = [redacted], LoggerFactory = ").Append(LoggerFactory)
             .Append(", MeterFactory = ").Append(MeterFactory)
+            .Append(", TimeProvider = ").Append(TimeProvider)
             .Append(", ProtocolVersion = ").Append(ProtocolVersion)
             .Append(", UseCompression = ").Append(UseCompression)
             .Append(", Dictionary = ").Append(Dictionary)
@@ -79,6 +80,12 @@ public record JetstreamOptions
     /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
     /// </summary>
     public IMeterFactory? MeterFactory { get; set; }
+
+    /// <summary>
+    /// Gets the provider used for Jetstream time reads and timed waits.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
     /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.

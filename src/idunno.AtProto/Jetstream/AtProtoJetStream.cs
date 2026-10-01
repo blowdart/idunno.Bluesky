@@ -646,7 +646,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
     {
         EventHandler<MessageReceivedEventArgs>? messageReceived = _messageReceived;
-        MessageLastReceived = DateTimeOffset.UtcNow;
+        MessageLastReceived = Options.TimeProvider.GetUtcNow();
 
         if (!_disposed)
         {
@@ -2243,7 +2243,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    await Task.Delay(s_receiveFailureBackoff, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(s_receiveFailureBackoff, Options.TimeProvider, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {

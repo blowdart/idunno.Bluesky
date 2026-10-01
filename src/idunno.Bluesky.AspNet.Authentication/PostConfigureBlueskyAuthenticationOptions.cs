@@ -36,6 +36,7 @@ public class PostConfigureBlueskyAuthenticationOptions(
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(options.RefreshCheckWait, TimeSpan.Zero);
 
         options.DataProtectionProvider ??= dataProtection;
+        options.TimeProvider ??= System.TimeProvider.System;
 
         ArgumentNullException.ThrowIfNull(name);
 
@@ -88,7 +89,13 @@ public class PostConfigureBlueskyAuthenticationOptions(
             options.AccessDeniedPath = CookieAuthenticationDefaults.AccessDeniedPath;
         }
 
-        options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive, options.RefreshLockLength);
+        options.IdentityStore ??= new EphemeralIdentityStore(
+            loggerFactory,
+            options.IdentityStoreEntryTimeToLive,
+            options.RefreshLockLength,
+            sizeLimit: null,
+            meterFactory: null,
+            options.TimeProvider);
 
         // The identity store holds the access token, the refresh token and the DPoP proof key, and the correlation
         // cache holds the PKCE verifier and the DPoP private key of a login in flight. Both are encrypted at rest
@@ -108,7 +115,7 @@ public class PostConfigureBlueskyAuthenticationOptions(
         // constructor, which only ever sees the unnamed options instance. They are pushed onto the store here instead.
         options.IdentityStore.Events = options.IdentityStoreEvents;
 
-        options.CorrelationStateCache ??= new EphemeralCorrelationStateCache(loggerFactory);
+        options.CorrelationStateCache ??= new EphemeralCorrelationStateCache(loggerFactory, timeProvider: options.TimeProvider);
         options.CorrelationStateCache.Events = options.CorrelationStateCacheEvents;
     }
 }

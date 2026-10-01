@@ -42,6 +42,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
@@ -59,6 +60,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
@@ -76,6 +78,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />

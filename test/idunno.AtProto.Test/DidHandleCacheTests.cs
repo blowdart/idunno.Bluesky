@@ -2,6 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
+using System.Reflection;
+
+using Microsoft.Extensions.Logging;
+
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
 
@@ -32,7 +38,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task HandlesExpireAfterTheirDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(s_handle));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Duration = TimeSpan.FromMinutes(10), TimeProvider = timeProvider });
 
@@ -51,13 +57,11 @@ public class DidHandleCacheTests
     [Fact]
     public async Task HandlesDoNotExpireWhileTheTimeProviderHasNotAdvanced()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(s_handle));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Duration = TimeSpan.FromMilliseconds(50), TimeProvider = timeProvider });
 
         await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
-
-        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
 
         Assert.True(cache.TryGetCachedHandle(s_did, out _));
         Assert.Equal(1, resolver.Calls);
@@ -66,7 +70,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AnInvalidHandleIsCachedForTheFailedResolutionDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromMinutes(1), TimeProvider = timeProvider });
 
@@ -87,7 +91,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AnInvalidHandleIsNotCachedForLongerThanTheDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
         {
@@ -116,14 +120,304 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AResolutionWhichTimesOutResultsInAnInvalidHandle()
     {
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(async cancellationToken =>
         {
             await Task.Delay(Timeout.Infinite, cancellationToken);
             return s_handle;
         });
-        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromMilliseconds(50) });
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            TimeProvider = timeProvider
+        });
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(Handle.Invalid, await lookup);
+    }
+
+    [Fact]
+    public async Task AResolverWhichIgnoresCancellationIsBoundedByTheTimeout()
+    {
+        FakeTimeProvider timeProvider = new();
+        TaskCompletionSource<Handle> neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => neverCompletes.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            TimeProvider = timeProvider
+        });
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(Handle.Invalid, await lookup);
+    }
+
+    [Fact]
+    public async Task DisposingCancelsAResolverWhichIgnoresCancellation()
+    {
+        TaskCompletionSource<Handle> neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => neverCompletes.Task);
+        DidHandleCache cache = new(resolver.ResolveAsync, null);
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        cache.Dispose();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lookup.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(nameof(DidHandleCacheMetrics.Hits), "idunno.atproto.didhandlecache.total.hits")]
+    [InlineData(nameof(DidHandleCacheMetrics.Misses), "idunno.atproto.didhandlecache.total.misses")]
+    [InlineData(nameof(DidHandleCacheMetrics.CoalescedLookups), "idunno.atproto.didhandlecache.total.coalesced_lookups")]
+    [InlineData(nameof(DidHandleCacheMetrics.RejectedLookups), "idunno.atproto.didhandlecache.total.rejected_lookups")]
+    [InlineData(nameof(DidHandleCacheMetrics.InvalidHandles), "idunno.atproto.didhandlecache.total.invalid_handles")]
+    [InlineData(nameof(DidHandleCacheMetrics.Invalidations), "idunno.atproto.didhandlecache.total.invalidations")]
+    public void CounterIsPublishedUnderItsExpectedName(string propertyName, string instrumentName)
+    {
+        // Instrument names are a contract with whatever is scraping them, so a rename should not pass silently.
+        using RecordingMeterFactory meterFactory = new();
+        DidHandleCacheMetrics metrics = new(meterFactory);
+        using MeasurementRecorder recorder = new(meterFactory);
+
+        Counter<long> counter = (Counter<long>)typeof(DidHandleCacheMetrics)
+            .GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(metrics)!;
+        counter.Add(1);
+
+        Assert.Equal(1, recorder.Total(instrumentName));
+        Assert.Equal([DidHandleCacheMetrics.MeterName], meterFactory.CreatedMeterNames);
+    }
+
+    [Fact]
+    public async Task LookupsAndInvalidationsEmitMetrics()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> second = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        completion.SetResult(s_handle);
+        await first;
+        await second;
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.CoalescedLookups)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
+        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
+        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+
+        cache.Invalidate(s_did);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+    }
+
+    [Fact]
+    public async Task AnInvalidHandleEmitsAMetric()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
+
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
+    }
+
+    [Fact]
+    public async Task LookupsAreRejectedButNotCachedOnceSizeLookupsArePending()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Size = 1, MeterFactory = meterFactory });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> shared = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> rejected = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+
+        Assert.True(rejected.IsCompleted);
+        Assert.Equal(Handle.Invalid, await rejected);
+        Assert.Equal(1, resolver.Calls);
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.CoalescedLookups)));
+        Assert.False(cache.TryGetCachedHandle(s_otherDid, out _));
+
+        completion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await first);
+        Assert.Equal(s_handle, await shared);
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
+    }
+
+    [Fact]
+    public async Task LookupsOrphanedByAnInvalidationStillCountAsPending()
+    {
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Size = 1 });
+
+        ValueTask<Handle> orphaned = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        cache.Invalidate(s_did);
 
         Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken));
+        Assert.Equal(1, resolver.Calls);
+
+        completion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await orphaned);
+        Assert.False(cache.TryGetCachedHandle(s_did, out _));
+    }
+
+    [Fact]
+    public async Task AtMostMaximumConcurrentResolutionsRunAtOnce()
+    {
+        TaskCompletionSource<Handle> firstCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Handle otherHandle = new("other.example.com");
+        int calls = 0;
+        TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? firstCompletion.Task : Task.FromResult(otherHandle));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MaximumConcurrentResolutions = 1 });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> waiting = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, resolver.Calls);
+        Assert.False(waiting.IsCompleted);
+
+        firstCompletion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await first);
+        Assert.Equal(otherHandle, await waiting);
+        Assert.Equal(2, resolver.Calls);
+    }
+
+    [Fact]
+    public async Task ATimedOutResolverWhichIgnoresCancellationHoldsItsSlotUntilItFinishes()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        FakeTimeProvider timeProvider = new();
+        TaskCompletionSource<Handle> ignoresCancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int calls = 0;
+        TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? ignoresCancellation.Task : Task.FromResult(s_handle));
+        Did thirdDid = new("did:web:third.example.com");
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            MaximumConcurrentResolutions = 1,
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            MeterFactory = meterFactory,
+            TimeProvider = timeProvider
+        });
+
+        ValueTask<Handle> timedOut = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+        Assert.Equal(Handle.Invalid, await timedOut);
+
+        ValueTask<Handle> blocked = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+        Assert.False(blocked.IsCompleted);
+        Assert.Equal(1, resolver.Calls);
+
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+        Assert.Equal(Handle.Invalid, await blocked);
+        Assert.Equal(1, resolver.Calls);
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+
+        ignoresCancellation.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(thirdDid, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
+    }
+
+    [Fact]
+    public async Task AResolverWhichThrowsSynchronouslyReleasesItsSlot()
+    {
+        int calls = 0;
+        TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? throw new InvalidOperationException("Resolver failed.") : Task.FromResult(s_handle));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MaximumConcurrentResolutions = 1 });
+
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ALookupWhichTimesOutWaitingToStartIsRejectedButNotCached()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        FakeTimeProvider timeProvider = new();
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            MaximumConcurrentResolutions = 1,
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            MeterFactory = meterFactory,
+            TimeProvider = timeProvider
+        });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> waiting = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
+
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(Handle.Invalid, await first);
+        Assert.Equal(Handle.Invalid, await waiting);
+        Assert.Equal(1, resolver.Calls);
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+        Assert.False(cache.TryGetCachedHandle(s_otherDid, out _));
+
+        completion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
+    }
+
+    [Fact]
+    public async Task InvalidatingOtherDidsDoesNotStopAHandleBeingCached()
+    {
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, null);
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        for (int i = 0; i < 4096; i++)
+        {
+            cache.Invalidate(new Did($"did:web:invalidated{i}.example.com"));
+        }
+
+        completion.SetResult(s_handle);
+
+        Assert.Equal(s_handle, await lookup);
+        Assert.True(cache.TryGetCachedHandle(s_did, out Handle? cached));
+        Assert.Equal(s_handle, cached);
+    }
+
+    [Fact]
+    public async Task ALookupCompletesWhenLoggingThrows()
+    {
+        TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { LoggerFactory = new ThrowingLoggerFactory() });
+
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.False(cache.TryGetCachedHandle(s_did, out _));
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
     }
 
     [Fact]
@@ -274,6 +568,7 @@ public class DidHandleCacheTests
         DidHandleCacheOptions options = new();
 
         Assert.Equal(100_000, options.Size);
+        Assert.Equal(32, options.MaximumConcurrentResolutions);
         Assert.Equal(TimeSpan.FromHours(1), options.Duration);
         Assert.Equal(TimeSpan.FromMinutes(1), options.FailedResolutionDuration);
         Assert.Equal(TimeSpan.FromSeconds(30), options.ResolutionTimeout);
@@ -287,6 +582,8 @@ public class DidHandleCacheTests
     public static TheoryData<Func<DidHandleCacheOptions>> InvalidOptions => new()
     {
         () => new DidHandleCacheOptions { Size = 0 },
+        () => new DidHandleCacheOptions { MaximumConcurrentResolutions = 0 },
+        () => new DidHandleCacheOptions { MaximumConcurrentResolutions = -1 },
         () => new DidHandleCacheOptions { Duration = TimeSpan.Zero },
         () => new DidHandleCacheOptions { Duration = TimeSpan.FromDays(100) },
         () => new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromSeconds(-1) },
@@ -319,13 +616,72 @@ public class DidHandleCacheTests
         }
     }
 
-    private sealed class ManualTimeProvider : TimeProvider
+    private sealed class ThrowingLoggerFactory : ILoggerFactory
     {
-        private DateTimeOffset _now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        public void AddProvider(ILoggerProvider provider)
+        {
+        }
 
-        public override DateTimeOffset GetUtcNow() => _now;
+        public ILogger CreateLogger(string categoryName) => new ThrowingLogger();
 
-        public void Advance(TimeSpan by) => _now += by;
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class ThrowingLogger : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            throw new InvalidOperationException("Logging failed.");
+    }
+
+    // Records the counters published by meters created from a specific meter factory, keyed by both instrument name and the
+    // name of the DidHandleCacheMetrics property which created them.
+    private sealed class MeasurementRecorder : IDisposable
+    {
+        private static readonly Dictionary<string, string> s_propertyNames = new()
+        {
+            ["idunno.atproto.didhandlecache.total.hits"] = nameof(DidHandleCacheMetrics.Hits),
+            ["idunno.atproto.didhandlecache.total.misses"] = nameof(DidHandleCacheMetrics.Misses),
+            ["idunno.atproto.didhandlecache.total.coalesced_lookups"] = nameof(DidHandleCacheMetrics.CoalescedLookups),
+            ["idunno.atproto.didhandlecache.total.rejected_lookups"] = nameof(DidHandleCacheMetrics.RejectedLookups),
+            ["idunno.atproto.didhandlecache.total.invalid_handles"] = nameof(DidHandleCacheMetrics.InvalidHandles),
+            ["idunno.atproto.didhandlecache.total.invalidations"] = nameof(DidHandleCacheMetrics.Invalidations),
+        };
+
+        private readonly ConcurrentDictionary<string, long> _totals = new();
+        private readonly MeterListener _listener = new();
+
+        public MeasurementRecorder(IMeterFactory meterFactory)
+        {
+            _listener.InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Scope == meterFactory)
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            };
+
+            _listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
+            {
+                _totals.AddOrUpdate(instrument.Name, measurement, (_, total) => total + measurement);
+
+                if (s_propertyNames.TryGetValue(instrument.Name, out string? propertyName))
+                {
+                    _totals.AddOrUpdate(propertyName, measurement, (_, total) => total + measurement);
+                }
+            });
+
+            _listener.Start();
+        }
+
+        public long Total(string name) => _totals.GetValueOrDefault(name);
+
+        public void Dispose() => _listener.Dispose();
     }
 }
 

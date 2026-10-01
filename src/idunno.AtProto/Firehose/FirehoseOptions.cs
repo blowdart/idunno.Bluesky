@@ -38,6 +38,12 @@ public sealed record FirehoseOptions
     public IMeterFactory? MeterFactory { get; init; }
 
     /// <summary>
+    /// Gets the provider used for firehose time reads and reconnect delays.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
+    /// <summary>
     /// Gets the host to subscribe to repository events from.
     /// </summary>
     /// <value>The relay or PDS host. The default is <c>wss://bsky.network</c>.</value>

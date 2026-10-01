@@ -86,6 +86,12 @@ public class AtProtoAgentOptions
     public bool EnableBackgroundTokenRefresh { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the <see cref="TimeProvider"/> used for time-sensitive operations.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
     /// Specifies the server to use when resolving plc DIDs.
     /// </summary>
     public Uri PlcDirectoryServer { get; set; } = new("https://plc.directory");

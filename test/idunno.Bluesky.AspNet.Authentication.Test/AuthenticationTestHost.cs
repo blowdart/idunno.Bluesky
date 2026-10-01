@@ -79,6 +79,8 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         internal ClaimsIdentity? Identity { get; set; }
 
         internal DateTimeOffset? ExpiresUtc { get; set; }
+
+        internal TimeProvider TimeProvider { get; set; } = TimeProvider.System;
     }
 
     /// <summary>
@@ -201,6 +203,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
             .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAuthenticationOptions>>()
             .Get(Scheme);
 
+        pendingSignIn.TimeProvider = testHost.Options.TimeProvider ?? TimeProvider.System;
         testHost.IdentityStore = testHost.Options.IdentityStore!;
 
         return testHost;
@@ -449,7 +452,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                 {
                     AllowRefresh = true,
                     IsPersistent = true,
-                    IssuedUtc = DateTimeOffset.UtcNow,
+                    IssuedUtc = pendingSignIn.TimeProvider.GetUtcNow(),
                     ExpiresUtc = pendingSignIn.ExpiresUtc
                 });
         });
@@ -477,7 +480,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                 {
                     AllowRefresh = true,
                     IsPersistent = true,
-                    IssuedUtc = DateTimeOffset.UtcNow,
+                    IssuedUtc = pendingSignIn.TimeProvider.GetUtcNow(),
                     ExpiresUtc = pendingSignIn.ExpiresUtc
                 });
         });

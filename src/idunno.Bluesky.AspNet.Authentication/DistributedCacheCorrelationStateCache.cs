@@ -17,6 +17,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
 {
     const string CorrelationPrefix = "_blueskyLoginCorrelation";
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Creates a new instance of <see cref="ICorrelationStateCache"/> using the specified <paramref name="cache"/>.
@@ -24,8 +25,15 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     /// <param name="cache">The <see cref="IDistributedCache"/> backing this instance.</param>
     /// <param name="entryTimeToLive">The TTL that entries in the cache should last for.</param>
     public DistributedCacheCorrelationStateCache(IDistributedCache cache, TimeSpan? entryTimeToLive = null)
+        : this(cache, entryTimeToLive, TimeProvider.System)
+    {
+    }
+
+    internal DistributedCacheCorrelationStateCache(IDistributedCache cache, TimeSpan? entryTimeToLive, TimeProvider timeProvider)
     {
         Cache = cache;
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _timeProvider = timeProvider;
 
         if (entryTimeToLive is not null)
         {
@@ -51,7 +59,7 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
         cancellationToken.ThrowIfCancellationRequested();
 
         DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
-            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
+            .SetAbsoluteExpiration(_timeProvider.GetUtcNow().UtcDateTime.Add(EntryTTL));
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);

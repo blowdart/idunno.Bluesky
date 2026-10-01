@@ -141,7 +141,7 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
         // Matches the agent's own IsAuthenticated check, made here so that a principal whose credentials have expired
         // costs nothing, and so the cache can be consulted before an agent is built.
-        if (dPoPAccessCredentials.ExpiresOn <= DateTimeOffset.UtcNow)
+        if (dPoPAccessCredentials.ExpiresOn <= Options.CurrentValue.TimeProvider.GetUtcNow())
         {
             return principal;
         }

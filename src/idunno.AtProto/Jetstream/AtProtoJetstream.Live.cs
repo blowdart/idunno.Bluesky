@@ -170,7 +170,7 @@ public partial class AtProtoJetstream
                 }
 
                 reconnectAttempts++;
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(1), Options.TimeProvider, cancellationToken).ConfigureAwait(false);
             }
         }
         finally

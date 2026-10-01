@@ -40,6 +40,8 @@ public sealed class DidHandleCacheMetrics
 
     internal Counter<long> CoalescedLookups { get; private set; }
 
+    internal Counter<long> RejectedLookups { get; private set; }
+
     internal Counter<long> InvalidHandles { get; private set; }
 
     internal Counter<long> Invalidations { get; private set; }
@@ -48,6 +50,7 @@ public sealed class DidHandleCacheMetrics
         nameof(Hits),
         nameof(Misses),
         nameof(CoalescedLookups),
+        nameof(RejectedLookups),
         nameof(InvalidHandles),
         nameof(Invalidations))]
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
@@ -69,6 +72,11 @@ public sealed class DidHandleCacheMetrics
             name: $"{prefix}.total.coalesced_lookups",
             unit: "{lookups}",
             description: "Total number of handle lookups which waited for a resolution already in progress for the same DID.");
+
+        RejectedLookups = meter.CreateCounter<long>(
+            name: $"{prefix}.total.rejected_lookups",
+            unit: "{lookups}",
+            description: "Total number of handle lookups which returned an uncached invalid handle because too many lookups were pending, or a resolution slot did not become free in time.");
 
         InvalidHandles = meter.CreateCounter<long>(
             name: $"{prefix}.total.invalid_handles",

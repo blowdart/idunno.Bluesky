@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
-using System.Timers;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
@@ -12,6 +11,7 @@ using idunno.AtProto.Events;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto.Integration.Test;
@@ -33,7 +33,7 @@ public class CredentialRefreshTests
     }
 
     [Fact]
-    public async Task TheRefreshTimerElapsedHandlerIsOnlyEverSubscribedOnce()
+    public async Task TheRefreshTimerIsReusedAcrossCredentialRefreshes()
     {
         RefreshTestServer refreshTestServer = new(this);
 
@@ -41,15 +41,13 @@ public class CredentialRefreshTests
         {
             await Login(agent);
 
-            Assert.Equal(1, CountElapsedSubscribers(agent));
+            ITimer initialTimer = Assert.IsAssignableFrom<ITimer>(GetRefreshTimer(agent));
 
             for (int i = 0; i < 4; i++)
             {
                 Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
-                // Subscribing on every start would double the subscriber count on every tick, and every subscriber
-                // would race to spend the same single use refresh token.
-                Assert.Equal(1, CountElapsedSubscribers(agent));
+                Assert.Same(initialTimer, GetRefreshTimer(agent));
             }
         }
     }
@@ -65,7 +63,7 @@ public class CredentialRefreshTests
 
             Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
-            Assert.True(GetRefreshTimer(agent)!.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
@@ -83,40 +81,49 @@ public class CredentialRefreshTests
             await InvokeBackgroundRefresh(agent);
 
             // A single transient failure must not silently end background refresh for the lifetime of the agent.
-            System.Timers.Timer? timer = GetRefreshTimer(agent);
+            ITimer? timer = GetRefreshTimer(agent);
 
             Assert.NotNull(timer);
-            Assert.True(timer.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
     [Fact]
     public async Task AFailedRefreshOfANearExpiryTokenIssuedAtLoginStillSchedulesARetry()
     {
+        FakeTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
         RefreshTestServer refreshTestServer = new(this)
         {
             // Short enough that StartTokenRefreshTimer refreshes immediately instead of creating the timer.
             AccessJwtLifetime = TimeSpan.FromSeconds(30),
-            FailRefresh = true
+            FailRefresh = true,
+            GateRefresh = true
         };
 
-        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer, timeProvider))
         {
-            await Login(agent);
+            TaskCompletionSource refreshFailed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            agent.TokenRefreshFailed += (_, _) => refreshFailed.TrySetResult();
 
-            // Login kicks the immediate refresh off in the background, so wait for it to have been attempted and failed.
-            while (refreshTestServer.RefreshAttemptCount == 0)
+            try
             {
-                await Task.Delay(25, TestContext.Current.CancellationToken);
+                await Login(agent);
+
+                timeProvider.Advance(TimeSpan.FromSeconds(1));
+                await refreshTestServer.RefreshEntered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            }
+            finally
+            {
+                refreshTestServer.ReleaseRefresh.TrySetResult();
             }
 
-            await Task.Delay(250, TestContext.Current.CancellationToken);
+            await refreshFailed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            await WaitForRefreshTimerEnabled(agent, TestContext.Current.CancellationToken);
 
-            // The timer does not exist yet on this path, so the retry has nothing to restart unless one is created.
-            System.Timers.Timer? timer = GetRefreshTimer(agent);
+            ITimer? timer = GetRefreshTimer(agent);
 
             Assert.NotNull(timer);
-            Assert.True(timer.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
@@ -294,10 +301,10 @@ public class CredentialRefreshTests
 
             // A refresh started by the caller stops the timer just as a background refresh does, so a failure must not
             // leave it stopped either, otherwise one failed call silently ends background refresh for the agent's lifetime.
-            System.Timers.Timer? timer = GetRefreshTimer(agent);
+            ITimer? timer = GetRefreshTimer(agent);
 
             Assert.NotNull(timer);
-            Assert.True(timer.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
@@ -315,10 +322,10 @@ public class CredentialRefreshTests
             await Assert.ThrowsAsync<SecurityTokenValidationException>(
                 () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
-            System.Timers.Timer? timer = GetRefreshTimer(agent);
+            ITimer? timer = GetRefreshTimer(agent);
 
             Assert.NotNull(timer);
-            Assert.True(timer.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
@@ -402,13 +409,13 @@ public class CredentialRefreshTests
                 () => agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
             StopRefreshTimer(agent);
-            Assert.False(GetRefreshTimer(agent)!.Enabled);
+            Assert.False(IsRefreshTimerEnabled(agent));
 
             await InvokeBackgroundRefresh(agent);
 
             // Reporting the remembered token as a completed refresh leaves the timer stopped, so the agent sits on
             // credentials it never refreshed until they expire.
-            Assert.True(GetRefreshTimer(agent)!.Enabled);
+            Assert.True(IsRefreshTimerEnabled(agent));
         }
     }
 
@@ -485,11 +492,11 @@ public class CredentialRefreshTests
 
             // Refreshing inline recurses, because the refresh starts the timer whilst it still holds the refresh
             // semaphore, and a server issuing tokens this short lived never lets that chain end.
-            System.Timers.Timer? timer = GetRefreshTimer(agent);
+            ITimer? timer = GetRefreshTimer(agent);
 
             Assert.NotNull(timer);
-            Assert.True(timer.Enabled);
-            Assert.Equal(TimeSpan.FromSeconds(1).TotalMilliseconds, timer.Interval);
+            Assert.True(IsRefreshTimerEnabled(agent));
+            Assert.Equal(TimeSpan.FromSeconds(1).TotalMilliseconds, GetRefreshTimerInterval(agent));
         }
     }
 
@@ -519,25 +526,22 @@ public class CredentialRefreshTests
             .Invoke(agent, [false]);
     }
 
-    private static int CountElapsedSubscribers(AtProtoAgent agent)
+    private static ITimer? GetRefreshTimer(AtProtoAgent agent)
     {
-        System.Timers.Timer? timer = GetRefreshTimer(agent);
-
-        Assert.NotNull(timer);
-
-        ElapsedEventHandler? handler = (ElapsedEventHandler?)typeof(System.Timers.Timer)
-            .GetField("_onIntervalElapsed", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?.GetValue(timer);
-
-        return handler is null ? 0 : handler.GetInvocationList().Length;
-    }
-
-    private static System.Timers.Timer? GetRefreshTimer(AtProtoAgent agent)
-    {
-        return (System.Timers.Timer?)typeof(AtProtoAgent)
+        return (ITimer?)typeof(AtProtoAgent)
             .GetField("_credentialRefreshTimer", BindingFlags.Instance | BindingFlags.NonPublic)
             ?.GetValue(agent);
     }
+
+    private static bool IsRefreshTimerEnabled(AtProtoAgent agent) =>
+        (bool)typeof(AtProtoAgent)
+            .GetProperty(nameof(AtProtoAgent.CredentialRefreshTimerEnabled), BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(agent)!;
+
+    private static double GetRefreshTimerInterval(AtProtoAgent agent) =>
+        (double)typeof(AtProtoAgent)
+            .GetProperty(nameof(AtProtoAgent.CredentialRefreshTimerInterval), BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(agent)!;
 
     private static IEnumerable<string> GetExchangedRefreshTokens(AtProtoAgent agent)
     {
@@ -1278,15 +1282,27 @@ public class CredentialRefreshTests
         Assert.Empty((IEnumerable<KeyValuePair<long, TaskCompletionSource?>>)waiters.GetValue(agent)!);
     }
 
-    private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer)
+    private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer, TimeProvider? timeProvider = null)
     {
         return new AtProtoAgent(
             new Uri($"https://{DomainName}"),
             new TestHttpClientFactory(refreshTestServer.TestServer),
             new AtProtoAgentOptions()
             {
-                PlcDirectoryServer = new Uri($"https://{DomainName}")
+                PlcDirectoryServer = new Uri($"https://{DomainName}"),
+                TimeProvider = timeProvider ?? TimeProvider.System
             });
+    }
+
+    private static async Task WaitForRefreshTimerEnabled(AtProtoAgent agent, CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+        while (!agent.CredentialRefreshTimerEnabled)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(10), linkedToken.Token);
+        }
     }
 
     private static async Task Login(AtProtoAgent agent)

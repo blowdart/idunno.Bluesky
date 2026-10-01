@@ -57,10 +57,16 @@ string Describe(Did did) =>
 
 ### Concurrent lookups and cancellation
 
-Concurrent calls to `ResolveHandleAsync()` for the same DID share a single resolution. Cancelling the token passed to
-`ResolveHandleAsync()` stops that caller waiting, but does not cancel the shared resolution, which continues for any other
-callers and is cached when it completes. Each resolution is bounded by `DidHandleCacheOptions.ResolutionTimeout`, and
-disposing the cache cancels any resolutions in progress.
+Concurrent calls to `ResolveHandleAsync()` for the same DID share a single resolution. At most
+`DidHandleCacheOptions.MaximumConcurrentResolutions` resolutions run at once, and other lookups wait for one to finish. A resolution
+holds its slot until it actually finishes, even after the lookup waiting for it has timed out.
+To bound memory, at most `DidHandleCacheOptions.Size` lookups can be pending at once; once that many are pending, a lookup for a DID
+which is not already being resolved returns `handle.invalid` immediately, without caching it, so a later lookup tries again.
+
+Cancelling the token passed to `ResolveHandleAsync()` stops that caller waiting, but does not cancel the shared resolution, which
+continues for any other callers and is cached when it completes. Each resolution, including any time spent waiting to start, is bounded by
+`DidHandleCacheOptions.ResolutionTimeout`. A lookup which times out waiting to start returns `handle.invalid` without caching it.
+Disposing the cache cancels any resolutions in progress.
 
 ## Keeping handles up to date
 
@@ -112,23 +118,31 @@ using var didHandleCache = new DidHandleCache(new DidHandleCacheOptions
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `Size` | 100,000 | The maximum number of handles cached. It also bounds the number of resolutions which can be shared between concurrent callers. |
+| `Size` | 100,000 | The maximum number of handles cached. It also bounds the number of lookups which can be pending at once. |
+| `MaximumConcurrentResolutions` | 32 | The maximum number of resolutions which can run at once. |
 | `Duration` | 1 hour | How long a verified handle is cached. |
 | `FailedResolutionDuration` | 1 minute | How long `handle.invalid` is cached after a failure, so a DID which cannot be resolved is not resolved again for every lookup. It is never cached for longer than `Duration`. |
-| `ResolutionTimeout` | 30 seconds | How long a single resolution can take before it is abandoned and treated as a failure. |
+| `ResolutionTimeout` | 30 seconds | How long a single resolution, including any wait for one of the `MaximumConcurrentResolutions` slots, can take before it is abandoned and treated as a failure. |
 | `PlcDirectory` | `https://plc.directory` | The PLC directory used to resolve `did:plc` DIDs. |
-| `HttpClient` | `null` | The `HttpClient` used for resolution. If `null` a client is created for each resolution. The cache does not dispose a client you supply. |
+| `HttpClient` | `null` | The `HttpClient` used for resolution. If `null` an SSRF-protected client is created for each resolution. The cache does not dispose a client you supply. See the warning below. |
 | `LoggerFactory` | `null` | The `ILoggerFactory` used to create loggers. |
 | `MeterFactory` | `null` | The `IMeterFactory` used to create the cache's meter. |
 | `TimeProvider` | `TimeProvider.System` | The `TimeProvider` used to expire entries and time out resolutions. Supply a fake time provider in tests. |
 
 When the cache is full a new handle is not cached until the cache has been compacted, which happens in the background.
 
+> [!WARNING]
+> DID documents and handles name hosts chosen by whoever controls the DID, so resolving them makes requests to hosts an attacker can choose.
+> When `HttpClient` is `null` the cache uses a handler which refuses to connect to loopback, private and other non-public addresses.
+> An `HttpClient` you supply does not get that protection. If you supply one, configure it to block requests to your internal networks,
+> for example by building it with `IServiceCollection.AddAtProtoHttpClient()`.
+
 ## Untrusted sources of DIDs
 
 The cache helps with well behaved sources of DIDs, but a malicious source can defeat it. A server which sends more distinct
 DIDs than `Size` evicts handles before they are reused, and one which sends an identity event before each event for a DID
-invalidates its handle every time. Either forces a resolution for most lookups. Each resolution makes requests to the PLC
+invalidates its handle every time. Either forces a resolution for most lookups, although `MaximumConcurrentResolutions` and `Size`
+limit how many run and wait at once, and lookups beyond those limits return `handle.invalid` without caching it. Each resolution makes requests to the PLC
 directory, or for `did:web` to a host the DID names, as well as to the host the handle names.
 
 If you read from a source you do not control, consider using `TryGetCachedHandle()` for most events, choosing a `Size` that
@@ -153,7 +167,7 @@ and `Invalidate()` does nothing.
 
 ## Metrics
 
-The cache reports hits, misses, shared lookups, invalid handles and invalidations through the `idunno.AtProto.DidHandleCache`
+The cache reports hits, misses, shared lookups, rejected lookups, invalid handles and invalidations through the `idunno.AtProto.DidHandleCache`
 meter. Register it with `AddAtProtoDidHandleCacheMetrics()`. See [Built-in metrics](metrics.md#idunnoatprotodidhandlecache)
 for the full list.
 

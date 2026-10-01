@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>
 

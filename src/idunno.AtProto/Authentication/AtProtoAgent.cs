@@ -9,7 +9,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
-using System.Timers;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
@@ -432,7 +431,13 @@ public partial class AtProtoAgent
     /// </remarks>
     private readonly TimeSpan _immediateRefreshInterval = new(0, 0, 1);
 
-    private System.Timers.Timer? _credentialRefreshTimer;
+    private ITimer? _credentialRefreshTimer;
+    private double _credentialRefreshTimerInterval;
+    private bool _credentialRefreshTimerEnabled;
+
+    internal double CredentialRefreshTimerInterval => _credentialRefreshTimerInterval;
+
+    internal bool CredentialRefreshTimerEnabled => _credentialRefreshTimerEnabled;
 
     /// <summary>
     /// Gets the current credentials for the agent, if any.
@@ -638,7 +643,7 @@ public partial class AtProtoAgent
             {
                 return _credentials is IAccessCredential accessCredential &&
                     accessCredential.Did is not null &&
-                    accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
+                    !accessCredential.IsExpiredAt(Clock);
             }
         }
     }
@@ -1933,7 +1938,7 @@ public partial class AtProtoAgent
     /// </remarks>
     public virtual OAuthClient CreateOAuthClient()
     {
-        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
+        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions, Clock)
         {
             MaximumResponseSize = MaximumResponseSize
         };
@@ -1949,7 +1954,7 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
+        var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions, Clock)
         {
             State = state,
             MaximumResponseSize = MaximumResponseSize
@@ -2288,7 +2293,8 @@ public partial class AtProtoAgent
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuth(
+            AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuthWithTimeProvider(
+                timeProvider: Clock,
                 audience: audience,
                 expiry: expiry,
                 lxm: lxm,
@@ -3241,7 +3247,7 @@ public partial class AtProtoAgent
         return authorizationServer;
     }
 
-    private static TimeSpan GetTimeToJwtTokenExpiry(string jwt)
+    private TimeSpan GetTimeToJwtTokenExpiry(string jwt)
     {
         if (string.IsNullOrEmpty(jwt))
         {
@@ -3251,7 +3257,7 @@ public partial class AtProtoAgent
         JsonWebToken token = new(jwt);
 
         DateTimeOffset validUntil = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
-        TimeSpan validityPeriod = validUntil - DateTimeOffset.UtcNow;
+        TimeSpan validityPeriod = validUntil - Clock.GetUtcNow();
 
         return validityPeriod;
     }
@@ -3918,8 +3924,13 @@ public partial class AtProtoAgent
         }
     }
 
-    private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+    private void RefreshTimerElapsed(object? state)
     {
+        lock (_timerLock)
+        {
+            _credentialRefreshTimerEnabled = false;
+        }
+
         Logger.BackgroundTokenRefreshFired(_logger);
 
         BackgroundRefreshCredentials().FireAndForget();
@@ -3979,11 +3990,9 @@ public partial class AtProtoAgent
 
             EnsureTokenRefreshTimer();
 
-            _credentialRefreshTimer.Interval = retryIn.TotalMilliseconds;
-            _credentialRefreshTimer.Enabled = true;
-            _credentialRefreshTimer.Start();
+            ChangeRefreshTimer(retryIn);
 
-            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimer.Interval, exception);
+            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimerInterval, exception);
         }
     }
 
@@ -3992,9 +4001,9 @@ public partial class AtProtoAgent
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   The timer is created here, and only here, so that the Elapsed handler is subscribed exactly once. Subscribing on
-    ///   every start would leave the handler attached multiple times, and every tick would then start as many concurrent
-    ///   refreshes as there are subscriptions, each racing to spend the same refresh token.
+    ///   The timer is created here, and only here, so that its callback is registered exactly once. Creating a new timer
+    ///   on every start would leave multiple timers running, and every tick would then start another refresh racing to
+    ///   spend the same refresh token.
     /// </para>
     /// <para>Callers must hold <see cref="_timerLock"/>.</para>
     /// </remarks>
@@ -4003,9 +4012,20 @@ public partial class AtProtoAgent
     {
         if (_credentialRefreshTimer is null)
         {
-            _credentialRefreshTimer = new System.Timers.Timer();
-            _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+            _credentialRefreshTimer = Clock.CreateTimer(
+                RefreshTimerElapsed,
+                state: null,
+                dueTime: Timeout.InfiniteTimeSpan,
+                period: Timeout.InfiniteTimeSpan);
         }
+    }
+
+    private void ChangeRefreshTimer(TimeSpan dueTime)
+    {
+        EnsureTokenRefreshTimer();
+        _credentialRefreshTimerInterval = Math.Min(dueTime.TotalMilliseconds, int.MaxValue);
+        _credentialRefreshTimerEnabled = true;
+        _credentialRefreshTimer.Change(TimeSpan.FromMilliseconds(_credentialRefreshTimerInterval), Timeout.InfiniteTimeSpan);
     }
 
     private void StartTokenRefreshTimer()
@@ -4035,13 +4055,9 @@ public partial class AtProtoAgent
                     return;
                 }
 
-                EnsureTokenRefreshTimer();
+                ChangeRefreshTimer(refreshIn);
 
-                _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                _credentialRefreshTimer.Enabled = true;
-                _credentialRefreshTimer.Start();
-
-                Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
+                Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
             }
         }
     }
@@ -4088,13 +4104,9 @@ public partial class AtProtoAgent
                 return;
             }
 
-            EnsureTokenRefreshTimer();
+            ChangeRefreshTimer(_immediateRefreshInterval);
 
-            _credentialRefreshTimer.Interval = _immediateRefreshInterval.TotalMilliseconds;
-            _credentialRefreshTimer.Enabled = true;
-            _credentialRefreshTimer.Start();
-
-            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
+            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
         }
     }
 
@@ -4104,7 +4116,7 @@ public partial class AtProtoAgent
     /// <param name="dispose">A flag indicating whether the timer should be disposed of as well as stopped.</param>
     /// <remarks>
     /// <para>
-    ///   Stopping the timer does not recall an Elapsed callback which has already been handed to the thread pool, so a refresh
+    ///   Stopping the timer does not recall a callback which has already been handed to the thread pool, so a refresh
     ///   which stops the timer can still be joined by one the timer started moments earlier. The second refresh blocks on the
     ///   refresh semaphore and then finds the token it holds has already been exchanged, which is what stops it presenting a
     ///   spent token to the server.
@@ -4116,12 +4128,12 @@ public partial class AtProtoAgent
         {
             if (_credentialRefreshTimer is not null)
             {
-                _credentialRefreshTimer.Stop();
+                _credentialRefreshTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                _credentialRefreshTimerEnabled = false;
                 Logger.TokenRefreshTimerStopped(_logger);
 
                 if (dispose)
                 {
-                    _credentialRefreshTimer.Elapsed -= RefreshTimerElapsed;
                     _credentialRefreshTimer.Dispose();
                     _credentialRefreshTimer = null;
                 }

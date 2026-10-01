@@ -9,6 +9,12 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public record BlueskyClaimsTransformerOptions
 {
     /// <summary>
+    /// Gets or sets the provider used to determine when cached profiles expire.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+
+    /// <summary>
     /// The profile cache used to cache profile information during claims transformation. If not provided a default in-memory store will be used.
     /// </summary>
     public IProfileCache? Cache { get; set; } = default!;

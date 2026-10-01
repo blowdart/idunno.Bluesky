@@ -24,6 +24,8 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyAuthenticationOptions>
 {
+    private TimeProvider ConfiguredTimeProvider => Options.TimeProvider ?? System.TimeProvider.System;
+
     private const string HeaderValueNoCache = "no-cache";
     private const string HeaderValueNoCacheNoStore = "no-cache,no-store";
     private const string HeaderValueEpochDate = "Thu, 01 Jan 1970 00:00:00 GMT";
@@ -277,7 +279,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         }
         else
         {
-            issuedUtc = TimeProvider.GetUtcNow();
+            issuedUtc = ConfiguredTimeProvider.GetUtcNow();
             signInContext.Properties.IssuedUtc = issuedUtc;
         }
 
@@ -493,7 +495,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
     private async Task CheckForRefreshAsync(AuthenticationTicket ticket)
     {
-        DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+        DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
         DateTimeOffset? issuedUtc = ticket.Properties.IssuedUtc;
         DateTimeOffset? expiresUtc = ticket.Properties.ExpiresUtc;
         bool allowRefresh = ticket.Properties.AllowRefresh ?? true;
@@ -735,7 +737,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return AuthenticateResults.s_missingIdentityInStore;
         }
 
-        DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+        DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
         DateTimeOffset? expiresUtc = ticket.Properties.ExpiresUtc;
 
         if (expiresUtc != null && expiresUtc.Value < currentUtc)
@@ -903,7 +905,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                         try
                         {
-                            await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+                            await Task.Delay(Options.RefreshCheckWait, ConfiguredTimeProvider, Context.RequestAborted).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
@@ -946,7 +948,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             }
 
             _shouldRefresh = true;
-            DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+            DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
             _refreshIssuedUtc = currentUtc;
             TimeSpan timeSpan = expiresUtc.Value.Subtract(issuedUtc.Value);
             _refreshExpiresUtc = currentUtc.Add(timeSpan);

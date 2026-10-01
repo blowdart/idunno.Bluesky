@@ -5,6 +5,7 @@ using idunno.AtProto;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.SQLite.Test;
 
@@ -14,7 +15,6 @@ public class SqliteIdentityStoreRefreshLockTests
     private static readonly Did s_otherDid = new("did:plc:hfgp6pj3akhqxntgqwramlbg");
 
     private static readonly TimeSpan s_shortLockLength = TimeSpan.FromMilliseconds(250);
-    private static readonly TimeSpan s_afterShortLockExpires = TimeSpan.FromMilliseconds(750);
 
     [Fact]
     public async Task StartRefreshReturnsALockTokenWhenNoLockIsHeld()
@@ -45,11 +45,19 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(database.ConnectionString, refreshLockLength: s_shortLockLength);
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
+            database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: s_shortLockLength,
+            meterFactory: null,
+            loggerFactory: null,
+            expiredEntrySweepInterval: null);
 
         Assert.NotNull(await store.StartRefresh(s_did, cancellationToken));
 
-        await Task.Delay(s_afterShortLockExpires, cancellationToken);
+        timeProvider.Advance(s_shortLockLength);
 
         Assert.NotNull(await store.StartRefresh(s_did, cancellationToken));
     }
@@ -60,6 +68,7 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
+        FakeTimeProvider timeProvider = new();
         SqliteIdentityStore store = new(database.ConnectionString);
 
         string? refreshLockToken = await store.StartRefresh(s_did, cancellationToken);
@@ -118,17 +127,32 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
+        FakeTimeProvider timeProvider = new();
 
         // Only the lock which is meant to expire is taken with a short lock length. The lock which takes over is taken
         // through a store using the default length, so the assertions which follow cannot race its expiry on a loaded
         // machine and see the takeover lock disappear rather than the behaviour under test.
-        SqliteIdentityStore expiringStore = new(database.ConnectionString, refreshLockLength: s_shortLockLength);
-        SqliteIdentityStore store = new(database.ConnectionString);
+        SqliteIdentityStore expiringStore = SqliteIdentityStore.CreateWithTimeProvider(
+            database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: s_shortLockLength,
+            meterFactory: null,
+            loggerFactory: null,
+            expiredEntrySweepInterval: null);
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
+            database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: null,
+            meterFactory: null,
+            loggerFactory: null,
+            expiredEntrySweepInterval: null);
 
         string? expiredLockToken = await expiringStore.StartRefresh(s_did, cancellationToken);
         Assert.NotNull(expiredLockToken);
 
-        await Task.Delay(s_afterShortLockExpires, cancellationToken);
+        timeProvider.Advance(s_shortLockLength);
 
         string? reacquiredLockToken = await store.StartRefresh(s_did, cancellationToken);
         Assert.NotNull(reacquiredLockToken);
@@ -215,11 +239,19 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        SqliteIdentityStore store = new(database.ConnectionString, refreshLockLength: s_shortLockLength);
+        FakeTimeProvider timeProvider = new();
+        SqliteIdentityStore store = SqliteIdentityStore.CreateWithTimeProvider(
+            database.ConnectionString,
+            timeProvider,
+            entryTimeToLive: null,
+            refreshLockLength: s_shortLockLength,
+            meterFactory: null,
+            loggerFactory: null,
+            expiredEntrySweepInterval: null);
 
         Assert.NotNull(await store.StartRefresh(s_did, cancellationToken));
 
-        await Task.Delay(s_afterShortLockExpires, cancellationToken);
+        timeProvider.Advance(s_shortLockLength);
 
         Assert.False(await store.IsRefreshing(s_did, cancellationToken));
     }

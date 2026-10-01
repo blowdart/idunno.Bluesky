@@ -73,7 +73,7 @@ public static class IdentityResolution
     /// <param name="handle">The handle to resolve.</param>
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-    /// <param name="timeout">An optional timeout for HTTP requests.</param>
+    /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
     /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -123,6 +123,11 @@ public static class IdentityResolution
     ///   Only when both directions agree is the pairing trustworthy.
     /// </para>
     /// <para>
+    ///   Following the <see href="https://atproto.com/specs/did">AT Protocol DID specification</see>, only the first valid handle
+    ///   in the document's <c>alsoKnownAs</c> entries is the handle the <see cref="Did"/> claims. If <paramref name="handle"/> is
+    ///   listed after it, verification fails.
+    /// </para>
+    /// <para>
     ///   Verify before treating a <see cref="Handle"/> as identifying the holder of a <see cref="Did"/>. Anyone can put any handle
     ///   in a <see cref="DidDocument"/> they control, or point a handle they own at someone else's <see cref="Did"/>, so an
     ///   unverified handle proves nothing.
@@ -156,7 +161,9 @@ public static class IdentityResolution
             maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (didDocument is null || !DeclaresHandle(didDocument, handle))
+        // Only the handle the document claims counts. A handle listed after it is ignored, as the AT Protocol DID specification
+        // (https://atproto.com/specs/did) requires, so a document cannot be verified against a handle it does not present as its own.
+        if (didDocument is null || ClaimedHandle(didDocument) != handle)
         {
             Logger.HandleNotDeclaredByDidDocument(logger, handle, did);
             return false;
@@ -194,14 +201,16 @@ public static class IdentityResolution
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>
     /// The task object representing the asynchronous operation, whose result is the verified <see cref="Handle"/> for the
-    /// <paramref name="did"/>, or <see cref="Handle.Invalid"/> if it does not declare a handle which resolves back to it.
+    /// <paramref name="did"/>, or <see cref="Handle.Invalid"/> if the handle it claims does not resolve back to it.
     /// </returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
     ///   The handles in a <see cref="DidDocument"/> are declared by whoever controls the <see cref="Did"/>, so a handle is only
-    ///   meaningful once it has been resolved back to the <see cref="Did"/> which claims it. Each declared handle is checked in
-    ///   turn and the first which resolves back to <paramref name="did"/> is returned.
+    ///   meaningful once it has been resolved back to the <see cref="Did"/> which claims it. Following the
+    ///   <see href="https://atproto.com/specs/did">AT Protocol DID specification</see>, only the first valid handle in the
+    ///   document's <c>alsoKnownAs</c> entries is the claimed handle. Any other handles are ignored, and if the claimed handle
+    ///   does not resolve back to <paramref name="did"/> the result is <see cref="Handle.Invalid"/>.
     /// </para>
     /// <para>
     ///   Use <see cref="Handle.IsValid"/> on the result, or compare it to <see cref="Handle.Invalid"/>, before displaying
@@ -239,46 +248,54 @@ public static class IdentityResolution
             return Handle.Invalid;
         }
 
-        foreach (Handle candidate in DeclaredHandles(didDocument))
+        // Only the claimed handle is resolved. Trying every handle in the document would let whoever controls it choose which
+        // of several handles is shown, and would make a request to a host of their choosing for each one.
+        Handle? claimedHandle = ClaimedHandle(didDocument);
+
+        if (claimedHandle is null)
         {
-            Did? resolvedDid = await ResolveHandleAsync(
-                handle: candidate,
-                loggerFactory: loggerFactory,
-                httpClient: httpClient,
-                timeout: timeout,
-                maximumWellKnownResponseSize: maximumWellKnownResponseSize,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (resolvedDid is not null && resolvedDid == did)
-            {
-                Logger.HandleVerified(logger, candidate, did);
-                return candidate;
-            }
-
-            Logger.HandleDidNotResolveToDid(logger, candidate, did, resolvedDid);
+            return Handle.Invalid;
         }
 
-        return Handle.Invalid;
+        Did? resolvedDid = await ResolveHandleAsync(
+            handle: claimedHandle,
+            loggerFactory: loggerFactory,
+            httpClient: httpClient,
+            timeout: timeout,
+            maximumWellKnownResponseSize: maximumWellKnownResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (resolvedDid is null || resolvedDid != did)
+        {
+            Logger.HandleDidNotResolveToDid(logger, claimedHandle, did, resolvedDid);
+            return Handle.Invalid;
+        }
+
+        Logger.HandleVerified(logger, claimedHandle, did);
+
+        return claimedHandle;
     }
 
     /// <summary>
-    /// Gets the handles declared by the <c>alsoKnownAs</c> entries of the specified <paramref name="didDocument"/>.
+    /// Gets the handle claimed by the <c>alsoKnownAs</c> entries of the specified <paramref name="didDocument"/>.
     /// </summary>
-    /// <param name="didDocument">The <see cref="DidDocument"/> to read the declared handles from.</param>
-    /// <returns>The handles declared by <paramref name="didDocument"/>.</returns>
+    /// <param name="didDocument">The <see cref="DidDocument"/> to read the claimed handle from.</param>
+    /// <returns>The handle claimed by <paramref name="didDocument"/>, or <see langword="null"/> if it does not claim one.</returns>
     /// <remarks>
     /// <para>
-    ///   Entries which are not <c>at://</c> URIs, or whose authority is not a valid handle, are ignored. A DID document
-    ///   is supplied by whoever controls the DID, so its contents are untrusted.
+    ///   The <see href="https://atproto.com/specs/did">AT Protocol DID specification</see> says the first syntactically valid
+    ///   handle in <c>alsoKnownAs</c> is the claimed handle, even if it fails to resolve bidirectionally, and that any other
+    ///   handles should be ignored. Entries which are not <c>at://</c> URIs, or whose authority is not a valid handle, are skipped.
+    ///   A DID document is supplied by whoever controls the DID, so its contents are untrusted.
     /// </para>
     /// </remarks>
-    private static IEnumerable<Handle> DeclaredHandles(DidDocument didDocument)
+    private static Handle? ClaimedHandle(DidDocument didDocument)
     {
         const string atUriPrefix = "at://";
 
         if (didDocument.AlsoKnownAs is null)
         {
-            yield break;
+            return null;
         }
 
         foreach (string alsoKnownAs in didDocument.AlsoKnownAs)
@@ -300,20 +317,11 @@ public static class IdentityResolution
 
             if (Handle.TryParse(candidate, out Handle? handle) && handle is not null && handle.IsValid)
             {
-                yield return handle;
+                return handle;
             }
         }
-    }
 
-    /// <summary>
-    /// Returns a flag indicating whether <paramref name="didDocument"/> declares the specified <paramref name="handle"/>.
-    /// </summary>
-    /// <param name="didDocument">The <see cref="DidDocument"/> to check.</param>
-    /// <param name="handle">The <see cref="Handle"/> to look for.</param>
-    /// <returns><see langword="true"/> if <paramref name="didDocument"/> declares <paramref name="handle"/>, otherwise <see langword="false"/>.</returns>
-    private static bool DeclaresHandle(DidDocument didDocument, Handle handle)
-    {
-        return DeclaredHandles(didDocument).Contains(handle);
+        return null;
     }
 
     /// <summary>
@@ -505,7 +513,7 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="did"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="did"/>.
     /// </summary>
     /// <param name="did">The <see cref="Did"/> to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
@@ -564,7 +572,7 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="handle"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="handle"/>.
     /// </summary>
     /// <param name="handle">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
@@ -609,9 +617,9 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="atIdentifier"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="atIdentifier"/>.
     /// </summary>
-    /// <param name="atIdentifier">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
+    /// <param name="atIdentifier">The AT identifier, a <see cref="Did"/> or a <see cref="Handle"/>, to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>

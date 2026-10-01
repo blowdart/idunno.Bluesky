@@ -16,8 +16,12 @@ namespace idunno.AtProto;
 /// <para>A handle is resolved with <see cref="IdentityResolution.ResolveVerifiedHandleAsync(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>,
 /// so it is only returned once the handle the DID document declares has been resolved back to the same DID. Any failure to resolve or verify
 /// a handle results in <see cref="Handle.Invalid"/>, which is cached for <see cref="DidHandleCacheOptions.FailedResolutionDuration"/>.</para>
-/// <para>Concurrent lookups for the same DID share a single resolution. Cancelling a lookup stops the caller waiting, but does not cancel the
-/// shared resolution, which is bounded by <see cref="DidHandleCacheOptions.ResolutionTimeout"/> and cancelled when the cache is disposed.</para>
+/// <para>Concurrent lookups for the same DID share a single resolution. At most <see cref="DidHandleCacheOptions.MaximumConcurrentResolutions"/>
+/// resolutions run at once, and other lookups wait for one to finish. At most <see cref="DidHandleCacheOptions.Size"/> lookups can be pending;
+/// once that many are pending, a lookup for a DID which is not already being resolved returns <see cref="Handle.Invalid"/>, which is not cached.
+/// Cancelling a lookup stops the caller waiting, but does not cancel the shared resolution, which is bounded by
+/// <see cref="DidHandleCacheOptions.ResolutionTimeout"/>, including any time spent waiting to start, and cancelled when the cache is disposed.
+/// A lookup which times out waiting to start returns <see cref="Handle.Invalid"/>, which is not cached.</para>
 /// <para>Set <see cref="Firehose.FirehoseOptions.DidHandleResolver"/> or <see cref="Jetstream.JetstreamOptions.DidHandleResolver"/> to
 /// have a stream call <see cref="Invalidate(Did)"/> for each <c>#identity</c> event it receives. A handle being resolved when its DID is
 /// invalidated is returned to the callers already waiting for it, but is not cached.</para>
@@ -28,13 +32,6 @@ namespace idunno.AtProto;
 /// </remarks>
 public sealed class DidHandleCache : IDidHandleResolver, IDisposable
 {
-    // Invalidation generations, striped by DID so they take bounded memory. A resolution which began before its DID's stripe was
-    // invalidated is not cached, so a handle resolved before an #identity event cannot be cached after it. Unrelated DIDs sharing a
-    // stripe only cost an extra resolution.
-    private const int GenerationStripes = 256;
-
-    private readonly long[] _generations = new long[GenerationStripes];
-
 #if NET9_0_OR_GREATER
     private readonly Lock _lock = new();
 #else
@@ -42,6 +39,10 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
 #endif
 
     private readonly Dictionary<Did, InFlightLookup> _inFlight = [];
+    // Not disposed, as resolutions still running when the cache is disposed release their slot as they finish, and releasing a disposed
+    // semaphore throws. A SemaphoreSlim only holds unmanaged resources if its AvailableWaitHandle is used, which it never is.
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "See comment.")]
+    private readonly SemaphoreSlim _resolutionSlots;
     private readonly Func<Did, CancellationToken, Task<Handle>> _resolver;
     private readonly DidHandleCacheOptions _options;
     private readonly MemoryCache _cache;
@@ -49,6 +50,10 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     private readonly ILogger<DidHandleCache> _logger;
     private readonly CancellationTokenSource _disposalTokenSource = new();
     private readonly CancellationToken _disposalToken;
+
+    // Counts every lookup which has not completed, including those removed from _inFlight by an invalidation, so a source which
+    // invalidates DIDs whilst they are resolved cannot grow the number of pending lookups without limit.
+    private int _pendingLookups;
 
     private bool _disposed;
 
@@ -76,6 +81,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     {
         _options = options ?? new DidHandleCacheOptions();
         _resolver = resolver ?? DefaultResolverAsync;
+        _resolutionSlots = new SemaphoreSlim(_options.MaximumConcurrentResolutions, _options.MaximumConcurrentResolutions);
         _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _options.Size, Clock = new TimeProviderSystemClock(_options.TimeProvider) });
         _metrics = new DidHandleCacheMetrics(_options.MeterFactory);
         _logger = (_options.LoggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DidHandleCache>();
@@ -85,6 +91,8 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">The cache has been disposed.</exception>
     /// <remarks>
+    /// <para>If <see cref="DidHandleCacheOptions.Size"/> lookups are already pending, and <paramref name="did"/> is not one of them,
+    /// <see cref="Handle.Invalid"/> is returned without being cached.</para>
     /// <para>If the cache is disposed whilst a resolution is in progress the returned task is cancelled.</para>
     /// </remarks>
     public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
@@ -109,19 +117,22 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             {
                 _metrics.CoalescedLookups.Add(1);
             }
+            else if (_pendingLookups >= _options.Size)
+            {
+                // Bounded so a flood of distinct DIDs cannot grow the number of pending lookups without limit. The rejection says
+                // nothing about the DID, so it is not cached and a later lookup tries again.
+                _metrics.RejectedLookups.Add(1);
+                return ValueTask.FromResult(Handle.Invalid);
+            }
             else
             {
                 _metrics.Misses.Add(1);
 
-                lookup = new InFlightLookup(_generations[Stripe(did)]);
+                // Every lookup is registered, so an invalidation can always find, and mark, a lookup in progress for its DID.
+                lookup = new InFlightLookup();
+                _inFlight.Add(did, lookup);
+                _pendingLookups++;
                 owner = true;
-
-                // Bounded so a flood of distinct DIDs cannot grow the in-flight table without limit. A lookup which is not
-                // registered still resolves and is cached, it just cannot be shared.
-                if (_inFlight.Count < _options.Size)
-                {
-                    _inFlight.Add(did, lookup);
-                }
             }
         }
 
@@ -165,9 +176,14 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
                 return;
             }
 
-            _generations[Stripe(did)]++;
             _cache.Remove(did.Value);
-            _inFlight.Remove(did);
+
+            // A lookup in progress may have read the DID document before the invalidation, so its result is returned to the callers
+            // already waiting for it but is never cached. Only the lookup for this DID is affected.
+            if (_inFlight.Remove(did, out InFlightLookup? lookup))
+            {
+                lookup.Invalidated = true;
+            }
         }
 
         _metrics.Invalidations.Add(1);
@@ -193,15 +209,15 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
         _cache.Dispose();
     }
 
-    private static int Stripe(Did did) => (int)((uint)did.GetHashCode() % GenerationStripes);
-
     private Task<Handle> DefaultResolverAsync(Did did, CancellationToken cancellationToken) =>
         IdentityResolution.ResolveVerifiedHandleAsync(
             did: did,
             plcDirectory: _options.PlcDirectory,
             loggerFactory: _options.LoggerFactory,
             httpClient: _options.HttpClient,
-            timeout: _options.ResolutionTimeout,
+            // ResolutionTimeout is enforced by a cancellation token driven by the configured TimeProvider. HttpClient.Timeout always
+            // measures wall-clock time, so it is disabled rather than set to the same value.
+            timeout: Timeout.InfiniteTimeSpan,
             cancellationToken: cancellationToken);
 
     // Must be called whilst holding _lock, and only when the cache has not been disposed.
@@ -224,43 +240,118 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
         return false;
     }
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Any failure to resolve a handle is reported as Handle.Invalid.")]
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A lookup must always complete, whatever fails.")]
     private async Task RunLookupAsync(Did did, InFlightLookup lookup)
     {
-        Handle? handle;
+        Handle? handle = null;
+        bool cacheable = false;
 
         try
         {
-            using CancellationTokenSource timeoutTokenSource = new(_options.ResolutionTimeout, _options.TimeProvider);
-            using CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_disposalToken, timeoutTokenSource.Token);
+            (handle, cacheable) = await ResolveAsync(did).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Only reached if logging or metrics throw. The failure says nothing about the DID, so it is not cached.
+            handle = _disposalToken.IsCancellationRequested ? null : Handle.Invalid;
+            cacheable = false;
+        }
+        finally
+        {
+            // Always completed, otherwise every later lookup for the DID would wait for a lookup which never finishes.
+            CompleteLookup(did, lookup, handle, cacheable);
+        }
+    }
 
-            try
-            {
-                handle = await _resolver(did, linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
-            }
-            catch (OperationCanceledException) when (!_disposalToken.IsCancellationRequested && timeoutTokenSource.IsCancellationRequested)
-            {
-                DidHandleCacheLogger.ResolutionTimedOut(_logger, did);
-                handle = Handle.Invalid;
-            }
+    // Returns the handle to return, or null if the cache was disposed, and whether the handle may be cached.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Any failure to resolve a handle is reported as Handle.Invalid.")]
+    private async Task<(Handle? Handle, bool Cacheable)> ResolveAsync(Did did)
+    {
+        using CancellationTokenSource timeoutTokenSource = new(_options.ResolutionTimeout, _options.TimeProvider);
+        using CancellationTokenSource linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_disposalToken, timeoutTokenSource.Token);
+
+        // Waiting for a resolution slot counts against the resolution timeout, so a flood of lookups cannot queue work indefinitely.
+        try
+        {
+            await _resolutionSlots.WaitAsync(linkedTokenSource.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (_disposalToken.IsCancellationRequested)
         {
-            handle = null;
+            return (null, false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The rejection says nothing about the DID, so it is not cached and a later lookup tries again.
+            _metrics.RejectedLookups.Add(1);
+            return (Handle.Invalid, false);
+        }
+
+        Handle handle;
+
+        try
+        {
+            // WaitAsync bounds the wait even if the resolver ignores cancellation.
+            handle = await StartResolution(did, linkedTokenSource.Token).WaitAsync(linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
+        }
+        catch (OperationCanceledException) when (_disposalToken.IsCancellationRequested)
+        {
+            return (null, false);
+        }
+        catch (OperationCanceledException) when (timeoutTokenSource.IsCancellationRequested)
+        {
+            DidHandleCacheLogger.ResolutionTimedOut(_logger, did);
+            handle = Handle.Invalid;
         }
         catch (Exception exception)
         {
             DidHandleCacheLogger.ResolutionFailed(_logger, exception, did);
             handle = Handle.Invalid;
         }
-
-        if (handle is not null && !handle.IsValid)
+        if (!handle.IsValid)
         {
             DidHandleCacheLogger.HandleNotVerified(_logger, did);
             _metrics.InvalidHandles.Add(1);
             handle = Handle.Invalid;
         }
 
+        return (handle, true);
+    }
+
+    // Starts the resolver, releasing the resolution slot the caller holds when the resolver finishes. The slot is held until then, rather
+    // than until the cache stops waiting for it, so MaximumConcurrentResolutions bounds the resolutions actually running even when a
+    // resolver is slow to observe cancellation.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A resolver which throws must still release its slot.")]
+    private Task<Handle> StartResolution(Did did, CancellationToken cancellationToken)
+    {
+        Task<Handle> resolution;
+
+        try
+        {
+            resolution = _resolver(did, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            resolution = Task.FromException<Handle>(exception);
+        }
+
+        _ = resolution.ContinueWith(
+            static (completed, state) =>
+            {
+                // Observed so a resolver which fails after the cache stopped waiting for it does not raise UnobservedTaskException.
+                _ = completed.Exception;
+                ((SemaphoreSlim)state!).Release();
+            },
+            _resolutionSlots,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        return resolution;
+    }
+
+    // Must not throw, as it is called from a finally block to complete the lookup.
+    private void CompleteLookup(Did did, InFlightLookup lookup, Handle? handle, bool cacheable)
+    {
         lock (_lock)
         {
             if (_inFlight.TryGetValue(did, out InFlightLookup? current) && ReferenceEquals(current, lookup))
@@ -268,8 +359,9 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
                 _inFlight.Remove(did);
             }
 
-            // The handle is still returned to the callers waiting for it, but is not cached if the DID was invalidated whilst it was resolved.
-            if (handle is not null && !_disposed && _generations[Stripe(did)] == lookup.Generation)
+            _pendingLookups--;
+
+            if (handle is not null && cacheable && !_disposed && !lookup.Invalidated)
             {
                 TimeSpan duration = handle.IsValid || _options.Duration < _options.FailedResolutionDuration
                     ? _options.Duration
@@ -293,11 +385,12 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
         }
     }
 
-    private sealed class InFlightLookup(long generation)
+    private sealed class InFlightLookup
     {
-        public long Generation { get; } = generation;
-
         public TaskCompletionSource<Handle> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Read and written whilst holding _lock.
+        public bool Invalidated { get; set; }
     }
 
     private sealed record CachedHandle(Handle Handle, DateTimeOffset ExpiresAt);

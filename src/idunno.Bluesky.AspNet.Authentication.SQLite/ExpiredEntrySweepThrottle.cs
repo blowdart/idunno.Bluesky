@@ -20,7 +20,8 @@ namespace idunno.Bluesky.AspNet.Authentication.SQLite;
 /// </remarks>
 internal sealed class ExpiredEntrySweepThrottle
 {
-    private readonly long _intervalMilliseconds;
+    private readonly TimeSpan _interval;
+    private readonly TimeProvider _timeProvider;
     private long _nextSweepAt;
 
     /// <summary>
@@ -28,16 +29,18 @@ internal sealed class ExpiredEntrySweepThrottle
     /// </summary>
     /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
     /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
+    /// <param name="timeProvider">A provider for monotonic timestamps, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
-    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName)
+    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, TimeProvider? timeProvider = null)
     {
         if (interval < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(paramName, interval, "The sweep interval cannot be negative.");
         }
 
-        _intervalMilliseconds = (long)interval.TotalMilliseconds;
-        _nextSweepAt = Environment.TickCount64 + _intervalMilliseconds;
+        _interval = interval;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _nextSweepAt = _timeProvider.GetTimestamp() + ToTimestampTicks(interval);
     }
 
     /// <summary>
@@ -47,20 +50,21 @@ internal sealed class ExpiredEntrySweepThrottle
     /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
     /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
     /// <param name="dueImmediately">When <see langword="true"/>, the first sweep is claimable immediately rather than one interval after construction.</param>
+    /// <param name="timeProvider">A provider for monotonic timestamps, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
-    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately)
-        : this(interval, paramName)
+    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately, TimeProvider? timeProvider = null)
+        : this(interval, paramName, timeProvider)
     {
         if (dueImmediately)
         {
-            _nextSweepAt = Environment.TickCount64;
+            _nextSweepAt = _timeProvider.GetTimestamp();
         }
     }
 
     /// <summary>
     /// Gets a value indicating whether sweeping is enabled.
     /// </summary>
-    internal bool IsEnabled => _intervalMilliseconds > 0;
+    internal bool IsEnabled => _interval > TimeSpan.Zero;
 
     /// <summary>
     /// Gets a value indicating whether the caller should sweep, claiming the current interval when it should.
@@ -81,7 +85,7 @@ internal sealed class ExpiredEntrySweepThrottle
             return false;
         }
 
-        long now = Environment.TickCount64;
+        long now = _timeProvider.GetTimestamp();
         long nextSweepAt = Interlocked.Read(ref _nextSweepAt);
 
         if (now < nextSweepAt)
@@ -89,6 +93,8 @@ internal sealed class ExpiredEntrySweepThrottle
             return false;
         }
 
-        return Interlocked.CompareExchange(ref _nextSweepAt, now + _intervalMilliseconds, nextSweepAt) == nextSweepAt;
+        return Interlocked.CompareExchange(ref _nextSweepAt, now + ToTimestampTicks(_interval), nextSweepAt) == nextSweepAt;
     }
+
+    private long ToTimestampTicks(TimeSpan duration) => (long)(duration.TotalSeconds * _timeProvider.TimestampFrequency);
 }

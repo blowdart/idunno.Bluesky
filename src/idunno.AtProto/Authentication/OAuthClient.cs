@@ -54,6 +54,7 @@ public class OAuthClient
     private const string DPoPTokenType = "DPoP";
 
     private readonly OAuthOptions? _options;
+    private readonly TimeProvider _timeProvider;
 
 #if NET9_0_OR_GREATER
     private readonly Lock _stateLock = new();
@@ -81,20 +82,22 @@ public class OAuthClient
     private string? _proofKey;
     private IDictionary<string, string>? _stateExtraProperties;
 
-    private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null)
+    private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null, TimeProvider? timeProvider = null)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<OAuthClient>();
 
         options?.Validate();
         _options = options;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     internal OAuthClient(
         Func<HttpClient, HttpClient> httpClientConfigurator,
         Func<HttpMessageHandler> innerHandlerFactory,
         ILoggerFactory? loggerFactory = null,
-        OAuthOptions? options = null) : this(loggerFactory, options)
+        OAuthOptions? options = null,
+        TimeProvider? timeProvider = null) : this(loggerFactory, options, timeProvider)
     {
         ArgumentNullException.ThrowIfNull(httpClientConfigurator);
         ArgumentNullException.ThrowIfNull(innerHandlerFactory);
@@ -748,7 +751,7 @@ public class OAuthClient
     internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId)
     {
         TimeSpan clockSkew = _options?.ClockSkew ?? OAuthOptions.DefaultClockSkew;
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         DateTimeOffset? validFrom = ToUtcDateTimeOffset(accessToken.ValidFrom);
         DateTimeOffset? validTo = ToUtcDateTimeOffset(accessToken.ValidTo);
