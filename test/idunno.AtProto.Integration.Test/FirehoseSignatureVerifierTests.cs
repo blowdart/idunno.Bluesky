@@ -59,6 +59,18 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     }
 
     [Fact]
+    public async Task CachedKeysDoNotExpireWhileTheTimeProviderHasNotAdvanced()
+    {
+        using FirehoseSignatureVerifier verifier = CreateVerifier(new FirehoseOptions { SigningKeyCacheDuration = TimeSpan.FromMilliseconds(50) });
+
+        await Verify(verifier, _key);
+        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+        await Verify(verifier, _key);
+
+        Assert.Equal(1, _resolutions);
+    }
+
+    [Fact]
     public async Task InvalidatingADidResolvesItAgain()
     {
         using FirehoseSignatureVerifier verifier = CreateVerifier();

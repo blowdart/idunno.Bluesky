@@ -39,7 +39,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     private static readonly TimeSpan s_defaultEntryTimeToLive = new(0, 0, 15, 0);
 
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
     public EphemeralCorrelationStateCache(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,

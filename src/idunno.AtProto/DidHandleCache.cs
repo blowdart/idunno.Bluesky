@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -77,7 +76,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     {
         _options = options ?? new DidHandleCacheOptions();
         _resolver = resolver ?? DefaultResolverAsync;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _options.Size, Clock = new TimeProviderClock(_options.TimeProvider) });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _options.Size, Clock = new TimeProviderSystemClock(_options.TimeProvider) });
         _metrics = new DidHandleCacheMetrics(_options.MeterFactory);
         _logger = (_options.LoggerFactory ?? NullLoggerFactory.Instance).CreateLogger<DidHandleCache>();
         _disposalToken = _disposalTokenSource.Token;
@@ -302,10 +301,4 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     }
 
     private sealed record CachedHandle(Handle Handle, DateTimeOffset ExpiresAt);
-
-    // Expires memory cache entries by the configured time provider, so they cannot be evicted while ExpiresAt says they are still live.
-    private sealed class TimeProviderClock(TimeProvider timeProvider) : ISystemClock
-    {
-        public DateTimeOffset UtcNow => timeProvider.GetUtcNow();
-    }
 }
