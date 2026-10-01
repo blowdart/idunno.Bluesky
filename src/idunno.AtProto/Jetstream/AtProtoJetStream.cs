@@ -2103,7 +2103,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     JetStreamLogger.UnexpectedMessageType(_logger, webSocketReceiveResult.MessageType);
                 }
 
-                byte[] receivedData;
+                string? messageAsString = default;
                 bool disposedDuringDecompression = false;
 
                 if (Options.UseCompression)
@@ -2127,11 +2127,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                             if (_disposed)
                             {
                                 disposedDuringDecompression = true;
-                                receivedData = [];
                             }
                             else
                             {
-                                receivedData = _decompressor!.Unwrap(bufferAsSpan, Options.MaxMessageSize).ToArray();
+                                // The message is decoded straight from the decompressed output, rather than from a copy of it.
+                                messageAsString = DecodeMessage(_decompressor!.Unwrap(bufferAsSpan, Options.MaxMessageSize));
                             }
                         }
                     }
@@ -2150,21 +2150,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 }
                 else
                 {
-                    // ReceiveNextMessageAsync allocates the array it returns, so the message can be used as it is.
-                    receivedData = message;
-                }
-
-                string? messageAsString = default;
-
-                // Now convert to a string
-                try
-                {
-                    messageAsString = Encoding.UTF8.GetString(receivedData);
-                }
-                catch
-                {
-                    _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
-                    throw;
+                    messageAsString = DecodeMessage(message);
                 }
 
                 if (!string.IsNullOrEmpty(messageAsString))
@@ -2902,17 +2888,31 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// </remarks>
     private static Dictionary<string, JsonElement> ExtensionDataExcept(IDictionary<string, JsonElement> extensionData, string consumedKey)
     {
-        Dictionary<string, JsonElement> remaining = new(StringComparer.Ordinal);
-
-        foreach (KeyValuePair<string, JsonElement> entry in extensionData.Where(entry => !string.Equals(entry.Key, consumedKey, StringComparison.Ordinal)))
-        {
-            remaining.Add(entry.Key, entry.Value);
-        }
+        Dictionary<string, JsonElement> remaining = new(extensionData, StringComparer.Ordinal);
+        remaining.Remove(consumedKey);
 
         return remaining;
     }
 
     private sealed record ConnectionSettings(HttpClient? HttpClient, CancellationToken CancellationToken);
+
+    /// <summary>
+    /// Decodes a received message as UTF-8, counting a failure to do so as a parsing failure.
+    /// </summary>
+    /// <param name="message">The received, and if necessary decompressed, message.</param>
+    /// <returns>The message as a string.</returns>
+    private string DecodeMessage(ReadOnlySpan<byte> message)
+    {
+        try
+        {
+            return Encoding.UTF8.GetString(message);
+        }
+        catch
+        {
+            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+            throw;
+        }
+    }
 }
 
 #pragma warning restore CS0618

@@ -98,6 +98,28 @@
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
 
+### Changed
+
+#### idunno.AtProto
+
+* XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
+  A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
+* XRPC request bodies are now serialized directly to UTF-8 bytes. The `Content-Type` header is unchanged, `application/json; charset=utf-8`.
+* Firehose and Jetstream web socket messages are now received into pooled buffers. A message that arrives in a single fragment is copied once, rather than
+  being assembled in a `MemoryStream`, and compressed Jetstream messages are decoded without an intermediate copy.
+* Reduced allocations when merging request headers, recording XRPC metrics, and copying Jetstream extension data.
+
+#### idunno.AtProto.Types
+
+* `Cid` now caches its string form and hash code, so repeated calls to `ToString()`, `Value` and `GetHashCode()`, such as when a `Cid` is a dictionary key, no longer allocate.
+  `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
+* `Cid.Hash` now returns a read-only view of the hash, rather than the array itself, so it can no longer be cast to `byte[]` and changed.
+* `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
+
+#### idunno.Bluesky
+
+* `PostView.SelfLabels` and `ProfileViewBasic.SelfLabels` (for both actors and chat members) no longer allocate when there are no labels, and allocate less when there are.
+
 ### Breaking Changes
 
 #### idunno.AtProto

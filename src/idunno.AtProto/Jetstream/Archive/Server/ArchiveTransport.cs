@@ -67,11 +67,11 @@ public static partial class AtProtoServer
             return new(null, response.StatusCode, response.Headers, error);
         }
 
-        string json = await HttpContentReader.ReadAsString(
+        using PooledContent json = await HttpContentReader.ReadAsPooledBytes(
             response.Content, 8 * 1024 * 1024, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidDataException("The Jetstream archive JSON response exceeded 8 MB.");
         JsonTypeInfo<T> configuredTypeInfo = (JsonTypeInfo<T>)AtProtoJsonSerializerOptions.GetTypeInfo(jsonTypeInfo.Type);
-        T? result = JsonSerializer.Deserialize(json, configuredTypeInfo);
+        T? result = JsonSerializer.Deserialize(json.Span, configuredTypeInfo);
         return new(result ?? throw new JsonException("The archive response was empty."), response.StatusCode, response.Headers);
     }
 

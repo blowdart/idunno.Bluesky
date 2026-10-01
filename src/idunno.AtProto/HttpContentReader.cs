@@ -57,6 +57,44 @@ internal static class HttpContentReader
     }
 
     /// <summary>
+    /// Reads <paramref name="content"/> into a pooled buffer, rejecting it if it is longer than <paramref name="maximumLength"/> bytes.
+    /// </summary>
+    /// <param name="content">The <see cref="HttpContent"/> to read.</param>
+    /// <param name="maximumLength">The maximum number of bytes to accept.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>
+    /// The task object representing the asynchronous operation, whose result is the content in a <see cref="PooledContent"/>,
+    /// which must be disposed to return its buffer to the pool, or <see langword="null"/> if the content is longer than <paramref name="maximumLength"/>.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   Reading the bytes avoids decoding the body into a string, which doubles the memory a response needs
+    ///   when the body is then parsed as JSON.
+    /// </para>
+    /// </remarks>
+    public static async Task<PooledContent?> ReadAsPooledBytes(HttpContent content, int maximumLength, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumLength);
+
+        if (content.Headers.ContentLength > maximumLength)
+        {
+            return null;
+        }
+
+        // Read one byte more than the maximum so an over-long response can be detected rather than silently truncated.
+        (byte[] buffer, int bytesRead) = await ReadAtMost(content, maximumLength + 1, cancellationToken).ConfigureAwait(false);
+
+        if (bytesRead > maximumLength)
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+            return null;
+        }
+
+        return new PooledContent(buffer, bytesRead);
+    }
+
+    /// <summary>
     /// Reads at most <paramref name="maximumLength"/> bytes of <paramref name="content"/> as a string, truncating anything longer.
     /// </summary>
     /// <param name="content">The <see cref="HttpContent"/> to read.</param>

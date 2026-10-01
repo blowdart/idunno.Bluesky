@@ -3,9 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -30,6 +28,8 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
     [GeneratedRegex(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.CultureInvariant, 5000)]
     private static partial Regex s_asciiRegex();
+
+    private string? _value;
 
     private AtUri(string scheme, AtIdentifier authority, string? path, Nsid? collection, RecordKey? rKey)
     {
@@ -185,23 +185,16 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// Serializes the component parts of the AT URI represented by this instance into a string.
     /// </summary>
     /// <returns>A string representation of the AT URI.</returns>
-    public override string ToString()
+    /// <remarks>
+    /// <para>An <see cref="AtUri"/> cannot be changed once it is created, so the string is built once and then reused.</para>
+    /// </remarks>
+    public override string ToString() => _value ??= Format();
+
+    private string Format()
     {
-        StringBuilder atUriBuilder = new();
+        string scheme = string.IsNullOrEmpty(Scheme) ? string.Empty : Scheme + "://";
 
-        if (!string.IsNullOrEmpty(Scheme))
-        {
-            atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Scheme}://");
-        }
-
-        atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
-
-        if (!string.IsNullOrEmpty(AbsolutePath))
-        {
-            atUriBuilder.Append(CultureInfo.InvariantCulture, ($"{AbsolutePath}"));
-        }
-
-        return atUriBuilder.ToString();
+        return string.Concat(scheme, Authority.ToString(), AbsolutePath);
     }
 
     /// <summary>

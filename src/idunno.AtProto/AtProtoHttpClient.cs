@@ -1647,7 +1647,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         foreach (NameValueHeaderValue header in _extraRequestHeaders)
         {
-            if (mergedHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)))
+            if (ContainsHeader(requestHeaders, header.Name))
             {
                 continue;
             }
@@ -1656,6 +1656,57 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
 
         return mergedHeaders;
+    }
+
+    /// <summary>
+    /// Gets a flag indicating whether <paramref name="headers"/> contains a header named <paramref name="name"/>, ignoring case.
+    /// </summary>
+    /// <param name="headers">The headers to search.</param>
+    /// <param name="name">The name of the header to find.</param>
+    /// <returns><see langword="true"/> if <paramref name="headers"/> contains a header named <paramref name="name"/>, otherwise <see langword="false"/>.</returns>
+    [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq allocations in a hot path.")]
+    private static bool ContainsHeader(ICollection<NameValueHeaderValue>? headers, string name)
+    {
+        if (headers is null)
+        {
+            return false;
+        }
+
+        foreach (NameValueHeaderValue header in headers)
+        {
+            if (header.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the name of the XRPC method an endpoint path calls, for use in metrics.
+    /// </summary>
+    /// <param name="endpoint">The endpoint path, which may include a query string.</param>
+    /// <returns>The XRPC method name, or an empty string if <paramref name="endpoint"/> is not an XRPC endpoint.</returns>
+    internal static string GetXrpcEndpointName(string endpoint)
+    {
+        const string xrpcPrefix = "/xrpc/";
+
+        if (!endpoint.StartsWith(xrpcPrefix, StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
+        ReadOnlySpan<char> name = endpoint.AsSpan(xrpcPrefix.Length);
+
+        int end = name.IndexOfAny('/', '?');
+
+        if (end >= 0)
+        {
+            name = name[..end];
+        }
+
+        return name.ToString();
     }
 
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
@@ -1676,6 +1727,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         CancellationToken cancellationToken = default)
     {
         long startTimestamp = Stopwatch.GetTimestamp();
+        string xrpcEndpoint = GetXrpcEndpointName(endpoint);
 
         try
         {
@@ -1690,7 +1742,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                 if (needsProxyHeader)
                 {
-                    bool hasProxyHeader = requestHeaders?.Any(h => h.Name.Equals("atproto-proxy", StringComparison.OrdinalIgnoreCase)) ?? false;
+                    bool hasProxyHeader = ContainsHeader(requestHeaders, "atproto-proxy");
                     if (!hasProxyHeader)
                     {
                         Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
@@ -1736,9 +1788,11 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             break;
 
                         default:
-                            string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
+                            // Serializing straight to UTF-8 avoids building the body as a string and then encoding it again.
+                            ByteArrayContent jsonContent = new(JsonSerializer.SerializeToUtf8Bytes(record, jsonSerializerOptions));
+                            jsonContent.Headers.ContentType = new MediaTypeHeaderValue(MediaTypeNames.Application.Json) { CharSet = Encoding.UTF8.WebName };
 
-                            httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
+                            httpRequestMessage.Content = jsonContent;
                             break;
                     }
 
@@ -1769,17 +1823,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
                         new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
 
-                    string xrpcEndpoint = string.Empty;
-
-                    if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
+                    if (xrpcEndpoint.Length != 0)
                     {
-                        xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? string.Empty;
-
-                        if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
-                        {
-                            xrpcEndpoint = xrpcEndpoint.Split('?')[0];
-                        }
-
                         _metrics.XrpcRequests.Add(1,
                             new TagList(
                                 new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1852,7 +1897,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             }
                             else
                             {
-                                string? responseContent = await HttpContentReader.ReadAsString(
+                                using PooledContent? responseContent = await HttpContentReader.ReadAsPooledBytes(
                                     httpResponseMessage.Content,
                                     MaximumResponseSize,
                                     cancellationToken).ConfigureAwait(false);
@@ -1875,26 +1920,28 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                 if (typeof(TResult) == typeof(string))
                                 {
-                                    result.Result = responseContent as TResult;
+                                    result.Result = responseContent.ToString() as TResult;
                                 }
                                 else if (typeof(TResult) == typeof(JsonNode))
                                 {
-                                    result.Result = JsonNode.Parse(responseContent) as TResult;
+                                    result.Result = JsonNode.Parse(responseContent.Span) as TResult;
                                 }
                                 else if (typeof(TResult) == typeof(JsonObject))
                                 {
-                                    result.Result = JsonObject.Parse(responseContent) as TResult;
+                                    result.Result = JsonObject.Parse(responseContent.Span) as TResult;
                                 }
                                 else if (typeof(TResult) == typeof(JsonDocument))
                                 {
-                                    result.Result = JsonDocument.Parse(responseContent) as TResult;
+                                    // A JsonDocument parsed from memory keeps referring to it, and the pooled buffer is returned when
+                                    // this method ends, so the document needs its own copy.
+                                    result.Result = JsonDocument.Parse(responseContent.Span.ToArray()) as TResult;
                                 }
                                 else
                                 {
                                     try
                                     {
                                         result.Result = JsonSerializer.Deserialize<TResult>(
-                                            responseContent,
+                                            responseContent.Span,
                                             jsonSerializerOptions);
                                     }
                                     catch (JsonException ex)
@@ -2035,19 +2082,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
         {
             TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
 
-            if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
+            if (!string.IsNullOrEmpty(xrpcEndpoint))
             {
-                string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? string.Empty;
-
-                if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
-                {
-                    xrpcEndpoint = xrpcEndpoint.Split('?')[0];
-                }
-
-                if (!string.IsNullOrEmpty(xrpcEndpoint))
-                {
-                    tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
-                }
+                tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
             }
 
             _metrics.RequestDuration.Record(

@@ -47,9 +47,9 @@ public class AllocationBudgetTests
     // are in the comments.
     public static TheoryData<string, long> XrpcBudgets => new()
     {
-        { "Xrpc.GetTimeline", 2_850_000 },             // 2,560,370 / 2,590,394
-        { "Xrpc.GetAuthorFeed", 4_330_000 },           // 3,891,880 / 3,936,654
-        { "Xrpc.TimelineDecode", 2_230_000 },          // 1,997,256 / 2,026,760
+        { "Xrpc.GetTimeline", 2_260_000 },             // 2,018,624 / 2,048,304
+        { "Xrpc.GetAuthorFeed", 3_540_000 },           // 3,167,576 / 3,212,310
+        { "Xrpc.TimelineDecode", 2_230_000 },          // 2,009,672 / 2,039,176
     };
 
     [Theory]
@@ -92,10 +92,10 @@ public class AllocationBudgetTests
     // label, and every post a self label and a labeler's label.
     public static TheoryData<string, long> SelfLabelBudgets => new()
     {
-        { "PostView.SelfLabels.Corpus", 440 },               //   400
-        { "PostView.SelfLabels.Labelled", 1_200 },           // 1,088
-        { "ProfileViewBasic.SelfLabels.Corpus", 370 },       //   334
-        { "ProfileViewBasic.SelfLabels.Labelled", 1_060 },   //   960
+        { "PostView.SelfLabels.Corpus", 16 },                //     0
+        { "PostView.SelfLabels.Labelled", 160 },             //   144
+        { "ProfileViewBasic.SelfLabels.Corpus", 24 },        //    18
+        { "ProfileViewBasic.SelfLabels.Labelled", 340 },     //   304
     };
 
     [Theory]

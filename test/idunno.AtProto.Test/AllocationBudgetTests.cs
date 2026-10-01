@@ -31,14 +31,14 @@ public class AllocationBudgetTests
     // Bytes allocated per message. Baselines measured on .NET 8, 9 and 10 are in the comments; .NET 8 is slightly higher.
     public static TheoryData<string, long> Budgets => new()
     {
-        { "WebSocketReceive.Firehose", 26_000 },   // 23,637
-        { "WebSocketReceive.Jetstream", 10_700 },  //  9,737
-        { "Jetstream.V1", 5_600 },                 //  5,065
-        { "Jetstream.V1Compressed", 6_900 },       //  6,035 / 6,293
-        { "Jetstream.V2", 5_500 },                 //  4,850 / 4,978
-        { "Firehose.FrameParse", 3_200 },          //  2,908
-        { "Firehose.ReadFields", 5_100 },          //  4,660
-        { "Firehose.FullDecode", 44_000 },         // 39,897 / 39,937
+        { "WebSocketReceive.Firehose", 7_300 },   // 6,620
+        { "WebSocketReceive.Jetstream", 1_050 },  // 944
+        { "Jetstream.V1", 5_600 },                 // 5,009
+        { "Jetstream.V1Compressed", 6_900 },       // 5,979 / 6,237
+        { "Jetstream.V2", 5_500 },                 // 4,793 / 4,921
+        { "Firehose.FrameParse", 3_100 },          // 2,762
+        { "Firehose.ReadFields", 5_000 },          // 4,514
+        { "Firehose.FullDecode", 42_500 },         // 38,366 / 38,406
     };
 
     [Theory]
@@ -62,8 +62,9 @@ public class AllocationBudgetTests
     // Bytes allocated per CID. The CIDs are those of random 256 byte blocks, the size of a typical record.
     public static TheoryData<string, long> CidBudgets => new()
     {
-        { "Cid.CarBlockDictionary", 180 },  // 161
-        { "Cid.ToString", 800 },            // 720
+        { "Cid.CarBlockDictionary", 40 },   // 33
+        { "Cid.ToString", 8 },              // 0, as the string is cached after the first call
+        { "Cid.CreateAndFormat", 680 },     // 616
     };
 
     [Theory]
@@ -74,11 +75,12 @@ public class AllocationBudgetTests
 
         Random random = new(42);
         Cid[] cids = new Cid[count];
-        byte[] content = new byte[256];
+        byte[][] contents = new byte[count][];
         for (int i = 0; i < count; i++)
         {
-            random.NextBytes(content);
-            cids[i] = Cid.FromDagCbor(content);
+            contents[i] = new byte[256];
+            random.NextBytes(contents[i]);
+            cids[i] = Cid.FromDagCbor(contents[i]);
         }
 
         Action action = path switch
@@ -102,6 +104,14 @@ public class AllocationBudgetTests
                 foreach (Cid cid in cids)
                 {
                     _ = cid.ToString();
+                }
+            },
+            // The firehose creates a new CID for every block, so the first call to ToString is the one that matters there.
+            "Cid.CreateAndFormat" => () =>
+            {
+                foreach (byte[] content in contents)
+                {
+                    _ = Cid.FromDagCbor(content).ToString();
                 }
             },
             _ => throw new ArgumentOutOfRangeException(nameof(path), path, "Unknown path.")
