@@ -14,6 +14,7 @@ using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky.AspNet.Authentication;
@@ -81,21 +82,32 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     ///   store, and a <paramref name="sizeLimit"/>, for each of them rather than one shared between them.
     /// </para>
     /// </remarks>
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockExpiration = null,
         int? sizeLimit = null,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null) : this(loggerFactory, entryTimeToLive, refreshLockExpiration, sizeLimit, meterFactory, clock: null)
+    {
+    }
+
+    // Lets tests control when entries and refresh locks expire, rather than waiting on the system clock.
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
+    internal EphemeralIdentityStore(
+        ILoggerFactory loggerFactory,
+        TimeSpan? entryTimeToLive,
+        TimeSpan? refreshLockExpiration,
+        int? sizeLimit,
+        IMeterFactory? meterFactory,
+        ISystemClock? clock)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
 
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
-        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = clock });
+        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = clock });
 
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
