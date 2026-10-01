@@ -94,7 +94,7 @@ public sealed class Program
             throw new ArgumentException("--host must be a ws:// or wss:// Jetstream v2 URI.", nameof(host));
         }
 
-        Did did = await Resolution.ResolveHandle(new Handle(handle), cancellationToken: cancellationToken).ConfigureAwait(false)
+        Did did = await IdentityResolution.ResolveHandleAsync(new Handle(handle), cancellationToken: cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Could not resolve {handle}.");
 
         using AtProtoJetstream jetstream = new(uri: uri, options: new JetstreamOptions

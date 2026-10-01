@@ -187,7 +187,7 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
                     // returned for is dropped rather than presented as though the directory agreed with it.
                     if (Options.CurrentValue.VerifyHandle &&
                         cachedProfile.Handle is not null &&
-                        !await Resolution.VerifyHandle(
+                        !await IdentityResolution.VerifyHandleAsync(
                             cachedProfile.Handle,
                             agent.Did,
                             loggerFactory: _loggerFactory,

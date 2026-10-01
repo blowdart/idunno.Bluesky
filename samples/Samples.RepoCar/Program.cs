@@ -294,7 +294,7 @@ public sealed class Program
             {
                 if (!resolvedHandles.TryGetValue(subjectDid, out Task<Handle>? handleTask))
                 {
-                    handleTask = Resolution.ResolveVerifiedHandle(subjectDid, cancellationToken: cancellationToken);
+                    handleTask = IdentityResolution.ResolveVerifiedHandleAsync(subjectDid, cancellationToken: cancellationToken);
                     resolvedHandles.Add(subjectDid, handleTask);
                 }
 

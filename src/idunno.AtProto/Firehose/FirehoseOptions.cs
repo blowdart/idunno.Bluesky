@@ -233,7 +233,7 @@ public sealed record FirehoseOptions
     /// <summary>
     /// Gets the function used to resolve DID documents when <see cref="VerifySignatures"/> is <see langword="true"/>.
     /// </summary>
-    /// <value>A DID document resolver, or <see langword="null"/> to resolve each DID with <see cref="Resolution"/>.</value>
+    /// <value>A DID document resolver, or <see langword="null"/> to resolve each DID with <see cref="IdentityResolution"/>.</value>
     public Func<Did, CancellationToken, Task<DidDocument?>>? DidDocumentResolver { get; init; }
 
     /// <summary>

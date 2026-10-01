@@ -501,7 +501,7 @@ public partial class AtProtoAgent : Agent
             {
                 pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
 
-                if (pds is not null && !Resolution.IsSupportedServiceEndpoint(pds))
+                if (pds is not null && !IdentityResolution.IsSupportedServiceEndpoint(pds))
                 {
                     Logger.UnsupportedPdsUri(_logger, did, pds);
                     pds = null;

@@ -13,7 +13,7 @@ namespace idunno.AtProto;
 /// Resolves and caches the verified <see cref="Handle"/> for a <see cref="Did"/>.
 /// </summary>
 /// <remarks>
-/// <para>A handle is resolved with <see cref="Resolution.ResolveVerifiedHandle(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>,
+/// <para>A handle is resolved with <see cref="IdentityResolution.ResolveVerifiedHandleAsync(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>,
 /// so it is only returned once the handle the DID document declares has been resolved back to the same DID. Any failure to resolve or verify
 /// a handle results in <see cref="Handle.Invalid"/>, which is cached for <see cref="DidHandleCacheOptions.FailedResolutionDuration"/>.</para>
 /// <para>Concurrent lookups for the same DID share a single resolution. Cancelling a lookup stops the caller waiting, but does not cancel the
@@ -70,7 +70,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="DidHandleCache"/> class with a custom resolver.
     /// </summary>
-    /// <param name="resolver">The function used to resolve a verified handle, or <see langword="null"/> to use <see cref="Resolution.ResolveVerifiedHandle(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>.</param>
+    /// <param name="resolver">The function used to resolve a verified handle, or <see langword="null"/> to use <see cref="IdentityResolution.ResolveVerifiedHandleAsync(Did, Uri?, ILoggerFactory?, HttpClient?, TimeSpan?, int, int, CancellationToken)"/>.</param>
     /// <param name="options">The options configuring the cache, or <see langword="null"/> to use the default options.</param>
     internal DidHandleCache(Func<Did, CancellationToken, Task<Handle>>? resolver, DidHandleCacheOptions? options)
     {
@@ -196,7 +196,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     private static int Stripe(Did did) => (int)((uint)did.GetHashCode() % GenerationStripes);
 
     private Task<Handle> DefaultResolverAsync(Did did, CancellationToken cancellationToken) =>
-        Resolution.ResolveVerifiedHandle(
+        IdentityResolution.ResolveVerifiedHandleAsync(
             did: did,
             plcDirectory: _options.PlcDirectory,
             loggerFactory: _options.LoggerFactory,

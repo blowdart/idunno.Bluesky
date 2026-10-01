@@ -75,6 +75,7 @@
   is bounded by `ResolutionTimeout`. Set `FirehoseOptions.DidHandleResolver`, `JetstreamOptions.DidHandleResolver` or call
   `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
   Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
+* Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
 
 #### idunno.AtProto.Types
 
@@ -114,6 +115,8 @@
   `ArgumentException` when it is set. Both connect their web sockets through an `HttpClient`, and .NET does not allow a web socket which does
   that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
   Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
+* `Resolution` is obsolete. Use `IdentityResolution` and its `Async` methods instead; `Resolution` forwards to them. Resolution log messages now use the
+  `idunno.AtProto.IdentityResolution` category rather than `idunno.AtProto.Resolution`.
 * `Label.Signature`, and the `signature` parameter of the `Label` constructor, are now `Bytes?` rather than `IEnumerable<byte>`.
   Over JSON the AT Protocol data model encodes bytes as a `$bytes` object, which `IEnumerable<byte>` cannot read, so every signed
   label failed to deserialize. Use `Signature.Value` for the bytes as a collection, or `Signature.ToBytes()` for a `byte[]`, and pass

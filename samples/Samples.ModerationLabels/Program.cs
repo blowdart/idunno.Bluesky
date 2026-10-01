@@ -361,14 +361,14 @@ public sealed class Program
         Did? did = labeler switch
         {
             Did labelerDid => labelerDid,
-            Handle handle => await Resolution.ResolveHandle(handle, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false),
+            Handle handle => await IdentityResolution.ResolveHandleAsync(handle, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false),
             _ => throw new InvalidOperationException($"'{labeler}' is not a DID or a handle.")
         };
 
         cancellationToken.ThrowIfCancellationRequested();
         did = did ?? throw new InvalidOperationException($"Could not resolve the handle '{labeler}' to a DID.");
 
-        DidDocument? didDocument = await Resolution.ResolveDidDocument(did, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false);
+        DidDocument? didDocument = await IdentityResolution.ResolveDidDocumentAsync(did, loggerFactory: NullLoggerFactory.Instance, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         cancellationToken.ThrowIfCancellationRequested();
         didDocument = didDocument ?? throw new InvalidOperationException($"Could not resolve the DID document for {did}.");
