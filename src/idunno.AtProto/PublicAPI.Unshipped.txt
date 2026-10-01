@@ -749,3 +749,52 @@ idunno.AtProto.Firehose.FirehoseOptions.SigningKeyCacheSize.init -> void
 *REMOVED*idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>?
 idunno.AtProto.Labels.Label.Label(int? version, idunno.AtProto.Did! source, string! uri, idunno.AtProto.Cid? cid, string! value, bool isNegationLabel, System.DateTimeOffset creationTimestamp, idunno.AtProto.Bytes? signature) -> void
 idunno.AtProto.Labels.Label.Signature.get -> idunno.AtProto.Bytes?
+idunno.AtProto.DidHandleCache
+idunno.AtProto.DidHandleCache.DidHandleCache() -> void
+idunno.AtProto.DidHandleCache.DidHandleCache(idunno.AtProto.DidHandleCacheOptions? options) -> void
+idunno.AtProto.DidHandleCache.Dispose() -> void
+idunno.AtProto.DidHandleCache.Invalidate(idunno.AtProto.Did! did) -> void
+idunno.AtProto.DidHandleCache.ResolveHandleAsync(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<idunno.AtProto.Handle!>
+idunno.AtProto.DidHandleCache.TryGetCachedHandle(idunno.AtProto.Did! did, out idunno.AtProto.Handle? handle) -> bool
+idunno.AtProto.DidHandleCacheMetrics
+idunno.AtProto.DidHandleCacheOptions
+idunno.AtProto.DidHandleCacheOptions.<Clone>$() -> idunno.AtProto.DidHandleCacheOptions!
+idunno.AtProto.DidHandleCacheOptions.DidHandleCacheOptions() -> void
+idunno.AtProto.DidHandleCacheOptions.Duration.get -> System.TimeSpan
+idunno.AtProto.DidHandleCacheOptions.Duration.init -> void
+idunno.AtProto.DidHandleCacheOptions.Equals(idunno.AtProto.DidHandleCacheOptions? other) -> bool
+idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.get -> System.TimeSpan
+idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.init -> void
+idunno.AtProto.DidHandleCacheOptions.HttpClient.get -> System.Net.Http.HttpClient?
+idunno.AtProto.DidHandleCacheOptions.HttpClient.init -> void
+idunno.AtProto.DidHandleCacheOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.AtProto.DidHandleCacheOptions.LoggerFactory.init -> void
+idunno.AtProto.DidHandleCacheOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.AtProto.DidHandleCacheOptions.MeterFactory.init -> void
+idunno.AtProto.DidHandleCacheOptions.PlcDirectory.get -> System.Uri?
+idunno.AtProto.DidHandleCacheOptions.PlcDirectory.init -> void
+idunno.AtProto.DidHandleCacheOptions.ResolutionTimeout.get -> System.TimeSpan
+idunno.AtProto.DidHandleCacheOptions.ResolutionTimeout.init -> void
+idunno.AtProto.DidHandleCacheOptions.Size.get -> int
+idunno.AtProto.DidHandleCacheOptions.Size.init -> void
+idunno.AtProto.DidHandleCacheOptions.TimeProvider.get -> System.TimeProvider!
+idunno.AtProto.DidHandleCacheOptions.TimeProvider.init -> void
+idunno.AtProto.Firehose.FirehoseOptions.DidHandleResolver.get -> idunno.AtProto.IDidHandleResolver?
+idunno.AtProto.Firehose.FirehoseOptions.DidHandleResolver.init -> void
+idunno.AtProto.IDidHandleResolver
+idunno.AtProto.IDidHandleResolver.Invalidate(idunno.AtProto.Did! did) -> void
+idunno.AtProto.IDidHandleResolver.ResolveHandleAsync(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<idunno.AtProto.Handle!>
+idunno.AtProto.IDidHandleResolver.TryGetCachedHandle(idunno.AtProto.Did! did, out idunno.AtProto.Handle? handle) -> bool
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.DidHandleResolver.get -> idunno.AtProto.IDidHandleResolver?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.DidHandleResolver.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithDidHandleResolver(idunno.AtProto.IDidHandleResolver! didHandleResolver) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamOptions.DidHandleResolver.get -> idunno.AtProto.IDidHandleResolver?
+idunno.AtProto.Jetstream.JetstreamOptions.DidHandleResolver.init -> void
+override idunno.AtProto.DidHandleCacheOptions.Equals(object? obj) -> bool
+override idunno.AtProto.DidHandleCacheOptions.GetHashCode() -> int
+override idunno.AtProto.DidHandleCacheOptions.ToString() -> string!
+static idunno.AtProto.DidHandleCacheMetrics.MeterName.get -> string!
+static idunno.AtProto.DidHandleCacheMetrics.MeterVersion.get -> string!
+static idunno.AtProto.DidHandleCacheOptions.operator !=(idunno.AtProto.DidHandleCacheOptions? left, idunno.AtProto.DidHandleCacheOptions? right) -> bool
+static idunno.AtProto.DidHandleCacheOptions.operator ==(idunno.AtProto.DidHandleCacheOptions? left, idunno.AtProto.DidHandleCacheOptions? right) -> bool
+static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoDidHandleCacheMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!

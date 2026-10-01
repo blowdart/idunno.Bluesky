@@ -237,6 +237,16 @@ public sealed record FirehoseOptions
     public Func<Did, CancellationToken, Task<DidDocument?>>? DidDocumentResolver { get; init; }
 
     /// <summary>
+    /// Gets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <value>A DID handle resolver, or <see langword="null"/> to not invalidate any handles. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>The resolver is not disposed by the firehose.</para>
+    /// <para>A malicious server can send an <c>#identity</c> event before each event for a DID so its handle is never cached.</para>
+    /// </remarks>
+    public IDidHandleResolver? DidHandleResolver { get; init; }
+
+    /// <summary>
     /// Gets a value that indicates whether signing keys resolved when <see cref="VerifySignatures"/> is <see langword="true"/> are cached.
     /// </summary>
     /// <value><see langword="true"/> to cache signing keys; otherwise, <see langword="false"/>. The default is <see langword="true"/>.</value>

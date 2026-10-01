@@ -164,6 +164,7 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
+                                    InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
                                     yield return decodedEvent;
                                 }
@@ -209,6 +210,7 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
+                                    InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
                                     yield return decodedEvent;
                                 }
@@ -246,6 +248,7 @@ public partial class AtProtoJetstream
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
                                     JetstreamEvent decodedEvent = row.ToEvent();
+                                    InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
                                     yield return decodedEvent;
                                 }

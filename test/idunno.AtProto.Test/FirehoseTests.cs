@@ -506,6 +506,25 @@ public class FirehoseTests
         Assert.True(options.CacheSigningKeys);
         Assert.Equal(100_000, options.SigningKeyCacheSize);
         Assert.Equal(TimeSpan.FromHours(1), options.SigningKeyCacheDuration);
+        Assert.Null(options.DidHandleResolver);
+    }
+
+    [Fact]
+    public async Task AnIdentityEventInvalidatesTheDidHandleResolver()
+    {
+        RecordingDidHandleResolver resolver = new();
+        RepoEventDecoder decoder = new(new FirehoseOptions { DidHandleResolver = resolver }, verifier: null);
+        Did did = new("did:plc:ewvi7nxzyoun6zhxsrcy6jgr");
+
+        CborFields fields = FirehoseCbor.ReadFields(EncodeMap(("did", did.ToString()), ("time", "2026-09-28T01:02:03Z")), decoder.PayloadFields);
+        await decoder.DecodeAsync("#identity", 1, fields, TestContext.Current.CancellationToken);
+
+        Assert.Equal([did], resolver.Invalidated);
+
+        CborFields accountFields = FirehoseCbor.ReadFields(EncodeMap(("active", true), ("did", did.ToString()), ("time", "2026-09-28T01:02:03Z")), decoder.PayloadFields);
+        await decoder.DecodeAsync("#account", 2, accountFields, TestContext.Current.CancellationToken);
+
+        Assert.Single(resolver.Invalidated);
     }
 
     private static byte[] Encode(Action<CborWriter> write)

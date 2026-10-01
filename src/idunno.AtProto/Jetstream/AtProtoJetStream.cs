@@ -2326,6 +2326,18 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private static bool ContainsControlCharacters(string value) => value.Any(char.IsControl);
 
+    /// <summary>
+    /// Invalidates the cached handle of the DID an <c>#identity</c> event is for, as its handle may have changed.
+    /// </summary>
+    /// <param name="jetstreamEvent">The event about to be raised.</param>
+    internal void InvalidateHandle(AtJetstreamEvent jetstreamEvent)
+    {
+        if (jetstreamEvent.Kind == JetStreamEventKind.Identity)
+        {
+            Options.DidHandleResolver?.Invalidate(jetstreamEvent.Did);
+        }
+    }
+
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
     private Task ParseMessage(string json, ILogger logger)
     {
@@ -2373,6 +2385,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // bug as a message parsing failure and log it as though the server had sent something unparsable.
                     try
                     {
+                        InvalidateHandle(derivedEvent);
                         OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
                     }
                     catch (Exception ex)

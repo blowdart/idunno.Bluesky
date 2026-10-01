@@ -88,6 +88,11 @@ public sealed class AtProtoJetstreamBuilder
     public IMeterFactory? MeterFactory { get; set; }
 
     /// <summary>
+    /// Gets or sets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    public IDidHandleResolver? DidHandleResolver { get; set; }
+
+    /// <summary>
     /// Gets or sets a flag indicating whether compression should be used with the stream. Defaults to <see langword="true"/>.
     /// </summary>
     public bool EnableCompression { get; set; } = true;
@@ -338,6 +343,20 @@ public sealed class AtProtoJetstreamBuilder
         ArgumentNullException.ThrowIfNull(meterFactory);
 
         MeterFactory = meterFactory;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="IDidHandleResolver"/> whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <param name="didHandleResolver">The <see cref="IDidHandleResolver"/> to invalidate handles in.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="didHandleResolver"/> is <see langword="null"/>.</exception>
+    public AtProtoJetstreamBuilder WithDidHandleResolver(IDidHandleResolver didHandleResolver)
+    {
+        ArgumentNullException.ThrowIfNull(didHandleResolver);
+
+        DidHandleResolver = didHandleResolver;
         return this;
     }
 
@@ -639,6 +658,7 @@ public sealed class AtProtoJetstreamBuilder
             CloseTimeout = CloseTimeout,
             SendTimeout = SendTimeout,
             MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
+            DidHandleResolver = DidHandleResolver,
         };
 
         AtProtoJetstream jetstream;

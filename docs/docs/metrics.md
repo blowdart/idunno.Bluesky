@@ -163,6 +163,21 @@ The `idunno.AtProto.Firehose` Meter reports measures from the `idunno.AtProto.Fi
 | `total.signing_key_cache_misses` | Counter&lt;long&gt; | {lookups} | Signing keys not found in the signing key cache, each of which resolved a DID document inline and delayed the stream. Only recorded when `VerifySignatures` and `CacheSigningKeys` are both on. |
 | `total.signing_key_refreshes` | Counter&lt;long&gt; | {lookups} | Cached signing keys resolved again because a signature failed to verify against them, which may mean a key was rotated without an `#identity` event. |
 
+## idunno.AtProto.DidHandleCache
+
+The `idunno.AtProto.DidHandleCache` Meter reports measures from `idunno.AtProto.DidHandleCache`. Instrument names are prefixed with `idunno.atproto.didhandlecache.` (for example, `idunno.atproto.didhandlecache.total.hits`).
+Register the meter with `AddAtProtoDidHandleCacheMetrics()`, and supply an `IMeterFactory` with `DidHandleCacheOptions.MeterFactory`.
+
+Hits and misses are only recorded by `ResolveHandleAsync()`; `TryGetCachedHandle()` records nothing.
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `total.hits` | Counter&lt;long&gt; | {lookups} | Handles, including `handle.invalid`, found in the cache. |
+| `total.misses` | Counter&lt;long&gt; | {lookups} | Handles not found in the cache, each of which started a resolution. |
+| `total.coalesced_lookups` | Counter&lt;long&gt; | {lookups} | Handles not found in the cache which joined a resolution already in progress for the same DID rather than starting another. |
+| `total.invalid_handles` | Counter&lt;long&gt; | {resolutions} | Resolutions which failed, timed out, or returned a handle which did not resolve back to the DID, and so returned `handle.invalid`. |
+| `total.invalidations` | Counter&lt;long&gt; | {invalidations} | Calls to `Invalidate()`, including those made by the firehose or Jetstream for identity events. |
+
 ## idunno.AtProto.Directory
 
 The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDirectory` service.
