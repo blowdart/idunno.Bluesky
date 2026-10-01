@@ -527,6 +527,45 @@ public class FirehoseTests
         Assert.NotEmpty(LabelEventDecoder.GetUnsignedLabel(EncodeMap(fields[..LabelEventDecoder.MaximumSignedLabelFields])));
     }
 
+    [Theory]
+    [InlineData(0, 3, true)]
+    [InlineData(3, 0, true)]
+    [InlineData(2, 2, true)]
+    [InlineData(22, 1, true)]
+    [InlineData(21, 1, true)]
+    [InlineData(30, 32, true)]
+    [InlineData(2, 2, false)]
+    [InlineData(30, 32, false)]
+    public void GetUnsignedLabelMatchesReEncodingTheUnsignedFields(int before, int after, bool signed)
+    {
+        // The data value holds the bytes of an encoded "sig" key, so only a key can match.
+        List<(string Key, object Value)> unsignedFields = [("data", new byte[] { 0x63, (byte)'s', (byte)'i', (byte)'g' })];
+        unsignedFields.AddRange(Enumerable.Range(0, before).Select(i => (string.Create(CultureInfo.InvariantCulture, $"a{i:D2}"), (object)"x")));
+        unsignedFields.AddRange(Enumerable.Range(0, after).Select(i => (string.Create(CultureInfo.InvariantCulture, $"z{i:D2}"), (object)(long)i)));
+
+        List<(string Key, object Value)> fields = [.. unsignedFields];
+        if (signed)
+        {
+            fields.Add(("sig", new byte[64]));
+        }
+
+        Assert.Equal(EncodeMap([.. unsignedFields]), LabelEventDecoder.GetUnsignedLabel(EncodeMap([.. fields])));
+    }
+
+    [Fact]
+    public void GetUnsignedLabelRejectsKeysWhichAreNotStrings()
+    {
+        byte[] label = Encode(writer =>
+        {
+            writer.WriteStartMap(1);
+            writer.WriteInt32(1);
+            writer.WriteTextString("x");
+            writer.WriteEndMap();
+        });
+
+        Assert.Throws<InvalidDataException>(() => LabelEventDecoder.GetUnsignedLabel(label));
+    }
+
     public static TheoryData<Func<FirehoseOptions>> InvalidOptions => new()
     {
         () => new FirehoseOptions { BufferSize = 0 },

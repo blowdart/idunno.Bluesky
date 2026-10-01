@@ -193,8 +193,9 @@ internal sealed record JssRow(
         }
     }
 
+    // Deserialized straight from the JSON, rather than through a JsonElement, which would parse the JSON into a document and copy it.
     private static T Deserialize<T>(byte[] bytes, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
         where T : class =>
-        JsonSerializer.Deserialize(DagCbor.ToJsonElement(bytes), typeInfo) ??
+        JsonSerializer.Deserialize(DagCbor.ToJsonUtf8(bytes).Span, typeInfo) ??
         throw new JsonException("The archive event payload was empty.");
 }

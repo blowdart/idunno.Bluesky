@@ -115,6 +115,10 @@
   allocations when decoding a commit by about 16%.
 * Jetstream archive blocks are decoded without copying the decompressed block or its columns, and Jetstream metrics no longer format the server
   address for every message or archive event.
+* Jetstream archive identity, account and sync events are deserialized directly from their converted JSON, rather than through a `JsonElement`,
+  and `DagCbor.ToJsonElement()` no longer copies the element it returns.
+* Preparing a moderation label for signature verification now removes the signature from the encoded label, rather than re-encoding
+  every other field, more than halving its cost and cutting its allocations by more than 80%.
 
 #### idunno.AtProto.Types
 
