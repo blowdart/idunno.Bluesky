@@ -118,8 +118,8 @@
   `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
 * `Cid.Hash` now returns a read-only view of the hash, rather than the array itself, so it can no longer be cast to `byte[]` and changed.
 * `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
-* `Did`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
-  parsing between five and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
+* `Did`, `Handle`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
+  parsing between four and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
   no longer split the NSID. Generating a `TimestampIdentifier` no longer validates the value it has just built.
 
 #### idunno.Bluesky
@@ -166,6 +166,7 @@
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
   with an `OK` status code. See the breaking change above for the new type.
+* `did:web` resolution no longer accepts a DID whose host ends with a percent encoded new line, such as `did:web:example.com%0A`.
 
 #### idunno.AtProto.Types
 
@@ -174,8 +175,10 @@
   throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
   Encoding is unchanged, and still emits the padding.
   Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
-* `Did`, `RecordKey` and `AtUri` no longer accept a value with a trailing new line, such as `"did:plc:abc\n"`. Their regular
+* `Did`, `Handle`, `RecordKey` and `AtUri` no longer accept a value with a trailing new line, such as `"did:plc:abc\n"`. Their regular
   expressions ended in `$`, which in .NET also matches before a final new line.
+* The `Handle` constructor now validates a handle before lower casing it, so it no longer accepts a handle containing a non-ASCII character
+  which lower cases to an ASCII letter, such as the Kelvin sign, U+212A. `Handle.TryParse()` already rejected these.
 
 #### idunno.Bluesky
 

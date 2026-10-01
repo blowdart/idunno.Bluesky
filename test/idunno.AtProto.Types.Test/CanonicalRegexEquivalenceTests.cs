@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace idunno.AtProto.Types.Test;
 
-// Did, Nsid, RecordKey, TimestampIdentifier and AtUri validate with hand written parsers rather than the regular expressions
+// Did, Handle, Nsid, RecordKey, TimestampIdentifier and AtUri validate with hand written parsers rather than the regular expressions
 // from the atproto specifications, because the parsers are much faster. These tests check that each parser accepts exactly
 // the strings that the canonical regular expression accepts.
 //
@@ -17,6 +17,7 @@ public class CanonicalRegexEquivalenceTests
     private const int FuzzIterations = 20_000;
 
     private static readonly Regex s_did = Strict(Did.ValidationRegex);
+    private static readonly Regex s_handle = Strict(Handle.ValidationRegex);
     private static readonly Regex s_nsid = Strict(Nsid.ValidationRegex);
     private static readonly Regex s_recordKey = Strict(RecordKey.ValidationRegex);
     private static readonly Regex s_tid = Strict(TimestampIdentifier.ValidationRegex);
@@ -32,6 +33,8 @@ public class CanonicalRegexEquivalenceTests
     }
 
     private static bool DidReference(string s) => s.Length <= 2048 && s_did.IsMatch(s);
+
+    private static bool HandleReference(string s) => s.Length <= 253 && s_handle.IsMatch(s);
 
     private static bool NsidReference(string s) => s.Length <= 317 && s_nsid.IsMatch(s);
 
@@ -55,7 +58,7 @@ public class CanonicalRegexEquivalenceTests
         string authority = match.Groups["authority"].Value;
         bool validAuthority = authority.StartsWith("did:", StringComparison.OrdinalIgnoreCase) ?
             DidReference(authority) :
-            Handle.TryParse(authority, out _);
+            HandleReference(authority);
 
         return validAuthority &&
             (!match.Groups["collection"].Success || NsidReference(match.Groups["collection"].Value)) &&
@@ -90,6 +93,45 @@ public class CanonicalRegexEquivalenceTests
         "did:m:" + new string('a', 2042),
         "did:m:" + new string('a', 2043),
         "",
+    ];
+
+    public static TheoryData<string> HandleInputs =>
+    [
+        "alice.bsky.social",
+        "jay.bsky.team",
+        "a.co",
+        "a.b",
+        "a",
+        "a.",
+        ".a",
+        "a..b",
+        "-a.b",
+        "a-.b",
+        "a.-b",
+        "a.b-",
+        "a--b.c",
+        "0.a",
+        "a.0",
+        "a.b0",
+        "a.0b",
+        "xn--ls8h.test",
+        "Alice.Example.COM",
+        "a_b.test",
+        "a b.test",
+        "a@b.test",
+        "a.test\n",
+        "a.test\r",
+        "a\n.test",
+        "\u212A.com",
+        "\u0130.com",
+        string.Join('.', new string('a', 63), "test"),
+        string.Join('.', new string('a', 64), "test"),
+        string.Join('.', "a", new string('t', 63)),
+        string.Join('.', "a", new string('t', 64)),
+        string.Join('.', new string('a', 63), new string('b', 63), new string('c', 63), new string('d', 61)),
+        string.Join('.', new string('a', 63), new string('b', 63), new string('c', 63), new string('d', 62)),
+        "",
+        " ",
     ];
 
     public static TheoryData<string> NsidInputs =>
@@ -196,6 +238,10 @@ public class CanonicalRegexEquivalenceTests
     public void DidTryParseMatchesCanonicalRegex(string s) => Assert.Equal(DidReference(s), Did.TryParse(s, out _));
 
     [Theory]
+    [MemberData(nameof(HandleInputs))]
+    public void HandleTryParseMatchesCanonicalRegex(string s) => Assert.Equal(HandleReference(s), Handle.TryParse(s, out _));
+
+    [Theory]
     [MemberData(nameof(NsidInputs))]
     public void NsidTryParseMatchesCanonicalRegex(string s) => Assert.Equal(NsidReference(s), Nsid.TryParse(s, out _));
 
@@ -216,6 +262,15 @@ public class CanonicalRegexEquivalenceTests
     [InlineData("did:plc:z72i7hdynmk6r22z27h6tvur\n")]
     [InlineData("did:web:example.com\n")]
     public void DidRejectsTrailingNewLine(string s) => Assert.False(Did.TryParse(s, out _));
+
+    [Theory]
+    [InlineData("alice.bsky.social\n")]
+    [InlineData("example.com\n")]
+    public void HandleRejectsTrailingNewLine(string s)
+    {
+        Assert.False(Handle.TryParse(s, out _));
+        Assert.Throws<ArgumentException>(() => new Handle(s));
+    }
 
     [Theory]
     [InlineData("app.bsky.feed.post\n")]
@@ -246,6 +301,25 @@ public class CanonicalRegexEquivalenceTests
             random => prefixes[random.Next(prefixes.Length)] + RandomString(random, "abzAZ09.:_-%F\n/ ", random.Next(0, 12)),
             DidReference,
             s => Did.TryParse(s, out _));
+    }
+
+    [Fact]
+    public void HandleTryParseMatchesCanonicalRegexForRandomInput()
+    {
+        AssertEquivalent(
+            random =>
+            {
+                string[] labels = new string[random.Next(1, 5)];
+                for (int i = 0; i < labels.Length; i++)
+                {
+                    int length = random.Next(10) == 0 ? random.Next(61, 66) : random.Next(0, 5);
+                    labels[i] = RandomString(random, "abAZ09-_\n ", length);
+                }
+
+                return string.Join('.', labels);
+            },
+            HandleReference,
+            s => Handle.TryParse(s, out _));
     }
 
     [Fact]

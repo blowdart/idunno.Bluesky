@@ -12,7 +12,7 @@ using idunno.AtProto.Json;
 namespace idunno.AtProto.Benchmarks;
 
 /// <summary>
-/// Measures <c>idunno.AtProto.Types</c> parsing, equality and identifier generation over values taken from the jetstream corpus.
+/// Measures <c>idunno.AtProto.Types</c> parsing, equality and identifier generation over values taken from the jetstream and XRPC corpora.
 /// </summary>
 [MemoryDiagnoser]
 [CategoriesColumn]
@@ -22,6 +22,7 @@ public class TypesBenchmarks
     private const int Count = CorpusFile.JetstreamMessageCount;
 
     private string[] _dids = null!;
+    private string[] _handles = null!;
     private string[] _collections = null!;
     private string[] _recordKeys = null!;
     private string[] _atUris = null!;
@@ -56,7 +57,18 @@ public class TypesBenchmarks
             }
         }
 
+        List<string> handles = [];
+        foreach (string corpus in new[] { CorpusFile.XrpcGetProfiles, CorpusFile.XrpcGetTimeline, CorpusFile.XrpcGetAuthorFeed })
+        {
+            foreach (byte[] response in CorpusFile.Read(corpus))
+            {
+                using JsonDocument document = JsonDocument.Parse(response);
+                CollectHandles(document.RootElement, handles);
+            }
+        }
+
         _dids = Fill(dids);
+        _handles = Fill(handles);
         _collections = Fill(collections);
         _recordKeys = Fill(recordKeys);
 
@@ -79,11 +91,40 @@ public class TypesBenchmarks
         }
     }
 
+    private static void CollectHandles(JsonElement element, List<string> handles)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (property.NameEquals("handle") && property.Value.ValueKind == JsonValueKind.String)
+                    {
+                        handles.Add(property.Value.GetString()!);
+                    }
+                    else
+                    {
+                        CollectHandles(property.Value, handles);
+                    }
+                }
+
+                break;
+
+            case JsonValueKind.Array:
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    CollectHandles(item, handles);
+                }
+
+                break;
+        }
+    }
+
     private static string[] Fill(List<string> values)
     {
         if (values.Count == 0)
         {
-            throw new InvalidOperationException("The jetstream corpus contains no usable values.");
+            throw new InvalidOperationException("The corpus contains no usable values.");
         }
 
         string[] result = new string[Count];
@@ -137,6 +178,22 @@ public class TypesBenchmarks
         }
 
         return length;
+    }
+
+    [Benchmark(OperationsPerInvoke = Count)]
+    [BenchmarkCategory("HandleParse")]
+    public int HandleParse()
+    {
+        int accepted = 0;
+        foreach (string s in _handles)
+        {
+            if (Handle.TryParse(s, out _))
+            {
+                accepted++;
+            }
+        }
+
+        return accepted;
     }
 
     [Benchmark(OperationsPerInvoke = Count)]

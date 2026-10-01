@@ -1,11 +1,11 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace idunno.AtProto;
 
@@ -20,33 +20,40 @@ namespace idunno.AtProto;
 /// </remarks>
 [JsonConverter(typeof(Json.HandleConverter))]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
+public sealed class Handle : AtIdentifier, IEquatable<Handle>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private const int MaximumLength = 253;
 
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private const int MaximumLabelLength = 63;
+
+    private static readonly SearchValues<char> s_labelCharacters =
+        SearchValues.Create("-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+
     /// <summary>
-    /// A regular expression suitable for use when validating a handle.
+    /// A regular expression which checks the syntax of a handle.
     /// </summary>
+    /// <remarks>
+    /// <para>The expression is suitable for client side validation, for example with a <c>RegularExpressionAttribute</c>.
+    /// It checks syntax only, and does not limit the overall length of a handle. Use
+    /// <see cref="TryParse(string, out Handle?)"/> to validate a handle fully.</para>
+    /// </remarks>
     public const string ValidationRegex = @"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$";
 
-    [GeneratedRegex(ValidationRegex, RegexOptions.None, 5000)]
-    private static partial Regex s_validate();
 
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto standards normalize to lower case.")]
     private Handle(string s, bool validate)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s);
 
-        // Normalize
-        s = s.ToLowerInvariant();
-
-        if (validate && !Parse(s, true, out Handle? _))
+        // Validate before normalizing, as lower casing can map some non-ASCII characters, such as the Kelvin sign, to ASCII letters.
+        if (validate)
         {
-            throw new ArgumentException($"\"{s}\" does not validate as a handle.", nameof(s));
+            Validate(s, true);
         }
 
-        Value = s;
+        Value = s.ToLowerInvariant();
     }
 
     /// <summary>
@@ -214,10 +221,17 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
     /// </remarks>
     public static bool TryParse(string s, [NotNullWhen(true)] out Handle? result)
     {
-        return Parse(s, false, out result);
+        if (!Validate(s, false))
+        {
+            result = null;
+            return false;
+        }
+
+        result = new Handle(s, false);
+        return true;
     }
 
-    private static bool Parse(string s, bool throwOnError, out Handle? result)
+    private static bool Validate(string s, bool throwOnError)
     {
         if (string.IsNullOrWhiteSpace(s))
         {
@@ -225,11 +239,8 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
             {
                 ArgumentException.ThrowIfNullOrWhiteSpace(s);
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
         if (s.Length > MaximumLength)
@@ -238,11 +249,8 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
             {
                 throw new ArgumentException($"\"{s}\" length is greater than {MaximumLength}.", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
         if (s.StartsWith('.') || s.EndsWith('.'))
@@ -251,11 +259,8 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
             {
                 throw new ArgumentException($"\"{s}\" cannot begin or end with '.'.", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
         if (!s.Contains('.', StringComparison.InvariantCulture))
@@ -264,28 +269,58 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
             {
                 throw new ArgumentException($"\"{s}\" is not a valid hostname.", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
-        if (!s_validate().IsMatch(s))
+        if (!IsValidSyntax(s))
         {
             if (throwOnError)
             {
                 throw new ArgumentException($"\"{s}\" does not validate as a handle.", nameof(s));
             }
-            else
-            {
-                result = null;
-                return false;
-            }
+
+            return false;
         }
 
-        result = new Handle(s, false);
         return true;
+    }
+
+    // This is a hand written equivalent of ValidationRegex,
+    //   ^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$
+    // from https://atproto.com/specs/handle, except that it does not accept a trailing new line, which $ matches before.
+    // A single pass over the characters is several times faster than the regex, even a source generated one, and does not
+    // allocate. CanonicalRegexEquivalenceTests checks it accepts exactly what the regex does.
+    //
+    // A handle is at least two dot separated labels of 1 to 63 letters, digits and hyphens. A label neither starts nor ends
+    // with a hyphen, and the last label, the top level domain, starts with a letter.
+    internal static bool IsValidSyntax(ReadOnlySpan<char> s)
+    {
+        int labels = 0;
+
+        while (true)
+        {
+            int length = s.IndexOf('.');
+            bool isTopLevelDomain = length < 0;
+            ReadOnlySpan<char> label = isTopLevelDomain ? s : s[..length];
+
+            if (label.IsEmpty ||
+                label.Length > MaximumLabelLength ||
+                !char.IsAsciiLetterOrDigit(label[0]) ||
+                !char.IsAsciiLetterOrDigit(label[^1]) ||
+                label.ContainsAnyExcept(s_labelCharacters))
+            {
+                return false;
+            }
+
+            if (isTopLevelDomain)
+            {
+                return labels >= 1 && char.IsAsciiLetter(label[0]);
+            }
+
+            labels++;
+            s = s[(length + 1)..];
+        }
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
