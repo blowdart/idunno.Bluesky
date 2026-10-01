@@ -11,6 +11,7 @@ using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -87,9 +88,10 @@ public class DistributedCacheIdentityStoreTests : IdentityStoreTests
     public async Task OptionsSupplyTheEntryAndRefreshLockLifetimes()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
 
         DistributedCacheIdentityStore store = new(
-            TestData.DistributedCache(),
+            new TimeProviderDistributedCache(timeProvider),
             NullLoggerFactory.Instance,
             Options.Create(new BlueskyAuthenticationOptions
             {
@@ -102,7 +104,7 @@ public class DistributedCacheIdentityStoreTests : IdentityStoreTests
         await store.Add(TestData.ClaimsIdentity(did), cancellationToken);
         Assert.NotNull(await store.StartRefresh(did, cancellationToken));
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
 
         Assert.Null(await store.GetIdentity(did, cancellationToken));
         Assert.False(await store.IsRefreshing(did, cancellationToken));

@@ -92,7 +92,7 @@ public class CredentialRefreshTests
     public async Task AFailedRefreshOfANearExpiryTokenIssuedAtLoginStillSchedulesARetry()
     {
         FakeTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
-        RefreshTestServer refreshTestServer = new(this)
+        RefreshTestServer refreshTestServer = new(this, timeProvider)
         {
             // Short enough that StartTokenRefreshTimer refreshes immediately instead of creating the timer.
             AccessJwtLifetime = TimeSpan.FromSeconds(30),
@@ -480,13 +480,14 @@ public class CredentialRefreshTests
     [Fact]
     public async Task AnAccessTokenWhichIsAlreadyCloseToExpiryIsRefreshedThroughTheTimerRatherThanInline()
     {
-        RefreshTestServer refreshTestServer = new(this)
+        FakeTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        RefreshTestServer refreshTestServer = new(this, timeProvider)
         {
             // Short enough that the refresh timer start refreshes immediately rather than waiting.
             AccessJwtLifetime = TimeSpan.FromSeconds(30)
         };
 
-        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer, timeProvider))
         {
             await Login(agent);
 
@@ -498,6 +499,26 @@ public class CredentialRefreshTests
             Assert.True(IsRefreshTimerEnabled(agent));
             Assert.Equal(TimeSpan.FromSeconds(1).TotalMilliseconds, GetRefreshTimerInterval(agent));
         }
+    }
+
+    [Fact]
+    public async Task IsAuthenticatedChangesToFalseWhenTheConfiguredTimeProviderReachesTheTokenExpiry()
+    {
+        FakeTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        RefreshTestServer refreshTestServer = new(this, timeProvider)
+        {
+            AccessJwtLifetime = TimeSpan.FromMinutes(5)
+        };
+
+        using AtProtoAgent agent = CreateAgent(refreshTestServer, timeProvider, enableBackgroundTokenRefresh: false);
+
+        await Login(agent);
+
+        Assert.True(agent.IsAuthenticated);
+
+        timeProvider.Advance(TimeSpan.FromMinutes(5));
+
+        Assert.False(agent.IsAuthenticated);
     }
 
     [Fact]
@@ -1282,7 +1303,10 @@ public class CredentialRefreshTests
         Assert.Empty((IEnumerable<KeyValuePair<long, TaskCompletionSource?>>)waiters.GetValue(agent)!);
     }
 
-    private static AtProtoAgent CreateAgent(RefreshTestServer refreshTestServer, TimeProvider? timeProvider = null)
+    private static AtProtoAgent CreateAgent(
+        RefreshTestServer refreshTestServer,
+        TimeProvider? timeProvider = null,
+        bool enableBackgroundTokenRefresh = true)
     {
         return new AtProtoAgent(
             new Uri($"https://{DomainName}"),
@@ -1290,7 +1314,8 @@ public class CredentialRefreshTests
             new AtProtoAgentOptions()
             {
                 PlcDirectoryServer = new Uri($"https://{DomainName}"),
-                TimeProvider = timeProvider ?? TimeProvider.System
+                TimeProvider = timeProvider ?? TimeProvider.System,
+                EnableBackgroundTokenRefresh = enableBackgroundTokenRefresh
             });
     }
 
@@ -1327,12 +1352,15 @@ public class CredentialRefreshTests
         private int _refreshAttemptCount;
         private int _tokenSerialNumber;
 
-        internal RefreshTestServer(CredentialRefreshTests test)
+        internal RefreshTestServer(CredentialRefreshTests test, TimeProvider? timeProvider = null)
         {
+            TimeProvider = timeProvider ?? TimeProvider.System;
             TestServer = TestServerBuilder.CreateServer(DomainName, context => Handle(test, context));
         }
 
         internal TestServer TestServer { get; }
+
+        internal TimeProvider TimeProvider { get; }
 
         internal bool FailRefresh { get; set; }
 
@@ -1461,12 +1489,20 @@ public class CredentialRefreshTests
             }
         }
 
-        private string CreateAccessJwt() => JwtBuilder.CreateJwt(IssuedDid, $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
+        private string CreateAccessJwt() => JwtBuilder.CreateJwt(
+            IssuedDid,
+            $"did:web:{DomainName}",
+            expiresIn: AccessJwtLifetime,
+            timeProvider: TimeProvider);
 
         /// <summary>
         /// Creates an access token whose audience is not the service it was requested from, so validation of it fails.
         /// </summary>
-        private string CreateUnvalidatableAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), "did:web:elsewhere.invalid", expiresIn: AccessJwtLifetime);
+        private string CreateUnvalidatableAccessJwt() => JwtBuilder.CreateJwt(
+            new Did(ExpectedDid),
+            "did:web:elsewhere.invalid",
+            expiresIn: AccessJwtLifetime,
+            timeProvider: TimeProvider);
 
         private string NextRefreshToken() => $"refreshToken{Interlocked.Increment(ref _tokenSerialNumber)}";
     }

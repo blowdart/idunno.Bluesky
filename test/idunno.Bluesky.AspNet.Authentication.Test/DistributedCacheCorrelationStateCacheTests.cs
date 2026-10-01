@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheTests
@@ -24,14 +26,16 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
     [Fact]
     public async Task StateExpiresAfterItsTimeToLive()
     {
+        FakeTimeProvider timeProvider = new();
         DistributedCacheCorrelationStateCache cache = new(
-            TestData.DistributedCache(),
-            entryTimeToLive: TimeSpan.FromMilliseconds(50));
+            new TimeProviderDistributedCache(timeProvider),
+            entryTimeToLive: TimeSpan.FromMilliseconds(50),
+            timeProvider);
 
         Guid correlationId = Guid.NewGuid();
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
 
         Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
