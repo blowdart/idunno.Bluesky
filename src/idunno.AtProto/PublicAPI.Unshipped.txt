@@ -767,6 +767,8 @@ idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.get -> System.Time
 idunno.AtProto.DidHandleCacheOptions.FailedResolutionDuration.init -> void
 idunno.AtProto.DidHandleCacheOptions.HttpClient.get -> System.Net.Http.HttpClient?
 idunno.AtProto.DidHandleCacheOptions.HttpClient.init -> void
+idunno.AtProto.DidHandleCacheOptions.MaximumConcurrentResolutions.get -> int
+idunno.AtProto.DidHandleCacheOptions.MaximumConcurrentResolutions.init -> void
 idunno.AtProto.DidHandleCacheOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
 idunno.AtProto.DidHandleCacheOptions.LoggerFactory.init -> void
 idunno.AtProto.DidHandleCacheOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?

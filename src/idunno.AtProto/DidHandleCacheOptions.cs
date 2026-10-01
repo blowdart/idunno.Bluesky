@@ -19,7 +19,8 @@ public sealed record DidHandleCacheOptions
     /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
     /// <remarks>
     /// <para>When the cache is full a new handle is not cached until the cache has been compacted, which happens in the background.
-    /// The same limit bounds the number of lookups which can be shared between concurrent callers.</para>
+    /// The same limit bounds the number of lookups which can be pending at once; once that many are pending a lookup for a DID which
+    /// is not already being resolved returns <see cref="Handle.Invalid"/>, which is not cached.</para>
     /// <para>The size bounds the cache's memory, not the number of resolutions. A source of DIDs which sends more distinct DIDs
     /// than this can keep evicting handles, so most lookups need a resolution.</para>
     /// </remarks>
@@ -32,6 +33,26 @@ public sealed record DidHandleCacheOptions
             field = value;
         }
     } = 100_000;
+
+    /// <summary>
+    /// Gets the maximum number of resolutions which can run at once.
+    /// </summary>
+    /// <value>The maximum number of concurrent resolutions. The default is 32.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>Lookups beyond this limit wait for a resolution to finish. Time spent waiting counts against <see cref="ResolutionTimeout"/>,
+    /// and a lookup which times out waiting returns <see cref="Handle.Invalid"/>, which is not cached.</para>
+    /// <para>This bounds the outbound requests a source of DIDs can cause, such as a firehose relay sending many distinct DIDs.</para>
+    /// </remarks>
+    public int MaximumConcurrentResolutions
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            field = value;
+        }
+    } = 32;
 
     /// <summary>
     /// Gets how long a verified handle is cached for.
@@ -80,7 +101,8 @@ public sealed record DidHandleCacheOptions
     /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero, or exceeds the timer's maximum duration.</exception>
     /// <remarks>
     /// <para>A resolution is shared by every caller waiting for the same DID and is not cancelled when they stop waiting, so this
-    /// bounds how long it can run.</para>
+    /// bounds how long it can run. The timeout includes any time spent waiting for one of the <see cref="MaximumConcurrentResolutions"/>
+    /// resolution slots.</para>
     /// </remarks>
     public TimeSpan ResolutionTimeout
     {
@@ -105,6 +127,10 @@ public sealed record DidHandleCacheOptions
     /// <value>The HTTP client, or <see langword="null"/> to create one for each resolution.</value>
     /// <remarks>
     /// <para>The client is not disposed by the cache.</para>
+    /// <para><b>Warning:</b> DID documents and handles name hosts chosen by whoever controls the DID, so resolving them makes requests to
+    /// attacker-chosen hosts. When no client is supplied the cache uses a handler which refuses to connect to loopback, private and other
+    /// non-public addresses. A supplied client does not get that protection; it is the caller's responsibility to configure it to block
+    /// requests to internal networks.</para>
     /// </remarks>
     public HttpClient? HttpClient { get; init; }
 

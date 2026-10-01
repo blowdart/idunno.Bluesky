@@ -168,11 +168,28 @@ public class HandleVerificationTests
     }
 
     [Fact]
-    public async Task ResolveVerifiedHandleReturnsTheFirstDeclaredHandleWhichResolvesBack()
+    public async Task ResolveVerifiedHandleOnlyResolvesTheClaimedHandle()
     {
         using TestDns dns = TestDns.WithNoTextRecords();
         using TestServer testServer = CreateServer(
-            DidDocumentDeclaring("at://someone.else.invalid", $"at://{TestServerBuilder.DefaultDomainName}"),
+            DidDocumentDeclaring("at://someone.else.example", $"at://{TestServerBuilder.DefaultDomainName}"),
+            Did);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        Handle handle = await IdentityResolution.ResolveVerifiedHandleAsync(
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(Handle.Invalid, handle);
+    }
+
+    [Fact]
+    public async Task ResolveVerifiedHandleSkipsEntriesWhichAreNotValidHandles()
+    {
+        using TestDns dns = TestDns.WithNoTextRecords();
+        using TestServer testServer = CreateServer(
+            DidDocumentDeclaring("https://example.invalid", "at://", $"at://{TestServerBuilder.DefaultDomainName}"),
             Did);
         using HttpClient httpClient = testServer.CreateClient();
 
@@ -183,6 +200,24 @@ public class HandleVerificationTests
 
         Assert.True(handle.IsValid);
         Assert.Equal(TestServerBuilder.DefaultDomainName, handle.Value);
+    }
+
+    [Fact]
+    public async Task VerifyHandleReturnsFalseForAHandleListedAfterTheClaimedHandle()
+    {
+        Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        using TestDns dns = TestDns.WithNoTextRecords();
+        using TestServer testServer = CreateServer(
+            DidDocumentDeclaring("at://someone.else.example", $"at://{TestServerBuilder.DefaultDomainName}"),
+            Did);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        Assert.False(await IdentityResolution.VerifyHandleAsync(
+            handle,
+            new Did(Did),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]

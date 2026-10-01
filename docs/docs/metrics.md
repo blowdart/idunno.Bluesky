@@ -175,6 +175,7 @@ Hits and misses are only recorded by `ResolveHandleAsync()`; `TryGetCachedHandle
 | `total.hits` | Counter&lt;long&gt; | {lookups} | Handles, including `handle.invalid`, found in the cache. |
 | `total.misses` | Counter&lt;long&gt; | {lookups} | Handles not found in the cache, each of which started a resolution. |
 | `total.coalesced_lookups` | Counter&lt;long&gt; | {lookups} | Handles not found in the cache which joined a resolution already in progress for the same DID rather than starting another. |
+| `total.rejected_lookups` | Counter&lt;long&gt; | {lookups} | Lookups which returned `handle.invalid`, without caching it, because `Size` lookups were already pending or a resolution slot did not become free within `ResolutionTimeout`. A sustained rise suggests a source sending more distinct DIDs than the cache can resolve. |
 | `total.invalid_handles` | Counter&lt;long&gt; | {resolutions} | Resolutions which failed, timed out, or returned a handle which did not resolve back to the DID, and so returned `handle.invalid`. |
 | `total.invalidations` | Counter&lt;long&gt; | {invalidations} | Calls to `Invalidate()`, including those made by the firehose or Jetstream for identity events. |
 

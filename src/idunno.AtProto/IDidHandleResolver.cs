@@ -9,9 +9,9 @@ namespace idunno.AtProto;
 /// Resolves the verified <see cref="Handle"/> for a <see cref="Did"/>.
 /// </summary>
 /// <remarks>
-/// <para>A handle is only verified when the <see cref="DidDocument"/> for the <see cref="Did"/> declares it and the handle
-/// resolves back to the same <see cref="Did"/>. An implementation returns <see cref="Handle.Invalid"/> when no declared handle
-/// can be verified.</para>
+/// <para>A handle is only verified when it is the first valid handle the <see cref="DidDocument"/> for the <see cref="Did"/> declares,
+/// and it resolves back to the same <see cref="Did"/>. An implementation returns <see cref="Handle.Invalid"/> when that handle
+/// cannot be verified.</para>
 /// </remarks>
 /// <seealso cref="DidHandleCache"/>
 public interface IDidHandleResolver
