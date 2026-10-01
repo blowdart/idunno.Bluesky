@@ -236,7 +236,8 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
 
             try
             {
-                handle = await _resolver(did, linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
+                // WaitAsync bounds the wait even if the resolver ignores cancellation.
+                handle = await _resolver(did, linkedTokenSource.Token).WaitAsync(linkedTokenSource.Token).ConfigureAwait(false) ?? Handle.Invalid;
             }
             catch (OperationCanceledException) when (!_disposalToken.IsCancellationRequested && timeoutTokenSource.IsCancellationRequested)
             {

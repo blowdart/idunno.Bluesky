@@ -73,7 +73,7 @@ public static class IdentityResolution
     /// <param name="handle">The handle to resolve.</param>
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-    /// <param name="timeout">An optional timeout for HTTP requests.</param>
+    /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
     /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -505,7 +505,7 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="did"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="did"/>.
     /// </summary>
     /// <param name="did">The <see cref="Did"/> to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
@@ -564,7 +564,7 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="handle"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="handle"/>.
     /// </summary>
     /// <param name="handle">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
@@ -609,9 +609,9 @@ public static class IdentityResolution
     }
 
     /// <summary>
-    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="atIdentifier"/>.
+    /// Resolves the Personal Data Server (PDS) <see cref="Uri"/> for the specified <paramref name="atIdentifier"/>.
     /// </summary>
-    /// <param name="atIdentifier">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
+    /// <param name="atIdentifier">The AT identifier, a <see cref="Did"/> or a <see cref="Handle"/>, to resolve the PDS <see cref="Uri"/> for.</param>
     /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>

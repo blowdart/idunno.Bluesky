@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
+using System.Reflection;
 
 namespace idunno.AtProto.Test;
 
@@ -124,6 +126,95 @@ public class DidHandleCacheTests
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromMilliseconds(50) });
 
         Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AResolverWhichIgnoresCancellationIsBoundedByTheTimeout()
+    {
+        TaskCompletionSource<Handle> neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => neverCompletes.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromMilliseconds(50) });
+
+        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task DisposingCancelsAResolverWhichIgnoresCancellation()
+    {
+        TaskCompletionSource<Handle> neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => neverCompletes.Task);
+        DidHandleCache cache = new(resolver.ResolveAsync, null);
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        cache.Dispose();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => lookup.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(nameof(DidHandleCacheMetrics.Hits), "idunno.atproto.didhandlecache.total.hits")]
+    [InlineData(nameof(DidHandleCacheMetrics.Misses), "idunno.atproto.didhandlecache.total.misses")]
+    [InlineData(nameof(DidHandleCacheMetrics.CoalescedLookups), "idunno.atproto.didhandlecache.total.coalesced_lookups")]
+    [InlineData(nameof(DidHandleCacheMetrics.InvalidHandles), "idunno.atproto.didhandlecache.total.invalid_handles")]
+    [InlineData(nameof(DidHandleCacheMetrics.Invalidations), "idunno.atproto.didhandlecache.total.invalidations")]
+    public void CounterIsPublishedUnderItsExpectedName(string propertyName, string instrumentName)
+    {
+        // Instrument names are a contract with whatever is scraping them, so a rename should not pass silently.
+        using RecordingMeterFactory meterFactory = new();
+        DidHandleCacheMetrics metrics = new(meterFactory);
+        using MeasurementRecorder recorder = new(meterFactory);
+
+        Counter<long> counter = (Counter<long>)typeof(DidHandleCacheMetrics)
+            .GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(metrics)!;
+        counter.Add(1);
+
+        Assert.Equal(1, recorder.Total(instrumentName));
+        Assert.Equal([DidHandleCacheMetrics.MeterName], meterFactory.CreatedMeterNames);
+    }
+
+    [Fact]
+    public async Task LookupsAndInvalidationsEmitMetrics()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
+
+        ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        ValueTask<Handle> second = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        completion.SetResult(s_handle);
+        await first;
+        await second;
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.CoalescedLookups)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
+        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
+        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+
+        cache.Invalidate(s_did);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+    }
+
+    [Fact]
+    public async Task AnInvalidHandleEmitsAMetric()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
+
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
+        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
     }
 
     [Fact]
@@ -326,6 +417,50 @@ public class DidHandleCacheTests
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan by) => _now += by;
+    }
+
+    // Records the counters published by meters created from a specific meter factory, keyed by both instrument name and the
+    // name of the DidHandleCacheMetrics property which created them.
+    private sealed class MeasurementRecorder : IDisposable
+    {
+        private static readonly Dictionary<string, string> s_propertyNames = new()
+        {
+            ["idunno.atproto.didhandlecache.total.hits"] = nameof(DidHandleCacheMetrics.Hits),
+            ["idunno.atproto.didhandlecache.total.misses"] = nameof(DidHandleCacheMetrics.Misses),
+            ["idunno.atproto.didhandlecache.total.coalesced_lookups"] = nameof(DidHandleCacheMetrics.CoalescedLookups),
+            ["idunno.atproto.didhandlecache.total.invalid_handles"] = nameof(DidHandleCacheMetrics.InvalidHandles),
+            ["idunno.atproto.didhandlecache.total.invalidations"] = nameof(DidHandleCacheMetrics.Invalidations),
+        };
+
+        private readonly ConcurrentDictionary<string, long> _totals = new();
+        private readonly MeterListener _listener = new();
+
+        public MeasurementRecorder(IMeterFactory meterFactory)
+        {
+            _listener.InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Scope == meterFactory)
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            };
+
+            _listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
+            {
+                _totals.AddOrUpdate(instrument.Name, measurement, (_, total) => total + measurement);
+
+                if (s_propertyNames.TryGetValue(instrument.Name, out string? propertyName))
+                {
+                    _totals.AddOrUpdate(propertyName, measurement, (_, total) => total + measurement);
+                }
+            });
+
+            _listener.Start();
+        }
+
+        public long Total(string name) => _totals.GetValueOrDefault(name);
+
+        public void Dispose() => _listener.Dispose();
     }
 }
 
