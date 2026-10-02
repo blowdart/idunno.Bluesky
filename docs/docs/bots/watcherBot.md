@@ -87,6 +87,9 @@ enumeration rather than leaving an empty loop running.
 > You may have noticed there's no authentication. The live Jetstream, and its older sibling the Firehose, are open access. No authentication is needed. This is part
 > of why Bluesky is described as a public network.
 
+> [!WARNING]
+> Stream events and sequence values come from the server and are not proof of event authenticity. Jetstream v2 delivery is at least once; `StreamAsync` suppresses inclusive cursor repeats within one enumeration, but cannot ensure exactly-once processing across application restarts or failures. Persist progress only after successfully processing the event and make processing idempotent. The Firehose reader rejects unexpected duplicate or out-of-order stream sequences, but does not verify per-repository commit order; applications that rely on it must track repository revisions themselves.
+
 ## Move to the application host model
 
 Next, change our console application to a hosted service, using .NET's
