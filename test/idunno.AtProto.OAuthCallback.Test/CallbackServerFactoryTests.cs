@@ -17,6 +17,53 @@ namespace idunno.AtProto.OAuthCallback.Test;
 public class CallbackServerFactoryTests
 {
     [Fact]
+    public async Task PublicConstructorStartsAndServesCallbacks()
+    {
+        CallbackServer? server = null;
+
+        for (int attempt = 0; attempt < CallbackServerFactory.MaximumAttempts; attempt++)
+        {
+            int port;
+
+            using (TcpListener portProbe = new(IPAddress.Loopback, 0))
+            {
+                portProbe.Start();
+                port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+            }
+
+            CallbackServer candidate = new(port);
+
+            try
+            {
+                await candidate.Startup;
+                server = candidate;
+                break;
+            }
+            catch (Exception exception) when (CallbackServer.IsAddressInUse(exception))
+            {
+                await candidate.DisposeAsync();
+            }
+            catch
+            {
+                await candidate.DisposeAsync();
+                throw;
+            }
+        }
+
+        await using CallbackServer startedServer = server
+            ?? throw new InvalidOperationException("The callback server could not start after repeated address collisions.");
+
+        Task<string> callback = startedServer.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using HttpClient client = new();
+        using HttpResponseMessage response = await client.GetAsync(
+            new Uri($"{startedServer.Uri}?code=abc"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("?code=abc", await callback);
+    }
+
+    [Fact]
     public async Task AsyncFactoryReturnsAStartedServerOnBothLoopbackAddresses()
     {
         await using CallbackServer server = await CallbackServer.CreateAsync(
