@@ -38,7 +38,7 @@ public sealed record FirehoseOptions
     public IMeterFactory? MeterFactory { get; init; }
 
     /// <summary>
-    /// Gets the provider used for firehose time reads and reconnect delays.
+    /// Gets the provider used for firehose time reads, reconnect delays, and idle and close timeouts.
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
     /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>

@@ -78,8 +78,8 @@
   Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
 * Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
 * Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
-  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache and reconnection delays, and the
-  jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
+  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache, reconnection delays, and idle and close
+  timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
