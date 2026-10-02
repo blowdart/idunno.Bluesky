@@ -96,7 +96,7 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
-* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`, used to expire cached claims.
+* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
 
