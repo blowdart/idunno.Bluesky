@@ -5,8 +5,10 @@ using System.Net.Http.Headers;
 
 using idunno.AtProto.Authentication;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
@@ -36,6 +38,25 @@ public class BuilderTests
     [Fact]
     public void BuilderWithTimeProviderRejectsNull() =>
         Assert.Throws<ArgumentNullException>("timeProvider", () => AtProtoAgent.CreateBuilder().WithTimeProvider(null!));
+
+    [Fact]
+    public void AddAtProtoAgentOptionsCopiesTimeProvider()
+    {
+        FakeTimeProvider timeProvider = new();
+        AtProtoAgentOptions options = new(NullLoggerFactory.Instance)
+        {
+            TimeProvider = timeProvider
+        };
+
+        ServiceCollection services = new();
+        services.AddAtProtoAgentOptions(options);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        Assert.Same(
+            timeProvider,
+            serviceProvider.GetRequiredService<IOptionsMonitor<AtProtoAgentOptions>>().CurrentValue.TimeProvider);
+    }
 
     [Fact]
     public void BuilderWithServiceUriCreatesCorrectly()

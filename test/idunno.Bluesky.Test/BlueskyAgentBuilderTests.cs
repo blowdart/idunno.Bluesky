@@ -5,6 +5,10 @@ using System.Reflection;
 
 using idunno.AtProto;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+
 namespace idunno.Bluesky.Test;
 
 public class BlueskyAgentBuilderTests
@@ -36,6 +40,26 @@ public class BlueskyAgentBuilderTests
             .WithTimeProvider(new TestTimeProvider());
 
         Assert.IsType<BlueskyAgentBuilder>(builder);
+    }
+
+    [Fact]
+    public void AddBlueskyAgentOptionsCopiesTimeProvider()
+    {
+        TestTimeProvider timeProvider = new();
+        BlueskyAgentOptions options = new()
+        {
+            LoggerFactory = NullLoggerFactory.Instance,
+            TimeProvider = timeProvider
+        };
+
+        ServiceCollection services = new();
+        services.AddBlueskyAgentOptions(options);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        Assert.Same(
+            timeProvider,
+            serviceProvider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.TimeProvider);
     }
 
     private sealed class TestTimeProvider : TimeProvider

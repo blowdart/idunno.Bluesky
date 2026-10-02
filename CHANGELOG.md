@@ -155,6 +155,7 @@
 
 #### idunno.AtProto
 
+* `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
   with an `OK` status code. See the breaking change above for the new type.
@@ -169,6 +170,7 @@
 
 #### idunno.Bluesky
 
+* `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
