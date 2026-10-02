@@ -2,16 +2,58 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.AtProto.Server;
 using idunno.AtProto.Sync;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Integration.Test;
 
 public class ServerTests
 {
+    [Fact]
+    public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider()
+    {
+        string domainName = TestServerBuilder.CreateRandomHostName();
+        Uri service = new($"https://{domainName}");
+        Did audience = new("did:plc:abcdefghijklmnopqrstuvwx");
+        TimeSpan expiry = TimeSpan.FromMinutes(5);
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        long expectedExpiry = (timeProvider.GetUtcNow() + expiry).ToUnixTimeSeconds();
+
+        TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.server.getServiceAuth", context.Request.Path);
+            Assert.Equal(audience.Value, context.Request.Query["aud"]);
+            Assert.Equal(expectedExpiry.ToString(System.Globalization.CultureInfo.InvariantCulture), context.Request.Query["exp"]);
+            Assert.Equal("app.bsky.actor.getProfile", context.Request.Query["lxm"]);
+            await context.Response.WriteAsJsonAsync(
+                new { token = JwtBuilder.CreateJwt(new Did("did:plc:zyxwvutsrqponmlkjihgfedcba"), audience: audience.Value) },
+                TestContext.Current.CancellationToken);
+        });
+
+        AccessCredentials accessCredentials = new(
+            service,
+            AuthenticationType.UsernamePassword,
+            JwtBuilder.CreateJwt(new Did("did:plc:zyxwvutsrqponmlkjihgfedcba")),
+            "refresh-token");
+
+        AtProtoHttpResult<ServiceCredential> result = await AtProtoServer.GetServiceAuthWithTimeProvider(
+            timeProvider,
+            audience,
+            expiry,
+            new Nsid("app.bsky.actor.getProfile"),
+            service,
+            accessCredentials,
+            testServer.CreateClient(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+    }
+
     [Fact]
     public async Task DirectGetRepoStreamsCarResponse()
     {

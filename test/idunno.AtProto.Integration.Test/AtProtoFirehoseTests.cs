@@ -16,6 +16,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Sync;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 using static idunno.AtProto.Integration.Test.FirehoseTestData;
 
@@ -594,6 +595,48 @@ public class AtProtoFirehoseTests
     }
 
     [Fact]
+    public async Task SigningKeyCacheExpiryUsesTheConfiguredTimeProvider()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        DidDocument document = DidDocumentFor(TestDid, "atproto", key);
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        TaskCompletionSource timeAdvanced = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int resolutions = 0;
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#commit", new TestCommit(1) { SigningKey = key }.Build()), token);
+            await timeAdvanced.Task.WaitAsync(token);
+            await Send(socket, Frame("#commit", new TestCommit(2) { SigningKey = key }.Build()), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            VerifySignatures = true,
+            SigningKeyCacheDuration = TimeSpan.FromMinutes(5),
+            TimeProvider = timeProvider,
+            DidDocumentResolver = (_, _) =>
+            {
+                Interlocked.Increment(ref resolutions);
+                return Task.FromResult<DidDocument?>(document);
+            }
+        });
+
+        await using IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+        Assert.IsType<FirehoseCommitEvent>(events.Current);
+        Assert.Equal(1, resolutions);
+
+        timeProvider.Advance(TimeSpan.FromMinutes(5));
+        timeAdvanced.SetResult();
+
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+        Assert.IsType<FirehoseCommitEvent>(events.Current);
+        Assert.Equal(2, resolutions);
+    }
+
+    [Fact]
     public async Task LabelSigningKeysAreCachedAcrossMessages()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -894,6 +937,39 @@ public class AtProtoFirehoseTests
     }
 
     [Fact]
+    public async Task CloseTimeoutUsesTheConfiguredTimeProvider()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
+        TimeSpan closeTimeout = TimeSpan.FromHours(1);
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#identity", IdentityPayload(1)), token);
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            CloseTimeout = closeTimeout,
+            TimeProvider = timeProvider
+        });
+
+        IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Assert.True(await events.MoveNextAsync().AsTask().WaitAsync(s_timeout, cancellationToken));
+
+        Task dispose = events.DisposeAsync().AsTask();
+        using CancellationTokenSource timeout = new(s_timeout);
+        using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        while (!dispose.IsCompleted)
+        {
+            timeProvider.Advance(closeTimeout);
+            await Task.Delay(TimeSpan.FromMilliseconds(10), linkedCancellation.Token);
+        }
+
+        await dispose.WaitAsync(s_timeout, cancellationToken);
+    }
+
+    [Fact]
     public async Task IdleConnectionsAreReconnected()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -911,6 +987,42 @@ public class AtProtoFirehoseTests
 
         Assert.Equal(1, identity.Sequence);
         Assert.Equal(2, server.Connections.Count);
+    }
+
+    [Fact]
+    public async Task IdleTimeoutUsesTheConfiguredTimeProvider()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
+        TimeSpan idleTimeout = TimeSpan.FromHours(1);
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, connection, token) =>
+        {
+            if (connection > 1)
+            {
+                await Send(socket, Frame("#identity", IdentityPayload(1)), token);
+            }
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            IdleTimeout = idleTimeout,
+            TimeProvider = timeProvider
+        });
+
+        await using IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeReposAsync(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Task<bool> moveNext = events.MoveNextAsync().AsTask();
+
+        using CancellationTokenSource timeout = new(s_timeout);
+        using CancellationTokenSource linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+        while (!moveNext.IsCompleted)
+        {
+            timeProvider.Advance(idleTimeout);
+            await Task.Delay(TimeSpan.FromMilliseconds(10), linkedCancellation.Token);
+        }
+
+        Assert.True(await moveNext.WaitAsync(s_timeout, cancellationToken));
+        Assert.IsType<FirehoseIdentityEvent>(events.Current);
+        Assert.True(server.Connections.Count >= 2);
     }
 
     [Fact]

@@ -646,7 +646,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
     {
         EventHandler<MessageReceivedEventArgs>? messageReceived = _messageReceived;
-        MessageLastReceived = DateTimeOffset.UtcNow;
+        MessageLastReceived = Options.TimeProvider.GetUtcNow();
 
         if (!_disposed)
         {
@@ -1721,9 +1721,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             // The close handshake completes when the server replies to it, so without a deadline of its own a server
             // which never replies holds the caller here for as long as it cares to.
-            using CancellationTokenSource closeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            closeCancellationTokenSource.CancelAfter(Options.CloseTimeout);
+            using CancellationTokenSource closeTimeoutTokenSource = new(Options.CloseTimeout, Options.TimeProvider);
+            using CancellationTokenSource closeCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, closeTimeoutTokenSource.Token);
 
             try
             {
@@ -2054,9 +2053,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // and the write are given a deadline of their own, because a write which is already in flight
                     // against a peer that has stopped reading never completes by itself, and without a deadline it
                     // would hold this reply, and so this loop, for as long as the peer cared to leave it there.
-                    using CancellationTokenSource sendCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-                    sendCancellationTokenSource.CancelAfter(Options.SendTimeout);
+                    using CancellationTokenSource sendTimeoutTokenSource = new(Options.SendTimeout, Options.TimeProvider);
+                    using CancellationTokenSource sendCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, sendTimeoutTokenSource.Token);
 
                     try
                     {
@@ -2243,7 +2241,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    await Task.Delay(s_receiveFailureBackoff, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(s_receiveFailureBackoff, Options.TimeProvider, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -2533,7 +2531,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // Both the wait and the send are given a deadline. A send against a peer which has stopped reading never
         // completes by itself, and this send holds the semaphore every other write to the socket queues behind,
         // including the reply which completes a close handshake the server started.
-        using CancellationTokenSource sendCancellationTokenSource = new(Options.SendTimeout);
+        using CancellationTokenSource sendCancellationTokenSource = new(Options.SendTimeout, Options.TimeProvider);
 
         try
         {

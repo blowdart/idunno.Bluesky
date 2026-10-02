@@ -46,6 +46,7 @@ public record JetstreamOptions
         ArgumentNullException.ThrowIfNull(builder);
         builder.Append("ApiKey = [redacted], LoggerFactory = ").Append(LoggerFactory)
             .Append(", MeterFactory = ").Append(MeterFactory)
+            .Append(", TimeProvider = ").Append(TimeProvider)
             .Append(", ProtocolVersion = ").Append(ProtocolVersion)
             .Append(", UseCompression = ").Append(UseCompression)
             .Append(", Dictionary = ").Append(Dictionary)
@@ -79,6 +80,29 @@ public record JetstreamOptions
     /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
     /// </summary>
     public IMeterFactory? MeterFactory { get; set; }
+
+    /// <summary>
+    /// Gets the provider used for Jetstream time reads and timed waits.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The provider times reconnection, receive failure and archive retry delays, archive read timeouts, and the
+    ///   <see cref="CloseTimeout"/> and <see cref="SendTimeout"/> deadlines for close handshakes, close replies and
+    ///   options update messages. The synchronous wait for an in-flight connection attempt during disposal is bounded by
+    ///   <see cref="CloseTimeout"/> using the system clock, so disposal cannot block on a provider which never advances.
+    /// </para>
+    /// </remarks>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
 
     /// <summary>
     /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.

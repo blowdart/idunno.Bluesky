@@ -34,6 +34,7 @@ public partial class AtProtoAgent : Agent
     private volatile bool _atProtoAgentDisposed;
 
     private readonly ILogger<AtProtoAgent> _logger;
+    private readonly TimeProvider _timeProvider;
     internal readonly DirectoryAgent _directoryAgent;
 
     /// <summary>
@@ -47,6 +48,7 @@ public partial class AtProtoAgent : Agent
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(service);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -92,6 +94,7 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -135,6 +138,7 @@ public partial class AtProtoAgent : Agent
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(principal);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -193,6 +197,7 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(principal);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -243,6 +248,7 @@ public partial class AtProtoAgent : Agent
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -298,6 +304,7 @@ public partial class AtProtoAgent : Agent
         AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -345,6 +352,8 @@ public partial class AtProtoAgent : Agent
     /// Gets the configuration options for the agent.
     /// </summary>
     protected internal AtProtoAgentOptions? Options { get; init; }
+
+    private TimeProvider Clock => _timeProvider;
 
     /// <summary>
     /// Gets the maximum number of bytes to read from an XRPC response body, as configured by

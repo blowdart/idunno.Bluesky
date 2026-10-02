@@ -1,1 +1,3 @@
 #nullable enable
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.get -> System.TimeProvider!
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.set -> void

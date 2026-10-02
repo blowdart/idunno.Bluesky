@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
                 options.LoggerFactory = configureOptions.LoggerFactory;
                 options.OAuthOptions = configureOptions.OAuthOptions;
                 options.PlcDirectoryServer = configureOptions.PlcDirectoryServer;
+                options.TimeProvider = configureOptions.TimeProvider;
             });
 
         if (configureOptions is not null && configureOptions.LoggerFactory is null)

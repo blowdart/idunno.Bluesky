@@ -162,6 +162,12 @@ public class BlueskyAuthenticationOptionsConfigurationTests
     }
 
     [Fact]
+    public void ClaimsTransformerTimeProviderCannotBeNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new BlueskyClaimsTransformerOptions { TimeProvider = null! });
+    }
+
+    [Fact]
     public void TheAuthenticationCookieIsNamedAfterTheSchemeAndIsNotReadableByScript()
     {
         IOptionsMonitor<BlueskyAuthenticationOptions> monitor = BuildOptions("Custom Scheme", _ => { });

@@ -8,9 +8,11 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 public class EphemeralIdentityStoreTests : IdentityStoreTests
@@ -150,7 +152,7 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        FakeClock clock = new();
+        FakeTimeProvider timeProvider = new();
 
         EphemeralIdentityStore store = new(
             NullLoggerFactory.Instance,
@@ -158,14 +160,14 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
             refreshLockExpiration: TimeSpan.FromSeconds(1),
             sizeLimit: null,
             meterFactory: null,
-            clock: clock);
+            timeProvider: timeProvider);
 
         Did did = TestData.NewDid();
 
         string? expiredToken = await store.StartRefresh(did, cancellationToken);
         Assert.NotNull(expiredToken);
 
-        clock.UtcNow += TimeSpan.FromSeconds(2);
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         string? newOwnersToken = await store.StartRefresh(did, cancellationToken);
         Assert.NotNull(newOwnersToken);
@@ -313,8 +315,4 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
         Assert.Equal(3, heldByUnlimited);
     }
 
-    private sealed class FakeClock : ISystemClock
-    {
-        public DateTimeOffset UtcNow { get; set; } = DateTimeOffset.UtcNow;
-    }
 }

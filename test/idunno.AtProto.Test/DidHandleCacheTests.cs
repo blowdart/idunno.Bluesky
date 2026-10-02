@@ -7,6 +7,8 @@ using System.Reflection;
 
 using Microsoft.Extensions.Logging;
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.AtProto.Test;
 
 [ExcludeFromCodeCoverage]
@@ -36,7 +38,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task HandlesExpireAfterTheirDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(s_handle));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Duration = TimeSpan.FromMinutes(10), TimeProvider = timeProvider });
 
@@ -55,13 +57,11 @@ public class DidHandleCacheTests
     [Fact]
     public async Task HandlesDoNotExpireWhileTheTimeProviderHasNotAdvanced()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(s_handle));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Duration = TimeSpan.FromMilliseconds(50), TimeProvider = timeProvider });
 
         await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
-
-        await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
 
         Assert.True(cache.TryGetCachedHandle(s_did, out _));
         Assert.Equal(1, resolver.Calls);
@@ -70,7 +70,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AnInvalidHandleIsCachedForTheFailedResolutionDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { FailedResolutionDuration = TimeSpan.FromMinutes(1), TimeProvider = timeProvider });
 
@@ -91,7 +91,7 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AnInvalidHandleIsNotCachedForLongerThanTheDuration()
     {
-        ManualTimeProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
         {
@@ -120,24 +120,40 @@ public class DidHandleCacheTests
     [Fact]
     public async Task AResolutionWhichTimesOutResultsInAnInvalidHandle()
     {
+        FakeTimeProvider timeProvider = new();
         TestResolver resolver = new(async cancellationToken =>
         {
             await Task.Delay(Timeout.Infinite, cancellationToken);
             return s_handle;
         });
-        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromMilliseconds(50) });
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            TimeProvider = timeProvider
+        });
 
-        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(Handle.Invalid, await lookup);
     }
 
     [Fact]
     public async Task AResolverWhichIgnoresCancellationIsBoundedByTheTimeout()
     {
+        FakeTimeProvider timeProvider = new();
         TaskCompletionSource<Handle> neverCompletes = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => neverCompletes.Task);
-        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { ResolutionTimeout = TimeSpan.FromMilliseconds(50) });
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
+        {
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
+            TimeProvider = timeProvider
+        });
 
-        Assert.Equal(Handle.Invalid, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Equal(Handle.Invalid, await lookup);
     }
 
     [Fact]
@@ -295,7 +311,7 @@ public class DidHandleCacheTests
     {
         using RecordingMeterFactory meterFactory = new();
         using MeasurementRecorder recorder = new(meterFactory);
-        ManualTimerProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TaskCompletionSource<Handle> ignoresCancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int calls = 0;
         TestResolver resolver = new(_ => Interlocked.Increment(ref calls) == 1 ? ignoresCancellation.Task : Task.FromResult(s_handle));
@@ -303,20 +319,21 @@ public class DidHandleCacheTests
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
         {
             MaximumConcurrentResolutions = 1,
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
             MeterFactory = meterFactory,
             TimeProvider = timeProvider
         });
 
         ValueTask<Handle> timedOut = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
-        timeProvider.Timers[0].Fire();
-        Assert.Equal(Handle.Invalid, await timedOut.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+        Assert.Equal(Handle.Invalid, await timedOut);
 
         ValueTask<Handle> blocked = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
         Assert.False(blocked.IsCompleted);
         Assert.Equal(1, resolver.Calls);
 
-        timeProvider.Timers[1].Fire();
-        Assert.Equal(Handle.Invalid, await blocked.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+        Assert.Equal(Handle.Invalid, await blocked);
         Assert.Equal(1, resolver.Calls);
         Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
 
@@ -342,12 +359,13 @@ public class DidHandleCacheTests
     {
         using RecordingMeterFactory meterFactory = new();
         using MeasurementRecorder recorder = new(meterFactory);
-        ManualTimerProvider timeProvider = new();
+        FakeTimeProvider timeProvider = new();
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => completion.Task);
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions
         {
             MaximumConcurrentResolutions = 1,
+            ResolutionTimeout = TimeSpan.FromMilliseconds(50),
             MeterFactory = meterFactory,
             TimeProvider = timeProvider
         });
@@ -355,17 +373,18 @@ public class DidHandleCacheTests
         ValueTask<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
         ValueTask<Handle> waiting = cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, timeProvider.Timers.Count);
-        timeProvider.Timers[1].Fire();
+        timeProvider.Advance(TimeSpan.FromMilliseconds(50));
 
-        Assert.Equal(Handle.Invalid, await waiting.AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(Handle.Invalid, await first);
+        Assert.Equal(Handle.Invalid, await waiting);
         Assert.Equal(1, resolver.Calls);
         Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
         Assert.False(cache.TryGetCachedHandle(s_otherDid, out _));
 
         completion.SetResult(s_handle);
 
-        Assert.Equal(s_handle, await first);
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken));
+        Assert.Equal(2, resolver.Calls);
     }
 
     [Fact]
@@ -595,45 +614,6 @@ public class DidHandleCacheTests
             LastCancellationToken = cancellationToken;
             return resolve(cancellationToken);
         }
-    }
-
-    private sealed class ManualTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-        public override DateTimeOffset GetUtcNow() => _now;
-
-        public void Advance(TimeSpan by) => _now += by;
-    }
-
-    // Creates timers which only fire when a test fires them.
-    private sealed class ManualTimerProvider : TimeProvider
-    {
-        public List<ManualTimer> Timers { get; } = [];
-
-        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
-        {
-            ManualTimer timer = new(callback, state);
-            lock (Timers)
-            {
-                Timers.Add(timer);
-            }
-
-            return timer;
-        }
-    }
-
-    private sealed class ManualTimer(TimerCallback callback, object? state) : ITimer
-    {
-        public void Fire() => callback(state);
-
-        public bool Change(TimeSpan dueTime, TimeSpan period) => true;
-
-        public void Dispose()
-        {
-        }
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class ThrowingLoggerFactory : ILoggerFactory

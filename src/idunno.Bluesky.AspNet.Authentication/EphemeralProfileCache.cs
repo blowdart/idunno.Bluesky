@@ -34,6 +34,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
 
     private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
+    private readonly TimeProvider _timeProvider;
 
     private volatile bool _disposed;
 
@@ -54,15 +55,26 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
     public EphemeralProfileCache(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
-        int? sizeLimit = null)
+        int? sizeLimit = null) : this(loggerFactory, entryTimeToLive, sizeLimit, TimeProvider.System)
+    {
+    }
+
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
+    internal EphemeralProfileCache(
+        ILoggerFactory loggerFactory,
+        TimeSpan? entryTimeToLive,
+        int? sizeLimit,
+        TimeProvider timeProvider)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
 
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _timeProvider = timeProvider;
         Logger = loggerFactory.CreateLogger<EphemeralProfileCache>();
         EntryTTL = entryTimeToLive ?? new(0, 0, 15, 0);
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
 
         if (!s_warned)
         {
@@ -91,7 +103,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
         ArgumentNullException.ThrowIfNull(profile);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        DateTime absoluteExpiration = DateTime.UtcNow.Add(EntryTTL);
+        DateTime absoluteExpiration = _timeProvider.GetUtcNow().UtcDateTime.Add(EntryTTL);
 
         MemoryCacheEntryOptions options = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(absoluteExpiration)
@@ -107,7 +119,7 @@ public sealed class EphemeralProfileCache : IProfileCache, IDisposable
 
         // A short lived entry can reach the end of its life between being written and being read back, which leaves it
         // missing because it expired rather than because the cache had no room for it.
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= absoluteExpiration)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= absoluteExpiration)
         {
             return Task.CompletedTask;
         }

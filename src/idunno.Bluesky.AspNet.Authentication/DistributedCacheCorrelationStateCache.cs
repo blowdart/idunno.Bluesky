@@ -23,6 +23,9 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     /// </summary>
     /// <param name="cache">The <see cref="IDistributedCache"/> backing this instance.</param>
     /// <param name="entryTimeToLive">The TTL that entries in the cache should last for.</param>
+    /// <remarks>
+    /// <para>Entries expire relative to the time they are stored, so expiry is measured by the backing cache's own clock.</para>
+    /// </remarks>
     public DistributedCacheCorrelationStateCache(IDistributedCache cache, TimeSpan? entryTimeToLive = null)
     {
         Cache = cache;
@@ -51,7 +54,7 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
         cancellationToken.ThrowIfCancellationRequested();
 
         DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
-            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
+            .SetAbsoluteExpiration(EntryTTL);
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);

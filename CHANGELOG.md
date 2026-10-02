@@ -77,6 +77,11 @@
   `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
   Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
 * Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
+* Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
+  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache, reconnection delays, and idle and close
+  timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
+* Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
+* Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
 #### idunno.AtProto.Types
 
@@ -84,9 +89,19 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Added `SqliteCorrelationStateCache.CreateWithTimeProvider()` and `SqliteIdentityStore.CreateWithTimeProvider()`, which create stores that
+  use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
 
 #### Samples
 
@@ -140,6 +155,7 @@
 
 #### idunno.AtProto
 
+* `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
   with an `OK` status code. See the breaking change above for the new type.
@@ -154,6 +170,7 @@
 
 #### idunno.Bluesky
 
+* `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
@@ -165,6 +182,18 @@
 * `LabelerPolicies.LabelValues` and `LabelValueDefinitions` now drop any `null` entries a labeler returns.
   Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
   collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Temporary agents used for credential revocation and refresh now use the authentication handler's configured `TimeProvider`,
+  keeping token expiry decisions consistent without changing the shared agent options.
+* Temporary agents used for profile claims transformation now use the transformer's configured `TimeProvider` for token expiry,
+  keeping cache-miss lookups consistent with the transformer's credential precheck without changing the shared agent options.
+* Temporary OAuth agents used during sign-in now use the authentication handler's configured `TimeProvider` without changing the shared agent options.
+* `DistributedCacheCorrelationStateCache` entries now expire relative to when they are stored, so expiry is measured by the backing cache's
+  clock rather than the local wall clock.
+* Authentication ticket and correlation-cookie expiry, refresh waits, and the default ephemeral identity and correlation caches now use the
+  authentication handler's configured `TimeProvider`.
 
 ### Documentation
 

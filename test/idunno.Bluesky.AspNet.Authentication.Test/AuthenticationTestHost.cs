@@ -79,6 +79,8 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
         internal ClaimsIdentity? Identity { get; set; }
 
         internal DateTimeOffset? ExpiresUtc { get; set; }
+
+        internal TimeProvider TimeProvider { get; set; } = TimeProvider.System;
     }
 
     /// <summary>
@@ -102,6 +104,9 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
     /// builder the sign in manager is using.
     /// </summary>
     internal BlueskyAuthenticationOptions Options { get; private set; } = default!;
+
+    internal BlueskyAgentOptions AgentOptions =>
+        _host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue;
 
     /// <summary>
     /// The protector the sign in manager writes and reads correlation cookies with, so a test can forge one.
@@ -201,6 +206,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
             .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAuthenticationOptions>>()
             .Get(Scheme);
 
+        pendingSignIn.TimeProvider = testHost.Options.TimeProvider ?? TimeProvider.System;
         testHost.IdentityStore = testHost.Options.IdentityStore!;
 
         return testHost;
@@ -414,6 +420,16 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
 
         endpoints.MapGet("/test/challenge", context => context.ChallengeAsync(Scheme));
 
+        endpoints.MapGet("/test/signin/clock", async context =>
+        {
+            BlueskySignInManager manager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
+            BlueskyAgentOptions agentOptions = manager.CreateAgentOptions();
+
+            await context.Response.WriteAsync(
+                $"clock={ReferenceEquals(agentOptions.TimeProvider, manager.BlueskyAuthenticationOptions.TimeProvider)};" +
+                $"unchanged={ReferenceEquals(manager.BlueskyAgentOptions.TimeProvider, TimeProvider.System)}");
+        });
+
         // Reports which identity store the agent factory wired an agent's credential updates to, for a user whose
         // identity carries the authentication type named in the query string.
         endpoints.MapGet("/test/agent/store", async context =>
@@ -449,7 +465,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                 {
                     AllowRefresh = true,
                     IsPersistent = true,
-                    IssuedUtc = DateTimeOffset.UtcNow,
+                    IssuedUtc = pendingSignIn.TimeProvider.GetUtcNow(),
                     ExpiresUtc = pendingSignIn.ExpiresUtc
                 });
         });
@@ -477,7 +493,7 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
                 {
                     AllowRefresh = true,
                     IsPersistent = true,
-                    IssuedUtc = DateTimeOffset.UtcNow,
+                    IssuedUtc = pendingSignIn.TimeProvider.GetUtcNow(),
                     ExpiresUtc = pendingSignIn.ExpiresUtc
                 });
         });

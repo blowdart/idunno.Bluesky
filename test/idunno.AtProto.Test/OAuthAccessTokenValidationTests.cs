@@ -8,6 +8,7 @@ using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
 
@@ -16,7 +17,10 @@ public class OAuthAccessTokenValidationTests
 {
     private static readonly Uri s_authority = new("https://authority.test/");
 
-    private static OAuthClient CreateOAuthClient(TimeSpan? clockSkew = null, ILoggerFactory? loggerFactory = null)
+    private static OAuthClient CreateOAuthClient(
+        TimeSpan? clockSkew = null,
+        ILoggerFactory? loggerFactory = null,
+        TimeProvider? timeProvider = null)
     {
         OAuthOptions options = new("https://client.test/clientMetadata.json");
 
@@ -29,7 +33,8 @@ public class OAuthAccessTokenValidationTests
             httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: () => new HttpClientHandler(),
             loggerFactory: loggerFactory,
-            options: options);
+            options: options,
+            timeProvider: timeProvider);
     }
 
     private static string Base64UrlEncode(string value) =>
@@ -207,6 +212,25 @@ public class OAuthAccessTokenValidationTests
                 Guid.NewGuid()));
 
         Assert.Equal("Issued token is not yet valid.", exception.Message);
+    }
+
+    [Fact]
+    public void TokenLifetimeValidationUsesTheInjectedTimeProvider()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        OAuthClient client = CreateOAuthClient(TimeSpan.Zero, timeProvider: timeProvider);
+        JsonWebToken token = CreateToken(
+            notBefore: timeProvider.GetUtcNow().AddMinutes(-1),
+            expires: timeProvider.GetUtcNow().AddMinutes(1));
+
+        client.ValidateAccessToken(token, s_authority, Guid.NewGuid());
+
+        timeProvider.Advance(TimeSpan.FromMinutes(2));
+
+        OAuthException exception = Assert.Throws<OAuthException>(
+            () => client.ValidateAccessToken(token, s_authority, Guid.NewGuid()));
+
+        Assert.Equal("Issued token has already expired.", exception.Message);
     }
 
     [Fact]

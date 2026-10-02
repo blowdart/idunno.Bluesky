@@ -15,6 +15,7 @@ namespace idunno.AtProto.Jetstream;
 public sealed class AtProtoJetstreamBuilder
 {
     private Uri? _service;
+    private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
     /// Gets or sets the optional API key for HTTP archive access.
@@ -357,6 +358,22 @@ public sealed class AtProtoJetstreamBuilder
         ArgumentNullException.ThrowIfNull(didHandleResolver);
 
         DidHandleResolver = didHandleResolver;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="TimeProvider"/> used by the jetstream for time-sensitive operations.
+    /// </summary>
+    /// <param name="timeProvider">A time provider.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public AtProtoJetstreamBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _timeProvider = timeProvider;
+
         return this;
     }
 
@@ -659,6 +676,7 @@ public sealed class AtProtoJetstreamBuilder
             SendTimeout = SendTimeout,
             MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
             DidHandleResolver = DidHandleResolver,
+            TimeProvider = _timeProvider,
         };
 
         AtProtoJetstream jetstream;

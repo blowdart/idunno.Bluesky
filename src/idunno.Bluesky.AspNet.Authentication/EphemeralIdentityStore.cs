@@ -14,7 +14,6 @@ using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky.AspNet.Authentication;
@@ -56,6 +55,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     private readonly MemoryCache _refreshCache;
     private readonly int _sizeLimit;
     private readonly BlueskyAuthenticationMetrics _metrics;
+    private readonly TimeProvider _timeProvider;
 
     private volatile bool _disposed;
 
@@ -87,7 +87,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockExpiration = null,
         int? sizeLimit = null,
-        IMeterFactory? meterFactory = null) : this(loggerFactory, entryTimeToLive, refreshLockExpiration, sizeLimit, meterFactory, clock: null)
+        IMeterFactory? meterFactory = null) : this(loggerFactory, entryTimeToLive, refreshLockExpiration, sizeLimit, meterFactory, TimeProvider.System)
     {
     }
 
@@ -99,15 +99,17 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         TimeSpan? refreshLockExpiration,
         int? sizeLimit,
         IMeterFactory? meterFactory,
-        ISystemClock? clock)
+        TimeProvider timeProvider)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
+        _timeProvider = timeProvider;
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = clock });
-        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = clock });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
+        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
 
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
@@ -422,14 +424,14 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         string key = $"{did}";
 
         DateTime expiresAfter = TokenCacheMemoryOptions.SlidingExpiration is TimeSpan slidingExpiration
-            ? DateTime.UtcNow.Add(slidingExpiration)
+            ? _timeProvider.GetUtcNow().UtcDateTime.Add(slidingExpiration)
             : DateTime.MaxValue;
 
         Cache.Set(key, identity, TokenCacheMemoryOptions);
 
         // A short lived entry can reach the end of its life between being written and being read back, which leaves it
         // missing because it expired rather than because the cache had no room for it.
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= expiresAfter)
         {
             return;
         }
@@ -442,7 +444,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
         Cache.Set(key, identity, TokenCacheMemoryOptions);
 
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= expiresAfter)
         {
             return;
         }

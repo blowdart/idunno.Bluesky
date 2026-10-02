@@ -93,12 +93,12 @@ public partial class AtProtoJetstream
                 }
 
                 _metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)));
-                TimeSpan? retry = ArchiveDownload.GetRetryAfter(result.HttpResponseHeaders);
+                TimeSpan? retry = ArchiveDownload.GetRetryAfter(result.HttpResponseHeaders, Options.TimeProvider);
                 TimeSpan delay = retry ?? throw new HttpRequestException(
                     "The Jetstream archive planner was rate limited without a Retry-After header.",
                     null, result.StatusCode);
 
-                await Task.Delay(delay > TimeSpan.Zero ? delay : TimeSpan.Zero,
+                await Task.Delay(delay > TimeSpan.Zero ? delay : TimeSpan.Zero, Options.TimeProvider,
                     cancellationToken).ConfigureAwait(false);
             }
             ThrowOnArchiveError(result);
@@ -191,7 +191,8 @@ public partial class AtProtoJetstream
                     long offset = startOffset > 0 ? startOffset : 0;
                     ArchiveDownload download = new(
                         segment.Name, null, segment.Checksum, key, _uri, _httpClient, offset, _metrics,
-                        Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
+                        Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null,
+                        timeProvider: Options.TimeProvider);
                     await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
                     if (offset == 0)
                     {
@@ -319,7 +320,8 @@ public partial class AtProtoJetstream
         string name, int index, string checksum, string key, CancellationToken cancellationToken)
     {
         ArchiveDownload download = new(name, index, checksum, key, _uri, _httpClient, 0, _metrics,
-            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
+            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null,
+            timeProvider: Options.TimeProvider);
         await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
         return await download.ReadFrameAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -328,7 +330,8 @@ public partial class AtProtoJetstream
         string name, string checksum, string key, CancellationToken cancellationToken)
     {
         ArchiveDownload download = new(name, null, checksum, key, _uri, _httpClient, 0, _metrics,
-            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null);
+            Options.ArchiveReadTimeout, allowCrossOriginRedirect: _serviceProvider is not null,
+            timeProvider: Options.TimeProvider);
         await using ConfiguredAsyncDisposable disposal = download.ConfigureAwait(false);
         byte[] header = new byte[256];
         await download.ReadExactlyAsync(header, cancellationToken).ConfigureAwait(false);

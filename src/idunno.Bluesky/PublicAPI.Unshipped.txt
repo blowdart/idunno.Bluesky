@@ -1,4 +1,5 @@
 #nullable enable
+override idunno.Bluesky.BlueskyAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.Bluesky.BlueskyAgentBuilder!
 const idunno.Bluesky.RecordType.Generator = "app.bsky.feed.generator" -> string!
 static idunno.Bluesky.CollectionNsid.Generator.get -> idunno.AtProto.Nsid!
 idunno.Bluesky.Feed.Generator

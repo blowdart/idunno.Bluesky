@@ -15,6 +15,7 @@ public class AtProtoAgentBuilder
 {
     private const string DefaultService = "https://public.api.bsky.app";
     private const string DefaultDirectoryService = "https://plc.directory";
+    private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoAgentBuilder"/>.
@@ -141,6 +142,20 @@ public class AtProtoAgentBuilder
     }
 
     /// <summary>
+    /// Sets the <see cref="TimeProvider"/> used by the agent for time-sensitive operations.
+    /// </summary>
+    /// <param name="timeProvider">A time provider.</param>
+    /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public virtual AtProtoAgentBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _timeProvider = timeProvider;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="OAuthOptions"/> to use using OAuth for authentication.
     /// </summary>
     /// <param name="configure">The <see cref="OAuthOptions"/> to use using OAuth for authentication.</param>
@@ -259,6 +274,7 @@ public class AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
         else
@@ -270,6 +286,7 @@ public class AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
     }
