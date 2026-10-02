@@ -139,6 +139,32 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// </summary>
     protected BlueskyAgentOptions BlueskyAgentOptions => BlueskyAgentOptionsMonitor.CurrentValue;
 
+    private BlueskyAgentOptions CreateAgentOptions()
+    {
+        BlueskyAgentOptions configured = BlueskyAgentOptions;
+        BlueskyAgentOptions options = new()
+        {
+            EnableBackgroundTokenRefresh = configured.EnableBackgroundTokenRefresh,
+            FacetExtractor = configured.FacetExtractor,
+            HttpClientOptions = configured.HttpClientOptions,
+            HttpJsonOptions = configured.HttpJsonOptions,
+            LoggerFactory = configured.LoggerFactory,
+            MaximumResponseSize = configured.MaximumResponseSize,
+            MaximumWellKnownResponseSize = configured.MaximumWellKnownResponseSize,
+            OAuthOptions = configured.OAuthOptions,
+            PlcDirectoryServer = configured.PlcDirectoryServer,
+            PublicAppViewUri = configured.PublicAppViewUri,
+            TimeProvider = ConfiguredTimeProvider
+        };
+
+        foreach (string root in configured.DraftMediaRoots)
+        {
+            options.DraftMediaRoots.Add(root);
+        }
+
+        return options;
+    }
+
     /// <summary>
     /// Gets or sets the <see cref="Did"/> for the current user.
     /// This is typically set during the authentication process from a claim in the authentication cookie.
@@ -655,7 +681,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         try
         {
-            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), HttpClientFactory, BlueskyAgentOptions);
+            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), HttpClientFactory, CreateAgentOptions());
 
             if (!agent.IsAuthenticated)
             {
@@ -755,7 +781,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         var hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(storedIdentity), ticket.Properties, ticket.AuthenticationScheme);
 
         // Now check the actual token from the store, and spin up an agent to check if the token is still valid
-        using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, BlueskyAgentOptions))
+        using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, CreateAgentOptions()))
         {
             if (!agent.HasCredentials)
             {

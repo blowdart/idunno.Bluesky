@@ -180,6 +180,11 @@
   Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
   collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
 
+#### idunno.Bluesky.AspNet.Authentication
+
+* Temporary agents used for credential revocation and refresh now use the authentication handler's configured `TimeProvider`,
+  keeping token expiry decisions consistent without changing the shared agent options.
+
 ### Documentation
 
 * Added warnings that data returned from Bluesky and AT Protocol APIs, Jetstream, the firehose, and other remote sources is untrusted and must be

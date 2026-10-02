@@ -105,6 +105,9 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
     /// </summary>
     internal BlueskyAuthenticationOptions Options { get; private set; } = default!;
 
+    internal BlueskyAgentOptions AgentOptions =>
+        _host.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue;
+
     /// <summary>
     /// The protector the sign in manager writes and reads correlation cookies with, so a test can forge one.
     /// </summary>
