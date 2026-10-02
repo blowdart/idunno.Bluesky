@@ -87,6 +87,10 @@
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
+#### idunno.AtProto.OAuthCallback
+
+* Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+
 #### idunno.AtProto.Types
 
 * Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
