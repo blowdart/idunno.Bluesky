@@ -23,13 +23,14 @@ public class BenchmarkCorpusTests
     public void CorpusContainsNothingWhichLooksLikeACredential(string name)
     {
         using Decompressor decompressor = new();
-        decompressor.LoadDictionary(new JetstreamOptions().Dictionary);
+        JetstreamOptions options = new();
+        decompressor.LoadDictionary(options.Dictionary);
 
         byte[][] messages = CorpusFile.Read(name);
 
         for (int i = 0; i < messages.Length; i++)
         {
-            byte[] message = name == CorpusFile.JetstreamV1Zstd ? decompressor.Unwrap(messages[i]).ToArray() : messages[i];
+            byte[] message = name == CorpusFile.JetstreamV1Zstd ? decompressor.Unwrap(messages[i], options.MaxMessageSize).ToArray() : messages[i];
             Assert.False(SensitiveContent.IsSensitive(message), $"Message {i} of the {name} corpus looks like it contains a credential.");
         }
     }
@@ -45,13 +46,14 @@ public class BenchmarkCorpusTests
         }
 
         using Decompressor decompressor = new();
-        decompressor.LoadDictionary(new JetstreamOptions().Dictionary);
+        JetstreamOptions options = new();
+        decompressor.LoadDictionary(options.Dictionary);
 
         byte[][] messages = CorpusFile.Read(name);
 
         for (int i = 0; i < messages.Length; i++)
         {
-            byte[] message = name == CorpusFile.JetstreamV1Zstd ? decompressor.Unwrap(messages[i]).ToArray() : messages[i];
+            byte[] message = name == CorpusFile.JetstreamV1Zstd ? decompressor.Unwrap(messages[i], options.MaxMessageSize).ToArray() : messages[i];
             Assert.False(CaptureScrubber.ContainsAny(message, credentials), $"Message {i} of the {name} corpus contains the capture account's handle or password.");
         }
     }

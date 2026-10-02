@@ -43,6 +43,26 @@ public class HttpContentReaderTests
         Assert.Null(pooled);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReadersAcceptSmallBodiesWithIntMaxValueLimit(bool pooled)
+    {
+        using ByteArrayContent content = new("small"u8.ToArray());
+
+        if (pooled)
+        {
+            using PooledContent? result = await HttpContentReader.ReadAsPooledBytes(content, int.MaxValue, TestContext.Current.CancellationToken);
+            Assert.NotNull(result);
+            Assert.Equal("small"u8, result.Span);
+        }
+        else
+        {
+            string? result = await HttpContentReader.ReadAsString(content, int.MaxValue, TestContext.Current.CancellationToken);
+            Assert.Equal("small", result);
+        }
+    }
+
     [Fact]
     public async Task PooledContentRejectsInvalidUtf8()
     {

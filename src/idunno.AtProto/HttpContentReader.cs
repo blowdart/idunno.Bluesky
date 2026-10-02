@@ -40,7 +40,7 @@ internal static class HttpContentReader
         }
 
         // Read one byte more than the maximum so an over-long response can be detected rather than silently truncated.
-        (byte[] buffer, int bytesRead) = await ReadAtMost(content, maximumLength + 1, cancellationToken).ConfigureAwait(false);
+        (byte[] buffer, int bytesRead) = await ReadAtMost(content, GetReadLimit(maximumLength), cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -85,7 +85,7 @@ internal static class HttpContentReader
         }
 
         // Read one byte more than the maximum so an over-long response can be detected rather than silently truncated.
-        (byte[] buffer, int bytesRead) = await ReadAtMost(content, maximumLength + 1, cancellationToken).ConfigureAwait(false);
+        (byte[] buffer, int bytesRead) = await ReadAtMost(content, GetReadLimit(maximumLength), cancellationToken).ConfigureAwait(false);
 
         if (bytesRead > maximumLength)
         {
@@ -184,4 +184,7 @@ internal static class HttpContentReader
 
         return (buffer, bytesRead);
     }
+
+    private static int GetReadLimit(int maximumLength) =>
+        maximumLength == int.MaxValue ? int.MaxValue : maximumLength + 1;
 }
