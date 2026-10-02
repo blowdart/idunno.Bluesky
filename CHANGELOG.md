@@ -129,6 +129,8 @@
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
+* Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
+  `CallbackServer.CreateAsync()` for race-free callback server startup.
 
 ### Changed
 
