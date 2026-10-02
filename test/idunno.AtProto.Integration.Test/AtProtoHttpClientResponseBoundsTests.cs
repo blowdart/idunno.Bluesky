@@ -26,6 +26,50 @@ public class AtProtoHttpClientResponseBoundsTests
         }
         """;
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task StringResponsesRequireValidUtf8(bool validUtf8, bool withByteOrderMark)
+    {
+        const string text = "h\u00e9llo";
+        byte[] body = validUtf8 ? System.Text.Encoding.UTF8.GetBytes(text) : [0xC3, 0x28];
+        if (withByteOrderMark)
+        {
+            body = [.. System.Text.Encoding.UTF8.Preamble, .. body];
+        }
+
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.Body.WriteAsync(body, TestContext.Current.CancellationToken);
+        });
+        using HttpClient httpClient = testServer.CreateClient();
+        AtProtoHttpClient<string> client = new();
+
+        AtProtoHttpResult<string> result = await client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/test.invalidUtf8",
+            credentials: null,
+            httpClient: httpClient,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(validUtf8, result.Succeeded);
+        if (validUtf8)
+        {
+            Assert.Equal(text, result.Result);
+            Assert.Null(result.AtErrorDetail);
+        }
+        else
+        {
+            Assert.Null(result.Result);
+            Assert.NotNull(result.AtErrorDetail);
+            Assert.Equal("InvalidResponse", result.AtErrorDetail.Error);
+        }
+    }
+
     [Fact]
     public void TheMaximumResponseSizeDefaultsToThirtyTwoMegabytes()
     {

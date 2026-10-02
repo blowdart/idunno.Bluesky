@@ -54,6 +54,8 @@ password is removed, and the account's DID is replaced with `did:plc:aaaaaaaaaaa
 DID or either token remains after scrubbing, the timeline is not written. The capture logs out afterwards, which revokes the
 session.
 
+Compressed Jetstream captures enforce the configured maximum decompressed message size before inspecting their content.
+
 The corpus tests rescan every checked-in message on every build. When `_BlueskyHandle` or `_BlueskyPassword` is set, which
 `capture.ps1` does for its verification step, they also check that no corpus contains either value.
 

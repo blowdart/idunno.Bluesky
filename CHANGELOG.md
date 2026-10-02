@@ -132,6 +132,7 @@
 
 * XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
   A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
+  Raw string responses also reject invalid UTF-8 and report an `InvalidResponse` error.
 * XRPC request bodies are now serialized directly to UTF-8 bytes. The `Content-Type` header is unchanged, `application/json; charset=utf-8`.
 * Firehose and Jetstream web socket messages are now received into pooled buffers. A message that arrives in a single fragment is copied once, rather than
   being assembled in a `MemoryStream`, and compressed Jetstream messages are decoded without an intermediate copy.

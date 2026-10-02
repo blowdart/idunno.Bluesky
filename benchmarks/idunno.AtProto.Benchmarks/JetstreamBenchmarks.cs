@@ -70,7 +70,7 @@ public class JetstreamBenchmarks
         int parsed = 0;
         foreach (byte[] message in _v1Zstd)
         {
-            parsed += ParseV1(_decompressor.Unwrap(message, MaxMessageSize).ToArray());
+            parsed += ParseV1(_decompressor.Unwrap(message, MaxMessageSize));
         }
 
         return parsed;
@@ -92,7 +92,7 @@ public class JetstreamBenchmarks
         return parsed;
     }
 
-    private int ParseV1(byte[] message)
+    private int ParseV1(ReadOnlySpan<byte> message)
     {
         string json = Encoding.UTF8.GetString(message);
         AtJetstreamEvent? atJetstreamEvent = JsonSerializer.Deserialize(json, AtProto::idunno.AtProto.SourceGenerationContext.Default.AtJetstreamEvent);

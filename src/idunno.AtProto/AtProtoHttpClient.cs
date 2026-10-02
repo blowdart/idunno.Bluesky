@@ -1918,42 +1918,48 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                     return result;
                                 }
 
-                                if (typeof(TResult) == typeof(string))
+                                try
                                 {
-                                    result.Result = responseContent.ToString() as TResult;
-                                }
-                                else if (typeof(TResult) == typeof(JsonNode))
-                                {
-                                    result.Result = JsonNode.Parse(responseContent.Span) as TResult;
-                                }
-                                else if (typeof(TResult) == typeof(JsonObject))
-                                {
-                                    result.Result = JsonObject.Parse(responseContent.Span) as TResult;
-                                }
-                                else if (typeof(TResult) == typeof(JsonDocument))
-                                {
-                                    // A JsonDocument parsed from memory keeps referring to it, and the pooled buffer is returned when
-                                    // this method ends, so the document needs its own copy.
-                                    result.Result = JsonDocument.Parse(responseContent.Span.ToArray()) as TResult;
-                                }
-                                else
-                                {
-                                    try
+                                    if (typeof(TResult) == typeof(string))
+                                    {
+                                        result.Result = responseContent.ToString() as TResult;
+                                    }
+                                    else if (typeof(TResult) == typeof(JsonNode))
+                                    {
+                                        result.Result = JsonNode.Parse(responseContent.Span) as TResult;
+                                    }
+                                    else if (typeof(TResult) == typeof(JsonObject))
+                                    {
+                                        result.Result = JsonObject.Parse(responseContent.Span) as TResult;
+                                    }
+                                    else if (typeof(TResult) == typeof(JsonDocument))
+                                    {
+                                        // A JsonDocument must own its memory after the pooled buffer is returned.
+                                        result.Result = JsonDocument.Parse(responseContent.Span.ToArray()) as TResult;
+                                    }
+                                    else
                                     {
                                         result.Result = JsonSerializer.Deserialize<TResult>(
                                             responseContent.Span,
                                             jsonSerializerOptions);
                                     }
-                                    catch (JsonException ex)
+                                }
+                                catch (Exception ex) when (ex is JsonException or DecoderFallbackException)
+                                {
+                                    _metrics.DeserializationFailures.Add(
+                                        1,
+                                        new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                        new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                        new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
+                                        new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
+                                    Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    result.AtErrorDetail = new AtErrorDetail
                                     {
-                                        _metrics.DeserializationFailures.Add(
-                                            1,
-                                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
-                                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
-                                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
-                                            new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
-                                        Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
-                                    }
+                                        Instance = httpRequestMessage.RequestUri,
+                                        HttpMethod = httpRequestMessage.Method,
+                                        Error = "InvalidResponse",
+                                        Message = "The response could not be decoded."
+                                    };
                                 }
                             }
                         }

@@ -58,11 +58,12 @@ internal static class Capture
         }
 
         using Decompressor decompressor = new();
-        decompressor.LoadDictionary(new JetstreamOptions().Dictionary);
+        JetstreamOptions options = new();
+        decompressor.LoadDictionary(options.Dictionary);
 
         await CaptureAsync(outputDirectory, CorpusFile.Firehose, s_firehose, null, static m => m).ConfigureAwait(false);
         await CaptureAsync(outputDirectory, CorpusFile.JetstreamV1, s_jetstreamV1, null, static m => m).ConfigureAwait(false);
-        await CaptureAsync(outputDirectory, CorpusFile.JetstreamV1Zstd, s_jetstreamV1Zstd, null, m => decompressor.Unwrap(m).ToArray()).ConfigureAwait(false);
+        await CaptureAsync(outputDirectory, CorpusFile.JetstreamV1Zstd, s_jetstreamV1Zstd, null, m => decompressor.Unwrap(m, options.MaxMessageSize).ToArray()).ConfigureAwait(false);
         await CaptureAsync(outputDirectory, CorpusFile.JetstreamV2, s_jetstreamV2, "xrpc.v1.json", static m => m).ConfigureAwait(false);
     }
 

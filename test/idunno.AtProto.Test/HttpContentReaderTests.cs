@@ -44,6 +44,16 @@ public class HttpContentReaderTests
     }
 
     [Fact]
+    public async Task PooledContentRejectsInvalidUtf8()
+    {
+        using ByteArrayContent content = new([0xC3, 0x28]);
+        using PooledContent? pooled = await HttpContentReader.ReadAsPooledBytes(content, 1024, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(pooled);
+        Assert.Throws<DecoderFallbackException>(pooled.ToString);
+    }
+
+    [Fact]
     public void PooledContentThrowsAfterItIsDisposed()
     {
         PooledContent pooled = new(System.Buffers.ArrayPool<byte>.Shared.Rent(4), 4);

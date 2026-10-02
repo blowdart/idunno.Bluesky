@@ -34,7 +34,7 @@ public class AllocationBudgetTests
         { "WebSocketReceive.Firehose", 7_300 },   // 6,620
         { "WebSocketReceive.Jetstream", 1_050 },  // 944
         { "Jetstream.V1", 5_600 },                 // 5,009
-        { "Jetstream.V1Compressed", 6_900 },       // 5,979 / 6,237
+        { "Jetstream.V1Compressed", 5_800 },       // 4,986 / 5,244
         { "Jetstream.V2", 5_500 },                 // 4,793 / 4,921
         { "Firehose.FrameParse", 3_100 },          // 2,762
         { "Firehose.ReadFields", 5_000 },          // 4,514
@@ -150,7 +150,7 @@ public class AllocationBudgetTests
                 decompressor.LoadDictionary(new JetstreamOptions().Dictionary);
                 return (
                     CorpusFile.Read(CorpusFile.JetstreamV1Zstd),
-                    message => ParseV1(v1Compressed, decompressor.Unwrap(message, MaxMessageSize).ToArray()),
+                    message => ParseV1(v1Compressed, decompressor.Unwrap(message, MaxMessageSize)),
                     new Disposables(v1Compressed, decompressor));
 
             case "Jetstream.V2":
@@ -196,7 +196,7 @@ public class AllocationBudgetTests
     private static AtProtoJetstream CreateJetstream(JetstreamProtocolVersion version) =>
         new(options: new JetstreamOptions { ProtocolVersion = version, UseCompression = false });
 
-    private static Task ParseV1(AtProtoJetstream jetstream, byte[] message)
+    private static Task ParseV1(AtProtoJetstream jetstream, ReadOnlySpan<byte> message)
     {
         AtJetstreamEvent? atJetstreamEvent = JsonSerializer.Deserialize(Encoding.UTF8.GetString(message), SourceGenerationContext.Default.AtJetstreamEvent);
         if (atJetstreamEvent is not null)

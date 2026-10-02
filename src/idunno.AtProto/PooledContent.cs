@@ -18,6 +18,7 @@ namespace idunno.AtProto;
 /// </remarks>
 internal sealed class PooledContent : IDisposable
 {
+    private static readonly UTF8Encoding s_utf8 = new(false, true);
     private byte[]? _buffer;
     private readonly int _length;
 
@@ -57,7 +58,8 @@ internal sealed class PooledContent : IDisposable
     /// </summary>
     /// <returns>The content as a string.</returns>
     /// <exception cref="ObjectDisposedException">Thrown when the instance has been disposed.</exception>
-    public override string ToString() => Encoding.UTF8.GetString(Span);
+    /// <exception cref="DecoderFallbackException">Thrown when the content is not valid UTF-8.</exception>
+    public override string ToString() => s_utf8.GetString(Span);
 
     /// <summary>
     /// Returns the buffer to the pool.
