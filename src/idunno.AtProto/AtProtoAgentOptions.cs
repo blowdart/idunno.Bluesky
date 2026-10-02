@@ -89,7 +89,18 @@ public class AtProtoAgentOptions
     /// Gets or sets the <see cref="TimeProvider"/> used for time-sensitive operations.
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
-    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public TimeProvider TimeProvider
+    {
+        get => _timeProvider;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _timeProvider = value;
+        }
+    }
+
+    private TimeProvider _timeProvider = TimeProvider.System;
 
     /// <summary>
     /// Specifies the server to use when resolving plc DIDs.

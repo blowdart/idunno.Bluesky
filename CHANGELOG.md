@@ -192,6 +192,8 @@
 * Temporary OAuth agents used during sign-in now use the authentication handler's configured `TimeProvider` without changing the shared agent options.
 * `DistributedCacheCorrelationStateCache` entries now expire relative to when they are stored, so expiry is measured by the backing cache's
   clock rather than the local wall clock.
+* Authentication ticket and correlation-cookie expiry, refresh waits, and the default ephemeral identity and correlation caches now use the
+  authentication handler's configured `TimeProvider`.
 
 ### Documentation
 

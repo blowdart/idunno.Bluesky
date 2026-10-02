@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
+using System.Reflection;
 
 using idunno.AtProto.Authentication;
 
@@ -38,6 +39,33 @@ public class BuilderTests
     [Fact]
     public void BuilderWithTimeProviderRejectsNull() =>
         Assert.Throws<ArgumentNullException>("timeProvider", () => AtProtoAgent.CreateBuilder().WithTimeProvider(null!));
+
+    [Fact]
+    public void AgentTimeProviderIsSnapshottedAtConstruction()
+    {
+        FakeTimeProvider configuredTimeProvider = new();
+        AtProtoAgentOptions options = new(NullLoggerFactory.Instance)
+        {
+            TimeProvider = configuredTimeProvider
+        };
+
+        using AtProtoAgent agent = new(
+            new Uri("https://example.com"),
+            new HttpClientFactory(),
+            options);
+
+        options.TimeProvider = new FakeTimeProvider();
+
+        TimeProvider agentTimeProvider = (TimeProvider)typeof(AtProtoAgent)
+            .GetProperty("Clock", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(agent)!;
+
+        Assert.Same(configuredTimeProvider, agentTimeProvider);
+    }
+
+    [Fact]
+    public void AgentOptionsRejectNullTimeProvider() =>
+        Assert.Throws<ArgumentNullException>(() => new AtProtoAgentOptions { TimeProvider = null! });
 
     [Fact]
     public void AddAtProtoAgentOptionsCopiesTimeProvider()
