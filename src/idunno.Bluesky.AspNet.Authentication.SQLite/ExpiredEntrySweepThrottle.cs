@@ -88,8 +88,7 @@ internal sealed class ExpiredEntrySweepThrottle
 
         if (Interlocked.CompareExchange(ref _dueImmediately, 0, 1) == 1)
         {
-            Interlocked.Exchange(ref _lastSweepAt, now);
-            return true;
+            return Interlocked.CompareExchange(ref _lastSweepAt, now, lastSweepAt) == lastSweepAt;
         }
 
         // Comparing elapsed time, rather than adding the interval to a timestamp, cannot overflow however large the interval is.
