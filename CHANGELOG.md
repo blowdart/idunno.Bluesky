@@ -150,7 +150,6 @@
 
 * `Cid` now caches its string form and hash code, so repeated calls to `ToString()`, `Value` and `GetHashCode()`, such as when a `Cid` is a dictionary key, no longer allocate.
   `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
-* `Cid.Hash` now returns a read-only view of the hash, rather than the array itself, so it can no longer be cast to `byte[]` and changed.
 * `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
 * `Did`, `Handle`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
   parsing between four and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
@@ -164,6 +163,8 @@
 
 #### idunno.AtProto
 
+* `Cid.Hash` now returns an `IReadOnlyList<byte>` rather than a `byte[]`, so callers can no longer cast it to `byte[]` and change the hash.
+  Use `Hash.ToArray()` if a mutable `byte[]` is required.
 * `IdentityResolution.ResolveVerifiedHandleAsync()` and `IdentityResolution.VerifyHandleAsync()`, and the `Resolution` methods they replace, now only consider
   the first valid handle in a DID document's `alsoKnownAs` entries, as the [AT Protocol DID specification](https://atproto.com/specs/did) requires.
   Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.

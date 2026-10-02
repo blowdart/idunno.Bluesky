@@ -1647,7 +1647,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         foreach (NameValueHeaderValue header in _extraRequestHeaders)
         {
-            if (ContainsHeader(requestHeaders, header.Name))
+            if (ContainsHeader(mergedHeaders, header.Name))
             {
                 continue;
             }
