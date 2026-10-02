@@ -94,6 +94,71 @@ public class JsonSerializerOptionsTests
 
         Assert.IsType<StrongReference>(subject);
     }
+
+    public static TheoryData<string> SharedOptionsSurfaces => new()
+    {
+        nameof(AtProtoJsonSerializerOptions.Default),
+        nameof(AtProtoServer.AtProtoJsonSerializerOptions),
+    };
+
+    [Theory]
+    [MemberData(nameof(SharedOptionsSurfaces))]
+    public void SharedOptionsAreTheSameReadOnlyInstanceOnEveryCall(string surface)
+    {
+        Func<JsonSerializerOptions> get = surface switch
+        {
+            nameof(AtProtoJsonSerializerOptions.Default) => () => AtProtoJsonSerializerOptions.Default,
+            nameof(AtProtoServer.AtProtoJsonSerializerOptions) => () => AtProtoServer.AtProtoJsonSerializerOptions,
+            _ => throw new InvalidOperationException($"Unknown surface {surface}."),
+        };
+
+        JsonSerializerOptions options = get();
+
+        Assert.Same(options, get());
+        Assert.True(options.IsReadOnly);
+        Assert.Throws<InvalidOperationException>(() => options.Converters.Add(new JsonStringEnumConverter()));
+    }
+
+    [Fact]
+    public void DefaultJsonSerializerOptionsWithNoTypeResolutionIsTheSameInstanceOnEveryCall()
+    {
+        Assert.Same(AtProtoServer.DefaultJsonSerializerOptionsWithNoTypeResolution, AtProtoServer.DefaultJsonSerializerOptionsWithNoTypeResolution);
+    }
+
+    [Fact]
+    public void OptionsReturnsANewMutableInstanceOnEveryCall()
+    {
+        JsonSerializerOptions first = AtProtoJsonSerializerOptions.Options;
+
+        Assert.NotSame(first, AtProtoJsonSerializerOptions.Options);
+        Assert.NotSame(AtProtoJsonSerializerOptions.Default, first);
+        Assert.False(first.IsReadOnly);
+
+        first.Converters.Add(new JsonStringEnumConverter());
+
+        Assert.Empty(AtProtoJsonSerializerOptions.Default.Converters);
+    }
+
+    [Fact]
+    public void TypeInfoResolverIsTheDefaultResolver()
+    {
+        Assert.Same(AtProtoJsonSerializerOptions.Default.TypeInfoResolver, AtProtoJsonSerializerOptions.TypeInfoResolver);
+    }
+
+    [Fact]
+    public void ChainedJsonSerializerOptionsAreNewMutableInstancesWhichDoNotChangeTheSharedOptions()
+    {
+        int sharedResolverCount = AtProtoServer.AtProtoJsonSerializerOptions.TypeInfoResolverChain.Count;
+
+        JsonSerializerOptions first = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(ChainedTestContext.Default);
+        JsonSerializerOptions second = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(ChainedTestContext.Default);
+
+        Assert.NotSame(first, second);
+        Assert.NotSame(AtProtoServer.AtProtoJsonSerializerOptions, first);
+        Assert.False(first.IsReadOnly);
+        Assert.Equal(sharedResolverCount, AtProtoServer.AtProtoJsonSerializerOptions.TypeInfoResolverChain.Count);
+        Assert.Same(ChainedTestContext.Default, first.TypeInfoResolverChain[0]);
+    }
 }
 
 /// <summary>

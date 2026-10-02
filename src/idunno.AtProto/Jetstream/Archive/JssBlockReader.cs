@@ -19,7 +19,9 @@ internal static class JssBlockReader
     internal static IReadOnlyList<JssRow> Decode(ReadOnlySpan<byte> compressed)
     {
         using Decompressor decompressor = new();
-        byte[] data = decompressor.Unwrap(compressed, MaximumDecodedSize).ToArray();
+
+        // The decompressed block is only read here, so it is used where it is rather than being copied.
+        ReadOnlySpan<byte> data = decompressor.Unwrap(compressed, MaximumDecodedSize);
         if (data.Length < sizeof(uint))
         {
             throw new InvalidDataException("The Jetstream block has no event count.");
@@ -39,42 +41,35 @@ internal static class JssBlockReader
             throw new InvalidDataException("The Jetstream block columns are truncated.");
         }
 
-        int pos = 4;
-        long[] seqs = ReadInt64Column(data, count, ref pos);
-        long[] witnessed = ReadInt64Column(data, count, ref pos);
-        long[] indexed = ReadInt64Column(data, count, ref pos);
-        byte[] kinds = data.AsSpan(pos, count).ToArray();
-        pos += count;
-        byte[] collectionLengths = data.AsSpan(pos, count).ToArray();
-        pos += count;
-        ushort[] didLengths = new ushort[count];
+        int seqsPos = 4;
+        int witnessedPos = seqsPos + count * 8;
+        int indexedPos = witnessedPos + count * 8;
+        int kindsPos = indexedPos + count * 8;
+        int collectionLengthsPos = kindsPos + count;
+        int didLengthsPos = collectionLengthsPos + count;
+        int rkeyLengthsPos = didLengthsPos + count * 2;
+        int revLengthsPos = rkeyLengthsPos + count;
+        int payloadLengthsPos = revLengthsPos + count;
+        int pos = payloadLengthsPos + count * 4;
+
+        long collectionSize = 0;
+        long didSize = 0;
+        long rkeySize = 0;
+        long revSize = 0;
+        long payloadSize = 0;
         for (int i = 0; i < count; i++)
         {
-            didLengths[i] = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(pos, 2));
-            pos += 2;
+            collectionSize += data[collectionLengthsPos + i];
+            didSize += BinaryPrimitives.ReadUInt16LittleEndian(data[(didLengthsPos + i * 2)..]);
+            rkeySize += data[rkeyLengthsPos + i];
+            revSize += data[revLengthsPos + i];
+            payloadSize += BinaryPrimitives.ReadUInt32LittleEndian(data[(payloadLengthsPos + i * 4)..]);
         }
 
-        byte[] rkeyLengths = data.AsSpan(pos, count).ToArray();
-        pos += count;
-        byte[] revLengths = data.AsSpan(pos, count).ToArray();
-        pos += count;
-        uint[] payloadLengths = new uint[count];
-        for (int i = 0; i < count; i++)
-        {
-            payloadLengths[i] = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(pos, 4));
-            pos += 4;
-        }
-
-        long collectionSize = collectionLengths.Sum(length => (long)length);
-        long didSize = didLengths.Sum(length => (long)length);
-        long rkeySize = rkeyLengths.Sum(length => (long)length);
-        long revSize = revLengths.Sum(length => (long)length);
-        long payloadSize = payloadLengths.Sum(length => (long)length);
         if (collectionSize + didSize + rkeySize + revSize + payloadSize != data.Length - pos)
         {
             throw new InvalidDataException("The Jetstream block variable-length regions do not match the column sizes.");
         }
-
         int collectionPos = pos;
         int didPos = checked(collectionPos + (int)collectionSize);
         int rkeyPos = checked(didPos + (int)didSize);
@@ -83,40 +78,32 @@ internal static class JssBlockReader
         List<JssRow> rows = new(count);
         for (int i = 0; i < count; i++)
         {
-            string collection = ReadString(data, ref collectionPos, collectionLengths[i]);
-            string did = ReadString(data, ref didPos, didLengths[i]);
-            string rkey = ReadString(data, ref rkeyPos, rkeyLengths[i]);
-            string rev = ReadString(data, ref revPos, revLengths[i]);
-            int payloadLength = checked((int)payloadLengths[i]);
-            byte[] payload = data.AsSpan(payloadPos, payloadLength).ToArray();
+            long seq = BinaryPrimitives.ReadInt64LittleEndian(data[(seqsPos + i * 8)..]);
+            long witnessed = BinaryPrimitives.ReadInt64LittleEndian(data[(witnessedPos + i * 8)..]);
+            long indexed = BinaryPrimitives.ReadInt64LittleEndian(data[(indexedPos + i * 8)..]);
+            string collection = ReadString(data, ref collectionPos, data[collectionLengthsPos + i]);
+            string did = ReadString(data, ref didPos, BinaryPrimitives.ReadUInt16LittleEndian(data[(didLengthsPos + i * 2)..]));
+            string rkey = ReadString(data, ref rkeyPos, data[rkeyLengthsPos + i]);
+            string rev = ReadString(data, ref revPos, data[revLengthsPos + i]);
+            int payloadLength = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(data[(payloadLengthsPos + i * 4)..]));
+
+            // Each payload is copied out, so an event which is kept does not keep the whole decompressed block alive.
+            byte[] payload = data.Slice(payloadPos, payloadLength).ToArray();
             payloadPos += payloadLength;
-            rows.Add(new JssRow(seqs[i], witnessed[i], indexed[i] == 0 ? witnessed[i] : indexed[i],
-                kinds[i], did, collection, rkey, rev, payload));
+            rows.Add(new JssRow(seq, witnessed, indexed == 0 ? witnessed : indexed,
+                data[kindsPos + i], did, collection, rkey, rev, payload));
         }
 
         return rows;
     }
 
-    private static long[] ReadInt64Column(byte[] data, int count, ref int pos)
+    private static string ReadString(ReadOnlySpan<byte> data, ref int pos, int length)
     {
-        long[] column = new long[count];
-        for (int i = 0; i < count; i++)
-        {
-            column[i] = BinaryPrimitives.ReadInt64LittleEndian(data.AsSpan(pos, 8));
-            pos += 8;
-        }
-
-        return column;
-    }
-
-    private static string ReadString(byte[] data, ref int pos, int length)
-    {
-        string result = s_utf8.GetString(data, pos, length);
+        string result = s_utf8.GetString(data.Slice(pos, length));
         pos += length;
         return result;
     }
 }
-
 internal sealed record JssRow(
     long Seq,
     long WitnessedAt,
@@ -206,8 +193,9 @@ internal sealed record JssRow(
         }
     }
 
+    // Deserialized straight from the JSON, rather than through a JsonElement, which would parse the JSON into a document and copy it.
     private static T Deserialize<T>(byte[] bytes, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
         where T : class =>
-        JsonSerializer.Deserialize(DagCbor.ToJsonElement(bytes), typeInfo) ??
+        JsonSerializer.Deserialize(DagCbor.ToJsonUtf8(bytes).Span, typeInfo) ??
         throw new JsonException("The archive event payload was empty.");
 }

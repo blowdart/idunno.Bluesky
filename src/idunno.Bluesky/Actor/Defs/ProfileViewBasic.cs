@@ -158,10 +158,7 @@ public record ProfileViewBasic : View
     /// </remarks>
     [JsonIgnore]
     public IReadOnlyList<string> SelfLabels =>
-        [.. Labels
-            .Where(label => label.Source == Did && label.Uri == $"at://{Did}/app.bsky.actor.profile/self")
-            .Select(label => label.Value)
-            .Distinct()];
+        Labels.Count == 0 ? [] : SelfLabelReader.Read(Labels, Did, $"at://{Did}/app.bsky.actor.profile/self");
 
     /// <summary>
     /// Gets a string representation of the <see cref="ProfileView"/>.

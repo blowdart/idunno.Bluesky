@@ -69,6 +69,10 @@
 * Added `Label.ExpiresAt`, the optional label expiry time.
 * Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
   representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
+* Added `AtProtoJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `AtProtoJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+* The JSON serializer options used internally for every XRPC request and response are now cached, rather than rebuilt for each call,
+  so their type metadata is resolved once rather than on every request.
 * Added `DidHandleCache`, an `IDidHandleResolver` which resolves the handle for a DID, bidirectionally verifying it, and caches the result.
   Handles which cannot be resolved or verified return `Handle.Invalid`, which is cached for a shorter time. The cache is bounded by
   `DidHandleCacheOptions.Size` and `Duration`, concurrent lookups for the same DID share a single resolution, at most `MaximumConcurrentResolutions`
@@ -86,6 +90,9 @@
 #### idunno.AtProto.Types
 
 * Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
+* Added `Nsid.ValidationRegex`, `RecordKey.ValidationRegex` and `TimestampIdentifier.ValidationRegex`, the syntax regular expressions from the
+  AT Protocol specifications, for client side validation. Like `Did.ValidationRegex` and `Handle.ValidationRegex` they check syntax only;
+  use `TryParse()` to validate a value fully.
 
 #### idunno.Bluesky
 
@@ -93,6 +100,9 @@
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
+* Added `BlueskyJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `BlueskyJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+  `BlueskyJsonSerializerOptions.TypeInfoResolver` no longer builds a new set of options each time it is read.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -116,10 +126,45 @@
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
 
+### Changed
+
+#### idunno.AtProto
+
+* XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
+  A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
+  Raw string responses also reject invalid UTF-8 and report an `InvalidResponse` error.
+* XRPC request bodies are now serialized directly to UTF-8 bytes. The `Content-Type` header is unchanged, `application/json; charset=utf-8`.
+* Firehose and Jetstream web socket messages are now received into pooled buffers. A message that arrives in a single fragment is copied once, rather than
+  being assembled in a `MemoryStream`, and compressed Jetstream messages are decoded without an intermediate copy.
+* Reduced allocations when merging request headers, recording XRPC metrics, and copying Jetstream extension data.
+* Firehose commit and sync events now take their CAR block and record data from the event's `Blocks` rather than copying each block, reducing
+  allocations when decoding a commit by about 16%.
+* Jetstream archive blocks are decoded without copying the decompressed block or its columns, and Jetstream metrics no longer format the server
+  address for every message or archive event.
+* Jetstream archive identity, account and sync events are deserialized directly from their converted JSON, rather than through a `JsonElement`,
+  and `DagCbor.ToJsonElement()` no longer copies the element it returns.
+* Preparing a moderation label for signature verification now removes the signature from the encoded label, rather than re-encoding
+  every other field, more than halving its cost and cutting its allocations by more than 80%.
+
+#### idunno.AtProto.Types
+
+* `Cid` now caches its string form and hash code, so repeated calls to `ToString()`, `Value` and `GetHashCode()`, such as when a `Cid` is a dictionary key, no longer allocate.
+  `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
+* `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
+* `Did`, `Handle`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
+  parsing between four and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
+  no longer split the NSID. Generating a `TimestampIdentifier` no longer validates the value it has just built.
+
+#### idunno.Bluesky
+
+* `PostView.SelfLabels` and `ProfileViewBasic.SelfLabels` (for both actors and chat members) no longer allocate when there are no labels, and allocate less when there are.
+
 ### Breaking Changes
 
 #### idunno.AtProto
 
+* `Cid.Hash` now returns an `IReadOnlyList<byte>` rather than a `byte[]`, so callers can no longer cast it to `byte[]` and change the hash.
+  Use `Hash.ToArray()` if a mutable `byte[]` is required.
 * `IdentityResolution.ResolveVerifiedHandleAsync()` and `IdentityResolution.VerifyHandleAsync()`, and the `Resolution` methods they replace, now only consider
   the first valid handle in a DID document's `alsoKnownAs` entries, as the [AT Protocol DID specification](https://atproto.com/specs/did) requires.
   Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.
@@ -150,6 +195,9 @@
 * `BlueskyServer.GetUploadStatus()` now takes a `ServiceCredential`, because the video service rejects unauthenticated upload status requests.
 * `BlueskyServer.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices()`, `GetSuggestions()` and `SearchPostsV2()`
   now take an optional `AccessCredentials?`, rather than a required one.
+* `BlueskyServer.BlueskyJsonSerializerOptions` now returns the shared, read-only `BlueskyJsonSerializerOptions.Default`.
+  Changing it, for example by adding a converter or a type info resolver, now throws `InvalidOperationException`.
+  Use `BlueskyJsonSerializerOptions.Options` to get a copy you can change.
 
 ### Fixed
 
@@ -159,6 +207,7 @@
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
   with an `OK` status code. See the breaking change above for the new type.
+* `did:web` resolution no longer accepts a DID whose host ends with a percent encoded new line, such as `did:web:example.com%0A`.
 
 #### idunno.AtProto.Types
 
@@ -167,6 +216,10 @@
   throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
   Encoding is unchanged, and still emits the padding.
   Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
+* `Did`, `Handle`, `RecordKey` and `AtUri` no longer accept a value with a trailing new line, such as `"did:plc:abc\n"`. Their regular
+  expressions ended in `$`, which in .NET also matches before a final new line.
+* The `Handle` constructor now validates a handle before lower casing it, so it no longer accepts a handle containing a non-ASCII character
+  which lower cases to an ASCII letter, such as the Kelvin sign, U+212A. `Handle.TryParse()` already rejected these.
 
 #### idunno.Bluesky
 

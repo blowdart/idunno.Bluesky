@@ -26,6 +26,24 @@ public class JetstreamArchiveTests
     private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
     private static readonly Uri s_server = new("wss://test.internal:443/some/path?ignored=1");
 
+    private sealed class SignalingTimeProvider : FakeTimeProvider
+    {
+        private readonly TaskCompletionSource _quotaDelayScheduled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal Task QuotaDelayScheduled => _quotaDelayScheduled.Task;
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ITimer timer = base.CreateTimer(callback, state, dueTime, period);
+            if (dueTime == TimeSpan.FromSeconds(1))
+            {
+                _quotaDelayScheduled.TrySetResult();
+            }
+
+            return timer;
+        }
+    }
+
     [Theory]
     [InlineData("http://archive.example")]
     [InlineData("ws://archive.example")]
@@ -229,22 +247,17 @@ public class JetstreamArchiveTests
             await context.Response.Body.WriteAsync(new byte[] { 1, 2, 3 });
         });
         using HttpClient client = server.CreateClient();
-        FakeTimeProvider timeProvider = new();
+        SignalingTimeProvider timeProvider = new();
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null), timeProvider: timeProvider);
         byte[] bytes = new byte[3];
         Task read = download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
 
-        Assert.True(SpinWait.SpinUntil(() => download.Position == 2 || read.IsCompleted, TimeSpan.FromSeconds(10)));
+        await timeProvider.QuotaDelayScheduled.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         Assert.Equal(2, download.Position);
         Assert.False(read.IsCompleted);
 
-        for (int i = 0; i < 10 && !read.IsCompleted; i++)
-        {
-            timeProvider.Advance(TimeSpan.FromSeconds(1));
-            await Task.Yield();
-        }
-
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
         await read.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         Assert.Equal([1, 2, 3], bytes);
     }

@@ -116,11 +116,7 @@ public sealed record ProfileViewBasic : View
     {
         get
         {
-            field ??= Labels
-                .Where(l => (l.Source == Did &&
-                             l.Uri == $"at://{Did}/app.bsky.actor.profile/self"))
-                .Select(v => v.Value)
-                .Distinct().ToList().AsReadOnly();
+            field ??= Labels.Count == 0 ? [] : SelfLabelReader.Read(Labels, Did, $"at://{Did}/app.bsky.actor.profile/self");
 
             return field;
         }

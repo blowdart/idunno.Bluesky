@@ -41,9 +41,9 @@ public static class DagCbor
     /// </remarks>
     public static JsonElement ToJsonElement(ReadOnlyMemory<byte> value)
     {
-        using JsonDocument document = ToJsonDocument(value);
+        Utf8JsonReader reader = new(ToJsonUtf8(value).Span);
 
-        return document.RootElement.Clone();
+        return JsonElement.ParseValue(ref reader);
     }
 
     /// <summary>
@@ -57,7 +57,17 @@ public static class DagCbor
     /// <remarks>
     /// <para>The caller owns the returned <see cref="JsonDocument"/> and must dispose of it.</para>
     /// </remarks>
-    public static JsonDocument ToJsonDocument(ReadOnlyMemory<byte> value)
+    public static JsonDocument ToJsonDocument(ReadOnlyMemory<byte> value) => JsonDocument.Parse(ToJsonUtf8(value));
+
+    /// <summary>
+    /// Converts the DAG-CBOR encoded <paramref name="value"/> to its UTF-8 encoded JSON representation.
+    /// </summary>
+    /// <param name="value">The DAG-CBOR encoded value to convert.</param>
+    /// <returns>The UTF-8 encoded JSON representation of <paramref name="value"/>.</returns>
+    /// <exception cref="InvalidDataException">
+    /// Thrown when <paramref name="value"/> is empty, is not valid DAG-CBOR, or contains a value which is not part of the AT Proto data model.
+    /// </exception>
+    internal static ReadOnlyMemory<byte> ToJsonUtf8(ReadOnlyMemory<byte> value)
     {
         if (value.IsEmpty)
         {
@@ -89,7 +99,7 @@ public static class DagCbor
             writer.Flush();
         }
 
-        return JsonDocument.Parse(buffer.WrittenMemory);
+        return buffer.WrittenMemory;
     }
 
     /// <summary>

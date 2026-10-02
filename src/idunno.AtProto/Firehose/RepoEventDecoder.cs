@@ -266,7 +266,7 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         {
             return FirehoseCbor.Wrap(() =>
             {
-                using CarReader reader = new(new MemoryStream(car, writable: false), options.MaximumCarBlockSize);
+                using CarReader reader = new(car, options.MaximumCarBlockSize);
                 CarHeader header = reader.ReadHeader();
 
                 if (header.Roots.Count == 0)
@@ -285,6 +285,8 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
                             string.Create(CultureInfo.InvariantCulture, $"The CAR has more than {options.MaximumCarBlocks} blocks."));
                     }
 
+                    // Every block is verified now, rather than lazily when it is used, because FirehoseCommitEvent promises that
+                    // every block's content identifier has been checked before the event is raised.
                     if (block.Cid != Cid.FromDagCbor(block.Data.Span))
                     {
                         throw new InvalidDataException($"The CAR block '{block.Cid}' does not match its content.");

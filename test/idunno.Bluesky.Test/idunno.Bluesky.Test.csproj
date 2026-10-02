@@ -4,4 +4,10 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Shared\CorpusFile.cs" LinkBase="Benchmarks" />
+    <Compile Include="..\idunno.AtProto.Test\AllocationMeasurement.cs" LinkBase="Benchmarks" />
+    <None Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Corpus\xrpc-*.bin.gz" LinkBase="Corpus" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

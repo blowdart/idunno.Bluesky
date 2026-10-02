@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers;
 using System.Net.WebSockets;
 
 using Microsoft.Extensions.Logging;
@@ -29,7 +30,7 @@ internal static class WebSocketExtensions
     /// or the web socket is no longer open, and returns the final <see cref="WebSocketReceiveResult"/>
     /// and a byte array containing the read message.
     /// </summary>
-    /// <param name="webSocket">The <see cref="ClientWebSocket"/> to read the message from.</param>
+    /// <param name="webSocket">The <see cref="WebSocket"/> to read the message from.</param>
     /// <param name="bufferSize">The maximum block size, in bytes, to read from <paramref name="webSocket"/>.</param>
     /// <param name="maxMessageSize">The maximum total message size, in bytes. Defaults to 1 MB.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging, if any.</param>
@@ -42,28 +43,33 @@ internal static class WebSocketExtensions
     /// socket, so a <see cref="WebSocketMessageAbandonedException"/> means the connection can no longer be read from.</para>
     /// </remarks>
     public static async Task<(WebSocketReceiveResult Result, byte[] Message)> ReceiveNextMessageAsync(
-        this ClientWebSocket webSocket,
+        this WebSocket webSocket,
         int bufferSize,
         int maxMessageSize = DefaultMaxMessageSize,
         ILogger? logger = null,
         CancellationToken cancellationToken = default)
     {
-        ArraySegment<byte> buffer = new(new byte[bufferSize]);
-        WebSocketReceiveResult receiveResult;
-        byte[] message;
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(bufferSize);
 
         if (webSocket.State != WebSocketState.Open)
         {
             throw new WebSocketException(WebSocketError.InvalidState);
         }
 
-        using (MemoryStream ms = new())
+        // Both buffers are rented, and the message is copied out of them once it is complete. Most messages arrive in a
+        // single fragment, which is copied straight from the receive buffer without being assembled at all.
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+        byte[]? assembled = null;
+        int assembledLength = 0;
+
+        try
         {
+            WebSocketReceiveResult receiveResult;
             int consecutiveEmptyFragments = 0;
 
             do
             {
-                receiveResult = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+                receiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, 0, bufferSize), cancellationToken).ConfigureAwait(false);
 
                 if (receiveResult.Count == 0 && !receiveResult.EndOfMessage)
                 {
@@ -86,11 +92,11 @@ internal static class WebSocketExtensions
                     consecutiveEmptyFragments = 0;
                 }
 
-                if (ms.Length + receiveResult.Count > maxMessageSize)
+                if ((long)assembledLength + receiveResult.Count > maxMessageSize)
                 {
                     if (logger is not null)
                     {
-                        Logger.ReceivedMessageTooLarge(logger, (int)ms.Length + receiveResult.Count, maxMessageSize);
+                        Logger.ReceivedMessageTooLarge(logger, assembledLength + receiveResult.Count, maxMessageSize);
                     }
 
                     throw new WebSocketMessageAbandonedException(
@@ -98,9 +104,14 @@ internal static class WebSocketExtensions
                         WebSocketCloseStatus.MessageTooBig);
                 }
 
-                await ms.WriteAsync(
-                    buffer.AsMemory(buffer.Offset, receiveResult.Count),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (assembled is null && receiveResult.EndOfMessage)
+                {
+                    return (receiveResult, buffer.AsSpan(0, receiveResult.Count).ToArray());
+                }
+
+                assembled = EnsureCapacity(assembled, assembledLength, assembledLength + receiveResult.Count, bufferSize);
+                buffer.AsSpan(0, receiveResult.Count).CopyTo(assembled.AsSpan(assembledLength));
+                assembledLength += receiveResult.Count;
             } while (!receiveResult.EndOfMessage && webSocket.State == WebSocketState.Open);
 
             if (!receiveResult.EndOfMessage)
@@ -111,12 +122,45 @@ internal static class WebSocketExtensions
                 throw new WebSocketException(WebSocketError.InvalidState, "The web socket closed before the end of the message was reached.");
             }
 
-            await ms.FlushAsync(cancellationToken).ConfigureAwait(false);
-            ms.Seek(0, SeekOrigin.Begin);
-            message = ms.ToArray();
-            ms.Close();
-
-            return (receiveResult, message);
+            return (receiveResult, assembled.AsSpan(0, assembledLength).ToArray());
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+
+            if (assembled is not null)
+            {
+                ArrayPool<byte>.Shared.Return(assembled);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns a pooled buffer of at least <paramref name="required"/> bytes, holding the first <paramref name="used"/> bytes of <paramref name="current"/>.
+    /// </summary>
+    /// <param name="current">The current pooled buffer, if any, which is returned to the pool if a larger one is needed.</param>
+    /// <param name="used">The number of bytes of <paramref name="current"/> in use.</param>
+    /// <param name="required">The number of bytes the buffer must hold.</param>
+    /// <param name="minimumSize">The smallest buffer to rent.</param>
+    /// <returns>A pooled buffer of at least <paramref name="required"/> bytes.</returns>
+    private static byte[] EnsureCapacity(byte[]? current, int used, int required, int minimumSize)
+    {
+        if (current is not null && current.Length >= required)
+        {
+            return current;
+        }
+
+        // Doubling keeps the number of copies logarithmic in the message size. The size is grown through a long so a
+        // large buffer cannot overflow, and the maximum message size has already bounded required.
+        long grownSize = Math.Max(Math.Max(required, minimumSize), (long)(current?.Length ?? 0) * 2);
+        byte[] grown = ArrayPool<byte>.Shared.Rent((int)Math.Min(grownSize, Array.MaxLength));
+
+        if (current is not null)
+        {
+            current.AsSpan(0, used).CopyTo(grown);
+            ArrayPool<byte>.Shared.Return(current);
+        }
+
+        return grown;
     }
 }

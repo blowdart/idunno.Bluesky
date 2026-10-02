@@ -167,12 +167,7 @@ public sealed record PostView : PostViewBase
     {
         get
         {
-            field ??= Labels
-                .Where(label => Author.Did == label.Source &&
-                                Uri.ToString() == label.Uri &&
-                                Cid == label.Cid)
-                .Select(label => label.Value)
-                .Distinct().ToList().AsReadOnly();
+            field ??= Labels.Count == 0 ? [] : SelfLabelReader.Read(Labels, Author.Did, Uri.ToString(), matchCid: true, Cid);
 
             return field;
         }

@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Web;
 
 using idunno.AtProto;
@@ -23,18 +22,10 @@ namespace idunno.DidPlcDirectory;
 /// Provides a class for sending requests to and receiving responses from an directory service, identified by its service URI.
 /// </summary>
 [SuppressMessage("Performance", "CA1812", Justification = "Used in DID resolution.")]
-internal static partial class DirectoryServer
+internal static class DirectoryServer
 {
     private const string LocalHost = "localhost";
 
-    // The maximum length of a DNS name, which a did:web identifier resolves to a request against.
-    private const int MaximumHostNameLength = 253;
-
-    // AT Proto did:web identifiers are hostnames, which is the same grammar a handle uses, so the handle
-    // validation pattern is reused here. As well as requiring a well formed hostname it requires the right
-    // most label to begin with a letter, which is what rules out IPv4 literals such as 169.254.169.254.
-    [GeneratedRegex(Handle.ValidationRegex, RegexOptions.None, 5000)]
-    private static partial Regex s_validateHostName();
 
     /// <summary>
     /// Tries to create the <see cref="Uri"/> of the web server a <c>did:web</c> DID document should be resolved from.
@@ -88,8 +79,10 @@ internal static partial class DirectoryServer
             }
         }
 
-        if (!host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) &&
-            (host.Length > MaximumHostNameLength || !s_validateHostName().IsMatch(host)))
+        // AT Proto did:web identifiers are hostnames, which is the same grammar a handle uses, so handle validation is reused
+        // here. As well as requiring a well formed hostname of at most 253 characters it requires the right most label to begin
+        // with a letter, which is what rules out IPv4 literals such as 169.254.169.254.
+        if (!host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) && !Handle.TryParse(host, out _))
         {
             return false;
         }

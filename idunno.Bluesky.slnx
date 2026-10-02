@@ -38,6 +38,7 @@
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />
+    <File Path=".github/workflows/benchmarks.yml" />
     <File Path=".github/workflows/ci-build.yml" />
     <File Path=".github/workflows/close-inactive-issues.yml" />
     <File Path=".github/workflows/codeql-analysis.yml" />
@@ -50,8 +51,18 @@
   <Folder Name="/.vscode/">
     <File Path=".vscode/settings.json" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <File Path="benchmarks/capture.ps1" />
+    <File Path="benchmarks/Directory.Build.props" />
+    <File Path="benchmarks/readme.md" />
+    <Project Path="benchmarks/idunno.AtProto.Benchmarks/idunno.AtProto.Benchmarks.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/devnotes/">
     <File Path="devnotes/credential-lifecycle-and-locking.md" />
+    <File Path="devnotes/prototyping-performance-improvements.md" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
