@@ -1,2 +1,1 @@
 #nullable enable
-static idunno.AtProto.OAuthCallback.CallbackServer.CreateAsync(string? path = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Action<idunno.AtProto.OAuthCallback.CallbackServer!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.OAuthCallback.CallbackServer!>!
