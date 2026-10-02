@@ -74,4 +74,69 @@ public class OAuthOptionsScopesTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => options.Scopes = []);
     }
+
+    [Fact]
+    public void PermissionSetsAreEmptyByDefaultAndDoNotChangeRawScopes()
+    {
+        OAuthOptions options = CreateOptions();
+
+        Assert.Empty(options.PermissionSets);
+        Assert.Equal(["atproto"], options.GetRequestedScopes());
+
+        options.Scopes = ["transition:generic", "custom:scope"];
+
+        Assert.Equal(options.Scopes, options.GetRequestedScopes());
+    }
+
+    [Fact]
+    public void ConfiguredScopesCombineAndDeduplicateRawScopesAndPermissionSets()
+    {
+        OAuthOptions options = CreateOptions();
+        options.Scopes = ["atproto", "include:com.example.authBasic", "blob:image/*"];
+        options.PermissionSets = [new("com.example.authBasic"), new("com.example.authOther"), new("com.example.authOther")];
+
+        Assert.Equal(["atproto", "include:com.example.authBasic", "blob:image/*", "include:com.example.authOther"], options.GetRequestedScopes());
+        Assert.Equal(["atproto", "include:com.example.authBasic", "blob:image/*"], options.Scopes);
+    }
+
+    [Fact]
+    public void PermissionSetsAreCopiedAndOnlyEnumeratedOnce()
+    {
+        int enumerationCount = 0;
+        List<OAuthPermissionSet> permissionSets = [new("com.example.authBasic")];
+
+        IEnumerable<OAuthPermissionSet> CountingPermissionSets()
+        {
+            enumerationCount++;
+            foreach (OAuthPermissionSet permissionSet in permissionSets)
+            {
+                yield return permissionSet;
+            }
+        }
+
+        OAuthOptions options = CreateOptions();
+        options.PermissionSets = CountingPermissionSets();
+        IEnumerable<string> snapshot = options.GetRequestedScopes();
+        permissionSets.Clear();
+
+        Assert.Equal(["atproto", "include:com.example.authBasic"], options.GetRequestedScopes());
+        Assert.Equal(snapshot, options.GetRequestedScopes());
+        Assert.Equal(1, enumerationCount);
+
+        options.PermissionSets = [];
+
+        Assert.Equal(["atproto"], options.GetRequestedScopes());
+        Assert.Equal(["atproto", "include:com.example.authBasic"], snapshot);
+    }
+
+    [Fact]
+    public void NullPermissionSetsOrEntriesAreRejectedWithoutChangingConfiguration()
+    {
+        OAuthOptions options = CreateOptions();
+        options.PermissionSets = [new("com.example.authBasic")];
+
+        Assert.Throws<ArgumentNullException>(() => options.PermissionSets = null!);
+        Assert.Throws<ArgumentNullException>(() => options.PermissionSets = [null!]);
+        Assert.Equal(["atproto", "include:com.example.authBasic"], options.GetRequestedScopes());
+    }
 }

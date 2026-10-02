@@ -383,8 +383,8 @@ internal static partial class Logger
     [LoggerMessage(604, LogLevel.Information, "DPoP header added to request to {host}/{path}")]
     internal static partial void DPoPHeaderAddedToTokenRequest(ILogger logger, string? host, string? path);
 
-    [LoggerMessage(605, LogLevel.Error, "OAuth login access token did not contain AtProto in scope, correlation {correlation}")]
-    internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
+    [LoggerMessage(605, LogLevel.Error, "OAuth login access token scope did not contain atproto or begin with ref:, correlation {correlation}")]
+    internal static partial void OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(ILogger logger, Guid correlation);
 
     [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
     internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri actual, Uri expected, Guid correlation);

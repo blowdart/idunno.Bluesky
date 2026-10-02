@@ -8,6 +8,7 @@ using idunno.AtProto.Authentication;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,6 +28,56 @@ public class OAuthLoginResponseTests
     private static readonly Uri s_returnUri = new("https://client.test/callback");
 
     private static readonly string s_signingKeyJson = CreatePublicSigningKeyJson();
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task LoginAndRefreshRequestsUsePermissionSetsUnlessScopesAreExplicitlyOverridden(bool localhost, bool overrideScopes)
+    {
+        LoginTestServer server = new();
+        OAuthOptions options = new(localhost ? "http://localhost" : ClientId, s_returnUri)
+        {
+            Scopes = ["atproto", "blob:image/*"],
+            PermissionSets = [new("com.example.authBasic", "did:web:api.example.com#appview")]
+        };
+        OAuthClient client = CreateClient(server, options);
+        string[]? scopes = overrideScopes ? ["atproto", new OAuthPermissionSet("com.example.authOther")] : null;
+        string expected = string.Join(" ", scopes ?? options.GetRequestedScopes());
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            scopes: scopes,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, server.RequestedScopes);
+        if (localhost)
+        {
+            Assert.Equal(expected, QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"]);
+        }
+        else
+        {
+            Assert.Equal(ClientId, server.RequestedClientId);
+        }
+
+        DPoPAccessCredentials? credentials = await client.ProcessOAuth2LoginResponse(
+            CallbackData(client.State!.State),
+            scopes: scopes,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.NotNull(await client.RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            scopes: scopes,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(expected, server.RefreshRequestedScopes);
+        Assert.Equal(server.RequestedClientId, server.RefreshRequestedClientId);
+    }
 
     [Fact]
     public async Task ASuccessfullyProcessedLoginResponseDiscardsTheLoginState()
@@ -162,11 +213,11 @@ public class OAuthLoginResponseTests
 
     private static string CallbackData(string state) => $"?code=authorizationCode&state={state}";
 
-    private static OAuthClient CreateClient(LoginTestServer server) =>
+    private static OAuthClient CreateClient(LoginTestServer server, OAuthOptions? options = null) =>
         new(httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: server.TestServer.CreateHandler,
             loggerFactory: null,
-            options: new OAuthOptions(ClientId, s_returnUri));
+            options: options ?? new OAuthOptions(ClientId, s_returnUri));
 
     private static string CreateAccessJwt(Did did) =>
         JwtBuilder.CreateJwt(did, issuer: Authority, audience: ServerDid, scope: "atproto");
@@ -213,6 +264,14 @@ public class OAuthLoginResponseTests
         /// Gets or sets a value indicating whether the token endpoint issues a bearer token rather than a DPoP bound one.
         /// </summary>
         internal bool IssueBearerToken { get; set; }
+
+        internal string? RequestedScopes { get; private set; }
+
+        internal string? RequestedClientId { get; private set; }
+
+        internal string? RefreshRequestedScopes { get; private set; }
+
+        internal string? RefreshRequestedClientId { get; private set; }
 
         internal string? TokenRequestProofKeyThumbprint
         {
@@ -263,6 +322,9 @@ public class OAuthLoginResponseTests
                     return;
 
                 case "/par" when request.Method == HttpMethod.Post.Method:
+                    IFormCollection form = await request.ReadFormAsync();
+                    RequestedScopes = form["scope"].ToString();
+                    RequestedClientId = form["client_id"].ToString();
                     response.StatusCode = StatusCodes.Status201Created;
                     response.ContentType = "application/json";
                     await response.WriteAsync("""{"request_uri":"urn:ietf:params:oauth:request_uri:test","expires_in":90}""");
@@ -270,6 +332,12 @@ public class OAuthLoginResponseTests
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
                     RecordProofKey(request);
+                    IFormCollection tokenForm = await request.ReadFormAsync();
+                    if (tokenForm["grant_type"] == "refresh_token")
+                    {
+                        RefreshRequestedScopes = tokenForm["scope"].ToString();
+                        RefreshRequestedClientId = tokenForm["client_id"].ToString();
+                    }
 
                     response.Headers["DPoP-Nonce"] = "serverIssuedNonce";
                     response.ContentType = "application/json";

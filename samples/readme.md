@@ -32,9 +32,27 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.ModerationLabels` - a `SubscribeLabelsAsync()` sample which shows the labels applied, and negated, by a labeler, defaulting to the Bluesky moderation service, or the labeler given by `--labeler`. `--list` lists every labeler which has published a labeler service record, and `--live` narrows that list to the labelers which answer a query. `dotnet publish` produces it as a single native AOT executable; an ordinary build does not, as the native link step needs a platform C/C++ toolchain.
 * `Samples.Notifications` - a sample which shows notifications for the authenticated user.
 * `Samples.OAuth` - a sample that demonstrates how to login via OAuth.
+* `Samples.OAuthPermissionSets` - a sample that requests the published Bluesky create-posts and delete-content permission sets, creates a post, refreshes credentials, then deletes the post.
 * `Samples.Posting` - a sample that shows how to make posts.
 * `Samples.Timeline` - a sample that shows reading and paging through the authenticated user's timeline.
 * `Samples.TokenRefresh` - a sample that shows background token refresh happening, by hacking the refresh timer to be very short.
 * `Samples.Video` - a sample that demonstrates video uploading and embedding.
 
 * `Samples.BulkDelete` - an implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.
+
+## OAuth permission sets
+
+Run the permission-set sample with your handle:
+
+```powershell
+dotnet run --project samples\Samples.OAuthPermissionSets -- --handle your-handle.bsky.social
+```
+
+The sample opens a browser for OAuth consent using a localhost callback. It requests `atproto`,
+`BlueskyOAuthPermissionSets.CreatePosts`, and `BlueskyOAuthPermissionSets.DeleteContent`, without transition scopes.
+The delete-content set also permits deleting likes and reposts; the sample only deletes the post it creates.
+No blob permissions are needed for this text-only post.
+
+It creates a public post containing `Hello OAuth PermssionSets`, demonstrates credential refresh, then deletes that
+same post using the refreshed credentials and logs out. If refresh or deletion fails, it reports the post URI so you
+can delete it manually. An interruption or exception after creation can also leave the post on your account.

@@ -228,7 +228,7 @@ public class OAuthClient
             ArgumentOutOfRangeException.ThrowIfZero(requestedScopes.Length);
         }
 
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
@@ -328,7 +328,7 @@ public class OAuthClient
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
         string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
@@ -561,7 +561,7 @@ public class OAuthClient
         ArgumentNullException.ThrowIfNull(authority);
 
         string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
@@ -786,11 +786,13 @@ public class OAuthClient
 
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
         // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
+        // A case-sensitive "ref:" prefix references scopes and permission sets resolved by the server.
         if (!accessToken.TryGetClaim("scope", out Claim? scopeClaim) ||
-            !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal))
+            (!scopeClaim.Value.StartsWith("ref:", StringComparison.Ordinal) &&
+             !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal)))
         {
-            Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, correlationId);
-            throw new OAuthException("Issued token does not contain atproto in scope.");
+            Logger.OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(_logger, correlationId);
+            throw new OAuthException("Issued token scope does not contain atproto or begin with ref:.");
         }
 
         if (!Uri.TryCreate(accessToken.Issuer, UriKind.Absolute, out Uri? issuer))

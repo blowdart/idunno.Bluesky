@@ -2092,7 +2092,7 @@ public partial class AtProtoAgent
 
         Options.OAuthOptions.Validate();
 
-        scopes ??= Options.OAuthOptions.Scopes;
+        scopes ??= Options.OAuthOptions.GetRequestedScopes();
         ArgumentNullException.ThrowIfNull(scopes);
 
         if (validateDiscoveredEndpoints)
@@ -2897,7 +2897,7 @@ public partial class AtProtoAgent
 
             Options.OAuthOptions.Validate();
 
-            string scopeString = string.Join(" ", Options.OAuthOptions.Scopes.Where(s => !string.IsNullOrEmpty(s)));
+            string scopeString = string.Join(" ", Options.OAuthOptions.GetRequestedScopes().Where(s => !string.IsNullOrEmpty(s)));
 
             string clientId = Options.OAuthOptions.ClientId;
 
