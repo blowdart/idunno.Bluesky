@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -64,6 +65,8 @@ public sealed class CallbackServer : IAsyncDisposable
     // otherwise a blocking continuation in the waiting caller stalls the response the browser is
     // waiting on.
     private readonly TaskCompletionSource<string> _source = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private readonly Task _startupTask;
 
     private readonly CancellationTokenSource _disposalCancellationSource = new();
 
@@ -207,11 +210,13 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Logger.ListeningOn(_logger, Uri);
 
-        // RunAsync() faults if the server cannot start, for example when another process claimed the
+        _startupTask = _listener.StartAsync(CancellationToken.None);
+
+        // The listener task faults if the server cannot start, for example when another process claimed the
         // port after GetRandomUnusedPort() released it. Leaving the task unobserved means the instance
         // looks constructed but is dead and every caller waiting for a callback hangs until it times
         // out, so surface the failure to the waiter instead.
-        _ = _listener.RunAsync().ContinueWith(
+        _ = RunListenerAsync(_listener).ContinueWith(
             static (listenerTask, state) =>
             {
                 CallbackServer server = (CallbackServer)state!;
@@ -237,6 +242,35 @@ public sealed class CallbackServer : IAsyncDisposable
             CancellationToken.None,
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+
+        _ = _startupTask.ContinueWith(
+            static faulted => _ = faulted.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Gets the task which completes when the listener has started, or faults with its startup exception.
+    /// </summary>
+    internal Task Startup => _startupTask;
+
+    /// <summary>
+    /// Runs the listener until shutdown, preserving the disposal performed by the host's RunAsync method.
+    /// </summary>
+    /// <param name="listener">The listener to run.</param>
+    /// <returns>A task representing the listener lifetime.</returns>
+    private async Task RunListenerAsync(WebApplication listener)
+    {
+        try
+        {
+            await _startupTask.ConfigureAwait(false);
+            await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            await listener.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     /// <summary>
