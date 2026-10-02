@@ -1,4 +1,3 @@
 #nullable enable
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.get -> System.TimeProvider!
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.set -> void
-static idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.CreateWithTimeProvider(Microsoft.Extensions.Caching.Distributed.IDistributedCache! cache, System.TimeProvider! timeProvider, System.TimeSpan? entryTimeToLive = null) -> idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache!

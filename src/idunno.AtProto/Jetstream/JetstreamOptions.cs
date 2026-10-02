@@ -86,6 +86,14 @@ public record JetstreamOptions
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
     /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The provider times reconnection, receive failure and archive retry delays, archive read timeouts, and the
+    ///   <see cref="CloseTimeout"/> and <see cref="SendTimeout"/> deadlines for close handshakes, close replies and
+    ///   options update messages. The synchronous wait for an in-flight connection attempt during disposal is bounded by
+    ///   <see cref="CloseTimeout"/> using the system clock, so disposal cannot block on a provider which never advances.
+    /// </para>
+    /// </remarks>
     public TimeProvider TimeProvider
     {
         get;

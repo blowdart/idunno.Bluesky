@@ -37,6 +37,9 @@ public class BlueskySignInManager
 
     private System.TimeProvider TimeProvider => BlueskyAuthenticationOptions.TimeProvider ?? System.TimeProvider.System;
 
+    internal BlueskyAgentOptions CreateAgentOptions() =>
+        BlueskyAgentOptionsWithTimeProvider.Create(BlueskyAgentOptions, TimeProvider);
+
     [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Too much validation going on.")]
     private IDataProtector? _dataProtector;
 
@@ -267,7 +270,7 @@ public class BlueskySignInManager
     {
         returnUri ??= CreateReturnUri();
 
-        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: CreateAgentOptions());
         OAuthClient oAuthClient = agent.CreateOAuthClient();
 
         Uri redirectUri = await agent.BuildOAuth2LoginUri(
@@ -626,7 +629,7 @@ public class BlueskySignInManager
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
-        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: CreateAgentOptions());
         OAuthClient oAuthClient = agent.CreateOAuthClient();
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(
             correlationState,

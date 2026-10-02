@@ -79,7 +79,7 @@
 * Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
 * Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
   The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache and reconnection delays, and the
-  jetstream for its reconnection, receive failure and archive retry delays.
+  jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
@@ -96,7 +96,6 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
-* Added `DistributedCacheCorrelationStateCache.CreateWithTimeProvider()` to create a distributed correlation state cache that expires entries using a supplied `TimeProvider`.
 * Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`, used to expire cached claims.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
@@ -188,6 +187,9 @@
   keeping token expiry decisions consistent without changing the shared agent options.
 * Temporary agents used for profile claims transformation now use the transformer's configured `TimeProvider` for token expiry,
   keeping cache-miss lookups consistent with the transformer's credential precheck without changing the shared agent options.
+* Temporary OAuth agents used during sign-in now use the authentication handler's configured `TimeProvider` without changing the shared agent options.
+* `DistributedCacheCorrelationStateCache` entries now expire relative to when they are stored, so expiry is measured by the backing cache's
+  clock rather than the local wall clock.
 
 ### Documentation
 

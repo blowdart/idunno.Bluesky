@@ -420,6 +420,16 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
 
         endpoints.MapGet("/test/challenge", context => context.ChallengeAsync(Scheme));
 
+        endpoints.MapGet("/test/signin/clock", async context =>
+        {
+            BlueskySignInManager manager = context.RequestServices.GetRequiredService<BlueskySignInManager>();
+            BlueskyAgentOptions agentOptions = manager.CreateAgentOptions();
+
+            await context.Response.WriteAsync(
+                $"clock={ReferenceEquals(agentOptions.TimeProvider, manager.BlueskyAuthenticationOptions.TimeProvider)};" +
+                $"unchanged={ReferenceEquals(manager.BlueskyAgentOptions.TimeProvider, TimeProvider.System)}");
+        });
+
         // Reports which identity store the agent factory wired an agent's credential updates to, for a user whose
         // identity carries the authentication type named in the query string.
         endpoints.MapGet("/test/agent/store", async context =>

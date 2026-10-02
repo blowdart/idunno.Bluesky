@@ -27,15 +27,32 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
     public async Task StateExpiresAfterItsTimeToLive()
     {
         FakeTimeProvider timeProvider = new();
-        DistributedCacheCorrelationStateCache cache = DistributedCacheCorrelationStateCache.CreateWithTimeProvider(
+        DistributedCacheCorrelationStateCache cache = new(
             new TimeProviderDistributedCache(timeProvider),
-            timeProvider,
             entryTimeToLive: TimeSpan.FromMilliseconds(50));
 
         Guid correlationId = Guid.NewGuid();
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
         timeProvider.Advance(TimeSpan.FromMilliseconds(50));
+
+        Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CacheExpirationIsRelativeToTheBackendClock()
+    {
+        FakeTimeProvider backendTime = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        DistributedCacheCorrelationStateCache cache = new(
+            new TimeProviderDistributedCache(backendTime),
+            entryTimeToLive: TimeSpan.FromMinutes(1));
+
+        Guid correlationId = Guid.NewGuid();
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
+
+        backendTime.Advance(TimeSpan.FromMinutes(1));
 
         Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }
