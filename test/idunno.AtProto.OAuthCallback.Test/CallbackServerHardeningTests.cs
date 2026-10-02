@@ -17,7 +17,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -34,7 +34,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         using HttpClient client = new();
 
@@ -57,7 +57,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -73,7 +73,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -92,7 +92,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -124,7 +124,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -147,7 +147,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -163,7 +163,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         using HttpClient client = new();
 
@@ -185,7 +185,9 @@ public class CallbackServerHardeningTests
     [InlineData("call\\back")]
     public void ConstructorRejectsPathsWhichWouldNotMeanTheSameThingInARouteAndAUri(string path)
     {
-        Assert.Throws<ArgumentException>("path", () => new CallbackServer(12345, path));
+        int port = CallbackServer.GetRandomUnusedPort();
+
+        Assert.Throws<ArgumentException>("path", () => new CallbackServer(port, path));
     }
 
     [Theory]
@@ -197,7 +199,7 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync(path);
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort(), path);
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -209,11 +211,20 @@ public class CallbackServerHardeningTests
     }
 
     [Fact]
-    public void GetRandomUnusedPortReturnsAPortInTheValidRange()
+    public void GetRandomUnusedPortReturnsAPortWhichIsFreeOnBothLoopbackFamilies()
     {
         int port = CallbackServer.GetRandomUnusedPort();
 
-        Assert.InRange(port, 1, 65535);
+        using TcpListener ipv4 = new(IPAddress.Loopback, port);
+        ipv4.Start();
+        ipv4.Stop();
+
+        if (Socket.OSSupportsIPv6)
+        {
+            using TcpListener ipv6 = new(IPAddress.IPv6Loopback, port);
+            ipv6.Start();
+            ipv6.Stop();
+        }
     }
 
     [Fact]
@@ -225,17 +236,18 @@ public class CallbackServerHardeningTests
 
         // Holding the IPv6 half of a port makes it exactly the case the probe has to notice, because the IPv4 bind
         // GetRandomUnusedPort relies on still succeeds.
-        using TcpListener holder = new(IPAddress.IPv6Loopback, 0);
+        int held = CallbackServer.GetRandomUnusedPort();
+
+        using TcpListener holder = new(IPAddress.IPv6Loopback, held);
         holder.Start();
-        int held = ((IPEndPoint)holder.LocalEndpoint).Port;
 
         try
         {
             Assert.False(IsFreeOnIPv6Loopback(held));
-            Assert.NotEqual(held, CallbackServer.GetRandomUnusedPort());
+            Assert.True(IsFreeOnIPv6Loopback(CallbackServer.GetRandomUnusedPort()));
 
             // A server on a port the probe hands out has to actually start.
-            await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+            await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
             Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -266,7 +278,7 @@ public class CallbackServerHardeningTests
     [Fact]
     public async Task RepeatedWaitsDoNotRearmTheTimeoutWhenTheCallersTokenIsAlreadyCancelled()
     {
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
@@ -333,12 +345,13 @@ public class CallbackServerHardeningTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        int port = CallbackServer.GetRandomUnusedPort();
+        await using CallbackServer server = new(port);
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
         using HttpClient client = new();
-        using HttpResponseMessage response = await client.GetAsync(new Uri($"http://localhost:{server.Uri.Port}/?code=abc"), testToken);
+        using HttpResponseMessage response = await client.GetAsync(new Uri($"http://localhost:{port}/?code=abc"), testToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("?code=abc", await waiting.WaitAsync(s_completionBudget, testToken));
@@ -351,12 +364,13 @@ public class CallbackServerHardeningTests
 
         Assert.SkipUnless(Socket.OSSupportsIPv6, "The machine does not support IPv6.");
 
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        int port = CallbackServer.GetRandomUnusedPort();
+        await using CallbackServer server = new(port);
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
         using HttpClient client = new();
-        using HttpResponseMessage response = await client.GetAsync(new Uri($"http://[{IPAddress.IPv6Loopback}]:{server.Uri.Port}/?code=abc"), testToken);
+        using HttpResponseMessage response = await client.GetAsync(new Uri($"http://[{IPAddress.IPv6Loopback}]:{port}/?code=abc"), testToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("?code=abc", await waiting.WaitAsync(s_completionBudget, testToken));
@@ -366,7 +380,7 @@ public class CallbackServerHardeningTests
     {
         for (int i = 0; i < 10; i++)
         {
-            CallbackServer server = await CallbackServerFactory.CreateAsync();
+            CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
             await server.DisposeAsync();
         }
     }

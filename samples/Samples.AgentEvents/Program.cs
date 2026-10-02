@@ -436,9 +436,9 @@ public sealed class Program
                     }
                 };
 
-                await using (var callbackServer = await idunno.AtProto.OAuthCallback.CallbackServer.CreateAsync(
-                    loggerFactory: loggerFactory,
-                    cancellationToken: cancellationToken))
+                await using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
+                    loggerFactory: loggerFactory))
                 {
                     OAuthClient oAuthClient = agent.CreateOAuthClient();
 
@@ -493,9 +493,9 @@ public sealed class Program
 
                 // Login again
                 Console.WriteLine("Logging in again");
-                await using (var callbackServer = await idunno.AtProto.OAuthCallback.CallbackServer.CreateAsync(
-                    loggerFactory: loggerFactory,
-                    cancellationToken: cancellationToken))
+                await using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
+                    loggerFactory: loggerFactory))
                 {
                     OAuthClient oAuthClient = agent.CreateOAuthClient();
 

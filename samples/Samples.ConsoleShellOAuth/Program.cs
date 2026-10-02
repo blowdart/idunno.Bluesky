@@ -59,9 +59,9 @@ public sealed class Program
                 }
             }))
         {
-            await using var loginCallbackServer = await CallbackServer.CreateAsync(
-                loggerFactory: loggerFactory,
-                cancellationToken: cancellationToken);
+            await using var loginCallbackServer = new CallbackServer(
+                CallbackServer.GetRandomUnusedPort(),
+                loggerFactory: loggerFactory);
             {
                 string callbackData;
 
