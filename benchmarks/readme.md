@@ -55,6 +55,9 @@ DID or either token remains after scrubbing, the timeline is not written. The ca
 session.
 
 Compressed Jetstream captures enforce the configured maximum decompressed message size before inspecting their content.
+All web socket captures also enforce the default Jetstream maximum wire message size while receiving.
+Anonymous AppView responses and recorded timeline responses are limited to the SDK's default maximum HTTP response size.
+Oversized bodies or messages stop the capture with an error rather than being written to the corpus.
 
 The corpus tests rescan every checked-in message on every build. When `_BlueskyHandle` or `_BlueskyPassword` is set, which
 `capture.ps1` does for its verification step, they also check that no corpus contains either value.

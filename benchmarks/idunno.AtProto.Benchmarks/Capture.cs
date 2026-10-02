@@ -115,7 +115,9 @@ internal static class Capture
     {
         // An anonymous request to the public AppView. Only the response body is kept.
         using HttpClient httpClient = new();
-        byte[] body = await httpClient.GetByteArrayAsync(uri).ConfigureAwait(false);
+        using HttpResponseMessage response = await httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        byte[] body = await CaptureContent.ReadAsync(response.Content, AtProtoHttpClient.DefaultMaximumResponseSize, CancellationToken.None).ConfigureAwait(false);
 
         if (SensitiveContent.IsSensitive(body))
         {
@@ -143,25 +145,16 @@ internal static class Capture
 
         List<byte[]> messages = new(count);
         int discarded = 0;
-        byte[] buffer = new byte[1024 * 1024];
+        int maximumMessageSize = new JetstreamOptions().MaxMessageSize;
 
         while (messages.Count < count)
         {
-            int length = 0;
-            ValueWebSocketReceiveResult result;
-            do
+            (WebSocketReceiveResult result, byte[] message) = await socket.ReceiveNextMessageAsync(
+                64 * 1024, maximumMessageSize, cancellationToken: timeout.Token).ConfigureAwait(false);
+            if (result.MessageType == WebSocketMessageType.Close)
             {
-                if (length == buffer.Length)
-                {
-                    Array.Resize(ref buffer, buffer.Length * 2);
-                }
-
-                result = await socket.ReceiveAsync(buffer.AsMemory(length), timeout.Token).ConfigureAwait(false);
-                length += result.Count;
+                throw new InvalidDataException("The capture stream closed before enough messages were received.");
             }
-            while (!result.EndOfMessage);
-
-            byte[] message = buffer.AsSpan(0, length).ToArray();
 
             if (SensitiveContent.IsSensitive(plainText(message)))
             {
@@ -188,7 +181,16 @@ internal static class Capture
         {
             HttpResponseMessage response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-            byte[] body = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            byte[] body;
+            try
+            {
+                body = await CaptureContent.ReadAsync(response.Content, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                response.Dispose();
+                throw;
+            }
             if (response.IsSuccessStatusCode)
             {
                 Body = body;
