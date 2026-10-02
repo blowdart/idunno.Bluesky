@@ -1,6 +1,7 @@
 #nullable enable
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.get -> System.TimeProvider!
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.set -> void
+virtual idunno.AtProto.AtProtoAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.AtProto.AtProtoAgentBuilder!
 idunno.AtProto.Authentication.IAccessCredential.IsExpiredAt(System.TimeProvider! timeProvider) -> bool
 idunno.AtProto.Firehose.FirehoseOptions.TimeProvider.get -> System.TimeProvider!
 idunno.AtProto.Firehose.FirehoseOptions.TimeProvider.init -> void
@@ -60,6 +61,7 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.KindsToFilterOn.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.get -> idunno.AtProto.Jetstream.JetstreamProtocolVersion
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ProtocolVersion.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.UseProtocolVersion(idunno.AtProto.Jetstream.JetstreamProtocolVersion protocolVersion) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Jetstream.CollectionSelector
 idunno.AtProto.Jetstream.CollectionSelector.Collection.get -> idunno.AtProto.Nsid?
 idunno.AtProto.Jetstream.CollectionSelector.CollectionSelector(idunno.AtProto.Nsid! collection) -> void

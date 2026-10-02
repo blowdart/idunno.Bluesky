@@ -13,6 +13,7 @@ public sealed class BlueskyAgentBuilder : AtProtoAgentBuilder
 {
     private Uri _publicAppViewUri = DefaultServiceUris.PublicAppViewUri;
     private IFacetExtractor? _facetExtractor;
+    private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoAgentBuilder"/>.
@@ -54,6 +55,19 @@ public sealed class BlueskyAgentBuilder : AtProtoAgentBuilder
     }
 
     /// <summary>
+    /// Sets the <see cref="TimeProvider"/> used by the agent for time-sensitive operations.
+    /// </summary>
+    /// <param name="timeProvider">A time provider.</param>
+    /// <returns>The same instance of <see cref="BlueskyAgentBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public override BlueskyAgentBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        base.WithTimeProvider(timeProvider);
+        _timeProvider = timeProvider;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the <see cref="AtProtoAgent"/>.
     /// </summary>
     /// <returns>A configured <see cref="AtProtoAgent"/>.</returns>
@@ -75,6 +89,7 @@ public sealed class BlueskyAgentBuilder : AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
         else
@@ -88,6 +103,7 @@ public sealed class BlueskyAgentBuilder : AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
     }

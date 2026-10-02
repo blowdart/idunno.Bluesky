@@ -80,6 +80,7 @@
 * Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
   The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache and reconnection delays, and the
   jetstream for its reconnection, receive failure and archive retry delays.
+* Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
 #### idunno.AtProto.Types
@@ -88,6 +89,7 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
@@ -184,6 +186,8 @@
 
 * Temporary agents used for credential revocation and refresh now use the authentication handler's configured `TimeProvider`,
   keeping token expiry decisions consistent without changing the shared agent options.
+* Temporary agents used for profile claims transformation now use the transformer's configured `TimeProvider` for token expiry,
+  keeping cache-miss lookups consistent with the transformer's credential precheck without changing the shared agent options.
 
 ### Documentation
 

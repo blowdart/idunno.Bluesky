@@ -139,31 +139,8 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// </summary>
     protected BlueskyAgentOptions BlueskyAgentOptions => BlueskyAgentOptionsMonitor.CurrentValue;
 
-    private BlueskyAgentOptions CreateAgentOptions()
-    {
-        BlueskyAgentOptions configured = BlueskyAgentOptions;
-        BlueskyAgentOptions options = new()
-        {
-            EnableBackgroundTokenRefresh = configured.EnableBackgroundTokenRefresh,
-            FacetExtractor = configured.FacetExtractor,
-            HttpClientOptions = configured.HttpClientOptions,
-            HttpJsonOptions = configured.HttpJsonOptions,
-            LoggerFactory = configured.LoggerFactory,
-            MaximumResponseSize = configured.MaximumResponseSize,
-            MaximumWellKnownResponseSize = configured.MaximumWellKnownResponseSize,
-            OAuthOptions = configured.OAuthOptions,
-            PlcDirectoryServer = configured.PlcDirectoryServer,
-            PublicAppViewUri = configured.PublicAppViewUri,
-            TimeProvider = ConfiguredTimeProvider
-        };
-
-        foreach (string root in configured.DraftMediaRoots)
-        {
-            options.DraftMediaRoots.Add(root);
-        }
-
-        return options;
-    }
+    private BlueskyAgentOptions CreateAgentOptions() =>
+        BlueskyAgentOptionsWithTimeProvider.Create(BlueskyAgentOptions, ConfiguredTimeProvider);
 
     /// <summary>
     /// Gets or sets the <see cref="Did"/> for the current user.

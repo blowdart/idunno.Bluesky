@@ -70,10 +70,10 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
     /// </param>
     /// <param name="loggerFactory">An optional logger factory used to report sweep activity and failures.</param>
     /// <returns>A new cache using <paramref name="timeProvider"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="connectionString"/> is empty or invalid.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is empty or invalid.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="entryTimeToLive"/> is not positive, or <paramref name="expiredEntrySweepInterval"/> is negative.
+    /// <paramref name="entryTimeToLive"/> is not positive, or <paramref name="expiredEntrySweepInterval"/> is negative.
     /// </exception>
     /// <remarks>
     /// <para>
