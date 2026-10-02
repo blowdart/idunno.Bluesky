@@ -153,7 +153,8 @@ contain a `state` query parameter, which can use as a primary key as needed for 
 The `idunno.AtProto.OAuthCallback` NuGet package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
 to the package, set the  ClientId in options to "`http://localhost`" but do not set the ReturnUri, then create an instance of the callback server
 before you build the login URI, use the callback server uri when creating the login URI, and finally await the callback,
-which will return the callback data as a string
+which will return the callback data as a string.
+Use `CallbackServer.CreateAsync()` to reserve the loopback sockets and wait until the listener is ready before building the login URI.
 
 ```c#
 
@@ -169,9 +170,9 @@ var agent = new BlueskyAgent(new BlueskyAgentOptions()
 string callbackData;
 OAuthClient oAuthClient = agent.CreateOAuthClient();
 
-await using var callbackServer = new CallbackServer(
-    CallbackServer.GetRandomUnusedPort(),
-    loggerFactory: loggerFactory);
+await using var callbackServer = await CallbackServer.CreateAsync(
+    loggerFactory: loggerFactory,
+    cancellationToken: cancellationToken);
 {
     // We dynamically set the return URI as the callback server will listen on a random free port.
     Uri startUri = await agent.BuildOAuth2LoginUri(

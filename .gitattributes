@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+# These newly added files must retain CRLF in the repository as well as the working tree.
+/test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactory.cs -text
+/test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactoryTests.cs -text
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

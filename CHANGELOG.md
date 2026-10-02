@@ -87,6 +87,10 @@
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
+#### idunno.AtProto.OAuthCallback
+
+* Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+
 #### idunno.AtProto.Types
 
 * Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
@@ -125,6 +129,8 @@
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
+* Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
+  `CallbackServer.CreateAsync()` for race-free callback server startup.
 
 ### Changed
 
