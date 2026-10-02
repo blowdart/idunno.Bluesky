@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -11,6 +12,73 @@ namespace idunno.AtProto.OAuthCallback.Test;
 [Collection("CallbackServer")]
 public class CallbackServerFactoryTests
 {
+    [Fact]
+    public async Task AsyncFactoryReturnsAStartedServerOnBothLoopbackAddresses()
+    {
+        await using CallbackServer server = await CallbackServer.CreateAsync(
+            path: "oauth/callback",
+            configure: candidate => candidate.SuccessBody = "<p>configured</p>",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(server.Startup.IsCompletedSuccessfully);
+        Assert.Equal("/oauth/callback", server.Uri.AbsolutePath);
+
+        Task<string> waiting = server.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using HttpClient client = new();
+
+        string[] hosts = Socket.OSSupportsIPv6
+            ? [IPAddress.Loopback.ToString(), IPAddress.IPv6Loopback.ToString(), "localhost"]
+            : [IPAddress.Loopback.ToString(), "localhost"];
+
+        foreach (string host in hosts)
+        {
+            Uri callbackUri = new UriBuilder(server.Uri) { Host = host }.Uri;
+            using HttpResponseMessage response = await client.GetAsync(
+                new Uri($"{callbackUri}?code=abc"),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("configured", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        }
+
+        Assert.Equal("?code=abc", await waiting.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AsyncFactoryHonorsCancellationBeforeAllocatingSockets()
+    {
+        using CancellationTokenSource cancellationTokenSource = new();
+        cancellationTokenSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            CallbackServer.CreateAsync(cancellationToken: cancellationTokenSource.Token));
+    }
+
+    [Fact]
+    public async Task ConcurrentAsyncFactoryCallsReceiveDifferentReadyPorts()
+    {
+        ConcurrentBag<CallbackServer> servers = [];
+
+        try
+        {
+            await Task.WhenAll(
+                Enumerable.Range(0, 8)
+                    .Select(_ => CallbackServer.CreateAsync(
+                        configure: servers.Add,
+                        cancellationToken: TestContext.Current.CancellationToken)));
+
+            Assert.All(servers, server => Assert.True(server.Startup.IsCompletedSuccessfully));
+            Assert.Equal(servers.Count, servers.Select(server => server.Uri.Port).Distinct().Count());
+        }
+        finally
+        {
+            foreach (CallbackServer server in servers)
+            {
+                await server.DisposeAsync();
+            }
+        }
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -36,15 +104,7 @@ public class CallbackServerFactoryTests
         Assert.InRange(attempts, 2, CallbackServerFactory.MaximumAttempts);
         Assert.Equal("/oauth/callback", server.Uri.AbsolutePath);
 
-        foreach (CallbackServer failed in servers.SkipLast(1))
-        {
-            Assert.True(failed.Startup.IsFaulted);
-            Assert.Throws<ObjectDisposedException>(() =>
-            {
-                _ = failed.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
-            });
-        }
-
+        Assert.Single(servers);
         Assert.True(server.Startup.IsCompletedSuccessfully);
         Task<string> waiting = server.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
         using HttpClient client = new();
@@ -64,7 +124,7 @@ public class CallbackServerFactoryTests
     }
 
     [Fact]
-    public async Task ExhaustedCollisionsReportThePortsAndFinalExceptionAndDisposeEveryServer()
+    public async Task ExhaustedCollisionsReportThePortsWithoutCreatingServers()
     {
         using TcpListener holder = new(IPAddress.Loopback, 0);
         holder.Start();
@@ -74,18 +134,9 @@ public class CallbackServerFactoryTests
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             CallbackServerFactory.CreateAsync(configure: servers.Add, getPort: () => heldPort));
 
-        Assert.Equal(CallbackServerFactory.MaximumAttempts, servers.Count);
-        Assert.Contains($"Attempted ports: {string.Join(", ", Enumerable.Repeat(heldPort, servers.Count))}", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(servers);
         Assert.NotNull(exception.InnerException);
-        Assert.Same(servers[^1].Startup.Exception!.InnerException, exception.InnerException);
-
-        foreach (CallbackServer server in servers)
-        {
-            Assert.Throws<ObjectDisposedException>(() =>
-            {
-                _ = server.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
-            });
-        }
+        Assert.Contains($"Attempted ports: {string.Join(", ", Enumerable.Repeat(heldPort, CallbackServerFactory.MaximumAttempts))}", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

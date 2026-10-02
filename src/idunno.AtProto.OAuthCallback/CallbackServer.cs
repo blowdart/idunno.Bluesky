@@ -38,6 +38,8 @@ public sealed class CallbackServer : IAsyncDisposable
 
     private const int MaximumPortNumber = 65535;
 
+    internal const int MaximumCreationAttempts = 5;
+
     // Declaring the character set keeps the browser from sniffing an encoding for a page which may
     // contain a caller supplied SuccessBody.
     private const string HtmlContentType = "text/html; charset=utf-8";
@@ -69,6 +71,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private readonly Task _startupTask;
 
     private readonly CancellationTokenSource _disposalCancellationSource = new();
+    private readonly Socket[] _ownedSockets;
 
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new();
@@ -95,9 +98,23 @@ public sealed class CallbackServer : IAsyncDisposable
     /// or contains a dot segment which a <see cref="System.Uri"/> would resolve away.</exception>
     [SuppressMessage("Minor Vulnerability", "S5332:Clear-text protocols should not be used", Justification = "Has to be clear text, as local machines may not have a trusted localhost certificate and we shouldn't create one.")]
     public CallbackServer(int port, string? path = null, ILoggerFactory? loggerFactory = default)
+        : this(port, path, loggerFactory, [], null, CancellationToken.None)
+    {
+    }
+
+    [SuppressMessage("Minor Vulnerability", "S5332:Clear-text protocols should not be used", Justification = "Has to be clear text, as local machines may not have a trusted localhost certificate and we shouldn't create one.")]
+    private CallbackServer(
+        int port,
+        string? path,
+        ILoggerFactory? loggerFactory,
+        Socket[] ownedSockets,
+        Action<CallbackServer>? configure,
+        CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(port);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(port, MaximumPortNumber);
+
+        _ownedSockets = ownedSockets;
 
         ResponseStyleSheet = Resources.StyleSheet;
         SuccessTitle = Resources.SuccessTitle;
@@ -142,6 +159,8 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Uri = uri;
 
+        configure?.Invoke(this);
+
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
         // This server receives OAuth authorization codes, so it must only ever be reachable from the
@@ -155,14 +174,24 @@ public sealed class CallbackServer : IAsyncDisposable
 
         builder.WebHost.ConfigureKestrel(kestrelOptions =>
         {
-            kestrelOptions.Listen(IPAddress.Loopback, port);
-
-            // RFC 8252 section 7.3 calls for both loopback families to be supported, because a redirect
-            // URI written as http://localhost resolves to ::1 on many machines. The bind is conditional
-            // so a machine with IPv6 disabled does not fail to start the server at all.
-            if (Socket.OSSupportsIPv6)
+            if (ownedSockets.Length == 0)
             {
-                kestrelOptions.Listen(IPAddress.IPv6Loopback, port);
+                kestrelOptions.Listen(IPAddress.Loopback, port);
+
+                // RFC 8252 section 7.3 calls for both loopback families to be supported, because a redirect
+                // URI written as http://localhost resolves to ::1 on many machines. The bind is conditional
+                // so a machine with IPv6 disabled does not fail to start the server at all.
+                if (Socket.OSSupportsIPv6)
+                {
+                    kestrelOptions.Listen(IPAddress.IPv6Loopback, port);
+                }
+            }
+            else
+            {
+                foreach (Socket socket in ownedSockets)
+                {
+                    kestrelOptions.ListenHandle(unchecked((ulong)socket.Handle.ToInt64()));
+                }
             }
         });
 
@@ -210,7 +239,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Logger.ListeningOn(_logger, Uri);
 
-        _startupTask = _listener.StartAsync(CancellationToken.None);
+        _startupTask = _listener.StartAsync(cancellationToken);
 
         // The listener task faults if the server cannot start, for example when another process claimed the
         // port after GetRandomUnusedPort() released it. Leaving the task unobserved means the instance
@@ -248,6 +277,147 @@ public sealed class CallbackServer : IAsyncDisposable
             CancellationToken.None,
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Creates a callback server on an automatically allocated loopback port and waits for it to start.
+    /// </summary>
+    /// <param name="path">An optional path the host should respond on.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
+    /// <param name="configure">An optional action to configure the callback response before the listener starts.</param>
+    /// <param name="cancellationToken">A token that can cancel server creation.</param>
+    /// <returns>A started callback server whose <see cref="Uri"/> is ready to use.</returns>
+    /// <exception cref="ArgumentException">The callback path contains an invalid character or a dot segment.</exception>
+    /// <exception cref="OperationCanceledException">Server creation was cancelled.</exception>
+    /// <exception cref="InvalidOperationException">The callback port could not be allocated after repeated address collisions.</exception>
+    /// <remarks>
+    /// <para>The server binds and retains its loopback sockets before handing them to Kestrel, so no other process can
+    /// claim the selected port between allocation and startup. When IPv6 is supported, both loopback families use the
+    /// same port. The returned server is ready to accept callbacks.</para>
+    /// </remarks>
+    public static Task<CallbackServer> CreateAsync(
+        string? path = null,
+        ILoggerFactory? loggerFactory = null,
+        Action<CallbackServer>? configure = null,
+        CancellationToken cancellationToken = default)
+    {
+        return CreateAsync(path, loggerFactory, configure, null, cancellationToken);
+    }
+
+    internal static async Task<CallbackServer> CreateAsync(
+        string? path,
+        ILoggerFactory? loggerFactory,
+        Action<CallbackServer>? configure,
+        Func<int>? getPort,
+        CancellationToken cancellationToken)
+    {
+        List<int> attemptedPorts = [];
+
+        for (int attempt = 1; attempt <= MaximumCreationAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            Socket[] sockets = [];
+            CallbackServer? server = null;
+            int attemptedPort = getPort?.Invoke() ?? 0;
+            bool attemptedPortRecorded = false;
+
+            try
+            {
+                sockets = BindLoopbackSockets(attemptedPort, out attemptedPort);
+                attemptedPorts.Add(attemptedPort);
+                attemptedPortRecorded = true;
+
+                server = new CallbackServer(attemptedPort, path, loggerFactory, sockets, configure, cancellationToken);
+                sockets = [];
+
+                await server._startupTask.ConfigureAwait(false);
+
+                return server;
+            }
+            catch (Exception exception) when (IsAddressInUse(exception))
+            {
+                if (!attemptedPortRecorded)
+                {
+                    attemptedPorts.Add(attemptedPort);
+                }
+
+                if (server is not null)
+                {
+                    await server.DisposeAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    DisposeSockets(sockets);
+                }
+
+                if (attempt == MaximumCreationAttempts)
+                {
+                    throw new InvalidOperationException(
+                        $"Callback server startup failed after {MaximumCreationAttempts} address collisions. Attempted ports: {string.Join(", ", attemptedPorts)}.",
+                        exception);
+                }
+            }
+            catch
+            {
+                if (server is not null)
+                {
+                    await server.DisposeAsync().ConfigureAwait(false);
+                }
+                else
+                {
+                    DisposeSockets(sockets);
+                }
+
+                throw;
+            }
+        }
+
+        throw new InvalidOperationException("Callback server startup attempts were exhausted.");
+    }
+
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Socket ownership is transferred to the returned array or disposed when binding fails.")]
+    private static Socket[] BindLoopbackSockets(int requestedPort, out int assignedPort)
+    {
+        assignedPort = requestedPort;
+        Socket ipv4Socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        Socket? ipv6Socket = null;
+
+        try
+        {
+            ipv4Socket.Bind(new IPEndPoint(IPAddress.Loopback, requestedPort));
+            assignedPort = ((IPEndPoint)ipv4Socket.LocalEndPoint!).Port;
+
+            if (Socket.OSSupportsIPv6)
+            {
+                ipv6Socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
+                ipv6Socket.Bind(new IPEndPoint(IPAddress.IPv6Loopback, assignedPort));
+            }
+
+            return ipv6Socket is null ? [ipv4Socket] : [ipv4Socket, ipv6Socket];
+        }
+        catch
+        {
+            ipv6Socket?.Dispose();
+            ipv4Socket.Dispose();
+
+            throw;
+        }
+    }
+
+    private static bool IsAddressInUse(Exception exception)
+    {
+        return exception is SocketException { SocketErrorCode: SocketError.AddressAlreadyInUse } ||
+            exception.InnerException is not null && IsAddressInUse(exception.InnerException) ||
+            exception is AggregateException aggregate && aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsAddressInUse);
+    }
+
+    private static void DisposeSockets(IEnumerable<Socket> sockets)
+    {
+        foreach (Socket socket in sockets)
+        {
+            socket.Dispose();
+        }
     }
 
     /// <summary>
@@ -483,10 +653,26 @@ public sealed class CallbackServer : IAsyncDisposable
         await _disposalCancellationSource.CancelAsync().ConfigureAwait(false);
         CompleteAsCancelled();
 
-        if (listener is not null)
+        try
         {
-            await listener.StopAsync(CancellationToken.None).ConfigureAwait(false);
-            await listener.DisposeAsync().ConfigureAwait(false);
+            if (listener is not null)
+            {
+                await listener.StopAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (listener is not null)
+                {
+                    await listener.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                DisposeSockets(_ownedSockets);
+            }
         }
 
         await _timeoutRegistration.DisposeAsync().ConfigureAwait(false);
@@ -509,11 +695,10 @@ public sealed class CallbackServer : IAsyncDisposable
     /// </summary>
     /// <returns>A port number that is free and can be used to bind the callback server to.</returns>
     /// <remarks>
-    /// <para>The port is released before it is returned, so another process on the machine can claim it
-    /// before the callback server binds to it. Construct the <see cref="CallbackServer"/> immediately
-    /// after calling this to keep that window as small as possible. If the port is lost the task
-    /// returned by <see cref="WaitForCallbackAsync(int, CancellationToken)"/> faults rather than
-    /// hanging.</para>
+    /// <para>Prefer <see cref="CreateAsync(string?, ILoggerFactory?, Action{CallbackServer}?, CancellationToken)"/>,
+    /// which keeps the allocated sockets bound and waits for the server to start. This method releases the port before
+    /// returning it, so another process can claim it before a <see cref="CallbackServer"/> binds to it. If the port is
+    /// lost, the task returned by <see cref="WaitForCallbackAsync(int, CancellationToken)"/> faults rather than hanging.</para>
     /// <para>A <see cref="CallbackServer"/> binds both loopback families, so a port which is free on IPv4 but taken on
     /// IPv6 is no use. The port returned is checked against both.</para>
     /// </remarks>
