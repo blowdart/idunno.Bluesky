@@ -158,7 +158,10 @@ the combined, deduplicated scope strings; publish the same scopes in your client
 No metadata generation or serving is performed by these APIs.
 
 Raw scopes remain supported unchanged. An explicit `scopes` argument on an OAuth request overrides both configured
-raw scopes and permission sets. Typed sets also convert to strings when placed in a raw scope collection:
+raw scopes and permission sets. The effective client ID and requested scopes are saved with the login state and
+issued credentials, so callback processing and subsequent refreshes retain the original request even if options change.
+Older saved state and credentials without this context continue to use the configured options.
+Typed sets also convert to strings when placed in a raw scope collection:
 
 ```c#
 string[] scopes = ["atproto", "blob:image/*", BlueskyOAuthPermissionSets.CreatePosts];

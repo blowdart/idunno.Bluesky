@@ -53,6 +53,6 @@ The sample opens a browser for OAuth consent using a localhost callback. It requ
 The delete-content set also permits deleting likes and reposts; the sample only deletes the post it creates.
 No blob permissions are needed for this text-only post.
 
-It creates a public post containing `Hello OAuth PermssionSets`, demonstrates credential refresh, then deletes that
+It creates a public post containing `Hello OAuth Permission Sets`, demonstrates credential refresh, then deletes that
 same post using the refreshed credentials and logs out. If refresh or deletion fails, it reports the post URI so you
 can delete it manually. An interruption or exception after creation can also leave the post on your account.

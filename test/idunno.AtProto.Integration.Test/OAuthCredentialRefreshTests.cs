@@ -54,6 +54,38 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(server.LastIssuedRefreshToken, agent.Credentials.RefreshToken);
     }
 
+    [Theory]
+    [InlineData("http://localhost?scope=atproto%20include%3Acom.example.authBasic")]
+    [InlineData("https://original.test/clientMetadata.json")]
+    public async Task AgentRefreshPreservesTheOriginalOAuthRequestContext(string clientId)
+    {
+        OAuthTestServer server = new();
+        using AtProtoAgent agent = CreateAgent(server);
+        const string requestedScope = "atproto include:com.example.authBasic";
+        DPoPAccessCredentials credentials = new(
+            new Uri($"https://{DomainName}"),
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            OAuthClientId = clientId,
+            RequestedScope = requestedScope
+        };
+
+        Assert.True(await agent.Login(credentials, TestContext.Current.CancellationToken));
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.Equal(clientId, server.RefreshRequestedClientId);
+        Assert.Equal(requestedScope, server.RefreshRequestedScope);
+        DPoPAccessCredentials refreshed = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal(clientId, refreshed.OAuthClientId);
+        Assert.Equal(requestedScope, refreshed.RequestedScope);
+
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.Equal(clientId, server.RefreshRequestedClientId);
+        Assert.Equal(requestedScope, server.RefreshRequestedScope);
+    }
+
     [Fact]
     public async Task ANonceUpdateDuringRefreshDoesNotDiscardTheRefreshedCredentials()
     {
@@ -1040,6 +1072,10 @@ public class OAuthCredentialRefreshTests
     {
         private int _tokenSerialNumber;
 
+        internal string? RefreshRequestedClientId { get; private set; }
+
+        internal string? RefreshRequestedScope { get; private set; }
+
         internal bool GateRefresh { get; set; }
 
         internal OAuthTestServer()
@@ -1120,6 +1156,9 @@ public class OAuthCredentialRefreshTests
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
                     Interlocked.Increment(ref _refreshCount);
+                    IFormCollection form = await request.ReadFormAsync();
+                    RefreshRequestedClientId = form["client_id"].ToString();
+                    RefreshRequestedScope = form["scope"].ToString();
 
                     if (GateRefresh)
                     {

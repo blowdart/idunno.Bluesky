@@ -122,6 +122,7 @@
 
 #### Samples
 
+* Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
 * `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
   cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
@@ -213,6 +214,8 @@
 #### idunno.AtProto
 
 * Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
+* OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.
+* Missing-scope warnings no longer compare permission-set references literally against expanded grants, or opaque `ref:` grants against requested scopes.
 * `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result

@@ -1,4 +1,18 @@
 #nullable enable
+const idunno.AtProto.Authentication.AtProtoClaims.OAuthClientId = "urn:atproto:oauth:client" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.OAuthRequestedScope = "urn:atproto:oauth:scope" -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.DPoPAccessCredentials.OAuthClientId.init -> void
+idunno.AtProto.Authentication.DPoPAccessCredentials.RequestedScope.get -> string?
+idunno.AtProto.Authentication.DPoPAccessCredentials.RequestedScope.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.DPoPRefreshCredential.OAuthClientId.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.RequestedScope.get -> string?
+idunno.AtProto.Authentication.DPoPRefreshCredential.RequestedScope.init -> void
+idunno.AtProto.Authentication.OAuthLoginState.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.OAuthClientId.init -> void
+idunno.AtProto.Authentication.OAuthLoginState.RequestedScope.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.RequestedScope.init -> void
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.get -> System.TimeProvider!
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.set -> void
 virtual idunno.AtProto.AtProtoAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.AtProto.AtProtoAgentBuilder!

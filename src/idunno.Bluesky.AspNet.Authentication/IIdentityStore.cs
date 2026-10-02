@@ -276,6 +276,16 @@ public interface IIdentityStore
 
         if (credentials is DPoPAccessCredentials dPoPAccessCredentials)
         {
+            if (dPoPAccessCredentials.OAuthClientId is string clientId)
+            {
+                claims.Add(new Claim(AtProtoClaims.OAuthClientId, clientId, ClaimValueTypes.String, credentials.Service.ToString()));
+            }
+
+            if (dPoPAccessCredentials.RequestedScope is string requestedScope)
+            {
+                claims.Add(new Claim(AtProtoClaims.OAuthRequestedScope, requestedScope, ClaimValueTypes.String, credentials.Service.ToString()));
+            }
+
             claims.Add(
                 new Claim(
                     AtProtoClaims.DPoPProof,

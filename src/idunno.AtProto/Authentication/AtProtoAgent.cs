@@ -2899,7 +2899,7 @@ public partial class AtProtoAgent
 
             string scopeString = string.Join(" ", Options.OAuthOptions.GetRequestedScopes().Where(s => !string.IsNullOrEmpty(s)));
 
-            string clientId = Options.OAuthOptions.ClientId;
+            string clientId = (credentials as DPoPAccessCredentials)?.OAuthClientId ?? Options.OAuthOptions.ClientId;
 
             // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
             // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -3115,7 +3115,7 @@ public partial class AtProtoAgent
                 throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
             }
 
-            DPoPRefreshCredential refreshCredential = new(accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
+            DPoPRefreshCredential refreshCredential = new(accessCredentials);
 
             return await RefreshOAuthIssuedCredentials(refreshCredential, accessCredentials.Did, cancellationToken).ConfigureAwait(false);
         }

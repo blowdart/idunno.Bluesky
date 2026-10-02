@@ -11,6 +11,16 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential
 {
+    /// <summary>
+    /// Gets the effective OAuth client identifier used to obtain these credentials, or <see langword="null"/> for older credentials.
+    /// </summary>
+    public string? OAuthClientId { get; init; }
+
+    /// <summary>
+    /// Gets the space-separated scopes originally requested, or <see langword="null"/> for older credentials.
+    /// </summary>
+    public string? RequestedScope { get; init; }
+
 #if NET9_0_OR_GREATER
     private readonly Lock _dPoPRefreshCredentialLock = new();
 #else
@@ -59,6 +69,8 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         dPoPAccessCredentials.DPoPProofKey,
         dPoPAccessCredentials.DPoPNonce)
     {
+        OAuthClientId = dPoPAccessCredentials.OAuthClientId;
+        RequestedScope = dPoPAccessCredentials.RequestedScope;
     }
 
     /// <summary>

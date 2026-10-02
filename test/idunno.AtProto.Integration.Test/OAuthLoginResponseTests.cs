@@ -63,18 +63,31 @@ public class OAuthLoginResponseTests
             Assert.Equal(ClientId, server.RequestedClientId);
         }
 
-        DPoPAccessCredentials? credentials = await client.ProcessOAuth2LoginResponse(
-            CallbackData(client.State!.State),
-            scopes: scopes,
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        Assert.Equal(expected, savedState.RequestedScope);
+        Assert.Equal(server.RequestedClientId, savedState.OAuthClientId);
+
+        options.Scopes = ["atproto", "blob:video/*"];
+        options.PermissionSets = [new("com.example.authChanged")];
+        OAuthClient restoredClient = CreateClient(server, options);
+        DPoPAccessCredentials? credentials = await restoredClient.ProcessOAuth2Response(
+            savedState,
+            CallbackData(savedState.State),
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(credentials);
-        Assert.NotNull(await client.RefreshCredentials(
+        Assert.Equal(server.RequestedClientId, server.TokenRequestedClientId);
+        Assert.Equal(expected, credentials.RequestedScope);
+        Assert.Equal(server.RequestedClientId, credentials.OAuthClientId);
+        OAuthClient refreshClient = CreateClient(server, options);
+        DPoPAccessCredentials? refreshed = await refreshClient.RefreshCredentials(
             new DPoPRefreshCredential(credentials),
             s_authority,
-            scopes: scopes,
-            cancellationToken: TestContext.Current.CancellationToken));
+            cancellationToken: TestContext.Current.CancellationToken);
 
+        Assert.NotNull(refreshed);
+        Assert.Equal(expected, refreshed.RequestedScope);
+        Assert.Equal(credentials.OAuthClientId, refreshed.OAuthClientId);
         Assert.Equal(expected, server.RefreshRequestedScopes);
         Assert.Equal(server.RequestedClientId, server.RefreshRequestedClientId);
     }
@@ -269,6 +282,8 @@ public class OAuthLoginResponseTests
 
         internal string? RequestedClientId { get; private set; }
 
+        internal string? TokenRequestedClientId { get; private set; }
+
         internal string? RefreshRequestedScopes { get; private set; }
 
         internal string? RefreshRequestedClientId { get; private set; }
@@ -337,6 +352,10 @@ public class OAuthLoginResponseTests
                     {
                         RefreshRequestedScopes = tokenForm["scope"].ToString();
                         RefreshRequestedClientId = tokenForm["client_id"].ToString();
+                    }
+                    else
+                    {
+                        TokenRequestedClientId = tokenForm["client_id"].ToString();
                     }
 
                     response.Headers["DPoP-Nonce"] = "serverIssuedNonce";

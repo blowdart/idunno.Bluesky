@@ -127,7 +127,7 @@ public sealed class Program
             Console.WriteLine($"Credentials issued for: {agent.Credentials.Service}");
 
             AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post(
-                "Hello OAuth PermssionSets",
+                "Hello OAuth Permission Sets",
                 cancellationToken: cancellationToken);
 
             if (!createPostResult.Succeeded)

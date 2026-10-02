@@ -17,6 +17,28 @@ public class OAuthAccessTokenValidationTests
 {
     private static readonly Uri s_authority = new("https://authority.test/");
 
+    [Theory]
+    [InlineData("ref:scopeReference", false)]
+    [InlineData("atproto repo:com.example.post?action=create", true)]
+    [InlineData("atproto blob:image/* repo:com.example.post?action=create", false)]
+    public void MissingScopeWarningsOnlyCompareDirectlyComparableScopes(string grantedScopes, bool expectBlobWarning)
+    {
+        using CapturingLoggerFactory loggerFactory = new();
+        OAuthClient client = CreateOAuthClient(loggerFactory: loggerFactory);
+
+        client.WarnOnScopesNotGranted(
+            ["atproto", "include:com.example.authBasic", "blob:image/*"],
+            grantedScopes,
+            Guid.NewGuid());
+
+        Assert.Equal(expectBlobWarning ? 1 : 0, loggerFactory.Messages.Count);
+        Assert.DoesNotContain(loggerFactory.Messages, message => message.Contains("include:", StringComparison.Ordinal));
+        if (expectBlobWarning)
+        {
+            Assert.Contains("blob:image/*", Assert.Single(loggerFactory.Messages), StringComparison.Ordinal);
+        }
+    }
+
     private static OAuthClient CreateOAuthClient(
         TimeSpan? clockSkew = null,
         ILoggerFactory? loggerFactory = null,
