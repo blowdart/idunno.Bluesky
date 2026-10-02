@@ -53,15 +53,16 @@ internal static class TestData
     internal static ClaimsIdentity AuthenticatedClaimsIdentity(
         Did did,
         string authenticationType = "Bluesky",
-        bool signableProofKey = false)
+        bool signableProofKey = false,
+        TimeProvider? timeProvider = null)
     {
         // The service comes from the issuer of the DID claim, and the expiry from the access token, so both have to
         // be set for AtProtoCredential.TryCreate to produce credentials which have not expired.
         List<Claim> claims =
         [
             new Claim(AtProtoClaims.Did, did, ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.AccessToken, Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.RefreshToken, Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.AccessToken, Jwt(did, timeProvider: timeProvider), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.RefreshToken, Jwt(did, timeProvider: timeProvider), ClaimValueTypes.String, "https://bsky.social"),
             new Claim(
                 AtProtoClaims.DPoPProof,
                 signableProofKey ? JsonWebKeys.CreateRsaJson() : "proof-key",
@@ -107,9 +108,9 @@ internal static class TestData
     /// The SDK reads the expiry out of an access token rather than validating it, so a token only has to be well
     /// formed and carry an <c>exp</c> claim for code which depends on credentials not having expired to run.
     /// </remarks>
-    internal static string Jwt(Did did, TimeSpan? lifetime = null)
+    internal static string Jwt(Did did, TimeSpan? lifetime = null, TimeProvider? timeProvider = null)
     {
-        DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
+        DateTimeOffset issuedAt = (timeProvider ?? TimeProvider.System).GetUtcNow();
         DateTimeOffset expiresAt = issuedAt.Add(lifetime ?? TimeSpan.FromHours(1));
 
         string header = Base64UrlEncode("""{"alg":"none","typ":"JWT"}""");

@@ -46,6 +46,7 @@ public record JetstreamOptions
         ArgumentNullException.ThrowIfNull(builder);
         builder.Append("ApiKey = [redacted], LoggerFactory = ").Append(LoggerFactory)
             .Append(", MeterFactory = ").Append(MeterFactory)
+            .Append(", TimeProvider = ").Append(TimeProvider)
             .Append(", ProtocolVersion = ").Append(ProtocolVersion)
             .Append(", UseCompression = ").Append(UseCompression)
             .Append(", Dictionary = ").Append(Dictionary)
@@ -55,9 +56,20 @@ public record JetstreamOptions
             .Append(", CloseTimeout = ").Append(CloseTimeout)
             .Append(", SendTimeout = ").Append(SendTimeout)
             .Append(", ArchiveReadTimeout = ").Append(ArchiveReadTimeout)
-            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers);
+            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers)
+            .Append(", DidHandleResolver = ").Append(DidHandleResolver);
         return true;
     }
+
+    /// <summary>
+    /// Gets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <value>A DID handle resolver, or <see langword="null"/> to not invalidate any handles. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>The resolver is not disposed by the jetstream. Events from a jetstream's archive also invalidate handles.</para>
+    /// <para>A malicious server can send an <c>#identity</c> event before each event for a DID so its handle is never cached.</para>
+    /// </remarks>
+    public IDidHandleResolver? DidHandleResolver { get; init; }
 
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
@@ -68,6 +80,29 @@ public record JetstreamOptions
     /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
     /// </summary>
     public IMeterFactory? MeterFactory { get; set; }
+
+    /// <summary>
+    /// Gets the provider used for Jetstream time reads and timed waits.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The provider times reconnection, receive failure and archive retry delays, archive read timeouts, and the
+    ///   <see cref="CloseTimeout"/> and <see cref="SendTimeout"/> deadlines for close handshakes, close replies and
+    ///   options update messages. The synchronous wait for an in-flight connection attempt during disposal is bounded by
+    ///   <see cref="CloseTimeout"/> using the system clock, so disposal cannot block on a provider which never advances.
+    /// </para>
+    /// </remarks>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
 
     /// <summary>
     /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.

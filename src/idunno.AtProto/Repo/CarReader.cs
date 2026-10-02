@@ -102,7 +102,7 @@ public sealed class CarReader : IDisposable
         return CreateAsync(
             stream,
             validateSignature,
-            static (did, token) => Resolution.ResolveDidDocument(did, cancellationToken: token),
+            static (did, token) => IdentityResolution.ResolveDidDocumentAsync(did, cancellationToken: token),
             leaveOpen,
             cancellationToken);
     }

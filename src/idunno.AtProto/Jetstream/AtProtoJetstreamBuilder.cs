@@ -15,6 +15,7 @@ namespace idunno.AtProto.Jetstream;
 public sealed class AtProtoJetstreamBuilder
 {
     private Uri? _service;
+    private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
     /// Gets or sets the optional API key for HTTP archive access.
@@ -86,6 +87,11 @@ public sealed class AtProtoJetstreamBuilder
     /// Gets or sets the <see cref="IMeterFactory"/> to use when creating meters.
     /// </summary>
     public IMeterFactory? MeterFactory { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    public IDidHandleResolver? DidHandleResolver { get; set; }
 
     /// <summary>
     /// Gets or sets a flag indicating whether compression should be used with the stream. Defaults to <see langword="true"/>.
@@ -338,6 +344,36 @@ public sealed class AtProtoJetstreamBuilder
         ArgumentNullException.ThrowIfNull(meterFactory);
 
         MeterFactory = meterFactory;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="IDidHandleResolver"/> whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <param name="didHandleResolver">The <see cref="IDidHandleResolver"/> to invalidate handles in.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="didHandleResolver"/> is <see langword="null"/>.</exception>
+    public AtProtoJetstreamBuilder WithDidHandleResolver(IDidHandleResolver didHandleResolver)
+    {
+        ArgumentNullException.ThrowIfNull(didHandleResolver);
+
+        DidHandleResolver = didHandleResolver;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="TimeProvider"/> used by the jetstream for time-sensitive operations.
+    /// </summary>
+    /// <param name="timeProvider">A time provider.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public AtProtoJetstreamBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _timeProvider = timeProvider;
+
         return this;
     }
 
@@ -639,6 +675,8 @@ public sealed class AtProtoJetstreamBuilder
             CloseTimeout = CloseTimeout,
             SendTimeout = SendTimeout,
             MaximumConcurrentMessageParsers = MaximumConcurrentMessageParsers,
+            DidHandleResolver = DidHandleResolver,
+            TimeProvider = _timeProvider,
         };
 
         AtProtoJetstream jetstream;

@@ -218,11 +218,10 @@ internal sealed class EventStreamReader
                     if (failure is null)
                     {
                         opened = true;
-                        using CancellationTokenSource idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
                         while (true)
                         {
-                            ReceiveStep step = await ReceiveAsync(socket, state, idle, cancellationToken).ConfigureAwait(false);
+                            ReceiveStep step = await ReceiveAsync(socket, state, cancellationToken).ConfigureAwait(false);
 
                             if (step.Event is not null)
                             {
@@ -265,7 +264,7 @@ internal sealed class EventStreamReader
                 _metrics.Reconnections.Add(1, _serverTag);
                 FirehoseLogger.Reconnecting(_logger, attempts, delay);
 
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(delay, _options.TimeProvider, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -358,7 +357,7 @@ internal sealed class EventStreamReader
 
             FirehoseLogger.ConnectionRefused(_logger, (int)statusCode);
 
-            TimeSpan? retryAfter = GetRetryAfter(socket.HttpResponseHeaders);
+            TimeSpan? retryAfter = GetRetryAfter(socket.HttpResponseHeaders, _options.TimeProvider);
             FirehoseConnectionException refused = new(statusCode, null, retryAfter, exception);
 
             if (statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or HttpStatusCode.InternalServerError or
@@ -383,7 +382,9 @@ internal sealed class EventStreamReader
         return null;
     }
 
-    internal static TimeSpan? GetRetryAfter(IReadOnlyDictionary<string, IEnumerable<string>>? headers)
+    internal static TimeSpan? GetRetryAfter(
+        IReadOnlyDictionary<string, IEnumerable<string>>? headers,
+        TimeProvider? timeProvider = null)
     {
         if (headers is null)
         {
@@ -406,7 +407,7 @@ internal sealed class EventStreamReader
 
             if (DateTimeOffset.TryParseExact(value, "r", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset date))
             {
-                TimeSpan wait = date - DateTimeOffset.UtcNow;
+                TimeSpan wait = date - (timeProvider ?? TimeProvider.System).GetUtcNow();
                 return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
             }
 
@@ -424,7 +425,7 @@ internal sealed class EventStreamReader
             if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
             {
                 // CloseAsync, unlike CloseOutputAsync, waits for the server's answer, so the timeout bounds the whole handshake.
-                using CancellationTokenSource timeout = new(_options.CloseTimeout);
+                using CancellationTokenSource timeout = new(_options.CloseTimeout, _options.TimeProvider);
                 await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token).ConfigureAwait(false);
             }
         }
@@ -448,13 +449,13 @@ internal sealed class EventStreamReader
     private async Task<ReceiveStep> ReceiveAsync(
         ClientWebSocket socket,
         SequenceState state,
-        CancellationTokenSource idle,
         CancellationToken cancellationToken)
     {
         WebSocketReceiveResult result;
         byte[] message;
 
-        idle.CancelAfter(_options.IdleTimeout);
+        using CancellationTokenSource timeout = new(_options.IdleTimeout, _options.TimeProvider);
+        using CancellationTokenSource idle = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
 
         try
         {
@@ -470,7 +471,7 @@ internal sealed class EventStreamReader
             // frame again, so the enumeration ends rather than loops.
             throw ProtocolError(new InvalidDataException("The firehose sent a frame larger than the maximum message size.", exception));
         }
-        catch (Exception exception) when (!cancellationToken.IsCancellationRequested && idle.IsCancellationRequested &&
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested && timeout.IsCancellationRequested &&
             exception is OperationCanceledException or WebSocketException)
         {
             FirehoseLogger.IdleTimeout(_logger, _options.IdleTimeout);

@@ -13,6 +13,7 @@ using idunno.AtProto.Jetstream;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -20,6 +21,12 @@ namespace idunno.AtProto.Integration.Test;
 public class AtProtoJetstreamConnectionTests
 {
     private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
+
+    [Fact]
+    public void JetstreamTimeProviderCannotBeNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new JetstreamOptions { TimeProvider = null! });
+    }
 
     [Fact]
     public async Task AStateChangedHandlerDoesNotRunUnderTheLockWhichGuardsTheFilters()
@@ -190,6 +197,61 @@ public class AtProtoJetstreamConnectionTests
                 Task close = jetstream.CloseAsync(cancellationToken: cancellationToken);
 
                 await close.WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
+
+                Assert.Equal(WebSocketState.Aborted, jetstream.State);
+                Assert.False(jetstream.DisconnectedGracefully);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task TheCloseTimeoutUsesTheConfiguredTimeProvider()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
+        TimeSpan closeTimeout = TimeSpan.FromHours(1);
+
+        using var server = new TestJetstreamServer
+        {
+            DrainSockets = false
+        };
+
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
+                UseCompression = false,
+                CloseTimeout = closeTimeout,
+                TimeProvider = timeProvider
+            }))
+        {
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                Task close = jetstream.CloseAsync(cancellationToken: cancellationToken);
+
+                // The close deadline is an hour of wall-clock time, so only the fake provider can make it expire in time.
+                Task advance = Task.Run(
+                    async () =>
+                    {
+                        while (!close.IsCompleted)
+                        {
+                            timeProvider.Advance(closeTimeout);
+                            await Task.Delay(50, cancellationToken);
+                        }
+                    },
+                    cancellationToken);
+
+                await close.WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
+                await advance.WaitAsync(TimeSpan.FromSeconds(20), cancellationToken);
 
                 Assert.Equal(WebSocketState.Aborted, jetstream.State);
                 Assert.False(jetstream.DisconnectedGracefully);

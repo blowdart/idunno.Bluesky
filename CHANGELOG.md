@@ -73,6 +73,19 @@
   `AtProtoJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
 * The JSON serializer options used internally for every XRPC request and response are now cached, rather than rebuilt for each call,
   so their type metadata is resolved once rather than on every request.
+* Added `DidHandleCache`, an `IDidHandleResolver` which resolves the handle for a DID, bidirectionally verifying it, and caches the result.
+  Handles which cannot be resolved or verified return `Handle.Invalid`, which is cached for a shorter time. The cache is bounded by
+  `DidHandleCacheOptions.Size` and `Duration`, concurrent lookups for the same DID share a single resolution, at most `MaximumConcurrentResolutions`
+  resolutions run at once, at most `Size` lookups can be pending, and each resolution, including any wait to start, is bounded by `ResolutionTimeout`.
+  A lookup rejected because too many are pending, or which times out waiting to start, returns `Handle.Invalid` without caching it. Set `FirehoseOptions.DidHandleResolver`, `JetstreamOptions.DidHandleResolver` or call
+  `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
+  Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
+* Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
+* Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
+  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache, reconnection delays, and idle and close
+  timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
+* Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
+* Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
 
 #### idunno.AtProto.Types
 
@@ -83,6 +96,7 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
 * Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
@@ -90,9 +104,20 @@
   `BlueskyJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
   `BlueskyJsonSerializerOptions.TypeInfoResolver` no longer builds a new set of options each time it is read.
 
+#### idunno.Bluesky.AspNet.Authentication
+
+* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Added `SqliteCorrelationStateCache.CreateWithTimeProvider()` and `SqliteIdentityStore.CreateWithTimeProvider()`, which create stores that
+  use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
+
 #### Samples
 
-* Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event.
+* Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
+* `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
+  cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
 * Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
   selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
   display name and declared label values, with an optional case-insensitive wildcard pattern to filter handles. `--live` narrows that list
@@ -138,6 +163,9 @@
 
 #### idunno.AtProto
 
+* `IdentityResolution.ResolveVerifiedHandleAsync()` and `IdentityResolution.VerifyHandleAsync()`, and the `Resolution` methods they replace, now only consider
+  the first valid handle in a DID document's `alsoKnownAs` entries, as the [AT Protocol DID specification](https://atproto.com/specs/did) requires.
+  Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.
 * `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
   To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
 * `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
@@ -151,6 +179,8 @@
   `ArgumentException` when it is set. Both connect their web sockets through an `HttpClient`, and .NET does not allow a web socket which does
   that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
   Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
+* `Resolution` is obsolete. Use `IdentityResolution` and its `Async` methods instead; `Resolution` forwards to them. Resolution log messages now use the
+  `idunno.AtProto.IdentityResolution` category rather than `idunno.AtProto.Resolution`.
 * `Label.Signature`, and the `signature` parameter of the `Label` constructor, are now `Bytes?` rather than `IEnumerable<byte>`.
   Over JSON the AT Protocol data model encodes bytes as a `$bytes` object, which `IEnumerable<byte>` cannot read, so every signed
   label failed to deserialize. Use `Signature.Value` for the bytes as a collection, or `Signature.ToBytes()` for a `byte[]`, and pass
@@ -171,6 +201,7 @@
 
 #### idunno.AtProto
 
+* `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
   with an `OK` status code. See the breaking change above for the new type.
@@ -190,6 +221,7 @@
 
 #### idunno.Bluesky
 
+* `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
@@ -201,6 +233,19 @@
 * `LabelerPolicies.LabelValues` and `LabelValueDefinitions` now drop any `null` entries a labeler returns.
   Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
   collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
+* Bounds `DeleteFromList` pagination and returns an explicit upstream pagination error if the list API cycles cursors or exceeds the page limit.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Temporary agents used for credential revocation and refresh now use the authentication handler's configured `TimeProvider`,
+  keeping token expiry decisions consistent without changing the shared agent options.
+* Temporary agents used for profile claims transformation now use the transformer's configured `TimeProvider` for token expiry,
+  keeping cache-miss lookups consistent with the transformer's credential precheck without changing the shared agent options.
+* Temporary OAuth agents used during sign-in now use the authentication handler's configured `TimeProvider` without changing the shared agent options.
+* `DistributedCacheCorrelationStateCache` entries now expire relative to when they are stored, so expiry is measured by the backing cache's
+  clock rather than the local wall clock.
+* Authentication ticket and correlation-cookie expiry, refresh waits, and the default ephemeral identity and correlation caches now use the
+  authentication handler's configured `TimeProvider`.
 
 ### Documentation
 

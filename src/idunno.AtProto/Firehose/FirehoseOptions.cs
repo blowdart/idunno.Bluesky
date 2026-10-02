@@ -38,6 +38,21 @@ public sealed record FirehoseOptions
     public IMeterFactory? MeterFactory { get; init; }
 
     /// <summary>
+    /// Gets the provider used for firehose time reads, reconnect delays, and idle and close timeouts.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
+
+    /// <summary>
     /// Gets the host to subscribe to repository events from.
     /// </summary>
     /// <value>The relay or PDS host. The default is <c>wss://bsky.network</c>.</value>
@@ -233,8 +248,18 @@ public sealed record FirehoseOptions
     /// <summary>
     /// Gets the function used to resolve DID documents when <see cref="VerifySignatures"/> is <see langword="true"/>.
     /// </summary>
-    /// <value>A DID document resolver, or <see langword="null"/> to resolve each DID with <see cref="Resolution"/>.</value>
+    /// <value>A DID document resolver, or <see langword="null"/> to resolve each DID with <see cref="IdentityResolution"/>.</value>
     public Func<Did, CancellationToken, Task<DidDocument?>>? DidDocumentResolver { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <value>A DID handle resolver, or <see langword="null"/> to not invalidate any handles. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>The resolver is not disposed by the firehose.</para>
+    /// <para>A malicious server can send an <c>#identity</c> event before each event for a DID so its handle is never cached.</para>
+    /// </remarks>
+    public IDidHandleResolver? DidHandleResolver { get; init; }
 
     /// <summary>
     /// Gets a value that indicates whether signing keys resolved when <see cref="VerifySignatures"/> is <see langword="true"/> are cached.

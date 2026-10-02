@@ -7,6 +7,7 @@ using idunno.AtProto.Firehose;
 using idunno.AtProto.Repo;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 using static idunno.AtProto.Integration.Test.FirehoseTestData;
 
@@ -19,7 +20,7 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
 
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly ECDsa _rotatedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-    private readonly ManualTimeProvider _time = new();
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
     private readonly FirehoseMetrics _metrics = new(null);
     private readonly Did _did = new(TestDid);
     private int _resolutions;
@@ -34,6 +35,12 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     {
         _key.Dispose();
         _rotatedKey.Dispose();
+    }
+
+    [Fact]
+    public void FirehoseTimeProviderCannotBeNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new FirehoseOptions { TimeProvider = null! });
     }
 
     [Fact]
@@ -56,6 +63,17 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
         Assert.Equal(2, _resolutions);
         Assert.Equal(2, hits.GetMeasurementSnapshot().EvaluateAsCounter());
         Assert.Equal(2, misses.GetMeasurementSnapshot().EvaluateAsCounter());
+    }
+
+    [Fact]
+    public async Task CachedKeysDoNotExpireWhileTheTimeProviderHasNotAdvanced()
+    {
+        using FirehoseSignatureVerifier verifier = CreateVerifier(new FirehoseOptions { SigningKeyCacheDuration = TimeSpan.FromMilliseconds(50) });
+
+        await Verify(verifier, _key);
+        await Verify(verifier, _key);
+
+        Assert.Equal(1, _resolutions);
     }
 
     [Fact]
@@ -197,12 +215,4 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     private Task Verify(FirehoseSignatureVerifier verifier, ECDsa signer, string fragment = SigningKeyVerifier.RepositorySigningKeyFragment) =>
         verifier.VerifyAsync(_did, fragment, s_data, Sign(signer, s_data), "test", [], TestContext.Current.CancellationToken);
 
-    private sealed class ManualTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-
-        public override DateTimeOffset GetUtcNow() => _now;
-
-        public void Advance(TimeSpan by) => _now += by;
-    }
 }

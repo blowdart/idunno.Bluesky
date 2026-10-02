@@ -55,6 +55,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     private readonly MemoryCache _refreshCache;
     private readonly int _sizeLimit;
     private readonly BlueskyAuthenticationMetrics _metrics;
+    private readonly TimeProvider _timeProvider;
 
     private volatile bool _disposed;
 
@@ -81,21 +82,34 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     ///   store, and a <paramref name="sizeLimit"/>, for each of them rather than one shared between them.
     /// </para>
     /// </remarks>
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockExpiration = null,
         int? sizeLimit = null,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null) : this(loggerFactory, entryTimeToLive, refreshLockExpiration, sizeLimit, meterFactory, TimeProvider.System)
+    {
+    }
+
+    // Lets tests control when entries and refresh locks expire, rather than waiting on the system clock.
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
+    internal EphemeralIdentityStore(
+        ILoggerFactory loggerFactory,
+        TimeSpan? entryTimeToLive,
+        TimeSpan? refreshLockExpiration,
+        int? sizeLimit,
+        IMeterFactory? meterFactory,
+        TimeProvider timeProvider)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
+        _timeProvider = timeProvider;
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
-        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
+        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(timeProvider) });
 
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
@@ -410,14 +424,14 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         string key = $"{did}";
 
         DateTime expiresAfter = TokenCacheMemoryOptions.SlidingExpiration is TimeSpan slidingExpiration
-            ? DateTime.UtcNow.Add(slidingExpiration)
+            ? _timeProvider.GetUtcNow().UtcDateTime.Add(slidingExpiration)
             : DateTime.MaxValue;
 
         Cache.Set(key, identity, TokenCacheMemoryOptions);
 
         // A short lived entry can reach the end of its life between being written and being read back, which leaves it
         // missing because it expired rather than because the cache had no room for it.
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= expiresAfter)
         {
             return;
         }
@@ -430,7 +444,7 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
         Cache.Set(key, identity, TokenCacheMemoryOptions);
 
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= expiresAfter)
         {
             return;
         }

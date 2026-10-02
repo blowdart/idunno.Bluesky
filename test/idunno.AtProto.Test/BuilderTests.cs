@@ -2,16 +2,90 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
+using System.Reflection;
 
 using idunno.AtProto.Authentication;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
 
 public class BuilderTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuilderPassesTimeProviderToAgent(bool withHttpClientFactory)
+    {
+        FakeTimeProvider timeProvider = new();
+        AtProtoAgentBuilder builder = AtProtoAgent.CreateBuilder()
+            .WithTimeProvider(timeProvider)
+            .DisableBackgroundTokenRefresh();
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new HttpClientFactory());
+        }
+
+        using AtProtoAgent agent = builder.Build();
+
+        Assert.Same(timeProvider, agent.Options!.TimeProvider);
+    }
+
+    [Fact]
+    public void BuilderWithTimeProviderRejectsNull() =>
+        Assert.Throws<ArgumentNullException>("timeProvider", () => AtProtoAgent.CreateBuilder().WithTimeProvider(null!));
+
+    [Fact]
+    public void AgentTimeProviderIsSnapshottedAtConstruction()
+    {
+        FakeTimeProvider configuredTimeProvider = new();
+        AtProtoAgentOptions options = new(NullLoggerFactory.Instance)
+        {
+            TimeProvider = configuredTimeProvider
+        };
+
+        using AtProtoAgent agent = new(
+            new Uri("https://example.com"),
+            new HttpClientFactory(),
+            options);
+
+        options.TimeProvider = new FakeTimeProvider();
+
+        TimeProvider agentTimeProvider = (TimeProvider)typeof(AtProtoAgent)
+            .GetProperty("Clock", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(agent)!;
+
+        Assert.Same(configuredTimeProvider, agentTimeProvider);
+    }
+
+    [Fact]
+    public void AgentOptionsRejectNullTimeProvider() =>
+        Assert.Throws<ArgumentNullException>(() => new AtProtoAgentOptions { TimeProvider = null! });
+
+    [Fact]
+    public void AddAtProtoAgentOptionsCopiesTimeProvider()
+    {
+        FakeTimeProvider timeProvider = new();
+        AtProtoAgentOptions options = new(NullLoggerFactory.Instance)
+        {
+            TimeProvider = timeProvider
+        };
+
+        ServiceCollection services = new();
+        services.AddAtProtoAgentOptions(options);
+
+        using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+        Assert.Same(
+            timeProvider,
+            serviceProvider.GetRequiredService<IOptionsMonitor<AtProtoAgentOptions>>().CurrentValue.TimeProvider);
+    }
+
     [Fact]
     public void BuilderWithServiceUriCreatesCorrectly()
     {

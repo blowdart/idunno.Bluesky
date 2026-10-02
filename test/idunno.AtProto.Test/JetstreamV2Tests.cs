@@ -344,6 +344,35 @@ public class JetstreamV2Tests
     }
 
     [Fact]
+    public void OnlyIdentityEventsInvalidateTheDidHandleResolver()
+    {
+        RecordingDidHandleResolver resolver = new();
+        using AtProtoJetstream jetstream = new(uri: s_server, options: new JetstreamOptions { DidHandleResolver = resolver });
+
+        Assert.True(jetstream.TryDeriveV2Event(
+            Message("account", $$""","account":{"active":true,"did":"{{TestDid}}","seq":7,"time":"2026-09-26T00:19:35Z"}"""),
+            out AtJetstreamEvent? accountEvent));
+        jetstream.InvalidateHandle(accountEvent!);
+        Assert.Empty(resolver.Invalidated);
+
+        Assert.True(jetstream.TryDeriveV2Event(
+            Message("identity", $$""","identity":{"did":"{{TestDid}}","handle":"example.com","seq":8,"time":"2026-09-26T00:19:35Z"}""", sequence: 43),
+            out AtJetstreamEvent? identityEvent));
+        jetstream.InvalidateHandle(identityEvent!);
+        Assert.Equal([new Did(TestDid)], resolver.Invalidated);
+    }
+
+    [Fact]
+    public void TheBuilderPassesTheDidHandleResolverToTheJetstream()
+    {
+        RecordingDidHandleResolver resolver = new();
+        using AtProtoJetstream jetstream = AtProtoJetstreamBuilder.Create().WithDidHandleResolver(resolver).Build();
+
+        Assert.Same(resolver, jetstream.Options.DidHandleResolver);
+        Assert.Contains("DidHandleResolver = ", jetstream.Options.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AV2AccountIsDerived()
     {
         using AtProtoJetstream jetstream = CreateJetstream();

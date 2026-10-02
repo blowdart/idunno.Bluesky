@@ -41,6 +41,9 @@ the constructor; `AtProtoJetstream` appends the subscription path. `StreamAsync`
 `JetstreamProtocolVersion.V1`. See [migration](jetstreamMigration.md#staying-on-version-1) to retain an
 event-driven v1 connection.
 
+> [!WARNING]
+> Jetstream v2 delivery is at least once: a reconnect cursor is inclusive, so an event can be received again. `StreamAsync` suppresses events at or below the last yielded sequence within one enumeration, but this is not exactly-once processing across application restarts or failures. Persist the last successfully processed sequence with the state it represents, and make processing idempotent. Treat sequence values as server-provided data, not proof of event authenticity.
+
 ## Filtering
 
 Supply collections and [DIDs](commonTerms.md#dids) to the constructor. A collection may be an exact NSID
@@ -120,6 +123,34 @@ A sync marker means a repository's commit history can no longer be followed; con
 mirror should resynchronize that repository. Unknown future kinds can arrive as a plain `JetstreamEvent`
 with `Kind == JetStreamEventKind.Unknown`.
 
+### Showing handles
+
+Events identify accounts by DID, and the handle in an identity event is not verified. To show verified handles, use a
+[`DidHandleCache`](didHandleCache.md). Set `JetstreamOptions.DidHandleResolver`, or call
+`AtProtoJetstreamBuilder.WithDidHandleResolver()`, and the Jetstream invalidates a cached handle when it receives an
+identity event for its DID:
+
+```csharp
+using var didHandleCache = new DidHandleCache();
+
+await using var jetstream = new AtProtoJetstream(
+    options: new JetstreamOptions
+    {
+        DidHandleResolver = didHandleCache
+    });
+
+await foreach (JetstreamEvent evt in jetstream.StreamAsync())
+{
+    if (evt is JetstreamAccountEvent account)
+    {
+        Handle handle = await didHandleCache.ResolveHandleAsync(account.Did);
+        Console.WriteLine($"{account.Did} ({handle}) active: {account.Account.Active}");
+    }
+}
+```
+
+Use `TryGetCachedHandle()`, which never makes a network request, for frequent events such as commits.
+
 ## Stopping and shutdown
 
 Breaking out of `await foreach` disposes the enumerator and closes its connection. You can also pass a
@@ -184,5 +215,6 @@ enumeration instead of silently losing the gap.
 
 ## See also
 
+* [Resolving and caching handles for DIDs](didHandleCache.md) for showing verified handles alongside DIDs.
 * [Network replay and snapshots](jetstreamReplay.md) for archive snapshots and archive-to-live recovery.
 * [Migrating Jetstream clients](jetstreamMigration.md) for v1 compatibility and moving from event handlers to async enumeration.

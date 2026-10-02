@@ -62,6 +62,8 @@ items:
         href: logging.md
       - name: Built-in Metrics
         href: metrics.md
+      - name: Resolving and caching handles for DIDs
+        href: didHandleCache.md
       - name: Labels
         href: labels.md
       - name: Saving & restoring authentication state

@@ -6,6 +6,8 @@ using System.Net;
 
 using idunno.AtProto.Jetstream;
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.AtProto.Test;
 
 /// <summary>
@@ -20,6 +22,31 @@ namespace idunno.AtProto.Test;
 [ExcludeFromCodeCoverage]
 public class AtProtoJetstreamBuilderTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildPassesTheTimeProviderToTheJetstream(bool withHttpClientFactory)
+    {
+        FakeTimeProvider timeProvider = new();
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create()
+            .WithTimeProvider(timeProvider);
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+
+        Assert.Same(timeProvider, jetstream.Options.TimeProvider);
+    }
+
+    [Fact]
+    public void WithTimeProviderRejectsNull() =>
+        Assert.Throws<ArgumentNullException>(
+            "timeProvider",
+            () => AtProtoJetstreamBuilder.Create().WithTimeProvider(null!));
+
     [Fact]
     public void BuildPassesTheMeterFactoryToTheJetstream()
     {

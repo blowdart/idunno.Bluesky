@@ -92,6 +92,9 @@ internal sealed class RepoEventDecoder(FirehoseOptions options, FirehoseSignatur
         // A malicious server can abuse this to force a resolution for every event, but only when signature verification is on.
         verifier?.Invalidate(identity.Did);
 
+        // The handle may have changed, so any cached handle is dropped.
+        options.DidHandleResolver?.Invalidate(identity.Did);
+
         return identity;
     }
 

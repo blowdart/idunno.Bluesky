@@ -12,6 +12,7 @@ using idunno.AtProto.Jetstream.Archive;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Time.Testing;
 
 using ZstdSharp;
 
@@ -213,6 +214,39 @@ public class JetstreamArchiveTests
         Assert.Equal([1, 2, 3], bytes);
         Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(850),
             $"Quota was bypassed: the download completed in {elapsed.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task DownloadQuotaRefillsUsingTheConfiguredTimeProvider()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.Headers.ETag = $"\"{Checksum}:0\"";
+            context.Response.Headers["headwind-quota-burst-bytes"] = "2";
+            context.Response.Headers["headwind-quota-refill-bytes"] = "1";
+            context.Response.Headers["headwind-quota-refill-period-seconds"] = "1";
+            context.Response.ContentLength = 3;
+            await context.Response.Body.WriteAsync(new byte[] { 1, 2, 3 });
+        });
+        using HttpClient client = server.CreateClient();
+        FakeTimeProvider timeProvider = new();
+        await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
+            TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null), timeProvider: timeProvider);
+        byte[] bytes = new byte[3];
+        Task read = download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+
+        Assert.True(SpinWait.SpinUntil(() => download.Position == 2 || read.IsCompleted, TimeSpan.FromSeconds(10)));
+        Assert.Equal(2, download.Position);
+        Assert.False(read.IsCompleted);
+
+        for (int i = 0; i < 10 && !read.IsCompleted; i++)
+        {
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
+            await Task.Yield();
+        }
+
+        await read.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Equal([1, 2, 3], bytes);
     }
 
     [Fact]

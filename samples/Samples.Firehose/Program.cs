@@ -8,7 +8,6 @@ using idunno.AtProto;
 using idunno.AtProto.Firehose;
 using idunno.AtProto.Sync;
 
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Samples.Firehose;
@@ -37,11 +36,13 @@ public sealed class Program
         };
         Console.OutputEncoding = Encoding.UTF8;
 
-        using var didHandleCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 1024 });
+        // Resolves and verifies handles, caching them. The firehose invalidates a cached handle when it sees an #identity event for its DID.
+        using var didHandleCache = new DidHandleCache(new DidHandleCacheOptions { LoggerFactory = loggerFactory });
         await using var firehose = new AtProtoFirehose(
             options: new FirehoseOptions
             {
-                LoggerFactory = loggerFactory
+                LoggerFactory = loggerFactory,
+                DidHandleResolver = didHandleCache
             });
 
         const int maximumRetries = 5;
@@ -55,7 +56,7 @@ public sealed class Program
                     await foreach (FirehoseEvent evt in firehose.SubscribeReposAsync(
                         cursor: cursor, maximumReconnectAttempts: maximumRetries, cancellationToken: cancellationToken))
                     {
-                        await PrintEventAsync(evt, didHandleCache, loggerFactory, cancellationToken).ConfigureAwait(false);
+                        await PrintEventAsync(evt, didHandleCache, cancellationToken).ConfigureAwait(false);
 
                         if (evt.Sequence is long sequence)
                         {
@@ -90,8 +91,7 @@ public sealed class Program
 
     private static async Task PrintEventAsync(
         FirehoseEvent evt,
-        MemoryCache didHandleCache,
-        ILoggerFactory loggerFactory,
+        DidHandleCache didHandleCache,
         CancellationToken cancellationToken)
     {
         string sequence = evt.Sequence is long value ? $" (#{value})" : string.Empty;
@@ -119,32 +119,9 @@ public sealed class Program
 
             case FirehoseAccountEvent accountEvent:
                 {
-                    string eventBelongsTo = accountEvent.Did;
-
-                    if (didHandleCache.TryGetValue(accountEvent.Did.Value, out string? handle))
-                    {
-                        eventBelongsTo += $"/({handle})";
-                    }
-                    else
-                    {
-                        DidDocument? didDoc = await Resolution.ResolveDidDocument(
-                            accountEvent.Did,
-                            loggerFactory: loggerFactory,
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                        if (didDoc is not null)
-                        {
-                            foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
-                            {
-                                if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
-                                {
-                                    CacheHandle(didHandleCache, accountEvent.Did, alsoKnownAs[5..]);
-                                    eventBelongsTo += $"/({alsoKnownAs[5..]})";
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    // Commits are too frequent to resolve every DID, so account events resolve and cache the handle for later commits.
+                    Handle handle = await didHandleCache.ResolveHandleAsync(accountEvent.Did, cancellationToken).ConfigureAwait(false);
+                    string eventBelongsTo = $"{accountEvent.Did}/({handle})";
 
                     string timeStamp = FormatTime(accountEvent.Time) + sequence;
 
@@ -176,9 +153,8 @@ public sealed class Program
                 {
                     string timeStamp = FormatTime(identityEvent.Time) + sequence;
 
-                    // The identity may have changed, so forget the cached handle. The handle in an identity event is not verified,
-                    // so it is not cached; the next account event resolves the DID document instead.
-                    didHandleCache.Remove(identityEvent.Did.Value);
+                    // The firehose has already invalidated any cached handle. The handle in an identity event is not verified,
+                    // so it is only printed; the next account event resolves and verifies the handle instead.
 
                     if (identityEvent.Handle is not null)
                     {
@@ -214,15 +190,9 @@ public sealed class Program
         }
     }
 
-    private static string DescribeDid(Did did, MemoryCache didHandleCache) =>
-        didHandleCache.TryGetValue(did.Value, out string? handle) ? $"{did}/({handle})" : did;
-
-    private static void CacheHandle(MemoryCache didHandleCache, Did did, string handle) =>
-        didHandleCache.Set(did.Value, handle, new MemoryCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-            Size = 1
-        });
+    // Only uses a handle which is already cached, rather than resolving one for each commit. A handle which could not be verified is shown as handle.invalid.
+    private static string DescribeDid(Did did, DidHandleCache didHandleCache) =>
+        didHandleCache.TryGetCachedHandle(did, out Handle? handle) ? $"{did}/({handle})" : did;
 
     private static string FormatTime(DateTimeOffset time) =>
         time.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);

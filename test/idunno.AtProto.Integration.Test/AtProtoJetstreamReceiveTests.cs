@@ -136,7 +136,6 @@ public class AtProtoJetstreamReceiveTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using var server = new TestJetstreamServer();
-
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
             await SendText(webSocket, IdentityEvent(), serverCancellationToken);
@@ -472,13 +471,23 @@ public class AtProtoJetstreamReceiveTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using var server = new TestJetstreamServer();
+        TaskCompletionSource firstParserEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allMessagesSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ManualResetEventSlim releaseParsers = new();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
             for (int sequence = 1; sequence <= messageCount; sequence++)
             {
                 await SendText(webSocket, IdentityEvent(sequence), serverCancellationToken);
+
+                if (sequence == 1)
+                {
+                    await firstParserEntered.Task.WaitAsync(serverCancellationToken);
+                }
             }
+
+            allMessagesSent.TrySetResult();
         });
 
         int inFlight = 0;
@@ -500,11 +509,16 @@ public class AtProtoJetstreamReceiveTests
                     maximumInFlight = Math.Max(maximumInFlight, current);
                 }
 
-                // Held long enough that anything dispatched alongside this one overlaps it.
-                Thread.Sleep(50);
-
-                Interlocked.Decrement(ref inFlight);
-                allParsed.Signal();
+                firstParserEntered.TrySetResult();
+                try
+                {
+                    releaseParsers.Wait(cancellationToken);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref inFlight);
+                    allParsed.Signal();
+                }
             };
 
             using (var httpClient = new HttpClient())
@@ -515,6 +529,8 @@ public class AtProtoJetstreamReceiveTests
                     httpClient: httpClient,
                     cancellationToken: cancellationToken);
 
+                await allMessagesSent.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                releaseParsers.Set();
                 Assert.True(allParsed.Wait(TimeSpan.FromSeconds(30), cancellationToken));
 
                 // Without a limit every message read is handed straight to the task factory, so a server which sends

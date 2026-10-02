@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
@@ -26,6 +27,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     private readonly MemoryCache _cache;
     private readonly int _sizeLimit;
+    private readonly TimeProvider _timeProvider;
 
     private volatile bool _disposed;
 
@@ -39,19 +41,21 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
     private static readonly TimeSpan s_defaultEntryTimeToLive = new(0, 0, 15, 0);
 
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
     public EphemeralCorrelationStateCache(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
-        int? sizeLimit = null)
+        int? sizeLimit = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
 
+        _timeProvider = timeProvider ?? TimeProvider.System;
         Logger = loggerFactory.CreateLogger<EphemeralCorrelationStateCache>();
         EntryTTL = entryTimeToLive ?? s_defaultEntryTimeToLive;
 
         _sizeLimit = sizeLimit ?? DefaultSizeLimit;
-        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit, Clock = new TimeProviderSystemClock(_timeProvider) });
 
         if (!s_warned)
         {
@@ -84,7 +88,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
         ObjectDisposedException.ThrowIf(_disposed, this);
         cancellationToken.ThrowIfCancellationRequested();
 
-        DateTime absoluteExpiration = DateTime.UtcNow.Add(EntryTTL);
+        DateTime absoluteExpiration = _timeProvider.GetUtcNow().UtcDateTime.Add(EntryTTL);
 
         MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(absoluteExpiration)
@@ -103,7 +107,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
         // A short lived entry can reach the end of its life between being written and being read back, which leaves it
         // missing because it expired rather than because the cache had no room for it.
-        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= absoluteExpiration)
+        if (Cache.TryGetValue(key, out _) || _timeProvider.GetUtcNow().UtcDateTime >= absoluteExpiration)
         {
             return;
         }
@@ -117,7 +121,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, I
 
         Cache.Set(key, context.State, cacheOptions);
 
-        if (!Cache.TryGetValue(key, out _) && DateTime.UtcNow < absoluteExpiration)
+        if (!Cache.TryGetValue(key, out _) && _timeProvider.GetUtcNow().UtcDateTime < absoluteExpiration)
         {
             throw new InvalidOperationException(
                 $"The correlation state cache is full at its size limit of {_sizeLimit} and could not make room for the login state.");

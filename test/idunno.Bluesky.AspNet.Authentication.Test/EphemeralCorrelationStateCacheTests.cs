@@ -4,6 +4,7 @@
 using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -115,15 +116,17 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
     public async Task StateExpiresAfterItsTimeToLive()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
 
         EphemeralCorrelationStateCache cache = new(
             NullLoggerFactory.Instance,
-            entryTimeToLive: TimeSpan.FromMilliseconds(50));
+            entryTimeToLive: TimeSpan.FromMilliseconds(50),
+            timeProvider: timeProvider);
 
         Guid correlationId = Guid.NewGuid();
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(51));
 
         Assert.Null(await cache.PeekOAuthLoginState(correlationId, TestContext.Current.CancellationToken));
     }

@@ -25,7 +25,20 @@ public interface IAccessCredential
     /// <summary>
     /// Gets a value indicating whether the access token is expired.
     /// </summary>
-    public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresOn;
+    public bool IsExpired => IsExpiredAt(TimeProvider.System);
+
+    /// <summary>
+    /// Determines whether the access token is expired using the specified time provider.
+    /// </summary>
+    /// <param name="timeProvider">The time provider used to get the current time.</param>
+    /// <returns><see langword="true"/> if the access token has expired; otherwise, <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">The time provider is <see langword="null"/>.</exception>
+    public bool IsExpiredAt(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        return timeProvider.GetUtcNow() >= ExpiresOn;
+    }
 
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> the access token was issued for.

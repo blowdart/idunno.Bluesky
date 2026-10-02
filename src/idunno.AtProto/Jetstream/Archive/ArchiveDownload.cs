@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -18,7 +17,8 @@ internal sealed class ArchiveDownload(
     long offset,
     JetstreamMetrics metrics,
     TimeSpan? readTimeout = null,
-    bool allowCrossOriginRedirect = false) : IAsyncDisposable
+    bool allowCrossOriginRedirect = false,
+    TimeProvider? timeProvider = null) : IAsyncDisposable
 {
     private const int MaximumReadResumes = 3;
     private Stream? _stream;
@@ -27,7 +27,8 @@ internal sealed class ArchiveDownload(
     private double _refill;
     private long _downloaded;
     private int _readResumes;
-    private readonly Stopwatch _elapsed = Stopwatch.StartNew();
+    private readonly TimeProvider _timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly long _startedTimestamp = (timeProvider ?? TimeProvider.System).GetTimestamp();
     private readonly string _etag = blockIndex is int index ? $"\"{checksum}:{index}\"" : $"\"{checksum}\"";
     private readonly TimeSpan _readTimeout = ValidateReadTimeout(readTimeout);
     private readonly string _serverTag = AtProtoJetstream.ArchiveServerTag(service);
@@ -106,8 +107,8 @@ internal sealed class ArchiveDownload(
 
     private async Task<int> ReadWithTimeoutAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
-        using CancellationTokenSource readCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        readCancellation.CancelAfter(_readTimeout);
+        using CancellationTokenSource timeoutSource = new(_readTimeout, _timeProvider);
+        using CancellationTokenSource readCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
         try
         {
             return await _stream!.ReadAsync(buffer, readCancellation.Token).ConfigureAwait(false);
@@ -136,7 +137,7 @@ internal sealed class ArchiveDownload(
 
         while (true)
         {
-            double available = _burst + _refill * _elapsed.Elapsed.TotalSeconds - _downloaded;
+            double available = _burst + _refill * _timeProvider.GetElapsedTime(_startedTimestamp).TotalSeconds - _downloaded;
             if (available >= 1)
             {
                 return buffer[..(int)Math.Min(buffer.Length, Math.Min(int.MaxValue, Math.Floor(available)))];
@@ -147,7 +148,7 @@ internal sealed class ArchiveDownload(
                 throw new InvalidDataException("The archive quota has no available bytes or refill rate.");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds((1 - available) / _refill), cancellationToken).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromSeconds((1 - available) / _refill), _timeProvider, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -164,7 +165,7 @@ internal sealed class ArchiveDownload(
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 metrics.ArchiveRateLimits.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
-                TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders);
+                TimeSpan? retry = GetRetryAfter(response.HttpResponseHeaders, _timeProvider);
 
                 if (retry is null)
                 {
@@ -172,7 +173,7 @@ internal sealed class ArchiveDownload(
                         null, response.StatusCode);
                 }
 
-                await Task.Delay(retry.Value > TimeSpan.Zero ? retry.Value : TimeSpan.Zero, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(retry.Value > TimeSpan.Zero ? retry.Value : TimeSpan.Zero, _timeProvider, cancellationToken).ConfigureAwait(false);
                 continue;
             }
 
@@ -229,10 +230,10 @@ internal sealed class ArchiveDownload(
         }
     }
 
-    internal static TimeSpan? GetRetryAfter(HttpResponseHeaders? headers)
+    internal static TimeSpan? GetRetryAfter(HttpResponseHeaders? headers, TimeProvider? timeProvider = null)
     {
         RetryConditionHeaderValue? retry = headers?.RetryAfter;
-        return retry?.Delta ?? (retry?.Date is DateTimeOffset date ? date - DateTimeOffset.UtcNow : null);
+        return retry?.Delta ?? (retry?.Date is DateTimeOffset date ? date - (timeProvider ?? TimeProvider.System).GetUtcNow() : null);
     }
 
     public async ValueTask DisposeAsync()
