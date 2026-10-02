@@ -16,24 +16,43 @@ The first call to `ListNotifications()` uses the limit parameter to control how 
 
 If you don't pass a limit Bluesky uses a default page size limit, which can vary by API.
 
-Then the code loops until either the call to `ListNotifications()` returns an empty cursor, or it fails.
+Check each response and follow its cursor until there are no more pages. Since cursors are supplied by the API, also
+track cursors already used and impose a page limit:
 
 ```c#
-if (notifications.Succeeded && notifications.Result.Count != 0)
+const int maximumPages = 100;
+int pagesRead = 1;
+HashSet<string> seenCursors = new(StringComparer.Ordinal);
+
+notifications.EnsureSucceeded();
+
+while (notifications.Result.Count != 0)
 {
-    do
+    // Do whatever needs to be done on the page
+    // of notifications.
+
+    string? nextCursor = notifications.Result.Cursor;
+
+    if (string.IsNullOrEmpty(nextCursor))
     {
-        // Do whatever needs to be done on the page
-        // of notifications.
+        break;
+    }
 
-        // Get the next page
-        notifications = 
-            await agent.ListNotifications(
-                limit: 5, 
-                cursor: notifications.Result.Cursor);
+    if (!seenCursors.Add(nextCursor))
+    {
+        throw new InvalidOperationException("The API returned a cursor that was already used.");
+    }
 
-    } while (notifications.Succeeded &&
-             !string.IsNullOrEmpty(notifications.Result.Cursor));
+    if (pagesRead >= maximumPages)
+    {
+        throw new InvalidOperationException($"Pagination exceeded the limit of {maximumPages} pages.");
+    }
+
+    pagesRead++;
+    notifications = await agent.ListNotifications(
+        limit: 5,
+        cursor: nextCursor);
+    notifications.EnsureSucceeded();
 }
 ```
 
