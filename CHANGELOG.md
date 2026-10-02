@@ -1,5 +1,13 @@
 # Version History
 
+## Unreleased
+
+### Added
+
+#### idunno.AtProto.OAuthCallback
+
+* Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+
 ## 7.0.1 - 2026-09-26
 
 ### Fixed

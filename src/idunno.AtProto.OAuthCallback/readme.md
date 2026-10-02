@@ -29,8 +29,8 @@ using (var agent = new BlueskyAgent(
     }))
     {
 
-        await using var callbackServer = new CallbackServer(
-            CallbackServer.GetRandomUnusedPort());
+        await using var callbackServer = await CallbackServer.CreateAsync(
+            cancellationToken: cancellationToken);
         {
             string callbackData;
 
