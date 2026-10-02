@@ -646,13 +646,18 @@ public class AtProtoHttpClient<TResult> where TResult : class
             _suppressProxyHeaderCheck = true;
         }
 
-        if (_extraRequestHeaders is null)
+        foreach (NameValueHeaderValue header in requestHeaders)
         {
-            _extraRequestHeaders = [.. requestHeaders];
-        }
-        else
-        {
-            foreach (NameValueHeaderValue header in requestHeaders)
+            if (ContainsHeader(_extraRequestHeaders, header.Name))
+            {
+                continue;
+            }
+
+            if (_extraRequestHeaders is null)
+            {
+                _extraRequestHeaders = [header];
+            }
+            else
             {
                 _extraRequestHeaders.Add(header);
             }
