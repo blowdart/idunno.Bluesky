@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace idunno.AtProto;
@@ -15,6 +16,7 @@ namespace idunno.AtProto;
 ///   the buffer, so parse it into objects which own their data, rather than, for example, a <see cref="System.Text.Json.JsonDocument"/>
 ///   over its memory.
 /// </para>
+/// <para>The content bytes are cleared before the buffer is returned to the shared pool.</para>
 /// </remarks>
 internal sealed class PooledContent : IDisposable
 {
@@ -70,6 +72,7 @@ internal sealed class PooledContent : IDisposable
 
         if (buffer is not null)
         {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, _length));
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }

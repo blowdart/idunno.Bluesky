@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace idunno.AtProto;
@@ -52,6 +53,7 @@ internal static class HttpContentReader
         }
         finally
         {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, bytesRead));
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
@@ -87,6 +89,7 @@ internal static class HttpContentReader
 
         if (bytesRead > maximumLength)
         {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, bytesRead));
             ArrayPool<byte>.Shared.Return(buffer);
             return null;
         }
@@ -122,6 +125,7 @@ internal static class HttpContentReader
         }
         finally
         {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, bytesRead));
             ArrayPool<byte>.Shared.Return(buffer);
         }
     }
@@ -152,6 +156,7 @@ internal static class HttpContentReader
                         // overflow to a negative length and throw from Rent rather than stopping at maximumLength.
                         byte[] grown = ArrayPool<byte>.Shared.Rent((int)Math.Min((long)buffer.Length * 2, maximumLength));
                         Buffer.BlockCopy(buffer, 0, grown, 0, bytesRead);
+                        CryptographicOperations.ZeroMemory(buffer.AsSpan(0, bytesRead));
                         ArrayPool<byte>.Shared.Return(buffer);
                         buffer = grown;
                     }
@@ -172,6 +177,7 @@ internal static class HttpContentReader
         }
         catch
         {
+            CryptographicOperations.ZeroMemory(buffer.AsSpan(0, bytesRead));
             ArrayPool<byte>.Shared.Return(buffer);
             throw;
         }

@@ -56,11 +56,14 @@ public class HttpContentReaderTests
     [Fact]
     public void PooledContentThrowsAfterItIsDisposed()
     {
-        PooledContent pooled = new(System.Buffers.ArrayPool<byte>.Shared.Rent(4), 4);
+        byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(4);
+        buffer.AsSpan(0, 4).Fill(0xA5);
+        PooledContent pooled = new(buffer, 4);
 
         pooled.Dispose();
         pooled.Dispose();
 
+        Assert.All(buffer.AsSpan(0, 4).ToArray(), value => Assert.Equal(0, value));
         Assert.Throws<ObjectDisposedException>(() => pooled.Span.Length);
         Assert.Throws<ObjectDisposedException>(pooled.ToString);
     }
