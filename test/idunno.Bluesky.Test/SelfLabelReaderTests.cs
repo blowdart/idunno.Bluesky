@@ -39,6 +39,21 @@ public class SelfLabelReaderTests
     }
 
     [Fact]
+    public void ReadReturnsDistinctMatchingValuesInOrderForLargeCollections()
+    {
+        List<Label> labels = [];
+        for (int i = 0; i < 32; i++)
+        {
+            labels.Add(CreateLabel(s_actor, Uri, s_cid, $"label-{i}"));
+        }
+
+        labels.Add(CreateLabel(s_actor, Uri, s_cid, "label-3"));
+        labels.Add(CreateLabel(s_actor, Uri, s_cid, "label-0"));
+
+        Assert.Equal(Enumerable.Range(0, 32).Select(i => $"label-{i}"), SelfLabelReader.Read(labels, s_actor, Uri));
+    }
+
+    [Fact]
     public void ReadOnlyMatchesTheCidWhenAsked()
     {
         List<Label> labels =

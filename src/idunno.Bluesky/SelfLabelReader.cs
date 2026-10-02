@@ -11,6 +11,8 @@ namespace idunno.Bluesky;
 /// </summary>
 internal static class SelfLabelReader
 {
+    private const int HashSetThreshold = 8;
+
     /// <summary>
     /// Gets the distinct values, in their original order, of the <paramref name="labels"/> applied by <paramref name="source"/> to <paramref name="uri"/>.
     /// </summary>
@@ -23,6 +25,7 @@ internal static class SelfLabelReader
     public static IReadOnlyList<string> Read(IReadOnlyCollection<Label> labels, Did source, string uri, bool matchCid = false, Cid? cid = null)
     {
         List<string>? values = null;
+        HashSet<string>? seen = null;
 
         foreach (Label label in labels)
         {
@@ -35,9 +38,21 @@ internal static class SelfLabelReader
 
             values ??= [];
 
-            if (!values.Contains(label.Value))
+            if (seen is not null)
+            {
+                if (seen.Add(label.Value))
+                {
+                    values.Add(label.Value);
+                }
+            }
+            else if (!values.Contains(label.Value))
             {
                 values.Add(label.Value);
+
+                if (values.Count >= HashSetThreshold)
+                {
+                    seen = new HashSet<string>(values, StringComparer.Ordinal);
+                }
             }
         }
 

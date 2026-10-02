@@ -10,10 +10,10 @@ The benchmarks replay fixed corpora of messages captured from the live, public F
 ## Running
 
 ```shell
-dotnet run -c Release --project benchmarks/idunno.AtProto.Benchmarks -- --filter *
+dotnet run -c Release --project benchmarks/idunno.AtProto.Benchmarks -- --filter "*"
 ```
 
-Pass `--filter *Firehose*` (or any other BenchmarkDotNet filter) to run a subset. Results are written to
+Pass `--filter "*Firehose*"` (or any other BenchmarkDotNet filter) to run a subset. Results are written to
 `BenchmarkDotNet.Artifacts`.
 
 ## What to trust
