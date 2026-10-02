@@ -36,6 +36,12 @@ Never use `gh run rerun --failed` as the first response to a failed CI test job.
 
 To request Copilot code review on a pull request, run `gh pr edit <number> --repo <owner/repo> --add-reviewer '@copilot'`, then verify with `gh pr view <number> --repo <owner/repo> --json reviewRequests`. Do not claim success unless Copilot is present in `reviewRequests`. If it is not present, report that the request could not be verified and use the PR page's reviewer UI or explain that Copilot code review may be disabled or unavailable for the repository. Do not use `gh pr review` to request Copilot: it submits a review as the authenticated user instead.
 
+## Checking Copilot review findings
+
+For every check of Copilot findings on a pull request, read the full history of Copilot review bodies **and** inline review threads. Review bodies can contain findings in sections such as "Previously missed" that have no inline comment; checking only new comments or unresolved threads is insufficient.
+
+Report new findings, previously missed findings, and older findings that remain unaddressed. Check each finding against the current PR head before calling it addressed; an outdated or resolved thread alone does not prove the code is fixed, and an unresolved thread may already be fixed. Distinguish the finding's code status from its GitHub thread status.
+
 ## Pre-commit gate
 
 Before *every* commit, run both of these from the repository root and require both to be clean:
