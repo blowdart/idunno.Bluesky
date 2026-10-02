@@ -41,7 +41,16 @@ public sealed record FirehoseOptions
     /// Gets the provider used for firehose time reads and reconnect delays.
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
 
     /// <summary>
     /// Gets the host to subscribe to repository events from.

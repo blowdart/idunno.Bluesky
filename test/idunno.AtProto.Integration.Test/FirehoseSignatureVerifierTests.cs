@@ -38,6 +38,12 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     }
 
     [Fact]
+    public void FirehoseTimeProviderCannotBeNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new FirehoseOptions { TimeProvider = null! });
+    }
+
+    [Fact]
     public async Task CachedKeysExpire()
     {
         using FirehoseSignatureVerifier verifier = CreateVerifier();

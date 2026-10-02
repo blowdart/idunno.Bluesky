@@ -12,7 +12,16 @@ public record BlueskyClaimsTransformerOptions
     /// Gets or sets the provider used to determine when cached profiles expire.
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
-    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public TimeProvider TimeProvider
+    {
+        get;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
 
     /// <summary>
     /// The profile cache used to cache profile information during claims transformation. If not provided a default in-memory store will be used.

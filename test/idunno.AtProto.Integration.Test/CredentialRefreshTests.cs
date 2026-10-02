@@ -53,6 +53,29 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task AQueuedRefreshTimerCallbackDoesNotDisableANewerSchedule()
+    {
+        FakeTimeProvider timeProvider = new(DateTimeOffset.UtcNow);
+        RefreshTestServer refreshTestServer = new(this, timeProvider);
+
+        using AtProtoAgent agent = CreateAgent(refreshTestServer, timeProvider);
+        await Login(agent);
+
+        Assert.True(IsRefreshTimerEnabled(agent));
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.True(IsRefreshTimerEnabled(agent));
+
+        int refreshCount = refreshTestServer.RefreshCount;
+
+        typeof(AtProtoAgent)
+            .GetMethod("RefreshTimerElapsed", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(agent, [null]);
+
+        Assert.True(IsRefreshTimerEnabled(agent));
+        Assert.Equal(refreshCount, refreshTestServer.RefreshCount);
+    }
+
+    [Fact]
     public async Task ASuccessfulRefreshLeavesTheRefreshTimerRunning()
     {
         RefreshTestServer refreshTestServer = new(this);

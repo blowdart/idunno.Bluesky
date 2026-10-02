@@ -433,6 +433,8 @@ public partial class AtProtoAgent
 
     private ITimer? _credentialRefreshTimer;
     private double _credentialRefreshTimerInterval;
+    private long _credentialRefreshTimerScheduledAt;
+    private TimeSpan _credentialRefreshTimerDueTime;
     private bool _credentialRefreshTimerEnabled;
 
     internal double CredentialRefreshTimerInterval => _credentialRefreshTimerInterval;
@@ -3928,6 +3930,18 @@ public partial class AtProtoAgent
     {
         lock (_timerLock)
         {
+            if (!_credentialRefreshTimerEnabled)
+            {
+                return;
+            }
+
+            TimeSpan elapsed = Clock.GetElapsedTime(_credentialRefreshTimerScheduledAt);
+            if (elapsed < _credentialRefreshTimerDueTime)
+            {
+                _credentialRefreshTimer!.Change(_credentialRefreshTimerDueTime - elapsed, Timeout.InfiniteTimeSpan);
+                return;
+            }
+
             _credentialRefreshTimerEnabled = false;
         }
 
@@ -4024,8 +4038,10 @@ public partial class AtProtoAgent
     {
         EnsureTokenRefreshTimer();
         _credentialRefreshTimerInterval = Math.Min(dueTime.TotalMilliseconds, int.MaxValue);
+        _credentialRefreshTimerDueTime = TimeSpan.FromMilliseconds(_credentialRefreshTimerInterval);
+        _credentialRefreshTimerScheduledAt = Clock.GetTimestamp();
         _credentialRefreshTimerEnabled = true;
-        _credentialRefreshTimer.Change(TimeSpan.FromMilliseconds(_credentialRefreshTimerInterval), Timeout.InfiniteTimeSpan);
+        _credentialRefreshTimer.Change(_credentialRefreshTimerDueTime, Timeout.InfiniteTimeSpan);
     }
 
     private void StartTokenRefreshTimer()

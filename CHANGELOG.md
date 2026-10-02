@@ -94,6 +94,7 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* Added `DistributedCacheCorrelationStateCache.CreateWithTimeProvider()` to create a distributed correlation state cache that expires entries using a supplied `TimeProvider`.
 * Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`, used to expire cached claims.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite

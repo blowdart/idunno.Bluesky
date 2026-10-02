@@ -85,7 +85,16 @@ public record JetstreamOptions
     /// Gets the provider used for Jetstream time reads and timed waits.
     /// </summary>
     /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
 
     /// <summary>
     /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.

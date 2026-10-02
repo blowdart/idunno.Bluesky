@@ -68,7 +68,6 @@ public class SqliteIdentityStoreRefreshLockTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using TemporarySqliteDatabase database = new();
-        FakeTimeProvider timeProvider = new();
         SqliteIdentityStore store = new(database.ConnectionString);
 
         string? refreshLockToken = await store.StartRefresh(s_did, cancellationToken);

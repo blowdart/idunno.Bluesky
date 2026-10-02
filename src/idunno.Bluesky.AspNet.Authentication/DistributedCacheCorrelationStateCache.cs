@@ -29,6 +29,20 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     {
     }
 
+    /// <summary>
+    /// Creates a new instance of <see cref="DistributedCacheCorrelationStateCache"/> using the specified time provider.
+    /// </summary>
+    /// <param name="cache">The <see cref="IDistributedCache"/> backing this instance.</param>
+    /// <param name="timeProvider">The provider used to determine when entries expire.</param>
+    /// <param name="entryTimeToLive">The TTL that entries in the cache should last for.</param>
+    /// <returns>A new cache using <paramref name="timeProvider"/>.</returns>
+    /// <exception cref="ArgumentNullException">The value of <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public static DistributedCacheCorrelationStateCache CreateWithTimeProvider(
+        IDistributedCache cache,
+        TimeProvider timeProvider,
+        TimeSpan? entryTimeToLive = null) =>
+            new(cache, entryTimeToLive, timeProvider);
+
     internal DistributedCacheCorrelationStateCache(IDistributedCache cache, TimeSpan? entryTimeToLive, TimeProvider timeProvider)
     {
         Cache = cache;

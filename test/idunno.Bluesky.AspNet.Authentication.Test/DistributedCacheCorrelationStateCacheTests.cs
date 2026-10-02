@@ -27,10 +27,10 @@ public class DistributedCacheCorrelationStateCacheTests : CorrelationStateCacheT
     public async Task StateExpiresAfterItsTimeToLive()
     {
         FakeTimeProvider timeProvider = new();
-        DistributedCacheCorrelationStateCache cache = new(
+        DistributedCacheCorrelationStateCache cache = DistributedCacheCorrelationStateCache.CreateWithTimeProvider(
             new TimeProviderDistributedCache(timeProvider),
-            entryTimeToLive: TimeSpan.FromMilliseconds(50),
-            timeProvider);
+            timeProvider,
+            entryTimeToLive: TimeSpan.FromMilliseconds(50));
 
         Guid correlationId = Guid.NewGuid();
         await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId), TestContext.Current.CancellationToken);

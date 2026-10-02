@@ -22,6 +22,12 @@ public class AtProtoJetstreamConnectionTests
     private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
 
     [Fact]
+    public void JetstreamTimeProviderCannotBeNull()
+    {
+        Assert.Throws<ArgumentNullException>(() => new JetstreamOptions { TimeProvider = null! });
+    }
+
+    [Fact]
     public async Task AStateChangedHandlerDoesNotRunUnderTheLockWhichGuardsTheFilters()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
