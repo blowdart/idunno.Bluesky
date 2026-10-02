@@ -103,7 +103,7 @@ public class CallbackServerFactoryTests
                 candidate.SuccessBody = "<p>configured</p>";
                 servers.Add(candidate);
             },
-            getPort: () => ++attempts == 1 ? heldPort : CallbackServer.GetRandomUnusedPort());
+            getPort: () => ++attempts == 1 ? heldPort : 0);
 
         Assert.InRange(attempts, 2, CallbackServerFactory.MaximumAttempts);
         Assert.Equal("/oauth/callback", server.Uri.AbsolutePath);
