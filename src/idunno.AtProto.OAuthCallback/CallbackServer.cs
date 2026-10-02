@@ -159,8 +159,69 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Uri = uri;
 
-        configure?.Invoke(this);
+        _startupTask = InitializeListenerAsync(port, path, loggerFactory, ownedSockets, configure, cancellationToken);
 
+        _ = RunListenerAsync().ContinueWith(
+            static (listenerTask, state) =>
+            {
+                CallbackServer server = (CallbackServer)state!;
+
+                if (listenerTask.Exception is not null)
+                {
+                    Logger.ListenerFaulted(server._logger, listenerTask.Exception);
+                    server._source.TrySetException(listenerTask.Exception.InnerExceptions);
+                }
+            },
+            this,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        // Observe failures even when no caller waits for a callback.
+        _ = _source.Task.ContinueWith(
+            static faulted => _ = faulted.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        _ = _startupTask.ContinueWith(
+            static faulted => _ = faulted.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private async Task InitializeListenerAsync(
+        int port,
+        string path,
+        ILoggerFactory? loggerFactory,
+        Socket[] ownedSockets,
+        Action<CallbackServer>? configure,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            configure?.Invoke(this);
+            await BuildAndStartListenerAsync(port, path, loggerFactory, ownedSockets, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            if (_listener is not null)
+            {
+                await _listener.DisposeAsync().ConfigureAwait(false);
+            }
+
+            throw;
+        }
+    }
+
+    private async Task BuildAndStartListenerAsync(
+        int port,
+        string path,
+        ILoggerFactory? loggerFactory,
+        Socket[] ownedSockets,
+        CancellationToken cancellationToken)
+    {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
 
         // This server receives OAuth authorization codes, so it must only ever be reachable from the
@@ -239,44 +300,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
         Logger.ListeningOn(_logger, Uri);
 
-        _startupTask = _listener.StartAsync(cancellationToken);
-
-        // The listener task faults if the server cannot start, for example when another process claimed the
-        // port after GetRandomUnusedPort() released it. Leaving the task unobserved means the instance
-        // looks constructed but is dead and every caller waiting for a callback hangs until it times
-        // out, so surface the failure to the waiter instead.
-        _ = RunListenerAsync(_listener).ContinueWith(
-            static (listenerTask, state) =>
-            {
-                CallbackServer server = (CallbackServer)state!;
-
-                if (listenerTask.Exception is not null)
-                {
-                    Logger.ListenerFaulted(server._logger, listenerTask.Exception);
-                    server._source.TrySetException(listenerTask.Exception.InnerExceptions);
-                }
-            },
-            this,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
-
-        // A listener fault, and disposal without a callback ever being awaited, both complete _source
-        // with an exception. Nothing observes that exception when the caller never called
-        // WaitForCallbackAsync, which surfaces later as a TaskScheduler.UnobservedTaskException in the
-        // hosting application. Reading Exception here marks it observed without taking it away from a
-        // caller who does await the task.
-        _ = _source.Task.ContinueWith(
-            static faulted => _ = faulted.Exception,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
-
-        _ = _startupTask.ContinueWith(
-            static faulted => _ = faulted.Exception,
-            CancellationToken.None,
-            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-            TaskScheduler.Default);
+        await _listener.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -320,13 +344,13 @@ public sealed class CallbackServer : IAsyncDisposable
             Socket[] sockets = [];
             CallbackServer? server = null;
             int attemptedPort = getPort?.Invoke() ?? 0;
-            bool attemptedPortRecorded = false;
+            bool allocatingSockets = true;
 
             try
             {
                 sockets = BindLoopbackSockets(attemptedPort, out attemptedPort);
                 attemptedPorts.Add(attemptedPort);
-                attemptedPortRecorded = true;
+                allocatingSockets = false;
 
                 server = new CallbackServer(attemptedPort, path, loggerFactory, sockets, configure, cancellationToken);
                 sockets = [];
@@ -335,21 +359,10 @@ public sealed class CallbackServer : IAsyncDisposable
 
                 return server;
             }
-            catch (Exception exception) when (IsAddressInUse(exception))
+            catch (Exception exception) when (allocatingSockets && IsAddressInUse(exception))
             {
-                if (!attemptedPortRecorded)
-                {
-                    attemptedPorts.Add(attemptedPort);
-                }
-
-                if (server is not null)
-                {
-                    await server.DisposeAsync().ConfigureAwait(false);
-                }
-                else
-                {
-                    DisposeSockets(sockets);
-                }
+                attemptedPorts.Add(attemptedPort);
+                DisposeSockets(sockets);
 
                 if (attempt == MaximumCreationAttempts)
                 {
@@ -405,11 +418,15 @@ public sealed class CallbackServer : IAsyncDisposable
         }
     }
 
-    private static bool IsAddressInUse(Exception exception)
+    internal static bool IsAddressInUse(Exception exception)
     {
-        return exception is SocketException { SocketErrorCode: SocketError.AddressAlreadyInUse } ||
-            exception.InnerException is not null && IsAddressInUse(exception.InnerException) ||
-            exception is AggregateException aggregate && aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsAddressInUse);
+        return exception switch
+        {
+            AggregateException aggregate => aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsAddressInUse),
+            SocketException { SocketErrorCode: SocketError.AddressAlreadyInUse } => true,
+            { InnerException: not null } => IsAddressInUse(exception.InnerException),
+            _ => false
+        };
     }
 
     private static void DisposeSockets(IEnumerable<Socket> sockets)
@@ -428,13 +445,19 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <summary>
     /// Runs the listener until shutdown, preserving the disposal performed by the host's RunAsync method.
     /// </summary>
-    /// <param name="listener">The listener to run.</param>
     /// <returns>A task representing the listener lifetime.</returns>
-    private async Task RunListenerAsync(WebApplication listener)
+    private async Task RunListenerAsync()
     {
+        WebApplication? listener = _listener;
+        await _startupTask.ConfigureAwait(false);
+
+        if (listener is null)
+        {
+            throw new InvalidOperationException("Callback server startup completed without a listener.");
+        }
+
         try
         {
-            await _startupTask.ConfigureAwait(false);
             await listener.WaitForShutdownAsync(CancellationToken.None).ConfigureAwait(false);
         }
         finally

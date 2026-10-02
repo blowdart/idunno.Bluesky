@@ -4,7 +4,11 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto.OAuthCallback.Test;
@@ -139,10 +143,15 @@ public class CallbackServerFactoryTests
         Assert.Contains($"Attempted ports: {string.Join(", ", Enumerable.Repeat(heldPort, CallbackServerFactory.MaximumAttempts))}", exception.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task ANonCollisionStartupFailureIsPropagatedWithoutRetrying()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ANonCollisionStartupFailureIsPropagatedWithoutRetrying(bool mixedAggregate)
     {
-        InvalidOperationException failure = new("Deliberate startup failure.");
+        InvalidOperationException unrelatedFailure = new("Deliberate startup failure.");
+        Exception failure = mixedAggregate
+            ? new AggregateException(new SocketException((int)SocketError.AddressAlreadyInUse), unrelatedFailure)
+            : unrelatedFailure;
         using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(new FailingStartupLoggerProvider(failure)));
         List<CallbackServer> servers = [];
 
@@ -178,6 +187,110 @@ public class CallbackServerFactoryTests
         {
             _ = server.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
         });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AddressCollisionExceptionsFromConfigurationAreNotRetried(bool aggregate)
+    {
+        SocketException collision = new((int)SocketError.AddressAlreadyInUse);
+        Exception failure = aggregate ? new AggregateException(collision) : collision;
+        List<CallbackServer> servers = [];
+
+        Exception exception = await Assert.ThrowsAnyAsync<Exception>(() =>
+            CallbackServerFactory.CreateAsync(configure: server =>
+            {
+                servers.Add(server);
+                throw failure;
+            }));
+
+        Assert.Same(failure, exception);
+        CallbackServer server = Assert.Single(servers);
+        Assert.Throws<ObjectDisposedException>(() =>
+        {
+            _ = server.WaitForCallbackAsync(cancellationToken: TestContext.Current.CancellationToken);
+        });
+
+        using TcpListener probe = new(IPAddress.Loopback, server.Uri.Port);
+        probe.Start();
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void MixedAggregatesAreNotAddressCollisions(bool collisionFirst, bool wrapped)
+    {
+        SocketException collision = new((int)SocketError.AddressAlreadyInUse);
+        InvalidOperationException failure = new("Unrelated failure.");
+        AggregateException aggregate = collisionFirst
+            ? new AggregateException(collision, failure)
+            : new AggregateException(failure, collision);
+        Exception exception = wrapped ? new IOException("Wrapped failure.", aggregate) : aggregate;
+
+        Assert.False(CallbackServer.IsAddressInUse(exception));
+        Assert.True(CallbackServer.IsAddressInUse(new AggregateException(collision, new IOException("Wrapped collision.", collision))));
+        Assert.False(CallbackServer.IsAddressInUse(new AggregateException()));
+    }
+
+    [Fact]
+    public async Task ALoggerFailureAfterHostConstructionDisposesTheHostAndSockets()
+    {
+        InvalidOperationException failure = new("Deliberate listening log failure.");
+        CallbackServer? candidate = null;
+        WebApplication? listener = null;
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+            builder.SetMinimumLevel(LogLevel.Debug).AddProvider(new ListeningFailureLoggerProvider(() =>
+            {
+                Assert.NotNull(candidate);
+                listener = Assert.IsType<WebApplication>(typeof(CallbackServer)
+                    .GetField("_listener", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(candidate));
+                _ = listener.Services.GetRequiredService<IHostApplicationLifetime>();
+                throw failure;
+            })));
+
+        AggregateException exception = await Assert.ThrowsAsync<AggregateException>(() =>
+            CallbackServerFactory.CreateAsync(loggerFactory: loggerFactory, configure: server => candidate = server));
+
+        Assert.Same(failure, Assert.Single(exception.InnerExceptions));
+        Assert.NotNull(listener);
+        Assert.Throws<ObjectDisposedException>(() => listener.Services.GetRequiredService<IHostApplicationLifetime>());
+        Assert.NotNull(candidate);
+        using TcpListener probe = new(IPAddress.Loopback, candidate.Uri.Port);
+        probe.Start();
+    }
+
+    private sealed class ListeningFailureLoggerProvider(Action onListening) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new ListeningFailureLogger(categoryName, onListening);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class ListeningFailureLogger(string categoryName, Action onListening) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (categoryName == typeof(CallbackServer).FullName &&
+                    eventId.Id == 1)
+                {
+                    onListening();
+                }
+            }
+        }
     }
 
     private sealed class FailingStartupLoggerProvider(Exception failure) : ILoggerProvider
