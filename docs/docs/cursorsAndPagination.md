@@ -26,7 +26,7 @@ HashSet<string> seenCursors = new(StringComparer.Ordinal);
 
 notifications.EnsureSucceeded();
 
-while (notifications.Result.Count != 0)
+while (true)
 {
     // Do whatever needs to be done on the page
     // of notifications.
