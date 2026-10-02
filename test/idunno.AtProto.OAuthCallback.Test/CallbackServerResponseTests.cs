@@ -18,7 +18,7 @@ public class CallbackServerResponseTests
     [InlineData("callback/.")]
     public void ConstructorRejectsPathsWhichAUriWouldResolveAway(string path)
     {
-        Assert.Throws<ArgumentException>(() => new CallbackServer(CallbackServer.GetRandomUnusedPort(), path));
+        Assert.Throws<ArgumentException>(() => new CallbackServer(12345, path));
     }
 
     [Fact]
@@ -26,13 +26,13 @@ public class CallbackServerResponseTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort())
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(configure: server =>
         {
-            SuccessBody = "<p>login worked</p>",
-            SuccessTitle = "<title>worked</title>",
-            FailureBody = "<p>login did not work</p>",
-            FailureTitle = "<title>did not work</title>"
-        };
+            server.SuccessBody = "<p>login worked</p>";
+            server.SuccessTitle = "<title>worked</title>";
+            server.FailureBody = "<p>login did not work</p>";
+            server.FailureTitle = "<title>did not work</title>";
+        });
 
         Task<string> callback = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -57,13 +57,13 @@ public class CallbackServerResponseTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort())
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(configure: server =>
         {
-            SuccessBody = "<p>login worked</p>",
-            SuccessTitle = "<title>worked</title>",
-            FailureBody = "<p>login did not work</p>",
-            FailureTitle = "<title>did not work</title>"
-        };
+            server.SuccessBody = "<p>login worked</p>";
+            server.SuccessTitle = "<title>worked</title>";
+            server.FailureBody = "<p>login did not work</p>";
+            server.FailureTitle = "<title>did not work</title>";
+        });
 
         Task<string> callback = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -86,7 +86,7 @@ public class CallbackServerResponseTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -103,10 +103,8 @@ public class CallbackServerResponseTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort())
-        {
-            ContentSecurityPolicy = "default-src 'self'"
-        };
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(
+            configure: server => server.ContentSecurityPolicy = "default-src 'self'");
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -121,10 +119,8 @@ public class CallbackServerResponseTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort())
-        {
-            ContentSecurityPolicy = null
-        };
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(
+            configure: server => server.ContentSecurityPolicy = null);
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -146,7 +142,7 @@ public class CallbackServerResponseTests
             builder.AddProvider(provider);
         });
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(loggerFactory: loggerFactory);
 
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
         _ = server.WaitForCallbackAsync(timeoutInSeconds: 17, cancellationToken: testToken);

@@ -17,7 +17,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         using CancellationTokenSource cts = new();
 
@@ -36,7 +36,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
@@ -52,7 +52,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 1, cancellationToken: testToken);
 
@@ -65,7 +65,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -80,7 +80,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        CallbackServer server = await CallbackServerFactory.CreateAsync();
         await server.DisposeAsync();
 
         Assert.Throws<ObjectDisposedException>(() =>
@@ -92,7 +92,7 @@ public class CallbackServerTests
     [Fact]
     public async Task DisposingTwiceDoesNotThrow()
     {
-        CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         await server.DisposeAsync();
         await server.DisposeAsync();
@@ -103,7 +103,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Task<string> first = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
         Task<string> second = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
@@ -128,7 +128,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Assert.Throws<ArgumentOutOfRangeException>(() =>
         {
@@ -141,7 +141,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -163,7 +163,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -210,8 +210,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        int port = CallbackServer.GetRandomUnusedPort();
-        await using CallbackServer server = new(port);
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         Assert.Equal(IPAddress.Loopback.ToString(), server.Uri.Host);
 
@@ -220,7 +219,7 @@ public class CallbackServerTests
         Assert.SkipWhen(externalAddress is null, "The machine has no non loopback IPv4 address to probe.");
 
         // If the server had bound a wildcard address this connection would succeed.
-        Assert.False(await CanConnectAsync(externalAddress!, port, testToken));
+        Assert.False(await CanConnectAsync(externalAddress!, server.Uri.Port, testToken));
     }
 
     [Fact]
@@ -228,7 +227,9 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        int wildcardPort = CallbackServer.GetRandomUnusedPort();
+        using TcpListener holder = new(IPAddress.Loopback, 0);
+        holder.Start();
+        int wildcardPort = ((IPEndPoint)holder.LocalEndpoint).Port;
 
         // WebApplication.CreateBuilder() reads ASPNETCORE_ prefixed environment variables, and a Kestrel
         // endpoint found there replaces anything configured in code. The callback server must ignore it.
@@ -236,7 +237,7 @@ public class CallbackServerTests
 
         try
         {
-            await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+            await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
             Task<string> waiting = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
 
@@ -246,7 +247,7 @@ public class CallbackServerTests
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("?code=abc", await waiting.WaitAsync(s_completionBudget, testToken));
 
-            Assert.False(await CanConnectAsync(IPAddress.Loopback, wildcardPort, testToken));
+            Assert.NotEqual(wildcardPort, server.Uri.Port);
         }
         finally
         {
@@ -259,7 +260,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         using HttpClient client = new();
         using HttpRequestMessage request = new(HttpMethod.Get, new Uri($"{server.Uri}?code=abc"));
@@ -275,7 +276,7 @@ public class CallbackServerTests
     {
         CancellationToken testToken = TestContext.Current.CancellationToken;
 
-        await using CallbackServer server = new(CallbackServer.GetRandomUnusedPort());
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
 
         using StringContent content = new(string.Empty);
         using HttpClient client = new();
