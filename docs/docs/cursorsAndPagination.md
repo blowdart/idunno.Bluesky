@@ -52,3 +52,6 @@ APIs that support pagination include `ListNotifications()`, `SearchActors()`, `G
 > through the Bluesky Discovery feed. This feed uses the cursor to track what it's already shown you, so as you load more and more pages the cursor
 > grows and grows, until, if you page for long enough, the cursor is too big to send in the request and you get a `400 Bad Request` response.
 > This is why the feed sample only loads 10 pages of 5 posts.
+
+> [!WARNING]
+> Cursors are supplied by the API and are opaque; do not assume they always increase or that a repeated cursor will be returned immediately. A faulty or untrusted API can return the same cursor repeatedly, cycle between multiple cursors, or reset an earlier cursor sequence after some number of responses. A pagination loop can then repeat pages or make requests indefinitely. Applications that paginate should keep a set of cursors already used and stop if a cursor repeats, and also impose a maximum page/request count or deadline because a server can keep returning new cursors forever. Cursor-cycle checks help detect looping; they do not prove that pages are complete, unique, or trustworthy.

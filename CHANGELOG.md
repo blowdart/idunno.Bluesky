@@ -182,6 +182,7 @@
 * `LabelerPolicies.LabelValues` and `LabelValueDefinitions` now drop any `null` entries a labeler returns.
   Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
   collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
+* Bounded `DeleteFromList` pagination and fail with an explicit upstream pagination error if the list API cycles cursors or exceeds the page limit.
 
 #### idunno.Bluesky.AspNet.Authentication
 
