@@ -190,6 +190,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.AtProto/Samples.AtProto.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />

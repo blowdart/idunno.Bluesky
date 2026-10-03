@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -15,6 +16,7 @@ namespace idunno.AtProto;
 /// <para>See https://atproto.com/specs/nsid for details.</para>
 /// </remarks>
 [JsonConverter(typeof(Json.NsidConverter))]
+[TypeConverter(typeof(NsidTypeConverter))]
 public sealed partial class Nsid : IEquatable<Nsid>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]

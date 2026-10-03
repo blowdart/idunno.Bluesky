@@ -68,6 +68,29 @@ public sealed class OAuthOptions
     public string ClientId { get; set; } = default!;
 
     /// <summary>
+    /// Gets or sets the optional human-readable client name advertised in OAuth client metadata.
+    /// </summary>
+    public string? ClientName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional client homepage URL advertised in OAuth client metadata.
+    /// </summary>
+    /// <remarks>
+    /// <para>The homepage must have the same hostname as <see cref="ClientId"/> when publishing AT Protocol OAuth client metadata.</para>
+    /// </remarks>
+    public Uri? ClientUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional HTTPS terms of service URL advertised in OAuth client metadata.
+    /// </summary>
+    public Uri? TosUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional HTTPS privacy policy URL advertised in OAuth client metadata.
+    /// </summary>
+    public Uri? PolicyUri { get; set; }
+
+    /// <summary>
     /// Gets or sets the <see cref="Uri"/> the OAuth server should call back to when it has authenticated the user.
     /// </summary>
     public Uri? ReturnUri { get; set; } = default!;
@@ -183,6 +206,8 @@ public sealed class OAuthOptions
     /// <remarks>
     /// <para>The collection is copied when assigned. The default is an empty collection.</para>
     /// <para>Explicit scopes passed to an OAuth request override both configured scopes and permission sets.</para>
+    /// <para>Configuration binding accepts objects with a string <c>Nsid</c> and an optional string <c>Audience</c>.
+    /// Enable <c>ErrorOnUnknownConfiguration</c> when binding to reject invalid collection entries rather than skipping them.</para>
     /// </remarks>
     public IEnumerable<OAuthPermissionSet> PermissionSets
     {

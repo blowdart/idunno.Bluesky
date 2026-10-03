@@ -1,4 +1,12 @@
 #nullable enable
+idunno.AtProto.Authentication.OAuthOptions.TosUri.get -> System.Uri?
+idunno.AtProto.Authentication.OAuthOptions.TosUri.set -> void
+idunno.AtProto.Authentication.OAuthOptions.PolicyUri.get -> System.Uri?
+idunno.AtProto.Authentication.OAuthOptions.PolicyUri.set -> void
+idunno.AtProto.Authentication.OAuthOptions.ClientName.get -> string?
+idunno.AtProto.Authentication.OAuthOptions.ClientName.set -> void
+idunno.AtProto.Authentication.OAuthOptions.ClientUri.get -> System.Uri?
+idunno.AtProto.Authentication.OAuthOptions.ClientUri.set -> void
 idunno.AtProto.AtProtoAgent.ProcessOAuth2LoginResponse(idunno.AtProto.Authentication.OAuthClient! oAuthClient, string! callbackData, idunno.AtProto.Did! expectedDid, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 idunno.AtProto.InsufficientScope
 idunno.AtProto.InsufficientScope.InsufficientScope(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void

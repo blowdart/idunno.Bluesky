@@ -8,6 +8,8 @@
 
 #### idunno.AtProto
 
+* Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
+* Enabled structured configuration binding for `OAuthOptions.PermissionSets` using validated `Nsid` and optional `Audience` fields.
 * Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
 * Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.
 * Added `OAuthPermissionSet` for referencing published AT Protocol permission-set lexicons, including inherited RPC audiences.
@@ -115,6 +117,7 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* Added opt-in OAuth client metadata generation and publishing with `AddBlueskyOAuthClientMetadata()`, `UseBlueskyOAuthClientMetadata()` and `BlueskyOAuthClientMetadataOptions.GenerateJson()`, using the configured public web client's URLs, scopes and permission sets.
 * Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
@@ -124,6 +127,7 @@
 
 #### Samples
 
+* Added `Samples.AspNetClientMetadata`, which previews generated OAuth client metadata for example.org with the `atproto` scope and Bluesky `ViewAll` permission set.
 * Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
 * Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.

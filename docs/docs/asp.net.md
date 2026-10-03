@@ -128,6 +128,140 @@ sent to the login page, where you enter your handle, bounced through the Bluesky
 
 If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
 
+### Publishing OAuth client metadata
+
+Production OAuth clients must publish a [client metadata document](https://atproto.com/specs/oauth#client-id-metadata-document)
+at the exact URL configured as their `OAuthOptions.ClientId`. You can generate and serve this document without maintaining a JSON file.
+
+Configure the agent's production OAuth settings and optionally configure metadata branding:
+
+```c#
+builder.Services.Configure<BlueskyAgentOptions>(options =>
+{
+    options.OAuthOptions = new OAuthOptions(
+        "https://app.example.com/oauth-client-metadata.json",
+        new Uri("https://app.example.com/Bluesky/Callback"),
+        ["atproto", "transition:generic"])
+    {
+        ClientName = "My Bluesky application",
+        ClientUri = new Uri("https://app.example.com/"),
+        TosUri = new Uri("https://app.example.com/terms"),
+        PolicyUri = new Uri("https://app.example.com/privacy")
+    };
+});
+
+builder.Services.AddBlueskyOAuthClientMetadata();
+```
+
+`OAuthOptions` is in `idunno.AtProto.Authentication`; `BlueskyAgentOptions` is in `idunno.Bluesky`.
+Keep your existing `AddBluesky()` authentication registration.
+
+The optional `ClientName`, `ClientUri`, `TosUri` and `PolicyUri` properties belong to `OAuthOptions`, alongside `ClientId` and `ReturnUri`.
+They can also be bound from the existing agent configuration:
+
+```c#
+builder.Services.AddBlueskyOAuthClientMetadata();
+builder.Services.Configure<BlueskyAgentOptions>(
+    builder.Configuration.GetSection("BlueskyAgent"),
+    options => options.ErrorOnUnknownConfiguration = true);
+```
+
+For example, in `appsettings.json`:
+
+```json
+{
+  "BlueskyAgent": {
+    "OAuthOptions": {
+      "ClientId": "https://app.example.com/oauth-client-metadata.json",
+      "ReturnUri": "https://app.example.com/Bluesky/Callback",
+      "Scopes": [ "atproto", "transition:generic" ],
+      "ClientName": "My Bluesky application",
+      "ClientUri": "https://app.example.com/",
+      "TosUri": "https://app.example.com/terms",
+      "PolicyUri": "https://app.example.com/privacy"
+    }
+  }
+}
+```
+
+After building the app, add the publishing middleware **before** authentication, authorization, static files and anything else that
+could intercept the metadata URL:
+
+```c#
+app.UseBlueskyOAuthClientMetadata();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+The middleware serves anonymous GET requests with HTTP 200 and `application/json`, supports HEAD, and rejects other methods
+at the metadata URL with HTTP 405. Other URLs continue through the existing pipeline. It uses the path and query of the configured
+client ID, not the request host, to select requests; the document's URLs never come from untrusted request headers.
+If you use `UsePathBase()`, call it before the metadata middleware and include the public path base in the client ID.
+Ensure that the configured HTTPS URL is publicly reachable and is not redirected by your proxy or other middleware.
+
+The generated document describes a **public web client** (`token_endpoint_auth_method: none`) with DPoP, authorization code
+and refresh token support, matching the SDK's existing OAuth implementation. It does not add confidential-client keys or native-client support.
+The client ID must use HTTPS with no explicit port, credentials or fragment. The callback must use HTTPS with no credentials,
+fragment or explicit default port. The homepage must share the client ID's hostname; logo, terms and privacy URLs must use HTTPS.
+
+Scopes include `OAuthOptions.Scopes` and its typed `PermissionSets`, deduplicated with ordinal comparison.
+Permission sets can be configured in either of two equivalent ways. For example, to request `atproto` and Bluesky's
+read-only `ViewAll` permission set, put this under `BlueskyAgent:OAuthOptions`:
+
+**Structured permission sets** keep the NSID and audience readable:
+
+```json
+"Scopes": [ "atproto" ],
+"PermissionSets": [
+  {
+    "Nsid": "app.bsky.authViewAll",
+    "Audience": "did:web:api.bsky.app#bsky_appview"
+  }
+]
+```
+
+`Audience` is optional when the permission set does not need an inherited RPC audience. If provided, it must be a DID with
+a service fragment, or `*`. The NSID is validated during binding, and the audience is validated by the permission-set constructor.
+Use `ErrorOnUnknownConfiguration = true` as shown above so invalid or incomplete collection entries fail configuration
+instead of being skipped by the configuration binder. Strings are converted to validated `Nsid` values by a type converter;
+the resulting `OAuthPermissionSet` objects remain immutable.
+
+**Raw scopes** encode the same permission-set reference directly:
+
+```json
+"Scopes": [
+  "atproto",
+  "include:app.bsky.authViewAll?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview"
+]
+```
+
+Both approaches produce the same OAuth requests and generated metadata. Structured permission sets percent-encode the audience
+automatically; raw scopes must already contain the encoded audience. You can combine raw scopes and structured sets, and identical
+scope strings are included only once. Code-based configuration still supports
+`options.OAuthOptions.PermissionSets = [BlueskyOAuthPermissionSets.ViewAll]`.
+
+If the app may request additional scopes later, add each to `BlueskyOAuthClientMetadataOptions.AdditionalScopes` so the document
+advertises every scope the app might request. This does not change initial login scopes. Scope tokens must be valid OAuth scope
+tokens and the advertised set must include `atproto`.
+
+Metadata is validated and generated once when the pipeline is configured; invalid settings fail app startup. Restart the app after changing
+OAuth or metadata settings. Publication is opt-in and does not affect apps which already host a static metadata file.
+For local development, continue using the special `http://localhost` client ID: the authorization server supplies its virtual metadata,
+so do not enable this publishing middleware with that ID.
+
+To generate the JSON yourself, without the publishing middleware, call
+`new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions)`. This uses the same validation and source-generated serialization.
+
+`Samples.AspNetClientMetadata` is a minimal metadata-only sample. Run it with
+`dotnet run --project samples\Samples.AspNetClientMetadata` and browse to `http://127.0.0.1:5252/`.
+The home page redirects to `/oauth-client-metadata.json`, showing a document configured for `https://example.org`
+with the `atproto` scope and `BlueskyOAuthPermissionSets.ViewAll` permission set.
+Its client name and homepage URL are bound from `BlueskyAgent:OAuthOptions` in `appsettings.json`.
+It also binds the structured `PermissionSets` array from that section, with no permission-set construction in the sample code.
+The local address is only a preview: the document advertises the example.org URLs, not localhost.
+The sample does not implement login or the advertised callback; replace the example URLs and implement the callback before using it for OAuth.
+
 ### Changing the appearance of the UI pages
 
 The pages in `idunno.Bluesky.AspNet.Authentication.UI` render inside a plain, self contained layout that the package ships, styled by a small stylesheet the package

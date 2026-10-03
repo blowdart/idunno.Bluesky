@@ -26,6 +26,31 @@ public static class BlueskyExtensions
     internal const string TrimmingRequiredUnreferencedCodeMessage = "BlueskyAgentOptions instances may their members trimmed. Ensure all required members are preserved.";
 
     /// <summary>
+    /// Adds configuration for publishing a public web client's OAuth metadata document.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configureOptions">An optional delegate to configure branding and additional advertised scopes.</param>
+    /// <returns>The service collection.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="services"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <c>UseBlueskyOAuthClientMetadata()</c> to publish the document at the client ID configured in <see cref="AtProtoAgentOptions.OAuthOptions"/>.</para>
+    /// </remarks>
+    public static IServiceCollection AddBlueskyOAuthClientMetadata(
+        this IServiceCollection services,
+        Action<BlueskyOAuthClientMetadataOptions>? configureOptions = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddOptions<BlueskyOAuthClientMetadataOptions>();
+        if (configureOptions is not null)
+        {
+            services.Configure(configureOptions);
+        }
+
+        return services;
+    }
+
+    /// <summary>
     ///<para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the default scheme.
     /// The default scheme is specified by <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.

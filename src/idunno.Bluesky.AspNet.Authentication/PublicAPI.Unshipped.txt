@@ -1,3 +1,12 @@
 #nullable enable
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.BlueskyOAuthClientMetadataOptions() -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.AdditionalScopes.get -> System.Collections.Generic.IList<string!>!
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.LogoUri.get -> System.Uri?
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.LogoUri.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.GenerateJson(idunno.AtProto.Authentication.OAuthOptions! oAuthOptions) -> string!
+Microsoft.AspNetCore.Builder.BlueskyOAuthClientMetadataExtensions
+static Microsoft.AspNetCore.Builder.BlueskyOAuthClientMetadataExtensions.UseBlueskyOAuthClientMetadata(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
+static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyOAuthClientMetadata(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions!>? configureOptions = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.get -> System.TimeProvider!
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.set -> void

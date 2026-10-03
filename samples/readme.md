@@ -19,6 +19,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.ConsoleShellOAuth` - a skeleton console application which authenticates with OAuth that you can use as a starting point for experimentation.
 * `Samples.Common` - helper functions used in the sample applications.
 
+* `Samples.AspNetClientMetadata` - a minimal ASP.NET sample which redirects its home page to generated OAuth client metadata configured for example.org, with `atproto` and the Bluesky `ViewAll` permission set.
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
 * `Samples.Bot` - a sample showing a simple bot posting on a scheduled time.
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
@@ -40,6 +41,23 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.Video` - a sample that demonstrates video uploading and embedding.
 
 * `Samples.BulkDelete` - an implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.
+
+## ASP.NET OAuth client metadata
+
+```powershell
+dotnet run --project samples\Samples.AspNetClientMetadata
+```
+
+Browse to `http://127.0.0.1:5252/`. The home page redirects to `/oauth-client-metadata.json` so you can inspect the generated JSON.
+The document declares `https://example.org/oauth-client-metadata.json` as its client ID,
+`https://example.org/Bluesky/Callback` as its callback, and `atproto` followed by the `BlueskyOAuthPermissionSets.ViewAll` scope.
+These are example production URLs; local browsing is a preview, not an OAuth login.
+The optional client name and homepage URL are configured under `BlueskyAgent:OAuthOptions` in the sample's `appsettings.json`, alongside its client ID, callback and scopes.
+The same section contains a structured `PermissionSets` array with the `ViewAll` NSID and its unencoded audience.
+All OAuth settings are bound from configuration; no permission-set construction in code is needed.
+The agent's `OAuthOptions` also supplies example terms of service and privacy policy URLs,
+published as `tos_uri` and `policy_uri` in the document.
+The sample does not implement authentication or the callback endpoint.
 
 ## OAuth permission sets
 
