@@ -66,7 +66,8 @@ internal static class BffEndpoints
             BffSessions sessions,
             IOptions<BlueskyAgentOptions> options,
             IHttpClientFactory httpClientFactory,
-            TimeProvider clock) =>
+            TimeProvider clock,
+            ILoggerFactory loggerFactory) =>
         {
             var state = await manager.LoadState();
             if (state is null || !context.Request.QueryString.HasValue)
@@ -90,12 +91,15 @@ internal static class BffEndpoints
                     {
                         try
                         {
-                            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                            await previous.Client.LogoutAsync(timeout.Token);
+                            string previousId = context.User.FindFirstValue(SessionClaim)!;
+                            await RevokeAndRemovePreviousSessionAsync(
+                                sessions,
+                                previousId,
+                                previous,
+                                loggerFactory.CreateLogger("Samples.ReactBff.BffEndpoints"));
                         }
                         finally
                         {
-                            sessions.Remove(context.User.FindFirstValue(SessionClaim)!, previous);
                             await context.SignOutAsync(CookieScheme);
                         }
                     }
@@ -210,6 +214,27 @@ internal static class BffEndpoints
 
                 return Results.NoContent();
             }));
+    }
+
+    internal static async Task RevokeAndRemovePreviousSessionAsync(
+        BffSessions sessions,
+        string id,
+        BffSession session,
+        ILogger logger)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await session.Client.LogoutAsync(timeout.Token);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            BffLog.PreviousSessionRevocationFailed(logger);
+        }
+        finally
+        {
+            sessions.Remove(id, session);
+        }
     }
 
     private static async Task<IResult> WithSession(

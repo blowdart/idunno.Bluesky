@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
@@ -260,6 +261,38 @@ public class BffTests
         Assert.True(client.Disposed);
         using var replay = await browser.Send(HttpMethod.Get, "/api/timeline");
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+    }
+
+    [Fact]
+    public async Task PreviousSessionRevocationFailureDoesNotBlockReplacementLogin()
+    {
+        await using var factory = new BffFactory();
+        var previousClient = new FakeClient(factory.Clock) { FailLogout = true };
+        using var browser = new Browser(factory, previousClient);
+        var sessions = factory.Services.GetRequiredService<BffSessions>();
+        string previousId = browser.SessionId!;
+        BffSession previousSession = sessions.Find(previousId)!;
+        await previousSession.Gate.WaitAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            await BffEndpoints.RevokeAndRemovePreviousSessionAsync(
+                sessions,
+                previousId,
+                previousSession,
+                NullLogger<BffSession>.Instance);
+        }
+        finally
+        {
+            previousSession.Gate.Release();
+        }
+
+        Assert.True(previousClient.Disposed);
+        Assert.Null(sessions.Find(previousId));
+
+        var replacementClient = new FakeClient(factory.Clock);
+        string replacementId = sessions.Add(replacementClient);
+        Assert.NotEqual(previousId, replacementId);
+        Assert.Same(replacementClient, sessions.Find(replacementId)?.Client);
     }
 
     [Theory]

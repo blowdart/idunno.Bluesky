@@ -15,4 +15,7 @@
   <Target Name="NpmBuild" DependsOnTargets="NpmInstall" BeforeTargets="BeforeBuild">
     <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" />
   </Target>
+  <Target Name="NpmTest" DependsOnTargets="NpmBuild" BeforeTargets="Build">
+    <Exec Command="npm test" WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" />
+  </Target>
 </Project>

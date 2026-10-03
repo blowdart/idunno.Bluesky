@@ -109,7 +109,9 @@ Before timeline retrieval or writes, an access token expiring within one minute 
 The same agent retains the rotated refresh credentials and DPoP nonce between requests.
 A failed or throwing refresh invalidates the session instead of retrying a possibly spent refresh token.
 Logout attempts SDK token revocation with a ten-second timeout, then always removes local credentials and expires the cookie,
-even if revocation throws. Remote revocation is best effort and is not confirmed by a successful logout response.
+even if revocation throws. Replacing a session likewise treats revocation of the old session as best effort so a
+consumed OAuth callback can still establish the newly authorized session. Remote revocation is best effort and is not
+confirmed by a successful logout response.
 
 `GET /api/csrf` returns an ASP.NET antiforgery request token bound to an HttpOnly, SameSite=Strict antiforgery cookie.
 The frontend obtains a fresh token before every mutation and sends it in `X-CSRF-TOKEN`.
@@ -140,9 +142,11 @@ npm test --prefix samples\Samples.ReactBff\ClientApp
 npm run build --prefix samples\Samples.ReactBff\ClientApp
 ```
 
+The solution build also runs the Vitest suite so frontend tests are part of the same automated build gate as the backend.
 Backend tests use ASP.NET TestServer, protected synthetic cookie tickets and an injectable session client.
 They exercise endpoint authentication, CSRF, cross-browser session isolation, create/delete restrictions, token-refresh
-serialization, absolute expiry, capacity, logout failure cleanup and error redaction. They do not perform live OAuth consent.
+serialization, absolute expiry, capacity, logout and session-replacement revocation failure cleanup, and error redaction.
+They do not perform live OAuth consent.
 Existing library OAuth tests cover the SDK primitives the sample calls. Frontend tests cover mutation headers, failure
 handling, plain-text rendering, and the React create-then-delete interaction.
 
