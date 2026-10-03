@@ -55,6 +55,8 @@ items:
     items:
       - name: ASP.NET Authentication
         href: asp.net.md
+      - name: React BFF sample
+        href: reactBff.md
       - name: Production Configuration
         href: productionConfiguration.md
 

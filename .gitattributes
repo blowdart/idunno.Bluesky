@@ -6,6 +6,9 @@
 # These newly added files must retain CRLF in the repository as well as the working tree.
 /test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactory.cs -text
 /test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactoryTests.cs -text
+/docs/docs/reactBff.md -text
+/samples/Samples.ReactBff/** -text
+/test/Samples.ReactBff.Test/** -text
 
 ###############################################################################
 # Set default behavior for command prompt diff.

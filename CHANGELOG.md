@@ -143,6 +143,7 @@
 
 #### Samples
 
+* Added `Samples.ReactBff`, a React and ASP.NET backend-for-frontend sample demonstrating OAuth, isolated server-side credentials, timeline retrieval, creating and deleting a post, and CSRF-protected logout.
 * Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
   The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
   Its key-generation script restricts private-key files to the current user before writing key material, including when replacing an existing key.

@@ -36,6 +36,8 @@ UI package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides login and 
 `Samples.AspNetAuthentication` is a Razor Pages sample application that demonstrates how to use the authentication handler, and how an injected agent can be used to
 perform authenticated operations.
 
+For a React frontend with server-side OAuth credentials, see the [React BFF sample](reactBff.md).
+
 ### Adding Bluesky Authentication to your ASP.NET Razor Pages application
 
 To add simple authentication to your razor pages application first add a reference to the `idunno.Bluesky.AspNet.Authentication` and `idunno.Bluesky.AspNet.Authentication.UI` packages to your project.
