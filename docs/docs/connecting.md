@@ -473,6 +473,10 @@ The [OAuth Permission Sets Sample](https://github.com/blowdart/idunno.Bluesky/tr
 requests the published create-posts and delete-content sets, creates a text post, refreshes credentials, and deletes
 the same post using the refreshed credentials.
 
+## Production Configuration
+
+[!include[Production configuration](includes/production-configuration.md)]
+
 ## Logging out
 
 To log the authenticated user off Bluesky call the `Logout()` method. This revokes the refresh token (and,

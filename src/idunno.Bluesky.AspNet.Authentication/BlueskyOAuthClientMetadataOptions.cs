@@ -8,11 +8,11 @@ using idunno.AtProto.Authentication;
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Configures the optional fields in a public web client's OAuth metadata document.
+/// Configures the optional fields in a web client's OAuth metadata document.
 /// </summary>
 /// <remarks>
-/// <para>The client ID, optional name and homepage, callback and initial scopes come from the application's <see cref="OAuthOptions"/>.</para>
-/// <para>Confidential client authentication and native applications are not supported by this document generator.</para>
+/// <para>The client ID, optional name and homepage, callback, initial scopes and any client signing key come from the application's <see cref="OAuthOptions"/>.</para>
+/// <para>Native applications are not supported by this document generator.</para>
 /// </remarks>
 public sealed class BlueskyOAuthClientMetadataOptions
 {
@@ -37,14 +37,19 @@ public sealed class BlueskyOAuthClientMetadataOptions
     public IList<string> AdditionalScopes { get; } = [];
 
     /// <summary>
-    /// Generates a public web client's AT Protocol OAuth metadata JSON document.
+    /// Generates a web client's AT Protocol OAuth metadata JSON document.
     /// </summary>
     /// <param name="oAuthOptions">The application's OAuth configuration.</param>
     /// <returns>A JSON document suitable for publishing at the configured client ID.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="oAuthOptions"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">A URL or scope is invalid, or the configured scopes do not include <c>atproto</c>.</exception>
     /// <remarks>
-    /// <para>The document declares DPoP, authorization code and refresh token support, with no client authentication.</para>
+    /// <para>The document declares DPoP, authorization code and refresh token support.</para>
+    /// <para>
+    ///   When <see cref="OAuthOptions.ClientSigningKey"/> is set the document describes a confidential client, publishing the
+    ///   public keys of it and of any <see cref="OAuthOptions.AdditionalClientSigningKeys"/> in <c>jwks</c> with
+    ///   <c>private_key_jwt</c> client authentication. Otherwise it describes a public client with no client authentication.
+    /// </para>
     /// <para>Localhost development client IDs use virtual metadata supplied by the authorization server and cannot be published with this generator.</para>
     /// </remarks>
     public string GenerateJson(OAuthOptions oAuthOptions)
@@ -87,6 +92,21 @@ public sealed class BlueskyOAuthClientMetadataOptions
         ValidateHttpsUrl(oAuthOptions.TosUri, nameof(oAuthOptions.TosUri));
         ValidateHttpsUrl(oAuthOptions.PolicyUri, nameof(oAuthOptions.PolicyUri));
 
+        OAuthClientSigningKey? signingKey = oAuthOptions.ClientSigningKey;
+        OAuthClientJsonWebKey[] keys =
+        [
+            .. oAuthOptions.GetClientSigningKeys()
+                .DistinctBy(key => key.KeyId, StringComparer.Ordinal)
+                .Select(key => new OAuthClientJsonWebKey(
+                    "EC",
+                    OAuthClientSigningKey.Curve,
+                    key.X,
+                    key.Y,
+                    key.KeyId,
+                    OAuthClientSigningKey.Algorithm,
+                    "sig"))
+        ];
+
         OAuthClientMetadata document = new(
             oAuthOptions.ClientId,
             [returnUri.OriginalString],
@@ -95,7 +115,10 @@ public sealed class BlueskyOAuthClientMetadataOptions
             oAuthOptions.ClientUri?.OriginalString,
             LogoUri?.OriginalString,
             oAuthOptions.TosUri?.OriginalString,
-            oAuthOptions.PolicyUri?.OriginalString);
+            oAuthOptions.PolicyUri?.OriginalString,
+            signingKey is null ? "none" : "private_key_jwt",
+            signingKey is null ? null : OAuthClientSigningKey.Algorithm,
+            signingKey is null ? null : new OAuthClientJsonWebKeySet(keys));
 
         return JsonSerializer.Serialize(document, SourceGenerationContext.Default.OAuthClientMetadata);
     }

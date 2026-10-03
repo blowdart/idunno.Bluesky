@@ -239,6 +239,66 @@ public class OAuthLoginResponseTests
     }
 
     [Fact]
+    public async Task LoginRecordsTheActiveClientSigningKeyAndRefreshKeepsIt()
+    {
+        LoginTestServer server = new();
+        using System.Security.Cryptography.ECDsa activeKey = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        using System.Security.Cryptography.ECDsa previousKey = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(activeKey.ExportPkcs8PrivateKeyPem(), "active")
+        };
+        options.AdditionalClientSigningKeys.Add(OAuthClientSigningKey.FromPem(previousKey.ExportPkcs8PrivateKeyPem(), "previous"));
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        DPoPAccessCredentials? credentials = await CreateClient(server, options).ProcessOAuth2Response(
+            savedState,
+            CallbackData(savedState.State),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Equal("active", credentials.ClientSigningKeyId);
+
+        DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshed);
+        Assert.Equal("active", refreshed.ClientSigningKeyId);
+    }
+
+    [Fact]
+    public async Task LoginWithALocalhostClientIdRecordsNoClientSigningKey()
+    {
+        LoginTestServer server = new();
+        OAuthOptions options = new("http://localhost", s_returnUri);
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        DPoPAccessCredentials? credentials = await CreateClient(server, options).ProcessOAuth2Response(
+            savedState,
+            CallbackData(savedState.State),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Null(credentials.ClientSigningKeyId);
+    }
+
+    [Fact]
     public async Task ASuccessfullyProcessedLoginResponseDiscardsTheLoginState()
     {
         LoginTestServer server = new();

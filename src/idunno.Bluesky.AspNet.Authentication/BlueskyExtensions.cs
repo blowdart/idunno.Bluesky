@@ -10,6 +10,7 @@ using idunno.Bluesky.AspNet.Authentication;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -42,6 +43,7 @@ public static class BlueskyExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddOptions<BlueskyOAuthClientMetadataOptions>();
+        services.AddClientSigningKeyLoader();
         if (configureOptions is not null)
         {
             services.Configure(configureOptions);
@@ -49,6 +51,15 @@ public static class BlueskyExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers the loader which sets <see cref="idunno.AtProto.Authentication.OAuthOptions.ClientSigningKey"/> from
+    /// <see cref="idunno.AtProto.Authentication.OAuthOptions.ClientSigningKeyPath"/>.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    internal static void AddClientSigningKeyLoader(this IServiceCollection services) =>
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, ClientSigningKeyPostConfigureOptions>(
+            serviceProvider => new ClientSigningKeyPostConfigureOptions(serviceProvider.GetService<IHostEnvironment>())));
 
     /// <summary>
     ///<para>
@@ -147,6 +158,7 @@ public static class BlueskyExtensions
         builder.Services.AddAtProtoHttpClient(provider =>
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueskyAgentOptions>());
+        builder.Services.AddClientSigningKeyLoader();
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAuthenticationOptions>, PostConfigureBlueskyAuthenticationOptions>());
@@ -173,6 +185,7 @@ public static class BlueskyExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddOptions<BlueskyAgentOptions>();
+        services.AddClientSigningKeyLoader();
         services.AddAtProtoHttpClient(provider =>
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyClaimsTransformerOptions>, PostConfigureBlueskyClaimsTransformerOptions>());
@@ -215,6 +228,7 @@ public static class BlueskyExtensions
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddOptions<BlueskyAgentOptions>();
+        services.AddClientSigningKeyLoader();
         services.AddAtProtoHttpClient(provider =>
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         services.AddSingleton(provider => new BlueskyAgentFactory(

@@ -2893,6 +2893,48 @@ public partial class AtProtoAgent
         }
     }
 
+    /// <summary>
+    /// Builds the form fields for a token revocation request.
+    /// </summary>
+    /// <param name="token">The token to revoke.</param>
+    /// <param name="tokenTypeHint">The type of <paramref name="token"/>.</param>
+    /// <param name="clientId">The client ID.</param>
+    /// <param name="authorizationServer">The authorization server the request is sent to.</param>
+    /// <param name="signingKey">The confidential client signing key, if one is configured.</param>
+    /// <returns>The revocation request form fields.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A confidential client authenticates revocation requests with a client assertion, as it does every other request
+    ///   to the authorization server. Localhost development client IDs are always public clients.
+    /// </para>
+    /// </remarks>
+    internal KeyValuePair<string, string>[] BuildRevocationForm(
+        string token,
+        string tokenTypeHint,
+        string clientId,
+        Uri authorizationServer,
+        OAuthClientSigningKey? signingKey)
+    {
+        List<KeyValuePair<string, string>> form =
+        [
+            new("token", token),
+            new("token_type_hint", tokenTypeHint),
+            new("client_id", clientId),
+        ];
+
+        if (signingKey is not null && !clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            form.Add(new("client_assertion_type", OAuthClientSigningKey.JwtBearerClientAssertionType));
+            form.Add(new("client_assertion", signingKey.CreateClientAssertion(
+                clientId,
+                authorizationServer,
+                Clock.GetUtcNow(),
+                Options?.OAuthOptions?.ClientAssertionClockSkew ?? OAuthOptions.DefaultClientAssertionClockSkew)));
+        }
+
+        return [.. form];
+    }
+
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -2948,6 +2990,8 @@ public partial class AtProtoAgent
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
+            OAuthClientSigningKey? revocationSigningKey = Options.OAuthOptions.GetClientSigningKey(accessCredentials.ClientSigningKeyId, out _);
+
             Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
             bool succeeded = false;
@@ -2986,11 +3030,7 @@ public partial class AtProtoAgent
 
                 // First revoke the refresh token, then revoke the access token.
                 using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
-                        new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
-                        new KeyValuePair<string, string>("client_id", clientId),
-                    ]))
+                    BuildRevocationForm(accessCredentials.RefreshToken, "refresh_token", clientId, authorizationService, revocationSigningKey)))
                 {
                     AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
                         service: authorizationService,
@@ -3025,11 +3065,7 @@ public partial class AtProtoAgent
                 dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
 
                 using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
-                        new KeyValuePair<string, string>("token_type_hint", "access_token"),
-                        new KeyValuePair<string, string>("client_id", clientId),
-                    ]))
+                    BuildRevocationForm(accessCredentials.AccessJwt, "access_token", clientId, authorizationService, revocationSigningKey)))
                 {
                     AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
                         service: authorizationService,

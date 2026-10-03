@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+
+  <Target Name="NpmInstall" Inputs="package.json;package-lock.json" Outputs="node_modules\.package-lock.json">
+    <Exec Command="npm ci --no-audit --no-fund --ignore-scripts" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="NpmBuild" DependsOnTargets="NpmInstall" BeforeTargets="PrepareForBuild" Inputs="package.json;package-lock.json;scripts\copy-client-libraries.js" Outputs="wwwroot\lib\bootstrap\dist\css\bootstrap.min.css;wwwroot\lib\bootstrap\dist\js\bootstrap.bundle.min.js;wwwroot\lib\jquery\dist\jquery.min.js">
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="IncludeClientLibraries" DependsOnTargets="NpmBuild" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <Content Include="wwwroot\lib\**\*" Exclude="@(Content)" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.UI\idunno.Bluesky.AspNet.Authentication.UI.csproj" />
+  </ItemGroup>
+
+</Project>

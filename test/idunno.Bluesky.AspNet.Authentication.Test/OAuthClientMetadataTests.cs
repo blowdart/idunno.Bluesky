@@ -39,6 +39,80 @@ public class OAuthClientMetadataTests
         Assert.Equal(["authorization_code", "refresh_token"], root.GetProperty("grant_types").EnumerateArray().Select(value => value.GetString()));
         Assert.Equal("code", Assert.Single(root.GetProperty("response_types").EnumerateArray()).GetString());
         Assert.Equal(8, root.EnumerateObject().Count());
+        Assert.False(root.TryGetProperty("jwks", out _));
+        Assert.False(root.TryGetProperty("token_endpoint_auth_signing_alg", out _));
+    }
+
+    [Fact]
+    public void PublishesThePublicKeyForAConfidentialClient()
+    {
+        using System.Security.Cryptography.ECDsa ecdsa = System.Security.Cryptography.ECDsa.Create(
+            System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        OAuthClientSigningKey signingKey = OAuthClientSigningKey.FromPem(ecdsa.ExportPkcs8PrivateKeyPem());
+        OAuthOptions oAuthOptions = new(ClientId, new Uri(Callback))
+        {
+            ClientSigningKey = signingKey
+        };
+
+        string json = new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions);
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement root = document.RootElement;
+        Assert.Equal("private_key_jwt", root.GetProperty("token_endpoint_auth_method").GetString());
+        Assert.Equal("ES256", root.GetProperty("token_endpoint_auth_signing_alg").GetString());
+        Assert.False(root.TryGetProperty("jwks_uri", out _));
+        Assert.Equal(10, root.EnumerateObject().Count());
+
+        JsonElement key = Assert.Single(root.GetProperty("jwks").GetProperty("keys").EnumerateArray());
+        Assert.Equal(7, key.EnumerateObject().Count());
+        Assert.Equal("EC", key.GetProperty("kty").GetString());
+        Assert.Equal("P-256", key.GetProperty("crv").GetString());
+        Assert.Equal(signingKey.X, key.GetProperty("x").GetString());
+        Assert.Equal(signingKey.Y, key.GetProperty("y").GetString());
+        Assert.Equal(signingKey.KeyId, key.GetProperty("kid").GetString());
+        Assert.Equal("ES256", key.GetProperty("alg").GetString());
+        Assert.Equal("sig", key.GetProperty("use").GetString());
+        Assert.False(key.TryGetProperty("d", out _));
+    }
+
+    [Fact]
+    public void PublishesTheActiveAndAdditionalPublicKeys()
+    {
+        OAuthClientSigningKey activeKey = CreateSigningKey("active");
+        OAuthClientSigningKey previousKey = CreateSigningKey("previous");
+        OAuthOptions oAuthOptions = new(ClientId, new Uri(Callback))
+        {
+            ClientSigningKey = activeKey
+        };
+        oAuthOptions.AdditionalClientSigningKeys.Add(previousKey);
+
+        string json = new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions);
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement[] keys = [.. document.RootElement.GetProperty("jwks").GetProperty("keys").EnumerateArray()];
+        Assert.Equal(["active", "previous"], keys.Select(key => key.GetProperty("kid").GetString()));
+        Assert.Equal([activeKey.X, previousKey.X], keys.Select(key => key.GetProperty("x").GetString()));
+    }
+
+    [Fact]
+    public void AdditionalKeysWithoutAnActiveKeyAreNotPublished()
+    {
+        OAuthOptions oAuthOptions = new(ClientId, new Uri(Callback));
+        oAuthOptions.AdditionalClientSigningKeys.Add(CreateSigningKey("previous"));
+
+        string json = new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions);
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        Assert.Equal("none", document.RootElement.GetProperty("token_endpoint_auth_method").GetString());
+        Assert.False(document.RootElement.TryGetProperty("jwks", out _));
+    }
+
+    private static OAuthClientSigningKey CreateSigningKey(string keyId)
+    {
+        using System.Security.Cryptography.ECDsa ecdsa = System.Security.Cryptography.ECDsa.Create(
+            System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+
+        return OAuthClientSigningKey.FromPem(ecdsa.ExportPkcs8PrivateKeyPem(), keyId);
     }
 
     [Fact]

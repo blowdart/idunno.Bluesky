@@ -370,6 +370,9 @@ public class OAuthClient
             clientId ??= _options?.ClientId;
             ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
+            // Pushed authorization used the active client signing key, so the session is bound to it.
+            string? signingKeyId = clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+
             string[]? requestedScopes = scopes is null ? null : [.. scopes];
             requestedScopes ??= savedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
@@ -434,7 +437,8 @@ public class OAuthClient
                 loginResult.TokenResponse.DPoPNonce)
             {
                 OAuthClientId = clientId,
-                RequestedScope = scopeString
+                RequestedScope = scopeString,
+                ClientSigningKeyId = signingKeyId
             };
         }
         finally
@@ -620,6 +624,7 @@ public class OAuthClient
 
         oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
         oidcOptions.ConfigureDPoP(refreshCredential.DPoPProofKey);
+        string? signingKeyId = ConfigureClientAssertion(oidcOptions, clientId, authority, refreshCredential.ClientSigningKeyId);
 
         OidcClient client = new(oidcOptions);
 
@@ -685,7 +690,8 @@ public class OAuthClient
                     refreshCredential.DPoPNonce)
                 {
                     OAuthClientId = clientId,
-                    RequestedScope = scopeString
+                    RequestedScope = scopeString,
+                    ClientSigningKeyId = signingKeyId
                 };
             }
         }
@@ -876,6 +882,7 @@ public class OAuthClient
         if (clientId is not null)
         {
             oidcOptions.ClientId = clientId;
+            ConfigureClientAssertion(oidcOptions, clientId, authority);
         }
 
         if (returnUri is not null)
@@ -893,6 +900,50 @@ public class OAuthClient
         oidcOptions.ConfigureDPoP(proofKey);
 
         return oidcOptions;
+    }
+
+    /// <summary>
+    /// Configures <paramref name="oidcOptions"/> to authenticate with a JWT client assertion when a client signing key is configured.
+    /// </summary>
+    /// <param name="oidcOptions">The options to configure.</param>
+    /// <param name="clientId">The client ID the assertion is issued for.</param>
+    /// <param name="authority">The authorization server the assertion is for.</param>
+    /// <param name="signingKeyId">
+    /// The identifier of the key the session started with, or <see langword="null"/> to use the active client signing key.
+    /// </param>
+    /// <returns>The identifier of the key the assertion is signed with, or <see langword="null"/> if no assertion is configured.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The assertion is created by a callback rather than once, so each pushed authorization, token and refresh request,
+    ///   including a retry after a DPoP nonce challenge, carries a fresh <c>jti</c>. Localhost development client IDs are
+    ///   always public clients, so they never carry an assertion.
+    /// </para>
+    /// <para>
+    ///   A <paramref name="signingKeyId"/> which matches no configured key falls back to the active key. The authorization
+    ///   server rejects the request if the session is bound to the missing key, which ends the session.
+    /// </para>
+    /// </remarks>
+    internal string? ConfigureClientAssertion(OidcClientOptions oidcOptions, string clientId, Uri authority, string? signingKeyId = null)
+    {
+        if (_options is null ||
+            clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ||
+            _options.GetClientSigningKey(signingKeyId, out bool found) is not OAuthClientSigningKey signingKey)
+        {
+            return null;
+        }
+
+        if (!found)
+        {
+            Logger.OAuthClientSigningKeyNotFound(_logger, signingKeyId!, signingKey.KeyId);
+        }
+
+        oidcOptions.GetClientAssertionAsync = () => Task.FromResult(new ClientAssertion
+        {
+            Type = OAuthClientSigningKey.JwtBearerClientAssertionType,
+            Value = signingKey.CreateClientAssertion(clientId, authority, _timeProvider.GetUtcNow(), _options.ClientAssertionClockSkew)
+        });
+
+        return signingKey.KeyId;
     }
 
     /// <summary>

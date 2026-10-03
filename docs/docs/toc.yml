@@ -9,6 +9,8 @@ items:
         href: commonTerms.md
       - name: Connecting to Bluesky
         href: connecting.md
+      - name: Production Configuration
+        href: connecting.md#production-configuration
 
   - name: Tutorials
     href: tutorials/toc.yml
@@ -55,6 +57,8 @@ items:
     items:
       - name: ASP.NET Authentication
         href: asp.net.md
+      - name: Production Configuration
+        href: asp.net.md#production-configuration
 
   - name: Advanced Topics
     items:

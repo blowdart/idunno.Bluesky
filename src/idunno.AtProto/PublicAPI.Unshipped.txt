@@ -857,3 +857,27 @@ idunno.AtProto.Authentication.OAuthPermissionSet.Nsid.get -> idunno.AtProto.Nsid
 idunno.AtProto.Authentication.OAuthPermissionSet.OAuthPermissionSet(idunno.AtProto.Nsid! nsid, string? audience = null) -> void
 override idunno.AtProto.Authentication.OAuthPermissionSet.ToString() -> string!
 static idunno.AtProto.Authentication.OAuthPermissionSet.implicit operator string!(idunno.AtProto.Authentication.OAuthPermissionSet! permissionSet) -> string!
+const idunno.AtProto.Authentication.OAuthClientSigningKey.Algorithm = "ES256" -> string!
+const idunno.AtProto.Authentication.OAuthClientSigningKey.Curve = "P-256" -> string!
+idunno.AtProto.Authentication.OAuthClientSigningKey
+idunno.AtProto.Authentication.OAuthClientSigningKey.KeyId.get -> string!
+idunno.AtProto.Authentication.OAuthClientSigningKey.X.get -> string!
+idunno.AtProto.Authentication.OAuthClientSigningKey.Y.get -> string!
+static idunno.AtProto.Authentication.OAuthClientSigningKey.FromPem(string! pem, string? keyId = null) -> idunno.AtProto.Authentication.OAuthClientSigningKey!
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKey.get -> idunno.AtProto.Authentication.OAuthClientSigningKey?
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKey.set -> void
+static idunno.AtProto.Authentication.OAuthClientSigningKey.FromPemFile(string! path, string? keyId = null) -> idunno.AtProto.Authentication.OAuthClientSigningKey!
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKeyId.get -> string?
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKeyId.set -> void
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKeyPath.get -> string?
+idunno.AtProto.Authentication.OAuthOptions.ClientSigningKeyPath.set -> void
+const idunno.AtProto.Authentication.AtProtoClaims.OAuthClientSigningKeyId = "urn:atproto:oauth:signingkey" -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.ClientSigningKeyId.get -> string?
+idunno.AtProto.Authentication.DPoPAccessCredentials.ClientSigningKeyId.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.ClientSigningKeyId.get -> string?
+idunno.AtProto.Authentication.DPoPRefreshCredential.ClientSigningKeyId.init -> void
+idunno.AtProto.Authentication.OAuthOptions.AdditionalClientSigningKeyPaths.get -> System.Collections.Generic.ICollection<string!>!
+idunno.AtProto.Authentication.OAuthOptions.AdditionalClientSigningKeys.get -> System.Collections.Generic.ICollection<idunno.AtProto.Authentication.OAuthClientSigningKey!>!
+idunno.AtProto.Authentication.OAuthOptions.ClientAssertionClockSkew.get -> System.TimeSpan
+idunno.AtProto.Authentication.OAuthOptions.ClientAssertionClockSkew.set -> void
+static readonly idunno.AtProto.Authentication.OAuthOptions.DefaultClientAssertionClockSkew -> System.TimeSpan

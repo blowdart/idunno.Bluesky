@@ -86,6 +86,60 @@ public class OAuthCredentialRefreshTests
         Assert.Equal(requestedScope, server.RefreshRequestedScope);
     }
 
+    [Theory]
+    [InlineData("previous", "previous")]
+    [InlineData("active", "active")]
+    [InlineData(null, "active")]
+    [InlineData("unknown", "active")]
+    public async Task RefreshAndLogoutSignWithTheKeyTheSessionStartedWith(string? sessionKeyId, string expectedKeyId)
+    {
+        OAuthTestServer server = new();
+        OAuthOptions oAuthOptions = new("https://client.test/clientMetadata.json")
+        {
+            ClientSigningKey = CreateClientSigningKey("active")
+        };
+        oAuthOptions.AdditionalClientSigningKeys.Add(CreateClientSigningKey("previous"));
+        using AtProtoAgent agent = CreateAgent(server, oAuthOptions);
+
+        DPoPAccessCredentials credentials = new(
+            new Uri($"https://{DomainName}"),
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            ClientSigningKeyId = sessionKeyId
+        };
+
+        Assert.True(await agent.Login(credentials, TestContext.Current.CancellationToken));
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        Assert.Equal(expectedKeyId, GetAssertionKeyId(server.RefreshClientAssertion));
+        DPoPAccessCredentials refreshed = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal(expectedKeyId, refreshed.ClientSigningKeyId);
+
+        await agent.Logout(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, server.RevocationClientAssertions.Count);
+        Assert.All(server.RevocationClientAssertions, assertion => Assert.Equal(expectedKeyId, GetAssertionKeyId(assertion)));
+    }
+
+    private static OAuthClientSigningKey CreateClientSigningKey(string keyId)
+    {
+        using ECDsa ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        return OAuthClientSigningKey.FromPem(ecdsa.ExportPkcs8PrivateKeyPem(), keyId);
+    }
+
+    private static string? GetAssertionKeyId(string? assertion)
+    {
+        Assert.False(string.IsNullOrEmpty(assertion));
+
+        using System.Text.Json.JsonDocument header = System.Text.Json.JsonDocument.Parse(Base64UrlEncoder.Decode(assertion.Split('.')[0]));
+
+        return header.RootElement.GetProperty("kid").GetString();
+    }
+
     [Fact]
     public async Task ANonceUpdateDuringRefreshDoesNotDiscardTheRefreshedCredentials()
     {
@@ -1023,12 +1077,12 @@ public class OAuthCredentialRefreshTests
         Assert.True(agent.IsAuthenticated);
     }
 
-    private static AtProtoAgent CreateAgent(OAuthTestServer server) =>
+    private static AtProtoAgent CreateAgent(OAuthTestServer server, OAuthOptions? oAuthOptions = null) =>
         new OAuthTestAgent(server)
         {
             Options = new AtProtoAgentOptions
             {
-                OAuthOptions = new OAuthOptions("https://client.test/clientMetadata.json")
+                OAuthOptions = oAuthOptions ?? new OAuthOptions("https://client.test/clientMetadata.json")
             }
         };
 
@@ -1075,6 +1129,10 @@ public class OAuthCredentialRefreshTests
         internal string? RefreshRequestedClientId { get; private set; }
 
         internal string? RefreshRequestedScope { get; private set; }
+
+        internal string? RefreshClientAssertion { get; private set; }
+
+        internal List<string> RevocationClientAssertions { get; } = [];
 
         internal bool GateRefresh { get; set; }
 
@@ -1139,6 +1197,8 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/revoke" when request.Method == HttpMethod.Post.Method:
+                    RevocationClientAssertions.Add((await request.ReadFormAsync())["client_assertion"].ToString());
+
                     if (!RevocationSucceeds)
                     {
                         response.StatusCode = StatusCodes.Status400BadRequest;
@@ -1159,6 +1219,7 @@ public class OAuthCredentialRefreshTests
                     IFormCollection form = await request.ReadFormAsync();
                     RefreshRequestedClientId = form["client_id"].ToString();
                     RefreshRequestedScope = form["scope"].ToString();
+                    RefreshClientAssertion = form["client_assertion"].ToString();
 
                     if (GateRefresh)
                     {

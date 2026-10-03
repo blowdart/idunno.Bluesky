@@ -20,6 +20,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.Common` - helper functions used in the sample applications.
 
 * `Samples.AspNetClientMetadata` - a minimal ASP.NET sample which redirects its home page to generated OAuth client metadata configured for example.org, with `atproto` and the Bluesky `ViewAll` permission set.
+* `Samples.AspNetTunnelAuthentication` - an HTTPS sample for a public reverse tunnel, protecting the site with Bluesky authentication, requesting only `atproto`, and displaying the authenticated DID. It authenticates as a confidential client with a locally generated signing key. See its [readme](Samples.AspNetTunnelAuthentication/readme.md) for tunnel setup.
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
 * `Samples.Bot` - a sample showing a simple bot posting on a scheduled time.
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.

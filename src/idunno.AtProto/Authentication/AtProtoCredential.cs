@@ -218,7 +218,8 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
                 dPoPNonce: dPoPNonce)
             {
                 OAuthClientId = claimsIdentity.FindFirst(AtProtoClaims.OAuthClientId)?.Value,
-                RequestedScope = claimsIdentity.FindFirst(AtProtoClaims.OAuthRequestedScope)?.Value
+                RequestedScope = claimsIdentity.FindFirst(AtProtoClaims.OAuthRequestedScope)?.Value,
+                ClientSigningKeyId = claimsIdentity.FindFirst(AtProtoClaims.OAuthClientSigningKeyId)?.Value
             };
         }
         catch (ArgumentException)

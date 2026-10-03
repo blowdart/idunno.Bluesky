@@ -109,6 +109,7 @@
     <File Path="docs/docs/video.md" />
   </Folder>
   <Folder Name="/docs/docs/includes/">
+    <File Path="docs/docs/includes/production-configuration.md" />
     <File Path="docs/docs/includes/untrusted-data-warning.md" />
   </Folder>
   <Folder Name="/docs/docs/bots/">
@@ -191,6 +192,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

@@ -9,6 +9,9 @@
 #### idunno.AtProto
 
 * Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
+* Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
+  `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.
+* Added client signing key rotation. `OAuthOptions.AdditionalClientSigningKeys` and `AdditionalClientSigningKeyPaths` hold previous keys, which are used only for sessions that started with them. `DPoPAccessCredentials.ClientSigningKeyId` and `DPoPRefreshCredential.ClientSigningKeyId` record the key a session started with, and `AtProtoClaims.OAuthClientSigningKeyId` names the claim it is stored in.
 * Enabled structured configuration binding for `OAuthOptions.PermissionSets` using validated `Nsid` and optional `Audience` fields.
 * Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
 * Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.
@@ -117,7 +120,11 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
-* Added opt-in OAuth client metadata generation and publishing with `AddBlueskyOAuthClientMetadata()`, `UseBlueskyOAuthClientMetadata()` and `BlueskyOAuthClientMetadataOptions.GenerateJson()`, using the configured public web client's URLs, scopes and permission sets.
+* Added opt-in OAuth client metadata generation and publishing with `AddBlueskyOAuthClientMetadata()`, `UseBlueskyOAuthClientMetadata()` and `BlueskyOAuthClientMetadataOptions.GenerateJson()`, using the configured web client's URLs, scopes and permission sets.
+* Generated OAuth client metadata describes a confidential client, publishing the public key in `jwks` with `private_key_jwt` and `ES256`, when `OAuthOptions.ClientSigningKey` is set.
+* `OAuthOptions.ClientSigningKey` is loaded from `OAuthOptions.ClientSigningKeyPath` when set, expanding `~` and environment variables and resolving relative paths against the content root.
+* Keys in `OAuthOptions.AdditionalClientSigningKeyPaths` are loaded into `AdditionalClientSigningKeys`, and the generated metadata publishes every configured signing key in `jwks`.
+* The identity stores persist the client signing key ID of each OAuth session, so refresh and revocation use the key the session started with.
 * Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
 
 #### idunno.Bluesky.AspNet.Authentication.SQLite
@@ -127,6 +134,8 @@
 
 #### Samples
 
+* Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
+  The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
 * Added `Samples.AspNetClientMetadata`, which previews generated OAuth client metadata for example.org with the `atproto` scope and Bluesky `ViewAll` permission set.
 * Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
 * Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.

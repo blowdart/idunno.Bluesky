@@ -25,7 +25,7 @@ public abstract class IdentityStoreTests
     protected abstract IIdentityStore CreateStore(IMeterFactory meterFactory);
 
     [Fact]
-    public async Task StoredOAuthCredentialsPreserveTheOriginalClientAndRequestedScope()
+    public async Task StoredOAuthCredentialsPreserveTheOriginalClientRequestedScopeAndSigningKey()
     {
         IIdentityStore store = CreateStore();
         DPoPAccessCredentials credentials = new(
@@ -36,7 +36,8 @@ public abstract class IdentityStoreTests
             "nonce")
         {
             OAuthClientId = "http://localhost?scope=atproto",
-            RequestedScope = "atproto"
+            RequestedScope = "atproto",
+            ClientSigningKeyId = "signing-key"
         };
 
         await store.Add(IIdentityStore.BuildClaimsIdentity(credentials), TestContext.Current.CancellationToken);
@@ -47,6 +48,7 @@ public abstract class IdentityStoreTests
         Assert.NotNull(restored);
         Assert.Equal(credentials.OAuthClientId, restored.OAuthClientId);
         Assert.Equal(credentials.RequestedScope, restored.RequestedScope);
+        Assert.Equal(credentials.ClientSigningKeyId, restored.ClientSigningKeyId);
     }
 
     [Fact]

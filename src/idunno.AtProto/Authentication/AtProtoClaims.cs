@@ -19,6 +19,11 @@ public static class AtProtoClaims
     public const string OAuthRequestedScope = "urn:atproto:oauth:scope";
 
     /// <summary>
+    /// The claim name for the identifier of the confidential client signing key an OAuth session authenticates with.
+    /// </summary>
+    public const string OAuthClientSigningKeyId = "urn:atproto:oauth:signingkey";
+
+    /// <summary>
     /// The claim name for a <see cref="Did"/>.
     /// </summary>
     public const string Did = "urn:atproto:did";
