@@ -419,6 +419,29 @@ public class OAuthClientMetadataTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DuplicateSigningKeyIdsFailGenerationAndPipelineStartup(bool duplicateActiveKey)
+    {
+        OAuthOptions options = new(ClientId, new Uri(Callback))
+        {
+            ClientSigningKey = CreateSigningKey("active")
+        };
+        options.AdditionalClientSigningKeys.Add(CreateSigningKey("previous"));
+        options.AdditionalClientSigningKeys.Add(CreateSigningKey(duplicateActiveKey ? "active" : "previous"));
+
+        Assert.Throws<ArgumentException>(() => new BlueskyOAuthClientMetadataOptions().GenerateJson(options));
+
+        ServiceCollection services = new();
+        services.Configure<BlueskyAgentOptions>(agentOptions => agentOptions.OAuthOptions = options);
+        services.AddBlueskyOAuthClientMetadata();
+        using ServiceProvider provider = services.BuildServiceProvider();
+        ApplicationBuilder app = new(provider);
+
+        Assert.Throws<ArgumentException>(() => app.UseBlueskyOAuthClientMetadata());
+    }
+
+    [Theory]
     [InlineData(true, 200)]
     [InlineData(false, 302)]
     public async Task PublicationIsOptInAndBypassesAnAuthenticatedFallbackPolicy(bool publishMetadata, int statusCode)

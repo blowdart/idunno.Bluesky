@@ -88,6 +88,15 @@ public sealed class OAuthOptions
             throw new ArgumentException("Additional client signing keys require an active client signing key.");
         }
 
+        ValidateClientSigningKeyIds();
+    }
+
+    /// <summary>
+    /// Validates that configured client signing key identifiers are unique.
+    /// </summary>
+    /// <exception cref="ArgumentException">Two configured keys share a key identifier.</exception>
+    internal void ValidateClientSigningKeyIds()
+    {
         if (GetClientSigningKeys().GroupBy(key => key.KeyId, StringComparer.Ordinal).Any(group => group.Count() > 1))
         {
             throw new ArgumentException("Each client signing key must have a unique key identifier.");

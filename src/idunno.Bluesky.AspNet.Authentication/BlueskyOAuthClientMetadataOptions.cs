@@ -42,7 +42,7 @@ public sealed class BlueskyOAuthClientMetadataOptions
     /// <param name="oAuthOptions">The application's OAuth configuration.</param>
     /// <returns>A JSON document suitable for publishing at the configured client ID.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="oAuthOptions"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">A URL or scope is invalid, or the configured scopes do not include <c>atproto</c>.</exception>
+    /// <exception cref="ArgumentException">A URL or scope is invalid, the configured scopes do not include <c>atproto</c>, or signing keys share an identifier.</exception>
     /// <remarks>
     /// <para>The document declares DPoP, authorization code and refresh token support.</para>
     /// <para>
@@ -55,6 +55,7 @@ public sealed class BlueskyOAuthClientMetadataOptions
     public string GenerateJson(OAuthOptions oAuthOptions)
     {
         ArgumentNullException.ThrowIfNull(oAuthOptions);
+        oAuthOptions.ValidateClientSigningKeyIds();
 
         if (!Uri.TryCreate(oAuthOptions.ClientId, UriKind.Absolute, out Uri? clientId) ||
             !IsHttpsUrl(clientId) ||
@@ -96,7 +97,6 @@ public sealed class BlueskyOAuthClientMetadataOptions
         OAuthClientJsonWebKey[] keys =
         [
             .. oAuthOptions.GetClientSigningKeys()
-                .DistinctBy(key => key.KeyId, StringComparer.Ordinal)
                 .Select(key => new OAuthClientJsonWebKey(
                     "EC",
                     OAuthClientSigningKey.Curve,
