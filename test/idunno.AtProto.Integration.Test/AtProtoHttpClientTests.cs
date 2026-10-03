@@ -12,6 +12,31 @@ namespace idunno.AtProto.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class AtProtoHttpClientTests
 {
+    [Theory]
+    [InlineData("ScopeMissingError", typeof(ScopeMissingError))]
+    [InlineData("insufficient_scope", typeof(InsufficientScope))]
+    public async Task MissingScopeHttpResponsesAreMappedToTypedErrors(string error, Type expectedType)
+    {
+        const string message = "The access token lacks a required scope.";
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.server.describeServer", context.Request.Path);
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$"""{"error":"{{error}}","message":"{{message}}"}""");
+        });
+        using AtProtoAgent agent = new(TestServerBuilder.DefaultUri, new TestHttpClientFactory(server));
+
+        var result = await agent.DescribeServer(TestServerBuilder.DefaultUri, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(System.Net.HttpStatusCode.Forbidden, result.StatusCode);
+        Assert.IsType(expectedType, result.AtErrorDetail);
+        AtErrorDetail detail = Assert.IsAssignableFrom<AtErrorDetail>(result.AtErrorDetail);
+        Assert.Equal(error, detail.Error);
+        Assert.Equal(message, detail.Message);
+    }
+
     [Fact]
     public async Task AgentGetRecordSpecifyingAServiceProxySendsTheProxyHeader()
     {

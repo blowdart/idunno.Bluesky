@@ -34,6 +34,141 @@ public class OAuthLoginResponseTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
+    public async Task ExpectedDidIsValidatedBeforePublishingLoginCredentials(bool hasExistingSession, bool matches)
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+        AccessCredentials? originalCredentials = null;
+        Did expectedDid = new(matches ? AccountDid : "did:plc:originalaccount");
+
+        if (hasExistingSession)
+        {
+            originalCredentials = new AccessCredentials(
+                service: s_service,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: CreateAccessJwt(expectedDid),
+                refreshToken: "originalRefreshToken");
+            Assert.True(await agent.Login(originalCredentials, TestContext.Current.CancellationToken));
+        }
+
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        OAuthClient restoredClient = CreateClient(server);
+        restoredClient.State = savedState;
+
+        if (matches)
+        {
+            Assert.True(await agent.ProcessOAuth2LoginResponse(
+                restoredClient, CallbackData(savedState.State), expectedDid, TestContext.Current.CancellationToken));
+            Assert.True(agent.IsAuthenticated);
+            Assert.Equal(expectedDid, agent.Credentials.Did);
+            Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+            Assert.NotSame(originalCredentials, agent.Credentials);
+        }
+        else
+        {
+            OAuthException exception = await Assert.ThrowsAsync<OAuthException>(() =>
+                agent.ProcessOAuth2LoginResponse(
+                    restoredClient, CallbackData(savedState.State), expectedDid, TestContext.Current.CancellationToken));
+            Assert.Contains(expectedDid.ToString(), exception.Message, StringComparison.Ordinal);
+            Assert.Contains(AccountDid, exception.Message, StringComparison.Ordinal);
+            Assert.Equal(hasExistingSession, agent.IsAuthenticated);
+            if (hasExistingSession)
+            {
+                Assert.Same(originalCredentials, agent.Credentials);
+                Assert.Equal(s_service, agent.Service);
+            }
+        }
+
+        Assert.Null(restoredClient.State);
+    }
+
+    [Fact]
+    public async Task ExistingAgentLoginOverloadStillAcceptsValidatedCredentialsWithoutAnExpectedDid()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        string callbackData = CallbackData(client.State!.State);
+
+        Assert.True(await agent.ProcessOAuth2LoginResponse(client, callbackData, TestContext.Current.CancellationToken));
+        Assert.True(agent.IsAuthenticated);
+        Assert.Equal(new Did(AccountDid), agent.Credentials.Did);
+    }
+
+    [Fact]
+    public async Task ExpectedDidOverloadRejectsNullArgumentsBeforeProcessingTheCallback()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(null!, "?code=test", new Did(AccountDid), TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(CreateClient(server), "?code=test", null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ProgressiveRequestsUseOneClientIdWithDifferentParScopesAndPreserveCallbackAndRefreshContext()
+    {
+        string[] initialScopes = ["atproto", "rpc:app.bsky.feed.getTimeline?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview"];
+        string[] expandedScopes =
+        [
+            .. initialScopes,
+            new OAuthPermissionSet("app.bsky.authCreatePosts", "did:web:api.bsky.app#bsky_appview"),
+            new OAuthPermissionSet("app.bsky.authDeleteContent")
+        ];
+        string clientId = QueryHelpers.AddQueryString("http://localhost/", "scope", string.Join(" ", expandedScopes));
+        OAuthOptions options = new(clientId, s_returnUri, expandedScopes);
+        LoginTestServer server = new();
+
+        foreach (string[] scopes in new[] { initialScopes, expandedScopes })
+        {
+            OAuthClient client = CreateClient(server, options);
+            await client.BuildOAuth2LoginUri(
+                service: s_service,
+                authority: s_authority,
+                returnUri: s_returnUri,
+                scopes: scopes,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            string expectedScope = string.Join(" ", scopes);
+            Assert.Equal(clientId, server.RequestedClientId);
+            Assert.Equal(expectedScope, server.RequestedScopes);
+            Assert.Equal(string.Join(" ", expandedScopes), QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"]);
+
+            OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+            OAuthClient restoredClient = CreateClient(server, options);
+            DPoPAccessCredentials? credentials = await restoredClient.ProcessOAuth2Response(
+                savedState, CallbackData(savedState.State), TestContext.Current.CancellationToken);
+
+            Assert.NotNull(credentials);
+            Assert.Equal(clientId, server.TokenRequestedClientId);
+            Assert.Equal(clientId, credentials.OAuthClientId);
+            Assert.Equal(expectedScope, credentials.RequestedScope);
+
+            DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+                new DPoPRefreshCredential(credentials),
+                s_authority,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.NotNull(refreshed);
+            Assert.Equal(clientId, server.RefreshRequestedClientId);
+            Assert.Equal(expectedScope, server.RefreshRequestedScopes);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
     public async Task LoginAndRefreshRequestsUsePermissionSetsUnlessScopesAreExplicitlyOverridden(bool localhost, bool overrideScopes)
     {
         LoginTestServer server = new();

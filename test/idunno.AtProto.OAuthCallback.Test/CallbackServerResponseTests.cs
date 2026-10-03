@@ -11,6 +11,79 @@ namespace idunno.AtProto.OAuthCallback.Test;
 public class CallbackServerResponseTests
 {
     [Theory]
+    [InlineData("access_denied", "The user declined consent.")]
+    [InlineData("<script>alert(\"error\")</script>&", "<img src=x onerror='alert(1)'>&")]
+    [InlineData("&lt;script&gt;", "A < B & B > C")]
+    [InlineData("access_denied", null)]
+    [InlineData(null, "Consent was declined.")]
+    [InlineData("", "")]
+    [InlineData(null, null)]
+    public async Task FailurePagesAppendOnlyPresentHtmlEncodedOAuthErrorValues(string? error, string? description)
+    {
+        CancellationToken testToken = TestContext.Current.CancellationToken;
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(
+            configure: server => server.FailureBody = "<h1>Failure</h1>");
+        string query = "?state=xyz";
+        if (error is not null)
+        {
+            query += $"&error={Uri.EscapeDataString(error)}";
+        }
+        if (description is not null)
+        {
+            query += $"&error_description={Uri.EscapeDataString(description)}";
+        }
+        Task<string> callback = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
+        using HttpClient client = new();
+        using HttpResponseMessage response = await client.GetAsync(new Uri($"{server.Uri}{query}"), testToken);
+        string body = await response.Content.ReadAsStringAsync(testToken);
+
+        string expectedError = string.IsNullOrEmpty(error) ? string.Empty : $"<h2>{WebUtility.HtmlEncode(error)}</h2>";
+        string expectedDescription = string.IsNullOrEmpty(description) ? string.Empty : $"<p>{WebUtility.HtmlEncode(description)}</p>";
+        string expectedDetails = string.IsNullOrEmpty(error) && string.IsNullOrEmpty(description)
+            ? string.Empty
+            : $"<div class=\"oauth-error-details\">{expectedError}{expectedDescription}</div>";
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<h1>Failure</h1>{expectedDetails}</body>", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("<script>", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("<img src=x", body, StringComparison.Ordinal);
+        Assert.Equal(query, await callback);
+    }
+
+    [Fact]
+    public async Task SuccessPagesDoNotDisplayOAuthErrorParameters()
+    {
+        CancellationToken testToken = TestContext.Current.CancellationToken;
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        Task<string> callback = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: testToken);
+        const string query = "?code=abc&state=xyz&error=access_denied&error_description=DoNotDisplay";
+        using HttpClient client = new();
+        using HttpResponseMessage response = await client.GetAsync(new Uri($"{server.Uri}{query}"), testToken);
+        string body = await response.Content.ReadAsStringAsync(testToken);
+
+        Assert.Contains("Login completed.", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("access_denied", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("DoNotDisplay", body, StringComparison.Ordinal);
+        Assert.Equal(query, await callback);
+    }
+
+    [Fact]
+    public void DefaultSuccessAndFailureBodiesUseTheSameLogoBeforeTheHeadingText()
+    {
+        const string imageStart = "<img ";
+        const string imageEnd = "/>";
+        string successBody = Resources.SuccessBody;
+        string failureBody = Resources.FailureBody;
+        int start = successBody.IndexOf(imageStart, StringComparison.Ordinal);
+        int end = successBody.IndexOf(imageEnd, start, StringComparison.Ordinal) + imageEnd.Length;
+        string logo = successBody[start..end];
+
+        Assert.StartsWith("<h1><img src=\"data:image/png;base64,", successBody, StringComparison.Ordinal);
+        Assert.StartsWith("<h1><img src=\"data:image/png;base64,", failureBody, StringComparison.Ordinal);
+        Assert.Contains($"{logo}Login completed.", successBody, StringComparison.Ordinal);
+        Assert.Contains($"{logo}Login was not completed.", failureBody, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData(".")]
     [InlineData("..")]
     [InlineData("a/../b")]
