@@ -81,6 +81,8 @@ public class OAuthClient
     private Uri? _expectedService;
     private string? _proofKey;
     private IDictionary<string, string>? _stateExtraProperties;
+    private string? _loginClientId;
+    private string? _loginRequestedScope;
 
     private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null, TimeProvider? timeProvider = null)
     {
@@ -151,7 +153,11 @@ public class OAuthClient
                         _expectedService.ToString(),
                         _proofKey,
                         _correlationId,
-                        _stateExtraProperties);
+                        _stateExtraProperties)
+                    {
+                        OAuthClientId = _loginClientId,
+                        RequestedScope = _loginRequestedScope
+                    };
                 }
             }
         }
@@ -171,6 +177,8 @@ public class OAuthClient
                 _proofKey = value.ProofKey;
                 _correlationId = value.CorrelationId;
                 _stateExtraProperties = value.ExtraProperties;
+                _loginClientId = value.OAuthClientId;
+                _loginRequestedScope = value.RequestedScope;
             }
         }
     }
@@ -228,7 +236,7 @@ public class OAuthClient
             ArgumentOutOfRangeException.ThrowIfZero(requestedScopes.Length);
         }
 
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
@@ -291,6 +299,8 @@ public class OAuthClient
                 _expectedAuthority = authority;
                 _expectedService = service;
                 _authorizeState = authorizeState;
+                _loginClientId = clientId;
+                _loginRequestedScope = scopeString;
                 _correlationId = correlationId;
 
                 // Replaced rather than merged, and copied rather than aliased, so a second login on this instance neither
@@ -324,27 +334,12 @@ public class OAuthClient
         IEnumerable<string>? scopes = null,
         CancellationToken cancellationToken = default)
     {
-        clientId ??= _options?.ClientId;
-        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
-
-        string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
-        requestedScopes ??= [.. DefaultScopes];
-
-        string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
-
-        // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
-        // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
-        if (clientId == "http://localhost")
-        {
-            clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
-        }
-
         string proofKey;
         AuthorizeState authorizeState;
         Uri expectedService;
         Uri expectedAuthority;
         Guid correlationId;
+        string? savedScope;
 
         // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
         // another thread starts a new one part way through.
@@ -363,6 +358,8 @@ public class OAuthClient
             expectedService = _expectedService;
             expectedAuthority = _expectedAuthority;
             correlationId = _correlationId;
+            clientId ??= _loginClientId;
+            savedScope = _loginRequestedScope;
         }
 
         // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
@@ -370,6 +367,20 @@ public class OAuthClient
         // so neither has any further use to this instance and both remain readable through State until they are cleared.
         try
         {
+            clientId ??= _options?.ClientId;
+            ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+            string[]? requestedScopes = scopes is null ? null : [.. scopes];
+            requestedScopes ??= savedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
+            requestedScopes ??= [.. DefaultScopes];
+            string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
+
+            if (clientId == "http://localhost")
+            {
+                clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
+            }
+
             OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes);
 
             LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -420,7 +431,11 @@ public class OAuthClient
                 loginResult.AccessToken,
                 loginResult.RefreshToken,
                 proofKey,
-                loginResult.TokenResponse.DPoPNonce);
+                loginResult.TokenResponse.DPoPNonce)
+            {
+                OAuthClientId = clientId,
+                RequestedScope = scopeString
+            };
         }
         finally
         {
@@ -446,6 +461,8 @@ public class OAuthClient
             _expectedAuthority = null;
             _expectedService = null;
             _stateExtraProperties = null;
+            _loginClientId = null;
+            _loginRequestedScope = null;
 
             _oidcClient = null;
             _oidcClientProofKey = null;
@@ -453,16 +470,20 @@ public class OAuthClient
         }
     }
 
-    private void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
+    internal void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
     {
-        if (grantedScopes is null)
+        if (grantedScopes is null || grantedScopes.StartsWith("ref:", StringComparison.Ordinal))
         {
             return;
         }
 
         string[] granted = grantedScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        foreach (string requestedScope in requestedScopes.Where(s => !string.IsNullOrEmpty(s) && !granted.Contains(s, StringComparer.Ordinal)))
+        // Permission sets can be expanded into granular grants, so their include: strings cannot be compared literally.
+        foreach (string requestedScope in requestedScopes.Where(s =>
+            !string.IsNullOrEmpty(s) &&
+            !s.StartsWith("include:", StringComparison.Ordinal) &&
+            !granted.Contains(s, StringComparer.Ordinal)))
         {
             Logger.OAuthScopeNotGranted(_logger, correlationId, requestedScope, grantedScopes);
         }
@@ -561,12 +582,13 @@ public class OAuthClient
         ArgumentNullException.ThrowIfNull(authority);
 
         string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= refreshCredential.RequestedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
-        clientId ??= _options?.ClientId;
+        clientId ??= refreshCredential.OAuthClientId ?? _options?.ClientId;
 
         ArgumentNullException.ThrowIfNull(clientId);
 
@@ -660,7 +682,11 @@ public class OAuthClient
                     refreshResult.AccessToken,
                     refreshResult.RefreshToken,
                     refreshCredential.DPoPProofKey,
-                    refreshCredential.DPoPNonce);
+                    refreshCredential.DPoPNonce)
+                {
+                    OAuthClientId = clientId,
+                    RequestedScope = scopeString
+                };
             }
         }
     }
@@ -786,11 +812,13 @@ public class OAuthClient
 
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
         // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
+        // A case-sensitive "ref:" prefix references scopes and permission sets resolved by the server.
         if (!accessToken.TryGetClaim("scope", out Claim? scopeClaim) ||
-            !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal))
+            (!scopeClaim.Value.StartsWith("ref:", StringComparison.Ordinal) &&
+             !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal)))
         {
-            Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, correlationId);
-            throw new OAuthException("Issued token does not contain atproto in scope.");
+            Logger.OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(_logger, correlationId);
+            throw new OAuthException("Issued token scope does not contain atproto or begin with ref:.");
         }
 
         if (!Uri.TryCreate(accessToken.Issuer, UriKind.Absolute, out Uri? issuer))

@@ -519,6 +519,9 @@ public sealed class CallbackServer : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// <para>The value is written into the page exactly as it is given, and is not encoded.</para>
+    /// <para>When present, callback <c>error</c> and <c>error_description</c> values are HTML encoded and appended
+    /// after this content in an <c>h2</c> heading and a paragraph, respectively. These values are untrusted server
+    /// input and are displayed for information only; they do not establish the validity of the callback.</para>
     /// </remarks>
     public string FailureBody { get; set; }
 
@@ -864,6 +867,37 @@ public sealed class CallbackServer : IAsyncDisposable
             await context.Response.WriteAsync("</head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("<body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync(body, cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            if (!authorizationCodeIssued)
+            {
+                string error = context.Request.Query["error"].ToString();
+                string description = context.Request.Query["error_description"].ToString();
+                bool hasErrorDetails = !string.IsNullOrEmpty(error) || !string.IsNullOrEmpty(description);
+                if (hasErrorDetails)
+                {
+                    await context.Response.WriteAsync(
+                        "<div class=\"oauth-error-details\">",
+                        cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                }
+
+                if (!string.IsNullOrEmpty(error))
+                {
+                    await context.Response.WriteAsync(
+                        $"<h2>{WebUtility.HtmlEncode(error)}</h2>",
+                        cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                }
+
+                if (!string.IsNullOrEmpty(description))
+                {
+                    await context.Response.WriteAsync(
+                        $"<p>{WebUtility.HtmlEncode(description)}</p>",
+                        cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                }
+
+                if (hasErrorDetails)
+                {
+                    await context.Response.WriteAsync("</div>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+                }
+            }
             await context.Response.WriteAsync("</body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("</html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
 

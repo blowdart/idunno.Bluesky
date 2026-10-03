@@ -8,6 +8,10 @@
 
 #### idunno.AtProto
 
+* Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
+* Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.
+* Added `OAuthPermissionSet` for referencing published AT Protocol permission-set lexicons, including inherited RPC audiences.
+* Added `OAuthOptions.PermissionSets` and `GetRequestedScopes()` to combine typed permission sets with existing raw scopes for OAuth requests.
 * Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
 * Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
 * Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
@@ -100,6 +104,7 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
 * Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
 * Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
@@ -119,6 +124,8 @@
 
 #### Samples
 
+* Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
+* Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
 * `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
   cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
@@ -151,6 +158,11 @@
   and `DagCbor.ToJsonElement()` no longer copies the element it returns.
 * Preparing a moderation label for signature verification now removes the signature from the encoded label, rather than re-encoding
   every other field, more than halving its cost and cutting its allocations by more than 80%.
+
+#### idunno.AtProto.OAuthCallback
+
+* The default OAuth failure page now displays the same logo in the same position as the success page.
+* OAuth callback failure pages now display HTML-encoded `error` and `error_description` values when present.
 
 #### idunno.AtProto.Types
 
@@ -209,6 +221,9 @@
 
 #### idunno.AtProto
 
+* Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
+* OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.
+* Missing-scope warnings no longer compare permission-set references literally against expanded grants, or opaque `ref:` grants against requested scopes.
 * `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
 * Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
   but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result

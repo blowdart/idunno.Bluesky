@@ -2092,7 +2092,7 @@ public partial class AtProtoAgent
 
         Options.OAuthOptions.Validate();
 
-        scopes ??= Options.OAuthOptions.Scopes;
+        scopes ??= Options.OAuthOptions.GetRequestedScopes();
         ArgumentNullException.ThrowIfNull(scopes);
 
         if (validateDiscoveredEndpoints)
@@ -2192,13 +2192,53 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is <see langword="null"/>.</exception>
-    public async Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "The expected-DID overload requires all four arguments, preserving existing calls including a three-argument default literal.")]
+    public Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default) =>
+        ProcessOAuth2LoginResponseCore(oAuthClient, callbackData, expectedDid: null, cancellationToken);
+
+    /// <summary>
+    /// Processes an OAuth login response and sets the agent credentials only when the authorized DID matches the expected DID.
+    /// </summary>
+    /// <param name="oAuthClient">The OAuth client containing the saved login state.</param>
+    /// <param name="callbackData">The data returned to the callback URI.</param>
+    /// <param name="expectedDid">The DID the authorization must identify.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>A value indicating whether the agent authenticated successfully.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="oAuthClient"/> or <paramref name="expectedDid"/> is <see langword="null"/>.</exception>
+    /// <exception cref="OAuthException">The login response fails OAuth validation or identifies a DID other than <paramref name="expectedDid"/>.</exception>
+    /// <remarks>
+    /// <para>The DID is checked after validating the returned credentials and before replacing the agent's session.
+    /// A DID mismatch leaves any existing session unchanged.</para>
+    /// <para>For progressive scope requests, supply the original session's DID.
+    /// See <see href="https://atproto.com/specs/oauth#identity-authentication">OAuth identity authentication</see>.</para>
+    /// </remarks>
+    public Task<bool> ProcessOAuth2LoginResponse(
+        OAuthClient oAuthClient,
+        string callbackData,
+        Did expectedDid,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(expectedDid);
+
+        return ProcessOAuth2LoginResponseCore(oAuthClient, callbackData, expectedDid, cancellationToken);
+    }
+
+    private async Task<bool> ProcessOAuth2LoginResponseCore(
+        OAuthClient oAuthClient,
+        string callbackData,
+        Did? expectedDid,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(oAuthClient);
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2LoginResponse(callbackData, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (accessCredentials is not null)
         {
+            if (expectedDid is not null && accessCredentials.Did != expectedDid)
+            {
+                throw new OAuthException($"The authorized DID {accessCredentials.Did} does not match the expected DID {expectedDid}.");
+            }
+
             return await Login(accessCredentials, cancellationToken).ConfigureAwait(false);
         }
         else
@@ -2897,9 +2937,9 @@ public partial class AtProtoAgent
 
             Options.OAuthOptions.Validate();
 
-            string scopeString = string.Join(" ", Options.OAuthOptions.Scopes.Where(s => !string.IsNullOrEmpty(s)));
+            string scopeString = string.Join(" ", Options.OAuthOptions.GetRequestedScopes().Where(s => !string.IsNullOrEmpty(s)));
 
-            string clientId = Options.OAuthOptions.ClientId;
+            string clientId = (credentials as DPoPAccessCredentials)?.OAuthClientId ?? Options.OAuthOptions.ClientId;
 
             // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
             // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -3115,7 +3155,7 @@ public partial class AtProtoAgent
                 throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
             }
 
-            DPoPRefreshCredential refreshCredential = new(accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
+            DPoPRefreshCredential refreshCredential = new(accessCredentials);
 
             return await RefreshOAuthIssuedCredentials(refreshCredential, accessCredentials.Did, cancellationToken).ConfigureAwait(false);
         }

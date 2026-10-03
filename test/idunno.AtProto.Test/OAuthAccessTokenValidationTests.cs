@@ -17,6 +17,28 @@ public class OAuthAccessTokenValidationTests
 {
     private static readonly Uri s_authority = new("https://authority.test/");
 
+    [Theory]
+    [InlineData("ref:scopeReference", false)]
+    [InlineData("atproto repo:com.example.post?action=create", true)]
+    [InlineData("atproto blob:image/* repo:com.example.post?action=create", false)]
+    public void MissingScopeWarningsOnlyCompareDirectlyComparableScopes(string grantedScopes, bool expectBlobWarning)
+    {
+        using CapturingLoggerFactory loggerFactory = new();
+        OAuthClient client = CreateOAuthClient(loggerFactory: loggerFactory);
+
+        client.WarnOnScopesNotGranted(
+            ["atproto", "include:com.example.authBasic", "blob:image/*"],
+            grantedScopes,
+            Guid.NewGuid());
+
+        Assert.Equal(expectBlobWarning ? 1 : 0, loggerFactory.Messages.Count);
+        Assert.DoesNotContain(loggerFactory.Messages, message => message.Contains("include:", StringComparison.Ordinal));
+        if (expectBlobWarning)
+        {
+            Assert.Contains("blob:image/*", Assert.Single(loggerFactory.Messages), StringComparison.Ordinal);
+        }
+    }
+
     private static OAuthClient CreateOAuthClient(
         TimeSpan? clockSkew = null,
         ILoggerFactory? loggerFactory = null,
@@ -101,18 +123,31 @@ public class OAuthAccessTokenValidationTests
     }
 
     [Theory]
+    [InlineData("ref:scopeReference")]
+    [InlineData("ref:bafyScopeReference")]
+    public void ScopeBeginningWithAReferencePassesValidation(string scope)
+    {
+        CreateOAuthClient().ValidateAccessToken(CreateToken(scope: scope), s_authority, Guid.NewGuid());
+    }
+
+    [Theory]
     [InlineData("notatproto")]
     [InlineData("atproto-lite")]
     [InlineData("xatprotox")]
     [InlineData("transition:atprotogeneric")]
     [InlineData("ATPROTO")]
     [InlineData("transition:generic")]
+    [InlineData("REF:scopeReference")]
+    [InlineData("Ref:scopeReference")]
+    [InlineData("xref:scopeReference")]
+    [InlineData("transition:generic ref:scopeReference")]
+    [InlineData(" ref:scopeReference")]
     public void ScopeMerelyContainingAtProtoAsASubstringFailsValidation(string scope)
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: scope), s_authority, Guid.NewGuid()));
 
-        Assert.Equal("Issued token does not contain atproto in scope.", exception.Message);
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
     [Fact]
@@ -121,7 +156,7 @@ public class OAuthAccessTokenValidationTests
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid()));
 
-        Assert.Equal("Issued token does not contain atproto in scope.", exception.Message);
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
     [Fact]
@@ -308,6 +343,26 @@ public class OAuthAccessTokenValidationTests
             "issuer https://attacker.test/ did not match the expected https://authority.test/",
             message,
             StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("transition:generic")]
+    [InlineData("REF:scopeReference")]
+    public void InvalidScopeIsLoggedWithBothAcceptedScopeForms(string? scope)
+    {
+        CapturingLoggerFactory loggerFactory = new();
+        Guid correlationId = Guid.NewGuid();
+
+        Assert.Throws<OAuthException>(
+            () => CreateOAuthClient(loggerFactory: loggerFactory).ValidateAccessToken(
+                CreateToken(scope: scope),
+                s_authority,
+                correlationId));
+
+        Assert.Equal(
+            $"OAuth login access token scope did not contain atproto or begin with ref:, correlation {correlationId}",
+            Assert.Single(loggerFactory.Messages));
     }
 
     private sealed class CapturingLoggerFactory : ILoggerFactory

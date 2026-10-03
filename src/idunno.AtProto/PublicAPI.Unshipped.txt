@@ -1,4 +1,23 @@
 #nullable enable
+idunno.AtProto.AtProtoAgent.ProcessOAuth2LoginResponse(idunno.AtProto.Authentication.OAuthClient! oAuthClient, string! callbackData, idunno.AtProto.Did! expectedDid, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.InsufficientScope
+idunno.AtProto.InsufficientScope.InsufficientScope(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.AtProto.ScopeMissingError
+idunno.AtProto.ScopeMissingError.ScopeMissingError(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+const idunno.AtProto.Authentication.AtProtoClaims.OAuthClientId = "urn:atproto:oauth:client" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.OAuthRequestedScope = "urn:atproto:oauth:scope" -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.DPoPAccessCredentials.OAuthClientId.init -> void
+idunno.AtProto.Authentication.DPoPAccessCredentials.RequestedScope.get -> string?
+idunno.AtProto.Authentication.DPoPAccessCredentials.RequestedScope.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.DPoPRefreshCredential.OAuthClientId.init -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.RequestedScope.get -> string?
+idunno.AtProto.Authentication.DPoPRefreshCredential.RequestedScope.init -> void
+idunno.AtProto.Authentication.OAuthLoginState.OAuthClientId.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.OAuthClientId.init -> void
+idunno.AtProto.Authentication.OAuthLoginState.RequestedScope.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.RequestedScope.init -> void
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.get -> System.TimeProvider!
 idunno.AtProto.AtProtoAgentOptions.TimeProvider.set -> void
 virtual idunno.AtProto.AtProtoAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.AtProto.AtProtoAgentBuilder!
@@ -821,3 +840,12 @@ static idunno.AtProto.IdentityResolution.ResolvePdsAsync(idunno.AtProto.Handle! 
 static idunno.AtProto.IdentityResolution.ResolvePdsAsync(string! atIdentifier, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, int maximumResponseSize = 33554432, int maximumWellKnownResponseSize = 4096, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
 static idunno.AtProto.IdentityResolution.ResolveVerifiedHandleAsync(idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, int maximumResponseSize = 33554432, int maximumWellKnownResponseSize = 4096, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Handle!>!
 static idunno.AtProto.IdentityResolution.VerifyHandleAsync(idunno.AtProto.Handle! handle, idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, int maximumResponseSize = 33554432, int maximumWellKnownResponseSize = 4096, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.Authentication.OAuthOptions.GetRequestedScopes() -> System.Collections.Generic.IEnumerable<string!>!
+idunno.AtProto.Authentication.OAuthOptions.PermissionSets.get -> System.Collections.Generic.IEnumerable<idunno.AtProto.Authentication.OAuthPermissionSet!>!
+idunno.AtProto.Authentication.OAuthOptions.PermissionSets.set -> void
+idunno.AtProto.Authentication.OAuthPermissionSet
+idunno.AtProto.Authentication.OAuthPermissionSet.Audience.get -> string?
+idunno.AtProto.Authentication.OAuthPermissionSet.Nsid.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Authentication.OAuthPermissionSet.OAuthPermissionSet(idunno.AtProto.Nsid! nsid, string? audience = null) -> void
+override idunno.AtProto.Authentication.OAuthPermissionSet.ToString() -> string!
+static idunno.AtProto.Authentication.OAuthPermissionSet.implicit operator string!(idunno.AtProto.Authentication.OAuthPermissionSet! permissionSet) -> string!

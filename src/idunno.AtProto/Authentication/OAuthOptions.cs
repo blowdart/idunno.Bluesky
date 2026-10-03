@@ -175,4 +175,37 @@ public sealed class OAuthOptions
             field = scopes;
         }
     } = ["atproto"];
+
+    /// <summary>
+    /// Gets or sets the published permission sets to request in addition to <see cref="Scopes"/>.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The collection or one of its entries is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The collection is copied when assigned. The default is an empty collection.</para>
+    /// <para>Explicit scopes passed to an OAuth request override both configured scopes and permission sets.</para>
+    /// </remarks>
+    public IEnumerable<OAuthPermissionSet> PermissionSets
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            OAuthPermissionSet[] permissionSets = [.. value];
+            foreach (OAuthPermissionSet permissionSet in permissionSets)
+            {
+                ArgumentNullException.ThrowIfNull(permissionSet);
+            }
+
+            field = Array.AsReadOnly(permissionSets);
+        }
+    } = [];
+
+    /// <summary>
+    /// Gets the configured scopes combined with the permission-set references.
+    /// </summary>
+    /// <returns>A snapshot of the scopes to request, deduplicated using ordinal comparison.</returns>
+    public IEnumerable<string> GetRequestedScopes() =>
+        Scopes.Concat(PermissionSets.Select(permissionSet => permissionSet.ToString())).Distinct(StringComparer.Ordinal).ToArray();
 }

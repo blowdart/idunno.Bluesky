@@ -9,6 +9,16 @@ namespace idunno.AtProto.Authentication;
 public static class AtProtoClaims
 {
     /// <summary>
+    /// The claim name for the effective OAuth client identifier.
+    /// </summary>
+    public const string OAuthClientId = "urn:atproto:oauth:client";
+
+    /// <summary>
+    /// The claim name for the space-separated scopes originally requested during OAuth login.
+    /// </summary>
+    public const string OAuthRequestedScope = "urn:atproto:oauth:scope";
+
+    /// <summary>
     /// The claim name for a <see cref="Did"/>.
     /// </summary>
     public const string Did = "urn:atproto:did";
