@@ -1,5 +1,5 @@
 #nullable enable
-idunno.AtProto.AtProtoAgent.ProcessOAuth2LoginResponse(idunno.AtProto.Authentication.OAuthClient! oAuthClient, string! callbackData, idunno.AtProto.Did! expectedDid, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.ProcessOAuth2LoginResponse(idunno.AtProto.Authentication.OAuthClient! oAuthClient, string! callbackData, idunno.AtProto.Did! expectedDid, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 idunno.AtProto.InsufficientScope
 idunno.AtProto.InsufficientScope.InsufficientScope(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.AtProto.ScopeMissingError

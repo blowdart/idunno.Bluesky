@@ -2192,6 +2192,7 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "The expected-DID overload requires all four arguments, preserving existing calls including a three-argument default literal.")]
     public Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default) =>
         ProcessOAuth2LoginResponseCore(oAuthClient, callbackData, expectedDid: null, cancellationToken);
 
@@ -2211,12 +2212,11 @@ public partial class AtProtoAgent
     /// <para>For progressive scope requests, supply the original session's DID.
     /// See <see href="https://atproto.com/specs/oauth#identity-authentication">OAuth identity authentication</see>.</para>
     /// </remarks>
-    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple overloads with optional parameters", Justification = "The required expectedDid distinguishes identity validation from the existing login overload.")]
     public Task<bool> ProcessOAuth2LoginResponse(
         OAuthClient oAuthClient,
         string callbackData,
         Did expectedDid,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(expectedDid);
 

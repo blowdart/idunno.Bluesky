@@ -103,6 +103,17 @@ public class OAuthLoginResponseTests
     }
 
     [Fact]
+    [SuppressMessage("Usage", "xUnit1051:Calls to methods which accept CancellationToken should use TestContext.Current.CancellationToken", Justification = "This regression verifies source compatibility of a default literal; null validation prevents any network operation.")]
+    public async Task ExistingAgentLoginOverloadAcceptsADefaultLiteralCancellationToken()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(null!, "?code=test", default));
+    }
+
+    [Fact]
     public async Task ExpectedDidOverloadRejectsNullArgumentsBeforeProcessingTheCallback()
     {
         LoginTestServer server = new();
