@@ -389,6 +389,8 @@ public class AtProtoHttpClient(
 /// <typeparam name="TResult">The type of class to use when deserializing results from an AT Proto API call.</typeparam>
 public class AtProtoHttpClient<TResult> where TResult : class
 {
+    private sealed record HttpContentFactory(Func<HttpContent> Create);
+
     // Each public method must have an overload which takes a required JsonSerializerOptions parameter, and which which does not have the parameter.
     // The overload without the parameter must be marked with [RequiresDynamicCode()] to enable AOT compilation.
 
@@ -1221,6 +1223,54 @@ public class AtProtoHttpClient<TResult> where TResult : class
     }
 
     /// <summary>
+    /// Performs a POST request with a new request body for each HTTP attempt.
+    /// </summary>
+    /// <param name="service">The service to call.</param>
+    /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
+    /// <param name="contentFactory">A factory for request content.</param>
+    /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+    /// <param name="credentials">The credentials to use when calling <paramref name="service"/>.</param>
+    /// <param name="httpClient">An HTTP client to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="jsonSerializerOptions">The JSON serialization options to apply to the response.</param>
+    /// <param name="onCredentialsUpdated">A callback to invoke if credentials need updating.</param>
+    /// <param name="cancellationToken">A cancellation token for the request.</param>
+    /// <returns>A result for the POST request.</returns>
+    [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    internal Task<AtProtoHttpResult<TResult>> Post(
+        Uri service,
+        string endpoint,
+        Func<HttpContent> contentFactory,
+        ICollection<NameValueHeaderValue>? requestHeaders,
+        AtProtoCredential? credentials,
+        HttpClient httpClient,
+        JsonSerializerOptions jsonSerializerOptions,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrEmpty(endpoint);
+        ArgumentNullException.ThrowIfNull(contentFactory);
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
+
+        return MakeRequest(
+            service: service,
+            endpoint: endpoint,
+            record: new HttpContentFactory(contentFactory),
+            httpMethod: HttpMethod.Post,
+            requestHeaders: MergeRequestHeaders(requestHeaders),
+            contentHeaders: null,
+            credentials: credentials,
+            retry: true,
+            httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            subscribedLabelers: null,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a blob record on the supplied <paramref name="service"/> against the specified <paramref name="endpoint"/>.
     /// </summary>
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
@@ -1775,6 +1825,11 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 {
                     switch (record)
                     {
+                        case HttpContentFactory contentFactory:
+                            httpRequestMessage.Content = contentFactory.Create() ??
+                                throw new InvalidOperationException("The HTTP content factory returned null.");
+                            break;
+
                         case HttpContent httpContent:
                             httpRequestMessage.Content = httpContent;
                             callerSuppliedContent = true;

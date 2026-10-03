@@ -1,0 +1,20 @@
+@page "/tos"
+@{
+    ViewData["Title"] = "Terms of service";
+}
+
+<h1 class="display-4">Terms of service</h1>
+<div class="alert alert-warning" role="note">
+    This is a development sample, not production terms of service. Replace this page with your application's terms before deployment.
+</div>
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5 card-title">Demonstration use</h2>
+        <p>This sample demonstrates signing in with Bluesky through an HTTPS tunnel, refreshing OAuth credentials and logging out.
+            It is intended for local development and testing.</p>
+        <p>Use a domain you control, protect your client signing key and review the production configuration guidance before deploying
+            an application based on this sample.</p>
+        <p class="mb-0">Sessions are stored in memory and are lost when the application restarts. Remote token revocation is best effort;
+            a local logout does not guarantee successful revocation at the authorization server.</p>
+    </div>
+</div>

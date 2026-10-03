@@ -25,6 +25,11 @@ public sealed class OAuthOptions
     public static readonly TimeSpan DefaultClockSkew = TimeSpan.FromMinutes(5);
 
     /// <summary>
+    /// The default amount by which client assertion issued-at timestamps are backdated.
+    /// </summary>
+    public static readonly TimeSpan DefaultClientAssertionClockSkew = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Creates a new instance of <see cref="OAuthOptions"/>.
     /// </summary>
     public OAuthOptions()
@@ -52,7 +57,11 @@ public sealed class OAuthOptions
     /// <summary>
     /// Check that the options are valid.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when <see cref="ClientId"/> is white space.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <see cref="ClientId"/> is white space, when a client signing key or key path is set and
+    /// <see cref="ClientId"/> is a localhost development client ID, when additional client signing keys or key paths are set
+    /// without an active client signing key or key path, or when two client signing keys share a key identifier.
+    /// </exception>
     /// <exception cref="ArgumentNullException">Thrown when <see cref="ClientId"/> or <see cref="Scopes"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <see cref="Scopes"/> is empty.</exception>
     public void Validate()
@@ -60,12 +69,227 @@ public sealed class OAuthOptions
         ArgumentException.ThrowIfNullOrWhiteSpace(ClientId);
         ArgumentNullException.ThrowIfNull(Scopes);
         ArgumentOutOfRangeException.ThrowIfZero(Scopes.Count());
+
+        bool hasActiveKey = ClientSigningKey is not null || !string.IsNullOrWhiteSpace(ClientSigningKeyPath);
+        bool hasAdditionalKeys =
+            AdditionalClientSigningKeys.Count != 0 ||
+            AdditionalClientSigningKeyPaths.Any(path => !string.IsNullOrWhiteSpace(path));
+
+        if ((hasActiveKey || hasAdditionalKeys) &&
+            Uri.TryCreate(ClientId, UriKind.Absolute, out Uri? clientId) &&
+            clientId.Scheme == Uri.UriSchemeHttp &&
+            string.Equals(clientId.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Localhost development client IDs are public clients and cannot use a client signing key.");
+        }
+
+        if (hasAdditionalKeys && !hasActiveKey)
+        {
+            throw new ArgumentException("Additional client signing keys require an active client signing key.");
+        }
+
+        ValidateClientSigningKeyIds();
+    }
+
+    /// <summary>
+    /// Validates that configured client signing key identifiers are unique.
+    /// </summary>
+    /// <exception cref="ArgumentException">Two configured keys share a key identifier.</exception>
+    internal void ValidateClientSigningKeyIds()
+    {
+        if (GetClientSigningKeys().GroupBy(key => key.KeyId, StringComparer.Ordinal).Any(group => group.Count() > 1))
+        {
+            throw new ArgumentException("Each client signing key must have a unique key identifier.");
+        }
+    }
+
+    /// <summary>
+    /// Gets the active client signing key followed by any additional client signing keys.
+    /// </summary>
+    /// <returns>The configured client signing keys.</returns>
+    internal IEnumerable<OAuthClientSigningKey> GetClientSigningKeys()
+    {
+        if (ClientSigningKey is not null)
+        {
+            yield return ClientSigningKey;
+        }
+
+        foreach (OAuthClientSigningKey key in AdditionalClientSigningKeys.Where(key => key is not null))
+        {
+            yield return key;
+        }
+    }
+
+    /// <summary>
+    /// Gets the client signing key a session authenticates with.
+    /// </summary>
+    /// <param name="keyId">The identifier of the key the session started with, or <see langword="null"/> if it is not known.</param>
+    /// <param name="found">
+    /// <see langword="true"/> when <paramref name="keyId"/> is <see langword="null"/> or matches a configured key; otherwise <see langword="false"/>.
+    /// </param>
+    /// <returns>
+    /// The key matching <paramref name="keyId"/>, or <see cref="ClientSigningKey"/> when <paramref name="keyId"/> is
+    /// <see langword="null"/> or does not match a configured key.
+    /// </returns>
+    internal OAuthClientSigningKey? GetClientSigningKey(string? keyId, out bool found)
+    {
+        found = true;
+
+        if (keyId is null)
+        {
+            return ClientSigningKey;
+        }
+
+        OAuthClientSigningKey? match = GetClientSigningKeys().FirstOrDefault(key => string.Equals(key.KeyId, keyId, StringComparison.Ordinal));
+        if (match is not null)
+        {
+            return match;
+        }
+
+        found = false;
+        return ClientSigningKey;
     }
 
     /// <summary>
     /// Gets or sets the OAuth client id.
     /// </summary>
     public string ClientId { get; set; } = default!;
+
+    /// <summary>
+    /// Gets or sets the optional human-readable client name advertised in OAuth client metadata.
+    /// </summary>
+    public string? ClientName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional client homepage URL advertised in OAuth client metadata.
+    /// </summary>
+    /// <remarks>
+    /// <para>The homepage must have the same hostname as <see cref="ClientId"/> when publishing AT Protocol OAuth client metadata.</para>
+    /// </remarks>
+    public Uri? ClientUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional HTTPS terms of service URL advertised in OAuth client metadata.
+    /// </summary>
+    public Uri? TosUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional HTTPS privacy policy URL advertised in OAuth client metadata.
+    /// </summary>
+    public Uri? PolicyUri { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key a confidential client authenticates itself to authorization servers with.
+    /// </summary>
+    /// <value>The client signing key, or <see langword="null"/> for a public client. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>
+    ///   When set, pushed authorization, token, refresh and revocation requests include a <c>private_key_jwt</c> client
+    ///   assertion signed with this key, and the client metadata must publish its public key. Localhost development client IDs
+    ///   are always public clients and cannot use a signing key.
+    /// </para>
+    /// <para>
+    ///   Sessions are bound to the key that started them. Changing or removing the key ends existing sessions when they next
+    ///   refresh, unless the previous key is kept in <see cref="AdditionalClientSigningKeys"/>.
+    /// </para>
+    /// <para>
+    ///   This property is not bound from configuration. Create it with <see cref="OAuthClientSigningKey.FromPem(string, string?)"/>
+    ///   or <see cref="OAuthClientSigningKey.FromPemFile(string, string?)"/>, or, in ASP.NET Core, set <see cref="ClientSigningKeyPath"/>.
+    /// </para>
+    /// </remarks>
+    public OAuthClientSigningKey? ClientSigningKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the path of a file containing the confidential client signing key.
+    /// </summary>
+    /// <value>
+    /// The path of a file containing an unencrypted ECDSA P-256 private key in PKCS#8 or SEC 1 PEM format,
+    /// or <see langword="null"/>. The default is <see langword="null"/>.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    ///   This can be bound from configuration. The ASP.NET Core authentication package loads the key from this path into
+    ///   <see cref="ClientSigningKey"/> when the options are built, unless <see cref="ClientSigningKey"/> is already set.
+    ///   Environment variables in the path are expanded, a leading <c>~</c> is replaced with the user's profile directory,
+    ///   and a relative path is resolved against the application's content root.
+    /// </para>
+    /// <para>
+    ///   Other applications should load the key with <see cref="OAuthClientSigningKey.FromPemFile(string, string?)"/> and set
+    ///   <see cref="ClientSigningKey"/> themselves.
+    /// </para>
+    /// </remarks>
+    public string? ClientSigningKeyPath { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key identifier to publish for the key loaded from <see cref="ClientSigningKeyPath"/>.
+    /// </summary>
+    /// <value>
+    /// The key identifier, or <see langword="null"/> to use the RFC 7638 thumbprint of the public key. The default is <see langword="null"/>.
+    /// </value>
+    public string? ClientSigningKeyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount by which client assertion issued-at timestamps are backdated.
+    /// </summary>
+    /// <value>The clock skew allowance. The default is 30 seconds.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This accommodates small clock differences with authorization servers when authenticating confidential clients.
+    ///   It applies to pushed authorization, token, refresh and revocation requests, without changing the assertion's
+    ///   expiration one minute after creation. Set to <see cref="TimeSpan.Zero"/> to disable backdating.
+    /// </para>
+    /// <para>
+    ///   This can be bound from configuration and is separate from <see cref="ClockSkew"/>, which controls token validation.
+    ///   Keep the system clock synchronized; an authorization server may reject assertions backdated too far.
+    /// </para>
+    /// </remarks>
+    public TimeSpan ClientAssertionClockSkew
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = DefaultClientAssertionClockSkew;
+
+    /// <summary>
+    /// Gets the keys, other than <see cref="ClientSigningKey"/>, that existing sessions may still authenticate with.
+    /// </summary>
+    /// <value>The additional client signing keys. The default is an empty collection.</value>
+    /// <remarks>
+    /// <para>
+    ///   Use additional keys to rotate the client signing key without ending existing sessions. New sign-ins always use
+    ///   <see cref="ClientSigningKey"/>. A session that started with an additional key keeps using that key when it refreshes
+    ///   or signs out, provided the session's <see cref="DPoPAccessCredentials.ClientSigningKeyId"/> was saved with it.
+    ///   The client metadata must publish every key.
+    /// </para>
+    /// <para>
+    ///   Each key must have a unique key identifier, and additional keys require an active <see cref="ClientSigningKey"/>.
+    /// </para>
+    /// <para>
+    ///   This property is not bound from configuration. In ASP.NET Core, set <see cref="AdditionalClientSigningKeyPaths"/> instead.
+    /// </para>
+    /// </remarks>
+    public ICollection<OAuthClientSigningKey> AdditionalClientSigningKeys { get; } = [];
+
+    /// <summary>
+    /// Gets the paths of files containing additional client signing keys.
+    /// </summary>
+    /// <value>
+    /// The paths of files containing unencrypted ECDSA P-256 private keys in PKCS#8 or SEC 1 PEM format. The default is an empty collection.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    ///   This can be bound from configuration. The ASP.NET Core authentication package loads each key into
+    ///   <see cref="AdditionalClientSigningKeys"/> when the options are built, resolving each path in the same way as
+    ///   <see cref="ClientSigningKeyPath"/>. Each key's identifier is the RFC 7638 thumbprint of its public key.
+    /// </para>
+    /// </remarks>
+    public ICollection<string> AdditionalClientSigningKeyPaths { get; } = [];
 
     /// <summary>
     /// Gets or sets the <see cref="Uri"/> the OAuth server should call back to when it has authenticated the user.
@@ -183,6 +407,8 @@ public sealed class OAuthOptions
     /// <remarks>
     /// <para>The collection is copied when assigned. The default is an empty collection.</para>
     /// <para>Explicit scopes passed to an OAuth request override both configured scopes and permission sets.</para>
+    /// <para>Configuration binding accepts objects with a string <c>Nsid</c> and an optional string <c>Audience</c>.
+    /// Enable <c>ErrorOnUnknownConfiguration</c> when binding to reject invalid collection entries rather than skipping them.</para>
     /// </remarks>
     public IEnumerable<OAuthPermissionSet> PermissionSets
     {

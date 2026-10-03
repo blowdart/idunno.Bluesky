@@ -55,19 +55,33 @@ items:
     items:
       - name: ASP.NET Authentication
         href: asp.net.md
+      - name: Production Configuration
+        href: productionConfiguration.md
 
   - name: Advanced Topics
     items:
-      - name: Configuring logging
-        href: logging.md
-      - name: Built-in Metrics
-        href: metrics.md
+      - name: Configuration
+        items:
+          - name: Production Configuration
+            href: productionConfiguration.md
+          - name: Agent HTTP configuration
+            href: httpConfiguration.md
+          - name: Logging Configuration
+            href: logging.md
+      - name: Advanced Authentication
+        items:
+          - name: Saving & restoring authentication state
+            href: savingAndRestoringAuthentication.md
+          - name: OAuth permissions
+            href: oauth/oauthPermissions.md
+          - name: Progressive authorization
+            href: oauth/progressiveAuthorization.md
+          - name: Local OAuth development
+            href: oauth/localOAuthDevelopment.md
       - name: Resolving and caching handles for DIDs
         href: didHandleCache.md
-      - name: Labels
+      - name: atproto Labels
         href: labels.md
-      - name: Saving & restoring authentication state
-        href: savingAndRestoringAuthentication.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
       - name: Sending "raw" requests
@@ -78,6 +92,8 @@ items:
         href: customLexiconsAndRecords.md
       - name: Unspecced APIS
         href: unspecced.md
+      - name: Built-in Metrics
+        href: metrics.md
 
   - name: Writing Bots
     items:

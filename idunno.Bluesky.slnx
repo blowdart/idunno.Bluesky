@@ -86,6 +86,7 @@
     <File Path="docs/docs/drafts.md" />
     <File Path="docs/docs/endpointStatus.md" />
     <File Path="docs/docs/firehose.md" />
+    <File Path="docs/docs/httpConfiguration.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
     <File Path="docs/docs/jetstreamMigration.md" />
@@ -95,6 +96,7 @@
     <File Path="docs/docs/metrics.md" />
     <File Path="docs/docs/notifications.md" />
     <File Path="docs/docs/posting.md" />
+    <File Path="docs/docs/productionConfiguration.md" />
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
     <File Path="docs/docs/rawClient.md" />
@@ -109,6 +111,7 @@
     <File Path="docs/docs/video.md" />
   </Folder>
   <Folder Name="/docs/docs/includes/">
+    <File Path="docs/docs/includes/production-configuration.md" />
     <File Path="docs/docs/includes/untrusted-data-warning.md" />
   </Folder>
   <Folder Name="/docs/docs/bots/">
@@ -157,6 +160,11 @@
     <File Path="docs/docs/media/vs-AdditionalInformation.png" />
     <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
   </Folder>
+  <Folder Name="/docs/docs/oauth/">
+    <File Path="docs/docs/oauth/localOAuthDevelopment.md" />
+    <File Path="docs/docs/oauth/oauthPermissions.md" />
+    <File Path="docs/docs/oauth/progressiveAuthorization.md" />
+  </Folder>
   <Folder Name="/docs/docs/tutorials/">
     <File Path="docs/docs/tutorials/blockingUsers.md" />
     <File Path="docs/docs/tutorials/creatingAPost.md" />
@@ -187,6 +195,14 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

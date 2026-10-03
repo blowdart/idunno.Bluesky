@@ -18,6 +18,9 @@ namespace idunno.Bluesky.AspNet.Authentication;
     WriteIndented = false)]
 
 [JsonSerializable(typeof(ProfileCacheEntry))]
+[JsonSerializable(typeof(OAuthClientMetadata))]
+[JsonSerializable(typeof(OAuthClientJsonWebKeySet))]
+[JsonSerializable(typeof(OAuthClientJsonWebKey))]
 [JsonSerializable(typeof(BlueskyAuthenticationOptions))]
 internal sealed partial class SourceGenerationContext : JsonSerializerContext
 {

@@ -401,6 +401,9 @@ internal static partial class Logger
     [LoggerMessage(612, LogLevel.Debug, "OAuthClient refresh succeeded, token issued by authority {authority}")]
     internal static partial void OAuthClientRefreshSucceeded(ILogger logger, Uri authority);
 
+    [LoggerMessage(613, LogLevel.Warning, "OAuth session client signing key {keyId} is not configured, using the active client signing key {activeKeyId}")]
+    internal static partial void OAuthClientSigningKeyNotFound(ILogger logger, string keyId, string activeKeyId);
+
     // Agent flow logging
     [LoggerMessage(750, LogLevel.Debug, "Agent disposing")]
     internal static partial void AgentDisposing(ILogger logger);

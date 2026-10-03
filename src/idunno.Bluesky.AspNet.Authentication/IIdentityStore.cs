@@ -286,6 +286,11 @@ public interface IIdentityStore
                 claims.Add(new Claim(AtProtoClaims.OAuthRequestedScope, requestedScope, ClaimValueTypes.String, credentials.Service.ToString()));
             }
 
+            if (dPoPAccessCredentials.ClientSigningKeyId is string clientSigningKeyId)
+            {
+                claims.Add(new Claim(AtProtoClaims.OAuthClientSigningKeyId, clientSigningKeyId, ClaimValueTypes.String, credentials.Service.ToString()));
+            }
+
             claims.Add(
                 new Claim(
                     AtProtoClaims.DPoPProof,
