@@ -18,7 +18,9 @@ and plain text: no embeds, moderation rendering or pagination. React renders tex
 ## Prerequisites
 
 * The .NET 10 SDK pinned in `global.json`.
-* Node.js 22.12 or later (Node.js 24 LTS is suitable) and npm.
+* Node.js matching `^22.22.2 || ^24.15.0 || >=26.0.0` and npm: Node 22.22.2 or later in the 22.x line,
+  Node 24.15.0 or later in the 24.x line, or Node 26 or later. Node 24 LTS at version 24.15.0 or later is recommended.
+  Node 23 and 25 are not supported by the locked frontend test stack.
 
 No development certificate, public hostname, tunnel or hosted client metadata is needed. This sample uses the special
 `http://localhost` OAuth development client and HTTP loopback callbacks, like `Samples.AspNetAuthentication`.
