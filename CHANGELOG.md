@@ -140,6 +140,7 @@
   The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
   Its key-generation script restricts private-key files to the current user before writing key material, including when replacing an existing key.
   A Bash/OpenSSL equivalent also generates key pairs and rotation configuration.
+  The PowerShell generator preserves existing keys in directories containing literal brackets unless replacement is explicitly requested.
 * Added `Samples.AspNetClientMetadata`, which previews generated OAuth client metadata for example.org with the `atproto` scope and Bluesky `ViewAll` permission set.
 * Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
 * Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.

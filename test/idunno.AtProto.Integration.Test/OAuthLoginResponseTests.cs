@@ -287,6 +287,38 @@ public class OAuthLoginResponseTests
         Assert.Equal("active", new JsonWebToken(server.TokenClientAssertion!).Kid);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConfidentialLoginAndRefreshNonceRetriesCreateFreshClientAssertions(bool restoreState)
+    {
+        LoginTestServer server = new() { ChallengeNonce = true };
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(key.ExportPkcs8PrivateKeyPem(), "active")
+        };
+        OAuthClient client = CreateClient(server, options);
+        await client.BuildOAuth2LoginUri(s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+
+        DPoPAccessCredentials? credentials = restoreState
+            ? await CreateClient(server, options).ProcessOAuth2Response(
+                state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken)
+            : await client.ProcessOAuth2LoginResponse(
+                CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+            new DPoPRefreshCredential(credentials), s_authority, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshed);
+        Assert.Equal("active", refreshed.ClientSigningKeyId);
+        Assert.Equal(["par", "par", "authorization_code", "authorization_code", "refresh_token", "refresh_token"], server.AssertionOperations);
+        Assert.Equal(6, server.AssertionJtis.Count);
+        Assert.Equal(6, server.AssertionJtis.Distinct(StringComparer.Ordinal).Count());
+    }
+
     [Fact]
     public async Task LoginRejectsARemovedParSigningKeyBeforeTokenExchange()
     {
@@ -518,6 +550,12 @@ public class OAuthLoginResponseTests
         /// </summary>
         internal bool IssueBearerToken { get; set; }
 
+        internal bool ChallengeNonce { get; set; }
+
+        internal List<string> AssertionJtis { get; } = [];
+
+        internal List<string> AssertionOperations { get; } = [];
+
         internal string? RequestedScopes { get; private set; }
 
         internal string? ParClientAssertion { get; private set; }
@@ -585,6 +623,11 @@ public class OAuthLoginResponseTests
                     RequestedScopes = form["scope"].ToString();
                     ParClientAssertion = form["client_assertion"].ToString();
                     RequestedClientId = form["client_id"].ToString();
+                    if (ChallengeNonce && await ChallengeOrRejectAssertion(context, ParClientAssertion, "par"))
+                    {
+                        return;
+                    }
+
                     response.StatusCode = StatusCodes.Status201Created;
                     response.ContentType = "application/json";
                     await response.WriteAsync("""{"request_uri":"urn:ietf:params:oauth:request_uri:test","expires_in":90}""");
@@ -594,6 +637,11 @@ public class OAuthLoginResponseTests
                     RecordProofKey(request);
                     IFormCollection tokenForm = await request.ReadFormAsync();
                     TokenClientAssertion = tokenForm["client_assertion"].ToString();
+                    if (ChallengeNonce && await ChallengeOrRejectAssertion(context, TokenClientAssertion, tokenForm["grant_type"].ToString()))
+                    {
+                        return;
+                    }
+
                     if (tokenForm["grant_type"] == "refresh_token")
                     {
                         RefreshRequestedScopes = tokenForm["scope"].ToString();
@@ -626,6 +674,29 @@ public class OAuthLoginResponseTests
                     response.StatusCode = StatusCodes.Status404NotFound;
                     return;
             }
+        }
+
+        private async Task<bool> ChallengeOrRejectAssertion(HttpContext context, string assertion, string operation)
+        {
+            string jti = new JsonWebToken(assertion).Id;
+            bool reused = AssertionJtis.Contains(jti, StringComparer.Ordinal);
+            AssertionJtis.Add(jti);
+            AssertionOperations.Add(operation);
+            string nonce = $"{operation}-nonce";
+            JsonWebToken proof = new(context.Request.Headers["DPoP"].ToString());
+
+            if (reused || !proof.TryGetClaim("nonce", out System.Security.Claims.Claim? nonceClaim) || nonceClaim.Value != nonce)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["DPoP-Nonce"] = nonce;
+                await context.Response.WriteAsync(reused
+                    ? """{"error":"invalid_client","error_description":"Reused client assertion"}"""
+                    : """{"error":"use_dpop_nonce"}""");
+                return true;
+            }
+
+            return false;
         }
 
         private void RecordProofKey(HttpRequest request)

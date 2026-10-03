@@ -38,7 +38,7 @@ $keyName = if ($NewKey) { "client-signing-key-$([Guid]::NewGuid().ToString('N'))
 $privateKeyPath = Join-Path $OutputDirectory "$keyName.pem"
 $publicKeyPath = Join-Path $OutputDirectory "$keyName.jwk.json"
 
-if (-not $Force -and ((Test-Path $privateKeyPath) -or (Test-Path $publicKeyPath))) {
+if (-not $Force -and ((Test-Path -LiteralPath $privateKeyPath) -or (Test-Path -LiteralPath $publicKeyPath))) {
     throw "A client signing key already exists in $OutputDirectory. Use -NewKey to create another key, or -Force to replace it."
 }
 
