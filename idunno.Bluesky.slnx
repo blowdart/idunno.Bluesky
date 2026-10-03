@@ -86,6 +86,7 @@
     <File Path="docs/docs/drafts.md" />
     <File Path="docs/docs/endpointStatus.md" />
     <File Path="docs/docs/firehose.md" />
+    <File Path="docs/docs/httpConfiguration.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
     <File Path="docs/docs/jetstreamMigration.md" />
@@ -95,6 +96,7 @@
     <File Path="docs/docs/metrics.md" />
     <File Path="docs/docs/notifications.md" />
     <File Path="docs/docs/posting.md" />
+    <File Path="docs/docs/productionConfiguration.md" />
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
     <File Path="docs/docs/rawClient.md" />
@@ -157,6 +159,11 @@
     <File Path="docs/docs/media/standardSiteEmbeddedCard.png" />
     <File Path="docs/docs/media/vs-AdditionalInformation.png" />
     <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
+  </Folder>
+  <Folder Name="/docs/docs/oauth/">
+    <File Path="docs/docs/oauth/localOAuthDevelopment.md" />
+    <File Path="docs/docs/oauth/oauthPermissions.md" />
+    <File Path="docs/docs/oauth/progressiveAuthorization.md" />
   </Folder>
   <Folder Name="/docs/docs/tutorials/">
     <File Path="docs/docs/tutorials/blockingUsers.md" />

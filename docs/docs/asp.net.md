@@ -25,7 +25,8 @@ If you use the `idunno.Bluesky.AspNet.Authentication` to authenticate against Bl
 
 ## Production Configuration
 
-[!include[Production configuration](includes/production-configuration.md)]
+See [Production configuration](productionConfiguration.md) for deployment URLs, persistent stores, trusted proxies,
+signing keys and operational checks.
 
 ## Authenticating with Bluesky
 

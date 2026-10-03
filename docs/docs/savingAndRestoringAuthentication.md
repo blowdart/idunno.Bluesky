@@ -101,3 +101,19 @@ if (!resumeResult)
 If the resume is successful the agent will be populated with the current access and refresh tokens and the session will be valid for authenticated
 calls. If the tokens were refreshed during restoration (which happens if you have a refresh token, but no access token, or the access token is expired)
 the `CredentialsUpdatedAsync` callback will be invoked, where you should store the newly refreshed credentials.
+
+## <a name="disablingTokenRefresh">Automatic and manual token refresh</a>
+
+Agents refresh access tokens automatically by default. Persist updated credentials using `CredentialsUpdatedAsync` as described above.
+
+If you want to disable automatic authentication token refresh in an agent you can do that by setting the `EnableBackgroundTokenRefresh` property in options to `false`.
+Eventually the access token will expire and APIs will start returning errors. You can call `RefreshCredentials()` to refresh the access token manually.
+
+```c#
+var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false };
+
+using (BlueskyAgent agent = new (options))
+{
+    // No token refresh will occur, so eventually API calls will fail.
+}
+```

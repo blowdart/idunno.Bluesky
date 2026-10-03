@@ -4,6 +4,12 @@
 
 🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
 
+🎉 **New** [Firehose](https://atproto.com/blog/introducing-bluesky-protocol-services) support, including commit, sync, identity, account, info and label events.
+
+🎉 **New** Bluesky OAuth Permission Set support, including typed permission sets, progressive scope requests, and missing-scope errors.
+
+🎉 **New** ASP.NET middleware to generate and publish OAuth client metadata, including confidential client support with `private_key_jwt` and ES256 signing keys.
+
 ### Added
 
 #### idunno.AtProto
