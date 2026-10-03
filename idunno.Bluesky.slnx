@@ -100,6 +100,7 @@
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
     <File Path="docs/docs/rawClient.md" />
+    <File Path="docs/docs/reactBff.md" />
     <File Path="docs/docs/requestsAndResponses.md" />
     <File Path="docs/docs/savingAndRestoringAuthentication.md" />
     <File Path="docs/docs/sourceGeneration.md" />
@@ -190,6 +191,7 @@
   <Folder Name="/samples/">
     <File Path="samples/Directory.Build.Props" />
     <File Path="samples/readme.md" />
+    <File Path="samples/Samples.ReactBff/readme.md" />
     <Project Path="samples/Samples.AgentEvents/Samples.AgentEvents.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -306,6 +308,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.RepoCar/Samples.RepoCar.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -367,6 +373,9 @@
   <Folder Name="/test/">
     <File Path="test/.editorconfig" />
     <File Path="test/Directory.Build.props" />
+    <Project Path="test/Samples.ReactBff.Test/Samples.ReactBff.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>

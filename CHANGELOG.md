@@ -118,6 +118,8 @@
 
 #### idunno.Bluesky
 
+* Added `Samples.ReactBff`, a React and ASP.NET backend-for-frontend sample demonstrating OAuth, isolated server-side credentials, timeline retrieval, creating and deleting a post, and CSRF-protected logout.
+
 * Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
 * Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).

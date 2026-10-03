@@ -37,6 +37,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.OAuthPermissionSets` - a sample that requests the published Bluesky create-posts and delete-content permission sets, creates a post, refreshes credentials, then deletes the post.
 * `Samples.Posting` - a sample that shows how to make posts.
 * `Samples.ProgressiveOAuth` - a sample that reads the timeline, demonstrates a real missing-scope write failure, then adds create/delete Permission Sets and retries the same post.
+* `Samples.ReactBff` - a React frontend and ASP.NET backend-for-frontend demonstrating OAuth login, session status, timeline retrieval, creating and deleting a public post, and CSRF-protected logout with server-only credentials. See the [setup and security notes](../docs/docs/reactBff.md).
 * `Samples.Timeline` - a sample that shows reading and paging through the authenticated user's timeline.
 * `Samples.TokenRefresh` - a sample that shows background token refresh happening, by hacking the refresh timer to be very short.
 * `Samples.Video` - a sample that demonstrates video uploading and embedding.
