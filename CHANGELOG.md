@@ -14,6 +14,7 @@
 * Added client signing key rotation. `OAuthOptions.AdditionalClientSigningKeys` and `AdditionalClientSigningKeyPaths` hold previous keys, which are used only for sessions that started with them. `DPoPAccessCredentials.ClientSigningKeyId` and `DPoPRefreshCredential.ClientSigningKeyId` record the key a session started with, and `AtProtoClaims.OAuthClientSigningKeyId` names the claim it is stored in.
   Pending logins retain their PAR signing key in `OAuthLoginState.ClientSigningKeyId`, including across serialization and rotation before the callback. Revocation retries generate fresh client assertions after DPoP nonce challenges.
   Metadata generation rejects duplicate signing key identifiers at pipeline startup rather than silently dropping a key.
+  Generated callback URLs use the same URI representation as OAuth requests for exact redirect URI matching.
 * Enabled structured configuration binding for `OAuthOptions.PermissionSets` using validated `Nsid` and optional `Audience` fields.
 * Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
 * Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.

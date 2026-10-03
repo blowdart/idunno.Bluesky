@@ -43,6 +43,21 @@ public class OAuthClientMetadataTests
         Assert.False(root.TryGetProperty("token_endpoint_auth_signing_alg", out _));
     }
 
+    [Theory]
+    [InlineData("https://APP.EXAMPLE.com/Bluesky/Callback", "https://app.example.com/Bluesky/Callback")]
+    [InlineData("https://app.example.com", "https://app.example.com/")]
+    public void PublishesTheCallbackRepresentationUsedByOAuthRequests(string callback, string expected)
+    {
+        Uri returnUri = new(callback);
+        Assert.NotEqual(returnUri.OriginalString, returnUri.ToString());
+
+        using JsonDocument document = JsonDocument.Parse(new BlueskyOAuthClientMetadataOptions().GenerateJson(
+            new OAuthOptions(ClientId, returnUri)));
+
+        Assert.Equal(expected, document.RootElement.GetProperty("redirect_uris")[0].GetString());
+        Assert.Equal(returnUri.ToString(), document.RootElement.GetProperty("redirect_uris")[0].GetString());
+    }
+
     [Fact]
     public void PublishesThePublicKeyForAConfidentialClient()
     {

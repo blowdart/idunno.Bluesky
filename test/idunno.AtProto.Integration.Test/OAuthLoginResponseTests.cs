@@ -319,6 +319,25 @@ public class OAuthLoginResponseTests
         Assert.Equal(6, server.AssertionJtis.Distinct(StringComparer.Ordinal).Count());
     }
 
+    [Theory]
+    [InlineData("https://CLIENT.test/callback", "https://client.test/callback")]
+    [InlineData("https://client.test", "https://client.test/")]
+    public async Task LoginUsesTheNormalizedRedirectUriForParAndTokenExchange(string callback, string expected)
+    {
+        LoginTestServer server = new();
+        Uri returnUri = new(callback);
+        OAuthClient client = CreateClient(server, new OAuthOptions(ClientId, returnUri));
+
+        await client.BuildOAuth2LoginUri(s_service, s_authority, returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(expected, server.ParRedirectUri);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        DPoPAccessCredentials? credentials = await CreateClient(server, new OAuthOptions(ClientId, returnUri)).ProcessOAuth2Response(
+            state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Equal(expected, server.TokenRedirectUri);
+    }
+
     [Fact]
     public async Task LoginRejectsARemovedParSigningKeyBeforeTokenExchange()
     {
@@ -560,6 +579,10 @@ public class OAuthLoginResponseTests
 
         internal string? ParClientAssertion { get; private set; }
 
+        internal string? ParRedirectUri { get; private set; }
+
+        internal string? TokenRedirectUri { get; private set; }
+
         internal string? TokenClientAssertion { get; private set; }
 
         internal string? RequestedClientId { get; private set; }
@@ -622,6 +645,7 @@ public class OAuthLoginResponseTests
                     IFormCollection form = await request.ReadFormAsync();
                     RequestedScopes = form["scope"].ToString();
                     ParClientAssertion = form["client_assertion"].ToString();
+                    ParRedirectUri = form["redirect_uri"].ToString();
                     RequestedClientId = form["client_id"].ToString();
                     if (ChallengeNonce && await ChallengeOrRejectAssertion(context, ParClientAssertion, "par"))
                     {
@@ -637,6 +661,7 @@ public class OAuthLoginResponseTests
                     RecordProofKey(request);
                     IFormCollection tokenForm = await request.ReadFormAsync();
                     TokenClientAssertion = tokenForm["client_assertion"].ToString();
+                    TokenRedirectUri = tokenForm["redirect_uri"].ToString();
                     if (ChallengeNonce && await ChallengeOrRejectAssertion(context, TokenClientAssertion, tokenForm["grant_type"].ToString()))
                     {
                         return;

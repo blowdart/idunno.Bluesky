@@ -45,6 +45,7 @@ public sealed class BlueskyOAuthClientMetadataOptions
     /// <exception cref="ArgumentException">A URL or scope is invalid, the configured scopes do not include <c>atproto</c>, or signing keys share an identifier.</exception>
     /// <remarks>
     /// <para>The document declares DPoP, authorization code and refresh token support.</para>
+    /// <para>The callback URL uses <see cref="Uri.ToString"/> to match the redirect URI sent by the OAuth client.</para>
     /// <para>
     ///   When <see cref="OAuthOptions.ClientSigningKey"/> is set the document describes a confidential client, publishing the
     ///   public keys of it and of any <see cref="OAuthOptions.AdditionalClientSigningKeys"/> in <c>jwks</c> with
@@ -109,7 +110,7 @@ public sealed class BlueskyOAuthClientMetadataOptions
 
         OAuthClientMetadata document = new(
             oAuthOptions.ClientId,
-            [returnUri.OriginalString],
+            [returnUri.ToString()],
             string.Join(' ', scopes),
             oAuthOptions.ClientName,
             oAuthOptions.ClientUri?.OriginalString,
