@@ -68,6 +68,7 @@ public class OAuthClient
     private OidcClient? _oidcClient;
     private string? _oidcClientProofKey;
     private Uri? _oidcClientAuthority;
+    private string? _oidcClientSigningKeyId;
 
     private readonly Func<HttpClient, HttpClient> _clientConfigurationHandler = (httpClient) => { return httpClient; };
     private readonly Func<HttpMessageHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
@@ -83,6 +84,7 @@ public class OAuthClient
     private IDictionary<string, string>? _stateExtraProperties;
     private string? _loginClientId;
     private string? _loginRequestedScope;
+    private string? _loginSigningKeyId;
 
     private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null, TimeProvider? timeProvider = null)
     {
@@ -156,7 +158,8 @@ public class OAuthClient
                         _stateExtraProperties)
                     {
                         OAuthClientId = _loginClientId,
-                        RequestedScope = _loginRequestedScope
+                        RequestedScope = _loginRequestedScope,
+                        ClientSigningKeyId = _loginSigningKeyId
                     };
                 }
             }
@@ -179,6 +182,7 @@ public class OAuthClient
                 _stateExtraProperties = value.ExtraProperties;
                 _loginClientId = value.OAuthClientId;
                 _loginRequestedScope = value.RequestedScope;
+                _loginSigningKeyId = value.ClientSigningKeyId;
             }
         }
     }
@@ -250,7 +254,8 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
-        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes);
+        string? signingKeyId = clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes, signingKeyId);
 
         OidcClient oidcClient = new(oidcClientOptions);
 
@@ -294,6 +299,7 @@ public class OAuthClient
                 _oidcClient = oidcClient;
                 _oidcClientProofKey = proofKey;
                 _oidcClientAuthority = authority;
+                _oidcClientSigningKeyId = signingKeyId;
 
                 _proofKey = proofKey;
                 _expectedAuthority = authority;
@@ -301,6 +307,7 @@ public class OAuthClient
                 _authorizeState = authorizeState;
                 _loginClientId = clientId;
                 _loginRequestedScope = scopeString;
+                _loginSigningKeyId = signingKeyId;
                 _correlationId = correlationId;
 
                 // Replaced rather than merged, and copied rather than aliased, so a second login on this instance neither
@@ -340,6 +347,7 @@ public class OAuthClient
         Uri expectedAuthority;
         Guid correlationId;
         string? savedScope;
+        string? signingKeyId;
 
         // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
         // another thread starts a new one part way through.
@@ -360,6 +368,7 @@ public class OAuthClient
             correlationId = _correlationId;
             clientId ??= _loginClientId;
             savedScope = _loginRequestedScope;
+            signingKeyId = _loginSigningKeyId;
         }
 
         // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
@@ -370,8 +379,12 @@ public class OAuthClient
             clientId ??= _options?.ClientId;
             ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
 
-            // Pushed authorization used the active client signing key, so the session is bound to it.
-            string? signingKeyId = clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+            signingKeyId ??= clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+            if (signingKeyId is not null &&
+                (_options is null || _options.GetClientSigningKey(signingKeyId, out bool found) is null || !found))
+            {
+                throw new OAuthException("The signing key used to start this login is no longer configured.");
+            }
 
             string[]? requestedScopes = scopes is null ? null : [.. scopes];
             requestedScopes ??= savedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -384,7 +397,7 @@ public class OAuthClient
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
-            OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes);
+            OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes, signingKeyId: signingKeyId);
 
             LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -467,9 +480,11 @@ public class OAuthClient
             _stateExtraProperties = null;
             _loginClientId = null;
             _loginRequestedScope = null;
+            _loginSigningKeyId = null;
 
             _oidcClient = null;
             _oidcClientProofKey = null;
+            _oidcClientSigningKeyId = null;
             _oidcClientAuthority = null;
         }
     }
@@ -847,6 +862,7 @@ public class OAuthClient
     /// <param name="clientId">The client ID.</param>
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
+    /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
     /// <returns>The <see cref="OidcClientOptions"/> to build an <see cref="OidcClient"/> from.</returns>
     /// <remarks>
     /// <para>
@@ -861,7 +877,8 @@ public class OAuthClient
         Uri authority,
         string? clientId = null,
         Uri? returnUri = null,
-        IEnumerable<string>? scopes = null)
+        IEnumerable<string>? scopes = null,
+        string? signingKeyId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(proofKey);
         ArgumentNullException.ThrowIfNull(authority);
@@ -882,7 +899,7 @@ public class OAuthClient
         if (clientId is not null)
         {
             oidcOptions.ClientId = clientId;
-            ConfigureClientAssertion(oidcOptions, clientId, authority);
+            ConfigureClientAssertion(oidcOptions, clientId, authority, signingKeyId);
         }
 
         if (returnUri is not null)
@@ -955,6 +972,7 @@ public class OAuthClient
     /// <param name="clientId">The client ID.</param>
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
+    /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
     /// <returns>An <see cref="OidcClient"/> configured for the specified <paramref name="proofKey"/> and <paramref name="authority"/>.</returns>
     /// <remarks>
     /// <para>
@@ -968,22 +986,25 @@ public class OAuthClient
         Uri authority,
         string? clientId = null,
         Uri? returnUri = null,
-        IEnumerable<string>? scopes = null)
+        IEnumerable<string>? scopes = null,
+        string? signingKeyId = null)
     {
         lock (_stateLock)
         {
             if (_oidcClient is not null &&
                 string.Equals(_oidcClientProofKey, proofKey, StringComparison.Ordinal) &&
-                _oidcClientAuthority == authority)
+                _oidcClientAuthority == authority &&
+                string.Equals(_oidcClientSigningKeyId, signingKeyId, StringComparison.Ordinal))
             {
                 return _oidcClient;
             }
 
-            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes));
+            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes, signingKeyId));
 
             _oidcClient = oidcClient;
             _oidcClientProofKey = proofKey;
             _oidcClientAuthority = authority;
+            _oidcClientSigningKeyId = signingKeyId;
 
             return oidcClient;
         }

@@ -86,8 +86,10 @@ It requires PowerShell 7.4 or later:
 
 The script writes the private key to `client-signing-key.pem` (PKCS#8 PEM) and the public key to
 `client-signing-key.jwk.json` in a `.blueskyDotnet` folder in your user profile directory, outside the repository.
-The JWK's `kid` is its RFC 7638 thumbprint. Existing keys are not replaced unless you pass `-Force`.
-Keep the private key secret.
+The JWK's `kid` is its RFC 7638 thumbprint. Before writing the private key, the script restricts its file permissions
+to the current user: owner read/write on Unix and a protected Windows ACL granting full control only to the current user.
+This restriction is applied to existing files before `-Force` replaces their contents. Existing keys are not replaced
+unless you pass `-Force`. Keep the private key secret.
 
 To create a new key pair alongside existing keys for rotation, use `-NewKey`:
 
@@ -102,6 +104,19 @@ use `~/` in the JSON; paths outside it remain absolute. Review the retained path
 First publish the new key as an additional key while keeping the current active key; then promote it using the printed settings.
 Restart or redeploy after each step, and retain previous keys until their sessions expire.
 `-NewKey` cannot be combined with `-Force`.
+
+On Linux or macOS, the Bash equivalent uses OpenSSL to generate the key and Python 3 (standard library only) to encode the
+public JWK, calculate its RFC 7638 thumbprint and print configuration JSON:
+
+```bash
+bash samples/Samples.AspNetTunnelAuthentication/new-client-signing-key.sh
+bash samples/Samples.AspNetTunnelAuthentication/new-client-signing-key.sh --new-key
+```
+
+Use `--output-directory DIRECTORY` for a different folder, or `--force` to replace the default key.
+Like the PowerShell script, it preserves existing keys by default, supports rotation and uses `~/` in configuration paths
+under your home directory. The Bash script creates private files with restrictive permissions and enforces mode `0600`
+before generating key material, including when replacing a file. Do not combine `--new-key` and `--force`.
 
 The sample's `appsettings.json` sets `BlueskyAgent:OAuthOptions:ClientSigningKeyPath` to `~/.blueskyDotnet/client-signing-key.pem`.
 On startup the key is loaded from that file and set as `OAuthOptions.ClientSigningKey`; the sample fails to start if the file is missing.

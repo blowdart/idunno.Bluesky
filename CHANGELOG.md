@@ -12,6 +12,7 @@
 * Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
   `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.
 * Added client signing key rotation. `OAuthOptions.AdditionalClientSigningKeys` and `AdditionalClientSigningKeyPaths` hold previous keys, which are used only for sessions that started with them. `DPoPAccessCredentials.ClientSigningKeyId` and `DPoPRefreshCredential.ClientSigningKeyId` record the key a session started with, and `AtProtoClaims.OAuthClientSigningKeyId` names the claim it is stored in.
+  Pending logins retain their PAR signing key in `OAuthLoginState.ClientSigningKeyId`, including across serialization and rotation before the callback. Revocation retries generate fresh client assertions after DPoP nonce challenges.
 * Enabled structured configuration binding for `OAuthOptions.PermissionSets` using validated `Nsid` and optional `Audience` fields.
 * Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
 * Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.
@@ -136,6 +137,8 @@
 
 * Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
   The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
+  Its key-generation script restricts private-key files to the current user before writing key material, including when replacing an existing key.
+  A Bash/OpenSSL equivalent also generates key pairs and rotation configuration.
 * Added `Samples.AspNetClientMetadata`, which previews generated OAuth client metadata for example.org with the `atproto` scope and Bluesky `ViewAll` permission set.
 * Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
 * Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.

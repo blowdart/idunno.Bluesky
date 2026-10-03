@@ -3029,34 +3029,32 @@ public partial class AtProtoAgent
                 }
 
                 // First revoke the refresh token, then revoke the access token.
-                using (var formData = new FormUrlEncodedContent(
-                    BuildRevocationForm(accessCredentials.RefreshToken, "refresh_token", clientId, authorizationService, revocationSigningKey)))
+                AtProtoHttpResult<EmptyResponse> refreshTokenRevokeResponse = await revokeRequest.Post(
+                    service: authorizationService,
+                    endpoint: revocationEndpoint.AbsolutePath,
+                    contentFactory: () => new FormUrlEncodedContent(
+                        BuildRevocationForm(accessCredentials.RefreshToken, "refresh_token", clientId, authorizationService, revocationSigningKey)),
+                    requestHeaders: null,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                    credentials: dPoPRevokeCredentials,
+                    onCredentialsUpdated: logoutCredentialsUpdated,
+                    httpClient: HttpClient,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!refreshTokenRevokeResponse.Succeeded)
                 {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, refreshTokenRevokeResponse.StatusCode, "refresh_token");
 
-                    if (!revokeResponse.Succeeded)
+                    // The credentials are discarded even though the revocation failed, so that a failed logout does not
+                    // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
+                    // DeleteSession() below.
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
+                    throw new LogoutException()
                     {
-                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "refresh_token");
-
-                        // The credentials are discarded even though the revocation failed, so that a failed logout does not
-                        // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
-                        // DeleteSession() below.
-                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
-
-                        throw new LogoutException()
-                        {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
-                    }
+                        StatusCode = refreshTokenRevokeResponse.StatusCode,
+                        Error = refreshTokenRevokeResponse.AtErrorDetail
+                    };
                 }
 
                 // Now revoke the access token.
@@ -3064,34 +3062,32 @@ public partial class AtProtoAgent
                 // but some may require both to be revoked to ensure the session is fully revoked, so calling both to be safe.
                 dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
 
-                using (var formData = new FormUrlEncodedContent(
-                    BuildRevocationForm(accessCredentials.AccessJwt, "access_token", clientId, authorizationService, revocationSigningKey)))
+                AtProtoHttpResult<EmptyResponse> accessTokenRevokeResponse = await revokeRequest.Post(
+                    service: authorizationService,
+                    endpoint: revocationEndpoint.AbsolutePath,
+                    contentFactory: () => new FormUrlEncodedContent(
+                        BuildRevocationForm(accessCredentials.AccessJwt, "access_token", clientId, authorizationService, revocationSigningKey)),
+                    requestHeaders: null,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                    credentials: dPoPRevokeCredentials,
+                    onCredentialsUpdated: logoutCredentialsUpdated,
+                    httpClient: HttpClient,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!accessTokenRevokeResponse.Succeeded)
                 {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, accessTokenRevokeResponse.StatusCode, "access_token");
 
-                    if (!revokeResponse.Succeeded)
+                    // The refresh token has already been revoked by this point, so the session is over whatever happens
+                    // to the access token. Holding on to the credentials would leave the agent reporting itself as
+                    // authenticated against a session which no longer exists.
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
+                    throw new LogoutException()
                     {
-                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "access_token");
-
-                        // The refresh token has already been revoked by this point, so the session is over whatever happens
-                        // to the access token. Holding on to the credentials would leave the agent reporting itself as
-                        // authenticated against a session which no longer exists.
-                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
-
-                        throw new LogoutException()
-                        {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
-                    }
+                        StatusCode = accessTokenRevokeResponse.StatusCode,
+                        Error = accessTokenRevokeResponse.AtErrorDetail
+                    };
                 }
 
                 succeeded = true;

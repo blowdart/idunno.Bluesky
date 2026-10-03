@@ -879,5 +879,7 @@ idunno.AtProto.Authentication.DPoPRefreshCredential.ClientSigningKeyId.init -> v
 idunno.AtProto.Authentication.OAuthOptions.AdditionalClientSigningKeyPaths.get -> System.Collections.Generic.ICollection<string!>!
 idunno.AtProto.Authentication.OAuthOptions.AdditionalClientSigningKeys.get -> System.Collections.Generic.ICollection<idunno.AtProto.Authentication.OAuthClientSigningKey!>!
 idunno.AtProto.Authentication.OAuthOptions.ClientAssertionClockSkew.get -> System.TimeSpan
+idunno.AtProto.Authentication.OAuthLoginState.ClientSigningKeyId.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.ClientSigningKeyId.init -> void
 idunno.AtProto.Authentication.OAuthOptions.ClientAssertionClockSkew.set -> void
 static readonly idunno.AtProto.Authentication.OAuthOptions.DefaultClientAssertionClockSkew -> System.TimeSpan

@@ -299,7 +299,8 @@ Localhost development client IDs are always public clients, and setting a signin
 
 ##### Rotating the signing key
 
-Sessions are bound to the key they started with. Each session records the ID of that key in its credentials (`ClientSigningKeyId`),
+Sessions are bound to the key they started with. Pending logins retain the PAR signing key ID in `OAuthLoginState.ClientSigningKeyId`
+so a callback after rotation uses the same key. Each session records the key ID in its credentials (`ClientSigningKeyId`),
 and the ASP.NET identity stores persist it as the `urn:atproto:oauth:signingkey` claim. Refresh and revocation requests sign with the
 session's key, so an older key must stay available until the sessions that use it have expired.
 

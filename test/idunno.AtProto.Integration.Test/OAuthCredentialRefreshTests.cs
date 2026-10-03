@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 
 using idunno.AtProto.Authentication;
 
@@ -15,6 +17,38 @@ namespace idunno.AtProto.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class OAuthCredentialRefreshTests
 {
+    private sealed class TrackingFactoryContent(Action onDispose) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            byte[] content = Encoding.UTF8.GetBytes("token=token&token_type_hint=refresh_token");
+
+            return stream.WriteAsync(content).AsTask();
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = "token=token&token_type_hint=refresh_token".Length;
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                onDispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        internal TrackingFactoryContent SetFormContentType()
+        {
+            Headers.ContentType = new("application/x-www-form-urlencoded");
+            return this;
+        }
+    }
+
     private const string DomainName = "oauth.test.internal";
     private const string ServerDid = $"did:web:{DomainName}";
     private const string Authority = $"https://{DomainName}/";
@@ -138,6 +172,62 @@ public class OAuthCredentialRefreshTests
         using System.Text.Json.JsonDocument header = System.Text.Json.JsonDocument.Parse(Base64UrlEncoder.Decode(assertion.Split('.')[0]));
 
         return header.RootElement.GetProperty("kid").GetString();
+    }
+
+    private static string GetAssertionJti(string? assertion)
+    {
+        Assert.False(string.IsNullOrEmpty(assertion));
+
+        using System.Text.Json.JsonDocument payload = System.Text.Json.JsonDocument.Parse(Base64UrlEncoder.Decode(assertion.Split('.')[1]));
+
+        return payload.RootElement.GetProperty("jti").GetString()!;
+    }
+
+    [Fact]
+    public async Task RevocationNonceRetriesCreateFreshClientAssertions()
+    {
+        OAuthTestServer server = new() { ChallengeRevocationNonce = true };
+        OAuthOptions oAuthOptions = new("https://client.test/clientMetadata.json")
+        {
+            ClientSigningKey = CreateClientSigningKey("active")
+        };
+        using AtProtoAgent agent = CreateAgent(server, oAuthOptions);
+
+        await Login(agent);
+        await agent.Logout(TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, server.RevocationClientAssertions.Count);
+        Assert.Equal(4, server.RevocationClientAssertionJtis.Count);
+        Assert.Equal(4, server.RevocationClientAssertionJtis.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(["refresh_token", "refresh_token", "access_token", "access_token"], server.RevocationTokenTypeHints);
+    }
+
+    [Fact]
+    public async Task FactoryCreatedRequestContentIsDisposedAfterEachNonceAttempt()
+    {
+        OAuthTestServer server = new() { ChallengeRevocationNonce = true };
+        using HttpClient httpClient = server.TestServer.CreateClient();
+        AtProtoHttpClient<string> client = new();
+        int factoryCalls = 0;
+        int disposeCalls = 0;
+
+        AtProtoHttpResult<string> result = await client.Post(
+            service: new Uri(Authority),
+            endpoint: "/revoke",
+            contentFactory: () =>
+            {
+                Interlocked.Increment(ref factoryCalls);
+                return new TrackingFactoryContent(() => Interlocked.Increment(ref disposeCalls)).SetFormContentType();
+            },
+            requestHeaders: null,
+            credentials: CreateCredentials(),
+            httpClient: httpClient,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, factoryCalls);
+        Assert.Equal(2, disposeCalls);
     }
 
     [Fact]
@@ -1134,7 +1224,13 @@ public class OAuthCredentialRefreshTests
 
         internal List<string> RevocationClientAssertions { get; } = [];
 
+        internal List<string> RevocationClientAssertionJtis { get; } = [];
+
+        internal List<string> RevocationTokenTypeHints { get; } = [];
+
         internal bool GateRefresh { get; set; }
+
+        internal bool ChallengeRevocationNonce { get; set; }
 
         internal OAuthTestServer()
         {
@@ -1169,6 +1265,10 @@ public class OAuthCredentialRefreshTests
 
         private int _refreshCount;
 
+        private readonly HashSet<string> _consumedRevocationAssertionJtis = new(StringComparer.Ordinal);
+
+        private readonly HashSet<string> _challengedRevocationTokenHints = new(StringComparer.Ordinal);
+
         private async Task Handle(HttpContext context)
         {
             HttpRequest request = context.Request;
@@ -1197,7 +1297,35 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/revoke" when request.Method == HttpMethod.Post.Method:
-                    RevocationClientAssertions.Add((await request.ReadFormAsync())["client_assertion"].ToString());
+                    IFormCollection revocationForm = await request.ReadFormAsync();
+                    string clientAssertion = revocationForm["client_assertion"].ToString();
+
+                    RevocationClientAssertions.Add(clientAssertion);
+                    RevocationTokenTypeHints.Add(revocationForm["token_type_hint"].ToString());
+
+                    if (!string.IsNullOrEmpty(clientAssertion))
+                    {
+                        string assertionJti = GetAssertionJti(clientAssertion);
+                        RevocationClientAssertionJtis.Add(assertionJti);
+
+                        if (!_consumedRevocationAssertionJtis.Add(assertionJti))
+                        {
+                            response.StatusCode = StatusCodes.Status400BadRequest;
+                            response.ContentType = "application/json";
+                            await response.WriteAsync("""{"error":"invalid_client","error_description":"Client assertion jti has already been used"}""");
+                            return;
+                        }
+                    }
+
+                    string tokenTypeHint = revocationForm["token_type_hint"].ToString();
+                    if (ChallengeRevocationNonce && _challengedRevocationTokenHints.Add(tokenTypeHint))
+                    {
+                        response.StatusCode = StatusCodes.Status400BadRequest;
+                        response.Headers["DPoP-Nonce"] = $"revocationNonce-{tokenTypeHint}";
+                        response.ContentType = "application/json";
+                        await response.WriteAsync("""{"error":"use_dpop_nonce","error_description":"Authorization server requires nonce in DPoP proof"}""");
+                        return;
+                    }
 
                     if (!RevocationSucceeds)
                     {

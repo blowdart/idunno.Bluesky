@@ -68,6 +68,45 @@ function ConvertTo-ConfigurationPath([string] $path) {
     return $path
 }
 
+function Set-PrivateKeyPermissions([string] $path) {
+    if ([System.OperatingSystem]::IsWindows()) {
+        $fileInfo = [System.IO.FileInfo]::new($path)
+        $acl = [System.IO.FileSystemAclExtensions]::GetAccessControl(
+            $fileInfo,
+            [System.Security.AccessControl.AccessControlSections]::Access)
+        $acl.SetAccessRuleProtection($true, $false)
+        $accessRules = $acl.GetAccessRules(
+            $true,
+            $true,
+            [System.Security.Principal.SecurityIdentifier])
+        foreach ($accessRule in $accessRules) {
+            $acl.RemoveAccessRuleSpecific($accessRule)
+        }
+
+        $currentUserSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $ownerAccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $currentUserSid,
+            [System.Security.AccessControl.FileSystemRights]::FullControl,
+            [System.Security.AccessControl.AccessControlType]::Allow)
+        $acl.AddAccessRule($ownerAccessRule)
+        [System.IO.FileSystemAclExtensions]::SetAccessControl($fileInfo, $acl)
+    }
+    else {
+        $ownerOnlyMode = [System.IO.UnixFileMode]::UserRead -bor [System.IO.UnixFileMode]::UserWrite
+        [System.IO.File]::SetUnixFileMode($path, $ownerOnlyMode)
+    }
+}
+
+function Write-PrivateKey([string] $path, [string] $contents, [System.Text.Encoding] $encoding) {
+    if (-not [System.IO.File]::Exists($path)) {
+        $stream = [System.IO.File]::Open($path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write)
+        $stream.Dispose()
+    }
+
+    Set-PrivateKeyPermissions $path
+    [System.IO.File]::WriteAllText($path, $contents, $encoding)
+}
+
 $null = New-Item -ItemType Directory -Path $OutputDirectory -Force
 
 $key = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve+NamedCurves]::nistP256)
@@ -91,7 +130,7 @@ try {
     }
 
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
-    [System.IO.File]::WriteAllText($privateKeyPath, $key.ExportPkcs8PrivateKeyPem(), $utf8NoBom)
+    Write-PrivateKey $privateKeyPath $key.ExportPkcs8PrivateKeyPem() $utf8NoBom
     [System.IO.File]::WriteAllText($publicKeyPath, ($jwk | ConvertTo-Json), $utf8NoBom)
 }
 finally {
