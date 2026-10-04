@@ -150,6 +150,62 @@ public partial class ProfileTests
         Assert.Null(store.Get(owner));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CallbackCannotRestoreSessionDuringRealLogoutOrLoginReplacement(bool replacementLogin)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        await Login(browser);
+        string editor = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+        using var pending = await PostEdit(browser);
+        string callbackUrl = pending.Headers.Location!.ToString();
+        string? replacementCallback = null;
+        if (replacementLogin)
+        {
+            using var prepared = await browser.GetAsync("/test/prepare?returnUrl=%2FManage", TestContext.Current.CancellationToken);
+            replacementCallback = prepared.Headers.Location!.ToString();
+        }
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        factory.SessionChangeEntered = entered;
+        factory.ReleaseSessionChange = release;
+        Task<HttpResponseMessage> changingSession = replacementLogin
+            ? browser.GetAsync(replacementCallback, TestContext.Current.CancellationToken)
+            : Post(browser, "/Bluesky/Logout", new()
+            {
+                ["__RequestVerificationToken"] = HiddenValue(editor, "__RequestVerificationToken")
+            });
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            using var callback = await browser.GetAsync(callbackUrl, TestContext.Current.CancellationToken);
+            Assert.Equal("/Manage", callback.Headers.Location?.ToString());
+            Assert.False(callback.Headers.TryGetValues("Set-Cookie", out var cookies) &&
+                cookies.Any(cookie => cookie.StartsWith(".AspNetCore.Bluesky.Progressive=", StringComparison.Ordinal)));
+            Assert.Equal(replacementLogin ? 1 : 0, factory.Trace.Authorizations);
+            Assert.Equal(0, factory.Pds.Writes);
+        }
+        finally
+        {
+            release.TrySetResult();
+            using var changed = await changingSession;
+            Assert.Equal(HttpStatusCode.Redirect, changed.StatusCode);
+        }
+
+        if (replacementLogin)
+        {
+            Assert.Equal(ProfilePermissions.ReadScopes, ProfilePermissions.EffectiveScopes(await StoredCredentials(factory)));
+        }
+        else
+        {
+            var store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+                .Get(BlueskyAuthenticationDefaults.AuthenticationScheme).IdentityStore!;
+            Assert.Null(await store.GetIdentity(new Did(DidValue), TestContext.Current.CancellationToken));
+        }
+    }
+
     [Fact]
     public async Task SessionInvalidationWaitsForAnInFlightCredentialCommit()
     {
@@ -630,6 +686,8 @@ public partial class ProfileTests
     private sealed class SampleFactory : WebApplicationFactory<Program>
     {
         internal FakePds Pds { get; } = new();
+        internal TaskCompletionSource? SessionChangeEntered { get; set; }
+        internal TaskCompletionSource? ReleaseSessionChange { get; set; }
         internal OAuthTrace? OAuth { get; private set; }
         internal OAuthTrace Trace => OAuth ??= new();
         internal string Outcome { get; init; } = "success";
@@ -642,6 +700,26 @@ public partial class ProfileTests
             builder.UseEnvironment(Production ? "Production" : "Development");
             builder.ConfigureServices(services =>
             {
+                Pds.BeforeRevoke = async () =>
+                {
+                    if (SessionChangeEntered is not null && ReleaseSessionChange is not null)
+                    {
+                        SessionChangeEntered.TrySetResult();
+                        await ReleaseSessionChange.Task;
+                    }
+                };
+                services.PostConfigure<BlueskyAuthenticationOptions>(BlueskyAuthenticationDefaults.AuthenticationScheme, options =>
+                {
+                    options.Events.OnSigningIn = async context =>
+                    {
+                        if (context.HttpContext.Request.Path == "/Bluesky/Callback" &&
+                            SessionChangeEntered is not null && ReleaseSessionChange is not null)
+                        {
+                            SessionChangeEntered.TrySetResult();
+                            await ReleaseSessionChange.Task;
+                        }
+                    };
+                });
                 services.RemoveAll<IHttpClientFactory>();
                 services.AddSingleton<IHttpClientFactory>(Pds);
                 services.RemoveAll<TimeProvider>();
@@ -678,7 +756,12 @@ public partial class ProfileTests
             {
                 if (context.Request.Path == "/test/signout")
                 {
-                    await context.SignOutAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    var session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    var store = context.RequestServices.GetRequiredService<ProfileEditStore>();
+                    await store.ChangeSession(
+                        Areas.Bluesky.Pages.CallbackModel.GetOwner(session),
+                        () => context.SignOutAsync(BlueskyAuthenticationDefaults.AuthenticationScheme),
+                        context.RequestAborted);
                     context.Response.StatusCode = 200;
                     return;
                 }
@@ -695,7 +778,12 @@ public partial class ProfileTests
                     identity.AddClaim(new(idunno.Bluesky.ClaimTypes.Handle, "test.bsky.social"));
                     var properties = new AuthenticationProperties { IsPersistent = true, AllowRefresh = true };
                     properties.Items[ProfilePermissions.SessionKey] = Guid.NewGuid().ToString("N");
-                    await context.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), properties);
+                    var session = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    var store = context.RequestServices.GetRequiredService<ProfileEditStore>();
+                    await store.ChangeSession(
+                        Areas.Bluesky.Pages.CallbackModel.GetOwner(session),
+                        () => context.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), properties),
+                        context.RequestAborted);
                     context.Response.StatusCode = 200;
                     return;
                 }
@@ -768,6 +856,7 @@ public partial class ProfileTests
         internal int Writes { get; set; }
         internal string? LastWrite { get; set; }
         internal string? Failure { get; set; }
+        internal Func<Task>? BeforeRevoke { get; set; }
 
         public HttpClient CreateClient(string name) => new(new Handler(this));
 
@@ -775,6 +864,12 @@ public partial class ProfileTests
         {
             protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                if (request.RequestUri!.AbsolutePath == "/.well-known/oauth-protected-resource" && pds.BeforeRevoke is not null)
+                {
+                    // Pause the real handler's logout before revocation/identity removal, during authority discovery.
+                    await pds.BeforeRevoke();
+                }
+
                 if (request.RequestUri!.AbsolutePath == "/xrpc/com.atproto.repo.getRecord")
                 {
                     string cid = pds.Failure == "conflict" ? "bafyreig7t6q4x7zbibjnyxkzsde2ndvgc7jevdzicwagmg36nwcb6qhigy" : ProfileCid;
@@ -810,6 +905,10 @@ public partial class ProfileTests
 
                 if (request.RequestUri.AbsolutePath == "/oauth/revoke")
                 {
+                    if (pds.BeforeRevoke is not null)
+                    {
+                        await pds.BeforeRevoke();
+                    }
                     return Json(HttpStatusCode.OK, "{}");
                 }
 

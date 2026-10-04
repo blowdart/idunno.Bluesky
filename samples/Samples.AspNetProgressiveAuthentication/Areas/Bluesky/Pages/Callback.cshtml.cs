@@ -90,7 +90,7 @@ public partial class CallbackModel(BlueskySignInManager manager, ProfileOAuthCli
             }
 
             // Preserve the ticket's session identifier and lifetime for an upgrade. Only a new login creates
-            // a new editing session; the sign-in event then invalidates the previous session's draft.
+            // a new editing session; ChangeSession invalidates its predecessor before invoking the handler.
             AuthenticationProperties properties = pendingId is not null ? session.Properties! : new()
             {
                 AllowRefresh = true,
@@ -118,8 +118,10 @@ public partial class CallbackModel(BlueskySignInManager manager, ProfileOAuthCli
                 return RedirectToPage("/Manage/Index", new { area = "" });
             }
 
-            await HttpContext.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(IIdentityStore.BuildClaimsIdentity(credentials)), properties);
+            await edits.ChangeSession(owner,
+                () => HttpContext.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(IIdentityStore.BuildClaimsIdentity(credentials)), properties),
+                HttpContext.RequestAborted);
 
             // Ordinary login retains the UI's return-route behavior, but only from correlated server-side state
             // and only for local routes. Ignore any returnUrl supplied directly on the callback query string.

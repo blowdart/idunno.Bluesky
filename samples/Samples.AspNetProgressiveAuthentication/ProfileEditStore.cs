@@ -224,6 +224,40 @@ public sealed class ProfileEditStore : IDisposable
     }
 
     /// <summary>
+    /// Ends the previous editing session and executes an entire login replacement or logout under the consent gate.
+    /// </summary>
+    /// <param name="owner">The previous account and editing session, if authenticated.</param>
+    /// <param name="operation">The complete sign-in or sign-out operation, including identity storage and cookies.</param>
+    /// <param name="cancellationToken">The cancellation token for waiting to change sessions.</param>
+    /// <returns>The task representing the serialized session change.</returns>
+    /// <remarks>
+    /// <para>
+    /// Call before invoking the authentication handler, not from its events: sign-out removes credentials before
+    /// OnSigningOut runs. Holding the gate until the handler finishes prevents a consent commit from interleaving.
+    /// </para>
+    /// </remarks>
+    internal async Task ChangeSession(ProfileEditOwner? owner, Func<Task> operation, CancellationToken cancellationToken)
+    {
+        await _sessionGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (owner is not null)
+            {
+                lock (_gate)
+                {
+                    _cache.Remove(owner);
+                }
+            }
+
+            await operation();
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
+    }
+
+    /// <summary>
     /// Serializes the final ownership check and credential installation with session invalidation.
     /// </summary>
     /// <param name="owner">The original authenticated account and editing session.</param>
@@ -233,7 +267,7 @@ public sealed class ProfileEditStore : IDisposable
     /// <returns><see langword="true"/> if credentials were installed and the draft became ready; otherwise, <see langword="false"/>.</returns>
     /// <remarks>
     /// <para>
-    /// New-login and logout events acquire the same gate before invalidating the old session's draft. If invalidation
+    /// New-login and logout handlers acquire the same gate before invalidating the old session's draft. If invalidation
     /// wins, sign-in is never invoked. If this commit wins, invalidation waits until credential persistence completes.
     /// This process-local gate is for the single-instance sample; production needs equivalent shared coordination.
     /// </para>

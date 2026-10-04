@@ -53,11 +53,12 @@ No live consent is exercised by the automated tests.
 
 | Implementation | What to read |
 | --- | --- |
-| [Program.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Program.cs) | Authentication events invalidate old drafts; DI registers the store, OAuth adapter and maximum metadata scopes. |
+| [Program.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Program.cs) | DI registers authentication, the store, OAuth adapter and maximum metadata scopes. |
 | [ProfilePermissions.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/ProfilePermissions.cs) | Exact read/write scopes, fixed localhost metadata declaration and retained effective permissions. |
 | [ProfileEditStore.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/ProfileEditStore.cs) | Encrypted payloads, owner binding, absolute expiry and atomic single-use transitions. |
 | [ProfileOAuthClient.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/ProfileOAuthClient.cs) | Explicit per-request scopes, correlation storage and isolated expected-DID validation. |
 | [Callback.cshtml.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Areas/Bluesky/Pages/Callback.cshtml.cs) | Normal login versus progressive consent, credential installation and fixed return route without profile writes. |
+| [Logout.cshtml.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Areas/Bluesky/Pages/Logout.cshtml.cs) | Application-owned logout coordinates draft invalidation with the entire revocation, identity-removal and cookie-deletion operation. |
 | [Manage/Index.cshtml.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Pages/Manage/Index.cshtml.cs) | Draft recovery, protected completion/discard handlers and conditional profile saves. |
 | [Manage/Index.cshtml](https://github.com/blowdart/idunno.Bluesky/blob/main/samples/Samples.AspNetProgressiveAuthentication/Pages/Manage/Index.cshtml) | Antiforgery-enabled editor, completion and discard forms. |
 | [ProfileTests.cs](https://github.com/blowdart/idunno.Bluesky/blob/main/test/Samples.AspNetProgressiveAuthentication.Test/ProfileTests.cs) | Mock consent/PDS coverage for ownership, grants, antiforgery, replay and recoverable failures. |
@@ -242,9 +243,14 @@ Only after validation, sign in through the existing handler, preserving the old 
 Serialize the final ownership check and the entire credential-persistence/ticket-issuance operation with logout and
 new-login invalidation. A check followed by an unguarded `SignInAsync` has a time-of-check/time-of-use race: another
 request can invalidate the session between them, then the callback can restore its old ticket. The sample's
-`ProfileEditStore.CommitConsent` holds an asynchronous gate through sign-in and the Ready transition; its login/logout
-events acquire the same gate before invalidation. An upgrade preserving the same session must not reacquire that gate
-in its sign-in event. For multiple instances, use equivalent shared coordination, not a process-local semaphore.
+`ProfileEditStore.CommitConsent` holds an asynchronous gate through sign-in and the Ready transition. Normal login
+replacement in the callback and the application-owned logout page use `ChangeSession` to acquire the same gate,
+invalidate the previous draft, and hold the gate through the entire sign-in or sign-out operation.
+`OnSigningOut` is too late for this purpose: the library handler revokes credentials and removes the identity before
+raising that event. Coordinating only the event still lets a callback restore the identity during logout.
+Do not reacquire the gate in authentication events, which would deadlock while a guarded operation is in progress.
+Any other application endpoint that calls sign-in or sign-out must follow the same coordination pattern.
+For multiple instances, use equivalent shared coordination, not a process-local semaphore.
 
 ```c#
 await HttpContext.SignInAsync(

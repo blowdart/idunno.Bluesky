@@ -3,14 +3,12 @@
 
 using idunno.Bluesky.AspNet.Authentication;
 
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
 using OpenTelemetry.Metrics;
 
 using Samples.AspNetProgressiveAuthentication;
-using Samples.AspNetProgressiveAuthentication.Areas.Bluesky.Pages;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,25 +22,6 @@ builder.Services
     {
         options.Cookie.Name = ".AspNetCore.Bluesky.Progressive";
         options.CorrelationCookie.Name = ".AspNetCore.Bluesky.Progressive.Correlation";
-        options.Events.OnSigningIn = async context =>
-        {
-            var previous = await context.HttpContext.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
-            var owner = CallbackModel.GetOwner(previous);
-            context.Properties.Items.TryGetValue(ProfilePermissions.SessionKey, out string? newSession);
-            if (owner is not null && owner.Session != newSession)
-            {
-                await context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
-            }
-        };
-        options.Events.OnSigningOut = async context =>
-        {
-            var session = await context.HttpContext.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
-            var owner = CallbackModel.GetOwner(session);
-            if (owner is not null)
-            {
-                await context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
-            }
-        };
     })
     .AddBlueskyAuthenticationUI();
 
