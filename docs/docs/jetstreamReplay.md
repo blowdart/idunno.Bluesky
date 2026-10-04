@@ -79,8 +79,9 @@ continue with the next row, or `SkipBlock` to omit the rest of the current block
 This includes invalid DAG-CBOR/JSON payloads, invalid row metadata such as DIDs, NSIDs, record keys or timestamps,
 and malformed compressed block contents. Invalid frame lengths, truncated block downloads and transport failures
 remain fatal because the client cannot safely establish the next block boundary.
-Returning `Stop` preserves the default fail-fast behavior. Returning `Skip` explicitly omits that record and continues
-with the rest of the block. Records excluded by the snapshot filters are not decoded and do not invoke the callback.
+Returning `Stop` preserves the default fail-fast behavior. Returning `SkipRecord` explicitly omits that record and
+continues with the rest of the block. Records excluded by the snapshot filters are not decoded and do not invoke the
+callback.
 
 ```csharp
 await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
