@@ -2,10 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
 
 using idunno.AtProto.Jetstream.Archive;
+
+using ZstdSharp;
 
 namespace idunno.AtProto.Jetstream;
 
@@ -26,21 +31,36 @@ public partial class AtProtoJetstream
     /// <param name="checkpoint">An optional previously persisted position, including its original pinned sealed tip.</param>
     /// <param name="onCheckpoint">A synchronous callback invoked after the preceding events have been consumed by the enumerator.</param>
     /// <param name="cancellationToken">A cancellation token for planning, downloads, retries and decoding.</param>
+    /// <param name="onArchiveError">An optional callback that chooses whether an invalid matching record or block stops or is skipped.</param>
     /// <returns>An at-least-once stream of typed Jetstream events.</returns>
     /// <exception cref="ArgumentNullException">The request is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The request or checkpoint has invalid bounds or filters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The archive error callback returns an action that is not valid for the failure.</exception>
     /// <exception cref="InvalidOperationException">No API key is configured or a v1 service is selected.</exception>
     /// <exception cref="InvalidDataException">An archive response or checkpoint is inconsistent.</exception>
     /// <exception cref="HttpRequestException">The archive request fails or is rate limited without retry instructions.</exception>
-    /// <remarks><para>When resuming, persist checkpoints only after applying the preceding events. A changed segment
+    /// <remarks><para>Without <paramref name="onArchiveError"/>, or when it returns <see cref="JetstreamArchiveErrorAction.Stop"/>,
+    /// an invalid matching record or block stops enumeration. The callback receives the record sequence for record failures,
+    /// or <see langword="null"/> for a block failure, and the original decoding
+    /// or row-validation exception, which can be an <see cref="InvalidDataException"/>, <see cref="JsonException"/>,
+    /// <see cref="ArgumentException"/>, <see cref="NsidFormatException"/>, <see cref="RecordKeyFormatException"/>,
+    /// <see cref="OverflowException"/>, <see cref="DecoderFallbackException"/>, or <see cref="ZstdException"/>.
+    /// Returning <see cref="JetstreamArchiveErrorAction.SkipRecord"/> omits only the failing record and continues the block.
+    /// Returning <see cref="JetstreamArchiveErrorAction.SkipBlock"/> omits the failing record and the rest of its block,
+    /// or the entire block when the error occurred during block decoding. Checkpoints advance only after the selected
+    /// recovery action has completed and the block has been consumed. When resuming,
+    /// persist checkpoints only after applying the preceding events. A changed segment
     /// checksum restarts that segment; its events can be delivered again. Collection filters do not suppress account,
     /// identity or sync markers. Filter lists are copied when this method is called; later changes to the caller's
     /// lists do not affect the snapshot or its checkpoints.</para></remarks>
+    [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
+        Justification = "Appending the optional callback preserves the existing positional cancellationToken argument.")]
     public IAsyncEnumerable<JetstreamEvent> SnapshotAsync(
         SnapshotRequest request,
         SnapshotCheckpoint? checkpoint = null,
         Action<SnapshotCheckpoint>? onCheckpoint = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -53,7 +73,8 @@ public partial class AtProtoJetstream
             "Jetstream archive access requires an API key. Configure JetstreamOptions.ApiKey or AtProtoJetstreamBuilder.WithApiKey().");
         SnapshotRequest capturedRequest = request.SnapshotFilters();
         ValidateSnapshotRequest(capturedRequest, checkpoint, _uri);
-        return SnapshotCoreAsync(capturedRequest, checkpoint, onCheckpoint, key, capturedRequest.Fingerprint(_uri), cancellationToken);
+        return SnapshotCoreAsync(capturedRequest, checkpoint, onCheckpoint, key, capturedRequest.Fingerprint(_uri),
+            onArchiveError, cancellationToken);
     }
 
     private async IAsyncEnumerable<JetstreamEvent> SnapshotCoreAsync(
@@ -62,6 +83,7 @@ public partial class AtProtoJetstream
         Action<SnapshotCheckpoint>? onCheckpoint,
         string key,
         string fingerprint,
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         long after = checkpoint?.PlanAfterSeq ?? request.AfterSeq ?? 0;
@@ -163,19 +185,31 @@ public partial class AtProtoJetstream
                         for (int block = Math.Max(range.First, startBlock); block <= range.Last; block++)
                         {
                             byte[] frame = await DownloadFrame(segment.Name, block, segment.Checksum, key, cancellationToken).ConfigureAwait(false);
-                            foreach (JssRow row in JssBlockReader.Decode(frame))
+                            if (TryDecodeArchiveBlock(frame, onArchiveError, out IReadOnlyList<JssRow>? rows))
                             {
-                                cancellationToken.ThrowIfCancellationRequested();
-                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                foreach (JssRow row in rows)
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
-                                    InvalidateHandle(decodedEvent);
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
-                                    yield return decodedEvent;
-                                }
-                                else
-                                {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                    {
+                                        if (!TryDecodeArchiveRow(row, onArchiveError, out JetstreamEvent? decodedEvent, out bool skipBlock))
+                                        {
+                                            if (skipBlock)
+                                            {
+                                                break;
+                                            }
+
+                                            continue;
+                                        }
+
+                                        InvalidateHandle(decodedEvent);
+                                        _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                        yield return decodedEvent;
+                                    }
+                                    else
+                                    {
+                                        _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    }
                                 }
                             }
 
@@ -211,18 +245,32 @@ public partial class AtProtoJetstream
 
                         for (int block = 0; block < blockCount; block++)
                         {
-                            await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
+                            byte[] frame = await ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false);
+                            if (TryDecodeArchiveBlock(frame, onArchiveError, out IReadOnlyList<JssRow>? rows))
                             {
-                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                foreach (JssRow row in rows)
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
-                                    InvalidateHandle(decodedEvent);
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
-                                    yield return decodedEvent;
-                                }
-                                else
-                                {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                    {
+                                        if (!TryDecodeArchiveRow(row, onArchiveError, out JetstreamEvent? decodedEvent, out bool skipBlock))
+                                        {
+                                            if (skipBlock)
+                                            {
+                                                break;
+                                            }
+
+                                            continue;
+                                        }
+
+                                        InvalidateHandle(decodedEvent);
+                                        _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                        yield return decodedEvent;
+                                    }
+                                    else
+                                    {
+                                        _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    }
                                 }
                             }
 
@@ -249,18 +297,32 @@ public partial class AtProtoJetstream
 
                         for (int block = startBlock; block < blockCount; block++)
                         {
-                            await foreach (JssRow row in ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false))
+                            byte[] frame = await ReadSegmentBlock(download, cancellationToken).ConfigureAwait(false);
+                            if (TryDecodeArchiveBlock(frame, onArchiveError, out IReadOnlyList<JssRow>? rows))
                             {
-                                if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                foreach (JssRow row in rows)
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
-                                    InvalidateHandle(decodedEvent);
-                                    _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
-                                    yield return decodedEvent;
-                                }
-                                else
-                                {
-                                    _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    cancellationToken.ThrowIfCancellationRequested();
+                                    if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
+                                    {
+                                        if (!TryDecodeArchiveRow(row, onArchiveError, out JetstreamEvent? decodedEvent, out bool skipBlock))
+                                        {
+                                            if (skipBlock)
+                                            {
+                                                break;
+                                            }
+
+                                            continue;
+                                        }
+
+                                        InvalidateHandle(decodedEvent);
+                                        _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                        yield return decodedEvent;
+                                    }
+                                    else
+                                    {
+                                        _metrics.ArchiveFilteredEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
+                                    }
                                 }
                             }
 
@@ -301,8 +363,69 @@ public partial class AtProtoJetstream
         }
     }
 
-    private static async IAsyncEnumerable<JssRow> ReadSegmentBlock(
-        ArchiveDownload download, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private static bool TryDecodeArchiveBlock(
+        byte[] frame,
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError,
+        [NotNullWhen(true)] out IReadOnlyList<JssRow>? rows)
+    {
+        try
+        {
+            rows = JssBlockReader.Decode(frame);
+            return true;
+        }
+        catch (Exception exception) when (onArchiveError is not null &&
+            exception is InvalidDataException or DecoderFallbackException or ZstdException)
+        {
+            switch (onArchiveError(null, exception))
+            {
+                case JetstreamArchiveErrorAction.Stop:
+                    throw;
+                case JetstreamArchiveErrorAction.SkipBlock:
+                    rows = null;
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(onArchiveError),
+                        "The archive error callback returned an action that is not valid for a block error.");
+            }
+        }
+    }
+
+    private static bool TryDecodeArchiveRow(
+        JssRow row,
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError,
+        [NotNullWhen(true)] out JetstreamEvent? decodedEvent,
+        out bool skipBlock)
+    {
+        skipBlock = false;
+        try
+        {
+            decodedEvent = row.ToEvent();
+            return true;
+        }
+        catch (Exception exception) when (onArchiveError is not null &&
+            exception is InvalidDataException or JsonException or ArgumentException or
+                NsidFormatException or RecordKeyFormatException or OverflowException)
+        {
+            switch (onArchiveError(row.Seq, exception))
+            {
+                case JetstreamArchiveErrorAction.Stop:
+                    throw;
+                case JetstreamArchiveErrorAction.SkipRecord:
+                    decodedEvent = null;
+                    return false;
+                case JetstreamArchiveErrorAction.SkipBlock:
+                    decodedEvent = null;
+                    skipBlock = true;
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(onArchiveError),
+                        "The archive error callback returned an action that is not valid for a record error.");
+            }
+        }
+    }
+
+    private static async Task<byte[]> ReadSegmentBlock(
+        ArchiveDownload download, CancellationToken cancellationToken)
     {
         byte[] lengthBytes = new byte[8];
         await download.ReadExactlyAsync(lengthBytes, cancellationToken).ConfigureAwait(false);
@@ -314,11 +437,7 @@ public partial class AtProtoJetstream
 
         byte[] frame = new byte[checked((int)length)];
         await download.ReadExactlyAsync(frame, cancellationToken).ConfigureAwait(false);
-        foreach (JssRow row in JssBlockReader.Decode(frame))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            yield return row;
-        }
+        return frame;
     }
 
     private async Task<byte[]> DownloadFrame(

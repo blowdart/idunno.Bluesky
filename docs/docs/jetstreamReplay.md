@@ -69,6 +69,45 @@ await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
 For AOT applications, register `SnapshotCheckpoint` with a source-generated `JsonSerializerContext` when storing
 it as JSON. Cancellation stops HTTP requests, quota waits, downloads, decoding and the live subscription.
 
+## Handling invalid archive records
+
+Archive records are untrusted input. By default, a record that cannot be decoded stops `SnapshotAsync()` or
+`ReplayAsync()` with its decoding exception. To choose a recovery policy, pass `onArchiveError`; the callback receives
+the record sequence for a row failure, or `null` for a whole-block decode failure, and the original exception.
+Return `JetstreamArchiveErrorAction.Stop` to preserve fail-fast behavior, `SkipRecord` to omit one bad row and
+continue with the next row, or `SkipBlock` to omit the rest of the current block and continue at the next block.
+This includes invalid DAG-CBOR/JSON payloads, invalid row metadata such as DIDs, NSIDs, record keys or timestamps,
+and malformed compressed block contents. Invalid frame lengths, truncated block downloads and transport failures
+remain fatal because the client cannot safely establish the next block boundary.
+Returning `Stop` preserves the default fail-fast behavior. Returning `SkipRecord` explicitly omits that record and
+continues with the rest of the block. Records excluded by the snapshot filters are not decoded and do not invoke the
+callback.
+
+```csharp
+await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
+    request,
+    onArchiveError: (sequence, exception) =>
+    {
+        if (sequence is long recordSequence)
+        {
+            Console.Error.WriteLine($"Skipping invalid record {recordSequence}: {exception.Message}");
+            return JetstreamArchiveErrorAction.SkipRecord;
+        }
+
+        Console.Error.WriteLine($"Skipping invalid archive block: {exception.Message}");
+        return JetstreamArchiveErrorAction.SkipBlock;
+    },
+    cancellationToken: cancellationToken))
+{
+    Apply(evt);
+}
+```
+
+Skipping is an explicit data-loss decision. `SkipRecord` permanently omits one record; `SkipBlock` can omit multiple
+records, including valid ones, from that block. In either case the checkpoint advances only after the block has been
+consumed according to the selected policy. Persist the checkpoint only after applying emitted events, just as for
+normal snapshot processing. `ReplayAsync()` uses the same callback for archive records; live events are unaffected.
+
 ## Replay into the live tail
 
 Replace `SnapshotAsync` with `ReplayAsync` to consume the same bounded archive and then connect once at its
