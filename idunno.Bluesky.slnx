@@ -195,24 +195,7 @@
   <Folder Name="/samples/">
     <File Path="samples/Directory.Build.Props" />
     <File Path="samples/readme.md" />
-    <File Path="samples/Samples.ReactBff/readme.md" />
     <Project Path="samples/Samples.AgentEvents/Samples.AgentEvents.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -244,10 +227,6 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.ConsoleShellOAuth/Samples.ConsoleShellOAuth.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
     <Project Path="samples/Samples.CustomRecords/Samples.CustomRecords.csproj" Id="234c567a-c96f-436e-9622-404f99f2fbf4">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -268,14 +247,6 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.JetstreamReplay/Samples.JetstreamReplay.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
     <Project Path="samples/Samples.Logging/Samples.Logging.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -292,31 +263,11 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.OAuth/Samples.OAuth.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.OAuthPermissionSets/Samples.OAuthPermissionSets.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
     <Project Path="samples/Samples.PartialUploads/Samples.PartialUploads.csproj" Id="592ef987-eca7-4409-816e-a8d1ca452df0">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.ProgressiveOAuth/Samples.ProgressiveOAuth.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -378,10 +329,63 @@
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
+  <Folder Name="/samples/Jetstream/">
+    <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.JetstreamReplay/Samples.JetstreamReplay.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/OAuth/">
+    <Project Path="samples/Samples.ConsoleShellOAuth/Samples.ConsoleShellOAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuth/Samples.OAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuthPermissionSets/Samples.OAuthPermissionSets.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ProgressiveOAuth/Samples.ProgressiveOAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Web/">
+    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/samples/Windows/">
     <Project Path="samples/Samples.WinUIOAuth/Samples.WinUIOAuth.csproj">
-      <Platform Solution="*|*" Project="x64" />
-      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Project="x64" />
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
   </Folder>
