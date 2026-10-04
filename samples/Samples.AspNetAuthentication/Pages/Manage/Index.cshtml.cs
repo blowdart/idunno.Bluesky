@@ -53,6 +53,8 @@ public class IndexModel(BlueskyAgent agent) : PageModel
 
     public async Task<IActionResult> OnPost(Cid cid)
     {
+        Cid = cid;
+
         if (User is not null && User.Identity?.IsAuthenticated == true && User.Identity is ClaimsIdentity && User.Did is not null)
         {
             if (!ModelState.IsValid)
