@@ -66,6 +66,7 @@ public sealed class ProfileEditStore : IDisposable
 
     private readonly MemoryCache _cache = new(new MemoryCacheOptions { SizeLimit = 1000 });
     private readonly Lock _gate = new();
+    private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private readonly IDataProtector _protector;
     private readonly TimeProvider _clock;
 
@@ -206,11 +207,53 @@ public sealed class ProfileEditStore : IDisposable
     /// Invalidates the session's current draft when the session signs out or is replaced by a new login.
     /// </summary>
     /// <param name="owner">The account and editing session being ended.</param>
-    internal void Invalidate(ProfileEditOwner owner)
+    internal async Task Invalidate(ProfileEditOwner owner)
     {
-        lock (_gate)
+        await _sessionGate.WaitAsync();
+        try
         {
-            _cache.Remove(owner);
+            lock (_gate)
+            {
+                _cache.Remove(owner);
+            }
+        }
+        finally
+        {
+            _sessionGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Serializes the final ownership check and credential installation with session invalidation.
+    /// </summary>
+    /// <param name="owner">The original authenticated account and editing session.</param>
+    /// <param name="id">The claimed draft identifier.</param>
+    /// <param name="signIn">The credential-persistence and ticket-issuance operation.</param>
+    /// <param name="cancellationToken">The cancellation token for waiting to commit.</param>
+    /// <returns><see langword="true"/> if credentials were installed and the draft became ready; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// New-login and logout events acquire the same gate before invalidating the old session's draft. If invalidation
+    /// wins, sign-in is never invoked. If this commit wins, invalidation waits until credential persistence completes.
+    /// This process-local gate is for the single-instance sample; production needs equivalent shared coordination.
+    /// </para>
+    /// </remarks>
+    internal async Task<bool> CommitConsent(ProfileEditOwner owner, string id, Func<Task> signIn, CancellationToken cancellationToken)
+    {
+        await _sessionGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (Get(owner) is not { Status: ProfileEditStatus.ProcessingConsent } pending || pending.Id != id)
+            {
+                return false;
+            }
+
+            await signIn();
+            return FinishConsent(owner, id, authorized: true);
+        }
+        finally
+        {
+            _sessionGate.Release();
         }
     }
 
@@ -261,5 +304,9 @@ public sealed class ProfileEditStore : IDisposable
             ?? throw new InvalidOperationException("Missing saved profile edit."), entry.Status, entry.Message);
 
     /// <inheritdoc/>
-    public void Dispose() => _cache.Dispose();
+    public void Dispose()
+    {
+        _cache.Dispose();
+        _sessionGate.Dispose();
+    }
 }

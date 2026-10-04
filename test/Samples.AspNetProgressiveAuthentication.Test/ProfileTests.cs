@@ -150,6 +150,54 @@ public partial class ProfileTests
         Assert.Null(store.Get(owner));
     }
 
+    [Fact]
+    public async Task SessionInvalidationWaitsForAnInFlightCredentialCommit()
+    {
+        using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), new FakeTimeProvider());
+        ProfileEditOwner owner = new(DidValue, "session");
+        string id = store.Add(owner, Edit);
+        Assert.True(store.TakeConsent(owner, id));
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        bool credentialsPersisted = false;
+        Task<bool> commit = store.CommitConsent(owner, id, async () =>
+        {
+            entered.SetResult();
+            await release.Task;
+            credentialsPersisted = true;
+        }, TestContext.Current.CancellationToken);
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        Task invalidation = store.Invalidate(owner);
+        Assert.False(invalidation.IsCompleted);
+        Assert.False(credentialsPersisted);
+        release.SetResult();
+        Assert.True(await commit);
+        await invalidation;
+        Assert.True(credentialsPersisted);
+        Assert.Null(store.Get(owner));
+        Assert.Null(store.TakeReady(owner, id));
+    }
+
+    [Fact]
+    public async Task SessionInvalidatedBeforeCredentialCommitCannotBeSignedInAgain()
+    {
+        using var store = new ProfileEditStore(new EphemeralDataProtectionProvider(), new FakeTimeProvider());
+        ProfileEditOwner owner = new(DidValue, "session");
+        string id = store.Add(owner, Edit);
+        Assert.True(store.TakeConsent(owner, id));
+        await store.Invalidate(owner);
+        bool signedIn = false;
+
+        Assert.False(await store.CommitConsent(owner, id, () =>
+        {
+            signedIn = true;
+            return Task.CompletedTask;
+        }, TestContext.Current.CancellationToken));
+        Assert.False(signedIn);
+        Assert.Null(store.Get(owner));
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

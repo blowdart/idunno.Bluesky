@@ -31,7 +31,7 @@ builder.Services
             context.Properties.Items.TryGetValue(ProfilePermissions.SessionKey, out string? newSession);
             if (owner is not null && owner.Session != newSession)
             {
-                context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
+                await context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
             }
         };
         options.Events.OnSigningOut = async context =>
@@ -40,7 +40,7 @@ builder.Services
             var owner = CallbackModel.GetOwner(session);
             if (owner is not null)
             {
-                context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
+                await context.HttpContext.RequestServices.GetRequiredService<ProfileEditStore>().Invalidate(owner);
             }
         };
     })

@@ -89,13 +89,6 @@ public partial class CallbackModel(BlueskySignInManager manager, ProfileOAuthCli
                 return ConsentFailure(owner, pendingId, "The required read or profile update permissions were not granted. Your edits have not been saved.");
             }
 
-            // The user can sign out, replace the edit, or reach its expiry while the token exchange is in flight.
-            if (pendingId is not null &&
-                (edits.Get(owner!) is not { Status: ProfileEditStatus.ProcessingConsent } pending || pending.Id != pendingId))
-            {
-                return LoginFailure("The editing session ended or the pending edit expired or was replaced. No profile was saved.");
-            }
-
             // Preserve the ticket's session identifier and lifetime for an upgrade. Only a new login creates
             // a new editing session; the sign-in event then invalidates the previous session's draft.
             AuthenticationProperties properties = pendingId is not null ? session.Properties! : new()
@@ -108,20 +101,25 @@ public partial class CallbackModel(BlueskySignInManager manager, ProfileOAuthCli
                 properties.Items[ProfilePermissions.SessionKey] = Guid.NewGuid().ToString("N");
             }
 
-            await HttpContext.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(IIdentityStore.BuildClaimsIdentity(credentials)), properties);
-
             if (pendingId is not null)
             {
+                // Hold the session gate across the ownership check and the entire credential/ticket commit.
+                // Concurrent logout or new login must invalidate either before this check or after sign-in completes.
                 // Mark the draft ready only after credentials have been persisted by the authentication handler.
                 // This GET never saves a profile, and progressive consent never uses a supplied return route.
-                if (!edits.FinishConsent(owner!, pendingId, authorized: true))
+                if (!await edits.CommitConsent(owner!, pendingId,
+                    () => HttpContext.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(IIdentityStore.BuildClaimsIdentity(credentials)), properties),
+                    HttpContext.RequestAborted))
                 {
-                    TempData["ProfileMessage"] = "The pending edit expired or was replaced. No profile was saved.";
+                    return LoginFailure("The editing session ended or the pending edit expired or was replaced. No profile was saved.");
                 }
 
                 return RedirectToPage("/Manage/Index", new { area = "" });
             }
+
+            await HttpContext.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(IIdentityStore.BuildClaimsIdentity(credentials)), properties);
 
             // Ordinary login retains the UI's return-route behavior, but only from correlated server-side state
             // and only for local routes. Ignore any returnUrl supplied directly on the callback query string.

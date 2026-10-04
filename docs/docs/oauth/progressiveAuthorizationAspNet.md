@@ -239,6 +239,13 @@ credentials on the isolated agent.
 
 Only after validation, sign in through the existing handler, preserving the old ticket's properties and lifetime:
 
+Serialize the final ownership check and the entire credential-persistence/ticket-issuance operation with logout and
+new-login invalidation. A check followed by an unguarded `SignInAsync` has a time-of-check/time-of-use race: another
+request can invalidate the session between them, then the callback can restore its old ticket. The sample's
+`ProfileEditStore.CommitConsent` holds an asynchronous gate through sign-in and the Ready transition; its login/logout
+events acquire the same gate before invalidation. An upgrade preserving the same session must not reacquire that gate
+in its sign-in event. For multiple instances, use equivalent shared coordination, not a process-local semaphore.
+
 ```c#
 await HttpContext.SignInAsync(
     manager.AuthenticationScheme,
