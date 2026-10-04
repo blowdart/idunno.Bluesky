@@ -174,11 +174,14 @@ public partial class CallbackModel(BlueskySignInManager manager, ProfileOAuthCli
     /// <returns>The editor redirect for an authenticated user, or the login redirect for an anonymous user.</returns>
     private RedirectToPageResult LoginFailure(string message)
     {
-        TempData["ProfileMessage"] = message;
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            TempData["ProfileMessage"] = message;
+            return RedirectToPage("/Manage/Index", new { area = "" });
+        }
+
         TempData["ErrorMessage"] = message;
-        return User.Identity?.IsAuthenticated == true
-            ? RedirectToPage("/Manage/Index", new { area = "" })
-            : RedirectToPage("/Login", new { area = "Bluesky" });
+        return RedirectToPage("/Login", new { area = "Bluesky" });
     }
 
     /// <summary>

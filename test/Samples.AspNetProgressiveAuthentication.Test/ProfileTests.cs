@@ -477,6 +477,33 @@ public partial class ProfileTests
         Assert.Equal(storedRoute == "/Manage" ? "/Manage" : "/", callback.Headers.Location?.ToString());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CallbackFailureIsDisplayedOnlyOnItsDestinationPage(bool authenticated)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        if (authenticated)
+        {
+            await Login(browser);
+        }
+
+        using var callback = await browser.GetAsync("/Bluesky/Callback?state=missing", TestContext.Current.CancellationToken);
+        string destination = authenticated ? "/Manage" : "/Bluesky/Login";
+        Assert.Equal(destination, callback.Headers.Location?.ToString());
+        string html = await browser.GetStringAsync(destination, TestContext.Current.CancellationToken);
+        Assert.Contains("The authorization response expired or was already used.", html, StringComparison.Ordinal);
+        if (authenticated)
+        {
+            using var signout = await browser.GetAsync("/test/signout", TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, signout.StatusCode);
+        }
+
+        string login = await browser.GetStringAsync("/Bluesky/Login", TestContext.Current.CancellationToken);
+        Assert.DoesNotContain("The authorization response expired or was already used.", login, StringComparison.Ordinal);
+    }
+
     private static async Task<DPoPAccessCredentials> StoredCredentials(SampleFactory factory)
     {
         var store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
@@ -557,6 +584,13 @@ public partial class ProfileTests
         {
             app.Use(async (context, nextMiddleware) =>
             {
+                if (context.Request.Path == "/test/signout")
+                {
+                    await context.SignOutAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+                    context.Response.StatusCode = 200;
+                    return;
+                }
+
                 if (context.Request.Path == "/test/login")
                 {
                     string did = context.Request.Query["did"].ToString();
