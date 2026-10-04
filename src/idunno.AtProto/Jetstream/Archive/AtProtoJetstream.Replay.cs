@@ -22,18 +22,23 @@ public partial class AtProtoJetstream
     /// <param name="checkpoint">A saved archive or live checkpoint, if resuming an interrupted replay.</param>
     /// <param name="onCheckpoint">A callback for durably persistable progress after preceding events are consumed.</param>
     /// <param name="cancellationToken">A cancellation token for the archive and live stream.</param>
-    /// <param name="onRecordError">An optional callback that chooses whether an invalid archive record stops or is skipped.</param>
+    /// <param name="onArchiveError">An optional callback that chooses whether an invalid archive record or block stops or is skipped.</param>
     /// <returns>An at-least-once sequence of decoded archive and live events.</returns>
     /// <exception cref="ArgumentNullException">The request is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The request or replay checkpoint has invalid bounds or filters.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">The record error callback returns an unsupported action.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The archive error callback returns an action that is not valid for the failure.</exception>
     /// <exception cref="InvalidOperationException">A v2 service or archive API key is not configured.</exception>
     /// <exception cref="ObjectDisposedException">The Jetstream client has been disposed.</exception>
     /// <exception cref="InvalidDataException">The archive server returns an inconsistent plan.</exception>
-    /// <remarks><para>Without <paramref name="onRecordError"/>, or when it returns <see cref="JetstreamRecordErrorAction.Stop"/>,
-    /// an invalid matching archive record stops replay. The callback receives the record sequence and decoding exception.
-    /// Returning <see cref="JetstreamRecordErrorAction.Skip"/> deliberately
-    /// omits that record; its block checkpoint advances only after the rest of the block has been processed. A live cursor
+    /// <remarks><para>Without <paramref name="onArchiveError"/>, or when it returns <see cref="JetstreamArchiveErrorAction.Stop"/>,
+    /// an invalid matching archive record or block stops replay. The callback receives the record sequence for record failures,
+    /// or <see langword="null"/> for a block failure, and the original decoding or row-validation exception, which can be an <see cref="InvalidDataException"/>,
+    /// <see cref="System.Text.Json.JsonException"/>, <see cref="ArgumentException"/>,
+    /// <see cref="NsidFormatException"/>, <see cref="RecordKeyFormatException"/>, <see cref="OverflowException"/>,
+    /// <see cref="System.Text.DecoderFallbackException"/>, or <see cref="ZstdSharp.ZstdException"/>.
+    /// Returning <see cref="JetstreamArchiveErrorAction.SkipRecord"/> omits only the failing record and continues the block.
+    /// Returning <see cref="JetstreamArchiveErrorAction.SkipBlock"/> omits the failing record and the rest of its block,
+    /// or the entire block when the error occurred during block decoding. A live cursor
     /// is inclusive. When its lookback is exhausted after a long backfill or outage,
     /// replay returns to the archive from the last delivered sequence before reconnecting. Filter lists are copied
     /// when this method is called, so later changes to the caller's lists do not affect replay or its checkpoints.</para></remarks>
@@ -44,7 +49,7 @@ public partial class AtProtoJetstream
         SnapshotCheckpoint? checkpoint = null,
         Action<SnapshotCheckpoint>? onCheckpoint = null,
         CancellationToken cancellationToken = default,
-        Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError = null)
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -74,14 +79,14 @@ public partial class AtProtoJetstream
             throw new ArgumentException("The live replay checkpoint has invalid bounds.", nameof(checkpoint));
         }
 
-        return ReplayCoreAsync(capturedRequest, checkpoint, onCheckpoint, onRecordError, cancellationToken);
+        return ReplayCoreAsync(capturedRequest, checkpoint, onCheckpoint, onArchiveError, cancellationToken);
     }
 
     private async IAsyncEnumerable<JetstreamEvent> ReplayCoreAsync(
         SnapshotRequest request,
         SnapshotCheckpoint? checkpoint,
         Action<SnapshotCheckpoint>? onCheckpoint,
-        Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError,
+        Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         long lastDelivered = request.AfterSeq ?? 0;
@@ -115,7 +120,7 @@ public partial class AtProtoJetstream
                             RequestFingerprint = fingerprint,
                             ReplayAfterSeq = currentRequest == request ? null : currentRequest.AfterSeq
                         });
-                    }, cancellationToken, onRecordError).ConfigureAwait(false))
+                    }, cancellationToken, onArchiveError).ConfigureAwait(false))
                 {
                     if (item.Sequence is long sequence)
                     {

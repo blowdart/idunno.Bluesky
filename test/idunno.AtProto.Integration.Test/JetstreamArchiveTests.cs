@@ -569,9 +569,16 @@ public class JetstreamArchiveTests
     }
 
     [Theory]
-    [InlineData("blocks")]
-    [InlineData("segment")]
-    public async Task SnapshotCanSkipAnInvalidRecordAndResumePastItsBlock(string mode)
+    [InlineData("blocks", 65, false, false)]
+    [InlineData("segment", 65, false, false)]
+    [InlineData("blocks", 129, false, false)]
+    [InlineData("segment", 129, false, false)]
+    [InlineData("blocks", 0, true, false)]
+    [InlineData("segment", 0, true, false)]
+    [InlineData("blocks", 65, false, true)]
+    [InlineData("segment", 65, false, true)]
+    public async Task SnapshotCanSkipAnInvalidRecordAndResumePastItsBlock(
+        string mode, int nestingDepth, bool invalidDid, bool skipRemainder)
     {
         System.Formats.Cbor.CborWriter postWriter = new(System.Formats.Cbor.CborConformanceMode.Canonical);
         postWriter.WriteStartMap(3);
@@ -583,16 +590,18 @@ public class JetstreamArchiveTests
         postWriter.WriteTextString("2025-01-01T00:00:00.000Z");
         postWriter.WriteEndMap();
         byte[] record = postWriter.Encode();
-        byte[] deeplyNestedRecord = new byte[1 + 1 + 4 + 129 + 1];
+        byte[] deeplyNestedRecord = new byte[1 + 1 + 4 + nestingDepth + 1];
         deeplyNestedRecord[0] = 0xA1;
         deeplyNestedRecord[1] = 0x64;
         "test"u8.CopyTo(deeplyNestedRecord.AsSpan(2));
-        deeplyNestedRecord.AsSpan(6, 129).Fill(0x81);
+        deeplyNestedRecord.AsSpan(6, nestingDepth).Fill(0x81);
         deeplyNestedRecord[^1] = 0xF6;
 
         using Compressor compressor = new();
         byte[] frame = compressor.Wrap(PostBlock(
-            (10, record), (11, deeplyNestedRecord), (12, record))).ToArray();
+            (10, record, TestDid),
+            (11, deeplyNestedRecord, invalidDid ? "not-a-did" : TestDid),
+            (12, record, TestDid))).ToArray();
         byte[] segment = new byte[256 + 8 + frame.Length];
         "jss0"u8.CopyTo(segment);
         BinaryPrimitives.WriteUInt16LittleEndian(segment.AsSpan(12, 2), 1);
@@ -625,24 +634,25 @@ public class JetstreamArchiveTests
             httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
             options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
 
-        async Task<(List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, InvalidDataException? Error)> Enumerate(
+        async Task<(List<long?> Sequences, List<SnapshotCheckpoint> Checkpoints, Exception? Error)> Enumerate(
             SnapshotCheckpoint? checkpoint,
-            Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError = null)
+            Func<long?, Exception, JetstreamArchiveErrorAction>? onArchiveError = null)
         {
             List<long?> sequences = [];
             List<SnapshotCheckpoint> checkpoints = [];
-            InvalidDataException? error = null;
+            Exception? error = null;
             try
             {
                 await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(new SnapshotRequest(), checkpoint,
                     onCheckpoint: progress => checkpoints.Add(progress),
                     cancellationToken: TestContext.Current.CancellationToken,
-                    onRecordError: onRecordError))
+                    onArchiveError: onArchiveError))
                 {
                     sequences.Add(evt.Sequence);
                 }
             }
-            catch (InvalidDataException exception)
+            catch (Exception exception) when (exception is InvalidDataException or System.Text.Json.JsonException or
+                ArgumentException or NsidFormatException or RecordKeyFormatException or OverflowException)
             {
                 error = exception;
             }
@@ -651,26 +661,46 @@ public class JetstreamArchiveTests
         }
 
         var firstAttempt = await Enumerate(null);
-        Assert.Equal("The value is nested more than 128 levels deep.", firstAttempt.Error?.Message);
+        Exception firstError = Assert.IsAssignableFrom<Exception>(firstAttempt.Error);
+        if (invalidDid)
+        {
+            Assert.IsType<ArgumentException>(firstError);
+        }
+        else if (nestingDepth > 128)
+        {
+            Assert.IsType<InvalidDataException>(firstError);
+            Assert.Equal("The value is nested more than 128 levels deep.", firstError.Message);
+        }
+        else
+        {
+            Assert.IsAssignableFrom<System.Text.Json.JsonException>(firstError);
+        }
+
         Assert.Equal([10], firstAttempt.Sequences);
         SnapshotCheckpoint lastCheckpoint = Assert.Single(firstAttempt.Checkpoints);
         Assert.Null(lastCheckpoint.SegmentName);
         Assert.Equal(0, lastCheckpoint.NextBlockIndex);
 
         var resumedAttempt = await Enumerate(lastCheckpoint);
-        Assert.Equal("The value is nested more than 128 levels deep.", resumedAttempt.Error?.Message);
+        Assert.Equal(firstError.GetType(), resumedAttempt.Error?.GetType());
+        Assert.Equal(firstError.Message, resumedAttempt.Error?.Message);
         Assert.Equal([10], resumedAttempt.Sequences);
         Assert.Empty(resumedAttempt.Checkpoints);
 
-        List<(long Sequence, string Message)> recordErrors = [];
+        List<(long Sequence, Type ExceptionType, string Message)> recordErrors = [];
         var skippedAttempt = await Enumerate(null, (sequence, exception) =>
         {
-            recordErrors.Add((sequence, exception.Message));
-            return JetstreamRecordErrorAction.Skip;
+            recordErrors.Add((
+                sequence ?? throw new InvalidOperationException("A record failure has no sequence."),
+                exception.GetType(), exception.Message));
+            return skipRemainder
+                ? JetstreamArchiveErrorAction.SkipBlock
+                : JetstreamArchiveErrorAction.SkipRecord;
         });
         Assert.Null(skippedAttempt.Error);
-        Assert.Equal([10, 12], skippedAttempt.Sequences);
-        Assert.Equal([(11L, "The value is nested more than 128 levels deep.")], recordErrors);
+        long?[] expectedSequences = skipRemainder ? [10] : [10, 12];
+        Assert.Equal(expectedSequences, skippedAttempt.Sequences);
+        Assert.Equal([(11L, firstError.GetType(), firstError.Message)], recordErrors);
         SnapshotCheckpoint completedBlock = Assert.Single(skippedAttempt.Checkpoints,
             progress => progress.SegmentName is not null);
         Assert.Equal(Segment, completedBlock.SegmentName);
@@ -681,6 +711,98 @@ public class JetstreamArchiveTests
         Assert.Empty(resumedAfterSkip.Sequences);
         Assert.Equal(4, plans);
         Assert.Equal(mode == "blocks" ? 3 : 4, downloads);
+    }
+
+    [Theory]
+    [InlineData("blocks")]
+    [InlineData("segment")]
+    public async Task SnapshotCanSkipAnInvalidBlockAndContinueWithTheNextBlock(string mode)
+    {
+        System.Formats.Cbor.CborWriter postWriter = new(System.Formats.Cbor.CborConformanceMode.Canonical);
+        postWriter.WriteStartMap(3);
+        postWriter.WriteTextString("text");
+        postWriter.WriteTextString("hello");
+        postWriter.WriteTextString("$type");
+        postWriter.WriteTextString("app.bsky.feed.post");
+        postWriter.WriteTextString("createdAt");
+        postWriter.WriteTextString("2025-01-01T00:00:00.000Z");
+        postWriter.WriteEndMap();
+        byte[] record = postWriter.Encode();
+
+        using Compressor compressor = new();
+        byte[] firstFrame = compressor.Wrap(PostBlock((10, record, TestDid))).ToArray();
+        byte[] invalidFrame = compressor.Wrap([1, 2, 3]).ToArray();
+        byte[] lastFrame = compressor.Wrap(PostBlock((12, record, TestDid))).ToArray();
+        byte[][] frames = [firstFrame, invalidFrame, lastFrame];
+        byte[] segment = SegmentWithBlocks(frames);
+        int plans = 0;
+        int downloads = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                plans++;
+                context.Response.ContentType = "application/json";
+                string ranges = mode == "blocks" ? ""","blocks":[{"first":0,"last":2}]""" : "";
+                await context.Response.WriteAsync(
+                    $$$"""{"plannedThroughSeq":12,"sealedTipSeq":12,"segments":[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":10,"maxSeq":12,"mode":"{{{mode}}}"{{{ranges}}}}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":3,"entries":2}}""");
+                return;
+            }
+
+            downloads++;
+            context.Response.ContentType = "application/octet-stream";
+            if (mode == "blocks")
+            {
+                int blockIndex = int.Parse(
+                    context.Request.Query["blockIndex"].ToString(), System.Globalization.CultureInfo.InvariantCulture);
+                context.Response.Headers.ETag = $"\"{Checksum}:{blockIndex}\"";
+                context.Response.ContentLength = frames[blockIndex].Length;
+                await context.Response.Body.WriteAsync(frames[blockIndex]);
+            }
+            else
+            {
+                context.Response.Headers.ETag = $"\"{Checksum}\"";
+                context.Response.ContentLength = segment.Length;
+                await context.Response.Body.WriteAsync(segment);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        List<long?> sequences = [];
+        List<(long? Sequence, Type ExceptionType)> archiveErrors = [];
+        List<SnapshotCheckpoint> checkpoints = [];
+        SnapshotRequest request = new();
+
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request,
+            onCheckpoint: progress => checkpoints.Add(progress),
+            onArchiveError: (sequence, exception) =>
+            {
+                archiveErrors.Add((sequence, exception.GetType()));
+                return JetstreamArchiveErrorAction.SkipBlock;
+            },
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            sequences.Add(evt.Sequence);
+        }
+
+        Assert.Equal([10, 12], sequences);
+        Assert.Equal([(null, typeof(InvalidDataException))], archiveErrors);
+        SnapshotCheckpoint completedBlock = Assert.Single(checkpoints,
+            progress => progress.SegmentName is not null && progress.NextBlockIndex == 3);
+        Assert.Equal(Segment, completedBlock.SegmentName);
+        Assert.Equal(3, completedBlock.NextBlockIndex);
+
+        List<long?> resumedSequences = [];
+        await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(request, completedBlock,
+            cancellationToken: TestContext.Current.CancellationToken))
+        {
+            resumedSequences.Add(evt.Sequence);
+        }
+
+        Assert.Empty(resumedSequences);
+        Assert.Equal(2, plans);
+        Assert.Equal(mode == "blocks" ? 3 : 2, downloads);
     }
 
     [Theory]
@@ -1677,16 +1799,35 @@ public class JetstreamArchiveTests
         return stream.ToArray();
     }
 
-    private static byte[] PostBlock(params (long Sequence, byte[] Record)[] records)
+    private static byte[] SegmentWithBlocks(params byte[][] frames)
     {
-        byte[] did = Encoding.UTF8.GetBytes(TestDid);
+        int length = 256 + frames.Sum(frame => 8 + frame.Length);
+        byte[] segment = new byte[length];
+        "jss0"u8.CopyTo(segment);
+        BinaryPrimitives.WriteUInt16LittleEndian(segment.AsSpan(12, 2), 1);
+        BinaryPrimitives.WriteUInt32LittleEndian(segment.AsSpan(14, 4), checked((uint)frames.Length));
+        int offset = 256;
+        foreach (byte[] frame in frames)
+        {
+            BinaryPrimitives.WriteUInt64LittleEndian(segment.AsSpan(offset, 8), checked((ulong)frame.Length));
+            offset += 8;
+            frame.CopyTo(segment.AsSpan(offset));
+            offset += frame.Length;
+        }
+
+        return segment;
+    }
+
+    private static byte[] PostBlock(params (long Sequence, byte[] Record, string Did)[] records)
+    {
+        byte[][] dids = records.Select(record => Encoding.UTF8.GetBytes(record.Did)).ToArray();
         byte[] collection = Encoding.UTF8.GetBytes("app.bsky.feed.post");
         byte[] rkey = Encoding.UTF8.GetBytes("3mfrqvim56e25");
         byte[] rev = Encoding.UTF8.GetBytes("3mpksbjhx5s26");
         using MemoryStream stream = new();
         using BinaryWriter writer = new(stream, Encoding.UTF8, leaveOpen: true);
         writer.Write(checked((uint)records.Length));
-        foreach ((long sequence, _) in records)
+        foreach ((long sequence, _, _) in records)
         {
             writer.Write(checked((ulong)sequence));
         }
@@ -1713,7 +1854,7 @@ public class JetstreamArchiveTests
 
         for (int index = 0; index < records.Length; index++)
         {
-            writer.Write(checked((ushort)did.Length));
+            writer.Write(checked((ushort)dids[index].Length));
         }
 
         for (int index = 0; index < records.Length; index++)
@@ -1726,7 +1867,7 @@ public class JetstreamArchiveTests
             writer.Write(checked((byte)rev.Length));
         }
 
-        foreach ((_, byte[] payload) in records)
+        foreach ((_, byte[] payload, _) in records)
         {
             writer.Write(checked((uint)payload.Length));
         }
@@ -1738,7 +1879,7 @@ public class JetstreamArchiveTests
 
         for (int index = 0; index < records.Length; index++)
         {
-            writer.Write(did);
+            writer.Write(dids[index]);
         }
 
         for (int index = 0; index < records.Length; index++)
@@ -1751,7 +1892,7 @@ public class JetstreamArchiveTests
             writer.Write(rev);
         }
 
-        foreach ((_, byte[] payload) in records)
+        foreach ((_, byte[] payload, _) in records)
         {
             writer.Write(payload);
         }
