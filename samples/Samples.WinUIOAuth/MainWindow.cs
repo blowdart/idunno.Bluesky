@@ -10,6 +10,8 @@ using idunno.Bluesky.Actor;
 
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.System;
@@ -59,12 +61,13 @@ internal sealed class MainWindow : Window
         panel.Children.Add(_bio);
         panel.Children.Add(_counts);
         Content = new ScrollViewer() { Content = panel };
+        AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite);
 
         _login.Click += (_, _) => StartOperation(LoginAsync, "Login failed. Check your handle and connection, then try again.");
         _refresh.Click += (_, _) => StartOperation(RefreshProfileAsync, "Profile refresh failed. Check your connection or log in again.");
         _logout.Click += (_, _) => StartOperation(LogoutAsync, "Local credentials were cleared but could not logout from Bluesky.");
         _cancel.Click += (_, _) => _operationCancellation?.Cancel();
-        _avatar.ImageFailed += (_, _) => _status.Text = "The profile loaded, but its avatar could not be displayed.";
+        _avatar.ImageFailed += (_, _) => SetStatus("The profile loaded, but its avatar could not be displayed.");
         AppWindow.Closing += OnClosing;
     }
 
@@ -83,20 +86,20 @@ internal sealed class MainWindow : Window
 
         if (activation.Error is not null)
         {
-            _status.Text = activation.Error;
+            SetStatus(activation.Error);
             return;
         }
 
         if (activation.Callback is not Uri callback)
         {
-            _status.Text = "Windows delivered no OAuth callback address.";
+            SetStatus("Windows delivered no OAuth callback address.");
             return;
         }
 
         if (_operationCancellation?.IsCancellationRequested == true)
         {
             _router.Clear();
-            _status.Text = "This operation was canceled. The callback was rejected.";
+            SetStatus("This operation was canceled. The callback was rejected.");
             return;
         }
 
@@ -105,13 +108,13 @@ internal sealed class MainWindow : Window
             OAuthLoginState state = _router.Take(callback);
             if (_callback is null || !_callback.TrySetResult((callback, state)))
             {
-                _status.Text = "The callback was rejected because this login is no longer waiting.";
+                SetStatus("The callback was rejected because this login is no longer waiting.");
             }
         }
         catch (InvalidOperationException exception)
         {
             // Router messages are fixed strings: never display the callback, code, or server error text.
-            _status.Text = exception.Message;
+            SetStatus(exception.Message);
         }
     }
 
@@ -137,11 +140,11 @@ internal sealed class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            _status.Text = "Operation canceled or timed out. Logout revocation may be incomplete if it was canceled.";
+            SetStatus("Operation canceled or timed out. Logout revocation may be incomplete if it was canceled.");
         }
         catch (TimeoutException)
         {
-            _status.Text = "Login timed out. Start login again.";
+            SetStatus("Login timed out. Start login again.");
         }
         catch (Exception exception) when (exception is OAuthException or CredentialException or LogoutException or
             AuthenticationRequiredException or HttpRequestException or ArgumentException or FormatException or
@@ -149,7 +152,7 @@ internal sealed class MainWindow : Window
             Microsoft.IdentityModel.Tokens.SecurityTokenException)
         {
             // SDK/provider exception text can include sensitive data. Show only this operation's fixed message.
-            _status.Text = failureMessage;
+            SetStatus(failureMessage);
         }
         finally
         {
@@ -165,12 +168,12 @@ internal sealed class MainWindow : Window
     {
         if (!Handle.TryParse(_handle.Text.Trim().TrimStart('@'), out Handle? handle))
         {
-            _status.Text = "Enter a valid Bluesky handle, such as you.bsky.social.";
+            SetStatus("Enter a valid Bluesky handle, such as you.bsky.social.");
             return;
         }
 
         await ClearSessionAsync();
-        _status.Text = "Discovering your server and preparing OAuth...";
+        SetStatus("Discovering your server and preparing OAuth...");
         BlueskyAgent agent = new(new BlueskyAgentOptions()
         {
             OAuthOptions = new OAuthOptions()
@@ -196,10 +199,10 @@ internal sealed class MainWindow : Window
             cancellationToken.ThrowIfCancellationRequested();
             _callback = new(TaskCreationOptions.RunContinuationsAsynchronously);
             _router.Begin(state);
-            _status.Text = "Complete login in your browser. This request expires in five minutes.";
+            SetStatus("Complete login in your browser. This request expires in five minutes.");
             if (!await Launcher.LaunchUriAsync(startUri))
             {
-                _status.Text = "Windows could not open the browser. Check your default browser and try again.";
+                SetStatus("Windows could not open the browser. Check your default browser and try again.");
                 return;
             }
 
@@ -209,12 +212,12 @@ internal sealed class MainWindow : Window
             cancellationToken.ThrowIfCancellationRequested();
             if (!authenticated || !agent.IsAuthenticated)
             {
-                _status.Text = "Login was denied or the OAuth response failed validation. Start login again.";
+                SetStatus("Login was denied or the OAuth response failed validation. Start login again.");
                 return;
             }
 
             _agent = agent;
-            _status.Text = "Signed in. Loading your profile...";
+            SetStatus("Signed in. Loading your profile...");
             await RefreshProfileAsync(cancellationToken);
             retainAgent = ReferenceEquals(_agent, agent);
         }
@@ -246,17 +249,17 @@ internal sealed class MainWindow : Window
         if (agent is null || credentials is null || !agent.IsAuthenticated)
         {
             await ClearSessionAsync();
-            _status.Text = "Your session has ended. Log in again.";
+            SetStatus("Your session has ended. Log in again.");
             return;
         }
 
-        _status.Text = "Loading your profile...";
+        SetStatus("Loading your profile...");
         AtProtoHttpResult<ProfileViewDetailed> result = await Task.Run(
             () => agent.GetProfile(credentials.Did, cancellationToken: cancellationToken), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (!result.Succeeded)
         {
-            _status.Text = $"Profile request failed (HTTP {(int)result.StatusCode}). Retry or log out.";
+            SetStatus($"Profile request failed (HTTP {(int)result.StatusCode}). Retry or log out.");
             return;
         }
 
@@ -269,12 +272,12 @@ internal sealed class MainWindow : Window
             string.IsNullOrEmpty(avatar.UserInfo) && !avatar.IsLoopback
             ? new BitmapImage(avatar)
             : null;
-        _status.Text = "Signed in. Only your profile is requested. The SDK refreshes tokens in memory.";
+        SetStatus("Signed in. Only your profile is requested. The SDK refreshes tokens in memory.");
     }
 
     private async Task LogoutAsync(CancellationToken cancellationToken)
     {
-        _status.Text = "Revoking this session...";
+        SetStatus("Revoking this session...");
         try
         {
             if (_agent is not null)
@@ -282,7 +285,7 @@ internal sealed class MainWindow : Window
                 await Task.Run(() => _agent.Logout(cancellationToken), cancellationToken);
             }
 
-            _status.Text = "Logged out. Server tokens were revoked and local credentials cleared.";
+            SetStatus("Logged out. Server tokens were revoked and local credentials cleared.");
         }
         finally
         {
@@ -302,6 +305,17 @@ internal sealed class MainWindow : Window
         if (agent is not null)
         {
             await Task.Run(agent.Dispose);
+        }
+    }
+
+    private void SetStatus(string message)
+    {
+        _status.Text = message;
+        if (AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
+        {
+            AutomationPeer? peer = FrameworkElementAutomationPeer.FromElement(_status)
+                ?? FrameworkElementAutomationPeer.CreatePeerForElement(_status);
+            peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         }
     }
 
@@ -329,7 +343,7 @@ internal sealed class MainWindow : Window
         }
 
         _closing = true;
-        _status.Text = "Closing and discarding the in-memory session...";
+        SetStatus("Closing and discarding the in-memory session...");
         UpdateButtons();
         _operationCancellation?.Cancel();
         await _operation;

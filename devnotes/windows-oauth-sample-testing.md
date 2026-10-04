@@ -83,6 +83,10 @@ Pay particular attention to consent return: deferred access to forwarded WinRT
 activation data previously caused a disconnected COM proxy exception.
 The event handler must capture managed data before returning.
 
+With Narrator enabled, verify login progress, callback rejection, cancellation,
+profile errors and logout results are announced without moving focus to the status
+text. Status updates use a polite live region and raise its automation event.
+
 ## Cleanup
 
 Use Log out before closing if remote revocation is desired. Closing alone only
