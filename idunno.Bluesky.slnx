@@ -74,6 +74,7 @@
     <File Path="docs/filter.yml" />
     <File Path="docs/index.md" />
     <File Path="docs/toc.yml" />
+    <File Path="docs/windows-oauth-client.json" />
   </Folder>
   <Folder Name="/docs/docs/">
     <File Path="docs/docs/asp.net.md" />

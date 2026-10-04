@@ -248,16 +248,21 @@ callback query strings, which may expose sensitive data.
 To obtain the signed-in user's detailed profile, pass their DID explicitly:
 
 ```csharp
+AccessCredentials credentials = agent.Credentials
+    ?? throw new AuthenticationRequiredException();
+
 if (!agent.IsAuthenticated)
 {
     throw new AuthenticationRequiredException();
 }
 
 AtProtoHttpResult<ProfileViewDetailed> result = await agent.GetProfile(
-    agent.Did, cancellationToken: cancellationToken);
+    credentials.Did, cancellationToken: cancellationToken);
 ```
 
-Call this only after confirming the agent is authenticated. Check
+Snapshot credentials before taking their non-null DID rather than reading
+`agent.Did` after a separate authentication check; the session may end between reads.
+Check
 `result.Succeeded` before reading `result.Result`.
 The parameterless `GetProfile()` retrieves a repository profile record rather
 than the detailed view containing follower/following counts.

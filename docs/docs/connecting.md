@@ -176,7 +176,7 @@ Public profile reads do not require authorization; this permission is for the au
 
 The metadata declares a public native client (`token_endpoint_auth_method: none`) using the authorization-code
 and refresh-token grants with DPoP-bound access tokens. The application registers the
-`dev.idunno.bluesky` URI scheme with Windows and use the exact single-slash callback above, as required by the
+`dev.idunno.bluesky` URI scheme with Windows and uses the exact single-slash callback above, as required by the
 [AT Protocol native-client rules](https://atproto.com/specs/oauth#request-fields). Its authorization request must
 use these scope strings (or the identity-only subset `atproto`) and the same client ID and redirect URI.
 
