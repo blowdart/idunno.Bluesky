@@ -146,7 +146,7 @@ internal sealed class MainWindow : Window
         {
             SetStatus("Login timed out. Start login again.");
         }
-        catch (Exception exception) when (exception is OAuthException or CredentialException or LogoutException or
+        catch (Exception exception) when (exception is OAuthException or CredentialException or LogoutException or ResponseParseException or
             AuthenticationRequiredException or HttpRequestException or ArgumentException or FormatException or
             System.Text.Json.JsonException or System.Runtime.InteropServices.COMException or System.Security.Cryptography.CryptographicException or
             Microsoft.IdentityModel.Tokens.SecurityTokenException)

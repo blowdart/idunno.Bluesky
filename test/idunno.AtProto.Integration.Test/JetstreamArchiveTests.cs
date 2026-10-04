@@ -379,12 +379,13 @@ public class JetstreamArchiveTests
     public async Task CallerCancellationDoesNotResumeStalledDownload()
     {
         int requests = 0;
+        TaskCompletionSource stalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using HttpClient client = new(new ArchiveTestHandler(_ =>
         {
             Interlocked.Increment(ref requests);
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
-                Content = new StreamContent(new StallingStream([]))
+                Content = new StreamContent(new StallingStream([], () => stalled.TrySetResult()))
             };
             response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
             response.Content.Headers.ContentLength = 1;
@@ -392,11 +393,21 @@ public class JetstreamArchiveTests
         }));
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null),
-            readTimeout: TimeSpan.FromSeconds(2));
-        using CancellationTokenSource cancellation = new(TimeSpan.FromMilliseconds(80));
+            readTimeout: TimeSpan.FromMinutes(1));
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+
+        Task read = download.ReadExactlyAsync(new byte[1], cancellation.Token);
+        try
+        {
+            await stalled.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await cancellation.CancelAsync();
+        }
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            download.ReadExactlyAsync(new byte[1], cancellation.Token));
+            read.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         Assert.Equal(1, requests);
     }
 
@@ -1486,12 +1497,13 @@ public class JetstreamArchiveTests
             base.ReadAsync(buffer[..Math.Min(buffer.Length, 1)], cancellationToken);
     }
 
-    private sealed class StallingStream(byte[] bytes) : MemoryStream(bytes)
+    private sealed class StallingStream(byte[] bytes, Action? onStalled = null) : MemoryStream(bytes)
     {
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (Position >= Length)
             {
+                onStalled?.Invoke();
                 await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             }
 

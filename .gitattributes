@@ -9,6 +9,10 @@
 /docs/docs/reactBff.md -text
 /samples/Samples.ReactBff/** -text
 /test/Samples.ReactBff.Test/** -text
+/devnotes/windows-oauth-sample-testing.md -text
+/docs/docs/windowsOAuth.md -text
+/samples/Samples.WinUIOAuth/** -text
+/test/Samples.WinUIOAuth.Test/** -text
 
 ###############################################################################
 # Set default behavior for command prompt diff.

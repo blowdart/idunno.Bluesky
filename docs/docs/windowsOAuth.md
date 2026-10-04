@@ -248,6 +248,11 @@ callback query strings, which may expose sensitive data.
 To obtain the signed-in user's detailed profile, pass their DID explicitly:
 
 ```csharp
+if (!agent.IsAuthenticated)
+{
+    throw new AuthenticationRequiredException();
+}
+
 AtProtoHttpResult<ProfileViewDetailed> result = await agent.GetProfile(
     agent.Did, cancellationToken: cancellationToken);
 ```
