@@ -588,6 +588,50 @@ public partial class ProfileTests
     }
 
     [Fact]
+    public async Task DelayedMissingScopeResponseDoesNotReplaceANewerDraft()
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        await Login(browser, write: true);
+        factory.Pds.Failure = "scope";
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int writes = 0;
+        factory.Pds.BeforeWrite = async () =>
+        {
+            if (Interlocked.Increment(ref writes) == 1)
+            {
+                entered.SetResult();
+                await release.Task;
+            }
+        };
+        Task<HttpResponseMessage> staleSave = PostEdit(browser, displayName: "Older edit");
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            using var newerSave = await PostEdit(browser, displayName: "Newer edit");
+            Assert.Equal(HttpStatusCode.Redirect, newerSave.StatusCode);
+            release.SetResult();
+            using var staleResponse = await staleSave;
+            Assert.Equal(HttpStatusCode.OK, staleResponse.StatusCode);
+            Assert.Contains("superseded", await staleResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+            string recovered = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+            Assert.Contains("Newer edit", recovered, StringComparison.Ordinal);
+            Assert.DoesNotContain("Older edit", recovered, StringComparison.Ordinal);
+
+            using var callback = await browser.GetAsync(newerSave.Headers.Location, TestContext.Current.CancellationToken);
+            Assert.Equal("/Manage", callback.Headers.Location?.ToString());
+            string ready = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+            Assert.Contains("complete-profile-save", ready, StringComparison.Ordinal);
+        }
+        finally
+        {
+            release.TrySetResult();
+            using var completed = await staleSave;
+        }
+    }
+
+    [Fact]
     public async Task InvalidEditKeepsCidAndDoesNotStartConsent()
     {
         await using var factory = new SampleFactory();
@@ -857,6 +901,7 @@ public partial class ProfileTests
         internal string? LastWrite { get; set; }
         internal string? Failure { get; set; }
         internal Func<Task>? BeforeRevoke { get; set; }
+        internal Func<Task>? BeforeWrite { get; set; }
 
         public HttpClient CreateClient(string name) => new(new Handler(this));
 
@@ -881,6 +926,10 @@ public partial class ProfileTests
 
                 if (request.RequestUri.AbsolutePath == "/xrpc/com.atproto.repo.putRecord")
                 {
+                    if (pds.BeforeWrite is not null)
+                    {
+                        await pds.BeforeWrite();
+                    }
                     pds.Writes++;
                     pds.LastWrite = await request.Content!.ReadAsStringAsync(cancellationToken);
                     var token = new JsonWebToken(request.Headers.Authorization!.Parameter!);

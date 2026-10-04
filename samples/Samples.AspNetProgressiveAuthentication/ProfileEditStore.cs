@@ -116,6 +116,26 @@ public sealed class ProfileEditStore : IDisposable
     }
 
     /// <summary>
+    /// Moves a rejected direct save to consent without replacing a newer submitted draft.
+    /// </summary>
+    /// <param name="owner">The authenticated account and editing session.</param>
+    /// <param name="id">The original direct-save identifier.</param>
+    /// <returns><see langword="true"/> if the original draft still exists and was transitioned; otherwise, <see langword="false"/>.</returns>
+    internal bool AwaitConsent(ProfileEditOwner owner, string id)
+    {
+        lock (_gate)
+        {
+            if (Read(owner) is not Entry entry || entry.Id != id || entry.Status != ProfileEditStatus.Failed)
+            {
+                return false;
+            }
+
+            Put(owner, entry with { Status = ProfileEditStatus.AwaitingConsent, Message = null });
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Claims an awaiting draft for exactly one OAuth callback's token exchange.
     /// </summary>
     /// <param name="owner">The original authenticated account and editing session.</param>

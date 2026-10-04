@@ -286,11 +286,18 @@ public partial class IndexModel(BlueskyAgent agent, ProfileEditStore edits, Prof
     /// <param name="owner">The authenticated account and editing session.</param>
     /// <param name="edit">The submitted editor values and original profile CID.</param>
     /// <param name="credentials">The current credentials whose effective sample permissions should be retained.</param>
+    /// <param name="existingId">The rejected direct-save identifier, or <see langword="null"/> for a new submission.</param>
     /// <returns>The consent redirect, or the editor with a recoverable preparation error.</returns>
-    private async Task<IActionResult> Challenge(ProfileEditOwner owner, ProfileEdit edit, DPoPAccessCredentials credentials)
+    private async Task<IActionResult> Challenge(ProfileEditOwner owner, ProfileEdit edit, DPoPAccessCredentials credentials, string? existingId = null)
     {
         // Persist before discovery or redirect preparation can fail. A new Update intentionally supersedes an older attempt.
-        string id = edits.Add(owner, edit);
+        // A delayed missing-scope response must not replace a newer submission from another tab.
+        if (existingId is not null && !edits.AwaitConsent(owner, existingId))
+        {
+            return SaveFailure("This save attempt expired or was superseded by a newer edit. No consent was requested. Reload Manage Profile to recover the current draft.");
+        }
+
+        string id = existingId ?? edits.Add(owner, edit);
         PendingEditId = id;
         if (User.GetHandle() is not Handle handle)
         {
@@ -355,7 +362,7 @@ public partial class IndexModel(BlueskyAgent agent, ProfileEditStore edits, Prof
                 {
                     // Opaque scope references cannot be fully inspected locally. Only a recognized missing-scope
                     // response permits this fallback, not a generic forbidden response or unrelated server failure.
-                    return await Challenge(owner, edit, credentials);
+                    return await Challenge(owner, edit, credentials, existingId: id);
                 }
 
                 return SaveFailure($"The profile was not saved (HTTP {(int)result.StatusCode}). Check your profile before retrying.");
