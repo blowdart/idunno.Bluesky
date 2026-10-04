@@ -1,0 +1,40 @@
+@page "/Claims"
+@attribute [Authorize]
+@using Microsoft.IdentityModel.JsonWebTokens
+
+<PageTitle>User claims</PageTitle>
+<h1>User claims</h1>
+<p>Credentials and DPoP proof material are never displayed.</p>
+<table>
+    <thead><tr><th>Type</th><th>Value</th><th>Issuer</th></tr></thead>
+    <tbody>
+        @foreach (var claim in _claims)
+        {
+            <tr><td>@claim.Type</td><td>@claim.Value</td><td>@claim.Issuer</td></tr>
+        }
+    </tbody>
+</table>
+@if (_expiresOn is not null)
+{
+    <p>Access token expires on @_expiresOn.Value.ToLocalTime().ToString("G").</p>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    private IEnumerable<Claim> _claims = [];
+    private DateTimeOffset? _expiresOn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthenticationState).User;
+        _claims = user.Claims.Where(claim => claim.Type is not
+            (AtProtoClaims.AccessToken or AtProtoClaims.RefreshToken or AtProtoClaims.DPoPProof or AtProtoClaims.DPoPNonce));
+        if (user.FindFirst(AtProtoClaims.AccessToken) is Claim tokenClaim)
+        {
+            var token = new JsonWebToken(tokenClaim.Value);
+            _expiresOn = new DateTimeOffset(DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
+        }
+    }
+}

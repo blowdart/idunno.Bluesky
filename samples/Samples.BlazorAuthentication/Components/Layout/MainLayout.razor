@@ -1,0 +1,22 @@
+@inherits LayoutComponentBase
+
+<header>
+    <nav aria-label="Main navigation">
+        <a href="/">Blazor Bluesky</a>
+        <a href="/Privacy">Privacy</a>
+        <AuthorizeView>
+            <Authorized>
+                <a href="/Claims">Claims</a>
+                <a href="/Manage">Manage profile</a>
+                <span>@context.User.GetDisplayName()</span>
+                <a href="/Bluesky/Logout?returnUrl=%2F">Sign out</a>
+            </Authorized>
+            <NotAuthorized>
+                <a href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</header>
+<main>
+    @Body
+</main>

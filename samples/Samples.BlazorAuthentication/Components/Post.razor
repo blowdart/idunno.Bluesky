@@ -1,0 +1,29 @@
+@using idunno.Bluesky.Feed
+@using idunno.Bluesky.Embed
+
+<div class="author">
+    @if (PostView.Author.Avatar is not null)
+    {
+        <img src="@PostView.Author.Avatar" alt="" width="42" height="42" loading="lazy" />
+    }
+    <strong>@PostView.Author.DisplayName</strong>
+    <span>@@@PostView.Author.Handle</span>
+    <time datetime="@PostView.Record.CreatedAt.ToString("O")">@PostView.Record.CreatedAt.ToLocalTime().ToString("g")</time>
+</div>
+<p class="post-text">@PostView.Record.Text</p>
+@if (PostView.Embed is EmbeddedImagesView images)
+{
+    @foreach (var image in images.Images)
+    {
+        <img class="post-image" src="@image.ThumbnailUri" alt="@image.AltText" loading="lazy" />
+    }
+}
+<p>@PostView.ReplyCount replies &middot; @PostView.LikeCount likes &middot; @PostView.RepostCount reposts</p>
+
+@code {
+    /// <summary>
+    /// Gets or sets the post to render.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public PostView PostView { get; set; } = default!;
+}

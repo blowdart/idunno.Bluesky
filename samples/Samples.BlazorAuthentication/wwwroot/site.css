@@ -1,0 +1,19 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; }
+body { margin: 0; color: #202020; background: #fff; }
+header { border-bottom: 1px solid #ccc; }
+nav { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; align-items: center; }
+main { max-width: 60rem; margin: auto; padding: 1rem; }
+a { color: #0755b0; }
+label { display: block; margin-top: 1rem; }
+input:not([type=checkbox]), textarea { box-sizing: border-box; width: 100%; max-width: 40rem; padding: .5rem; }
+textarea { min-height: 8rem; }
+button { padding: .5rem 1rem; margin-top: 1rem; cursor: pointer; }
+.error, .validation-message, .validation-errors { color: #a00000; }
+.feed-entry { border-bottom: 1px solid #ccc; padding: 1rem 0; }
+.author { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.author img { border-radius: 50%; }
+.post-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-image { max-width: 100%; max-height: 30rem; }
+blockquote { margin-left: 1rem; padding-left: 1rem; border-left: 3px solid #ccc; }
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: .5rem; text-align: left; border-bottom: 1px solid #ccc; overflow-wrap: anywhere; }

@@ -1,0 +1,77 @@
+@page "/"
+@using idunno.Bluesky.Actor
+@using idunno.Bluesky.Feed
+@inject BlueskyAgent Agent
+
+<PageTitle>Bluesky timeline</PageTitle>
+<h1>Bluesky timeline</h1>
+<AuthorizeView>
+    <Authorized>
+        @if (_error is not null)
+        {
+            <p role="alert" class="error">@_error</p>
+        }
+        else if (_timeline is { Count: > 0 })
+        {
+            @foreach (var entry in _timeline)
+            {
+                <article class="feed-entry">
+                    <Post PostView="entry.Post" />
+                    @if (entry.Reply?.Parent is PostView parent)
+                    {
+                        <blockquote>
+                            <p>In reply to</p>
+                            <Post PostView="parent" />
+                        </blockquote>
+                    }
+                </article>
+            }
+        }
+        else
+        {
+            <p>Your timeline is empty.</p>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>Sign in with Bluesky to view your timeline and edit your profile.</p>
+        <a href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationState { get; set; } = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private ICollection<FeedViewPost>? _timeline;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationState;
+        if (state.User.Identity?.IsAuthenticated != true)
+        {
+            return;
+        }
+
+        var preferences = await Agent.GetPreferences(cancellationToken: HttpContext.RequestAborted);
+        if (!preferences.Succeeded)
+        {
+            _error = $"Could not load preferences: {preferences.StatusCode} ({preferences.AtErrorDetail?.Error}).";
+            return;
+        }
+
+        var timeline = await Agent.GetTimeline(
+            subscribedLabelers: preferences.Result.SubscribedLabelers,
+            cancellationToken: HttpContext.RequestAborted);
+        if (!timeline.Succeeded)
+        {
+            _error = $"Could not load the timeline: {timeline.StatusCode} ({timeline.AtErrorDetail?.Error}).";
+            return;
+        }
+
+        _timeline = timeline.Result;
+    }
+}

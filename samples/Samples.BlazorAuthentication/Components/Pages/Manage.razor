@@ -1,0 +1,106 @@
+@page "/Manage"
+@attribute [Authorize]
+@inject BlueskyAgent Agent
+@inject NavigationManager Navigation
+
+<PageTitle>Manage profile</PageTitle>
+<h1>Manage profile</h1>
+@if (_error is not null)
+{
+    <p role="alert" class="error">@_error</p>
+}
+@if (Saved && _error is null && HttpMethods.IsGet(HttpContext.Request.Method))
+{
+    <p role="status">Your profile was saved.</p>
+}
+@if (Input is not null)
+{
+    <EditForm Model="Input" OnValidSubmit="Save" FormName="profile">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <input type="hidden" name="Input.Cid" value="@Input.Cid" />
+        <label for="display-name">Display name</label>
+        <InputText id="display-name" @bind-Value="Input.DisplayName" />
+        <ValidationMessage For="() => Input.DisplayName" />
+        <label for="description">Description</label>
+        <InputTextArea id="description" @bind-Value="Input.Description" />
+        <ValidationMessage For="() => Input.Description" />
+        <label for="pronouns">Pronouns</label>
+        <InputText id="pronouns" @bind-Value="Input.Pronouns" />
+        <ValidationMessage For="() => Input.Pronouns" />
+        <button type="submit">Save profile</button>
+    </EditForm>
+}
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "profile")]
+    private ProfileInput? Input { get; set; }
+
+    [SupplyParameterFromQuery]
+    private bool Saved { get; set; }
+
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Static SSR recreates the component for POSTs; never replace the submitted edits or their original CID.
+        if (Input is not null)
+        {
+            return;
+        }
+
+        var profile = await Agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
+        if (!profile.Succeeded)
+        {
+            _error = $"Could not load your profile: {profile.StatusCode} ({profile.AtErrorDetail?.Error}).";
+            return;
+        }
+
+        Input = new ProfileInput
+        {
+            Cid = profile.Result.Cid.ToString(),
+            DisplayName = profile.Result.Value.DisplayName ?? string.Empty,
+            Description = profile.Result.Value.Description ?? string.Empty,
+            Pronouns = profile.Result.Value.Pronouns ?? string.Empty
+        };
+    }
+
+    private async Task Save()
+    {
+        if (Input is null || !Cid.TryParse(Input.Cid, out Cid? cid))
+        {
+            _error = "The profile version is invalid. Reload the editor.";
+            return;
+        }
+
+        var current = await Agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
+        if (!current.Succeeded)
+        {
+            _error = $"Could not load your profile: {current.StatusCode} ({current.AtErrorDetail?.Error}).";
+            return;
+        }
+
+        if (current.Result.Cid != cid)
+        {
+            _error = "Your profile changed since you opened the editor. Copy your edits, then reload before saving.";
+            return;
+        }
+
+        // Preserve avatar, banner and other profile fields, and guard against a change between this read and the write.
+        var profile = current.Result.Value;
+        profile.DisplayName = Input.DisplayName;
+        profile.Description = Input.Description;
+        profile.Pronouns = Input.Pronouns;
+        var result = await Agent.UpdateProfile(profile, cid: cid, cancellationToken: HttpContext.RequestAborted);
+        if (!result.Succeeded)
+        {
+            _error = $"Could not save your profile: {result.StatusCode} ({result.AtErrorDetail?.Error}). Copy your edits before reloading.";
+            return;
+        }
+
+        Navigation.NavigateTo("/Manage?saved=true");
+    }
+}
