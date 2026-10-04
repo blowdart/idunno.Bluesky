@@ -78,6 +78,39 @@ public partial class ProfileTests
         Assert.Equal(new Uri($"http://127.0.0.1:{port}/Bluesky/Callback"), manager.CreateReturnUri());
     }
 
+    [Fact]
+    public void ClaimsTransformerIsRegisteredOnlyOnce()
+    {
+        using var factory = new SampleFactory();
+        _ = factory.Services;
+        Assert.Equal(1, factory.ClaimsTransformerRegistrations);
+    }
+
+    [Theory]
+    [InlineData("http")]
+    [InlineData("https")]
+    public async Task ProductionMetadataUsesTransportMiddleware(string scheme)
+    {
+        await using var factory = new SampleFactory { Production = true };
+        using var browser = factory.CreateClient(new()
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new($"{scheme}://example.idunno.blue")
+        });
+        using var response = await browser.GetAsync("/oauth-client-metadata.json", TestContext.Current.CancellationToken);
+        if (scheme == "http")
+        {
+            Assert.Equal(HttpStatusCode.TemporaryRedirect, response.StatusCode);
+            Assert.Equal("https://example.idunno.blue/oauth-client-metadata.json", response.Headers.Location?.ToString());
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("max-age=", Assert.Single(response.Headers.GetValues("Strict-Transport-Security")), StringComparison.Ordinal);
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
     [Theory]
     [InlineData("ref:opaque", true)]
     [InlineData("atproto", false)]
@@ -552,17 +585,28 @@ public partial class ProfileTests
         internal OAuthTrace? OAuth { get; private set; }
         internal OAuthTrace Trace => OAuth ??= new();
         internal string Outcome { get; init; } = "success";
+        internal bool Production { get; init; }
+        internal int ClaimsTransformerRegistrations { get; private set; }
         internal FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Development");
+            builder.UseEnvironment(Production ? "Production" : "Development");
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IHttpClientFactory>();
                 services.AddSingleton<IHttpClientFactory>(Pds);
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton<TimeProvider>(Clock);
+                ClaimsTransformerRegistrations = services.Count(descriptor =>
+                    descriptor.ServiceType == typeof(IClaimsTransformation) &&
+                    descriptor.ImplementationType == typeof(BlueskyClaimsTransformer));
+                services.Configure<Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionOptions>(options => options.HttpsPort = 443);
+                if (Production)
+                {
+                    services.PostConfigure<Microsoft.AspNetCore.HostFiltering.HostFilteringOptions>(options =>
+                        options.AllowedHosts = ["example.idunno.blue"]);
+                }
                 services.RemoveAll<IClaimsTransformation>();
                 services.AddSingleton<IClaimsTransformation, NoClaimsTransformation>();
                 services.RemoveAll<ProfileOAuthClient>();

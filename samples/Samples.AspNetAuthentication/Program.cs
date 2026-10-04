@@ -46,13 +46,6 @@ builder.Services.AddRazorPages();
 
 var app = builder.Build();
 
-// Localhost clients use authorization-server metadata rather than publishing an HTTPS document.
-var oauthClientId = new Uri(app.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!.ClientId);
-if (oauthClientId.Scheme != Uri.UriSchemeHttp || oauthClientId.Host != "localhost")
-{
-    app.UseBlueskyOAuthClientMetadata();
-}
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -60,6 +53,13 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHttpsRedirection();
     app.UseHsts();
+}
+
+// Localhost clients use authorization-server metadata rather than publishing an HTTPS document.
+var oauthClientId = new Uri(app.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!.ClientId);
+if (oauthClientId.Scheme != Uri.UriSchemeHttp || oauthClientId.Host != "localhost")
+{
+    app.UseBlueskyOAuthClientMetadata();
 }
 
 app.UseRouting();
