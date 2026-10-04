@@ -91,6 +91,13 @@ public partial class AuthenticationTests
         await Login(browser);
         string timeline = await browser.GetStringAsync("/", TestContext.Current.CancellationToken);
         Assert.Contains("Hello from the timeline", timeline, StringComparison.Ordinal);
+        Assert.Contains("<blockquote>", timeline, StringComparison.Ordinal);
+        Assert.Contains("In reply to", timeline, StringComparison.Ordinal);
+        Assert.Contains("<strong>Parent author</strong>", timeline, StringComparison.Ordinal);
+        Assert.Contains("parent.bsky.social", timeline, StringComparison.Ordinal);
+        Assert.Contains("Text from the reply parent", timeline, StringComparison.Ordinal);
+        Assert.Contains("src=\"https://images.example/first-thumb.jpg\" alt=\"First image description\"", timeline, StringComparison.Ordinal);
+        Assert.Contains("src=\"https://images.example/second-thumb.jpg\" alt=\"Second image description\"", timeline, StringComparison.Ordinal);
         Assert.Contains("Manage profile", timeline, StringComparison.Ordinal);
         Assert.Contains("Sign out", timeline, StringComparison.Ordinal);
         Assert.Equal(1, factory.Pds.TimelineRequests);
@@ -345,11 +352,24 @@ public partial class AuthenticationTests
                         return pds.Failure == "preferences" ? Failure() : Json(HttpStatusCode.OK, """{"preferences":[]}""");
                     case "/xrpc/app.bsky.feed.getTimeline":
                         pds.TimelineRequests++;
-                        return pds.Failure == "timeline" ? Failure() : Json(HttpStatusCode.OK, $$$"""
-                            {"feed":[{"post":{"uri":"at://{{{Did}}}/app.bsky.feed.post/3kexample","cid":"{{{ProfileCid}}}",
-                            "author":{"did":"{{{Did}}}","handle":"test.bsky.social","displayName":"Test user"},
+                        return pds.Failure == "timeline" ? Failure() : Json(HttpStatusCode.OK, $$$$"""
+                            {"feed":[{"post":{"uri":"at://{{{{Did}}}}/app.bsky.feed.post/3kexample","cid":"{{{{ProfileCid}}}}",
+                            "author":{"did":"{{{{Did}}}}","handle":"test.bsky.social","displayName":"Test user"},
                             "record":{"$type":"app.bsky.feed.post","text":"Hello from the timeline","createdAt":"2026-10-01T12:00:00Z"},
-                            "indexedAt":"2026-10-01T12:00:00Z","replyCount":0,"likeCount":1,"repostCount":0}}]}
+                            "embed":{"$type":"app.bsky.embed.images#view","images":[
+                            {"thumb":"https://images.example/first-thumb.jpg","fullsize":"https://images.example/first.jpg","alt":"First image description"},
+                            {"thumb":"https://images.example/second-thumb.jpg","fullsize":"https://images.example/second.jpg","alt":"Second image description"}]},
+                            "indexedAt":"2026-10-01T12:00:00Z","replyCount":0,"likeCount":1,"repostCount":0},
+                            "reply":{
+                            "root":{"$type":"app.bsky.feed.defs#postView","uri":"at://{{{{Did}}}}/app.bsky.feed.post/3kroot","cid":"{{{{ProfileCid}}}}",
+                            "author":{"did":"{{{{Did}}}}","handle":"root.bsky.social","displayName":"Root author"},
+                            "record":{"$type":"app.bsky.feed.post","text":"Text from the thread root","createdAt":"2026-10-01T10:00:00Z"},
+                            "indexedAt":"2026-10-01T10:00:00Z"},
+                            "parent":{"$type":"app.bsky.feed.defs#postView","uri":"at://{{{{Did}}}}/app.bsky.feed.post/3kparent","cid":"{{{{ProfileCid}}}}",
+                            "author":{"did":"{{{{Did}}}}","handle":"parent.bsky.social","displayName":"Parent author"},
+                            "record":{"$type":"app.bsky.feed.post","text":"Text from the reply parent","createdAt":"2026-10-01T11:00:00Z"},
+                            "indexedAt":"2026-10-01T11:00:00Z"}
+                            }}]}
                             """);
                     case "/xrpc/com.atproto.repo.getRecord":
                         string cid = pds.Failure == "conflict" ? ChangedCid : ProfileCid;
