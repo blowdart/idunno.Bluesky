@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <LangVersion>13.0</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Keep this project in the main solution without requiring Windows tooling in Linux CI.
+       Non-Windows hosts restore and build an empty .NET library, not the Windows application.
+       Disable implicit source/resource items so app code and XAML cannot enter that build.
+       The separate Samples.WinUIOAuth.Test project still exercises callback routing on every OS. -->
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+
+  <!-- Only Windows evaluates the WinUI target, runtime identifiers and MSIX tooling.
+       The main solution maps Any CPU to x64 for this app; ARM64 is selected explicitly.
+       All other projects retain their existing solution platform mappings. -->
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Local Visual Studio deployment uses an unsigned development package.
+         Distribution requires a trusted signing certificate; never check its private key in. -->
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxAutoIncrementPackageRevision>false</AppxAutoIncrementPackageRevision>
+    <AppxBundle>Never</AppxBundle>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Custom Main redirects activation to the running instance before starting the XAML UI. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <!-- Do not even restore Windows packages or reference the SDK from the non-Windows placeholder.
+       Local package versions keep sample tooling independent of the shared library dependencies. -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+    <Content Include="Assets\*.png" />
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+</Project>

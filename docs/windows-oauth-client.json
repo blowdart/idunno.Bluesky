@@ -1,0 +1,19 @@
+{
+    "client_id": "https://bluesky.idunno.dev/windows-oauth-client.json",
+    "client_name": "idunno.Bluesky Windows OAuth sample",
+    "client_uri": "https://bluesky.idunno.dev/",
+    "application_type": "native",
+    "grant_types": [
+        "authorization_code",
+        "refresh_token"
+    ],
+    "response_types": [
+        "code"
+    ],
+    "redirect_uris": [
+        "dev.idunno.bluesky:/callback"
+    ],
+    "scope": "atproto rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app%23bsky_appview",
+    "token_endpoint_auth_method": "none",
+    "dpop_bound_access_tokens": true
+}

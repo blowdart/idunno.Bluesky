@@ -2,7 +2,7 @@
 
 User lists are collections of users created by users. When lists are created they are given a purpose. The two main purposes are
 
-* Curation: a list of users to drive custom feeds, or to set [thread gates](threadgates.md).
+* Curation: a list of users to drive custom feeds, or to set [thread gates](threadGates.md).
 * Moderation : a list of users used for muting or blocking.
 
 [!include[Untrusted data warning](../includes/untrusted-data-warning.md)]

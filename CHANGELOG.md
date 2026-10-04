@@ -143,6 +143,8 @@
 
 #### Samples
 
+* Added a packaged WinUI 3 OAuth sample (`Samples.WinUIOAuth`) with native protocol activation, in-memory login state and credentials, read-only profile display, profile refresh and token revocation on logout. The app is in the main solution and evaluates as an empty library on non-Windows hosts; callback routing tests run cross-platform.
+
 * Added `Samples.ReactBff`, a React and ASP.NET backend-for-frontend sample demonstrating OAuth, isolated server-side credentials, timeline retrieval, creating and deleting a post, and CSRF-protected logout.
 * Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
   The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.

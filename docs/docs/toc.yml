@@ -80,6 +80,8 @@ items:
             href: oauth/progressiveAuthorization.md
           - name: Local OAuth development
             href: oauth/localOAuthDevelopment.md
+          - name: Desktop authentication with Windows OAuth
+            href: windowsOAuth.md
       - name: Resolving and caching handles for DIDs
         href: didHandleCache.md
       - name: atproto Labels

@@ -41,6 +41,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.Timeline` - a sample that shows reading and paging through the authenticated user's timeline.
 * `Samples.TokenRefresh` - a sample that shows background token refresh happening, by hacking the refresh timer to be very short.
 * `Samples.Video` - a sample that demonstrates video uploading and embedding.
+* `Samples.WinUIOAuth` - a packaged Windows-only WinUI 3 sample with native OAuth callbacks and a read-only signed-in profile. Open the main solution; see [deployment and debugging](../docs/docs/windowsOAuth.md). Non-Windows hosts build an empty placeholder without Windows dependencies. It does not read console environment credentials.
 
 * `Samples.BulkDelete` - an implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.
 

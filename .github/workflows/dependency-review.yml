@@ -28,4 +28,6 @@ jobs:
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           allow-licenses: Apache-2.0, MIT, BSD-3-Clause, CC-BY-SA-4.0, LicenseRef-scancode-sonar-sal-1.0, CC-BY-3.0
-          allow-dependencies-licenses: 'pkg:nuget/idunno.AtProto, pkg:nuget/idunno.AtProto.OAuthCallback, pkg:nuget/idunno.AtProto.Types, pkg:nuget/idunno.Bluesky, pkg:nuget/idunno.Bluesky.AspNet.Authentication, pkg:nuget/idunno.Bluesky.AspNet.Authentication.MySQL, pkg:nuget/idunno.Bluesky.AspNet.Authentication.Redis, pkg:nuget/idunno.Bluesky.AspNet.Authentication.SQLite, pkg:nuget/idunno.Bluesky.AspNet.Authentication.UI'
+          # Windows-only sample tooling uses Microsoft SDK terms, not an SPDX license.
+          # These package-specific exceptions do not bypass vulnerability checks.
+          allow-dependencies-licenses: 'pkg:nuget/idunno.AtProto, pkg:nuget/idunno.AtProto.OAuthCallback, pkg:nuget/idunno.AtProto.Types, pkg:nuget/idunno.Bluesky, pkg:nuget/idunno.Bluesky.AspNet.Authentication, pkg:nuget/idunno.Bluesky.AspNet.Authentication.MySQL, pkg:nuget/idunno.Bluesky.AspNet.Authentication.Redis, pkg:nuget/idunno.Bluesky.AspNet.Authentication.SQLite, pkg:nuget/idunno.Bluesky.AspNet.Authentication.UI, pkg:nuget/Microsoft.WindowsAppSDK, pkg:nuget/Microsoft.Windows.SDK.BuildTools'

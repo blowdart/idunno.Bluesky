@@ -63,6 +63,7 @@
   <Folder Name="/devnotes/">
     <File Path="devnotes/credential-lifecycle-and-locking.md" />
     <File Path="devnotes/prototyping-performance-improvements.md" />
+    <File Path="devnotes/windows-oauth-sample-testing.md" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
@@ -73,6 +74,7 @@
     <File Path="docs/filter.yml" />
     <File Path="docs/index.md" />
     <File Path="docs/toc.yml" />
+    <File Path="docs/windows-oauth-client.json" />
   </Folder>
   <Folder Name="/docs/docs/">
     <File Path="docs/docs/asp.net.md" />
@@ -110,6 +112,7 @@
     <File Path="docs/docs/unspecced.md" />
     <File Path="docs/docs/userPreferences.md" />
     <File Path="docs/docs/video.md" />
+    <File Path="docs/docs/windowsOAuth.md" />
   </Folder>
   <Folder Name="/docs/docs/includes/">
     <File Path="docs/docs/includes/production-configuration.md" />
@@ -370,10 +373,20 @@
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
+  <Folder Name="/samples/Windows/">
+    <Project Path="samples/Samples.WinUIOAuth/Samples.WinUIOAuth.csproj">
+      <Platform Solution="*|*" Project="x64" />
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/test/">
     <File Path="test/.editorconfig" />
     <File Path="test/Directory.Build.props" />
     <Project Path="test/Samples.ReactBff.Test/Samples.ReactBff.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/Samples.WinUIOAuth.Test/Samples.WinUIOAuth.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
