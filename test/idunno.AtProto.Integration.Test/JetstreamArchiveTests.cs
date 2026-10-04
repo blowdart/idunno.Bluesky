@@ -806,6 +806,87 @@ public class JetstreamArchiveTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SegmentSnapshotObservesCancellationBetweenBufferedRows(bool resumedSegment)
+    {
+        System.Formats.Cbor.CborWriter postWriter = new(System.Formats.Cbor.CborConformanceMode.Canonical);
+        postWriter.WriteStartMap(3);
+        postWriter.WriteTextString("text");
+        postWriter.WriteTextString("hello");
+        postWriter.WriteTextString("$type");
+        postWriter.WriteTextString("app.bsky.feed.post");
+        postWriter.WriteTextString("createdAt");
+        postWriter.WriteTextString("2025-01-01T00:00:00.000Z");
+        postWriter.WriteEndMap();
+        byte[] record = postWriter.Encode();
+        using Compressor compressor = new();
+        byte[] firstFrame = compressor.Wrap(PostBlock((10, record, TestDid))).ToArray();
+        byte[] secondFrame = compressor.Wrap(
+            PostBlock((11, record, TestDid), (12, record, TestDid))).ToArray();
+        byte[] segment = SegmentWithBlocks(firstFrame, secondFrame);
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (context.Request.Path.ToString().EndsWith(".planSnapshot", StringComparison.Ordinal))
+            {
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync(
+                    $$$"""{"plannedThroughSeq":12,"sealedTipSeq":12,"segments":[{"name":"{{{Segment}}}","index":0,"checksum":"{{{Checksum}}}","minSeq":10,"maxSeq":12,"mode":"segment"}],"stats":{"segmentsExamined":1,"segmentsMatched":1,"blocksMatched":2,"entries":3}}""");
+                return;
+            }
+
+            context.Response.Headers.ETag = $"\"{Checksum}\"";
+            context.Response.ContentType = "application/octet-stream";
+            string range = context.Request.Headers.Range.ToString();
+            if (range.StartsWith("bytes=", StringComparison.Ordinal))
+            {
+                int offset = int.Parse(range.AsSpan("bytes=".Length, range.Length - "bytes=".Length - 1),
+                    System.Globalization.CultureInfo.InvariantCulture);
+                context.Response.StatusCode = StatusCodes.Status206PartialContent;
+                context.Response.Headers.ContentRange =
+                    new ContentRangeHeaderValue(offset, segment.Length - 1, segment.Length).ToString();
+                context.Response.ContentLength = segment.Length - offset;
+                await context.Response.Body.WriteAsync(segment.AsMemory(offset));
+            }
+            else
+            {
+                context.Response.ContentLength = segment.Length;
+                await context.Response.Body.WriteAsync(segment);
+            }
+        });
+        using AtProtoJetstream jetstream = new(
+            httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
+        SnapshotRequest request = new();
+        SnapshotCheckpoint? checkpoint = resumedSegment
+            ? new SnapshotCheckpoint
+            {
+                SealedTipSeq = 12,
+                PlanAfterSeq = 0,
+                RequestFingerprint = request.Fingerprint(s_server),
+                SegmentName = Segment,
+                SegmentChecksum = Checksum,
+                NextBlockIndex = 1,
+                NextByteOffset = 256 + 8 + firstFrame.Length
+            }
+            : null;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            TestContext.Current.CancellationToken);
+        IAsyncEnumerator<JetstreamEvent> events = jetstream.SnapshotAsync(request, checkpoint,
+            cancellationToken: cancellation.Token).GetAsyncEnumerator(cancellation.Token);
+        await using (events.ConfigureAwait(false))
+        {
+            Assert.True(await events.MoveNextAsync());
+            Assert.Equal(resumedSegment ? 11 : 10, events.Current.Sequence);
+            await cancellation.CancelAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            {
+                await events.MoveNextAsync();
+            });
+        }
+    }
+
+    [Theory]
     [InlineData("blocks")]
     [InlineData("segment")]
     public async Task SnapshotUsesConfiguredHostAndDecodesBothPlanModes(string mode)

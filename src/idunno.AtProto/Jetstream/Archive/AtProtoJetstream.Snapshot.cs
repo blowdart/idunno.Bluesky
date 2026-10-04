@@ -250,6 +250,7 @@ public partial class AtProtoJetstream
                             {
                                 foreach (JssRow row in rows)
                                 {
+                                    cancellationToken.ThrowIfCancellationRequested();
                                     if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                     {
                                         if (!TryDecodeArchiveRow(row, onArchiveError, out JetstreamEvent? decodedEvent, out bool skipBlock))
@@ -301,6 +302,7 @@ public partial class AtProtoJetstream
                             {
                                 foreach (JssRow row in rows)
                                 {
+                                    cancellationToken.ThrowIfCancellationRequested();
                                     if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                     {
                                         if (!TryDecodeArchiveRow(row, onArchiveError, out JetstreamEvent? decodedEvent, out bool skipBlock))
