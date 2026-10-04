@@ -44,7 +44,8 @@
                 "files": [
                     "favicon.ico",
                     "favicon.png",
-                    "docicon.png"
+                    "docicon.png",
+                    "windows-oauth-client.json"
                 ]
             }
         ],
