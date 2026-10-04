@@ -14,6 +14,8 @@
 /docs/windows-oauth-client.json -text
 /samples/Samples.WinUIOAuth/** -text
 /test/Samples.WinUIOAuth.Test/** -text
+/samples/Samples.BlazorAuthentication/** -text
+/test/Samples.BlazorAuthentication.Test/** -text
 
 ###############################################################################
 # Set default behavior for command prompt diff.

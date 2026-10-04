@@ -12,6 +12,10 @@
 
 ### Added
 
+#### Samples
+
+* Added `Samples.BlazorAuthentication`, a statically server-rendered Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI.
+
 #### idunno.AtProto
 
 * Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.

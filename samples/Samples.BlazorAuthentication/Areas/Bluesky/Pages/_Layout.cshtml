@@ -1,0 +1,32 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Blazor Bluesky</title>
+    <link rel="stylesheet" href="~/Bluesky/css/bluesky-auth.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav aria-label="Main navigation">
+            <a href="/">Blazor Bluesky</a>
+            <a href="/Privacy">Privacy</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a href="/Claims">Claims</a>
+                <a href="/Manage">Manage profile</a>
+                <a href="/Bluesky/Logout?returnUrl=%2F">Sign out</a>
+            }
+            else
+            {
+                <a href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
+            }
+        </nav>
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+</body>
+</html>

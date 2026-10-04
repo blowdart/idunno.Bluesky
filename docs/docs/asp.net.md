@@ -40,6 +40,12 @@ production applications should choose permissions appropriate to their features.
 
 For a React frontend with server-side OAuth credentials, see the [React BFF sample](reactBff.md).
 
+`Samples.BlazorAuthentication` provides the same timeline, claims and profile-editing functionality in a Blazor Web App
+using static server-side rendering, with the library's Razor Pages UI for login, logout and callbacks.
+See its [setup and rendering notes](../../samples/Samples.BlazorAuthentication/readme.md).
+Request-scoped agents and cookie renewal require an HTTP request; adding an interactive render mode is not sufficient
+to adapt this authentication pattern to a long-lived Blazor circuit.
+
 ### Adding Bluesky Authentication to your ASP.NET Razor Pages application
 
 To add simple authentication to your razor pages application first add a reference to the `idunno.Bluesky.AspNet.Authentication` and `idunno.Bluesky.AspNet.Authentication.UI` packages to your project.

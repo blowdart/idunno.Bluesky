@@ -23,6 +23,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.AspNetProgressiveAuthentication` - a Razor Pages sample based on `Samples.AspNetAuthentication`, starting with read permissions and adding profile-create/update consent when saving. It retains encrypted, expiring edits bound to the account and browser session, then completes saves with a single-use protected POST. See the [ASP.NET progressive authorization guide](../docs/docs/oauth/progressiveAuthorizationAspNet.md).
 * `Samples.AspNetTunnelAuthentication` - an HTTPS sample for a public reverse tunnel, protecting the site with Bluesky authentication, requesting only `atproto`, and displaying the authenticated DID. It authenticates as a confidential client with a locally generated signing key. See its [readme](Samples.AspNetTunnelAuthentication/readme.md) for tunnel setup.
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
+* `Samples.BlazorAuthentication` - a Blazor Web App using static server rendering and the Bluesky authentication UI for login, logout, timeline retrieval, claims and profile editing. See its [readme](Samples.BlazorAuthentication/readme.md).
 * `Samples.Bot` - a sample showing a simple bot posting on a scheduled time.
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
 * `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
