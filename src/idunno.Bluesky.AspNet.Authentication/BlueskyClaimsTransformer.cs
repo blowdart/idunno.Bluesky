@@ -21,7 +21,17 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// with claims derived from the user's Bluesky profile.
 /// </summary>
 /// <remarks>
-/// <para>This transformer requires the an access token issued with transition:generic scope.</para>
+/// <para>
+///   This transformer makes an authenticated <c>app.bsky.actor.getProfile</c> request. In addition to <c>atproto</c>,
+///   the minimum permission for Bluesky's default app view is
+///   <c>rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview</c>.
+///   Request it at initial login; for another app view, use that service's DID and service fragment as the audience.
+/// </para>
+/// <para>
+///   <see cref="idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ViewAll"/> also includes this permission but grants broader read access.
+///   No profile-write permission or transition scope is required. Without a suitable grant, profile retrieval can fail and the
+///   additional profile claims will not be populated.
+/// </para>
 /// </remarks>
 public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 {

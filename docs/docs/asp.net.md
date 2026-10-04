@@ -34,7 +34,9 @@ signing keys and operational checks.
 UI package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides login and logout pages, as well as code to process the OAuth callback.
 
 `Samples.AspNetAuthentication` is a Razor Pages sample application that demonstrates how to use the authentication handler, and how an injected agent can be used to
-perform authenticated operations.
+perform authenticated operations. It requests `atproto` and `BlueskyOAuthPermissionSets.FullApp` at login, allowing
+timeline reads and profile edits without a second consent flow. `FullApp` is intentionally broad to keep this sample simple;
+production applications should choose permissions appropriate to their features.
 
 For a React frontend with server-side OAuth credentials, see the [React BFF sample](reactBff.md).
 
@@ -78,15 +80,27 @@ Next, in your `appsettings.json` or `appsettings.Development.json` add configura
         "EnableBackgroundTokenRefresh": false,
 
         "OAuthOptions": {
-            "ClientId": "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20transition:generic",
+            "ClientId": "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20include%3Aapp.bsky.authFullApp%3Faud%3Ddid%253Aweb%253Aapi.bsky.app%2523bsky_appview",
             "ReturnUri": "http://127.0.0.1/Bluesky/Callback",
-            "Scopes": [ "atproto", "transition:generic" ]
+            "Scopes": [ "atproto" ],
+            "PermissionSets": [
+                {
+                    "Nsid": "app.bsky.authFullApp",
+                    "Audience": "did:web:api.bsky.app#bsky_appview"
+                }
+            ]
         }
     }
 ```
 
 Note that the client ID and return URI are both http. When you run the application you should use the http profile, or edit the URIs to match your HTTPS configuration.
 In production these will be configured with your production values.
+The structured permission set above is equivalent to `BlueskyOAuthPermissionSets.FullApp`, which the sample sets
+in `Program.cs`. When the localhost client ID includes a query, explicitly declare the same permissions in its `scope`
+parameter: the SDK adds scopes automatically only for the exact ID `http://localhost`. The encoded permission-set
+audience is encoded again inside that query parameter, hence the `%25` sequences above. Do not omit the declaration
+or retain a query advertising only the old `transition:generic` scope. Hosted clients must publish metadata declaring
+the same permissions.
 
 Now add login and logout links. In the standard ASP.NET Razor Pages templates these are defined in `_LoginPartial.cshtml`. For example,
 
@@ -134,6 +148,13 @@ Decorate a page with `[Authorize]`, or make your entire app require authenticati
 sent to the login page, where you enter your handle, bounced through the Bluesky OAuth login page, and back to your application where authentication will happen.
 
 If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
+
+### Progressive authorization
+
+Applications can start with read permissions and request additional permissions when a user enables a feature.
+See [ASP.NET progressive authorization](oauth/progressiveAuthorizationAspNet.md) for implementation choices and a
+concrete pattern for account/session-bound consent, credential replacement and safe completion of pending operations.
+The authentication sample deliberately uses `FullApp` at initial login instead of implementing this application-specific workflow.
 
 ### Publishing OAuth client metadata
 
@@ -506,6 +527,13 @@ builder.Services
 ```
 
 `AddBlueskyClaimsTransformer()` registers the transformer as an `IClaimsTransformation` for you, so you do not need to register it yourself.
+
+> [!IMPORTANT]
+> Claims transformation makes an authenticated `app.bsky.actor.getProfile` request. In addition to the required `atproto` scope,
+> the minimum permission is `rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview` for Bluesky's default app view.
+> Request it at initial login, even if the application's own pages do not read profiles. For another app view, use that service's DID
+> and service fragment as the audience. `BlueskyOAuthPermissionSets.ViewAll` also includes this permission but grants broader read access;
+> profile-write permission is not needed. Without a suitable grant, profile retrieval can fail and the additional profile claims will not be populated.
 
 ### OAuth and DPoP
 

@@ -129,6 +129,7 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* Documented the minimum `app.bsky.actor.getProfile` RPC permission required by claims transformation, replacing the incorrect requirement for `transition:generic`.
 * Added opt-in OAuth client metadata generation and publishing with `AddBlueskyOAuthClientMetadata()`, `UseBlueskyOAuthClientMetadata()` and `BlueskyOAuthClientMetadataOptions.GenerateJson()`, using the configured web client's URLs, scopes and permission sets.
 * Generated OAuth client metadata describes a confidential client, publishing the public key in `jwks` with `private_key_jwt` and `ES256`, when `OAuthOptions.ClientSigningKey` is set.
 * `OAuthOptions.ClientSigningKey` is loaded from `OAuthOptions.ClientSigningKeyPath` when set, expanding `~` and environment variables and resolving relative paths against the content root.
@@ -142,6 +143,10 @@
   use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
 
 #### Samples
+
+* Updated `Samples.AspNetAuthentication` to request `BlueskyOAuthPermissionSets.FullApp` at login, keeping its standard authentication UI and direct profile-save flow. Added an ASP.NET progressive authorization guide covering permission planning, same-session consent and safe completion of pending operations.
+* Added a success indication after saving a profile in `Samples.AspNetAuthentication`.
+* Added `Samples.AspNetProgressiveAuthentication`, demonstrating read-only login, just-in-time profile-write consent and safe completion of encrypted, expiring, account/session-bound pending edits, with focused tests.
 
 * Added a packaged WinUI 3 OAuth sample (`Samples.WinUIOAuth`) with native protocol activation, in-memory login state and credentials, read-only profile display, profile refresh and token revocation on logout. The app is in the main solution and evaluates as an empty library on non-Windows hosts; callback routing tests run cross-platform.
 

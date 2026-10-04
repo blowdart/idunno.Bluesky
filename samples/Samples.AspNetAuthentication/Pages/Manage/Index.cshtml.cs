@@ -76,6 +76,7 @@ public class IndexModel(BlueskyAgent agent) : PageModel
             var updateProfileResult = await agent.UpdateProfile(profile, cid: cid, cancellationToken: HttpContext.RequestAborted);
 
             updateProfileResult.EnsureSucceeded();
+            TempData["ProfileSaved"] = true;
             return RedirectToPage();
         }
 
