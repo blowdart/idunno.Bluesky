@@ -685,6 +685,39 @@ public partial class ProfileTests
         Assert.DoesNotContain("The authorization response expired or was already used.", login, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(20, false, true)]
+    [InlineData(21, false, false)]
+    [InlineData(99, true, true)]
+    [InlineData(100, true, false)]
+    public async Task PronounsAreValidatedBeforeRetainingAnEdit(int length, bool combiningMarks, bool valid)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        await Login(browser);
+        string html = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+        Assert.Contains("id=\"navbarSupportedContent\"", html, StringComparison.Ordinal);
+        string pronouns = combiningMarks ? "ab" + new string('\u0301', length) : new string('x', length);
+        using var response = await Post(browser, "/Manage?cid=" + ProfileCid, new()
+        {
+            ["DisplayName"] = Edit.DisplayName, ["Description"] = Edit.Description, ["Pronouns"] = pronouns,
+            ["__RequestVerificationToken"] = HiddenValue(html, "__RequestVerificationToken")
+        });
+        Assert.Equal(valid ? HttpStatusCode.Redirect : HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0, factory.Pds.Writes);
+        if (valid)
+        {
+            Assert.NotNull(factory.OAuth);
+        }
+        else
+        {
+            Assert.Null(factory.OAuth);
+            Assert.Contains("Pronouns must not exceed", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+            var sessionDraft = await browser.GetStringAsync("/Manage", TestContext.Current.CancellationToken);
+            Assert.DoesNotContain(Edit.DisplayName, sessionDraft, StringComparison.Ordinal);
+        }
+    }
+
     private static async Task<DPoPAccessCredentials> StoredCredentials(SampleFactory factory)
     {
         var store = factory.Services.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()

@@ -185,6 +185,15 @@ public partial class IndexModel(BlueskyAgent agent, ProfileEditStore edits, Prof
             ModelState.AddModelError(string.Empty, "Missing profile version. Reload the profile before saving.");
         }
 
+        // Validate the model's Unicode limits before retaining a draft or leaving the editor for consent.
+        if (!string.IsNullOrEmpty(Pronouns) &&
+            (Pronouns.GetGraphemeLength() > Maximum.PronounLengthInGraphemes ||
+             Pronouns.GetUtf8Length() > Maximum.PronounLengthInBytes))
+        {
+            ModelState.AddModelError(nameof(Pronouns),
+                $"Pronouns must not exceed {Maximum.PronounLengthInGraphemes} graphemes or {Maximum.PronounLengthInBytes} UTF-8 bytes.");
+        }
+
         if (!ModelState.IsValid)
         {
             return Page();

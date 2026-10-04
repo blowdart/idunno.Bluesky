@@ -65,6 +65,15 @@ public class IndexModel(BlueskyAgent agent) : PageModel
                 return BadRequest("Missing cid.");
             }
 
+            if (!string.IsNullOrEmpty(Pronouns) &&
+                (Pronouns.GetGraphemeLength() > Maximum.PronounLengthInGraphemes ||
+                 Pronouns.GetUtf8Length() > Maximum.PronounLengthInBytes))
+            {
+                ModelState.AddModelError(nameof(Pronouns),
+                    $"Pronouns must not exceed {Maximum.PronounLengthInGraphemes} graphemes or {Maximum.PronounLengthInBytes} UTF-8 bytes.");
+                return Page();
+            }
+
             var getProfileResult = await agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
             getProfileResult.EnsureSucceeded();
             var profile = getProfileResult.Result.Value;
