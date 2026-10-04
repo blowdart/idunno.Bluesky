@@ -148,6 +148,33 @@ Please consult the documentation for your application architecture. The `Uri` re
 contain a `state` query parameter, which can use as a primary key as needed for persisting the client state. You can extract this using
 `string stateKey = QueryHelpers.ParseQuery(startUri.Query)["state"]!;`.
 
+### Windows native OAuth metadata
+
+The [Windows client metadata](../windows-oauth-client.json) is reserved for the upcoming Windows OAuth sample;
+the Windows application is not included yet. Its fixed client contract is:
+
+* Client ID: `https://bluesky.idunno.dev/windows-oauth-client.json`
+* Redirect URI: `dev.idunno.bluesky:/callback`
+* Scopes: `atproto rpc:app.bsky.actor.getProfile?aud=did:web:api.bsky.app%23bsky_appview`
+
+The required `atproto` scope supports account authentication. The single
+[granular RPC permission](https://atproto.com/specs/permission#rpc) permits authenticated profile reads through
+the Bluesky AppView, allowing the sample to demonstrate an authenticated agent without requesting write access,
+timeline access, private account data, or the broad legacy `transition:generic` scope.
+Public profile reads do not require authorization; this permission is for the authenticated request and its viewer-specific data.
+
+The metadata declares a public native client (`token_endpoint_auth_method: none`) using the authorization-code
+and refresh-token grants with DPoP-bound access tokens. The future application must register the
+`dev.idunno.bluesky` URI scheme with Windows and use the exact single-slash callback above, as required by the
+[AT Protocol native-client rules](https://atproto.com/specs/oauth#request-fields). Its authorization request must
+use these scope strings (or the identity-only subset `atproto`) and the same client ID and redirect URI.
+
+DocFX copies `docs/windows-oauth-client.json` unchanged to `docs/_site/windows-oauth-client.json`.
+After merging this metadata into `main`, publish that branch using the existing **Generate and Publish docs**
+workflow before using it for login. Verify that the canonical client ID returns HTTP 200 with
+`Content-Type: application/json` and the exact metadata, without a redirect. Do not use the
+`blowdart.github.io/idunno.Bluesky` URL as the client ID: it redirects to the documentation site's custom domain.
+
 ### Testing OAuth locally with localhost
 
 The `idunno.AtProto.OAuthCallback` NuGet package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
