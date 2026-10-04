@@ -878,6 +878,12 @@ public class JetstreamArchiveTests
         {
             Assert.True(await events.MoveNextAsync());
             Assert.Equal(resumedSegment ? 11 : 10, events.Current.Sequence);
+            if (!resumedSegment)
+            {
+                Assert.True(await events.MoveNextAsync());
+                Assert.Equal(11, events.Current.Sequence);
+            }
+
             await cancellation.CancelAsync();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
             {
