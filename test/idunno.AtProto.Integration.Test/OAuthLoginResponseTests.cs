@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
+using System.Text;
 
 using idunno.AtProto.Authentication;
 
@@ -322,6 +323,7 @@ public class OAuthLoginResponseTests
     [Theory]
     [InlineData("https://CLIENT.test/callback", "https://client.test/callback")]
     [InlineData("https://client.test", "https://client.test/")]
+    [InlineData("dev.idunno.bluesky:/callback", "dev.idunno.bluesky:/callback")]
     public async Task LoginUsesTheNormalizedRedirectUriForParAndTokenExchange(string callback, string expected)
     {
         LoginTestServer server = new();
@@ -332,10 +334,12 @@ public class OAuthLoginResponseTests
         Assert.Equal(expected, server.ParRedirectUri);
         OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
         DPoPAccessCredentials? credentials = await CreateClient(server, new OAuthOptions(ClientId, returnUri)).ProcessOAuth2Response(
-            state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+            state, expected + CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(credentials);
         Assert.Equal(expected, server.TokenRedirectUri);
+        Assert.Equal(state.CodeVerifier, server.TokenCodeVerifier);
+        Assert.Equal(Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(state.CodeVerifier))), server.ParCodeChallenge);
     }
 
     [Fact]
@@ -581,7 +585,11 @@ public class OAuthLoginResponseTests
 
         internal string? ParRedirectUri { get; private set; }
 
+        internal string? ParCodeChallenge { get; private set; }
+
         internal string? TokenRedirectUri { get; private set; }
+
+        internal string? TokenCodeVerifier { get; private set; }
 
         internal string? TokenClientAssertion { get; private set; }
 
@@ -646,6 +654,7 @@ public class OAuthLoginResponseTests
                     RequestedScopes = form["scope"].ToString();
                     ParClientAssertion = form["client_assertion"].ToString();
                     ParRedirectUri = form["redirect_uri"].ToString();
+                    ParCodeChallenge = form["code_challenge"].ToString();
                     RequestedClientId = form["client_id"].ToString();
                     if (ChallengeNonce && await ChallengeOrRejectAssertion(context, ParClientAssertion, "par"))
                     {
@@ -662,6 +671,7 @@ public class OAuthLoginResponseTests
                     IFormCollection tokenForm = await request.ReadFormAsync();
                     TokenClientAssertion = tokenForm["client_assertion"].ToString();
                     TokenRedirectUri = tokenForm["redirect_uri"].ToString();
+                    TokenCodeVerifier = tokenForm["code_verifier"].ToString();
                     if (ChallengeNonce && await ChallengeOrRejectAssertion(context, TokenClientAssertion, tokenForm["grant_type"].ToString()))
                     {
                         return;

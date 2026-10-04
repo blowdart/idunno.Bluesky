@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <LangVersion>13.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <Compile Include="..\..\samples\Samples.WinUIOAuth\OAuthCallbackRouter.cs" Link="OAuthCallbackRouter.cs" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+</Project>
