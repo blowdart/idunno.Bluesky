@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
 
@@ -26,21 +27,30 @@ public partial class AtProtoJetstream
     /// <param name="checkpoint">An optional previously persisted position, including its original pinned sealed tip.</param>
     /// <param name="onCheckpoint">A synchronous callback invoked after the preceding events have been consumed by the enumerator.</param>
     /// <param name="cancellationToken">A cancellation token for planning, downloads, retries and decoding.</param>
+    /// <param name="onRecordError">An optional callback that chooses whether an invalid matching record stops or is skipped.</param>
     /// <returns>An at-least-once stream of typed Jetstream events.</returns>
     /// <exception cref="ArgumentNullException">The request is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The request or checkpoint has invalid bounds or filters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The record error callback returns an unsupported action.</exception>
     /// <exception cref="InvalidOperationException">No API key is configured or a v1 service is selected.</exception>
     /// <exception cref="InvalidDataException">An archive response or checkpoint is inconsistent.</exception>
     /// <exception cref="HttpRequestException">The archive request fails or is rate limited without retry instructions.</exception>
-    /// <remarks><para>When resuming, persist checkpoints only after applying the preceding events. A changed segment
+    /// <remarks><para>Without <paramref name="onRecordError"/>, or when it returns <see cref="JetstreamRecordErrorAction.Stop"/>,
+    /// an invalid matching record stops enumeration. The callback receives the record sequence and decoding exception.
+    /// Returning <see cref="JetstreamRecordErrorAction.Skip"/> deliberately
+    /// omits that record; the checkpoint advances only after the rest of its block has been processed. When resuming,
+    /// persist checkpoints only after applying the preceding events. A changed segment
     /// checksum restarts that segment; its events can be delivered again. Collection filters do not suppress account,
     /// identity or sync markers. Filter lists are copied when this method is called; later changes to the caller's
     /// lists do not affect the snapshot or its checkpoints.</para></remarks>
+    [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
+        Justification = "Appending the optional callback preserves the existing positional cancellationToken argument.")]
     public IAsyncEnumerable<JetstreamEvent> SnapshotAsync(
         SnapshotRequest request,
         SnapshotCheckpoint? checkpoint = null,
         Action<SnapshotCheckpoint>? onCheckpoint = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -53,7 +63,8 @@ public partial class AtProtoJetstream
             "Jetstream archive access requires an API key. Configure JetstreamOptions.ApiKey or AtProtoJetstreamBuilder.WithApiKey().");
         SnapshotRequest capturedRequest = request.SnapshotFilters();
         ValidateSnapshotRequest(capturedRequest, checkpoint, _uri);
-        return SnapshotCoreAsync(capturedRequest, checkpoint, onCheckpoint, key, capturedRequest.Fingerprint(_uri), cancellationToken);
+        return SnapshotCoreAsync(capturedRequest, checkpoint, onCheckpoint, key, capturedRequest.Fingerprint(_uri),
+            onRecordError, cancellationToken);
     }
 
     private async IAsyncEnumerable<JetstreamEvent> SnapshotCoreAsync(
@@ -62,6 +73,7 @@ public partial class AtProtoJetstream
         Action<SnapshotCheckpoint>? onCheckpoint,
         string key,
         string fingerprint,
+        Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         long after = checkpoint?.PlanAfterSeq ?? request.AfterSeq ?? 0;
@@ -168,7 +180,11 @@ public partial class AtProtoJetstream
                                 cancellationToken.ThrowIfCancellationRequested();
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
+                                    if (!TryDecodeArchiveRow(row, onRecordError, out JetstreamEvent? decodedEvent))
+                                    {
+                                        continue;
+                                    }
+
                                     InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
@@ -215,7 +231,11 @@ public partial class AtProtoJetstream
                             {
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
+                                    if (!TryDecodeArchiveRow(row, onRecordError, out JetstreamEvent? decodedEvent))
+                                    {
+                                        continue;
+                                    }
+
                                     InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
@@ -253,7 +273,11 @@ public partial class AtProtoJetstream
                             {
                                 if (MatchesSnapshot(row, request, after, plan.PlannedThroughSeq, pinned.Value, dids, collections, wildcardPrefixes))
                                 {
-                                    JetstreamEvent decodedEvent = row.ToEvent();
+                                    if (!TryDecodeArchiveRow(row, onRecordError, out JetstreamEvent? decodedEvent))
+                                    {
+                                        continue;
+                                    }
+
                                     InvalidateHandle(decodedEvent);
                                     _metrics.ArchiveEvents.Add(1, new KeyValuePair<string, object?>("server", ArchiveTag));
                                     yield return decodedEvent;
@@ -298,6 +322,32 @@ public partial class AtProtoJetstream
             after = plan.PlannedThroughSeq;
             position = new SnapshotCheckpoint { SealedTipSeq = pinned.Value, PlanAfterSeq = after, RequestFingerprint = fingerprint };
             onCheckpoint?.Invoke(position);
+        }
+    }
+
+    private static bool TryDecodeArchiveRow(
+        JssRow row,
+        Func<long, InvalidDataException, JetstreamRecordErrorAction>? onRecordError,
+        [NotNullWhen(true)] out JetstreamEvent? decodedEvent)
+    {
+        try
+        {
+            decodedEvent = row.ToEvent();
+            return true;
+        }
+        catch (InvalidDataException exception) when (onRecordError is not null)
+        {
+            switch (onRecordError(row.Seq, exception))
+            {
+                case JetstreamRecordErrorAction.Stop:
+                    throw;
+                case JetstreamRecordErrorAction.Skip:
+                    decodedEvent = null;
+                    return false;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(onRecordError),
+                        "The record error callback returned an unsupported action.");
+            }
         }
     }
 

@@ -69,6 +69,33 @@ await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
 For AOT applications, register `SnapshotCheckpoint` with a source-generated `JsonSerializerContext` when storing
 it as JSON. Cancellation stops HTTP requests, quota waits, downloads, decoding and the live subscription.
 
+## Handling invalid archive records
+
+Archive records are untrusted input. By default, a record that cannot be decoded stops `SnapshotAsync()` or
+`ReplayAsync()` with its decoding exception. To choose a recovery policy, pass `onRecordError`; the callback receives
+the record's sequence and exception and returns `JetstreamRecordErrorAction.Stop` or `JetstreamRecordErrorAction.Skip`.
+Returning `Stop` preserves the default fail-fast behavior. Returning `Skip` explicitly omits that record and continues
+with the rest of the block. Records excluded by the snapshot filters are not decoded and do not invoke the callback.
+
+```csharp
+await foreach (JetstreamEvent evt in jetstream.SnapshotAsync(
+    request,
+    onRecordError: (sequence, exception) =>
+    {
+        Console.Error.WriteLine($"Skipping invalid record {sequence}: {exception.Message}");
+        return JetstreamRecordErrorAction.Skip;
+    },
+    cancellationToken: cancellationToken))
+{
+    Apply(evt);
+}
+```
+
+Skipping is an explicit data-loss decision: the invalid record will not be replayed. A block checkpoint advances only
+after its remaining records have been processed, so a later failure in that block does not checkpoint past the failure.
+Persist the checkpoint only after applying the emitted events, just as for normal snapshot processing. `ReplayAsync()`
+uses the same callback for archive records; live events are unaffected.
+
 ## Replay into the live tail
 
 Replace `SnapshotAsync` with `ReplayAsync` to consume the same bounded archive and then connect once at its

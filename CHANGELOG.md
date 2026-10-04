@@ -64,6 +64,9 @@
   default 30 seconds), and only SDK-created HTTP clients follow cross-origin signed download redirects.
   Snapshot resume rejects unrelated above-tip checkpoints, and archive plans reject null segment entries and
   non-nullable fields before processing.
+  `SnapshotAsync()` and `ReplayAsync()` accept an optional record-error callback to stop on an invalid archive record
+  (the default) or deliberately skip it and continue; block checkpoints advance only after the remaining records
+  in that block have been processed.
 * Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
   cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
   exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
