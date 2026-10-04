@@ -372,7 +372,7 @@
     </Project>
     <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
     </Project>
     <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
@@ -380,11 +380,11 @@
     </Project>
     <Project Path="samples/Samples.BlazorAuthentication/Samples.BlazorAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
     </Project>
     <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
     </Project>
   </Folder>
   <Folder Name="/samples/Windows/">
