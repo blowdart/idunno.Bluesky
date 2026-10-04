@@ -176,6 +176,30 @@ public class OAuthLoginResponseTests
         }
     }
 
+    [Fact]
+    public async Task LocalhostClientWithCallbackQueryDeclaresTheFullAppScopesSentToPar()
+    {
+        const string clientId = "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20include%3Aapp.bsky.authFullApp%3Faud%3Ddid%253Aweb%253Aapi.bsky.app%2523bsky_appview";
+        OAuthOptions options = new(clientId, new Uri("http://127.0.0.1:5251/Bluesky/Callback"))
+        {
+            Scopes = ["atproto"],
+            PermissionSets = [new("app.bsky.authFullApp", "did:web:api.bsky.app#bsky_appview")]
+        };
+        LoginTestServer server = new();
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: options.ReturnUri!,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(clientId, server.RequestedClientId);
+        Assert.Equal(string.Join(" ", options.GetRequestedScopes()), server.RequestedScopes);
+        Assert.Equal(server.RequestedScopes, QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"].ToString());
+        Assert.Equal("http://127.0.0.1/Bluesky/Callback", QueryHelpers.ParseQuery(new Uri(clientId).Query)["redirect_uri"].ToString());
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

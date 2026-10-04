@@ -168,6 +168,7 @@
     <File Path="docs/docs/oauth/localOAuthDevelopment.md" />
     <File Path="docs/docs/oauth/oauthPermissions.md" />
     <File Path="docs/docs/oauth/progressiveAuthorization.md" />
+    <File Path="docs/docs/oauth/progressiveAuthorizationAspNet.md" />
   </Folder>
   <Folder Name="/docs/docs/tutorials/">
     <File Path="docs/docs/tutorials/blockingUsers.md" />
@@ -204,6 +205,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -383,6 +388,9 @@
   <Folder Name="/test/">
     <File Path="test/.editorconfig" />
     <File Path="test/Directory.Build.props" />
+    <Project Path="test/Samples.AspNetProgressiveAuthentication.Test/Samples.AspNetProgressiveAuthentication.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/Samples.ReactBff.Test/Samples.ReactBff.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>

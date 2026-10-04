@@ -78,6 +78,8 @@ items:
             href: oauth/oauthPermissions.md
           - name: Progressive authorization
             href: oauth/progressiveAuthorization.md
+          - name: ASP.NET progressive authorization
+            href: oauth/progressiveAuthorizationAspNet.md
           - name: Local OAuth development
             href: oauth/localOAuthDevelopment.md
           - name: Desktop authentication with Windows OAuth

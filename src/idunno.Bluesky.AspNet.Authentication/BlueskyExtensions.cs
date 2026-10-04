@@ -176,6 +176,15 @@ public static class BlueskyExtensions
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
+    ///   The transformer makes an authenticated <c>app.bsky.actor.getProfile</c> request. In addition to <c>atproto</c>,
+    ///   the minimum permission for Bluesky's default app view is
+    ///   <c>rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview</c>.
+    ///   Request it at initial login; for another app view, use that service's DID and service fragment as the audience.
+    ///   <see cref="idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ViewAll"/> also includes this permission but grants broader read access.
+    ///   No profile-write permission or transition scope is required. Without a suitable grant, profile retrieval can fail and the
+    ///   additional profile claims will not be populated.
+    /// </para>
+    /// <para>
     ///   The <see cref="HttpClient"/> agents make their requests through is registered here as well, so that the
     ///   transformer, which runs on every request, does not have to build a connection pool of its own each time.
     /// </para>

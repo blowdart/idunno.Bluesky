@@ -1,37 +1,44 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.Bluesky;
 using idunno.Bluesky.AspNet.Authentication;
-using idunno.Bluesky.Authentication;
 
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
 using OpenTelemetry.Metrics;
 
+using Samples.AspNetProgressiveAuthentication;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddDataProtection()
-    .SetApplicationName("Bluesky.AspNetAuthentication");
+    .SetApplicationName("Bluesky.AspNetProgressiveAuthentication");
 
 builder.Services
     .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
-    .AddBluesky()
+    .AddBluesky(options =>
+    {
+        options.Cookie.Name = ".AspNetCore.Bluesky.Progressive";
+        options.CorrelationCookie.Name = ".AspNetCore.Bluesky.Progressive.Correlation";
+    })
     .AddBlueskyAuthenticationUI();
 
-builder.Services.PostConfigure<BlueskyAgentOptions>(options =>
+builder.Services.PostConfigure<idunno.Bluesky.BlueskyAgentOptions>(ProfilePermissions.Configure);
+builder.Services.AddBlueskyOAuthClientMetadata(options =>
 {
-    ArgumentNullException.ThrowIfNull(options.OAuthOptions);
-    options.OAuthOptions.PermissionSets = [BlueskyOAuthPermissionSets.FullApp];
+    foreach (string scope in ProfilePermissions.WriteScopes)
+    {
+        options.AdditionalScopes.Add(scope);
+    }
 });
-builder.Services.AddBlueskyOAuthClientMetadata();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ProfileEditStore>();
+builder.Services.AddScoped<ProfileOAuthClient>();
 
 builder.Services
     .AddBlueskyClaimsTransformer()
-    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
     .AddBlueskyAgentFactory()
     .AddOpenTelemetry()
         .WithMetrics(metrics =>
@@ -55,8 +62,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Localhost clients use authorization-server metadata rather than publishing an HTTPS document.
-var oauthClientId = new Uri(app.Services.GetRequiredService<IOptions<BlueskyAgentOptions>>().Value.OAuthOptions!.ClientId);
+var oauthClientId = new Uri(app.Services.GetRequiredService<IOptions<idunno.Bluesky.BlueskyAgentOptions>>().Value.OAuthOptions!.ClientId);
 if (oauthClientId.Scheme != Uri.UriSchemeHttp || oauthClientId.Host != "localhost")
 {
     app.UseBlueskyOAuthClientMetadata();
@@ -72,3 +78,8 @@ app.MapRazorPages()
    .WithStaticAssets();
 
 app.Run();
+
+/// <summary>
+/// Exposes the sample entry point to the test host.
+/// </summary>
+public partial class Program;
