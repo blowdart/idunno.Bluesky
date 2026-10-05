@@ -50,9 +50,16 @@ public partial class AtProtoJetstream
     /// or the entire block when the error occurred during block decoding. Checkpoints advance only after the selected
     /// recovery action has completed and the block has been consumed. When resuming,
     /// persist checkpoints only after applying the preceding events. A changed segment
-    /// checksum restarts that segment; its events can be delivered again. Collection filters do not suppress account,
+    /// checksum detected in a new plan restarts that segment; its events can be delivered again. Collection filters do not suppress account,
     /// identity or sync markers. Filter lists are copied when this method is called; later changes to the caller's
-    /// lists do not affect the snapshot or its checkpoints.</para></remarks>
+    /// lists do not affect the snapshot or its checkpoints.</para>
+    /// <para>A segment generation can change between planning and downloading, including during a resumed download.
+    /// A download ETag mismatch throws <see cref="InvalidDataException"/> and stops enumeration; it does not automatically
+    /// replan and is not passed to <paramref name="onArchiveError"/>. To recover at runtime, start a new enumeration with
+    /// the original request and latest durably persisted checkpoint; the same client can be reused. Keep the checkpoint's
+    /// pinned tip, filters and offsets unchanged. A fresh plan detects changed checksums and restarts the affected segment,
+    /// so event processing must be idempotent. Use bounded retries with a delay and surface persistent failures.
+    /// Other invalid archive data also throws <see cref="InvalidDataException"/> and must not be retried indiscriminately.</para></remarks>
     [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
         Justification = "Appending the optional callback preserves the existing positional cancellationToken argument.")]
     public IAsyncEnumerable<JetstreamEvent> SnapshotAsync(

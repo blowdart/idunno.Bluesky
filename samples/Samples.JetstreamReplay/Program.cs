@@ -19,6 +19,8 @@ public sealed class Program
 {
     private const string CheckpointPath = "jetstream-replay-checkpoint.json";
     private const int RecentPostLimit = 1000;
+    private const int MaximumArchiveRetries = 5;
+    private static readonly TimeSpan s_archiveRetryDelay = TimeSpan.FromSeconds(30);
 
     // Bluesky's public options provide source-generated metadata and converters; use their type info for native AOT.
     private static readonly JsonSerializerOptions s_blueskyJsonOptions = BlueskyJsonSerializerOptions.Options;
@@ -128,26 +130,72 @@ public sealed class Program
             : null;
 
         RecentPosts recentPosts = new(RecentPostLimit);
-        await foreach (JetstreamEvent evt in jetstream.ReplayAsync(request, saved, SaveCheckpoint, cancellationToken)
-            .ConfigureAwait(false))
+        void PersistCheckpoint(SnapshotCheckpoint checkpoint)
         {
-            switch (evt)
+            SaveCheckpoint(checkpoint);
+            saved = checkpoint;
+        }
+
+        for (int retries = 0; ; retries++)
+        {
+            try
             {
-                case JetstreamCommitEvent record:
-                    PrintCommit(record, recentPosts);
-                    break;
-                case JetstreamIdentityEvent identity:
-                    Console.WriteLine($"{identity.Sequence}: identity {identity.Identity.Handle}");
-                    break;
-                case JetstreamAccountEvent account:
-                    Console.WriteLine($"{account.Sequence}: account active={account.Account.Active}");
-                    break;
-                case JetstreamSyncEvent sync:
-                    Console.WriteLine($"{sync.Sequence}: sync {sync.Sync.Rev}");
-                    break;
+                await foreach (JetstreamEvent evt in jetstream.ReplayAsync(
+                    request, saved, PersistCheckpoint, cancellationToken, onArchiveError: SkipInvalidArchiveData)
+                    .ConfigureAwait(false))
+                {
+                    switch (evt)
+                    {
+                        case JetstreamCommitEvent record:
+                            PrintCommit(record, recentPosts);
+                            break;
+                        case JetstreamIdentityEvent identity:
+                            Console.WriteLine($"{identity.Sequence}: identity {identity.Identity.Handle}");
+                            break;
+                        case JetstreamAccountEvent account:
+                            Console.WriteLine($"{account.Sequence}: account active={account.Account.Active}");
+                            break;
+                        case JetstreamSyncEvent sync:
+                            Console.WriteLine($"{sync.Sequence}: sync {sync.Sync.Rev}");
+                            break;
+                    }
+                }
+
+                break;
+            }
+            catch (InvalidDataException exception) when (IsArchiveGenerationMismatch(exception))
+            {
+                if (retries >= MaximumArchiveRetries)
+                {
+                    Console.Error.WriteLine($"Archive generation mismatch persisted after {MaximumArchiveRetries} retries: {exception.Message}");
+                    throw;
+                }
+
+                Console.Error.WriteLine($"Archive generation mismatch: {exception.Message}");
+                Console.Error.WriteLine($"Retry {retries + 1}/{MaximumArchiveRetries} in {s_archiveRetryDelay.TotalSeconds} seconds " +
+                    "from the latest saved checkpoint. Events may be repeated.");
+                await Task.Delay(s_archiveRetryDelay, cancellationToken).ConfigureAwait(false);
             }
         }
     }
+
+    // ReplayAsync forwards this policy to SnapshotAsync. Skipping permanently omits data as checkpoints advance.
+    private static JetstreamArchiveErrorAction SkipInvalidArchiveData(long? sequence, Exception exception)
+    {
+        if (sequence is long recordSequence)
+        {
+            Console.Error.WriteLine($"Skipping invalid archive record {recordSequence}: {exception.Message}");
+            return JetstreamArchiveErrorAction.SkipRecord;
+        }
+
+        Console.Error.WriteLine($"Skipping invalid archive block (valid records in this block may also be lost): {exception.Message}");
+        return JetstreamArchiveErrorAction.SkipBlock;
+    }
+
+    // Generation mismatches currently have no dedicated exception type; do not retry unrelated invalid archive data.
+    private static bool IsArchiveGenerationMismatch(InvalidDataException exception) =>
+        exception.Message.StartsWith("Archive download ETag mismatch for segment '", StringComparison.Ordinal) ||
+        exception.Message == "The archive server did not resume the expected segment generation.";
 
     private static void PrintCommit(JetstreamCommitEvent evt, RecentPosts recentPosts)
     {
