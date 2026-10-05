@@ -45,7 +45,9 @@ public partial class AtProtoJetstream
     /// <para>Archive segment generations can change after planning or during a download. An ETag mismatch stops replay
     /// with <see cref="InvalidDataException"/>; it is not automatically retried or passed to <paramref name="onArchiveError"/>.
     /// Recovery does not require restarting the application or replacing the client: start a new replay enumeration with
-    /// the original request and latest durably persisted checkpoint. Preserve the checkpoint's pinned tip, filters and offsets.
+    /// the original request, with its sequence bounds and filters unchanged, and latest durably persisted checkpoint.
+    /// Pass the entire checkpoint unchanged, including its request fingerprint, pinned tip, plan and replay cursors,
+    /// segment name and checksum, next block index, byte offset and live cursor.
     /// When the fresh archive plan reports a changed checksum, the affected segment starts again and events may repeat.
     /// Make event processing idempotent, delay between bounded retries and surface persistent mismatches.
     /// Do not retry every <see cref="InvalidDataException"/>, because corrupt data and other inconsistencies use the same type.</para></remarks>

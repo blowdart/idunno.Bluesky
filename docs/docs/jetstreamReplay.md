@@ -124,8 +124,10 @@ This failure is not automatically replanned and does not invoke `onArchiveError`
 decoding failures only. Recovery **does not require an application restart** or a new `AtProtoJetstream` instance.
 Catch the generation mismatch outside the `await foreach`, wait, and start a new `SnapshotAsync()` or `ReplayAsync()`
 enumeration with the original request and latest durably persisted checkpoint. Update the in-memory checkpoint
-only after successfully persisting it. Keep the original filters and checkpoint sealed tip; do not replace the saved
-checksum or reuse the old byte offset with a new checksum. The fresh plan can detect a changed generation and
+only after successfully persisting it. Keep the original request's sequence bounds and filters unchanged.
+Pass the entire saved checkpoint unchanged, including its request fingerprint, sealed tip, plan and replay cursors,
+segment name and checksum, next block index, byte offset and live cursor. Do not replace the saved checksum or reuse
+the old byte offset with a new checksum. The fresh plan can detect a changed generation and
 restart that segment, so previously handled events may repeat and processing must be idempotent.
 
 Use bounded retries and report persistent mismatches: repeated failures after fresh planning may indicate stale

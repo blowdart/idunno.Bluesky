@@ -56,8 +56,10 @@ public partial class AtProtoJetstream
     /// <para>A segment generation can change between planning and downloading, including during a resumed download.
     /// A download ETag mismatch throws <see cref="InvalidDataException"/> and stops enumeration; it does not automatically
     /// replan and is not passed to <paramref name="onArchiveError"/>. To recover at runtime, start a new enumeration with
-    /// the original request and latest durably persisted checkpoint; the same client can be reused. Keep the checkpoint's
-    /// pinned tip, filters and offsets unchanged. A fresh plan detects changed checksums and restarts the affected segment,
+    /// the original request, with its sequence bounds and filters unchanged, and latest durably persisted checkpoint;
+    /// the same client can be reused. Pass the entire checkpoint unchanged, including its request fingerprint, pinned tip,
+    /// plan cursor, segment name and checksum, next block index and byte offset.
+    /// A fresh plan detects changed checksums and restarts the affected segment,
     /// so event processing must be idempotent. Use bounded retries with a delay and surface persistent failures.
     /// Other invalid archive data also throws <see cref="InvalidDataException"/> and must not be retried indiscriminately.</para></remarks>
     [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
