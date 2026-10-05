@@ -148,6 +148,15 @@ from the live WebSocket message counters above. Instrument names are prefixed wi
 
 The `idunno.AtProto.Firehose` Meter reports measures from the `idunno.AtProto.Firehose.AtProtoFirehose` client. Instrument names are prefixed with `idunno.atproto.firehose.` (for example, `idunno.atproto.firehose.total.signing_key_cache_hits`).
 
+Register the meter with `AddAtProtoFirehoseMetrics()` from the `OpenTelemetry.Metrics` namespace:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddAtProtoFirehoseMetrics());
+```
+
+For dependency-injection scenarios, supply the application's `IMeterFactory` through `FirehoseOptions.MeterFactory`.
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `total.messages` | Counter&lt;long&gt; | {messages} | Frames received from the firehose. |

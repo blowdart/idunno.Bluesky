@@ -18,6 +18,7 @@
 
 #### idunno.AtProto
 
+* Added `AddAtProtoFirehoseMetrics()` to register firehose instrumentation with OpenTelemetry.
 * Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
 * Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
   `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.

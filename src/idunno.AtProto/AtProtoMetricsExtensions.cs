@@ -3,6 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.DidPlcDirectory;
+using idunno.AtProto.Firehose;
 using idunno.AtProto.Jetstream;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -49,6 +50,19 @@ public static class AtProtoMetricsExtensions
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder.AddMeter(JetstreamMetrics.MeterName);
+    }
+
+    /// <summary>
+    /// Enables the instrumentation data collection for <see cref="AtProtoFirehose"/>.
+    /// </summary>
+    /// <param name="builder">The <see cref="MeterProviderBuilder"/> being configured.</param>
+    /// <returns>The instance of <see cref="MeterProviderBuilder"/> to chain the calls.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
+    public static MeterProviderBuilder AddAtProtoFirehoseMetrics(this MeterProviderBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        return builder.AddMeter(FirehoseMetrics.MeterName);
     }
 
     /// <summary>
