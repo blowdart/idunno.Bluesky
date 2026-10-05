@@ -29,7 +29,7 @@ public partial class AtProtoJetstream
     /// <exception cref="ArgumentOutOfRangeException">The archive error callback returns an action that is not valid for the failure.</exception>
     /// <exception cref="InvalidOperationException">A v2 service or archive API key is not configured.</exception>
     /// <exception cref="ObjectDisposedException">The Jetstream client has been disposed.</exception>
-    /// <exception cref="InvalidDataException">The archive server returns an inconsistent plan.</exception>
+    /// <exception cref="InvalidDataException">An archive plan or response is inconsistent, including a download ETag mismatch.</exception>
     /// <remarks><para>Without <paramref name="onArchiveError"/>, or when it returns <see cref="JetstreamArchiveErrorAction.Stop"/>,
     /// an invalid matching archive record or block stops replay. The callback receives the record sequence for record failures,
     /// or <see langword="null"/> for a block failure, and the original decoding or row-validation exception, which can be an <see cref="InvalidDataException"/>,
@@ -41,7 +41,16 @@ public partial class AtProtoJetstream
     /// or the entire block when the error occurred during block decoding. A live cursor
     /// is inclusive. When its lookback is exhausted after a long backfill or outage,
     /// replay returns to the archive from the last delivered sequence before reconnecting. Filter lists are copied
-    /// when this method is called, so later changes to the caller's lists do not affect replay or its checkpoints.</para></remarks>
+    /// when this method is called, so later changes to the caller's lists do not affect replay or its checkpoints.</para>
+    /// <para>Archive segment generations can change after planning or during a download. An ETag mismatch stops replay
+    /// with <see cref="InvalidDataException"/>; it is not automatically retried or passed to <paramref name="onArchiveError"/>.
+    /// Recovery does not require restarting the application or replacing the client: start a new replay enumeration with
+    /// the original request, with its sequence bounds and filters unchanged, and latest durably persisted checkpoint.
+    /// Pass the entire checkpoint unchanged, including its request fingerprint, pinned tip, plan and replay cursors,
+    /// segment name and checksum, next block index, byte offset and live cursor.
+    /// When the fresh archive plan reports a changed checksum, the affected segment starts again and events may repeat.
+    /// Make event processing idempotent, delay between bounded retries and surface persistent mismatches.
+    /// Do not retry every <see cref="InvalidDataException"/>, because corrupt data and other inconsistencies use the same type.</para></remarks>
     [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
         Justification = "Appending the optional callback preserves the existing positional cancellationToken argument.")]
     public IAsyncEnumerable<JetstreamEvent> ReplayAsync(

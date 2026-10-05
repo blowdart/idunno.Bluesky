@@ -68,7 +68,11 @@ public sealed record SnapshotRequest
 /// </summary>
 /// <remarks>
 /// <para>Persist this value only after the events preceding it have been handled. A resumed run may repeat events
-/// from an interrupted block. If compaction changes a segment checksum, the segment is read again.</para>
+/// from an interrupted block. If a new plan detects a changed segment checksum after compaction, the segment is read again.
+/// A generation mismatch during download stops enumeration; resume a new enumeration from the latest persisted checkpoint
+/// to obtain a fresh plan. Keep the original request's sequence bounds and filters unchanged, and pass the entire
+/// checkpoint unchanged, including its request fingerprint, pinned tip, plan and replay cursors, segment name and checksum,
+/// next block index, byte offset and live cursor.</para>
 /// </remarks>
 public sealed record SnapshotCheckpoint
 {

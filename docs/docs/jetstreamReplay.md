@@ -48,7 +48,8 @@ Pass a `SnapshotCheckpoint` restored from storage to resume a bounded snapshot. 
 original tip; never substitute a newly planned tip for it. The callback receives progress **after** the iterator has
 advanced past all events in a block, with segment name, checksum, next block index and (for a whole segment)
 the next frame byte offset. Persist each checkpoint only after applying the preceding events. The server can compact
-a sealed segment and change its checksum; the client then starts that segment again rather than resuming stale bytes.
+a sealed segment and change its checksum; when a new plan detects the change, the client starts that segment again
+rather than resuming stale bytes.
 Delivery is **at least once** across crashes: make record processing idempotent, for example by AT URI.
 Checkpoints are bound to the original service, sequence bounds and filters; changing any of them requires
 a new snapshot. Older checkpoints without a request fingerprint cannot be resumed safely and must be discarded.
@@ -107,6 +108,34 @@ Skipping is an explicit data-loss decision. `SkipRecord` permanently omits one r
 records, including valid ones, from that block. In either case the checkpoint advances only after the block has been
 consumed according to the selected policy. Persist the checkpoint only after applying emitted events, just as for
 normal snapshot processing. `ReplayAsync()` uses the same callback for archive records; live events are unaffected.
+The replay sample supplies this policy through `ReplayAsync()`, which forwards it to `SnapshotAsync()`: it logs
+and skips individual invalid records, or logs and skips an entire block when block decoding fails. This intentionally
+permits data loss, including valid records in an undecodable block; a production app should choose its policy explicitly.
+
+## Recovering from archive generation mismatches
+
+A segment can change between planning and downloading, or while a download is being resumed. The client validates
+the download ETag against the planned checksum and stops enumeration with `InvalidDataException` if they differ.
+An HTTP 200 does not establish that the returned segment matches the plan. A resumed whole-segment download also
+opens a separate request at offset zero to read its header; a mismatch in that request can report offset zero
+even though the checkpoint contains a nonzero resume offset.
+
+This failure is not automatically replanned and does not invoke `onArchiveError`, which handles record and block
+decoding failures only. Recovery **does not require an application restart** or a new `AtProtoJetstream` instance.
+Catch the generation mismatch outside the `await foreach`, wait, and start a new `SnapshotAsync()` or `ReplayAsync()`
+enumeration with the original request and latest durably persisted checkpoint. Update the in-memory checkpoint
+only after successfully persisting it. Keep the original request's sequence bounds and filters unchanged.
+Pass the entire saved checkpoint unchanged, including its request fingerprint, sealed tip, plan and replay cursors,
+segment name and checksum, next block index, byte offset and live cursor. Do not replace the saved checksum or reuse
+the old byte offset with a new checksum. The fresh plan can detect a changed generation and
+restart that segment, so previously handled events may repeat and processing must be idempotent.
+
+Use bounded retries and report persistent mismatches: repeated failures after fresh planning may indicate stale
+planner metadata or inconsistent server/CDN responses, not just a one-off compaction race. Do not retry all
+`InvalidDataException` failures; the same type also represents corrupt data and other archive inconsistencies.
+There is currently no dedicated generation-mismatch exception type. The replay sample narrowly matches the SDK's
+current ETag-mismatch and failed-generation-resume exception messages; this is a sample workaround, not a stable
+exception-classification API, and must be checked when upgrading the SDK. Other failures propagate.
 
 ## Replay into the live tail
 
@@ -150,7 +179,14 @@ dotnet run --project samples\Samples.JetstreamReplay -- --host wss://jetstream.u
 ```
 
 The sample also accepts `--api-key` and `--handle` (each overriding its environment variable), and saves an archive or live checkpoint
-to `jetstream-replay-checkpoint.json`. It prints the collection for every commit, locally timed post text
+to `jetstream-replay-checkpoint.json`. On an archive generation mismatch it logs the failure and retries up to
+**five times after the initial attempt**, waiting **30 seconds before each retry**, using the latest successfully
+saved checkpoint and the same client. The retry budget is for the entire run and does not reset after progress.
+The wait is cancellable; after five retries the next mismatch is logged and rethrown. Other invalid-data failures
+are not retried. Record and block decoding failures are instead logged and skipped through `onArchiveError`;
+invalid frame lengths, truncated downloads and other failures outside that callback still stop the sample.
+Replayed events may appear in the console more than once.
+It prints the collection for every commit, locally timed post text
 (or `No Text`) and like subjects (AT URI and CID). Other commits display their operation and local event time.
 Post and like records use the Bluesky source-generated JSON options. Deletes display the record's AT URI and
 local deletion time. The sample keeps the most recent 1000 distinct posts in memory, refreshing an entry on update.
