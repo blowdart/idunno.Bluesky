@@ -46,7 +46,9 @@ public class AtProtoHttpClientMetrics
         nameof(DPoPRetries),
         nameof(DeserializationFailures),
         nameof(RequestDuration),
-        nameof(XrpcRequests)
+        nameof(XrpcRequests),
+        nameof(RequestContentLength),
+        nameof(ResponseContentLength)
         )]
     private void Initialize(Meter meter)
     {
@@ -90,6 +92,16 @@ public class AtProtoHttpClientMetrics
             name: $"{MeterName.ToLowerInvariant()}.requests.total.xrpc_request",
             description: "Total XRPC requests",
             unit: "{requests}");
+
+        RequestContentLength = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.request.content_length",
+            description: "Bytes declared by the Content-Length header on requests when present.",
+            unit: "By");
+
+        ResponseContentLength = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.response.content_length",
+            description: "Bytes declared by the Content-Length header on responses when present.",
+            unit: "By");
     }
 
     /// <summary>
@@ -117,4 +129,8 @@ public class AtProtoHttpClientMetrics
     internal Histogram<double> RequestDuration { get; private set; }
 
     internal Counter<long> XrpcRequests { get; private set; }
+
+    internal Counter<long> RequestContentLength { get; private set; }
+
+    internal Counter<long> ResponseContentLength { get; private set; }
 }

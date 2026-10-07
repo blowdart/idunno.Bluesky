@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <PackageReference Include="Duende.IdentityModel.OidcClient" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

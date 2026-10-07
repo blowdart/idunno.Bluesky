@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
@@ -82,6 +83,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private CancellationTokenSource? _timeoutCancellationSource;
     private CancellationTokenRegistration _timeoutRegistration;
     private CancellationToken _callerCancellationToken;
+    private long _callbackWaitStartTimestamp;
     private bool _callbackAwaited;
     private volatile bool _disposed;
 
@@ -169,7 +171,12 @@ public sealed class CallbackServer : IAsyncDisposable
                 if (listenerTask.Exception is not null)
                 {
                     Logger.ListenerFaulted(server._logger, listenerTask.Exception);
-                    server._source.TrySetException(listenerTask.Exception.InnerExceptions);
+                    if (server._source.TrySetException(listenerTask.Exception.InnerExceptions))
+                    {
+                        CallbackServerMetrics.RecordCallbackCompletion(
+                            "listener_error", Interlocked.Read(ref server._callbackWaitStartTimestamp), server._logger);
+                        server.ReleaseTimeout();
+                    }
                 }
             },
             this,
@@ -585,6 +592,7 @@ public sealed class CallbackServer : IAsyncDisposable
             // token that is already cancelled runs the callback inline and hands back a default
             // registration, which would let a second call re-arm and leak the first timeout source.
             _callbackAwaited = true;
+            Interlocked.Exchange(ref _callbackWaitStartTimestamp, Stopwatch.GetTimestamp());
 
             // Registering on a linked source rather than awaiting Task.Delay means cancellation of
             // cancellationToken actually completes _source. Awaiting the delay would throw instead,
@@ -639,16 +647,33 @@ public sealed class CallbackServer : IAsyncDisposable
     {
         if (_disposalCancellationSource.IsCancellationRequested)
         {
-            _source.TrySetException(new ObjectDisposedException(nameof(CallbackServer)));
+            if (_source.TrySetException(new ObjectDisposedException(nameof(CallbackServer))))
+            {
+                long startTimestamp = Interlocked.Read(ref _callbackWaitStartTimestamp);
+                if (startTimestamp != 0)
+                {
+                    CallbackServerMetrics.RecordCallbackCompletion("disposed", startTimestamp, _logger);
+                }
+            }
         }
         else if (_callerCancellationToken.IsCancellationRequested)
         {
-            _source.TrySetCanceled(_callerCancellationToken);
+            if (_source.TrySetCanceled(_callerCancellationToken))
+            {
+                long startTimestamp = Interlocked.Read(ref _callbackWaitStartTimestamp);
+                if (startTimestamp != 0)
+                {
+                    CallbackServerMetrics.RecordCallbackCompletion("cancelled", startTimestamp, _logger);
+                }
+            }
         }
         else
         {
             Logger.CallbackTimedOut(_logger);
-            _source.TrySetCanceled(new CancellationToken(canceled: true));
+            if (_source.TrySetCanceled(new CancellationToken(canceled: true)))
+            {
+                CallbackServerMetrics.RecordCallbackCompletion("timeout", Interlocked.Read(ref _callbackWaitStartTimestamp), _logger);
+            }
         }
     }
 
@@ -923,7 +948,12 @@ public sealed class CallbackServer : IAsyncDisposable
             // delay the response the browser is waiting on.
             if (queryString is not null)
             {
-                _source.TrySetResult(queryString);
+                if (_source.TrySetResult(queryString))
+                {
+                    CallbackServerMetrics.RecordCallbackCompletion(
+                        authorizationCodeIssued ? "success" : "oauth_error",
+                        Interlocked.Read(ref _callbackWaitStartTimestamp), _logger);
+                }
 
                 ReleaseTimeout();
             }
@@ -933,6 +963,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private async Task BadRequest(HttpContext context)
     {
         Logger.BadRequest(_logger, context.Request.Path);
+        CallbackServerMetrics.RecordRejectedRequest("bad_request", _logger);
 
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
         context.Response.ContentType = HtmlContentType;
@@ -943,6 +974,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private async Task MethodNotAllowed(HttpContext context)
     {
         Logger.MethodNotAllowed(_logger, context.Request.Method, context.Request.Path);
+        CallbackServerMetrics.RecordRejectedRequest("method_not_allowed", _logger);
 
         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
         context.Response.ContentType = HtmlContentType;

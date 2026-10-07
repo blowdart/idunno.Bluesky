@@ -1462,10 +1462,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
     }
 
     [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "A malformed error body is still reported with its raw content, so as to return as much as can be returned.")]
-    private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
+    private AtErrorDetail ExtractErrorDetailFromResponse(
         HttpRequestMessage request,
         HttpResponseMessage responseMessage,
-        CancellationToken cancellationToken = default)
+        string responseContent)
     {
         AtErrorDetail errorDetail = new()
         {
@@ -1473,9 +1473,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             HttpMethod = request.Method
         };
 
-        // Bounded and truncating: an error body is only used for diagnostics, so a partial one is better than
-        // allowing a service to dictate the allocation.
-        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
@@ -1783,6 +1780,45 @@ public class AtProtoHttpClient<TResult> where TResult : class
     {
         long startTimestamp = Stopwatch.GetTimestamp();
         string xrpcEndpoint = GetXrpcEndpointName(endpoint);
+        string outcome = "exception";
+        bool durationRecorded = false;
+
+        void RecordDuration()
+        {
+            if (durationRecorded)
+            {
+                return;
+            }
+
+            durationRecorded = true;
+            TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
+
+            if (!string.IsNullOrEmpty(xrpcEndpoint))
+            {
+                tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+            }
+
+            tags.Add(new KeyValuePair<string, object?>("outcome", outcome));
+            _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, tags);
+        }
+
+        async Task<T> AwaitTransportAsync<T>(Task<T> operation)
+        {
+            try
+            {
+                return await operation.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                outcome = cancellationToken.IsCancellationRequested ? "cancelled" : "transport_error";
+                throw;
+            }
+            catch (HttpRequestException)
+            {
+                outcome = "transport_error";
+                throw;
+            }
+        }
 
         try
         {
@@ -1878,6 +1914,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 try
                 {
                     await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+
+                    if (httpRequestMessage.Content?.Headers.ContentLength is long requestContentLength)
+                    {
+                        _metrics.RequestContentLength.Add(
+                            requestContentLength,
+                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+                    }
+
                     _metrics.RequestsSent.Add(
                         1,
                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1893,9 +1939,18 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 ));
                     }
 
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
+                    using (HttpResponseMessage httpResponseMessage = await AwaitTransportAsync(httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken)).ConfigureAwait(false))
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
+
+                        if (httpResponseMessage.Content.Headers.ContentLength is long responseContentLength)
+                        {
+                            _metrics.ResponseContentLength.Add(
+                                responseContentLength,
+                                new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+                        }
 
                         AtProtoHttpResult<TResult> result = new()
                         {
@@ -1920,8 +1975,15 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize).ConfigureAwait(false);
 #endif
                             }
+                            catch (OperationCanceledException)
+                            {
+                                outcome = cancellationToken.IsCancellationRequested ? "cancelled" : "transport_error";
+                                throw;
+                            }
                             catch (HttpRequestException)
                             {
+                                outcome = "response_too_large";
+
                                 // The service returned more than we are willing to allocate, so the response cannot be used and
                                 // must not be handed to the handler.
                                 Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
@@ -1942,6 +2004,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
+                            outcome = "success";
+
                             _metrics.SuccessfulRequests.Add(
                                 1,
                                 new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1957,13 +2021,15 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             }
                             else
                             {
-                                using PooledContent? responseContent = await HttpContentReader.ReadAsPooledBytes(
+                                using PooledContent? responseContent = await AwaitTransportAsync(HttpContentReader.ReadAsPooledBytes(
                                     httpResponseMessage.Content,
                                     MaximumResponseSize,
-                                    cancellationToken).ConfigureAwait(false);
+                                    cancellationToken)).ConfigureAwait(false);
 
                                 if (responseContent is null)
                                 {
+                                    outcome = "response_too_large";
+
                                     // The service returned more than we are willing to allocate, so the response cannot be used.
                                     Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
 
@@ -2006,6 +2072,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 }
                                 catch (Exception ex) when (ex is JsonException or DecoderFallbackException)
                                 {
+                                    outcome = "deserialization_error";
+
                                     _metrics.DeserializationFailures.Add(
                                         1,
                                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -2025,6 +2093,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                         }
                         else
                         {
+                            outcome = "http_error";
+
                             _metrics.FailedRequests.Add(
                                 1,
                                 new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -2032,10 +2102,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
                                 new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
 
-                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(
+                            string errorContent = await AwaitTransportAsync(HttpContentReader.ReadAsStringTruncating(
+                                httpResponseMessage.Content, MaximumResponseSize, cancellationToken)).ConfigureAwait(false);
+                            AtErrorDetail atErrorDetail = ExtractErrorDetailFromResponse(
                                 httpRequestMessage,
                                 httpResponseMessage,
-                                cancellationToken).ConfigureAwait(false);
+                                errorContent);
 
                             // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
                             // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
@@ -2085,6 +2157,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                         // seen, so the credential is holding it and the retry will send a proof built from it.
 
                                         _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
+
+                                        RecordDuration();
 
                                         // Retry
                                         return await MakeRequest(
@@ -2144,18 +2218,19 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 }
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        catch (Exception) when (outcome is not "cancelled" and not "transport_error")
+        {
+            outcome = "exception";
+            throw;
+        }
         finally
         {
-            TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
-
-            if (!string.IsNullOrEmpty(xrpcEndpoint))
-            {
-                tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
-            }
-
-            _metrics.RequestDuration.Record(
-                    Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
-                    tags);
+            RecordDuration();
         }
     }
 

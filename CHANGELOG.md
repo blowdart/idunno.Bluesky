@@ -21,6 +21,8 @@
 #### idunno.AtProto
 
 * Added `AddAtProtoFirehoseMetrics()` to register firehose instrumentation with OpenTelemetry.
+* Added HTTP request outcome tags, declared request and response `Content-Length` counters, DID handle cache lookup duration and pending lookup metrics,
+  and active connection, connection duration and message inter-arrival metrics for the firehose and Jetstream.
 * Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
 * Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
   `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.
@@ -118,6 +120,8 @@
 #### idunno.AtProto.OAuthCallback
 
 * Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+* Added `AddAtProtoOAuthCallbackMetrics()` and the `idunno.AtProto.OAuthCallback` meter, reporting callback outcomes, wait duration and rejected requests.
+  The package now depends on `OpenTelemetry.Extensions.Hosting`.
 
 #### idunno.AtProto.Types
 

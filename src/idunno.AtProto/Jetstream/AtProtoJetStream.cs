@@ -1242,7 +1242,14 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Tagged with the server rather than with the subscription uri. The subscription uri carries every did and
             // collection the caller is following, and a cursor, so tagging with it would both publish who is being
             // watched to whatever collects the metrics and give the tag an unbounded set of values.
-            _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+            lock (_syncLock)
+            {
+                _metrics.RecordConnectionOpened(client, new KeyValuePair<string, object?>("server", _serverTag));
+                if (_disposed)
+                {
+                    _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -1746,7 +1753,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 }
 
                 DisconnectedGracefully = recordAsGracefulDisconnection;
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (ObjectDisposedException)
             {
@@ -1758,7 +1765,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // being left open waiting on a server which is not answering.
                 JetStreamLogger.CloseTimedOut(_logger, Options.CloseTimeout);
                 client.Abort();
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (OperationCanceledException)
             {
@@ -1766,6 +1773,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // that state can neither be used nor connected again, so it is dropped rather than left behind for a
                 // later reconnection to find.
                 client.Abort();
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (Exception ex)
             {
@@ -1774,6 +1782,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // The close frame may already have gone, which leaves the socket half closed, and a socket in that
                 // state can neither be used nor connected again.
                 client.Abort();
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
 
         }
@@ -1782,7 +1791,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             try
             {
                 client.Abort();
-                _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (ObjectDisposedException)
             {
@@ -1876,6 +1885,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     _disposed = true;
 
                     _client.Dispose();
+                    _metrics.RecordConnectionClosed(_client, new KeyValuePair<string, object?>("server", _serverTag));
                 }
 
                 // Disposed under the lock the receive loop decompresses under, and after the flag the receive loop
@@ -2087,7 +2097,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                     JetStreamLogger.CloseMessageReceived(_logger);
 
-                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+                    _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
 
                     // A connection being replaced to apply updated filters is announced by the reconnection instead.
                     if (!ReferenceEquals(client, _replacedClient))
@@ -2160,7 +2170,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // when parsing fails.
                 if (!string.IsNullOrEmpty(messageAsString))
                 {
-                    _metrics.MessagesReceived.Add(1, new KeyValuePair<string, object?>("server", _serverTag));
+                    _metrics.RecordMessageReceived(client, new KeyValuePair<string, object?>("server", _serverTag));
 
                     OnMessageReceived(new MessageReceivedEventArgs(messageAsString));
 
@@ -2259,12 +2269,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 stateChanges: null,
                 cancellationToken).ConfigureAwait(false);
         }
-        else if (!finalStateRaised && client.State != WebSocketState.Open && !ReferenceEquals(client, _replacedClient))
+        else if (client.State != WebSocketState.Open)
         {
-            // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
-            // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
-            // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
+
+            if (!finalStateRaised && !ReferenceEquals(client, _replacedClient))
+            {
+                // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
+                // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
+                // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            }
         }
     }
 
