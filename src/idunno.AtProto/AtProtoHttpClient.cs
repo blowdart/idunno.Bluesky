@@ -1781,6 +1781,26 @@ public class AtProtoHttpClient<TResult> where TResult : class
         long startTimestamp = Stopwatch.GetTimestamp();
         string xrpcEndpoint = GetXrpcEndpointName(endpoint);
         string outcome = "exception";
+        bool durationRecorded = false;
+
+        void RecordDuration()
+        {
+            if (durationRecorded)
+            {
+                return;
+            }
+
+            durationRecorded = true;
+            TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
+
+            if (!string.IsNullOrEmpty(xrpcEndpoint))
+            {
+                tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+            }
+
+            tags.Add(new KeyValuePair<string, object?>("outcome", outcome));
+            _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, tags);
+        }
 
         async Task<T> AwaitTransportAsync<T>(Task<T> operation)
         {
@@ -2138,6 +2158,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                         _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
+                                        RecordDuration();
+
                                         // Retry
                                         return await MakeRequest(
                                             service: service,
@@ -2208,18 +2230,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
         finally
         {
-            TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
-
-            if (!string.IsNullOrEmpty(xrpcEndpoint))
-            {
-                tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
-            }
-
-            tags.Add(new KeyValuePair<string, object?>("outcome", outcome));
-
-            _metrics.RequestDuration.Record(
-                    Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
-                    tags);
+            RecordDuration();
         }
     }
 

@@ -84,6 +84,9 @@ The `request.duration` histogram is tagged with `outcome`, which is one of `succ
 `response_too_large`, `cancelled` (the caller's cancellation token was cancelled), `transport_error` (including an `HttpClient` timeout) or `exception`. It also includes the `server` tag and, for XRPC calls,
 the `xrpc_endpoint` tag.
 
+Each DPoP retry records a separate attempt duration. The failed attempt is recorded before the retry starts, so its
+`http_error` duration does not include time spent in the retry.
+
 ## idunno.AtProto.Jetstream
 
 The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.Jetstream.AtProtoJetstream` client.

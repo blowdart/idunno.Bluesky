@@ -23,6 +23,65 @@ public class AtProtoHttpClientMetricsTest
 {
     // https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#test-custom-metrics
 
+    [Fact]
+    public async Task DPoPRetryRecordsEachAttemptDurationBeforeTheNextAttemptCompletes()
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        TaskCompletionSource retryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseRetry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (Interlocked.Increment(ref requests) == 1)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["DPoP-Nonce"] = "updatedNonce";
+                await context.Response.WriteAsync("""{"error":"use_dpop_nonce"}""");
+            }
+            else
+            {
+                retryStarted.SetResult();
+                await releaseRetry.Task.WaitAsync(context.RequestAborted);
+                await context.Response.WriteAsync("{}");
+            }
+        });
+        using HttpClient httpClient = testServer.CreateClient();
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        DPoPAccessCredentials credentials = new(
+            service: TestServerBuilder.DefaultUri,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), TestServerBuilder.DefaultUri.ToString()),
+            refreshToken: "refreshToken",
+            dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+            dPoPNonce: "initialNonce");
+        Task<AtProtoHttpResult<string>> request = client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: credentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        CollectedMeasurement<double> firstAttempt;
+        try
+        {
+            await retryStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            firstAttempt = Assert.Single(durationCollector.GetMeasurementSnapshot());
+            Assert.Equal("http_error", firstAttempt.Tags["outcome"]);
+        }
+        finally
+        {
+            releaseRetry.TrySetResult();
+        }
+
+        Assert.True((await request).Succeeded);
+        IReadOnlyList<CollectedMeasurement<double>> measurements = durationCollector.GetMeasurementSnapshot();
+        Assert.Equal(2, measurements.Count);
+        Assert.Equal(firstAttempt.Value, measurements[0].Value);
+        Assert.Equal("success", measurements[1].Tags["outcome"]);
+    }
+
     [Theory]
     [InlineData(false, false)]
     [InlineData(false, true)]

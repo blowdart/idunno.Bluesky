@@ -18,6 +18,60 @@ public class DidHandleCacheTests
     private static readonly Did s_otherDid = new("did:plc:g6ylltenitt4tp27bpwalh7b");
     private static readonly Handle s_handle = new("example.com");
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)]
+    public async Task PendingMetricListenerFailuresDoNotStrandLookups(long failingMeasurement)
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeterListener listener = new();
+        InvalidOperationException failure = new("Metric listener failed.");
+        bool fail = true;
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Scope == meterFactory && instrument.Name == "idunno.atproto.didhandlecache.pending_lookups")
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, measurement, _, _) =>
+        {
+            if (fail && measurement == failingMeasurement)
+            {
+                throw failure;
+            }
+        });
+        listener.Start();
+        TaskCompletionSource<Handle> resolution = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using DidHandleCache cache = new((_, _) => resolution.Task, new DidHandleCacheOptions
+        {
+            Size = 1,
+            MeterFactory = meterFactory
+        });
+
+        Exception? thrown;
+        if (failingMeasurement == 1)
+        {
+            thrown = Record.Exception(() => cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken));
+        }
+        else
+        {
+            Task<Handle> first = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask();
+            Task<Handle> coalesced = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken).AsTask();
+            resolution.SetResult(s_handle);
+            thrown = await Record.ExceptionAsync(() => first.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+            Assert.Same(failure, await Record.ExceptionAsync(() => coalesced.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
+        }
+
+        Assert.Same(failure, thrown);
+        fail = false;
+        resolution.TrySetResult(s_handle);
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_otherDid, TestContext.Current.CancellationToken)
+            .AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+        Assert.Equal(s_handle, await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken)
+            .AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task AVerifiedHandleIsResolvedOnceAndCached()
     {

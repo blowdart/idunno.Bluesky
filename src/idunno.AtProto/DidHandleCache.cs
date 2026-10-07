@@ -91,11 +91,13 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">The cache has been disposed.</exception>
+    /// <exception cref="Exception">A metric listener failed while recording a pending lookup.</exception>
     /// <remarks>
     /// <para>If <see cref="DidHandleCacheOptions.Size"/> lookups are already pending, and <paramref name="did"/> is not one of them,
     /// <see cref="Handle.Invalid"/> is returned without being cached.</para>
     /// <para>If the cache is disposed whilst a resolution is in progress the returned task is cancelled.</para>
     /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failing metric listener must not leave a lookup registered without an owner.")]
     public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
@@ -139,7 +141,16 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
                 lookup = new InFlightLookup();
                 _inFlight.Add(did, lookup);
                 _pendingLookups++;
-                _metrics.PendingLookups.Add(1);
+                try
+                {
+                    _metrics.PendingLookups.Add(1);
+                }
+                catch (Exception)
+                {
+                    _inFlight.Remove(did);
+                    _pendingLookups--;
+                    throw;
+                }
                 owner = true;
             }
         }
@@ -374,6 +385,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     }
 
     // Must not throw, as it is called from a finally block to complete the lookup.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failing metric listener is surfaced through the lookup task after releasing its capacity.")]
     private void CompleteLookup(Did did, InFlightLookup lookup, Handle? handle, bool cacheable)
     {
         lock (_lock)
@@ -384,7 +396,6 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             }
 
             _pendingLookups--;
-            _metrics.PendingLookups.Add(-1);
 
             if (handle is not null && cacheable && !_disposed && !lookup.Invalidated)
             {
@@ -398,6 +409,16 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
                     AbsoluteExpirationRelativeToNow = duration
                 });
             }
+        }
+
+        try
+        {
+            _metrics.PendingLookups.Add(-1);
+        }
+        catch (Exception exception)
+        {
+            lookup.Completion.TrySetException(exception);
+            return;
         }
 
         if (handle is null)
