@@ -1766,6 +1766,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // that state can neither be used nor connected again, so it is dropped rather than left behind for a
                 // later reconnection to find.
                 client.Abort();
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
             catch (Exception ex)
             {
@@ -1774,6 +1775,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // The close frame may already have gone, which leaves the socket half closed, and a socket in that
                 // state can neither be used nor connected again.
                 client.Abort();
+                _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
             }
 
         }

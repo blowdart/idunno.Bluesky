@@ -24,6 +24,34 @@ public class AtProtoHttpClientMetricsTest
     // https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#test-custom-metrics
 
     [Fact]
+    public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory,
+            AtProtoHttpClientMetrics.MeterName,
+            "idunno.atproto.atprotohttpclient.request.duration");
+
+        using TestServer testServer = TestServerBuilder.CreateServer(
+            TestServerBuilder.DefaultUri,
+            async context => await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted));
+        using HttpClient httpClient = testServer.CreateClient();
+        httpClient.Timeout = TimeSpan.FromMilliseconds(100);
+
+        AtProtoHttpClient atProtoHttpClient = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await atProtoHttpClient.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        CollectedMeasurement<double> requestDuration = Assert.Single(durationCollector.GetMeasurementSnapshot());
+        Assert.Equal("transport_error", requestDuration.Tags["outcome"]);
+    }
+
+    [Fact]
     public async Task CreateRequestIncrementsIncrementsMetrics()
     {
         IServiceProvider services = CreateServiceProvider();

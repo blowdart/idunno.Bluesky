@@ -81,7 +81,7 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | `response.content_length` | Counter&lt;long&gt; | By | Sum of response body sizes reported by `Content-Length`, when that header is present. Tagged with `server`, `xrpc_endpoint` and `http_method`. This is the declared length, not a count of bytes actually consumed. |
 
 The `request.duration` histogram is tagged with `outcome`, which is one of `success`, `http_error`, `deserialization_error`,
-`response_too_large`, `cancelled`, `transport_error` or `exception`. It also includes the `server` tag and, for XRPC calls,
+`response_too_large`, `cancelled` (the caller's cancellation token was cancelled), `transport_error` (including an `HttpClient` timeout) or `exception`. It also includes the `server` tag and, for XRPC calls,
 the `xrpc_endpoint` tag.
 
 ## idunno.AtProto.Jetstream

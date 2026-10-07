@@ -2174,9 +2174,14 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             outcome = "cancelled";
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = "transport_error";
             throw;
         }
         catch (HttpRequestException)
