@@ -171,7 +171,12 @@ public sealed class CallbackServer : IAsyncDisposable
                 if (listenerTask.Exception is not null)
                 {
                     Logger.ListenerFaulted(server._logger, listenerTask.Exception);
-                    server._source.TrySetException(listenerTask.Exception.InnerExceptions);
+                    if (server._source.TrySetException(listenerTask.Exception.InnerExceptions))
+                    {
+                        CallbackServerMetrics.RecordCallbackCompletion(
+                            "listener_error", Interlocked.Read(ref server._callbackWaitStartTimestamp));
+                        server.ReleaseTimeout();
+                    }
                 }
             },
             this,

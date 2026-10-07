@@ -23,6 +23,41 @@ public class AtProtoJetstreamConnectionTests
     private const string TestDid = "did:plc:g6ylltenitt4tp27bpwalh7b";
 
     [Fact]
+    public async Task DisposingFromTheOpenEventBalancesConnectionMetrics()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var meterFactory = new TestMeterFactory();
+        using var activeCollector = new MetricCollector<long>(
+            meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.connections.active");
+        using var closedCollector = new MetricCollector<long>(
+            meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_closed");
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.connection.duration");
+        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
+        {
+            ProtocolVersion = JetstreamProtocolVersion.V1,
+            UseCompression = false,
+            MeterFactory = meterFactory
+        });
+        jetstream.ConnectionStateChanged += (_, e) =>
+        {
+            if (e.State == WebSocketState.Open)
+            {
+                jetstream.Dispose();
+            }
+        };
+        using var httpClient = new HttpClient();
+
+        await jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+
+        Assert.Equal(0, activeCollector.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, closedCollector.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Single(durationCollector.GetMeasurementSnapshot());
+    }
+
+    [Fact]
     public void JetstreamTimeProviderCannotBeNull()
     {
         Assert.Throws<ArgumentNullException>(() => new JetstreamOptions { TimeProvider = null! });

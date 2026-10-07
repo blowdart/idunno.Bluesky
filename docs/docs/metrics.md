@@ -431,6 +431,6 @@ builder.Services.AddOpenTelemetry()
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `callbacks.total` | Counter&lt;long&gt; | {callbacks} | Callback completion outcomes, tagged with `outcome`: `success` when an authorization code was received, `oauth_error` when the provider returned an error or no code, `timeout`, `cancelled` or `disposed`. |
-| `callback.wait.duration` | Histogram&lt;double&gt; | s | Time from the first `WaitForCallbackAsync()` call until a callback, timeout, cancellation or disposal. Tagged with the same `outcome`. Callbacks received before a wait begins have no duration measurement. |
+| `callbacks.total` | Counter&lt;long&gt; | {callbacks} | Callback completion outcomes, tagged with `outcome`: `success` when an authorization code was received, `oauth_error` when the provider returned an error or no code, `timeout`, `cancelled`, `disposed` or `listener_error` when the listener faults. |
+| `callback.wait.duration` | Histogram&lt;double&gt; | s | Time from the first `WaitForCallbackAsync()` call until a callback, timeout, cancellation, disposal or listener failure. Tagged with the same `outcome`. Callbacks received and listener faults occurring before a wait begins have no duration measurement. |
 | `requests.rejected.total` | Counter&lt;long&gt; | {requests} | Rejected requests, tagged with `reason`: `bad_request` for invalid callback requests and `method_not_allowed` for non-GET requests. |

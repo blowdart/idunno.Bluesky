@@ -1242,7 +1242,14 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Tagged with the server rather than with the subscription uri. The subscription uri carries every did and
             // collection the caller is following, and a cursor, so tagging with it would both publish who is being
             // watched to whatever collects the metrics and give the tag an unbounded set of values.
-            _metrics.RecordConnectionOpened(client, new KeyValuePair<string, object?>("server", _serverTag));
+            lock (_syncLock)
+            {
+                _metrics.RecordConnectionOpened(client, new KeyValuePair<string, object?>("server", _serverTag));
+                if (_disposed)
+                {
+                    _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -1878,6 +1885,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     _disposed = true;
 
                     _client.Dispose();
+                    _metrics.RecordConnectionClosed(_client, new KeyValuePair<string, object?>("server", _serverTag));
                 }
 
                 // Disposed under the lock the receive loop decompresses under, and after the flag the receive loop

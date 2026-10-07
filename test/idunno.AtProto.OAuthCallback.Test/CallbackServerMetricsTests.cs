@@ -4,6 +4,8 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 
+using Microsoft.Extensions.Logging;
+
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 
@@ -80,6 +82,22 @@ public class CallbackServerMetricsTests
             _ = await callback;
         }
 
+        CallbackServer? faultedServer = null;
+        Task<string>? faultedCallback = null;
+        InvalidOperationException listenerFailure = new("Deliberate listener startup failure.");
+        using var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddProvider(new ListenerFailureLoggerProvider(() =>
+        {
+            Assert.NotNull(faultedServer);
+            faultedCallback = faultedServer.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken);
+            throw listenerFailure;
+        })));
+
+        AggregateException startupFailure = await Assert.ThrowsAsync<AggregateException>(() =>
+            CallbackServerFactory.CreateAsync(loggerFactory: loggerFactory, configure: server => faultedServer = server));
+        Assert.Same(listenerFailure, Assert.Single(startupFailure.InnerExceptions));
+        Assert.NotNull(faultedCallback);
+        Assert.Same(startupFailure, await Assert.ThrowsAsync<AggregateException>(async () => await faultedCallback));
+
         Assert.True(provider.ForceFlush());
 
         AssertCounter(exporter, "idunno.atproto.oauthcallback.callbacks.total", "outcome", "success");
@@ -87,6 +105,7 @@ public class CallbackServerMetricsTests
         AssertCounter(exporter, "idunno.atproto.oauthcallback.callbacks.total", "outcome", "timeout");
         AssertCounter(exporter, "idunno.atproto.oauthcallback.callbacks.total", "outcome", "cancelled");
         AssertCounter(exporter, "idunno.atproto.oauthcallback.callbacks.total", "outcome", "disposed");
+        AssertCounter(exporter, "idunno.atproto.oauthcallback.callbacks.total", "outcome", "listener_error");
         AssertCounter(exporter, "idunno.atproto.oauthcallback.requests.rejected.total", "reason", "bad_request");
         AssertCounter(exporter, "idunno.atproto.oauthcallback.requests.rejected.total", "reason", "method_not_allowed");
 
@@ -95,6 +114,7 @@ public class CallbackServerMetricsTests
         AssertHistogram(exporter, "timeout");
         AssertHistogram(exporter, "cancelled");
         AssertHistogram(exporter, "disposed");
+        AssertHistogram(exporter, "listener_error");
     }
 
     private static void AssertCounter(RecordingMetricExporter exporter, string metricName, string tagName, string tagValue)
@@ -115,6 +135,30 @@ public class CallbackServerMetricsTests
             Equals(value, outcome));
 
         Assert.True(metric.Count is > 0);
+    }
+
+    private sealed class ListenerFailureLoggerProvider(Action onListening) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new ListenerFailureLogger(categoryName, onListening);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class ListenerFailureLogger(string categoryName, Action onListening) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (categoryName == typeof(CallbackServer).FullName && eventId.Id == 1)
+                {
+                    onListening();
+                }
+            }
+        }
     }
 
     private sealed record RecordedMetric(

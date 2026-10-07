@@ -1462,10 +1462,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
     }
 
     [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "A malformed error body is still reported with its raw content, so as to return as much as can be returned.")]
-    private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
+    private AtErrorDetail ExtractErrorDetailFromResponse(
         HttpRequestMessage request,
         HttpResponseMessage responseMessage,
-        CancellationToken cancellationToken = default)
+        string responseContent)
     {
         AtErrorDetail errorDetail = new()
         {
@@ -1473,9 +1473,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             HttpMethod = request.Method
         };
 
-        // Bounded and truncating: an error body is only used for diagnostics, so a partial one is better than
-        // allowing a service to dictate the allocation.
-        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
@@ -1785,6 +1782,24 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string xrpcEndpoint = GetXrpcEndpointName(endpoint);
         string outcome = "exception";
 
+        async Task<T> AwaitTransportAsync<T>(Task<T> operation)
+        {
+            try
+            {
+                return await operation.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                outcome = cancellationToken.IsCancellationRequested ? "cancelled" : "transport_error";
+                throw;
+            }
+            catch (HttpRequestException)
+            {
+                outcome = "transport_error";
+                throw;
+            }
+        }
+
         try
         {
             // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
@@ -1904,7 +1919,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 ));
                     }
 
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
+                    using (HttpResponseMessage httpResponseMessage = await AwaitTransportAsync(httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken)).ConfigureAwait(false))
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
@@ -1939,6 +1954,11 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 // The overload which takes a CancellationToken was only added in .NET 9.
                                 await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize).ConfigureAwait(false);
 #endif
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                outcome = cancellationToken.IsCancellationRequested ? "cancelled" : "transport_error";
+                                throw;
                             }
                             catch (HttpRequestException)
                             {
@@ -1981,10 +2001,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             }
                             else
                             {
-                                using PooledContent? responseContent = await HttpContentReader.ReadAsPooledBytes(
+                                using PooledContent? responseContent = await AwaitTransportAsync(HttpContentReader.ReadAsPooledBytes(
                                     httpResponseMessage.Content,
                                     MaximumResponseSize,
-                                    cancellationToken).ConfigureAwait(false);
+                                    cancellationToken)).ConfigureAwait(false);
 
                                 if (responseContent is null)
                                 {
@@ -2062,10 +2082,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
                                 new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
 
-                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(
+                            string errorContent = await AwaitTransportAsync(HttpContentReader.ReadAsStringTruncating(
+                                httpResponseMessage.Content, MaximumResponseSize, cancellationToken)).ConfigureAwait(false);
+                            AtErrorDetail atErrorDetail = ExtractErrorDetailFromResponse(
                                 httpRequestMessage,
                                 httpResponseMessage,
-                                cancellationToken).ConfigureAwait(false);
+                                errorContent);
 
                             // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
                             // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
@@ -2174,19 +2196,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 }
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception) when (outcome is not "cancelled" and not "transport_error")
         {
-            outcome = "cancelled";
-            throw;
-        }
-        catch (OperationCanceledException)
-        {
-            outcome = "transport_error";
-            throw;
-        }
-        catch (HttpRequestException)
-        {
-            outcome = "transport_error";
+            outcome = "exception";
             throw;
         }
         finally

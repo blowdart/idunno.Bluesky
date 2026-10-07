@@ -23,6 +23,42 @@ public class AtProtoHttpClientMetricsTest
 {
     // https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#test-custom-metrics
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CallbackFailuresAreNotReportedAsTransportErrors(bool responseCallback, bool cancellationException)
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
+            context => context.Response.WriteAsync("{}"));
+        using HttpClient httpClient = testServer.CreateClient();
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        Exception failure = cancellationException ? new OperationCanceledException() : new HttpRequestException();
+
+        if (responseCallback)
+        {
+            client.OnResponseReceived = (_, _) => Task.FromException(failure);
+        }
+        else
+        {
+            client.OnSendingRequest = (_, _) => Task.FromException(failure);
+        }
+
+        Exception? thrown = await Record.ExceptionAsync(async () => await client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, thrown);
+        Assert.Equal("exception", Assert.Single(durationCollector.GetMeasurementSnapshot()).Tags["outcome"]);
+    }
+
     [Fact]
     public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
     {
