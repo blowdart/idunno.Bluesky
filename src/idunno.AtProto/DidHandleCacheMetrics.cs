@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 
@@ -46,13 +47,24 @@ public sealed class DidHandleCacheMetrics
 
     internal Counter<long> Invalidations { get; private set; }
 
+    internal Histogram<double> LookupDuration { get; private set; }
+
+    internal UpDownCounter<long> PendingLookups { get; private set; }
+
+    internal void RecordLookupDuration(long startTimestamp, string outcome) =>
+        LookupDuration.Record(
+            Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
+            new KeyValuePair<string, object?>("outcome", outcome));
+
     [MemberNotNull(
         nameof(Hits),
         nameof(Misses),
         nameof(CoalescedLookups),
         nameof(RejectedLookups),
         nameof(InvalidHandles),
-        nameof(Invalidations))]
+        nameof(Invalidations),
+        nameof(LookupDuration),
+        nameof(PendingLookups))]
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
     private void Initialize(Meter meter)
     {
@@ -87,5 +99,15 @@ public sealed class DidHandleCacheMetrics
             name: $"{prefix}.total.invalidations",
             unit: "{invalidations}",
             description: "Total number of times a DID was invalidated.");
+
+        LookupDuration = meter.CreateHistogram<double>(
+            name: $"{prefix}.lookup.duration",
+            unit: "s",
+            description: "Duration of handle cache lookups, including time spent waiting for a shared resolution.");
+
+        PendingLookups = meter.CreateUpDownCounter<long>(
+            name: $"{prefix}.pending_lookups",
+            unit: "{lookups}",
+            description: "Current number of distinct handle lookups waiting for or performing a resolution.");
     }
 }

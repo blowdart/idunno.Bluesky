@@ -376,7 +376,7 @@ internal sealed class EventStreamReader
             return new ConnectionFailure(exception, null);
         }
 
-        _metrics.ConnectionsOpened.Add(1, _serverTag);
+        _metrics.RecordConnectionOpened(socket, _serverTag);
         FirehoseLogger.Connected(_logger, uri);
 
         return null;
@@ -439,7 +439,7 @@ internal sealed class EventStreamReader
             // Only a connection counted as opened is counted as closed, so a refused upgrade does not unbalance the two.
             if (opened)
             {
-                _metrics.ConnectionsClosed.Add(1, _serverTag);
+                _metrics.RecordConnectionClosed(socket, _serverTag);
             }
 
             socket.Dispose();
@@ -491,7 +491,7 @@ internal sealed class EventStreamReader
             return ReceiveStep.Disconnected(new WebSocketException(WebSocketError.ConnectionClosedPrematurely, "The firehose server closed the connection."));
         }
 
-        _metrics.MessagesReceived.Add(1, _serverTag);
+        _metrics.RecordMessageReceived(socket, _serverTag);
 
         if (result.MessageType != WebSocketMessageType.Binary)
         {

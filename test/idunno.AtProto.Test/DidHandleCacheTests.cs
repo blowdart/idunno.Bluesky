@@ -221,6 +221,26 @@ public class DidHandleCacheTests
     }
 
     [Fact]
+    public async Task LookupDurationAndPendingLookupCountAreRecorded()
+    {
+        using RecordingMeterFactory meterFactory = new();
+        using MeasurementRecorder recorder = new(meterFactory);
+        TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TestResolver resolver = new(_ => completion.Task);
+        using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
+
+        ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, recorder.Total("idunno.atproto.didhandlecache.pending_lookups"));
+
+        completion.SetResult(s_handle);
+        Assert.Equal(s_handle, await lookup);
+
+        Assert.Equal(0, recorder.Total("idunno.atproto.didhandlecache.pending_lookups"));
+        Assert.Equal(1, recorder.MeasurementCount("idunno.atproto.didhandlecache.lookup.duration"));
+    }
+
+    [Fact]
     public async Task AnInvalidHandleEmitsAMetric()
     {
         using RecordingMeterFactory meterFactory = new();
@@ -654,6 +674,7 @@ public class DidHandleCacheTests
         };
 
         private readonly ConcurrentDictionary<string, long> _totals = new();
+        private readonly ConcurrentDictionary<string, int> _measurementCounts = new();
         private readonly MeterListener _listener = new();
 
         public MeasurementRecorder(IMeterFactory meterFactory)
@@ -676,10 +697,17 @@ public class DidHandleCacheTests
                 }
             });
 
+            _listener.SetMeasurementEventCallback<double>((instrument, _, _, _) =>
+            {
+                _measurementCounts.AddOrUpdate(instrument.Name, 1, (_, count) => count + 1);
+            });
+
             _listener.Start();
         }
 
         public long Total(string name) => _totals.GetValueOrDefault(name);
+
+        public int MeasurementCount(string name) => _measurementCounts.GetValueOrDefault(name);
 
         public void Dispose() => _listener.Dispose();
     }

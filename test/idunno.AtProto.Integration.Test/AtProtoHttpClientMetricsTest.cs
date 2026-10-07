@@ -35,6 +35,9 @@ public class AtProtoHttpClientMetricsTest
         var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
         var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
         var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
+        var requestContentLengthCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.content_length");
+        var responseContentLengthCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.response.content_length");
+        var requestDurationCollector = new MetricCollector<double>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
 
         Did expectedDid = "did:plc:test";
         Nsid expectedCollection = "blue.idunno.test";
@@ -55,7 +58,8 @@ public class AtProtoHttpClientMetricsTest
             expectedCollection: expectedCollection,
             expectedRecordKey: expectedRecordKey,
             expectedAtUri: expectedAtUri,
-            expectedCid: expectedCid);
+            expectedCid: expectedCid,
+            includeResponseContentLength: true);
 
         JsonNode record = JsonSerializer.SerializeToNode(new TestRecord { TestValue = "test" })!;
         var createRequest = new CreateRecordRequest(
@@ -125,6 +129,15 @@ public class AtProtoHttpClientMetricsTest
         Assert.Equal(
             "POST",
             xrpcRequestMeasurements[0]!.Tags["http_method"]);
+
+        CollectedMeasurement<long> requestLength = Assert.Single(requestContentLengthCollector.GetMeasurementSnapshot());
+        Assert.True(requestLength.Value > 0);
+
+        CollectedMeasurement<long> responseLength = Assert.Single(responseContentLengthCollector.GetMeasurementSnapshot());
+        Assert.True(responseLength.Value > 0);
+
+        CollectedMeasurement<double> requestDuration = Assert.Single(requestDurationCollector.GetMeasurementSnapshot());
+        Assert.Equal("success", requestDuration.Tags["outcome"]);
     }
 
     [Fact]
@@ -1463,7 +1476,8 @@ public class AtProtoHttpClientMetricsTest
         AtUri expectedAtUri,
         Cid expectedCid,
         bool triggerDPoPRetry = false,
-        bool returnBadGetResult = false)
+        bool returnBadGetResult = false,
+        bool includeResponseContentLength = false)
     {
         bool dPoPRotationSent = false;
 
@@ -1534,7 +1548,20 @@ public class AtProtoHttpClientMetricsTest
                     ValidationStatus = "valid"
                 };
 
-                await response.WriteAsJsonAsync(createRecordResponse);
+                if (includeResponseContentLength)
+                {
+                    byte[] responseBody = JsonSerializer.SerializeToUtf8Bytes(
+                        createRecordResponse,
+                        AtProtoServer.AtProtoJsonSerializerOptions);
+
+                    response.ContentLength = responseBody.Length;
+                    await response.Body.WriteAsync(responseBody, context.RequestAborted);
+                }
+                else
+                {
+                    await response.WriteAsJsonAsync(createRecordResponse);
+                }
+
                 return;
             }
             else if (request.Path == AtProtoServer.GetRecordEndpoint)

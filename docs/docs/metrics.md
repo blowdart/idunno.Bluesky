@@ -68,6 +68,22 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | --- | --- | --- | --- |
 | `requests.total.xrpc_request` | Counter&lt;long&gt; | {requests} | Total number of xRPC requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`, tagged with the xrpc_endpoint. |
 
+### Metric: request.content_length
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `request.content_length` | Counter&lt;long&gt; | By | Sum of request body sizes reported by `Content-Length`, when that header is present. Tagged with `server`, `xrpc_endpoint` and `http_method`. This is the declared length, not a count of bytes actually transmitted. |
+
+### Metric: response.content_length
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `response.content_length` | Counter&lt;long&gt; | By | Sum of response body sizes reported by `Content-Length`, when that header is present. Tagged with `server`, `xrpc_endpoint` and `http_method`. This is the declared length, not a count of bytes actually consumed. |
+
+The `request.duration` histogram is tagged with `outcome`, which is one of `success`, `http_error`, `deserialization_error`,
+`response_too_large`, `cancelled`, `transport_error` or `exception`. It also includes the `server` tag and, for XRPC calls,
+the `xrpc_endpoint` tag.
+
 ## idunno.AtProto.Jetstream
 
 The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.Jetstream.AtProtoJetstream` client.
@@ -126,6 +142,24 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 | --- | --- | --- | --- |
 | `total.connections_failed` | Counter&lt;long&gt; | {connections} | Total number of WebSocket connections to the JetStream that failed by an `AtProtoJetstream` instance. |
 
+### Metric: connections.active
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `connections.active` | UpDownCounter&lt;long&gt; | {connections} | Current number of open Jetstream connections, tagged with the configured server URI. |
+
+### Metric: connection.duration
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `connection.duration` | Histogram&lt;double&gt; | s | Duration of completed Jetstream connections, tagged with the configured server URI. |
+
+### Metric: message.interarrival.duration
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `message.interarrival.duration` | Histogram&lt;double&gt; | s | Time between successive messages received on a Jetstream connection, tagged with the configured server URI. A rising interval can indicate an idle or stalled stream; it measures message arrival, not application event processing. |
+
 ### Archive snapshot and replay metrics
 
 These counters use the same `idunno.AtProto.Jetstream` meter and a `server` tag containing only the
@@ -171,6 +205,9 @@ For dependency-injection scenarios, supply the application's `IMeterFactory` thr
 | `total.signing_key_cache_hits` | Counter&lt;long&gt; | {lookups} | Signing keys, or failures to resolve one, found in the signing key cache. Only recorded when `VerifySignatures` and `CacheSigningKeys` are both on. |
 | `total.signing_key_cache_misses` | Counter&lt;long&gt; | {lookups} | Signing keys not found in the signing key cache, each of which resolved a DID document inline and delayed the stream. Only recorded when `VerifySignatures` and `CacheSigningKeys` are both on. |
 | `total.signing_key_refreshes` | Counter&lt;long&gt; | {lookups} | Cached signing keys resolved again because a signature failed to verify against them, which may mean a key was rotated without an `#identity` event. |
+| `connections.active` | UpDownCounter&lt;long&gt; | {connections} | Current number of open firehose connections, tagged with the server origin. |
+| `connection.duration` | Histogram&lt;double&gt; | s | Duration of completed firehose connections, tagged with the server origin. |
+| `message.interarrival.duration` | Histogram&lt;double&gt; | s | Time between successive frames received on a firehose connection, tagged with the server origin. A rising interval can indicate an idle or stalled stream; it measures frame arrival, not event processing. |
 
 ## idunno.AtProto.DidHandleCache
 
@@ -178,6 +215,11 @@ The `idunno.AtProto.DidHandleCache` Meter reports measures from `idunno.AtProto.
 Register the meter with `AddAtProtoDidHandleCacheMetrics()`, and supply an `IMeterFactory` with `DidHandleCacheOptions.MeterFactory`.
 
 Hits and misses are only recorded by `ResolveHandleAsync()`; `TryGetCachedHandle()` records nothing.
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `lookup.duration` | Histogram&lt;double&gt; | s | Duration of a `ResolveHandleAsync()` call, including time waiting for a shared resolution. Tagged with `outcome`: `hit`, `miss`, `coalesced` or `rejected`. |
+| `pending_lookups` | UpDownCounter&lt;long&gt; | {lookups} | Current aggregate number of distinct lookups waiting for or performing a resolution across all `DidHandleCache` instances. |
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
@@ -376,3 +418,19 @@ or `token_refresh` when it disappeared while its access token was being refreshe
 | `dataprotection.failures.total` | Counter&lt;long&gt; | {failures} | Total data protection failures. A sustained rise usually means key ring rotation or a key ring which is not shared across every instance of a multi-instance deployment. |
 
 Tagged with `source`, either `correlation_cookie` or `identity_store`, identifying which payload could not be unprotected.
+
+## idunno.AtProto.OAuthCallback
+
+The `idunno.AtProto.OAuthCallback` Meter reports measures from the local OAuth callback server. Register it with
+`AddAtProtoOAuthCallbackMetrics()` from the `OpenTelemetry.Metrics` namespace:
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddAtProtoOAuthCallbackMetrics());
+```
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `callbacks.total` | Counter&lt;long&gt; | {callbacks} | Callback completion outcomes, tagged with `outcome`: `success` when an authorization code was received, `oauth_error` when the provider returned an error or no code, `timeout`, `cancelled` or `disposed`. |
+| `callback.wait.duration` | Histogram&lt;double&gt; | s | Time from the first `WaitForCallbackAsync()` call until a callback, timeout, cancellation or disposal. Tagged with the same `outcome`. Callbacks received before a wait begins have no duration measurement. |
+| `requests.rejected.total` | Counter&lt;long&gt; | {requests} | Rejected requests, tagged with `reason`: `bad_request` for invalid callback requests and `method_not_allowed` for non-GET requests. |

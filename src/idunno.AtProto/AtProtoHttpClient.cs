@@ -1783,6 +1783,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     {
         long startTimestamp = Stopwatch.GetTimestamp();
         string xrpcEndpoint = GetXrpcEndpointName(endpoint);
+        string outcome = "exception";
 
         try
         {
@@ -1878,6 +1879,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 try
                 {
                     await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+
+                    if (httpRequestMessage.Content?.Headers.ContentLength is long requestContentLength)
+                    {
+                        _metrics.RequestContentLength.Add(
+                            requestContentLength,
+                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+                    }
+
                     _metrics.RequestsSent.Add(
                         1,
                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1896,6 +1907,15 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
+
+                        if (httpResponseMessage.Content.Headers.ContentLength is long responseContentLength)
+                        {
+                            _metrics.ResponseContentLength.Add(
+                                responseContentLength,
+                                new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+                        }
 
                         AtProtoHttpResult<TResult> result = new()
                         {
@@ -1922,6 +1942,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             }
                             catch (HttpRequestException)
                             {
+                                outcome = "response_too_large";
+
                                 // The service returned more than we are willing to allocate, so the response cannot be used and
                                 // must not be handed to the handler.
                                 Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
@@ -1942,6 +1964,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
+                            outcome = "success";
+
                             _metrics.SuccessfulRequests.Add(
                                 1,
                                 new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -1964,6 +1988,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
                                 if (responseContent is null)
                                 {
+                                    outcome = "response_too_large";
+
                                     // The service returned more than we are willing to allocate, so the response cannot be used.
                                     Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
 
@@ -2006,6 +2032,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 }
                                 catch (Exception ex) when (ex is JsonException or DecoderFallbackException)
                                 {
+                                    outcome = "deserialization_error";
+
                                     _metrics.DeserializationFailures.Add(
                                         1,
                                         new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -2025,6 +2053,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
                         }
                         else
                         {
+                            outcome = "http_error";
+
                             _metrics.FailedRequests.Add(
                                 1,
                                 new KeyValuePair<string, object?>("server", service.Host.ToString()),
@@ -2144,6 +2174,16 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 }
             }
         }
+        catch (OperationCanceledException)
+        {
+            outcome = "cancelled";
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            outcome = "transport_error";
+            throw;
+        }
         finally
         {
             TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
@@ -2152,6 +2192,8 @@ public class AtProtoHttpClient<TResult> where TResult : class
             {
                 tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
             }
+
+            tags.Add(new KeyValuePair<string, object?>("outcome", outcome));
 
             _metrics.RequestDuration.Record(
                     Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
