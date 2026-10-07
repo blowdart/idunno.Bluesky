@@ -424,6 +424,9 @@ Tagged with `source`, either `correlation_cookie` or `identity_store`, identifyi
 
 ## idunno.AtProto.OAuthCallback
 
+Callback metric recording is best-effort. Exceptions thrown by metric listeners are logged as warnings without interrupting
+HTTP responses, callback completion or server disposal.
+
 The `idunno.AtProto.OAuthCallback` Meter reports measures from the local OAuth callback server. Register it with
 `AddAtProtoOAuthCallbackMetrics()` from the `OpenTelemetry.Metrics` namespace:
 

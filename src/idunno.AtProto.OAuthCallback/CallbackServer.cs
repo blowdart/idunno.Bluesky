@@ -174,7 +174,7 @@ public sealed class CallbackServer : IAsyncDisposable
                     if (server._source.TrySetException(listenerTask.Exception.InnerExceptions))
                     {
                         CallbackServerMetrics.RecordCallbackCompletion(
-                            "listener_error", Interlocked.Read(ref server._callbackWaitStartTimestamp));
+                            "listener_error", Interlocked.Read(ref server._callbackWaitStartTimestamp), server._logger);
                         server.ReleaseTimeout();
                     }
                 }
@@ -652,7 +652,7 @@ public sealed class CallbackServer : IAsyncDisposable
                 long startTimestamp = Interlocked.Read(ref _callbackWaitStartTimestamp);
                 if (startTimestamp != 0)
                 {
-                    CallbackServerMetrics.RecordCallbackCompletion("disposed", startTimestamp);
+                    CallbackServerMetrics.RecordCallbackCompletion("disposed", startTimestamp, _logger);
                 }
             }
         }
@@ -663,7 +663,7 @@ public sealed class CallbackServer : IAsyncDisposable
                 long startTimestamp = Interlocked.Read(ref _callbackWaitStartTimestamp);
                 if (startTimestamp != 0)
                 {
-                    CallbackServerMetrics.RecordCallbackCompletion("cancelled", startTimestamp);
+                    CallbackServerMetrics.RecordCallbackCompletion("cancelled", startTimestamp, _logger);
                 }
             }
         }
@@ -672,7 +672,7 @@ public sealed class CallbackServer : IAsyncDisposable
             Logger.CallbackTimedOut(_logger);
             if (_source.TrySetCanceled(new CancellationToken(canceled: true)))
             {
-                CallbackServerMetrics.RecordCallbackCompletion("timeout", Interlocked.Read(ref _callbackWaitStartTimestamp));
+                CallbackServerMetrics.RecordCallbackCompletion("timeout", Interlocked.Read(ref _callbackWaitStartTimestamp), _logger);
             }
         }
     }
@@ -952,7 +952,7 @@ public sealed class CallbackServer : IAsyncDisposable
                 {
                     CallbackServerMetrics.RecordCallbackCompletion(
                         authorizationCodeIssued ? "success" : "oauth_error",
-                        Interlocked.Read(ref _callbackWaitStartTimestamp));
+                        Interlocked.Read(ref _callbackWaitStartTimestamp), _logger);
                 }
 
                 ReleaseTimeout();
@@ -963,7 +963,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private async Task BadRequest(HttpContext context)
     {
         Logger.BadRequest(_logger, context.Request.Path);
-        CallbackServerMetrics.RecordRejectedRequest("bad_request");
+        CallbackServerMetrics.RecordRejectedRequest("bad_request", _logger);
 
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
         context.Response.ContentType = HtmlContentType;
@@ -974,7 +974,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private async Task MethodNotAllowed(HttpContext context)
     {
         Logger.MethodNotAllowed(_logger, context.Request.Method, context.Request.Path);
-        CallbackServerMetrics.RecordRejectedRequest("method_not_allowed");
+        CallbackServerMetrics.RecordRejectedRequest("method_not_allowed", _logger);
 
         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
         context.Response.ContentType = HtmlContentType;

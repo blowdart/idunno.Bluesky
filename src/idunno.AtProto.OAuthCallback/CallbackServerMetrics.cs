@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 
+using Microsoft.Extensions.Logging;
+
 namespace idunno.AtProto.OAuthCallback;
 
 /// <summary>
@@ -37,18 +39,36 @@ public static class CallbackServerMetrics
     /// </summary>
     public static string MeterVersion => "1.0.0";
 
-    internal static void RecordCallbackCompletion(string outcome, long startTimestamp)
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Metric observers must not interrupt callback completion or server cleanup; failures are logged.")]
+    internal static void RecordCallbackCompletion(string outcome, long startTimestamp, ILogger logger)
     {
-        s_callbacks.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
-
-        if (startTimestamp != 0)
+        try
         {
-            s_callbackWaitDuration.Record(
-                Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
-                new KeyValuePair<string, object?>("outcome", outcome));
+            s_callbacks.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
+
+            if (startTimestamp != 0)
+            {
+                s_callbackWaitDuration.Record(
+                    Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
+                    new KeyValuePair<string, object?>("outcome", outcome));
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.MetricRecordingFailed(logger, exception);
         }
     }
 
-    internal static void RecordRejectedRequest(string reason) =>
-        s_rejectedRequests.Add(1, new KeyValuePair<string, object?>("reason", reason));
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Metric observers must not interrupt HTTP responses; failures are logged.")]
+    internal static void RecordRejectedRequest(string reason, ILogger logger)
+    {
+        try
+        {
+            s_rejectedRequests.Add(1, new KeyValuePair<string, object?>("reason", reason));
+        }
+        catch (Exception exception)
+        {
+            Logger.MetricRecordingFailed(logger, exception);
+        }
+    }
 }

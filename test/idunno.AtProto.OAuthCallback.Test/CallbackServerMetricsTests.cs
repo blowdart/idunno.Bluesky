@@ -1,9 +1,14 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Net;
+using System.Reflection;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using OpenTelemetry;
@@ -14,6 +19,63 @@ namespace idunno.AtProto.OAuthCallback.Test;
 [Collection("CallbackServer")]
 public class CallbackServerMetricsTests
 {
+    [Theory]
+    [InlineData("idunno.atproto.oauthcallback.callbacks.total", false)]
+    [InlineData("idunno.atproto.oauthcallback.callbacks.total", true)]
+    [InlineData("idunno.atproto.oauthcallback.callback.wait.duration", false)]
+    [InlineData("idunno.atproto.oauthcallback.callback.wait.duration", true)]
+    [InlineData("idunno.atproto.oauthcallback.requests.rejected.total", false)]
+    [InlineData("idunno.atproto.oauthcallback.requests.rejected.total", true)]
+    public async Task MetricListenerFailuresDoNotInterruptResponsesOrDisposal(string instrumentName, bool disposeWhileWaiting)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        InvalidOperationException failure = new("Deliberate metric listener failure.");
+        using MeterListener listener = new();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Name == CallbackServerMetrics.MeterName && instrument.Name == instrumentName)
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, _, _) => throw failure);
+        listener.SetMeasurementEventCallback<double>((_, _, _, _) => throw failure);
+        listener.Start();
+        using MetricFailureLoggerProvider logProvider = new();
+        using ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logProvider));
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(loggerFactory: loggerFactory);
+        WebApplication application = (WebApplication)typeof(CallbackServer)
+            .GetField("_listener", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(server)!;
+        IHostApplicationLifetime lifetime = application.Services.GetRequiredService<IHostApplicationLifetime>();
+        Task<string> callback = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken);
+        using HttpClient client = new();
+
+        using HttpResponseMessage badRequest = await client.GetAsync(server.Uri, cancellationToken);
+        Assert.Equal(HttpStatusCode.BadRequest, badRequest.StatusCode);
+        Assert.Equal("<h1>Invalid request.</h1>", await badRequest.Content.ReadAsStringAsync(cancellationToken));
+        using HttpResponseMessage wrongMethod = await client.PostAsync(server.Uri, null, cancellationToken);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, wrongMethod.StatusCode);
+        Assert.Equal("<h1>Method Not Allowed.</h1>", await wrongMethod.Content.ReadAsStringAsync(cancellationToken));
+
+        if (disposeWhileWaiting)
+        {
+            await server.DisposeAsync();
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await callback);
+        }
+        else
+        {
+            using HttpResponseMessage response = await client.GetAsync(new Uri($"{server.Uri}?code=abc&state=xyz"), cancellationToken);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Equal("?code=abc&state=xyz", await callback.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            await server.DisposeAsync();
+        }
+
+        Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
+        Assert.Throws<ObjectDisposedException>(() => application.Services.GetRequiredService<IHostApplicationLifetime>());
+        Assert.NotEmpty(logProvider.Failures);
+        Assert.All(logProvider.Failures, exception => Assert.Same(failure, exception));
+    }
+
     [Fact]
     public async Task CallbackServerMetricsReportOutcomesAndRejectedRequests()
     {
@@ -156,6 +218,32 @@ public class CallbackServerMetricsTests
                 if (categoryName == typeof(CallbackServer).FullName && eventId.Id == 1)
                 {
                     onListening();
+                }
+            }
+        }
+    }
+
+    private sealed class MetricFailureLoggerProvider : ILoggerProvider
+    {
+        public ConcurrentQueue<Exception?> Failures { get; } = new();
+
+        public ILogger CreateLogger(string categoryName) => new MetricFailureLogger(this);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class MetricFailureLogger(MetricFailureLoggerProvider provider) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (eventId.Id == 16 && logLevel == LogLevel.Warning)
+                {
+                    provider.Failures.Enqueue(exception);
                 }
             }
         }
