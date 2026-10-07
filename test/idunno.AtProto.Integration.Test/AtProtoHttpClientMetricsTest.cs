@@ -59,6 +59,50 @@ public class AtProtoHttpClientMetricsTest
         Assert.Equal("exception", Assert.Single(durationCollector.GetMeasurementSnapshot()).Tags["outcome"]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CallerCancellationDuringCallbacksIsReportedAsCancelled(bool responseCallback)
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
+            context => context.Response.WriteAsync("{}"));
+        using HttpClient httpClient = testServer.CreateClient();
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        TaskCompletionSource callbackStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task WaitForCancellation(CancellationToken token)
+        {
+            callbackStarted.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+        }
+
+        if (responseCallback)
+        {
+            client.OnResponseReceived = (_, token) => WaitForCancellation(token);
+        }
+        else
+        {
+            client.OnSendingRequest = (_, token) => WaitForCancellation(token);
+        }
+
+        Task<AtProtoHttpResult<string>> request = client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: cancellation.Token);
+
+        await callbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await request);
+
+        Assert.Equal("cancelled", Assert.Single(durationCollector.GetMeasurementSnapshot()).Tags["outcome"]);
+    }
+
     [Fact]
     public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
     {

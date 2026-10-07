@@ -4,10 +4,12 @@
 #pragma warning disable CS0618 // The shared callback retains its legacy base event type.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
@@ -631,6 +633,89 @@ public class AtProtoJetstreamV2Tests
 
         Assert.True(jetstream.IsConnected);
         Assert.Equal(2, server.DictionaryRequests);
+    }
+
+    [Fact]
+    public async Task AReplacedReceiveLoopRemovesLateMessageMetricState()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TaskCompletionSource sendMessage = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource measurementStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource messageDelivered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource replacementOpened = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ConcurrentQueue<WebSocketState> stateChanges = new();
+        using ManualResetEventSlim releaseMeasurement = new(false);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connectionNumber, token) =>
+        {
+            if (connectionNumber == 1)
+            {
+                await sendMessage.Task.WaitAsync(token);
+                await SendText(socket, IdentityEvent(100), token);
+            }
+        });
+        using var meterFactory = new TestMeterFactory();
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Scope == meterFactory && instrument.Name == "idunno.atproto.jetstream.total.messages")
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, _, _) =>
+        {
+            measurementStarted.TrySetResult();
+            Assert.True(releaseMeasurement.Wait(TimeSpan.FromSeconds(30), cancellationToken));
+        });
+        listener.Start();
+        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
+        {
+            UseCompression = false,
+            MeterFactory = meterFactory
+        });
+        using var closedCollector = new MetricCollector<long>(
+            meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_closed");
+        using var httpClient = new HttpClient();
+        jetstream.MessageReceived += (_, _) => messageDelivered.TrySetResult();
+        await jetstream.ConnectAsync(uri: server.Uri, cursor: null, httpClient: httpClient, cancellationToken: cancellationToken);
+        jetstream.ConnectionStateChanged += (_, e) =>
+        {
+            stateChanges.Enqueue(e.State);
+            if (e.State == WebSocketState.Open)
+            {
+                replacementOpened.TrySetResult();
+            }
+        };
+
+        try
+        {
+            sendMessage.SetResult();
+            await measurementStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            // Hold the old loop before it stores the message timestamp until replacement has removed its metric state.
+            jetstream.DidFilter = [new Did(TestDid)];
+            await replacementOpened.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        }
+        finally
+        {
+            releaseMeasurement.Set();
+        }
+
+        await messageDelivered.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        JetstreamMetrics metrics = (JetstreamMetrics)typeof(AtProtoJetstream)
+            .GetField("_metrics", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(jetstream)!;
+        var timestamps = (ConcurrentDictionary<object, long>)typeof(JetstreamMetrics)
+            .GetField("_lastMessageTimestamps", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(metrics)!;
+
+        for (int attempt = 0; attempt < 100 && !timestamps.IsEmpty; attempt++)
+        {
+            await Task.Delay(20, cancellationToken);
+        }
+
+        Assert.Empty(timestamps);
+        Assert.Equal(1, closedCollector.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.DoesNotContain(WebSocketState.Aborted, stateChanges);
+        Assert.Equal(1, stateChanges.Count(state => state == WebSocketState.Closed));
     }
 
     [Fact]

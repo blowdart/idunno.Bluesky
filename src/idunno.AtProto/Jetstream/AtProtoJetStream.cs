@@ -2269,14 +2269,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 stateChanges: null,
                 cancellationToken).ConfigureAwait(false);
         }
-        else if (!finalStateRaised && client.State != WebSocketState.Open && !ReferenceEquals(client, _replacedClient))
+        else if (client.State != WebSocketState.Open)
         {
             _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
 
-            // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
-            // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
-            // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            if (!finalStateRaised && !ReferenceEquals(client, _replacedClient))
+            {
+                // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
+                // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
+                // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+            }
         }
     }
 
