@@ -59,8 +59,8 @@ public class RecordKeyCreationTests
                 }
 
                 using JsonDocument request = await JsonDocument.ParseAsync(
-        context.Request.Body,
-        cancellationToken: TestContext.Current.CancellationToken);
+                    context.Request.Body,
+                    cancellationToken: TestContext.Current.CancellationToken);
                 requests.Add(request.RootElement.Clone());
                 context.Response.StatusCode = (int)statusCode;
                 context.Response.ContentType = "application/json";
@@ -888,7 +888,7 @@ public class RecordKeyCreationTests
             return Task.FromResult<IList<Facet>>(
             [
                 new(new ByteSlice(0, 19), [new LinkFacetFeature("https://example.com")]),
-                            new(new ByteSlice(20, 33), [new MentionFacetFeature(s_did)])
+                new(new ByteSlice(20, 33), [new MentionFacetFeature(s_did)])
             ]);
         }
     }
