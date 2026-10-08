@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Net.WebSockets;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
 using System.Web;
@@ -41,6 +42,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 #endif
 
     private volatile bool _disposed;
+
+    private volatile bool _disposing;
 
     private enum ConsumptionMode
     {
@@ -205,6 +208,19 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     // Replaced on reconnection, under _syncLock, but read without it by the state properties and by anything holding
     // its own reference to a socket, so the write has to be published rather than left for a reader to notice.
     private volatile ClientWebSocket _client;
+
+    private Task _receiveLoopTask = Task.CompletedTask;
+
+    private readonly HashSet<Task> _receiveLoopTasks = [];
+
+    private TaskCompletionSource? _asyncDisposal;
+
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a drain holds it makes the release which ends that drain throw.")]
+    private readonly SemaphoreSlim _parserDrainSemaphore = new(1, 1);
+
+    private readonly Queue<(ConnectionStateChangedEventArgs Args, ClientWebSocket? Client)> _stateNotifications = new();
+
+    private bool _dispatchingStateNotifications;
 
     private const string HttpClientName = Agent.HttpClientName;
     internal HttpClientOptions? _httpClientOptions;
@@ -676,11 +692,27 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="e">The <see cref="ConnectionStateChangedEventArgs"/> for the event.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="e"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Notifications are dispatched in order without holding the socket lock. A connection started from
+    /// a handler queues its notifications until that handler returns. Terminal notifications retain their
+    /// originating socket and are discarded if that socket was replaced before dispatch.</para>
+    /// <para>Collected connect and close transitions are queued before releasing the connection semaphore,
+    /// then dispatched after its release, preserving their order on the same socket.</para>
+    /// </remarks>
     protected virtual void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = _connectionStateChanged;
+        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged;
+        lock (_syncLock)
+        {
+            if (_disposed || (e.SourceClient is not null && !ReferenceEquals(e.SourceClient, _client)))
+            {
+                return;
+            }
+
+            connectionStatusChanged = _connectionStateChanged;
+        }
 
         if (!_disposed)
         {
@@ -688,6 +720,79 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             JetStreamLogger.ClientStateChanged(_logger, e.State);
         }
+    }
+
+    private void PublishConnectionStateChanged(ConnectionStateChangedEventArgs args, ClientWebSocket client)
+    {
+        if (QueueConnectionStateChanges([(args.State, client)]))
+        {
+            DispatchConnectionStateChanges();
+        }
+    }
+
+    private bool QueueConnectionStateChanges(IEnumerable<(WebSocketState State, ClientWebSocket Client)> changes)
+    {
+        lock (_syncLock)
+        {
+            if (_disposed)
+            {
+                return false;
+            }
+
+            foreach (var (state, client) in changes)
+            {
+                if (ReferenceEquals(client, _client))
+                {
+                    _stateNotifications.Enqueue((new ConnectionStateChangedEventArgs(state) { SourceClient = client }, client));
+                }
+            }
+
+            if (_dispatchingStateNotifications || _stateNotifications.Count == 0)
+            {
+                return false;
+            }
+
+            _dispatchingStateNotifications = true;
+            return true;
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Queued notifications must drain before propagating a handler failure.")]
+    private void DispatchConnectionStateChanges()
+    {
+        ExceptionDispatchInfo? failure = null;
+        while (true)
+        {
+            ConnectionStateChangedEventArgs args;
+            lock (_syncLock)
+            {
+                if (!_stateNotifications.TryDequeue(out var notification))
+                {
+                    _dispatchingStateNotifications = false;
+                    break;
+                }
+
+                if (notification.Client is not null && !ReferenceEquals(notification.Client, _client))
+                {
+                    continue;
+                }
+
+                args = notification.Args;
+            }
+
+            try
+            {
+                // Only one dispatcher invokes callbacks. Reentrant connects can enqueue their states without
+                // waiting, but cannot announce a replacement Open before this terminal notification finishes.
+                OnConnectionStateChanged(args);
+            }
+            catch (Exception ex)
+            {
+                failure ??= ExceptionDispatchInfo.Capture(ex);
+            }
+        }
+
+        failure?.Throw();
     }
 
     /// <summary>
@@ -908,7 +1013,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         lock (_syncLock)
         {
             ThrowIfEnumerating();
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
             _consumptionMode = ConsumptionMode.EventDriven;
             _pendingEventConnections++;
         }
@@ -948,11 +1053,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         bool reconnectForUpdatedFilters,
         CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
 
         // State changes are collected rather than raised as they happen, so they can be raised once neither the
         // connection semaphore nor the sync lock is held.
-        List<WebSocketState> stateChanges = [];
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
+        bool dispatchStateChanges = false;
         ClientWebSocket? connectedClient = null;
 
         try
@@ -1031,6 +1137,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             }
             finally
             {
+                dispatchStateChanges = QueueConnectionStateChanges(stateChanges);
                 _connectSemaphore.Release();
             }
         }
@@ -1040,17 +1147,27 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Raising them any earlier runs handler code inside both, where a handler which reconnects waits on a
             // semaphore its own caller is holding, and a handler which takes a lock of its own can deadlock against a
             // thread which holds that lock and is setting a filter.
-            foreach (WebSocketState state in stateChanges)
+            if (dispatchStateChanges)
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                DispatchConnectionStateChanges();
             }
         }
 
-        if (connectedClient is not null && !_disposed)
+        if (connectedClient is not null && !_disposed && !_disposing)
         {
             // The loop is given the socket this call connected rather than reading the field, so a later reconnection
             // which replaces the field does not hand this loop the new socket to read alongside the loop started for it.
-            ReceiveLoop(connectedClient, cancellationToken).FireAndForget();
+            lock (_syncLock)
+            {
+                if (!_disposed && !_disposing && ReferenceEquals(connectedClient, _client) && connectedClient.State == WebSocketState.Open)
+                {
+                    // Schedule outside caller code so no receive callbacks run under the disposal lock.
+                    _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, cancellationToken), CancellationToken.None);
+                    _receiveLoopTasks.Add(_receiveLoopTask);
+                    _ = _receiveLoopTask.ContinueWith(ReceiveLoopCompleted, CancellationToken.None,
+                        TaskContinuationOptions.None, TaskScheduler.Default);
+                }
+            }
 
             // A filter changed whilst the socket was connecting was not applied, as the setter does nothing whilst a
             // socket is not open, and the connection records the filter version copied before it opened, so no
@@ -1123,7 +1240,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         HttpClient? httpClient,
         long skipAtOrBelowSequence,
         bool refreshDictionary,
-        List<WebSocketState> stateChanges,
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges,
         CancellationToken cancellationToken = default)
     {
         if (_client is not null && _client.State == WebSocketState.Open)
@@ -1137,7 +1254,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             // Disposal is checked under the same lock it disposes the socket under, so a connect running alongside a
             // dispose either creates its socket first, and has it disposed there, or stops here.
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
 
             // The state is re-checked inside the lock. Checking it outside only narrows the race, it does not remove it,
             // and a caller which loses that race would otherwise have the socket it is about to connect disposed underneath it.
@@ -1161,7 +1278,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 }
 
                 _client = CreateWebSocketClient();
-                stateChanges.Add(_client.State);
+                stateChanges.Add((_client.State, _client));
             }
 
             // Everything below works against the socket this attempt settled on rather than the field, so a dispose or
@@ -1264,7 +1381,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             if (client.State != previousState)
             {
-                stateChanges.Add(client.State);
+                stateChanges.Add((client.State, client));
             }
 
             // A server which refuses the upgrade with an HTTP error says why in the body of the response, which the web
@@ -1285,7 +1402,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (client.State != previousState)
         {
-            stateChanges.Add(client.State);
+            stateChanges.Add((client.State, client));
         }
 
         if (client.State == WebSocketState.Open)
@@ -1662,7 +1779,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // State changes are collected rather than raised as they happen, so they can be raised once the connection
         // semaphore is released. Raising them any earlier runs handler code inside it, where a handler which connects
         // or closes waits on a semaphore its own caller is holding.
-        List<WebSocketState> stateChanges = [];
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
+        bool dispatchStateChanges = false;
 
         try
         {
@@ -1679,14 +1797,15 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             }
             finally
             {
+                dispatchStateChanges = QueueConnectionStateChanges(stateChanges);
                 _connectSemaphore.Release();
             }
         }
         finally
         {
-            foreach (WebSocketState state in stateChanges)
+            if (dispatchStateChanges)
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                DispatchConnectionStateChanges();
             }
 
             lock (_syncLock)
@@ -1719,7 +1838,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         WebSocketCloseStatus status,
         string statusDescription,
         bool recordAsGracefulDisconnection,
-        List<WebSocketState>? stateChanges,
+        List<(WebSocketState State, ClientWebSocket Client)>? stateChanges,
         CancellationToken cancellationToken)
     {
         WebSocketState startingState = client.State;
@@ -1728,7 +1847,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             return;
         }
-        else if (client.State == WebSocketState.Open)
+        else if (client.State is WebSocketState.Open or WebSocketState.CloseReceived or WebSocketState.CloseSent)
         {
             // The close handshake completes when the server replies to it, so without a deadline of its own a server
             // which never replies holds the caller here for as long as it cares to.
@@ -1745,7 +1864,18 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    await client.CloseAsync(status, statusDescription, closeCancellationTokenSource.Token).ConfigureAwait(false);
+                    Task close;
+                    lock (_syncLock)
+                    {
+                        if (_disposed || client.State is not (WebSocketState.Open or WebSocketState.CloseReceived or WebSocketState.CloseSent))
+                        {
+                            return;
+                        }
+
+                        close = client.CloseAsync(status, statusDescription, closeCancellationTokenSource.Token);
+                    }
+
+                    await close.ConfigureAwait(false);
                 }
                 finally
                 {
@@ -1811,11 +1941,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             if (stateChanges is not null)
             {
-                stateChanges.Add(client.State);
+                stateChanges.Add((client.State, client));
             }
             else
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
             }
         }
     }
@@ -1934,26 +2064,75 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>Preferred over <see cref="Dispose()"/> when the jetstream may still be connected. Disposing synchronously
     /// cannot wait for a close handshake, so it drops the connection and leaves the server to notice, whereas this
     /// closes it the way <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/> would first.</para>
+    /// <para>Waits for the receive loop and queued message parsers to finish before freeing resources.
+    /// Event handlers and any configured parsing scheduler must be allowed to complete their work.</para>
+    /// <para>Concurrent and repeated calls await the same cleanup operation.</para>
     /// </remarks>
-    public async ValueTask DisposeAsync()
+    [SuppressMessage("Usage", "CA1816:Dispose methods should call SuppressFinalize", Justification = "The shared cleanup calls Dispose, which suppresses finalization after cleanup succeeds.")]
+    public ValueTask DisposeAsync()
     {
-        await DisposeAsyncCore().ConfigureAwait(false);
+        TaskCompletionSource completion;
+        lock (_syncLock)
+        {
+            if (_asyncDisposal is not null)
+            {
+                return new ValueTask(_asyncDisposal.Task);
+            }
 
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _asyncDisposal = completion;
+            _disposing = true;
+        }
+
+        // Derived cleanup and event callbacks must run outside the disposal lock.
+        _ = CompleteDisposalAsync(completion);
+
+        return new ValueTask(completion.Task);
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Cleanup failures are propagated through the shared completion task.")]
+    [SuppressMessage("Usage", "CA1849:Call async methods when in an async method", Justification = "Synchronous resource disposal follows asynchronous cleanup; calling DisposeAsync would await this same operation.")]
+    [SuppressMessage("Reliability", "S6966:Awaitable method should be used", Justification = "Calling DisposeAsync from its shared cleanup would await this same operation.")]
+    private async Task CompleteDisposalAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose();
+            completion.SetResult();
+        }
+        catch (OperationCanceledException ex)
+        {
+            completion.SetCanceled(ex.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            completion.SetException(ex);
+        }
     }
 
     /// <summary>
     /// Performs the asynchronous part of disposal.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>Cleanup waits for outstanding receive loops, including those from replaced sockets, before draining
+    /// message parsers. Callbacks and any configured parser scheduler must be allowed to finish during disposal.</para>
+    /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failure to close cleanly must not stop disposal.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "A failure to close cleanly must not stop disposal.")]
     protected virtual async ValueTask DisposeAsyncCore()
     {
-        if (_disposed)
+        lock (_syncLock)
         {
-            return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            // Reject new connections before closing, otherwise a connection opened during cleanup can keep the
+            // receive-loop wait alive indefinitely.
+            _disposing = true;
         }
 
         try
@@ -1963,6 +2142,48 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             JetStreamLogger.CloseError(_logger, ex);
+        }
+
+        try
+        {
+            Task receiveLoops;
+            lock (_syncLock)
+            {
+                receiveLoops = Task.WhenAll(_receiveLoopTasks);
+            }
+
+            await receiveLoops.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.CloseError(_logger, ex);
+        }
+
+        try
+        {
+            await DrainMessageParsersAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.CloseError(_logger, ex);
+        }
+    }
+
+    private void ReceiveLoopCompleted(Task task)
+    {
+        try
+        {
+            if (task.Exception is not null)
+            {
+                JetStreamLogger.CloseError(_logger, task.Exception);
+            }
+        }
+        finally
+        {
+            lock (_syncLock)
+            {
+                _receiveLoopTasks.Remove(task);
+            }
         }
     }
 
@@ -2073,10 +2294,27 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     try
                     {
                         await _sendSemaphore.WaitAsync(sendCancellationTokenSource.Token).ConfigureAwait(false);
+                        bool replied = false;
 
                         try
                         {
-                            await client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: sendCancellationTokenSource.Token).ConfigureAwait(false);
+                            Task reply;
+                            lock (_syncLock)
+                            {
+                                // CloseAsync can finish while this reply waits for the send slot. Disposal and socket
+                                // replacement use this lock too, so checking and starting the write are atomic with them.
+                                if (!_disposed && client.State is WebSocketState.Open or WebSocketState.CloseReceived)
+                                {
+                                    reply = client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, sendCancellationTokenSource.Token);
+                                    replied = true;
+                                }
+                                else
+                                {
+                                    reply = Task.CompletedTask;
+                                }
+                            }
+
+                            await reply.ConfigureAwait(false);
                         }
                         finally
                         {
@@ -2085,7 +2323,13 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                         // The server asked to close and the close was completed by replying to it, which is as graceful
                         // as a disconnection gets. The flag records how the connection ended, not which end ended it.
-                        DisconnectedGracefully = true;
+                        lock (_syncLock)
+                        {
+                            if (replied && ReferenceEquals(client, _client))
+                            {
+                                DisconnectedGracefully = true;
+                            }
+                        }
                     }
                     catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                     {
@@ -2095,14 +2339,15 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                         client.Abort();
                     }
 
-                    JetStreamLogger.CloseMessageReceived(_logger);
+                    JetStreamLogger.CloseMessageReceived(_logger, webSocketReceiveResult.CloseStatus,
+                        ForLogging(webSocketReceiveResult.CloseStatusDescription ?? string.Empty));
 
                     _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
 
                     // A connection being replaced to apply updated filters is announced by the reconnection instead.
-                    if (!ReferenceEquals(client, _replacedClient))
+                    if (ReferenceEquals(client, _client) && !ReferenceEquals(client, _replacedClient))
                     {
-                        OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                        PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
                     }
 
                     finalStateRaised = true;
@@ -2223,10 +2468,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     }
                 }
             }
-            catch (Exception) when (ReferenceEquals(client, _replacedClient) && client.State != WebSocketState.Open)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                JetStreamLogger.ReceiveLoopStopped(_logger, "Cancellation");
+                break;
+            }
+            catch (Exception e) when ((_disposed || _disposing || ReferenceEquals(client, _replacedClient)) &&
+                e is ObjectDisposedException or WebSocketException or OperationCanceledException)
             {
                 // The socket was closed, and possibly disposed, by a reconnection applying updated filters before this
                 // loop noticed. Nothing has gone wrong, so the loop just ends.
+                JetStreamLogger.ReceiveLoopStopped(_logger, _disposed || _disposing ? "Disposal" : "Socket replacement");
                 break;
             }
             catch (Exception e)
@@ -2273,12 +2525,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             _metrics.RecordConnectionClosed(client, new KeyValuePair<string, object?>("server", _serverTag));
 
-            if (!finalStateRaised && !ReferenceEquals(client, _replacedClient))
+            if (!finalStateRaised && ReferenceEquals(client, _client) && !ReferenceEquals(client, _replacedClient))
             {
                 // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
                 // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
                 // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
             }
         }
     }
@@ -2462,10 +2714,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <remarks>
     /// <para>Every parsing slot is taken, which can only happen once the parsers holding them have finished, and then
-    /// all of them are given back.</para>
+    /// all of them are given back. Concurrent drains are serialized so they cannot each retain a subset of slots
+    /// while waiting for the other drain to release its slots.</para>
     /// </remarks>
     internal async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
     {
+        await _parserDrainSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         int slots = Options.MaximumConcurrentMessageParsers;
         int taken = 0;
 
@@ -2490,6 +2744,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // which has gone, so there is nothing to give back, and the disposal is not an error here.
                 }
             }
+
+            _parserDrainSemaphore.Release();
         }
     }
 

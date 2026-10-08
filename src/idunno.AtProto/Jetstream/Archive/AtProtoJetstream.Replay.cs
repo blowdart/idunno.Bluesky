@@ -161,11 +161,13 @@ public partial class AtProtoJetstream
                     }
                     catch (JetstreamConnectionException ex) when (ex.ErrorDetail?.Error == "CursorTooOld")
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "Expired cursor; archive fallback", lastDelivered, ex);
                         restartFromArchive = true;
                         break;
                     }
                     catch (InvalidDataException ex) when (ex.Message == OutdatedLiveCursorMessage)
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "Expired cursor; archive fallback", lastDelivered, ex);
                         restartFromArchive = true;
                         break;
                     }
@@ -173,20 +175,24 @@ public partial class AtProtoJetstream
                         ex.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
                             HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout)
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "Transient upgrade failure", lastDelivered, ex);
                         break;
                     }
-                    catch (IOException) when (!cancellationToken.IsCancellationRequested)
+                    catch (IOException ex) when (!cancellationToken.IsCancellationRequested)
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "Live stream failure", lastDelivered, ex);
                         break;
                     }
-                    catch (WebSocketException) when (!cancellationToken.IsCancellationRequested)
+                    catch (WebSocketException ex) when (!cancellationToken.IsCancellationRequested)
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "Transport failure", lastDelivered, ex);
                         break;
                     }
                     catch (HttpRequestException ex) when (!cancellationToken.IsCancellationRequested &&
                         (ex.StatusCode is null or HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or
                             HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout))
                     {
+                        JetStreamLogger.ReplayRecovering(_logger, "HTTP transport failure", lastDelivered, ex);
                         break;
                     }
 
@@ -237,6 +243,10 @@ public partial class AtProtoJetstream
         Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(
             new BoundedChannelOptions(1024) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
         int outdatedCursor = 0;
+        int cleaningUp = 0;
+        long lastReceived = long.MinValue;
+        object terminalLock = new();
+        (string Reason, Exception Exception, int Priority)? terminalCause = null;
         AtProtoJetstream live = new(
             uri: _uri,
             options: Options with { MaximumConcurrentMessageParsers = 1 },
@@ -244,6 +254,51 @@ public partial class AtProtoJetstream
             collections: request.Collections?.ToArray(),
             dids: request.Dids?.ToArray());
         await using ConfiguredAsyncDisposable liveDisposal = live.ConfigureAwait(false);
+        void Complete(string reason, Exception exception)
+        {
+            if (channel.Writer.TryComplete(exception))
+            {
+                long received = Interlocked.Read(ref lastReceived);
+                JetStreamLogger.ReplayLiveEnded(_logger, reason, cursor,
+                    received == long.MinValue ? null : received, channel.Reader.Count, exception);
+            }
+        }
+
+        void CompleteAfterParsers(string reason, Exception exception, int priority = 0)
+        {
+            bool startDrain;
+            lock (terminalLock)
+            {
+                startDrain = terminalCause is null;
+                if (terminalCause is null || priority > terminalCause.Value.Priority)
+                {
+                    terminalCause = (reason, exception, priority);
+                }
+            }
+
+            if (!startDrain)
+            {
+                return;
+            }
+
+#pragma warning disable CS4014 // Completion waits for records received before the terminal signal.
+            live.DrainMessageParsersAsync(CancellationToken.None).ContinueWith(
+                completed =>
+                {
+                    lock (terminalLock)
+                    {
+                        // A queued error parser can identify the initiating failure after the close starts draining.
+                        var cause = terminalCause ?? throw new InvalidOperationException("No terminal cause was recorded.");
+                        Complete(completed.IsFaulted ? "Parser drain failure" : cause.Reason,
+                            completed.Exception?.GetBaseException() ?? cause.Exception);
+                    }
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+#pragma warning restore CS4014
+        }
+
         if (request.Kinds is { Count: > 0 })
         {
             live.KindFilter = [.. request.Kinds];
@@ -256,48 +311,66 @@ public partial class AtProtoJetstream
                 return;
             }
 
-            if (args.ParsedEvent is not JetstreamEvent parsed ||
-                !channel.Writer.TryWrite(parsed))
+            if (args.ParsedEvent is not JetstreamEvent { Sequence: long sequence } parsed)
             {
-                channel.Writer.TryComplete(new IOException("The replay consumer fell behind the live stream."));
+                Complete("Invalid event", new InvalidDataException("The live Jetstream event has no sequence cursor."));
+            }
+            else
+            {
+                Interlocked.Exchange(ref lastReceived, sequence);
+                if (!channel.Writer.TryWrite(parsed))
+                {
+                    Complete("Buffer overflow", new IOException("The replay consumer fell behind the live stream."));
+                }
             }
         };
         live.ConnectionStateChanged += (_, args) =>
         {
-            if (args.State is WebSocketState.Closed or WebSocketState.Aborted)
+            if (Volatile.Read(ref cleaningUp) == 0 && args.State is WebSocketState.Closed or WebSocketState.Aborted)
             {
-#pragma warning disable CS4014 // The continuation reports completion or failure to the channel reader.
-                live.DrainMessageParsersAsync(cancellationToken).ContinueWith(
-                    completed => channel.Writer.TryComplete(completed.IsFaulted
-                        ? completed.Exception?.GetBaseException()
-                        : new IOException("The live Jetstream disconnected.")),
-                    CancellationToken.None,
-                    TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-#pragma warning restore CS4014
+                CompleteAfterParsers(live.DisconnectedGracefully ? "Remote close" : "Transport disconnect",
+                    new IOException("The live Jetstream disconnected."));
             }
         };
         live.FaultRaised += (_, args) =>
-            channel.Writer.TryComplete(new IOException($"The live Jetstream reported an error: {args.Fault}"));
+        {
+            string reason = (args.Error, live.State) switch
+            {
+                (not null, _) => "Server error",
+                (_, WebSocketState.Aborted) => "Transport failure",
+                _ => "Receive failure"
+            };
+            CompleteAfterParsers(reason,
+                new IOException($"The live Jetstream reported an error: {ForLogging(args.Fault)}"),
+                priority: args.Error is not null ? 2 : 1);
+        };
         live.InfoReceived += (_, args) =>
         {
             if (args.Name == "OutdatedCursor")
             {
                 Interlocked.Exchange(ref outdatedCursor, 1);
-                channel.Writer.TryComplete(new InvalidDataException(OutdatedLiveCursorMessage));
+                Complete("Expired cursor", new InvalidDataException(OutdatedLiveCursorMessage));
             }
         };
 
-        await live.ConnectAsync(uri: null, cursor: cursor, httpClient: _httpClient,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        await foreach (JetstreamEvent item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        try
         {
-            if (Volatile.Read(ref outdatedCursor) != 0)
+            await live.ConnectAsync(uri: null, cursor: cursor, httpClient: _httpClient,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            await foreach (JetstreamEvent item in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
             {
-                throw new InvalidDataException(OutdatedLiveCursorMessage);
-            }
+                if (Volatile.Read(ref outdatedCursor) != 0)
+                {
+                    throw new InvalidDataException(OutdatedLiveCursorMessage);
+                }
 
-            yield return item;
+                yield return item;
+            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref cleaningUp, 1);
+            JetStreamLogger.ReplayLiveCleanup(_logger, cancellationToken.IsCancellationRequested ? "Cancellation" : "Enumeration disposal", cursor);
         }
     }
 }
