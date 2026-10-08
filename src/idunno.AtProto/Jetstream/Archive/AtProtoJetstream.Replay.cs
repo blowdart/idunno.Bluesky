@@ -50,7 +50,10 @@ public partial class AtProtoJetstream
     /// segment name and checksum, next block index, byte offset and live cursor.
     /// When the fresh archive plan reports a changed checksum, the affected segment starts again and events may repeat.
     /// Make event processing idempotent, delay between bounded retries and surface persistent mismatches.
-    /// Do not retry every <see cref="InvalidDataException"/>, because corrupt data and other inconsistencies use the same type.</para></remarks>
+    /// Do not retry every <see cref="InvalidDataException"/>, because corrupt data and other inconsistencies use the same type.</para>
+    /// <para><see cref="JetstreamOptions.ReplayLiveBufferCapacity"/> bounds decoded events queued during the live
+    /// portion, including live-cursor catch-up. Each live channel captures its capacity when created.
+    /// Overflow drains queued events and recovers from consumed progress; it does not advance checkpoints to received progress.</para></remarks>
     [SuppressMessage("Design", "CA1068:Method should take CancellationToken as the last parameter",
         Justification = "Appending the optional callback preserves the existing positional cancellationToken argument.")]
     public IAsyncEnumerable<JetstreamEvent> ReplayAsync(
@@ -240,8 +243,9 @@ public partial class AtProtoJetstream
         long cursor,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        int capacity = Options.ReplayLiveBufferCapacity;
         Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(
-            new BoundedChannelOptions(1024) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
+            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
         int outdatedCursor = 0;
         int cleaningUp = 0;
         long lastReceived = long.MinValue;
@@ -260,7 +264,7 @@ public partial class AtProtoJetstream
             {
                 long received = Interlocked.Read(ref lastReceived);
                 JetStreamLogger.ReplayLiveEnded(_logger, reason, cursor,
-                    received == long.MinValue ? null : received, channel.Reader.Count, exception);
+                    received == long.MinValue ? null : received, channel.Reader.Count, capacity, exception);
             }
         }
 

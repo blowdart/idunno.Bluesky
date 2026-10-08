@@ -113,8 +113,8 @@ internal static partial class JetStreamLogger
     [LoggerMessage(41, LogLevel.Information, "Connecting to {uri}, which is a different server, so the sequence number and compression dictionary have been reset")]
     internal static partial void ServerChanged(ILogger logger, Uri uri);
 
-    [LoggerMessage(42, LogLevel.Warning, "Replay live connection ended: {reason}; starting cursor {cursor}, last received sequence {sequence}, buffered events {bufferedEvents}")]
-    internal static partial void ReplayLiveEnded(ILogger logger, string reason, long cursor, long? sequence, int bufferedEvents, Exception? exception);
+    [LoggerMessage(42, LogLevel.Warning, "Replay live connection ended: {reason}; starting cursor {cursor}, last received sequence {sequence}, buffered events {bufferedEvents}, capacity {capacity}")]
+    internal static partial void ReplayLiveEnded(ILogger logger, string reason, long cursor, long? sequence, int bufferedEvents, int capacity, Exception? exception);
 
     [LoggerMessage(43, LogLevel.Debug, "Receive loop stopped for {reason}")]
     internal static partial void ReceiveLoopStopped(ILogger logger, string reason);

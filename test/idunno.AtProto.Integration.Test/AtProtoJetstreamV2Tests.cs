@@ -436,10 +436,16 @@ public class AtProtoJetstreamV2Tests
         Assert.Contains("cursor=41", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task ReplayOverflowDrainsBufferedEventsAndReconnectsWithoutSkippingSequences()
+    [Theory]
+    [InlineData(null)]
+    [InlineData(4)]
+    [InlineData(2048)]
+    public async Task ReplayOverflowDrainsBufferedEventsAndReconnectsWithoutSkippingSequences(int? configuredCapacity)
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        int capacity = configuredCapacity ?? 1024;
+        long lastBuffered = 41 + capacity;
+        long lastEvent = lastBuffered + 1;
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
         using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
@@ -457,14 +463,19 @@ public class AtProtoJetstreamV2Tests
                 await burst.Task.WaitAsync(token);
             }
 
-            for (long sequence = connection == 1 ? 42 : 1065; sequence <= 1540; sequence++)
+            for (long sequence = connection == 1 ? 42 : lastBuffered; sequence <= lastEvent; sequence++)
             {
                 await SendText(socket, IdentityEvent(sequence), token);
             }
         });
+        JetstreamOptions options = new() { ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory };
+        if (configuredCapacity is int configured)
+        {
+            options = options with { ReplayLiveBufferCapacity = configured };
+        }
+
         await using var jetstream = new AtProtoJetstream(
-            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
-            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory });
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: options);
         SnapshotRequest request = new() { AfterSeq = 0 };
         SnapshotCheckpoint? checkpoint = null;
         await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
@@ -479,19 +490,131 @@ public class AtProtoJetstreamV2Tests
         await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 42 &&
             entry.Message.Contains("Buffer overflow", StringComparison.Ordinal)), cancellationToken);
 
-        for (long sequence = 42; sequence <= 1540; sequence++)
+        for (long sequence = 42; sequence <= lastEvent; sequence++)
         {
             Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
             Assert.Equal(sequence, replay.Current.Sequence);
             Assert.Equal(sequence - 1, checkpoint?.LiveAfterSeq);
             Assert.Equal(40, checkpoint?.SealedTipSeq);
             Assert.Equal(request.Fingerprint(server.Uri), checkpoint?.RequestFingerprint);
+            Assert.Equal(0, checkpoint?.PlanAfterSeq);
+            Assert.Null(checkpoint?.ReplayAfterSeq);
+            Assert.Null(checkpoint?.SegmentName);
+            Assert.Null(checkpoint?.SegmentChecksum);
+            Assert.Equal(0, checkpoint?.NextBlockIndex);
+            Assert.Equal(0, checkpoint?.NextByteOffset);
         }
 
         Assert.Equal(2, server.Connections.Count);
-        Assert.Contains("cursor=1065", server.Connections.Last().Query, StringComparison.Ordinal);
-        Assert.Contains(logs.Entries, entry => entry.EventId == 42 && entry.Message.Contains("buffered events 1024", StringComparison.Ordinal));
+        Assert.Contains($"cursor={lastBuffered}", server.Connections.Last().Query, StringComparison.Ordinal);
+        RecordedLogEntry overflow = Assert.Single(logs.Entries, entry => entry.EventId == 42);
+        Assert.Contains("Buffer overflow", overflow.Message, StringComparison.Ordinal);
+        Assert.Contains($"buffered events {capacity}, capacity {capacity}", overflow.Message, StringComparison.Ordinal);
+        Assert.Contains($"last received sequence {lastEvent}", overflow.Message, StringComparison.Ordinal);
+        Assert.IsType<IOException>(overflow.Exception);
+        Assert.DoesNotContain("test-key", overflow.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(logs.Entries, entry => entry.Level == LogLevel.Error);
+    }
+
+    [Theory]
+    [InlineData(1, false)]
+    [InlineData(1, true)]
+    [InlineData(3, false)]
+    [InlineData(3, true)]
+    public async Task ReplayCapacityBoundaryAndFullBufferCleanupWaitForPendingParsers(int capacity, bool cancel)
+    {
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        CancellationToken token = cancellation.Token;
+        PausedTaskScheduler scheduler = new();
+        TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var logs = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, _, serverToken) =>
+        {
+            await SendText(socket, IdentityEvent(41), serverToken);
+            await burst.Task.WaitAsync(serverToken);
+            for (long sequence = 42; sequence <= 43 + capacity; sequence++)
+            {
+                await SendText(socket, IdentityEvent(sequence), serverToken);
+            }
+        });
+        JetstreamOptions options = new()
+        {
+            ApiKey = "test-key",
+            UseCompression = false,
+            LoggerFactory = loggerFactory,
+            ReplayLiveBufferCapacity = capacity,
+            TaskFactory = new TaskFactory(scheduler)
+        };
+        await using var jetstream = new AtProtoJetstream(new LocalHttpClientFactory(), uri: server.Uri, options: options);
+        SnapshotCheckpoint? checkpoint = null;
+        IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(new SnapshotRequest(),
+            onCheckpoint: progress => checkpoint = progress, cancellationToken: token).GetAsyncEnumerator(token);
+        Task<bool> first = replay.MoveNextAsync().AsTask();
+        try
+        {
+            await scheduler.Scheduled.WaitAsync(TimeSpan.FromSeconds(30), token);
+            scheduler.RunNext();
+            Assert.True(await first.WaitAsync(TimeSpan.FromSeconds(30), token));
+            Assert.Equal(41, replay.Current.Sequence);
+            burst.SetResult();
+
+            for (int index = 0; index < capacity; index++)
+            {
+                await WaitUntil(() => scheduler.GetPendingCount() != 0, token);
+                scheduler.RunNext();
+            }
+
+            // Scheduling the next parser proves the preceding parser released its single slot.
+            await WaitUntil(() => scheduler.GetPendingCount() != 0, token);
+            Assert.DoesNotContain(logs.Entries, entry => entry.EventId == 42);
+            Assert.Null(checkpoint?.LiveAfterSeq);
+
+            options = options with { ReplayLiveBufferCapacity = capacity + 1 };
+            Assert.Equal(capacity + 1, options.ReplayLiveBufferCapacity);
+            Assert.Equal(capacity, jetstream.Options.ReplayLiveBufferCapacity);
+            scheduler.RunNext();
+            await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 42), token);
+            RecordedLogEntry overflow = Assert.Single(logs.Entries, entry => entry.EventId == 42);
+            Assert.Contains("Buffer overflow", overflow.Message, StringComparison.Ordinal);
+            Assert.Contains($"buffered events {capacity}, capacity {capacity}", overflow.Message, StringComparison.Ordinal);
+            Assert.Contains($"last received sequence {42 + capacity}", overflow.Message, StringComparison.Ordinal);
+
+            await WaitUntil(() => scheduler.GetPendingCount() != 0, token);
+            if (cancel)
+            {
+                await cancellation.CancelAsync();
+            }
+
+            Task cleanup = replay.DisposeAsync().AsTask();
+            await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 45), TestContext.Current.CancellationToken);
+            Assert.False(cleanup.IsCompleted);
+            scheduler.RunPending();
+            await cleanup.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.Null(checkpoint?.LiveAfterSeq);
+            Assert.Single(server.Connections);
+            Assert.DoesNotContain(logs.Entries, entry => entry.Level == LogLevel.Error);
+        }
+        finally
+        {
+            await cancellation.CancelAsync();
+            scheduler.RunPending();
+            try
+            {
+                await first.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+            }
+
+            await replay.DisposeAsync();
+        }
     }
 
     [Theory]
@@ -1959,6 +2082,12 @@ public class AtProtoJetstreamV2Tests
         }
 
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued) => false;
+
+        internal void RunNext()
+        {
+            Assert.True(_pending.TryDequeue(out Task? task));
+            Assert.True(TryExecuteTask(task));
+        }
 
         internal void RunPending()
         {

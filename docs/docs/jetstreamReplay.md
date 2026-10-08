@@ -155,15 +155,64 @@ fallback starting sequence in `ReplayAfterSeq`; resume them with the same origin
 is not valid input to `SnapshotAsync`. Transient connection failures are retried with a short delay; invalid
 credentials and other permanent server refusals are surfaced to the caller.
 
-The live handoff buffers at most 1,024 events. If a slow consumer fills that buffer, replay drains the
+The live handoff uses a bounded decoded-event channel with a default capacity of **1,024 events**.
+Configure `JetstreamOptions.ReplayLiveBufferCapacity` to change this event count. It applies to the live
+portion of `ReplayAsync`, **including catch-up from an older live cursor**, not archive download blocks.
+It is independent of `JetstreamOptions.BufferSize` (WebSocket read-buffer bytes) and `MaxMessageSize`
+(the maximum message size in bytes). It does not change the event-subscription or `StreamAsync` buffers.
+
+Both constructors accept the option, including the constructor taking an `IHttpClientFactory`:
+
+```csharp
+var options = new JetstreamOptions
+{
+    ApiKey = key,
+    ReplayLiveBufferCapacity = 8192
+};
+await using var replayClient = new AtProtoJetstream(options: options);
+// With an existing, appropriately configured HTTP client factory:
+// await using var replayClient = new AtProtoJetstream(httpClientFactory, options: options);
+```
+
+The builder supports the property and a fluent setter:
+
+```csharp
+await using var replayClient = AtProtoJetstream.CreateBuilder()
+    .WithApiKey(key)
+    .SetReplayLiveBufferCapacity(8192)
+    .Build();
+// Alternatively, set builder.ReplayLiveBufferCapacity before Build().
+```
+
+The capacity must be positive; zero and negative values throw `ArgumentOutOfRangeException` at the
+options initializer, builder property setter or fluent setter. Each live channel captures its capacity
+when created; an active channel never resizes. The options property is **init-only**. A `with` copy with a
+different capacity does not change the original options or an existing client's later enumerations or
+reconnections; supply it to a new client. The builder copies the value at `Build()`, so changing the builder
+affects only subsequently built clients.
+
+**8,192 is illustrative, not a recommended optimum or a guaranteed fix.** A larger capacity may absorb
+backlog bursts or temporary consumer pauses and reduce reconnect churn. It cannot fix sustained
+consumption slower than incoming traffic. Events have variable memory cost: an event count is not a
+fixed memory budget. Larger buffers increase memory use and can hold more queued work.
+Monitor available occupancy and overflow frequency, event-time lag, consumer throughput,
+processing/database pauses and memory while choosing a value. **Do not infer time lag from sequence
+differences.** Buffering is not durable storage: persist application effects before advancing the complete
+checkpoint, and make processing tolerant of repeated delivery after recovery.
+
+If a slow consumer fills the buffer, replay drains the
 events already queued, closes the connection and reconnects from the last delivered sequence. It does
 not advance the checkpoint to the last received sequence or drop buffered events to make room.
 Events not queued must be served again by the inclusive cursor, or recovered from the archive if the
-cursor has expired. Persist the full checkpoint only after durably processing preceding events.
+cursor has expired. Recovery still depends on archive availability and retention: if the needed history
+is no longer available, a larger buffer cannot recover it. Compaction can change segment generations and
+require the generation-mismatch recovery described above, including repeated delivery.
+Persist the full checkpoint only after durably processing preceding events.
 
 Enable Jetstream logging to distinguish reconnect causes. Established live-connection warnings (event 42)
 report buffer overflow, remote close, transport or receive failure, server error or notice-based cursor expiration,
-with the connection's starting cursor, last received sequence and buffered event count. Recovery entries (event 44)
+with the connection's starting cursor, last received sequence, buffered event count and configured capacity.
+Occupancy is observed when the channel completes, not a continuous occupancy metric. Recovery entries (event 44)
 report the last delivered sequence and exception; an expired cursor reports archive fallback. Upgrade-time
 `CursorTooOld` rejection emits the recovery entry without a live-end warning, so starting cursor,
 last received sequence and buffered count are not available in that path. Debug entries identify cancellation
@@ -192,10 +241,12 @@ before tailing live:
 ```powershell
 $env:_JetstreamApiKey = '<your key>'
 $env:_BlueskyHandle = 'bot.idunno.blue'
-dotnet run --project samples\Samples.JetstreamReplay -- --host wss://jetstream.us-west.bsky.network
+dotnet run --project samples\Samples.JetstreamReplay -- --host wss://jetstream.us-west.bsky.network --replay-live-buffer-capacity 8192
 ```
 
-The sample also accepts `--api-key` and `--handle` (each overriding its environment variable), and saves an archive or live checkpoint
+The sample's `--replay-live-buffer-capacity` defaults to 1,024 events and rejects non-positive values.
+The 8,192 value above is only illustrative. The sample also accepts `--api-key` and `--handle`
+(each overriding its environment variable), and saves an archive or live checkpoint
 to `jetstream-replay-checkpoint.json`. On an archive generation mismatch it logs the failure and retries up to
 **five times after the initial attempt**, waiting **30 seconds before each retry**, using the latest successfully
 saved checkpoint and the same client. The retry budget is for the entire run and does not reset after progress.
