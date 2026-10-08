@@ -708,7 +708,7 @@ public partial class BlueskyAgent
         RecordKey? rKey,
         StrongReference strongReference,
         string text,
-        EmbeddedMediaBase media,
+        EmbeddedBase media,
         ICollection<string>? tags,
         CancellationToken cancellationToken)
     {

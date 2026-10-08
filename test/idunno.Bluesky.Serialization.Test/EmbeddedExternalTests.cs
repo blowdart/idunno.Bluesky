@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -11,6 +12,73 @@ namespace idunno.Bluesky.Serialization.Test;
 [ExcludeFromCodeCoverage]
 public class EmbeddedExternalTests
 {
+    [Fact]
+    public void ExternalCardWithQuotedRecordRoundTrips()
+    {
+        StrongReference reference = new(
+            new AtUri("at://did:plc:3jpt2mvvsumj2r7eqk4gzzjz/app.bsky.feed.post/3mloolvzj2jsy"),
+            new Cid("bafyreibhvcdzstnjcktsdaiyjy7f2msthllikx3k3eem2rfqbmgbeniwc4"));
+        EmbeddedExternal card = new("https://example.com", "Card title", "Card description", associatedRefs: [reference]);
+        EmbeddedRecordWithMedia embed = new(new EmbeddedRecord(reference), card);
+        Assert.Same(card.External, Assert.IsType<EmbeddedExternalMedia>(embed.Media).External);
+        Post post = new(string.Empty, DateTimeOffset.UtcNow, embeddedRecord: embed);
+
+        string json = JsonSerializer.Serialize(post, BlueskyServer.BlueskyJsonSerializerOptions);
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement media = document.RootElement.GetProperty("embed").GetProperty("media");
+        Assert.Equal("app.bsky.embed.external", media.GetProperty("$type").GetString());
+        Assert.Equal("https://example.com", media.GetProperty("external").GetProperty("uri").GetString());
+
+        Post? deserialized = JsonSerializer.Deserialize<Post>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.NotNull(deserialized);
+        Assert.Equal(string.Empty, deserialized.Text);
+        EmbeddedRecordWithMedia actualEmbed = Assert.IsType<EmbeddedRecordWithMedia>(deserialized.EmbeddedRecord);
+        Assert.Equal(reference, actualEmbed.Record.Record);
+        EmbeddedExternalMedia actualCard = Assert.IsType<EmbeddedExternalMedia>(actualEmbed.Media);
+        Assert.Equal(card.External.Uri, actualCard.External.Uri);
+        Assert.Equal(card.External.Title, actualCard.External.Title);
+        Assert.Equal(card.External.Description, actualCard.External.Description);
+        Assert.Equal(reference, Assert.Single(actualCard.External.AssociatedRefs!));
+    }
+
+    [Fact]
+    public void ExternalMediaRoundTripsThroughMediaBase()
+    {
+        EmbeddedMediaBase media = new EmbeddedExternalMedia(new EmbeddedExternal("https://example.com", "Title", "Description").External);
+        string json = JsonSerializer.Serialize(media, BlueskyServer.BlueskyJsonSerializerOptions);
+        EmbeddedMediaBase? deserialized = JsonSerializer.Deserialize<EmbeddedMediaBase>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        EmbeddedExternalMedia card = Assert.IsType<EmbeddedExternalMedia>(deserialized);
+        Assert.Equal("https://example.com", card.External.Uri);
+        Assert.Equal("Title", card.External.Title);
+        Assert.Equal("Description", card.External.Description);
+    }
+
+    [Fact]
+    public void ExternalCardPreservesShippedInheritanceAndEquality()
+    {
+        EmbeddedExternal card = new("https://example.com", "Title", "Description");
+        EmbeddedBase other = card with { };
+
+        Assert.Equal(typeof(EmbeddedBase), typeof(EmbeddedExternal).BaseType);
+        Assert.True(card.Equals(other));
+        Assert.True(other.Equals(card));
+        Assert.False(card.Equals(new EmbeddedBase()));
+        Assert.False(card.Equals((EmbeddedBase?)null));
+    }
+
+    [Fact]
+    public void RecordWithMediaConstructorPreservesNullCallsAndValidatesMedia()
+    {
+        EmbeddedRecord record = new(new StrongReference(
+            new AtUri("at://did:plc:3jpt2mvvsumj2r7eqk4gzzjz/app.bsky.feed.post/3mloolvzj2jsy"),
+            new Cid("bafyreibhvcdzstnjcktsdaiyjy7f2msthllikx3k3eem2rfqbmgbeniwc4")));
+
+        Assert.Throws<ArgumentNullException>("media", () => new EmbeddedRecordWithMedia(record, null!));
+        Assert.Throws<ArgumentNullException>("media", () => new EmbeddedRecordWithMedia(record, (EmbeddedBase)null!));
+        Assert.Throws<ArgumentException>("media", () => new EmbeddedRecordWithMedia(record, new EmbeddedBase()));
+        Assert.Throws<ArgumentNullException>("record", () => new EmbeddedRecordWithMedia(null!, new EmbeddedExternal("https://example.com", "Title", "Description")));
+    }
+
     [Fact]
     public void ExternalEmbedDeserializesCorrectlyWithALeafletPublication()
     {

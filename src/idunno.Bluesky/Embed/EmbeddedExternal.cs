@@ -12,7 +12,7 @@ namespace idunno.Bluesky.Embed;
 /// <summary>
 /// A representation of some externally linked content (eg, a URL and 'card'), embedded in a Bluesky record (eg, a post)
 /// </summary>
-public sealed record EmbeddedExternal : EmbeddedMediaBase
+public sealed record EmbeddedExternal : EmbeddedBase
 {
     /// <summary>
     /// Creates a new instance of <see cref="EmbeddedExternal"/>

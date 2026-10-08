@@ -133,7 +133,7 @@
 #### idunno.Bluesky
 
 * Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.
-* Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used as media in `EmbeddedRecordWithMedia`.
+* Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used in `EmbeddedRecordWithMedia`, where they are represented by `EmbeddedExternalMedia`, without changing the existing `EmbeddedExternal` inheritance or equality APIs.
 * Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
 * Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).

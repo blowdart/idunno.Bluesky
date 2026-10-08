@@ -6,7 +6,7 @@ The SDK does not persist keys or reconcile uncertain writes. Generate or choose 
 
 ## Posting with a fixed key
 
-The keyed overloads of `Post`, `ReplyTo`, and `Quote` accept a `RecordKey? rKey`. `Post` supports text, language, image, video, and external-card variants. `Quote` supports images, videos, and external cards, with or without text, as well as text-only quotes. For example:
+The keyed overloads of `Post`, `ReplyTo`, and `Quote` accept a `RecordKey? rKey`. `Post` supports text, language, image, video, and external-card variants. `Quote` supports images, videos, and external cards, with or without text, as well as text-only quotes. External cards inside `EmbeddedRecordWithMedia.Media` are represented by `EmbeddedExternalMedia`; standalone cards remain `EmbeddedExternal`. For example:
 
 ```csharp
 RecordKey postKey = new("3lcf6ry7xy22x");

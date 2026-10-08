@@ -1,5 +1,4 @@
 #nullable enable
-*REMOVED*override sealed idunno.Bluesky.Embed.EmbeddedExternal.Equals(idunno.Bluesky.Embed.EmbeddedBase? other) -> bool
 idunno.Bluesky.BlueskyAgent.AddToList(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! uri, idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.AddToList(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! uri, idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Block(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -41,9 +40,19 @@ idunno.Bluesky.BlueskyAgent.Repost(idunno.AtProto.RecordKey? rKey, idunno.AtProt
 idunno.Bluesky.BlueskyAgent.Repost(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Repo.StrongReference! post, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Repost(idunno.AtProto.RecordKey? rKey, idunno.Bluesky.Feed.FeedViewPost! post, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Repost(idunno.AtProto.RecordKey? rKey, idunno.Bluesky.Feed.PostView! postView, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.Embed.EmbeddedExternalMedia
+idunno.Bluesky.Embed.EmbeddedExternalMedia.EmbeddedExternalMedia(idunno.Bluesky.Embed.External.Properties! external) -> void
+idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(idunno.Bluesky.Embed.EmbeddedExternalMedia? other) -> bool
+idunno.Bluesky.Embed.EmbeddedExternalMedia.External.get -> idunno.Bluesky.Embed.External.Properties!
+idunno.Bluesky.Embed.EmbeddedExternalMedia.External.init -> void
+idunno.Bluesky.Embed.EmbeddedRecordWithMedia.EmbeddedRecordWithMedia(idunno.Bluesky.Embed.EmbeddedRecord! record, idunno.Bluesky.Embed.EmbeddedBase! media) -> void
 override idunno.Bluesky.BlueskyAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.Bluesky.BlueskyAgentBuilder!
 const idunno.Bluesky.RecordType.Generator = "app.bsky.feed.generator" -> string!
-override sealed idunno.Bluesky.Embed.EmbeddedExternal.Equals(idunno.Bluesky.Embed.EmbeddedMediaBase? other) -> bool
+override idunno.Bluesky.Embed.EmbeddedExternalMedia.<Clone>$() -> idunno.Bluesky.Embed.EmbeddedExternalMedia!
+override idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(object? obj) -> bool
+override idunno.Bluesky.Embed.EmbeddedExternalMedia.GetHashCode() -> int
+override idunno.Bluesky.Embed.EmbeddedExternalMedia.ToString() -> string!
+override sealed idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(idunno.Bluesky.Embed.EmbeddedMediaBase? other) -> bool
 static idunno.Bluesky.CollectionNsid.Generator.get -> idunno.AtProto.Nsid!
 idunno.Bluesky.Feed.Generator
 idunno.Bluesky.Feed.Generator.AcceptsInteractions.get -> bool?
@@ -62,6 +71,8 @@ idunno.Bluesky.Feed.Generator.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Feed.Generator.Did.init -> void
 idunno.Bluesky.Feed.Generator.DisplayName.get -> string!
 idunno.Bluesky.Feed.Generator.DisplayName.init -> void
+static idunno.Bluesky.Embed.EmbeddedExternalMedia.operator !=(idunno.Bluesky.Embed.EmbeddedExternalMedia? left, idunno.Bluesky.Embed.EmbeddedExternalMedia? right) -> bool
+static idunno.Bluesky.Embed.EmbeddedExternalMedia.operator ==(idunno.Bluesky.Embed.EmbeddedExternalMedia? left, idunno.Bluesky.Embed.EmbeddedExternalMedia? right) -> bool
 virtual idunno.Bluesky.Feed.Generator.Equals(idunno.Bluesky.Feed.Generator? other) -> bool
 idunno.Bluesky.Feed.Generator.Generator() -> void
 idunno.Bluesky.Feed.Generator.Generator(idunno.Bluesky.Feed.Generator! original) -> void
