@@ -625,6 +625,189 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="post">The post to create the record from.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Gating rules to apply to the <paramref name="post"/>, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <remarks>
+    /// <para>When <paramref name="extractFacets"/> is <see langword="false"/>, this method does not modify the supplied post.</para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        Post post,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(post);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        if (!string.IsNullOrEmpty(post.Text) && extractFacets)
+        {
+            IList<Facet>? facets = await FacetExtractor.ExtractFacets(post.Text, cancellationToken).ConfigureAwait(false);
+            if (facets is not null && facets.Count > 0)
+            {
+                if (post.Facets is null || post.Facets.Count == 0)
+                {
+                    post.Facets = facets;
+                }
+                else
+                {
+                    if (post.Facets.IsReadOnly)
+                    {
+                        post.Facets = [.. post.Facets];
+                    }
+
+                    foreach (Facet facet in facets.OfType<Facet>().Where(facet => !post.Facets.Any(existingFacet =>
+                                 existingFacet is not null &&
+                                 existingFacet.Index.ByteStart == facet.Index.ByteStart &&
+                                 existingFacet.Index.ByteEnd == facet.Index.ByteEnd &&
+                                 existingFacet.Features.SequenceEqual(facet.Features))))
+                    {
+                        post.Facets.Add(facet);
+                    }
+                }
+            }
+        }
+
+        AtProtoHttpResult<CreateRecordResult> result = await CreatePost(
+            post,
+            threadGateRules: threadGateRules,
+            postGateRules: postGateRules,
+            interactionPreferences: interactionPreferences,
+            rKey: rKey,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            Logger.CreatePostWithPostSucceeded(_logger, Did, result.Result.Uri, result.Result.Cid);
+        }
+        else
+        {
+            Logger.CreatePostWithPostFailed(_logger, result.StatusCode, Did, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to use to create the record.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        PostBuilder postBuilder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        Post post = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
+
+        return await CreatePost(
+            post,
+            threadGateRules: threadGateRules,
+            postGateRules: postGateRules,
+            interactionPreferences: null,
+            rKey: rKey,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string text,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
+
+        if (threadGateRules is null && interactionPreferences is not null)
+        {
+            threadGateRules = interactionPreferences.ThreadGateAllowRules;
+        }
+
+        if (postGateRules is null && interactionPreferences is not null)
+        {
+            postGateRules = interactionPreferences.PostGateEmbeddingRules;
+        }
+
+        DateTimeOffset creationDateTime = createdAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
+        Post post = new(text, createdAt: creationDateTime, langs: langs, tags: tags);
+
+        if (labels is not null)
+        {
+            post.SetSelfLabels(labels);
+        }
+
+        return await Post(
+            rKey,
+            post,
+            threadGateRules: threadGateRules,
+            postGateRules: postGateRules,
+            interactionPreferences: interactionPreferences,
+            extractFacets: extractFacets,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Creates a Bluesky post record from the specified <paramref name="postBuilder"/>.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to use to create the record.</param>
@@ -649,7 +832,7 @@ public partial class BlueskyAgent
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
             interactionPreferences: null,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     [UnconditionalSuppressMessage(
@@ -664,6 +847,7 @@ public partial class BlueskyAgent
         ICollection<ThreadGateRule>? threadGateRules,
         ICollection<PostGateRule>? postGateRules,
         PostInteractionSettingsPreferences? interactionPreferences,
+        RecordKey? rKey = null,
         CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
@@ -678,6 +862,7 @@ public partial class BlueskyAgent
                 record: post,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Post,
+                rKey: rKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         else
@@ -688,10 +873,10 @@ public partial class BlueskyAgent
             List<WriteOperation> writeRequests = [];
 
             // We need to generate a record key to hang it all together.
-            RecordKey rKey = TimestampIdentifier.Next();
-            AtUri postUri = new($"at://{Did}/{CollectionNsid.Post}/{rKey}");
+            RecordKey postRecordKey = rKey ?? TimestampIdentifier.Next();
+            AtUri postUri = new($"at://{Did}/{CollectionNsid.Post}/{postRecordKey}");
 
-            writeRequests.Add(new CreateOperation(CollectionNsid.Post, rKey, post));
+            writeRequests.Add(new CreateOperation(CollectionNsid.Post, postRecordKey, post));
 
             if (threadGateRules is null && interactionPreferences is not null)
             {
@@ -707,7 +892,7 @@ public partial class BlueskyAgent
             {
                 writeRequests.Add(new CreateOperation(
                     CollectionNsid.ThreadGate,
-                    rKey,
+                    postRecordKey,
                     new ThreadGate(postUri, threadGateRules)));
             }
 
@@ -715,7 +900,7 @@ public partial class BlueskyAgent
             {
                 writeRequests.Add(new CreateOperation(
                     CollectionNsid.PostGate,
-                    rKey,
+                    postRecordKey,
                     new PostGate(postUri, postGateRules)));
             }
 
@@ -729,7 +914,7 @@ public partial class BlueskyAgent
 
             if (response.Succeeded)
             {
-                Logger.CreatePostWithGatesSucceeded(_logger, rKey, Did);
+                Logger.CreatePostWithGatesSucceeded(_logger, postRecordKey, Did);
 
                 CreateRecordResult? createRecordResult = null;
 
