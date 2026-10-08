@@ -19,6 +19,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         StrongReference strongReference,
@@ -38,6 +42,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         StrongReference strongReference,
@@ -58,6 +66,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         RecordKey? rKey,
@@ -79,6 +91,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         RecordKey? rKey,
@@ -99,6 +115,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         StrongReference strongReference,
@@ -118,6 +138,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         StrongReference strongReference,
@@ -138,6 +162,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         RecordKey? rKey,
@@ -159,6 +187,10 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
     public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
         RecordKey? rKey,
