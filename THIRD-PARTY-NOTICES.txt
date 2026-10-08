@@ -7,6 +7,33 @@ bring it to our attention by posting an issue.
 
 The attached notices are provided for information only.
 
+Third-party package licenses
+----------------------------
+
+The following third-party NuGet packages are used by the library projects.
+Package versions are intentionally omitted.
+
+Component                                       License
+----------------------------------------------  ----------
+DnsClient                                       Apache-2.0
+Duende.IdentityModel.OidcClient                 Apache-2.0
+Duende.IdentityModel.OidcClient.Extensions      Apache-2.0
+idunno.Security.Ssrf                            MIT
+Microsoft.AspNetCore.WebUtilities               MIT
+Microsoft.Data.Sqlite                           MIT
+Microsoft.Extensions.Caching.Memory             MIT
+Microsoft.Extensions.DependencyInjection        MIT
+Microsoft.Extensions.Http                       MIT
+Microsoft.Extensions.Logging                    MIT
+Microsoft.IdentityModel.JsonWebTokens           MIT
+MySqlConnector                                  MIT
+OpenTelemetry.Extensions.Hosting                Apache-2.0
+SimpleBase                                      Apache-2.0
+StackExchange.Redis                             MIT
+System.Formats.Cbor                             MIT
+System.Text.Json                                MIT
+ZstdSharp.Port                                  MIT
+
 License notice for varint.cs (https://github.com/ipfs-shipyard/net-ipfs-core/)
 ------------------------------------------------------------------------------
 

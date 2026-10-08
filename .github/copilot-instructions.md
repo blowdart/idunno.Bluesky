@@ -111,6 +111,7 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
   in `PublicAPI.Unshipped.txt`, alongside the properties and their `init` accessors.
 * **Add new doc files to the solution.** When you create a documentation file under `docs/`, add a `<File Path="..." />` entry for it to the matching `<Folder>` in `idunno.Bluesky.slnx`, keeping entries in alphabetical order, and add it to the relevant `toc.yml`.
 * **Update the changelog.** Record user-visible additions/changes/removals under the unreleased section of `CHANGELOG.md`, grouped by package (`### idunno.AtProto`, `### idunno.Bluesky`, ...).
+* **Third-party notices.** Whenever a dependency is added, removed, upgraded, or changes license, update `THIRD-PARTY-NOTICES.txt` for the affected distributed component. Keep dependency listings version-free and preserve any copyright or license text required for third-party code bundled in the repository.
 * **Targeting & trimming.** Trimming/AOT (`IsTrimmable`, `IsAotCompatible`) is enabled for net9.0+ only (net8.0 is excluded). Keep new code trimming-safe.
 * **Strong naming / InternalsVisibleTo.** Assemblies are strong-named (`key.snk`). Internal members are exposed to matching test projects via `InternalsVisibleTo` in the csproj, so internal types are testable.
 * **Spelling.** A spell-check analyzer runs during build; add legitimate domain words to the shared `exclusion.dic` at the repo root rather than suppressing warnings inline.
