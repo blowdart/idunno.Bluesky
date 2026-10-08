@@ -14,6 +14,7 @@
 
 #### Samples
 
+* Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
 * Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
 * Added `Samples.BlazorAuthentication`, a statically server-rendered Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI.
