@@ -1008,7 +1008,7 @@ public class AtProtoJetstreamV2Tests
         Assert.Empty(timestamps);
         Assert.Equal(1, closedCollector.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         Assert.DoesNotContain(WebSocketState.Aborted, stateChanges);
-        Assert.Equal(1, stateChanges.Count(state => state == WebSocketState.Closed));
+        Assert.DoesNotContain(WebSocketState.Closed, stateChanges);
     }
 
     [Fact]
@@ -1524,6 +1524,115 @@ public class AtProtoJetstreamV2Tests
         Assert.Equal(WebSocketState.Open, notifications[^1]);
         Assert.DoesNotContain(WebSocketState.Closed, notifications);
         await jetstream.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task DisposalWaitsForAReceiveCallbackFromAReplacedConnection()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var release = new ManualResetEventSlim();
+        TaskCompletionSource send = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource receiving = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, serverToken) =>
+        {
+            if (connection == 1)
+            {
+                await send.Task.WaitAsync(serverToken);
+                await SendText(socket, IdentityEvent(41), serverToken);
+            }
+        });
+        using var jetstream = new AtProtoJetstream(uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false });
+        using var httpClient = new HttpClient();
+        jetstream.MessageReceived += (_, _) =>
+        {
+            receiving.TrySetResult();
+            Assert.True(release.Wait(TimeSpan.FromSeconds(30), token));
+        };
+        await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+        Task originalReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+        Task? disposal = null;
+        try
+        {
+            send.SetResult();
+            await receiving.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.CloseAsync(cancellationToken: token);
+            await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+            Task replacementReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+            Assert.NotSame(originalReceiver, replacementReceiver);
+            disposal = jetstream.DisposeAsync().AsTask();
+            await replacementReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await Assert.ThrowsAsync<TimeoutException>(() => disposal.WaitAsync(TimeSpan.FromMilliseconds(250), token));
+        }
+        finally
+        {
+            release.Set();
+            await originalReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+            if (disposal is not null)
+            {
+                await disposal.WaitAsync(TimeSpan.FromSeconds(30), token);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task DelayedCallerCloseNotificationDoesNotDescribeTheReplacementConnection()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var releaseMessage = new ManualResetEventSlim();
+        using var releaseState = new ManualResetEventSlim();
+        TaskCompletionSource send = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource receiving = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource closing = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, serverToken) =>
+        {
+            if (connection == 1)
+            {
+                await send.Task.WaitAsync(serverToken);
+                await SendText(socket, IdentityEvent(41), serverToken);
+            }
+        });
+        using var jetstream = new PausedStateJetstream(server.Uri, closing, releaseState);
+        using var httpClient = new HttpClient();
+        ConcurrentQueue<WebSocketState> states = new();
+        jetstream.ConnectionStateChanged += (_, args) => states.Enqueue(args.State);
+        jetstream.MessageReceived += (_, _) =>
+        {
+            receiving.TrySetResult();
+            Assert.True(releaseMessage.Wait(TimeSpan.FromSeconds(30), token));
+        };
+        await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+        Task originalReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+        Task? close = null;
+        try
+        {
+            send.SetResult();
+            await receiving.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            close = Task.Run(() => jetstream.CloseAsync(cancellationToken: token), token);
+            await closing.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token)
+                .WaitAsync(TimeSpan.FromSeconds(30), token);
+            Assert.True(jetstream.IsConnected);
+            releaseState.Set();
+            await close.WaitAsync(TimeSpan.FromSeconds(30), token);
+            Assert.DoesNotContain(WebSocketState.Closed, states);
+            Assert.Equal(2, states.Count(state => state == WebSocketState.Open));
+            Assert.Equal(WebSocketState.Open, states.Last());
+        }
+        finally
+        {
+            releaseState.Set();
+            releaseMessage.Set();
+            if (close is not null)
+            {
+                await close.WaitAsync(TimeSpan.FromSeconds(30), token);
+            }
+
+            await originalReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.DisposeAsync();
+        }
     }
 
     [Fact]

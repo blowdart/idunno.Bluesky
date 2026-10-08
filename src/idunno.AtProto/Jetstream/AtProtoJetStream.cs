@@ -211,6 +211,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private Task _receiveLoopTask = Task.CompletedTask;
 
+    private readonly HashSet<Task> _receiveLoopTasks = [];
+
     private readonly Queue<(ConnectionStateChangedEventArgs Args, ClientWebSocket? Client)> _stateNotifications = new();
 
     private bool _dispatchingStateNotifications;
@@ -1033,7 +1035,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         // State changes are collected rather than raised as they happen, so they can be raised once neither the
         // connection semaphore nor the sync lock is held.
-        List<WebSocketState> stateChanges = [];
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
         ClientWebSocket? connectedClient = null;
 
         try
@@ -1121,9 +1123,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Raising them any earlier runs handler code inside both, where a handler which reconnects waits on a
             // semaphore its own caller is holding, and a handler which takes a lock of its own can deadlock against a
             // thread which holds that lock and is setting a filter.
-            foreach (WebSocketState state in stateChanges)
+            foreach (var (state, client) in stateChanges)
             {
-                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state), client);
             }
         }
 
@@ -1137,6 +1139,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 {
                     // Schedule outside caller code so no receive callbacks run under the disposal lock.
                     _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, cancellationToken), CancellationToken.None);
+                    _receiveLoopTasks.Add(_receiveLoopTask);
+                    _ = _receiveLoopTask.ContinueWith(ReceiveLoopCompleted, CancellationToken.None,
+                        TaskContinuationOptions.None, TaskScheduler.Default);
                 }
             }
 
@@ -1211,7 +1216,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         HttpClient? httpClient,
         long skipAtOrBelowSequence,
         bool refreshDictionary,
-        List<WebSocketState> stateChanges,
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges,
         CancellationToken cancellationToken = default)
     {
         if (_client is not null && _client.State == WebSocketState.Open)
@@ -1249,7 +1254,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 }
 
                 _client = CreateWebSocketClient();
-                stateChanges.Add(_client.State);
+                stateChanges.Add((_client.State, _client));
             }
 
             // Everything below works against the socket this attempt settled on rather than the field, so a dispose or
@@ -1352,7 +1357,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             if (client.State != previousState)
             {
-                stateChanges.Add(client.State);
+                stateChanges.Add((client.State, client));
             }
 
             // A server which refuses the upgrade with an HTTP error says why in the body of the response, which the web
@@ -1373,7 +1378,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         if (client.State != previousState)
         {
-            stateChanges.Add(client.State);
+            stateChanges.Add((client.State, client));
         }
 
         if (client.State == WebSocketState.Open)
@@ -1750,7 +1755,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // State changes are collected rather than raised as they happen, so they can be raised once the connection
         // semaphore is released. Raising them any earlier runs handler code inside it, where a handler which connects
         // or closes waits on a semaphore its own caller is holding.
-        List<WebSocketState> stateChanges = [];
+        List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
 
         try
         {
@@ -1772,9 +1777,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
         finally
         {
-            foreach (WebSocketState state in stateChanges)
+            foreach (var (state, client) in stateChanges)
             {
-                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state), client);
             }
 
             lock (_syncLock)
@@ -1807,7 +1812,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         WebSocketCloseStatus status,
         string statusDescription,
         bool recordAsGracefulDisconnection,
-        List<WebSocketState>? stateChanges,
+        List<(WebSocketState State, ClientWebSocket Client)>? stateChanges,
         CancellationToken cancellationToken)
     {
         WebSocketState startingState = client.State;
@@ -1910,7 +1915,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             if (stateChanges is not null)
             {
-                stateChanges.Add(client.State);
+                stateChanges.Add((client.State, client));
             }
             else
             {
@@ -2048,6 +2053,10 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// Performs the asynchronous part of disposal.
     /// </summary>
     /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>Cleanup waits for outstanding receive loops, including those from replaced sockets, before draining
+    /// message parsers. Callbacks and any configured parser scheduler must be allowed to finish during disposal.</para>
+    /// </remarks>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failure to close cleanly must not stop disposal.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "A failure to close cleanly must not stop disposal.")]
     protected virtual async ValueTask DisposeAsyncCore()
@@ -2075,7 +2084,13 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         try
         {
-            await _receiveLoopTask.ConfigureAwait(false);
+            Task receiveLoops;
+            lock (_syncLock)
+            {
+                receiveLoops = Task.WhenAll(_receiveLoopTasks);
+            }
+
+            await receiveLoops.ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -2089,6 +2104,24 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         catch (Exception ex)
         {
             JetStreamLogger.CloseError(_logger, ex);
+        }
+    }
+
+    private void ReceiveLoopCompleted(Task task)
+    {
+        try
+        {
+            if (task.Exception is not null)
+            {
+                JetStreamLogger.CloseError(_logger, task.Exception);
+            }
+        }
+        finally
+        {
+            lock (_syncLock)
+            {
+                _receiveLoopTasks.Remove(task);
+            }
         }
     }
 
