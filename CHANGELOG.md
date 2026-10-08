@@ -304,6 +304,7 @@
 #### idunno.Bluesky
 
 * `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
+* Textless video and external-card `Quote()` helpers omit language metadata, matching textless image quotes. Text-bearing quotes retain their language metadata.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.

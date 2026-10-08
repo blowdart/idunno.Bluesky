@@ -1253,7 +1253,7 @@ public partial class BlueskyAgent
         Post post = new(
             text,
             DateTimeOffset.UtcNow,
-            langs: [Thread.CurrentThread.CurrentUICulture.Name],
+            langs: string.IsNullOrEmpty(text) ? null : [Thread.CurrentThread.CurrentUICulture.Name],
             embeddedRecord: new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), media),
             tags: tags);
 

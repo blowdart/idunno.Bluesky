@@ -693,6 +693,10 @@ public class RecordKeyCreationTests
         }
         JsonElement post = request.GetProperty("record");
         Assert.Equal(text, post.GetProperty("text").GetString());
+        if (variant is 3 or 4)
+        {
+            Assert.Equal(Thread.CurrentThread.CurrentUICulture.Name, post.GetProperty("langs")[0].GetString());
+        }
         Assert.Equal(extractFacets ? 1 : 0, extractor.CallCount);
         Assert.Equal(extractFacets, post.TryGetProperty("facets", out JsonElement facets));
         if (extractFacets)
@@ -836,6 +840,7 @@ public class RecordKeyCreationTests
         JsonElement operation = Assert.Single(Assert.Single(requests).GetProperty("writes").EnumerateArray());
         Assert.Equal(string.Empty, operation.GetProperty("value").GetProperty("text").GetString());
         Assert.False(operation.GetProperty("value").TryGetProperty("facets", out _));
+        Assert.False(operation.GetProperty("value").TryGetProperty("langs", out _));
         if (useKey)
         {
             Assert.Equal(key.Value, operation.GetProperty("rkey").GetString());
