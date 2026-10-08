@@ -12,6 +12,166 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
+    /// Creates a quote post containing a video.
+    /// </summary>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="video">The video to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        StrongReference strongReference,
+        EmbeddedVideo video,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Quote(rKey: null, strongReference, video, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing text and a video.
+    /// </summary>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="text">The text for the quote post.</param>
+    /// <param name="video">The video to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        StrongReference strongReference,
+        string text,
+        EmbeddedVideo video,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Quote(rKey: null, strongReference, text, video, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing a video using the specified record key.
+    /// </summary>
+    /// <param name="rKey">The record key to use, or <see langword="null"/> for a generated key.</param>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="video">The video to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        EmbeddedVideo video,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return QuoteWithMedia(rKey, strongReference, string.Empty, video, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing text and a video using the specified record key.
+    /// </summary>
+    /// <param name="rKey">The record key to use, or <see langword="null"/> for a generated key.</param>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="text">The text for the quote post.</param>
+    /// <param name="video">The video to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        EmbeddedVideo video,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return QuoteWithMedia(rKey, strongReference, text, video, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing an external card.
+    /// </summary>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="externalCard">The external card to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        StrongReference strongReference,
+        EmbeddedExternal externalCard,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Quote(rKey: null, strongReference, externalCard, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing text and an external card.
+    /// </summary>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="text">The text for the quote post.</param>
+    /// <param name="externalCard">The external card to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        StrongReference strongReference,
+        string text,
+        EmbeddedExternal externalCard,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Quote(rKey: null, strongReference, text, externalCard, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing an external card using the specified record key.
+    /// </summary>
+    /// <param name="rKey">The record key to use, or <see langword="null"/> for a generated key.</param>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="externalCard">The external card to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        EmbeddedExternal externalCard,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return QuoteWithMedia(rKey, strongReference, string.Empty, externalCard, tags, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a quote post containing text and an external card using the specified record key.
+    /// </summary>
+    /// <param name="rKey">The record key to use, or <see langword="null"/> for a generated key.</param>
+    /// <param name="strongReference">A reference to the post to quote.</param>
+    /// <param name="text">The text for the quote post.</param>
+    /// <param name="externalCard">The external card to attach to the quote.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        EmbeddedExternal externalCard,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return QuoteWithMedia(rKey, strongReference, text, externalCard, tags, cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a post record, with the supplied <paramref name="text"/>, quoting the post identified by <see cref="StrongReference"/>.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
@@ -542,5 +702,32 @@ public partial class BlueskyAgent
             result.HttpResponseHeaders,
             result.AtErrorDetail,
             result.RateLimit);
+    }
+
+    private Task<AtProtoHttpResult<CreateRecordResult>> QuoteWithMedia(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        EmbeddedMediaBase media,
+        ICollection<string>? tags,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(strongReference);
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(media);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        Post post = new(
+            text,
+            DateTimeOffset.UtcNow,
+            langs: [Thread.CurrentThread.CurrentUICulture.Name],
+            embeddedRecord: new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), media),
+            tags: tags);
+
+        return Post(rKey, post, cancellationToken: cancellationToken);
     }
 }

@@ -287,6 +287,85 @@ public class RecordKeyCreationTests
         Assert.Equal("self", request.GetProperty("rkey").GetString());
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public async Task VideoAndCardQuotesPreserveMediaAndReference(bool useVideo, bool hasText, bool useKey)
+    {
+        List<JsonElement> requests = [];
+        using TestServer testServer = hasText ? CreateRecordServer(requests) : CreateApplyWritesServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
+        StrongReference reference = new(s_postUri, s_cid);
+        RecordKey key = TimestampIdentifier.Next();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        EmbeddedExternal card = new("https://example.com", "Card title", "Card description");
+        EmbeddedVideo video = new(
+            new Blob(new CidLink(s_cid.Value), "video/mp4", 1024),
+            altText: "Video description");
+        AtProtoHttpResult<CreateRecordResult> result;
+
+        if (useVideo)
+        {
+            result = (hasText, useKey) switch
+            {
+                (true, true) => await agent.Quote(key, reference, "Quote text", video, ["tag"], cancellationToken),
+                (true, false) => await agent.Quote(reference, "Quote text", video, ["tag"], cancellationToken),
+                (false, true) => await agent.Quote(key, reference, video, ["tag"], cancellationToken),
+                (false, false) => await agent.Quote(reference, video, ["tag"], cancellationToken)
+            };
+        }
+        else
+        {
+            result = (hasText, useKey) switch
+            {
+                (true, true) => await agent.Quote(key, reference, "Quote text", card, ["tag"], cancellationToken),
+                (true, false) => await agent.Quote(reference, "Quote text", card, ["tag"], cancellationToken),
+                (false, true) => await agent.Quote(key, reference, card, ["tag"], cancellationToken),
+                (false, false) => await agent.Quote(reference, card, ["tag"], cancellationToken)
+            };
+        }
+
+        Assert.True(result.Succeeded);
+        JsonElement request = Assert.Single(requests);
+        JsonElement operation = hasText ? request : Assert.Single(request.GetProperty("writes").EnumerateArray());
+        Assert.Equal("app.bsky.feed.post", operation.GetProperty("collection").GetString());
+        if (useKey)
+        {
+            Assert.Equal(key.Value, operation.GetProperty("rkey").GetString());
+            Assert.Equal($"at://{s_did}/app.bsky.feed.post/{key}", result.Result.Uri.ToString());
+        }
+        else if (hasText)
+        {
+            Assert.False(operation.TryGetProperty("rkey", out _));
+        }
+
+        JsonElement post = operation.GetProperty(hasText ? "record" : "value");
+        Assert.Equal(hasText ? "Quote text" : string.Empty, post.GetProperty("text").GetString());
+        Assert.Equal("tag", post.GetProperty("tags")[0].GetString());
+        JsonElement embed = post.GetProperty("embed");
+        Assert.Equal("app.bsky.embed.recordWithMedia", embed.GetProperty("$type").GetString());
+        JsonElement quotedRecord = embed.GetProperty("record").GetProperty("record");
+        Assert.Equal(s_postUri.ToString(), quotedRecord.GetProperty("uri").GetString());
+        Assert.Equal(s_cid.Value, quotedRecord.GetProperty("cid").GetString());
+        JsonElement media = embed.GetProperty("media");
+        Assert.Equal(useVideo ? "app.bsky.embed.video" : "app.bsky.embed.external", media.GetProperty("$type").GetString());
+        if (useVideo)
+        {
+            Assert.Equal("Video description", media.GetProperty("alt").GetString());
+        }
+        else
+        {
+            Assert.Equal("https://example.com", media.GetProperty("external").GetProperty("uri").GetString());
+            Assert.Equal("Card title", media.GetProperty("external").GetProperty("title").GetString());
+        }
+    }
+
     [Fact]
     public async Task KeyedListItemStillValidatesItsListUriBeforeSending()
     {
