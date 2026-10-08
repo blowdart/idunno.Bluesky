@@ -213,6 +213,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     private readonly HashSet<Task> _receiveLoopTasks = [];
 
+    private TaskCompletionSource? _asyncDisposal;
+
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Disposing it whilst a drain holds it makes the release which ends that drain throw.")]
+    private readonly SemaphoreSlim _parserDrainSemaphore = new(1, 1);
+
     private readonly Queue<(ConnectionStateChangedEventArgs Args, ClientWebSocket? Client)> _stateNotifications = new();
 
     private bool _dispatchingStateNotifications;
@@ -2040,13 +2045,49 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// closes it the way <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/> would first.</para>
     /// <para>Waits for the receive loop and queued message parsers to finish before freeing resources.
     /// Event handlers and any configured parsing scheduler must be allowed to complete their work.</para>
+    /// <para>Concurrent and repeated calls await the same cleanup operation.</para>
     /// </remarks>
-    public async ValueTask DisposeAsync()
+    [SuppressMessage("Usage", "CA1816:Dispose methods should call SuppressFinalize", Justification = "The shared cleanup calls Dispose, which suppresses finalization after cleanup succeeds.")]
+    public ValueTask DisposeAsync()
     {
-        await DisposeAsyncCore().ConfigureAwait(false);
+        TaskCompletionSource completion;
+        lock (_syncLock)
+        {
+            if (_asyncDisposal is not null)
+            {
+                return new ValueTask(_asyncDisposal.Task);
+            }
 
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _asyncDisposal = completion;
+            _disposing = true;
+        }
+
+        // Derived cleanup and event callbacks must run outside the disposal lock.
+        _ = CompleteDisposalAsync(completion);
+
+        return new ValueTask(completion.Task);
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Cleanup failures are propagated through the shared completion task.")]
+    [SuppressMessage("Usage", "CA1849:Call async methods when in an async method", Justification = "Synchronous resource disposal follows asynchronous cleanup; calling DisposeAsync would await this same operation.")]
+    [SuppressMessage("Reliability", "S6966:Awaitable method should be used", Justification = "Calling DisposeAsync from its shared cleanup would await this same operation.")]
+    private async Task CompleteDisposalAsync(TaskCompletionSource completion)
+    {
+        try
+        {
+            await DisposeAsyncCore().ConfigureAwait(false);
+            Dispose();
+            completion.SetResult();
+        }
+        catch (OperationCanceledException ex)
+        {
+            completion.SetCanceled(ex.CancellationToken);
+        }
+        catch (Exception ex)
+        {
+            completion.SetException(ex);
+        }
     }
 
     /// <summary>
@@ -2652,10 +2693,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <remarks>
     /// <para>Every parsing slot is taken, which can only happen once the parsers holding them have finished, and then
-    /// all of them are given back.</para>
+    /// all of them are given back. Concurrent drains are serialized so they cannot each retain a subset of slots
+    /// while waiting for the other drain to release its slots.</para>
     /// </remarks>
     internal async Task DrainMessageParsersAsync(CancellationToken cancellationToken)
     {
+        await _parserDrainSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         int slots = Options.MaximumConcurrentMessageParsers;
         int taken = 0;
 
@@ -2680,6 +2723,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // which has gone, so there is nothing to give back, and the disposal is not an error here.
                 }
             }
+
+            _parserDrainSemaphore.Release();
         }
     }
 

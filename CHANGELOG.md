@@ -270,6 +270,7 @@
 
 * Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
 * Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.
+* Concurrent Jetstream asynchronous disposal calls share one cleanup operation, and parser drains are serialized to prevent competing drains from deadlocking.
 * Replay now drains pending message parsers before completing a faulted live handoff, and logs distinct overflow, close, transport, server-error and expired-cursor recovery reasons without changing the bounded buffer or checkpoint semantics.
 * Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
 * OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.

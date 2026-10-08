@@ -1527,6 +1527,125 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task ConcurrentParserDrainsDoNotSplitTheAvailableSlots()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+        using var jetstream = new AtProtoJetstream(options: new JetstreamOptions
+        {
+            UseCompression = false, MaximumConcurrentMessageParsers = 2
+        });
+        SemaphoreSlim parsers = GetField<SemaphoreSlim>(jetstream, "_parseSemaphore");
+        await parsers.WaitAsync(token);
+        await parsers.WaitAsync(token);
+        Task first = jetstream.DrainMessageParsersAsync(cancellation.Token);
+        Task second = jetstream.DrainMessageParsersAsync(cancellation.Token);
+        try
+        {
+            parsers.Release();
+            await WaitUntil(() => parsers.CurrentCount == 0, token);
+            parsers.Release();
+            await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(1), token);
+            Assert.Equal(2, parsers.CurrentCount);
+        }
+        finally
+        {
+            cancellation.Cancel();
+            try
+            {
+                await Task.WhenAll(first, second);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConcurrentAsyncDisposalSharesOneCleanupOperation(bool fail)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var jetstream = new PausedDisposalJetstream(release.Task, fail);
+        Task first = jetstream.DisposeAsync().AsTask();
+        Task second = jetstream.DisposeAsync().AsTask();
+        try
+        {
+            Assert.Same(first, second);
+            Assert.Equal(1, jetstream.CleanupCalls);
+            Assert.False(first.IsCompleted);
+        }
+        finally
+        {
+            release.SetResult();
+            if (fail)
+            {
+                InvalidOperationException firstFailure = await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => first.WaitAsync(TimeSpan.FromSeconds(30), token));
+                InvalidOperationException secondFailure = await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => second.WaitAsync(TimeSpan.FromSeconds(30), token));
+                Assert.Same(firstFailure, secondFailure);
+            }
+            else
+            {
+                await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(30), token);
+            }
+        }
+
+        Assert.Same(first, jetstream.DisposeAsync().AsTask());
+        Assert.Equal(1, jetstream.CleanupCalls);
+    }
+
+    [Fact]
+    public async Task CancellingAWaitingParserDrainDoesNotBlockOtherDrains()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+        using var jetstream = new AtProtoJetstream(options: new JetstreamOptions
+        {
+            UseCompression = false, MaximumConcurrentMessageParsers = 2
+        });
+        SemaphoreSlim parsers = GetField<SemaphoreSlim>(jetstream, "_parseSemaphore");
+        await parsers.WaitAsync(token);
+        await parsers.WaitAsync(token);
+        Task first = jetstream.DrainMessageParsersAsync(token);
+        Task second = jetstream.DrainMessageParsersAsync(cancellation.Token);
+        try
+        {
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => second);
+            Assert.False(first.IsCompleted);
+        }
+        finally
+        {
+            parsers.Release(2);
+            await first.WaitAsync(TimeSpan.FromSeconds(30), token);
+        }
+
+        await jetstream.DrainMessageParsersAsync(token).WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.Equal(2, parsers.CurrentCount);
+    }
+
+    private sealed class PausedDisposalJetstream(Task release, bool fail) : AtProtoJetstream
+    {
+        internal int CleanupCalls { get; private set; }
+
+        protected override async ValueTask DisposeAsyncCore()
+        {
+            CleanupCalls++;
+            await release;
+            if (fail)
+            {
+                throw new InvalidOperationException("Cleanup failure");
+            }
+
+            await base.DisposeAsyncCore();
+        }
+    }
+
+    [Fact]
     public async Task DisposalWaitsForAReceiveCallbackFromAReplacedConnection()
     {
         CancellationToken token = TestContext.Current.CancellationToken;
