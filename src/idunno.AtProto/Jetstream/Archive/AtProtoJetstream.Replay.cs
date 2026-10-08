@@ -244,7 +244,7 @@ public partial class AtProtoJetstream
             new BoundedChannelOptions(1024) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true });
         int outdatedCursor = 0;
         int cleaningUp = 0;
-        long lastReceived = cursor;
+        long lastReceived = long.MinValue;
         AtProtoJetstream live = new(
             uri: _uri,
             options: Options with { MaximumConcurrentMessageParsers = 1 },
@@ -256,7 +256,9 @@ public partial class AtProtoJetstream
         {
             if (channel.Writer.TryComplete(exception))
             {
-                JetStreamLogger.ReplayLiveEnded(_logger, reason, cursor, Interlocked.Read(ref lastReceived), channel.Reader.Count, exception);
+                long received = Interlocked.Read(ref lastReceived);
+                JetStreamLogger.ReplayLiveEnded(_logger, reason, cursor,
+                    received == long.MinValue ? null : received, channel.Reader.Count, exception);
             }
         }
 

@@ -499,7 +499,8 @@ public class AtProtoJetstreamV2Tests
     [InlineData(true)]
     public async Task RemoteCloseDrainsTheLastScheduledParserBeforeReplayReconnects(bool abort)
     {
-        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        CancellationToken cancellationToken = cancellation.Token;
         PausedTaskScheduler scheduler = new();
         TaskCompletionSource disconnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var logs = new RecordingLoggerProvider();
@@ -539,40 +540,59 @@ public class AtProtoJetstreamV2Tests
                 ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory,
                 TaskFactory = new TaskFactory(scheduler)
             });
-        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
+        IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(
             new SnapshotRequest(), cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
         Task<bool> first = replay.MoveNextAsync().AsTask();
-        await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-        if (abort)
+        Task<bool> pending = first;
+        try
         {
-            await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 3), cancellationToken);
-        }
+            await disconnected.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            if (abort)
+            {
+                await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 3), cancellationToken);
+            }
 
-        scheduler.RunPending();
-        await WaitUntil(() => first.IsCompleted || server.Connections.Count == 2, cancellationToken);
-        if (!first.IsCompleted)
-        {
-            await WaitUntil(() => scheduler.GetPendingCount() != 0, cancellationToken);
             scheduler.RunPending();
-        }
+            await WaitUntil(() => first.IsCompleted || server.Connections.Count == 2, cancellationToken);
+            if (!first.IsCompleted)
+            {
+                await WaitUntil(() => scheduler.GetPendingCount() != 0, cancellationToken);
+                scheduler.RunPending();
+            }
 
-        Assert.True(await first.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
-        Assert.Equal(41, replay.Current.Sequence);
-        int bufferedEventConnectionCount = server.Connections.Count;
-        Task<bool> second = replay.MoveNextAsync().AsTask();
-        await WaitUntil(() => server.Connections.Count == 2, cancellationToken);
-        while (!second.IsCompleted)
+            Assert.True(await first.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Equal(41, replay.Current.Sequence);
+            int bufferedEventConnectionCount = server.Connections.Count;
+            pending = replay.MoveNextAsync().AsTask();
+            await WaitUntil(() => server.Connections.Count == 2, cancellationToken);
+            while (!pending.IsCompleted)
+            {
+                await WaitUntil(() => pending.IsCompleted || scheduler.GetPendingCount() != 0, cancellationToken);
+                scheduler.RunPending();
+            }
+
+            Assert.True(await pending.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Equal(42, replay.Current.Sequence);
+            Assert.Equal(1, bufferedEventConnectionCount);
+            Assert.Contains("cursor=41", server.Connections.Last().Query, StringComparison.Ordinal);
+            Assert.Contains(logs.Entries, entry => entry.EventId == 42 &&
+                entry.Message.Contains(abort ? "Transport" : "Remote close", StringComparison.Ordinal));
+        }
+        finally
         {
-            await WaitUntil(() => second.IsCompleted || scheduler.GetPendingCount() != 0, cancellationToken);
+            await cancellation.CancelAsync();
             scheduler.RunPending();
-        }
+            try
+            {
+                await pending.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // Cancellation must finish the pending read before the enumerator can be disposed.
+            }
 
-        Assert.True(await second.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
-        Assert.Equal(42, replay.Current.Sequence);
-        Assert.Equal(1, bufferedEventConnectionCount);
-        Assert.Contains("cursor=41", server.Connections.Last().Query, StringComparison.Ordinal);
-        Assert.Contains(logs.Entries, entry => entry.EventId == 42 &&
-            entry.Message.Contains(abort ? "Transport" : "Remote close", StringComparison.Ordinal));
+            await replay.DisposeAsync();
+        }
     }
 
     [Theory]
@@ -1358,6 +1378,204 @@ public class AtProtoJetstreamV2Tests
     private static T GetField<T>(AtProtoJetstream jetstream, string name) where T : class =>
         Assert.IsAssignableFrom<T>(typeof(AtProtoJetstream).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(jetstream));
 
+    [Fact]
+    public async Task DisposalBeforePostConnectHandoffDoesNotInstallAnotherReceiveTask()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var release = new ManualResetEventSlim();
+        TaskCompletionSource announcingOpen = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var jetstream = new AtProtoJetstream(uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false });
+        using var httpClient = new HttpClient();
+        jetstream.ConnectionStateChanged += (_, args) =>
+        {
+            if (args.State == WebSocketState.Open)
+            {
+                announcingOpen.TrySetResult();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(30), token));
+            }
+        };
+        Task originalReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+        SemaphoreSlim parsers = GetField<SemaphoreSlim>(jetstream, "_parseSemaphore");
+        await parsers.WaitAsync(token);
+        Task connect = Task.Run(() => jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token), token);
+        Task? disposal = null;
+        try
+        {
+            await announcingOpen.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            disposal = jetstream.DisposeAsync().AsTask();
+            await WaitUntil(() => jetstream.State == WebSocketState.Closed, token);
+            Assert.False(disposal.IsCompleted);
+            release.Set();
+            await connect.WaitAsync(TimeSpan.FromSeconds(30), token);
+            Assert.Same(originalReceiver, GetField<Task>(jetstream, "_receiveLoopTask"));
+        }
+        finally
+        {
+            release.Set();
+            parsers.Release();
+            if (disposal is not null)
+            {
+                await disposal.WaitAsync(TimeSpan.FromSeconds(30), token);
+            }
+        }
+
+        await connect.WaitAsync(TimeSpan.FromSeconds(30), token);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisposalDrainsQueuedParsersEvenWhenStateHandlersThrow(bool remoteClose)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        PausedTaskScheduler scheduler = new();
+        TaskCompletionSource close = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource record = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var logs = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, _, serverToken) =>
+        {
+            await SendText(socket, IdentityEvent(41), serverToken);
+            if (remoteClose)
+            {
+                await close.Task.WaitAsync(serverToken);
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, serverToken);
+            }
+        });
+        await using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
+        {
+            UseCompression = false, TaskFactory = new TaskFactory(scheduler), LoggerFactory = loggerFactory
+        });
+        using var httpClient = new HttpClient();
+        jetstream.RecordReceived += (_, _) => record.TrySetResult();
+        jetstream.ConnectionStateChanged += (_, args) =>
+        {
+            if (args.State == WebSocketState.Closed)
+            {
+                throw new InvalidOperationException("State handler failure");
+            }
+        };
+        await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+        await scheduler.Scheduled.WaitAsync(TimeSpan.FromSeconds(30), token);
+        if (remoteClose)
+        {
+            close.SetResult();
+            Task receiver = GetField<Task>(jetstream, "_receiveLoopTask");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => receiver.WaitAsync(TimeSpan.FromSeconds(30), token));
+        }
+
+        Task disposal = jetstream.DisposeAsync().AsTask();
+        try
+        {
+            await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 2), token);
+            Assert.False(disposal.IsCompleted);
+        }
+        finally
+        {
+            scheduler.RunPending();
+        }
+
+        await disposal.WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.True(record.Task.IsCompletedSuccessfully);
+    }
+
+    [Fact]
+    public async Task ReplacementOpenIsNotAnnouncedAheadOfAnInFlightTerminalNotification()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var release = new ManualResetEventSlim();
+        TaskCompletionSource closing = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource sendClose = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, serverToken) =>
+        {
+            if (connection == 1)
+            {
+                await sendClose.Task.WaitAsync(serverToken);
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, serverToken);
+            }
+        });
+        using var jetstream = new PausedStateJetstream(server.Uri, closing, release);
+        using var httpClient = new HttpClient();
+        ConcurrentQueue<WebSocketState> states = new();
+        jetstream.ConnectionStateChanged += (_, args) => states.Enqueue(args.State);
+        await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+        sendClose.SetResult();
+        Task originalReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+        try
+        {
+            await closing.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token)
+                .WaitAsync(TimeSpan.FromSeconds(30), token);
+            Assert.True(jetstream.IsConnected);
+            Assert.Equal(1, states.Count(state => state == WebSocketState.Open));
+        }
+        finally
+        {
+            release.Set();
+        }
+
+        await originalReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+        WebSocketState[] notifications = states.ToArray();
+        Assert.Equal(WebSocketState.Open, notifications[^1]);
+        Assert.DoesNotContain(WebSocketState.Closed, notifications);
+        await jetstream.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task ReplayCloseBeforeAnyEventDoesNotReportTheCursorAsReceived()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var logs = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs));
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, connection, serverToken) =>
+        {
+            if (connection == 1)
+            {
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "No events", serverToken);
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(41), serverToken);
+            }
+        });
+        await using var jetstream = new AtProtoJetstream(httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory });
+        await using IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(new SnapshotRequest(),
+            cancellationToken: token).GetAsyncEnumerator(token);
+        Assert.True(await replay.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token));
+        RecordedLogEntry ended = Assert.Single(logs.Entries, entry => entry.EventId == 42);
+        Assert.Contains("starting cursor 40", ended.Message, StringComparison.Ordinal);
+        Assert.Contains("last received sequence (null)", ended.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class PausedStateJetstream(
+        Uri uri,
+        TaskCompletionSource closing,
+        ManualResetEventSlim release) : AtProtoJetstream(uri: uri, options: new JetstreamOptions { UseCompression = false })
+    {
+        protected override void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
+        {
+            if (e.State == WebSocketState.Closed)
+            {
+                closing.TrySetResult();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+            }
+
+            base.OnConnectionStateChanged(e);
+        }
+    }
+
     private static async Task WaitUntil(Func<bool> condition, CancellationToken cancellationToken)
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -1526,6 +1744,13 @@ public class AtProtoJetstreamV2Tests
                             try
                             {
                                 await onConnected(webSocket, connectionNumber, _cancellationTokenSource.Token);
+
+                                if (webSocket.State == WebSocketState.Aborted)
+                                {
+                                    // On Linux with .NET 8/9, aborting the WebSocket alone can leave the
+                                    // HttpListener transport open, so the peer never observes the disconnect.
+                                    context.Response.Abort();
+                                }
 
                                 // Read until the client closes and the close answered, as a real server does.
                                 byte[] buffer = new byte[16 * 1024];

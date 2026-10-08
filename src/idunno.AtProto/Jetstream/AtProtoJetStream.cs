@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Net.WebSockets;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.Json;
 using System.Web;
@@ -209,6 +210,10 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     private volatile ClientWebSocket _client;
 
     private Task _receiveLoopTask = Task.CompletedTask;
+
+    private readonly Queue<(ConnectionStateChangedEventArgs Args, ClientWebSocket? Client)> _stateNotifications = new();
+
+    private bool _dispatchingStateNotifications;
 
     private const string HttpClientName = Agent.HttpClientName;
     internal HttpClientOptions? _httpClientOptions;
@@ -680,11 +685,25 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="e">The <see cref="ConnectionStateChangedEventArgs"/> for the event.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="e"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Notifications are dispatched in order without holding the socket lock. A connection started from
+    /// a handler queues its notifications until that handler returns. Terminal notifications retain their
+    /// originating socket and are discarded if that socket was replaced before dispatch.</para>
+    /// </remarks>
     protected virtual void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = _connectionStateChanged;
+        EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged;
+        lock (_syncLock)
+        {
+            if (_disposed || (e.SourceClient is not null && !ReferenceEquals(e.SourceClient, _client)))
+            {
+                return;
+            }
+
+            connectionStatusChanged = _connectionStateChanged;
+        }
 
         if (!_disposed)
         {
@@ -692,6 +711,64 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
             JetStreamLogger.ClientStateChanged(_logger, e.State);
         }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Queued notifications must drain before propagating a handler failure.")]
+    private void PublishConnectionStateChanged(ConnectionStateChangedEventArgs args, ClientWebSocket? client = null)
+    {
+        if (client is not null)
+        {
+            args = new ConnectionStateChangedEventArgs(args.State) { SourceClient = client };
+        }
+
+        lock (_syncLock)
+        {
+            if (_disposed || (client is not null && !ReferenceEquals(client, _client)))
+            {
+                return;
+            }
+
+            _stateNotifications.Enqueue((args, client));
+            if (_dispatchingStateNotifications)
+            {
+                return;
+            }
+
+            _dispatchingStateNotifications = true;
+        }
+
+        ExceptionDispatchInfo? failure = null;
+        while (true)
+        {
+            lock (_syncLock)
+            {
+                if (!_stateNotifications.TryDequeue(out var notification))
+                {
+                    _dispatchingStateNotifications = false;
+                    break;
+                }
+
+                if (notification.Client is not null && !ReferenceEquals(notification.Client, _client))
+                {
+                    continue;
+                }
+
+                args = notification.Args;
+            }
+
+            try
+            {
+                // Only one dispatcher invokes callbacks. Reentrant connects can enqueue their states without
+                // waiting, but cannot announce a replacement Open before this terminal notification finishes.
+                OnConnectionStateChanged(args);
+            }
+            catch (Exception ex)
+            {
+                failure ??= ExceptionDispatchInfo.Capture(ex);
+            }
+        }
+
+        failure?.Throw();
     }
 
     /// <summary>
@@ -1046,17 +1123,17 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // thread which holds that lock and is setting a filter.
             foreach (WebSocketState state in stateChanges)
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
             }
         }
 
-        if (connectedClient is not null && !_disposed)
+        if (connectedClient is not null && !_disposed && !_disposing)
         {
             // The loop is given the socket this call connected rather than reading the field, so a later reconnection
             // which replaces the field does not hand this loop the new socket to read alongside the loop started for it.
             lock (_syncLock)
             {
-                if (!_disposed)
+                if (!_disposed && !_disposing && ReferenceEquals(connectedClient, _client))
                 {
                     // Schedule outside caller code so no receive callbacks run under the disposal lock.
                     _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, cancellationToken), CancellationToken.None);
@@ -1697,7 +1774,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         {
             foreach (WebSocketState state in stateChanges)
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state));
             }
 
             lock (_syncLock)
@@ -1837,7 +1914,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             }
             else
             {
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
             }
         }
     }
@@ -1990,7 +2067,23 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         try
         {
             await CloseAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.CloseError(_logger, ex);
+        }
+
+        try
+        {
             await _receiveLoopTask.ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            JetStreamLogger.CloseError(_logger, ex);
+        }
+
+        try
+        {
             await DrainMessageParsersAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -2159,7 +2252,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // A connection being replaced to apply updated filters is announced by the reconnection instead.
                     if (ReferenceEquals(client, _client) && !ReferenceEquals(client, _replacedClient))
                     {
-                        OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                        PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
                     }
 
                     finalStateRaised = true;
@@ -2342,7 +2435,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 // The loop has stopped because the socket is no longer usable, which for a dropped connection is the only
                 // thing which tells a consumer the jetstream needs reconnecting. Without this a connection lost to the
                 // network ends the loop silently, and a caller waiting for a state change to reconnect on waits forever.
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State));
+                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(client.State), client);
             }
         }
     }
