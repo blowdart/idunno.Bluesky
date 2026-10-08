@@ -268,6 +268,8 @@
 
 #### idunno.AtProto
 
+* Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
+* Replay now drains pending message parsers before completing a faulted live handoff, and logs distinct overflow, close, transport, server-error and expired-cursor recovery reasons without changing the bounded buffer or checkpoint semantics.
 * Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
 * OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.
 * Missing-scope warnings no longer compare permission-set references literally against expanded grants, or opaque `ref:` grants against requested scopes.

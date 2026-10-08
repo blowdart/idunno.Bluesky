@@ -155,6 +155,19 @@ fallback starting sequence in `ReplayAfterSeq`; resume them with the same origin
 is not valid input to `SnapshotAsync`. Transient connection failures are retried with a short delay; invalid
 credentials and other permanent server refusals are surfaced to the caller.
 
+The live handoff buffers at most 1,024 events. If a slow consumer fills that buffer, replay drains the
+events already queued, closes the connection and reconnects from the last delivered sequence. It does
+not advance the checkpoint to the last received sequence or drop buffered events to make room.
+Events not queued must be served again by the inclusive cursor, or recovered from the archive if the
+cursor has expired. Persist the full checkpoint only after durably processing preceding events.
+
+Enable Jetstream logging to distinguish reconnect causes. Warning entries report buffer overflow,
+remote close, transport or receive failure, server error or an expired cursor, with the connection's starting
+cursor, last received sequence and buffered event count. Recovery entries report the last delivered
+sequence and exception; an expired cursor reports archive fallback. Debug entries identify cancellation
+and enumeration disposal during cleanup. A close/disposal exception alone does not identify the original
+reconnect trigger.
+
 Archive bandwidth is metered in downloaded bytes. The client paces downloads using advertised
 `headwind-quota-*` headers, waits for `Retry-After` on HTTP 429, and resumes interrupted downloads with a
 validated byte range and ETag. No quota is consumed for bytes skipped by a successful range request.

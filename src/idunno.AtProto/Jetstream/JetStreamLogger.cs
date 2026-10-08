@@ -47,8 +47,8 @@ internal static partial class JetStreamLogger
     [LoggerMessage(14, LogLevel.Debug, "Sent OptionsUpdate message")]
     internal static partial void OptionsUpdateMessageSent(ILogger logger);
 
-    [LoggerMessage(15, LogLevel.Warning, "WSS: Unexpected close message received")]
-    internal static partial void CloseMessageReceived(ILogger logger);
+    [LoggerMessage(15, LogLevel.Warning, "WSS: Close message received with status {status} and description {description}")]
+    internal static partial void CloseMessageReceived(ILogger logger, WebSocketCloseStatus? status, string description);
 
     [LoggerMessage(16, LogLevel.Warning, "WSS: Unexpected message type {webSocketMessageType}")]
     internal static partial void UnexpectedMessageType(ILogger logger, WebSocketMessageType webSocketMessageType);
@@ -112,4 +112,16 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(41, LogLevel.Information, "Connecting to {uri}, which is a different server, so the sequence number and compression dictionary have been reset")]
     internal static partial void ServerChanged(ILogger logger, Uri uri);
+
+    [LoggerMessage(42, LogLevel.Warning, "Replay live connection ended: {reason}; starting cursor {cursor}, last received sequence {sequence}, buffered events {bufferedEvents}")]
+    internal static partial void ReplayLiveEnded(ILogger logger, string reason, long cursor, long? sequence, int bufferedEvents, Exception? exception);
+
+    [LoggerMessage(43, LogLevel.Debug, "Receive loop stopped for {reason}")]
+    internal static partial void ReceiveLoopStopped(ILogger logger, string reason);
+
+    [LoggerMessage(44, LogLevel.Warning, "Replay recovering from {reason} at delivered sequence {sequence}")]
+    internal static partial void ReplayRecovering(ILogger logger, string reason, long sequence, Exception exception);
+
+    [LoggerMessage(45, LogLevel.Debug, "Replay live cleanup: {reason}; starting cursor {cursor}")]
+    internal static partial void ReplayLiveCleanup(ILogger logger, string reason, long cursor);
 }
