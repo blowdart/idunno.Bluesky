@@ -13,6 +13,7 @@ using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.RichText;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -36,8 +37,8 @@ public class RecordKeyCreationTests
         accessJwt: JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString()),
         refreshToken: "refreshToken");
 
-    private static BlueskyAgent CreateAgent(TestServer testServer) =>
-        new(new TestHttpClientFactory(testServer))
+    private static BlueskyAgent CreateAgent(TestServer testServer, IFacetExtractor? facetExtractor = null) =>
+        new(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { FacetExtractor = facetExtractor })
         {
             Credentials = CreateCredentials(),
             Service = TestServerBuilder.DefaultUri
@@ -58,8 +59,8 @@ public class RecordKeyCreationTests
                 }
 
                 using JsonDocument request = await JsonDocument.ParseAsync(
-                    context.Request.Body,
-                    cancellationToken: TestContext.Current.CancellationToken);
+        context.Request.Body,
+        cancellationToken: TestContext.Current.CancellationToken);
                 requests.Add(request.RootElement.Clone());
                 context.Response.StatusCode = (int)statusCode;
                 context.Response.ContentType = "application/json";
@@ -479,8 +480,9 @@ public class RecordKeyCreationTests
         Assert.Equal("builder text", request.GetProperty("record").GetProperty("text").GetString());
     }
 
-    [Fact]
-    public async Task ReplyToForwardsItsKeyAndKeepsTheResolvedRootAndParent()
+    [Theory]
+    [MemberData(nameof(ReplyFacetCases))]
+    public async Task ReplyToForwardsItsKeyAndKeepsTheResolvedRootAndParent(int variant, bool useKey, int mode)
     {
         List<JsonElement> createRequests = [];
         AtUri parentUri = new("at://did:plc:test/app.bsky.feed.post/3lcf6ry7xy23x");
@@ -526,7 +528,7 @@ public class RecordKeyCreationTests
                     createRequests.Add(request.RootElement.Clone());
                     JsonElement body = request.RootElement;
                     string collection = body.GetProperty("collection").GetString()!;
-                    string rKey = body.GetProperty("rkey").GetString()!;
+                    string rKey = body.TryGetProperty("rkey", out JsonElement suppliedKey) ? suppliedKey.GetString()! : "3lcf6ry7xy22x";
                     context.Response.StatusCode = (int)HttpStatusCode.OK;
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(
@@ -538,19 +540,46 @@ public class RecordKeyCreationTests
                 context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             });
 
-        using BlueskyAgent agent = CreateAgent(testServer);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(testServer, extractor);
         RecordKey key = TimestampIdentifier.Next();
-        AtProtoHttpResult<CreateRecordResult> result = await agent.ReplyTo(
-            key,
-            new StrongReference(parentUri, s_cid),
-            "reply text",
-            extractFacets: false,
-            cancellationToken: TestContext.Current.CancellationToken);
+        const string text = "https://example.com @example.test";
+        StrongReference parent = new(parentUri, s_cid);
+        EmbeddedImage image = new(new Blob(new CidLink(s_cid.Value), "image/jpeg", 1024), "Image");
+        CancellationToken token = TestContext.Current.CancellationToken;
+        bool extractFacets = mode != 2;
+        AtProtoHttpResult<CreateRecordResult> result = mode == 0
+            ? (variant, useKey) switch
+            {
+                (0, false) => await agent.ReplyTo(parent, text, cancellationToken: token),
+                (0, true) => await agent.ReplyTo(key, parent, text, cancellationToken: token),
+                (1, false) => await agent.ReplyTo(parent, text, image, cancellationToken: token),
+                (1, true) => await agent.ReplyTo(key, parent, text, image, cancellationToken: token),
+                (2, false) => await agent.ReplyTo(parent, text, images: [image], cancellationToken: token),
+                (2, true) => await agent.ReplyTo(key, parent, text, images: [image], cancellationToken: token),
+                _ => throw new InvalidOperationException()
+            }
+            : (variant, useKey) switch
+            {
+                (0, false) => await agent.ReplyTo(parent, text, extractFacets: extractFacets, cancellationToken: token),
+                (0, true) => await agent.ReplyTo(key, parent, text, extractFacets: extractFacets, cancellationToken: token),
+                (1, false) => await agent.ReplyTo(parent, text, image, extractFacets: extractFacets, cancellationToken: token),
+                (1, true) => await agent.ReplyTo(key, parent, text, image, extractFacets: extractFacets, cancellationToken: token),
+                (2, false) => await agent.ReplyTo(parent, text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                (2, true) => await agent.ReplyTo(key, parent, text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                _ => throw new InvalidOperationException()
+            };
 
         Assert.True(result.Succeeded);
+        Assert.Equal(mode == 2 ? 0 : 1, extractor.CallCount);
         JsonElement record = Assert.Single(createRequests).GetProperty("record");
-        Assert.Equal(key.Value, createRequests[0].GetProperty("rkey").GetString());
-        Assert.Equal("reply text", record.GetProperty("text").GetString());
+        Assert.Equal(useKey, createRequests[0].TryGetProperty("rkey", out JsonElement rKey));
+        if (useKey)
+        {
+            Assert.Equal(key.Value, rKey.GetString());
+        }
+        Assert.Equal(text, record.GetProperty("text").GetString());
+        Assert.Equal(mode != 2, record.TryGetProperty("facets", out _));
         Assert.Equal(s_postUri.ToString(), record.GetProperty("reply").GetProperty("root").GetProperty("uri").GetString());
         Assert.Equal(parentUri.ToString(), record.GetProperty("reply").GetProperty("parent").GetProperty("uri").GetString());
     }
@@ -577,5 +606,285 @@ public class RecordKeyCreationTests
             () => agent.Like(strongReference: reference, cancellationToken: cancellationToken));
         await Assert.ThrowsAsync<AuthenticationRequiredException>(
             () => agent.Post(postBuilder: builder, cancellationToken: cancellationToken));
+    }
+    public static TheoryData<int, bool, int> ReplyFacetCases =>
+        new(QuoteFacetCases.Where(testCase => testCase.Data.Item1 < 3));
+
+    public static TheoryData<int, bool, int> QuoteFacetCases
+    {
+        get
+        {
+            TheoryData<int, bool, int> cases = [];
+            for (int variant = 0; variant < 5; variant++)
+            {
+                foreach (bool useKey in new[] { false, true })
+                {
+                    for (int mode = 0; mode < 3; mode++)
+                    {
+                        cases.Add(variant, useKey, mode);
+                    }
+                }
+            }
+
+            return cases;
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(QuoteFacetCases))]
+    public async Task QuoteHelpersControlFacetExtraction(int variant, bool useKey, int mode)
+    {
+        List<JsonElement> requests = [];
+        using TestServer server = CreateRecordServer(requests);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(server, extractor);
+        StrongReference reference = new(s_postUri, s_cid);
+        RecordKey key = TimestampIdentifier.Next();
+        const string text = "https://example.com @example.test";
+        CancellationToken token = TestContext.Current.CancellationToken;
+        Blob blob = new(new CidLink(s_cid.Value), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "Image");
+        EmbeddedVideo video = new(blob, altText: "Video");
+        EmbeddedExternal card = new("https://example.com", "Title", "Description");
+        bool extractFacets = mode != 2;
+        AtProtoHttpResult<CreateRecordResult> result;
+
+        if (mode == 0)
+        {
+            result = (variant, useKey) switch
+            {
+                (0, false) => await agent.Quote(reference, text, null, token),
+                (0, true) => await agent.Quote(key, reference, text, null, token),
+                (1, false) => await agent.Quote(reference, text, image, null, token),
+                (1, true) => await agent.Quote(key, reference, text, image, null, token),
+                (2, false) => await agent.Quote(reference, text, [image], null, token),
+                (2, true) => await agent.Quote(key, reference, text, [image], null, token),
+                (3, false) => await agent.Quote(reference, text, video, null, token),
+                (3, true) => await agent.Quote(key, reference, text, video, null, token),
+                (4, false) => await agent.Quote(reference, text, card, null, token),
+                (4, true) => await agent.Quote(key, reference, text, card, null, token),
+                _ => throw new InvalidOperationException()
+            };
+        }
+        else
+        {
+            result = (variant, useKey) switch
+            {
+                (0, false) => await agent.Quote(reference, text: text, extractFacets: extractFacets, cancellationToken: token),
+                (0, true) => await agent.Quote(key, reference, text: text, extractFacets: extractFacets, cancellationToken: token),
+                (1, false) => await agent.Quote(reference, text: text, image: image, extractFacets: extractFacets, cancellationToken: token),
+                (1, true) => await agent.Quote(key, reference, text: text, image: image, extractFacets: extractFacets, cancellationToken: token),
+                (2, false) => await agent.Quote(reference, text: text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                (2, true) => await agent.Quote(key, reference, text: text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                (3, false) => await agent.Quote(reference, text: text, video: video, extractFacets: extractFacets, cancellationToken: token),
+                (3, true) => await agent.Quote(key, reference, text: text, video: video, extractFacets: extractFacets, cancellationToken: token),
+                (4, false) => await agent.Quote(reference, text: text, externalCard: card, extractFacets: extractFacets, cancellationToken: token),
+                (4, true) => await agent.Quote(key, reference, text: text, externalCard: card, extractFacets: extractFacets, cancellationToken: token),
+                _ => throw new InvalidOperationException()
+            };
+        }
+
+        Assert.True(result.Succeeded);
+        JsonElement request = Assert.Single(requests);
+        Assert.Equal(useKey, request.TryGetProperty("rkey", out JsonElement suppliedKey));
+        if (useKey)
+        {
+            Assert.Equal(key.Value, suppliedKey.GetString());
+        }
+        JsonElement post = request.GetProperty("record");
+        Assert.Equal(text, post.GetProperty("text").GetString());
+        Assert.Equal(extractFacets ? 1 : 0, extractor.CallCount);
+        Assert.Equal(extractFacets, post.TryGetProperty("facets", out JsonElement facets));
+        if (extractFacets)
+        {
+            Assert.Equal(text, extractor.Text);
+            Assert.Equal(token, extractor.CancellationToken);
+            Assert.Equal(2, facets.GetArrayLength());
+            Assert.Equal("https://example.com", facets[0].GetProperty("features")[0].GetProperty("uri").GetString());
+            Assert.Equal(s_did.Value, facets[1].GetProperty("features")[0].GetProperty("did").GetString());
+        }
+        JsonElement embed = post.GetProperty("embed");
+        JsonElement quoted = variant == 0 ? embed.GetProperty("record") : embed.GetProperty("record").GetProperty("record");
+        Assert.Equal(s_postUri.ToString(), quoted.GetProperty("uri").GetString());
+        Assert.Equal(s_cid.Value, quoted.GetProperty("cid").GetString());
+    }
+
+    [Theory]
+    [MemberData(nameof(QuoteFacetCases))]
+    public async Task PostHelpersControlFacetExtraction(int variant, bool useKey, int mode)
+    {
+        List<JsonElement> requests = [];
+        using TestServer server = CreateRecordServer(requests);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(server, extractor);
+        RecordKey key = TimestampIdentifier.Next();
+        const string text = "https://example.com @example.test";
+        CancellationToken token = TestContext.Current.CancellationToken;
+        Blob blob = new(new CidLink(s_cid.Value), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "Image");
+        EmbeddedVideo video = new(blob, altText: "Video");
+        EmbeddedExternal card = new("https://example.com", "Title", "Description");
+        bool extractFacets = mode != 2;
+        AtProtoHttpResult<CreateRecordResult> result;
+
+        if (mode == 0)
+        {
+            result = (variant, useKey) switch
+            {
+                (0, false) => await agent.Post(text, cancellationToken: token),
+                (0, true) => await agent.Post(key, text, cancellationToken: token),
+                (1, false) => await agent.Post(text, image, cancellationToken: token),
+                (1, true) => await agent.Post(key, text, image, cancellationToken: token),
+                (2, false) => await agent.Post(text, images: [image], cancellationToken: token),
+                (2, true) => await agent.Post(key, text, images: [image], cancellationToken: token),
+                (3, false) => await agent.Post(text, video, cancellationToken: token),
+                (3, true) => await agent.Post(key, text, video, cancellationToken: token),
+                (4, false) => await agent.Post(text, card, cancellationToken: token),
+                (4, true) => await agent.Post(key, text, card, cancellationToken: token),
+                _ => throw new InvalidOperationException()
+            };
+        }
+        else
+        {
+            result = (variant, useKey) switch
+            {
+                (0, false) => await agent.Post(text, extractFacets: extractFacets, cancellationToken: token),
+                (0, true) => await agent.Post(key, text, extractFacets: extractFacets, cancellationToken: token),
+                (1, false) => await agent.Post(text, image, extractFacets: extractFacets, cancellationToken: token),
+                (1, true) => await agent.Post(key, text, image, extractFacets: extractFacets, cancellationToken: token),
+                (2, false) => await agent.Post(text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                (2, true) => await agent.Post(key, text, images: [image], extractFacets: extractFacets, cancellationToken: token),
+                (3, false) => await agent.Post(text, video, extractFacets: extractFacets, cancellationToken: token),
+                (3, true) => await agent.Post(key, text, video, extractFacets: extractFacets, cancellationToken: token),
+                (4, false) => await agent.Post(text, card, extractFacets: extractFacets, cancellationToken: token),
+                (4, true) => await agent.Post(key, text, card, extractFacets: extractFacets, cancellationToken: token),
+                _ => throw new InvalidOperationException()
+            };
+        }
+
+        Assert.True(result.Succeeded);
+        JsonElement request = Assert.Single(requests);
+        Assert.Equal(useKey, request.TryGetProperty("rkey", out JsonElement suppliedKey));
+        if (useKey)
+        {
+            Assert.Equal(key.Value, suppliedKey.GetString());
+        }
+        JsonElement post = request.GetProperty("record");
+        Assert.Equal(text, post.GetProperty("text").GetString());
+        Assert.Equal(extractFacets ? 1 : 0, extractor.CallCount);
+        Assert.Equal(extractFacets, post.TryGetProperty("facets", out _));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task BuilderPublishingKeepsPreparedFacetsWithoutExtraction(bool useKey)
+    {
+        List<JsonElement> requests = [];
+        using TestServer server = CreateRecordServer(requests);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(server, extractor);
+        RecordKey key = TimestampIdentifier.Next();
+        PostBuilder builder = new("https://example.com", facets:
+        [
+            new(new ByteSlice(0, 19), [new LinkFacetFeature("https://example.com")])
+        ]);
+        AtProtoHttpResult<CreateRecordResult> result = useKey
+            ? await agent.Post(key, builder, TestContext.Current.CancellationToken)
+            : await agent.Post(builder, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, extractor.CallCount);
+        JsonElement facets = Assert.Single(requests).GetProperty("record").GetProperty("facets");
+        Assert.Equal(1, facets.GetArrayLength());
+        Assert.Equal("https://example.com", facets[0].GetProperty("features")[0].GetProperty("uri").GetString());
+    }
+
+    [Theory]
+    [MemberData(nameof(QuoteFacetCases))]
+    public async Task TextlessQuotesDoNotExtractFacets(int variant, bool useKey, int mode)
+    {
+        List<JsonElement> requests = [];
+        using TestServer server = CreateApplyWritesServer(requests);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(server, extractor);
+        StrongReference reference = new(s_postUri, s_cid);
+        RecordKey key = TimestampIdentifier.Next();
+        CancellationToken token = TestContext.Current.CancellationToken;
+        Blob blob = new(new CidLink(s_cid.Value), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "Image");
+        EmbeddedVideo video = new(blob, altText: "Video");
+        EmbeddedExternal card = new("https://example.com", "Title", "Description");
+        bool extractFacets = mode != 2;
+        AtProtoHttpResult<CreateRecordResult> result = (variant, useKey) switch
+        {
+            (0, false) => await agent.Quote(reference, extractFacets: extractFacets, cancellationToken: token),
+            (0, true) => await agent.Quote(key, reference, extractFacets: extractFacets, cancellationToken: token),
+            (1, false) => await agent.Quote(reference, image: image, extractFacets: extractFacets, cancellationToken: token),
+            (1, true) => await agent.Quote(key, reference, image: image, extractFacets: extractFacets, cancellationToken: token),
+            (2, false) => await agent.Quote(reference, images: [image], extractFacets: extractFacets, cancellationToken: token),
+            (2, true) => await agent.Quote(key, reference, images: [image], extractFacets: extractFacets, cancellationToken: token),
+            (3, false) => await agent.Quote(reference, video: video, extractFacets: extractFacets, cancellationToken: token),
+            (3, true) => await agent.Quote(key, reference, video: video, extractFacets: extractFacets, cancellationToken: token),
+            (4, false) => await agent.Quote(reference, externalCard: card, extractFacets: extractFacets, cancellationToken: token),
+            (4, true) => await agent.Quote(key, reference, externalCard: card, extractFacets: extractFacets, cancellationToken: token),
+            _ => throw new InvalidOperationException()
+        };
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, extractor.CallCount);
+        JsonElement operation = Assert.Single(Assert.Single(requests).GetProperty("writes").EnumerateArray());
+        Assert.Equal(string.Empty, operation.GetProperty("value").GetProperty("text").GetString());
+        Assert.False(operation.GetProperty("value").TryGetProperty("facets", out _));
+        if (useKey)
+        {
+            Assert.Equal(key.Value, operation.GetProperty("rkey").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CardOnlyPostsAcceptFacetControl(bool useKey, bool extractFacets)
+    {
+        List<JsonElement> requests = [];
+        using TestServer server = CreateApplyWritesServer(requests);
+        RecordingFacetExtractor extractor = new();
+        using BlueskyAgent agent = CreateAgent(server, extractor);
+        RecordKey key = TimestampIdentifier.Next();
+        EmbeddedExternal card = new("https://example.com", "Title", "Description");
+        AtProtoHttpResult<CreateRecordResult> result = useKey
+            ? await agent.Post(key, card, extractFacets: extractFacets, cancellationToken: TestContext.Current.CancellationToken)
+            : await agent.Post(card, extractFacets: extractFacets, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, extractor.CallCount);
+        JsonElement operation = Assert.Single(Assert.Single(requests).GetProperty("writes").EnumerateArray());
+        Assert.Equal(string.Empty, operation.GetProperty("value").GetProperty("text").GetString());
+        Assert.False(operation.GetProperty("value").TryGetProperty("facets", out _));
+    }
+
+    private sealed class RecordingFacetExtractor : IFacetExtractor
+    {
+        public int CallCount { get; private set; }
+
+        public string? Text { get; private set; }
+
+        public CancellationToken CancellationToken { get; private set; }
+
+        public Task<IList<Facet>> ExtractFacets(string text, CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            Text = text;
+            CancellationToken = cancellationToken;
+
+            return Task.FromResult<IList<Facet>>(
+            [
+                new(new ByteSlice(0, 19), [new LinkFacetFeature("https://example.com")]),
+                            new(new ByteSlice(20, 33), [new MentionFacetFeature(s_did)])
+            ]);
+        }
     }
 }

@@ -15,7 +15,7 @@ public partial class BlueskyAgent
     /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
     /// <param name="text">The text for the new reply.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is nul.</exception>
@@ -55,7 +55,7 @@ public partial class BlueskyAgent
     /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
     /// <param name="text">The text for the new reply.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
@@ -97,7 +97,7 @@ public partial class BlueskyAgent
     /// <param name="text">The text for the new reply</param>
     /// <param name="image">An image to attach to the reply.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
@@ -158,7 +158,7 @@ public partial class BlueskyAgent
     /// <param name="text">The text for the new reply.</param>
     /// <param name="image">An image to attach to the reply.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
@@ -207,7 +207,7 @@ public partial class BlueskyAgent
     /// <param name="text">The text for the new post</param>
     /// <param name="images">Any images to attach to the post.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is <see langword="null"/> or empty, or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
@@ -266,7 +266,7 @@ public partial class BlueskyAgent
     /// <param name="text">The text for the new reply.</param>
     /// <param name="images">Any images to attach to the reply.</param>
     /// <param name="tags">Any tags to apply to the reply.</param>
-    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>

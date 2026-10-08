@@ -21,6 +21,23 @@ Persist `postKey` before sending. If the outcome is uncertain, construct the sam
 
 `PostBuilder` does not own the key; pass it to the keyed `Post(rKey, postBuilder, ...)` overload. For an already-constructed `Post`, setting `extractFacets: false` preserves the supplied post (including its timestamps, facets, and reply references). When gates are created with a post, the post's key is also used for the corresponding threadgate or postgate record, as required by those records' lexicons.
 
+### Facet extraction and migration
+
+`Post`, `ReplyTo`, and `Quote` convenience helpers extract facets from text by default. Set `extractFacets: false` to disable this processing, for example when preserving persisted text without adding facets or performing mention-handle resolution. Textless helpers expose the same control, but have no text to extract. Publishing a `PostBuilder` continues to use its prepared facets without automatic extraction.
+
+**Breaking behavior change in 8.0.0:** existing text-only and image `Quote` calls now extract facets by default, just like text-bearing `Post` and `ReplyTo` calls. URLs and mentions can gain facets, and mentions can require handle-resolution network requests. To retain the previous quote behavior, pass the flag explicitly:
+
+```csharp
+await agent.Quote(
+    rKey: postKey,
+    strongReference: quotedPost,
+    text: "https://example.com @example.test",
+    extractFacets: false,
+    cancellationToken: cancellationToken);
+```
+
+The original overload signatures remain available, including positional cancellation-token calls. Explicit-control quote overloads require the flag; calls that omit it use extraction by default. Reusing a record key does not freeze extracted facets or resolved mention identities, so applications that need an exact persisted record should construct a `Post` and publish it with `extractFacets: false`, or prepare facets in a `PostBuilder`.
+
 ## Other supported records
 
 The following single-record convenience APIs expose a keyed overload:

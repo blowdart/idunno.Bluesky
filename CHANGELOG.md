@@ -228,6 +228,10 @@
 
 ### Breaking Changes
 
+#### idunno.Bluesky
+
+* `Quote` text-only and image helpers now extract facets by default, matching text-bearing `Post` and `ReplyTo` helpers. URLs and mentions can gain facets, and mentions can trigger handle-resolution network requests. Pass `extractFacets: false` to preserve the previous quote behavior. All quote and card-only post helpers expose explicit facet control while retaining existing method signatures and positional cancellation-token calls. `PostBuilder` publishing remains prepared-facets-only.
+
 #### idunno.AtProto
 
 * `Cid.Hash` now returns an `IReadOnlyList<byte>` rather than a `byte[]`, so callers can no longer cast it to `byte[]` and change the hash.

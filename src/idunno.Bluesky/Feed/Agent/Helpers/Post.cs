@@ -596,7 +596,7 @@ public partial class BlueskyAgent
             embeddedRecord: video,
             tags: tags);
 
-        if (extractFacets && text is not null)
+        if (extractFacets && !string.IsNullOrEmpty(text))
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -673,7 +673,7 @@ public partial class BlueskyAgent
         DateTimeOffset creationDateTime = createdAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
         Post post = new(text, createdAt: creationDateTime, langs: langs, embeddedRecord: video, tags: tags);
 
-        if (extractFacets && text is not null)
+        if (extractFacets && !string.IsNullOrEmpty(text))
         {
             IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (extractedFacets.Any())
@@ -734,7 +734,7 @@ public partial class BlueskyAgent
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
             interactionPreferences: interactionPreferences,
-            extractFacets: false,
+            extractFacets: true,
             labels: labels,
             tags: tags,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -780,10 +780,87 @@ public partial class BlueskyAgent
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
             interactionPreferences: interactionPreferences,
-            extractFacets: false,
+            extractFacets: true,
             labels: labels,
             tags: tags,
             cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a card-only post with explicit facet extraction control.
+    /// </summary>
+    /// <param name="externalCard">An Open Graph embedded card.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from post text; otherwise, <see langword="false"/>. This textless overload has no text to extract.</param>
+    /// <param name="createdAt">The time the post was created.</param>
+    /// <param name="langs">The languages of the post.</param>
+    /// <param name="threadGateRules">Any thread gate rules.</param>
+    /// <param name="postGateRules">Any post gate rules.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Any self labels.</param>
+    /// <param name="tags">Any tags to apply to the post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The gate rule counts, tag count, or tag lengths exceed their permitted maximums.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Explicit facet control preserves existing signatures.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        EmbeddedExternal externalCard,
+        bool extractFacets,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Post(rKey: null, externalCard: externalCard, extractFacets: extractFacets, createdAt: createdAt,
+            langs: langs, threadGateRules: threadGateRules, postGateRules: postGateRules,
+            interactionPreferences: interactionPreferences, labels: labels, tags: tags, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a card-only post with a specified key and explicit facet extraction control.
+    /// </summary>
+    /// <param name="rKey">The record key for the post and any associated gates.</param>
+    /// <param name="externalCard">An Open Graph embedded card.</param>
+    /// <param name="extractFacets"><see langword="true"/> to extract facets from post text; otherwise, <see langword="false"/>. This textless overload has no text to extract.</param>
+    /// <param name="createdAt">The time the post was created.</param>
+    /// <param name="langs">The languages of the post.</param>
+    /// <param name="threadGateRules">Any thread gate rules.</param>
+    /// <param name="postGateRules">Any post gate rules.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Any self labels.</param>
+    /// <param name="tags">Any tags to apply to the post.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The gate rule counts, tag count, or tag lengths exceed their permitted maximums.</exception>
+    /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Explicit facet control preserves existing signatures.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        EmbeddedExternal externalCard,
+        bool extractFacets,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(externalCard);
+
+        return Post(rKey, text: string.Empty, externalCard: externalCard, createdAt: createdAt,
+            langs: langs, threadGateRules: threadGateRules, postGateRules: postGateRules,
+            interactionPreferences: interactionPreferences, labels: labels, extractFacets: extractFacets,
+            tags: tags, cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -835,7 +912,7 @@ public partial class BlueskyAgent
 
         IList<Facet>? facets = null;
 
-        if (extractFacets)
+        if (extractFacets && !string.IsNullOrEmpty(text))
         {
             facets = await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
         }
@@ -916,7 +993,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        IList<Facet>? facets = extractFacets
+        IList<Facet>? facets = extractFacets && !string.IsNullOrEmpty(text)
             ? await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false)
             : null;
 
