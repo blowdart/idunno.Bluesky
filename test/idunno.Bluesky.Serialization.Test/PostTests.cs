@@ -4,7 +4,9 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -13,6 +15,134 @@ namespace idunno.Bluesky.Serialization.Test;
 public class PostTests
 {
     private readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void ReproducedWhitespacePostDeserializesWithProductionMetadata()
+    {
+        const string json = """
+            {
+              "text": " ",
+              "$type": "app.bsky.feed.post",
+              "createdAt": "2026-10-08T15:43:06.08711400Z"
+            }
+            """;
+
+        Post? post = JsonSerializer.Deserialize<Post>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.NotNull(post);
+        Assert.Equal(" ", post.Text);
+        Assert.Equal(DateTimeOffset.Parse("2026-10-08T15:43:06.08711400Z"), post.CreatedAt);
+        Assert.Null(post.EmbeddedRecord);
+
+        BlueskyRecord? record = JsonSerializer.Deserialize<BlueskyRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.Equal(" ", Assert.IsType<Post>(record).Text);
+
+        string envelopeJson = $$"""
+            {
+              "uri": "at://did:plc:kaxwhrcwrqdxm2ppaaczwhcn/app.bsky.feed.post/3mxesfgzw4q2r",
+              "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+              "value": {{json}}
+            }
+            """;
+        AtProtoRepositoryRecord<Post>? envelope = JsonSerializer.Deserialize<AtProtoRepositoryRecord<Post>>(
+            envelopeJson, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.NotNull(envelope);
+        Assert.Equal(" ", envelope.Value.Text);
+    }
+
+    [Theory]
+    [InlineData(" ", false)]
+    [InlineData("   ", false)]
+    [InlineData("\t\t", false)]
+    [InlineData("\n\n", false)]
+    [InlineData("\r\n", false)]
+    [InlineData(" \t\r\n ", false)]
+    [InlineData(" ", true)]
+    [InlineData("\t\t", true)]
+    [InlineData("\n\n", true)]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    public void PostTextRoundTripsUnchanged(string? text, bool hasEmbed)
+    {
+        string json = CreatePostJson(text, hasEmbed);
+
+        foreach (JsonSerializerOptions options in new[] { _jsonSerializerOptions, BlueskyServer.BlueskyJsonSerializerOptions })
+        {
+            Post? post = JsonSerializer.Deserialize<Post>(json, options);
+            Assert.NotNull(post);
+            Assert.Equal(text, post.Text);
+            Assert.Equal(hasEmbed, post.EmbeddedRecord is not null);
+
+            string serialized = JsonSerializer.Serialize(post, options);
+            using JsonDocument document = JsonDocument.Parse(serialized);
+            if (text is not null)
+            {
+                Assert.Equal(text, document.RootElement.GetProperty("text").GetString());
+            }
+            else if (document.RootElement.TryGetProperty("text", out JsonElement serializedText))
+            {
+                Assert.Equal(JsonValueKind.Null, serializedText.ValueKind);
+            }
+            Assert.Equal("app.bsky.feed.post", document.RootElement.GetProperty("$type").GetString());
+
+            Post? roundTripped = JsonSerializer.Deserialize<Post>(serialized, options);
+            Assert.NotNull(roundTripped);
+            Assert.Equal(text, roundTripped.Text);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void NullOrEmptyTextWithoutEmbedStillFailsDeserialization(string? text)
+    {
+        foreach (JsonSerializerOptions options in new[] { _jsonSerializerOptions, BlueskyServer.BlueskyJsonSerializerOptions })
+        {
+            ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
+                () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
+            Assert.Equal("text", exception.ParamName);
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DeserializationStillEnforcesTextLengthLimits(bool testBytes, bool hasEmbed)
+    {
+        string atLimit = testBytes
+            ? "a" + new string('\u0301', (Maximum.PostLengthInBytes - 2) / 2) + "b"
+            : new string(' ', Maximum.PostLengthInGraphemes);
+        string overLimit = atLimit + (testBytes ? "c" : " ");
+        Assert.Equal(testBytes ? Maximum.PostLengthInBytes : Maximum.PostLengthInGraphemes,
+            testBytes ? atLimit.GetUtf8Length() : atLimit.GetGraphemeLength());
+        Assert.Equal(testBytes ? Maximum.PostLengthInBytes + 1 : Maximum.PostLengthInGraphemes + 1,
+            testBytes ? overLimit.GetUtf8Length() : overLimit.GetGraphemeLength());
+
+        foreach (JsonSerializerOptions options in new[] { _jsonSerializerOptions, BlueskyServer.BlueskyJsonSerializerOptions })
+        {
+            Post? post = JsonSerializer.Deserialize<Post>(CreatePostJson(atLimit, hasEmbed), options);
+            Assert.NotNull(post);
+            Assert.Equal(atLimit, post.Text);
+
+            ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(
+                () => JsonSerializer.Deserialize<Post>(CreatePostJson(overLimit, hasEmbed), options));
+            Assert.Equal("text", exception.ParamName);
+        }
+    }
+
+    private string CreatePostJson(string? text, bool hasEmbed)
+    {
+        string embed = hasEmbed
+            ? """
+                ,"embed":{"$type":"app.bsky.embed.external","external":{"uri":"https://example.com","title":"Example","description":"An example card"}}
+                """
+            : string.Empty;
+
+        return $$"""
+            {"$type":"app.bsky.feed.post","text":{{JsonSerializer.Serialize(text, _jsonSerializerOptions)}},"createdAt":"2026-10-08T15:43:06.08711400Z"{{embed}}}
+            """;
+    }
 
     [Fact]
     public void SimplePostDeserializesCorrectlyWithSourceGeneratedJsonContext()

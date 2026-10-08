@@ -307,6 +307,9 @@
 
 #### idunno.Bluesky
 
+* Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved without changing null/empty text policies or text length limits.
+* Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation, top-level post tags and `HashTag` authoring validation remain unchanged.
+* Fixed schema-valid empty post-level tags and rich-text facets with empty feature arrays being rejected during record deserialization. Null values and required-field validation remain enforced.
 * `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
 * Textless video and external-card `Quote()` helpers omit language metadata, matching textless image quotes. Text-bearing quotes retain their language metadata.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.

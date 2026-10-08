@@ -14,6 +14,28 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostBuilderTests
 {
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    [InlineData(" \t\r\n ")]
+    public void BuilderPreservesWhitespaceOnlyText(string text)
+    {
+        PostBuilder builder = new(text);
+        Assert.True(builder.HasText);
+        Assert.Equal(text, builder.ToPost().Text);
+
+        PostBuilder fluentBuilder = new();
+        fluentBuilder.WithText(text);
+        Assert.Equal(text, fluentBuilder.ToPost().Text);
+
+        builder.EmbedRecord(new EmbeddedExternal("https://example.com", "Example", "An example card"));
+        Post post = builder.ToPost();
+        Assert.Equal(text, post.Text);
+        Assert.IsType<EmbeddedExternal>(post.EmbeddedRecord);
+    }
+
     [Fact]
     public void ToPostShouldCaptureGateRulesAtomicallyWithThePost()
     {

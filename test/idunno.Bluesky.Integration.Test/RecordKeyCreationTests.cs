@@ -117,6 +117,119 @@ public class RecordKeyCreationTests
             });
     }
 
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    [InlineData(" \t\r\n ")]
+    public async Task PostingOverloadsPreserveWhitespaceOnlyText(string text)
+    {
+            List<JsonElement> requests = [];
+            using TestServer testServer = CreateRecordServer(requests);
+            using BlueskyAgent agent = CreateAgent(testServer);
+
+            Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+            EmbeddedImage image = new(blob, "alt text");
+            EmbeddedVideo video = new(blob, altText: "video");
+            EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
+            RecordKey key = TimestampIdentifier.Next();
+            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+            Assert.True((await agent.Post(text, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(text, "en", cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, "en", cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(text, image, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, image, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, new[] { image }, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(text, video, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, video, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(text, externalCard, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, text, externalCard, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(new Post(text), cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, new Post(text), cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(new PostBuilder(text), cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, new PostBuilder(text), cancellationToken)).Succeeded);
+            PostBuilder builder = new();
+            builder.WithText(text);
+            builder.EmbedRecord(externalCard);
+            Assert.True((await agent.Post(builder, cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, builder, cancellationToken)).Succeeded);
+
+            Assert.Equal(18, requests.Count);
+            for (int index = 0; index < requests.Count; index++)
+            {
+                JsonElement request = requests[index];
+                Assert.Equal("app.bsky.feed.post", request.GetProperty("collection").GetString());
+                JsonElement record = request.GetProperty("record");
+                Assert.Equal("app.bsky.feed.post", record.GetProperty("$type").GetString());
+                Assert.Equal(text, record.GetProperty("text").GetString());
+                Assert.Equal(index is >= 4 and <= 11 or >= 16, record.TryGetProperty("embed", out _));
+
+                if (index % 2 == 1)
+                {
+                    Assert.Equal(key.Value, request.GetProperty("rkey").GetString());
+                }
+            }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task TextPostingOverloadsStillRejectNullOrEmptyText(string? text)
+    {
+            List<JsonElement> requests = [];
+            using TestServer testServer = CreateRecordServer(requests);
+            using BlueskyAgent agent = CreateAgent(testServer);
+            RecordKey key = TimestampIdentifier.Next();
+            Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+            EmbeddedImage image = new(blob, "alt text");
+            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+            if (text is null)
+            {
+                await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(text!, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, text!, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(text!, image, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentNullException>(() => agent.Post(key, text!, image, cancellationToken: cancellationToken));
+            }
+            else
+            {
+                await Assert.ThrowsAsync<ArgumentException>(() => agent.Post(text, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentException>(() => agent.Post(key, text, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentException>(() => agent.Post(text, image, cancellationToken: cancellationToken));
+                await Assert.ThrowsAsync<ArgumentException>(() => agent.Post(key, text, image, cancellationToken: cancellationToken));
+            }
+
+            Assert.Empty(requests);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PostingStillEnforcesTextLengthLimits(bool testBytes)
+    {
+            List<JsonElement> requests = [];
+            using TestServer testServer = CreateRecordServer(requests);
+            using BlueskyAgent agent = CreateAgent(testServer);
+            RecordKey key = TimestampIdentifier.Next();
+            string atLimit = testBytes
+                ? "a" + new string('\u0301', (Maximum.PostLengthInBytes - 2) / 2) + "b"
+                : new string(' ', Maximum.PostLengthInGraphemes);
+            string overLimit = atLimit + (testBytes ? "c" : " ");
+            CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+            Assert.True((await agent.Post(atLimit, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(key, atLimit, cancellationToken: cancellationToken)).Succeeded);
+            Assert.True((await agent.Post(new PostBuilder(atLimit), cancellationToken)).Succeeded);
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(overLimit, cancellationToken: cancellationToken));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.Post(key, overLimit, cancellationToken: cancellationToken));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder(overLimit));
+            Assert.Equal(3, requests.Count);
+    }
+
     [Fact]
     public async Task SupportedCreationHelpersForwardTheirRecordKeys()
     {
