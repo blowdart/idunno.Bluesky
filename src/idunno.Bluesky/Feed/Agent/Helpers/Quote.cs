@@ -896,7 +896,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/> with just an image.
+    /// Creates a Bluesky post record quoting the post identified by <see cref="StrongReference"/> with just an image.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
     /// <param name="image">The image to attach to the quote.</param>
@@ -920,7 +920,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/> with just an image.
+    /// Creates a Bluesky post record quoting the post identified by <see cref="StrongReference"/> with just an image.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the quote text; otherwise, <see langword="false"/>. Existing overloads default to extraction.</param>
@@ -1045,7 +1045,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
+    /// Creates a Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
     /// <param name="images">Any images to attach to the quote post.</param>
@@ -1068,7 +1068,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
+    /// Creates a Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the quote text; otherwise, <see langword="false"/>. Existing overloads default to extraction.</param>
