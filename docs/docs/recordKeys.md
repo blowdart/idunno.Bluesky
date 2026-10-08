@@ -6,7 +6,7 @@ The SDK does not persist keys or reconcile uncertain writes. Generate or choose 
 
 ## Posting with a fixed key
 
-The keyed overloads of `Post`, `ReplyTo`, and `Quote` accept a `RecordKey? rKey`. For example:
+The keyed overloads of `Post`, `ReplyTo`, and `Quote` accept a `RecordKey? rKey`. Post and quote overloads support their text, language, image, video, and external-card variants. For example:
 
 ```csharp
 RecordKey postKey = new("3lcf6ry7xy22x");

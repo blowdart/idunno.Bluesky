@@ -7,8 +7,10 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
 
@@ -207,6 +209,66 @@ public class RecordKeyCreationTests
         Assert.Equal(parent.Uri.ToString(), postRecord.GetProperty("reply").GetProperty("parent").GetProperty("uri").GetString());
         Assert.Equal(createdAt, post.CreatedAt);
         Assert.Equal(reply, post.Reply);
+    }
+
+    [Fact]
+    public async Task KeyedPostAndQuoteOverloadsForwardTheirKeys()
+    {
+        List<JsonElement> requests = [];
+        using TestServer testServer = CreateRecordServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "alt text");
+        EmbeddedVideo video = new(blob, altText: "video");
+        EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
+        StrongReference quoteReference = new(s_postUri, s_cid);
+        RecordKey[] keys = Enumerable.Range(0, 8).Select(_ => (RecordKey)TimestampIdentifier.Next()).ToArray();
+
+        Assert.True((await agent.Post(keys[0], "language post", "en", extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Post(keys[1], "image post", image, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Post(keys[2], "images post", new[] { image }, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Post(keys[3], "video post", video, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Post(keys[4], "card post", externalCard, extractFacets: false, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Quote(keys[5], quoteReference, "quoted text", cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Quote(keys[6], quoteReference, "quoted image", image, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await agent.Quote(keys[7], quoteReference, "quoted images", new[] { image }, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+
+        Assert.Equal(keys.Length, requests.Count);
+        for (int index = 0; index < keys.Length; index++)
+        {
+            Assert.Equal(keys[index].Value, requests[index].GetProperty("rkey").GetString());
+        }
+
+        Assert.Equal("en", requests[0].GetProperty("record").GetProperty("langs")[0].GetString());
+        Assert.True(requests[1].GetProperty("record").TryGetProperty("embed", out _));
+        Assert.True(requests[2].GetProperty("record").TryGetProperty("embed", out _));
+        Assert.True(requests[3].GetProperty("record").TryGetProperty("embed", out _));
+        Assert.True(requests[4].GetProperty("record").TryGetProperty("embed", out _));
+        Assert.Equal(s_postUri.ToString(), requests[5].GetProperty("record").GetProperty("embed").GetProperty("record").GetProperty("uri").GetString());
+        Assert.True(requests[6].GetProperty("record").TryGetProperty("embed", out _));
+        Assert.True(requests[7].GetProperty("record").TryGetProperty("embed", out _));
+    }
+
+    [Fact]
+    public async Task KeyedExternalCardPostForwardsItsKey()
+    {
+        List<JsonElement> requests = [];
+        using TestServer testServer = CreateApplyWritesServer(requests);
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        RecordKey key = TimestampIdentifier.Next();
+        EmbeddedExternal externalCard = new("https://example.com", "Example", "An example card");
+        AtProtoHttpResult<CreateRecordResult> result = await agent.Post(
+            key,
+            externalCard,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        JsonElement operation = Assert.Single(requests).GetProperty("writes")[0];
+        Assert.Equal("app.bsky.feed.post", operation.GetProperty("collection").GetString());
+        Assert.Equal(key.Value, operation.GetProperty("rkey").GetString());
+        Assert.Equal($"at://{s_did}/app.bsky.feed.post/{key}", result.Result.Uri.ToString());
     }
 
     [Fact]

@@ -55,6 +55,36 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a quote post using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the quote post.</param>
+    /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
+    /// <param name="text">The text for the new post.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Quote(
+            rKey,
+            strongReference,
+            text,
+            images: null,
+            tags: tags,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a simple Bluesky post record with the specified <paramref name="text"/>, if any, and <paramref name="image" />, quoting the post identified by <see cref="StrongReference"/>.
     /// </summary>
     /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
@@ -99,6 +129,42 @@ public partial class BlueskyAgent
             images: [image],
             tags: tags,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a quote post with the specified <paramref name="rKey"/> and image.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the quote post.</param>
+    /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
+    /// <param name="text">The text for the new post.</param>
+    /// <param name="image">The image to attach to the quote post.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> or a tag is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        EmbeddedImage image,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(strongReference);
+        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(image);
+
+        return Quote(
+            rKey,
+            strongReference,
+            text,
+            images: [image],
+            tags: tags,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -170,6 +236,79 @@ public partial class BlueskyAgent
         }
 
         return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a quote post with the specified <paramref name="rKey"/> and images.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the quote post.</param>
+    /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
+    /// <param name="text">The text for the new post.</param>
+    /// <param name="images">Any images to attach to the quote post.</param>
+    /// <param name="tags">Any tags to apply to the quote post.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text, image count, or tags exceed their maximums.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="images"/> contains an image that cannot be added to the quote.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+        RecordKey? rKey,
+        StrongReference strongReference,
+        string text,
+        ICollection<EmbeddedImage>? images,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(strongReference);
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
+
+        if (images is not null && images.Count > Maximum.ImagesInPost)
+        {
+            throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {Maximum.ImagesInPost} images.");
+        }
+
+        if (images is not null && images.Count == 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(images), "cannot be an empty collection.");
+        }
+
+        if (tags is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+            foreach (string tag in tags)
+            {
+                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+            }
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        PostBuilder postBuilder = new(text, lang: Thread.CurrentThread.CurrentUICulture.Name, tags: tags)
+        {
+            QuotePost = strongReference,
+        };
+
+        if (images is not null)
+        {
+            postBuilder.Add(images);
+        }
+
+        return await Post(rKey, postBuilder, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

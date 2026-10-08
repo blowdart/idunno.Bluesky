@@ -66,6 +66,54 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create.</param>
+    /// <param name="langs">The language the post was written in.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string text,
+        string langs,
+        DateTimeOffset? createdAt = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        string[]? langsArray = langs is null ? null : [langs];
+
+        return Post(
+            rKey,
+            text,
+            createdAt,
+            langsArray,
+            threadGateRules,
+            postGateRules,
+            interactionPreferences,
+            labels,
+            tags,
+            extractFacets,
+            cancellationToken);
+    }
+
+    /// <summary>
     /// Creates a Bluesky post record.
     /// </summary>
     /// <param name="text">The text of the post record to create.</param>
@@ -201,6 +249,69 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/> and image.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create.</param>
+    /// <param name="image">The image to attach to the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string text,
+        EmbeddedImage image,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await Post(
+            rKey,
+            text,
+            image is null ? null : [image],
+            createdAt,
+            langs,
+            threadGateRules,
+            postGateRules,
+            interactionPreferences,
+            labels,
+            tags,
+            extractFacets,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Creates a Bluesky post record. with multiple images.
     /// </summary>
     /// <param name="text">The text of the post record to create.</param>
@@ -312,6 +423,106 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/> and images.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create.</param>
+    /// <param name="images">Any images to attach to the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the post text, number of images, or gate rule counts exceed their maximums.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string text,
+        ICollection<EmbeddedImage>? images,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        EmbeddedImages? embeddedImages = null;
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
+
+        if (images is not null)
+        {
+            if (images.Count > Maximum.ImagesInPost)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(images),
+                    $"Cannot have more than {Maximum.ImagesInPost} images.");
+            }
+            else
+            {
+                embeddedImages = new EmbeddedImages(images);
+            }
+        }
+
+        if (threadGateRules is not null && threadGateRules.Count > Maximum.ThreadGateRules)
+        {
+            throw new ArgumentOutOfRangeException(nameof(threadGateRules), $"Cannot have more than {Maximum.ThreadGateRules} rules.");
+        }
+
+        if (postGateRules is not null && postGateRules.Count > Maximum.PostGateRules)
+        {
+            throw new ArgumentOutOfRangeException(nameof(postGateRules), $"Cannot have more than {Maximum.PostGateRules} rules.");
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        DateTimeOffset creationDateTime = createdAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
+        Post post = new(text, createdAt: creationDateTime, langs: langs, embeddedRecord: embeddedImages, tags: tags);
+
+        if (extractFacets)
+        {
+            IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (extractedFacets.Any())
+            {
+                post.Facets = extractedFacets;
+            }
+        }
+
+        if (labels is not null)
+        {
+            post.SetSelfLabels(labels);
+        }
+
+        return await CreatePost(
+            post,
+            threadGateRules,
+            postGateRules,
+            interactionPreferences,
+            rKey,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Creates a Bluesky post record with a video
     /// </summary>
     /// <param name="text">The text of the post record to create.</param>
@@ -409,6 +620,83 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Creates a Bluesky post record using the specified <paramref name="rKey"/> and video.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create, if any.</param>
+    /// <param name="video">The video to embed in the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Any optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length or gate rule counts exceed their maximums.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string? text,
+        EmbeddedVideo video,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        bool extractFacets = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(video);
+
+        if (text is not null &&
+            (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
+        }
+
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(threadGateRules?.Count ?? 0, Maximum.ThreadGateRules);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(postGateRules?.Count ?? 0, Maximum.PostGateRules);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        DateTimeOffset creationDateTime = createdAt?.ToUniversalTime() ?? DateTimeOffset.UtcNow;
+        Post post = new(text, createdAt: creationDateTime, langs: langs, embeddedRecord: video, tags: tags);
+
+        if (extractFacets && text is not null)
+        {
+            IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (extractedFacets.Any())
+            {
+                post.Facets = extractedFacets;
+            }
+        }
+
+        if (labels is not null)
+        {
+            post.SetSelfLabels(labels);
+        }
+
+        return await CreatePost(
+            post,
+            threadGateRules,
+            postGateRules,
+            interactionPreferences,
+            rKey,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Creates a Bluesky post record containing just a external Open Graph embedded card.
     /// </summary>
     /// <param name="externalCard">An Open Graph embedded card.</param>
@@ -450,6 +738,52 @@ public partial class BlueskyAgent
             labels: labels,
             tags: tags,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a post containing an external card using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="externalCard">An Open Graph embedded card.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        EmbeddedExternal externalCard,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(externalCard);
+
+        return Post(
+            rKey,
+            text: string.Empty,
+            externalCard: externalCard,
+            createdAt: createdAt,
+            langs: langs,
+            threadGateRules: threadGateRules,
+            postGateRules: postGateRules,
+            interactionPreferences: interactionPreferences,
+            extractFacets: false,
+            labels: labels,
+            tags: tags,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -531,6 +865,85 @@ public partial class BlueskyAgent
         }
 
         return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a post containing text and an external card using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the post and any associated gate records.</param>
+    /// <param name="text">The text of the post record to create.</param>
+    /// <param name="externalCard">An Open Graph embedded card.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages the post was written in.</param>
+    /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+    /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+    /// <param name="interactionPreferences">The user's default interaction preferences.</param>
+    /// <param name="labels">Optional self label settings for the post media content.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+    /// <param name="tags">Any optional tags to apply to the post.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the post text exceeds its maximum length.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+        RecordKey? rKey,
+        string text,
+        EmbeddedExternal externalCard,
+        DateTimeOffset? createdAt = null,
+        ICollection<string>? langs = null,
+        ICollection<ThreadGateRule>? threadGateRules = null,
+        ICollection<PostGateRule>? postGateRules = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
+        PostSelfLabels? labels = null,
+        bool extractFacets = true,
+        ICollection<string>? tags = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(externalCard);
+
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        IList<Facet>? facets = extractFacets
+            ? await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        PostBuilder postBuilder = new(text, createdAt: createdAt, langs: langs, facets: facets, tags: tags);
+        postBuilder.EmbedRecord(externalCard);
+
+        if (interactionPreferences is not null)
+        {
+            postBuilder.ApplyInteractionPreferences(interactionPreferences);
+        }
+
+        if (threadGateRules is not null)
+        {
+            postBuilder.ThreadGateRules = [.. threadGateRules];
+        }
+
+        if (postGateRules is not null)
+        {
+            postBuilder.PostGateRules = [.. postGateRules];
+        }
+
+        if (labels is not null)
+        {
+            postBuilder.SetSelfLabels(labels);
+        }
+
+        return await Post(rKey, postBuilder, cancellationToken).ConfigureAwait(false);
     }
 
 
