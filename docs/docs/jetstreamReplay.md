@@ -161,10 +161,12 @@ not advance the checkpoint to the last received sequence or drop buffered events
 Events not queued must be served again by the inclusive cursor, or recovered from the archive if the
 cursor has expired. Persist the full checkpoint only after durably processing preceding events.
 
-Enable Jetstream logging to distinguish reconnect causes. Warning entries report buffer overflow,
-remote close, transport or receive failure, server error or an expired cursor, with the connection's starting
-cursor, last received sequence and buffered event count. Recovery entries report the last delivered
-sequence and exception; an expired cursor reports archive fallback. Debug entries identify cancellation
+Enable Jetstream logging to distinguish reconnect causes. Established live-connection warnings (event 42)
+report buffer overflow, remote close, transport or receive failure, server error or notice-based cursor expiration,
+with the connection's starting cursor, last received sequence and buffered event count. Recovery entries (event 44)
+report the last delivered sequence and exception; an expired cursor reports archive fallback. Upgrade-time
+`CursorTooOld` rejection emits the recovery entry without a live-end warning, so starting cursor,
+last received sequence and buffered count are not available in that path. Debug entries identify cancellation
 and enumeration disposal during cleanup. A close/disposal exception alone does not identify the original
 reconnect trigger.
 When a queued server-error frame is followed by a close or transport failure, replay retains the server error

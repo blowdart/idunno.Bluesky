@@ -1561,6 +1561,56 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task SameSocketCloseCannotOvertakeCollectedConnectNotifications()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using var release = new ManualResetEventSlim();
+        TaskCompletionSource announcingNone = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start((_, _, _) => Task.CompletedTask);
+        using var jetstream = new PausedConnectStateJetstream(server.Uri, announcingNone, release);
+        using var httpClient = new HttpClient();
+        await jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token);
+        Task initialReceiver = GetField<Task>(jetstream, "_receiveLoopTask");
+        await jetstream.CloseAsync(cancellationToken: token);
+        await initialReceiver.WaitAsync(TimeSpan.FromSeconds(30), token);
+        ConcurrentQueue<WebSocketState> states = new();
+        jetstream.ConnectionStateChanged += (_, args) => states.Enqueue(args.State);
+        Task connect = Task.Run(() => jetstream.ConnectAsync(httpClient: httpClient, cancellationToken: token), token);
+        try
+        {
+            await announcingNone.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.CloseAsync(cancellationToken: token).WaitAsync(TimeSpan.FromSeconds(30), token);
+        }
+        finally
+        {
+            release.Set();
+            await connect.WaitAsync(TimeSpan.FromSeconds(30), token);
+            await jetstream.DisposeAsync();
+        }
+
+        Assert.Equal([WebSocketState.None, WebSocketState.Open, WebSocketState.Closed], states.ToArray());
+        Assert.False(jetstream.IsConnected);
+    }
+
+    private sealed class PausedConnectStateJetstream(
+        Uri uri,
+        TaskCompletionSource announcingNone,
+        ManualResetEventSlim release) : AtProtoJetstream(uri: uri, options: new JetstreamOptions { UseCompression = false })
+    {
+        protected override void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
+        {
+            if (e.State == WebSocketState.None)
+            {
+                announcingNone.TrySetResult();
+                Assert.True(release.Wait(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+            }
+
+            base.OnConnectionStateChanged(e);
+        }
+    }
+
+    [Fact]
     public async Task ReplacementOpenIsNotAnnouncedAheadOfAnInFlightTerminalNotification()
     {
         CancellationToken token = TestContext.Current.CancellationToken;

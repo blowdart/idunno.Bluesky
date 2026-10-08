@@ -696,6 +696,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// <para>Notifications are dispatched in order without holding the socket lock. A connection started from
     /// a handler queues its notifications until that handler returns. Terminal notifications retain their
     /// originating socket and are discarded if that socket was replaced before dispatch.</para>
+    /// <para>Collected connect and close transitions are queued before releasing the connection semaphore,
+    /// then dispatched after its release, preserving their order on the same socket.</para>
     /// </remarks>
     protected virtual void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
     {
@@ -720,33 +722,48 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
     }
 
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Queued notifications must drain before propagating a handler failure.")]
-    private void PublishConnectionStateChanged(ConnectionStateChangedEventArgs args, ClientWebSocket? client = null)
+    private void PublishConnectionStateChanged(ConnectionStateChangedEventArgs args, ClientWebSocket client)
     {
-        if (client is not null)
+        if (QueueConnectionStateChanges([(args.State, client)]))
         {
-            args = new ConnectionStateChangedEventArgs(args.State) { SourceClient = client };
+            DispatchConnectionStateChanges();
         }
+    }
 
+    private bool QueueConnectionStateChanges(IEnumerable<(WebSocketState State, ClientWebSocket Client)> changes)
+    {
         lock (_syncLock)
         {
-            if (_disposed || (client is not null && !ReferenceEquals(client, _client)))
+            if (_disposed)
             {
-                return;
+                return false;
             }
 
-            _stateNotifications.Enqueue((args, client));
-            if (_dispatchingStateNotifications)
+            foreach (var (state, client) in changes)
             {
-                return;
+                if (ReferenceEquals(client, _client))
+                {
+                    _stateNotifications.Enqueue((new ConnectionStateChangedEventArgs(state) { SourceClient = client }, client));
+                }
+            }
+
+            if (_dispatchingStateNotifications || _stateNotifications.Count == 0)
+            {
+                return false;
             }
 
             _dispatchingStateNotifications = true;
+            return true;
         }
+    }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Queued notifications must drain before propagating a handler failure.")]
+    private void DispatchConnectionStateChanges()
+    {
         ExceptionDispatchInfo? failure = null;
         while (true)
         {
+            ConnectionStateChangedEventArgs args;
             lock (_syncLock)
             {
                 if (!_stateNotifications.TryDequeue(out var notification))
@@ -1041,6 +1058,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // State changes are collected rather than raised as they happen, so they can be raised once neither the
         // connection semaphore nor the sync lock is held.
         List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
+        bool dispatchStateChanges = false;
         ClientWebSocket? connectedClient = null;
 
         try
@@ -1119,6 +1137,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             }
             finally
             {
+                dispatchStateChanges = QueueConnectionStateChanges(stateChanges);
                 _connectSemaphore.Release();
             }
         }
@@ -1128,9 +1147,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // Raising them any earlier runs handler code inside both, where a handler which reconnects waits on a
             // semaphore its own caller is holding, and a handler which takes a lock of its own can deadlock against a
             // thread which holds that lock and is setting a filter.
-            foreach (var (state, client) in stateChanges)
+            if (dispatchStateChanges)
             {
-                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state), client);
+                DispatchConnectionStateChanges();
             }
         }
 
@@ -1140,7 +1159,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             // which replaces the field does not hand this loop the new socket to read alongside the loop started for it.
             lock (_syncLock)
             {
-                if (!_disposed && !_disposing && ReferenceEquals(connectedClient, _client))
+                if (!_disposed && !_disposing && ReferenceEquals(connectedClient, _client) && connectedClient.State == WebSocketState.Open)
                 {
                     // Schedule outside caller code so no receive callbacks run under the disposal lock.
                     _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, cancellationToken), CancellationToken.None);
@@ -1761,6 +1780,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // semaphore is released. Raising them any earlier runs handler code inside it, where a handler which connects
         // or closes waits on a semaphore its own caller is holding.
         List<(WebSocketState State, ClientWebSocket Client)> stateChanges = [];
+        bool dispatchStateChanges = false;
 
         try
         {
@@ -1777,14 +1797,15 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             }
             finally
             {
+                dispatchStateChanges = QueueConnectionStateChanges(stateChanges);
                 _connectSemaphore.Release();
             }
         }
         finally
         {
-            foreach (var (state, client) in stateChanges)
+            if (dispatchStateChanges)
             {
-                PublishConnectionStateChanged(new ConnectionStateChangedEventArgs(state), client);
+                DispatchConnectionStateChanges();
             }
 
             lock (_syncLock)
