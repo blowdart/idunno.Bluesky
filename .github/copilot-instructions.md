@@ -102,7 +102,10 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 
 ## Key conventions
 
-* **Text file encoding.** Create new text files as UTF-8 without a byte-order mark (BOM), using CRLF line endings.
+* **Text file encoding and line endings.** Create new text files as UTF-8 without a byte-order mark (BOM). Use CRLF in Windows working trees, while respecting Git's line-ending normalization and `.gitattributes`.
+  The default `text=auto` stores normalized LF in Git; `core.autocrlf=true` checks those files out as CRLF on Windows. LF in a committed file or GitHub diff is therefore expected and is not a CRLF violation.
+  Do not raise review findings solely because normalized text files contain LF in Git, or add `-text` exceptions to bypass normalization. Preserve existing explicit `.gitattributes` exceptions.
+  When checking line endings locally, use `git ls-files --eol` and `git check-attr text eol` to distinguish indexed content from working-tree content.
 * **Public API tracking.** Public surface is tracked by the Roslyn `PublicApiAnalyzers` in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` per project. When you add, change, or remove a public member the build will fail until you update `PublicAPI.Unshipped.txt` accordingly.
   Public `record` types also generate `Equals`, `GetHashCode`, `ToString`, `<Clone>$`, `==` and `!=`. All of these must be listed
   in `PublicAPI.Unshipped.txt`, alongside the properties and their `init` accessors.

@@ -199,6 +199,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(AspectRatio))]
 [JsonSerializable(typeof(EmbeddedBase))]
 [JsonSerializable(typeof(EmbeddedExternal))]
+[JsonSerializable(typeof(EmbeddedExternalMedia))]
 [JsonSerializable(typeof(EmbeddedExternalView))]
 [JsonSerializable(typeof(EmbeddedImage))]
 [JsonSerializable(typeof(EmbeddedImages))]

@@ -164,7 +164,7 @@ Facets are post features, three of which are currently supported, links, mention
 
 ### <a name="autoDetection">Facet auto-detection</a>
 
-The majority of the `Post()` APIs will try to detect links, mentions and hashtags automatically, although you can disable this by setting the
+The `Post()`, `ReplyTo()`, and `Quote()` convenience APIs detect links, mentions and hashtags automatically by default, although you can disable this by setting the
 `extractFacets` parameter to `false`. For example:
 
 ```c#
@@ -174,7 +174,11 @@ var postResult =  await agent.Post("Hello #beans");
 This will result in a hashtag of beans being added to the post. Detection works for hashtags, @ mentions and for uris which begin with either
 https:// or http://.
 
-The only `Post()` method that doesn't auto-detect and extract facets is `Post(PostBuilder, CancellationToken)` as the `PostBuilder` class allows you to
+**Breaking behavior change in 8.0.0:** text-only and image quotes now extract facets by default. To retain the previous behavior, use
+`await agent.Quote(postStrongReference, text: "Hello #beans", extractFacets: false);`.
+Mention extraction can perform handle-resolution network requests. Textless helpers accept the flag too, but have no text to extract.
+
+The `Post(PostBuilder, CancellationToken)` and keyed builder overloads don't auto-detect and extract facets, as the `PostBuilder` class allows you to
 specifically add facets as you build your post, see [Building facets with a PostBuilder](posting.md#postBuilder).
 
 > [!TIP]
