@@ -23,6 +23,36 @@ namespace idunno.AtProto.Test;
 public class AtProtoJetstreamBuilderTests
 {
     [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void BuildCapturesReplayLiveBufferCapacity(bool withHttpClientFactory, bool fluent)
+    {
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        if (fluent)
+        {
+            Assert.Same(builder, builder.SetReplayLiveBufferCapacity(8192));
+        }
+        else
+        {
+            builder.ReplayLiveBufferCapacity = 8192;
+        }
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+        builder.ReplayLiveBufferCapacity = 1;
+        using AtProtoJetstream later = builder.Build();
+
+        Assert.Equal(8192, jetstream.Options.ReplayLiveBufferCapacity);
+        Assert.Equal(1, later.Options.ReplayLiveBufferCapacity);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public void BuildPassesTheTimeProviderToTheJetstream(bool withHttpClientFactory)

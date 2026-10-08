@@ -1,4 +1,9 @@
 #nullable enable
+idunno.AtProto.Jetstream.JetstreamOptions.ReplayLiveBufferCapacity.get -> int
+idunno.AtProto.Jetstream.JetstreamOptions.ReplayLiveBufferCapacity.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ReplayLiveBufferCapacity.get -> int
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ReplayLiveBufferCapacity.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetReplayLiveBufferCapacity(int replayLiveBufferCapacity) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Authentication.OAuthOptions.TosUri.get -> System.Uri?
 idunno.AtProto.Authentication.OAuthOptions.TosUri.set -> void
 idunno.AtProto.Authentication.OAuthOptions.PolicyUri.get -> System.Uri?

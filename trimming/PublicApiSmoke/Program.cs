@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 
 using idunno.AtProto;
+using idunno.AtProto.Jetstream;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
 using idunno.Bluesky;
@@ -10,6 +11,20 @@ using idunno.Bluesky.Actor;
 Uri service = new("https://offline.invalid");
 using OfflineHttpMessageHandler handler = new();
 OfflineHttpClientFactory httpClientFactory = new(handler);
+
+JetstreamOptions replayOptions = new() { ReplayLiveBufferCapacity = 8192 };
+using (AtProtoJetstream replay = new(options: replayOptions))
+using (AtProtoJetstream factoryReplay = new(httpClientFactory, options: replayOptions))
+using (AtProtoJetstream builtReplay = AtProtoJetstream.CreateBuilder()
+    .SetReplayLiveBufferCapacity(8192)
+    .WithHttpClientFactory(httpClientFactory)
+    .Build())
+{
+    if (!replayOptions.ToString().Contains("ReplayLiveBufferCapacity = 8192", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("The replay capacity was not retained in option diagnostics.");
+    }
+}
 
 using (AtProtoAgent agent = new(service, httpClientFactory))
 {

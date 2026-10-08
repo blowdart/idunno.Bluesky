@@ -20,6 +20,9 @@
 
 #### idunno.AtProto
 
+* Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
+  buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
+  Overflow diagnostics now include the configured capacity alongside occupancy; draining and recovery remain unchanged.
 * Added `AddAtProtoFirehoseMetrics()` to register firehose instrumentation with OpenTelemetry.
 * Added HTTP request outcome tags, declared request and response `Content-Length` counters, DID handle cache lookup duration and pending lookup metrics,
   and active connection, connection duration and message inter-arrival metrics for the firehose and Jetstream.
