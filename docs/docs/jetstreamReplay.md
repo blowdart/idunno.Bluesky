@@ -167,6 +167,8 @@ cursor, last received sequence and buffered event count. Recovery entries report
 sequence and exception; an expired cursor reports archive fallback. Debug entries identify cancellation
 and enumeration disposal during cleanup. A close/disposal exception alone does not identify the original
 reconnect trigger.
+When a queued server-error frame is followed by a close or transport failure, replay retains the server error
+as the initiating cause after draining pending parsers instead of reporting only the secondary disconnect.
 
 Archive bandwidth is metered in downloaded bytes. The client paces downloads using advertised
 `headwind-quota-*` headers, waits for `Retry-After` on HTTP 429, and resumes interrupted downloads with a

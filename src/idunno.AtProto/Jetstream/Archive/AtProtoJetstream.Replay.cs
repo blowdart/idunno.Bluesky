@@ -245,6 +245,8 @@ public partial class AtProtoJetstream
         int outdatedCursor = 0;
         int cleaningUp = 0;
         long lastReceived = long.MinValue;
+        object terminalLock = new();
+        (string Reason, Exception Exception, int Priority)? terminalCause = null;
         AtProtoJetstream live = new(
             uri: _uri,
             options: Options with { MaximumConcurrentMessageParsers = 1 },
@@ -262,12 +264,35 @@ public partial class AtProtoJetstream
             }
         }
 
-        void CompleteAfterParsers(string reason, Exception exception)
+        void CompleteAfterParsers(string reason, Exception exception, int priority = 0)
         {
+            bool startDrain;
+            lock (terminalLock)
+            {
+                startDrain = terminalCause is null;
+                if (terminalCause is null || priority > terminalCause.Value.Priority)
+                {
+                    terminalCause = (reason, exception, priority);
+                }
+            }
+
+            if (!startDrain)
+            {
+                return;
+            }
+
 #pragma warning disable CS4014 // Completion waits for records received before the terminal signal.
             live.DrainMessageParsersAsync(CancellationToken.None).ContinueWith(
-                completed => Complete(completed.IsFaulted ? "Parser drain failure" : reason,
-                    completed.Exception?.GetBaseException() ?? exception),
+                completed =>
+                {
+                    lock (terminalLock)
+                    {
+                        // A queued error parser can identify the initiating failure after the close starts draining.
+                        var cause = terminalCause ?? throw new InvalidOperationException("No terminal cause was recorded.");
+                        Complete(completed.IsFaulted ? "Parser drain failure" : cause.Reason,
+                            completed.Exception?.GetBaseException() ?? cause.Exception);
+                    }
+                },
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
@@ -316,7 +341,8 @@ public partial class AtProtoJetstream
                 _ => "Receive failure"
             };
             CompleteAfterParsers(reason,
-                new IOException($"The live Jetstream reported an error: {ForLogging(args.Fault)}"));
+                new IOException($"The live Jetstream reported an error: {ForLogging(args.Fault)}"),
+                priority: args.Error is not null ? 2 : 1);
         };
         live.InfoReceived += (_, args) =>
         {

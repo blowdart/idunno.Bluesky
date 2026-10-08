@@ -596,6 +596,83 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReplayReportsQueuedServerErrorInsteadOfTheFollowingDisconnect(bool abort)
+    {
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        CancellationToken token = cancellation.Token;
+        PausedTaskScheduler scheduler = new();
+        using var logs = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(logs).SetMinimumLevel(LogLevel.Debug));
+        using var server = new TestJetstreamServer
+        {
+            ArchiveRequest = context => TestJetstreamServer.Respond(context, HttpStatusCode.OK, "application/json",
+                Encoding.UTF8.GetBytes(
+                    """{"plannedThroughSeq":40,"sealedTipSeq":40,"segments":[],"stats":{"segmentsExamined":0,"segmentsMatched":0,"blocksMatched":0,"entries":0}}"""))
+        };
+        await server.Start(async (socket, connection, serverToken) =>
+        {
+            if (connection == 1)
+            {
+                await SendText(socket, """{"$type":"error","error":"ConsumerTooSlow","message":"too slow"}""", serverToken);
+                await scheduler.Scheduled.WaitAsync(serverToken);
+                if (abort)
+                {
+                    socket.Abort();
+                }
+                else
+                {
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server error", serverToken);
+                }
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(41), serverToken);
+            }
+        });
+        await using var jetstream = new AtProtoJetstream(httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                ApiKey = "test-key", UseCompression = false, LoggerFactory = loggerFactory,
+                TaskFactory = new TaskFactory(scheduler)
+            });
+        IAsyncEnumerator<JetstreamEvent> replay = jetstream.ReplayAsync(new SnapshotRequest(),
+            cancellationToken: token).GetAsyncEnumerator(token);
+        Task<bool> pending = replay.MoveNextAsync().AsTask();
+        try
+        {
+            await WaitUntil(() => logs.Entries.Any(entry => entry.EventId == 5 &&
+                entry.Message.Contains(abort ? "Aborted" : "Closed", StringComparison.Ordinal)), token);
+            scheduler.RunPending();
+            await WaitUntil(() => server.Connections.Count == 2, token);
+            await WaitUntil(() => scheduler.GetPendingCount() != 0, token);
+            scheduler.RunPending();
+            Assert.True(await pending.WaitAsync(TimeSpan.FromSeconds(30), token));
+            Assert.Equal(41, replay.Current.Sequence);
+            RecordedLogEntry ended = Assert.Single(logs.Entries, entry => entry.EventId == 42);
+            Assert.Contains("Server error", ended.Message, StringComparison.Ordinal);
+            Assert.Contains("too slow", Assert.IsType<IOException>(ended.Exception).Message, StringComparison.Ordinal);
+            RecordedLogEntry recovery = Assert.Single(logs.Entries, entry => entry.EventId == 44);
+            Assert.Contains("too slow", Assert.IsType<IOException>(recovery.Exception).Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await cancellation.CancelAsync();
+            scheduler.RunPending();
+            try
+            {
+                await pending.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+            }
+
+            await replay.DisposeAsync();
+        }
+    }
+
+    [Theory]
     [InlineData("Closed")]
     [InlineData("Disposed")]
     [InlineData("Cancelled")]
