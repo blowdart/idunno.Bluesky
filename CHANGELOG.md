@@ -139,6 +139,11 @@
 
 #### idunno.Bluesky
 
+* Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
+  `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
+  `Add(StrongReference)` is obsolete in favor of `Quote()`, and `Label()` is obsolete in favor of `SetSelfLabels()`.
+  The network-backed `ReplyTo(StrongReference, BlueskyAgent, CancellationToken)` overload is obsolete; retrieve references explicitly and use `ReplyTo(ReplyReferences)`.
+  Added chainable `PostBuilder.ExtractFacetsAsync()`; the original `ExtractFacets()` method is obsolete.
 * Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
 * Chat account export requests advertise the lexicon's `application/jsonl` response media type.
 * Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.

@@ -374,7 +374,7 @@ public partial class BlueskyAgent
 
         if (extractFacets)
         {
-            await postBuilder.ExtractFacets(
+            await postBuilder.ExtractFacetsAsync(
                 facetExtractor: FacetExtractor,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

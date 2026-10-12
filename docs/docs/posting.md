@@ -199,23 +199,28 @@ in the `idunno.Bluesky.RichText` namespace which you can add to a `PostBuilder`
 Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also have a text parameter, the text in a post you want the facet to apply to.
 
 `PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit,
-adding/appending to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the
+appending text and rich-text facets to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the
 instance of `PostBuilder` you have been building on.
 
 If you want to auto-extract facets from text for use with a `PostBuilder` the `BlueskyAgent` class has a property, `FacetExtractor`
-which will extract facets from a string, which you can use when setting up your `PostBuilder`
+which will extract facets from a string, which you can use when setting up your `PostBuilder`. Alternatively, call
+`ExtractFacetsAsync()` on the builder to extract facets from its current text. It returns the builder after extraction, so it can be chained:
 
 ```c#
 var postText = "Hello @sinclairinat0r.com, I hear you love beans! #beans";
 var extractedFacets = await agent.FacetExtractor.ExtractFacets(postText);
 var postBuilder = new PostBuilder(postText, facets: extractedFacets);
 
+// Or extract facets on the builder:
+postBuilder = await new PostBuilder(postText)
+    .ExtractFacetsAsync(agent.FacetExtractor, cancellationToken);
 ```
 
 #### Mentions
 
 To mention someone in a post you must know their DID, which you can get by resolving their handle.
-Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your PostBuilder.
+Then create a `Mention` instance and append it to your `PostBuilder`, then finally call `agent.Post()` with your PostBuilder.
+Use `Append()` for post text and rich-text facets; `Add()` is for media and labels. The older `Add()` overloads for text and facets are obsolete.
 
 ```c#
 string userToTagHandle = "userHandle.test";
@@ -225,7 +230,7 @@ if (userToTagDid is null)
   // handle did not resolve to a did, react accordingly.
 }
 
-var builder = new PostBuilder("Hello ") + new Mention(userToTagDid, $"@{userToTagHandle}");
+var builder = new PostBuilder("Hello ").Append(new Mention(userToTagDid, $"@{userToTagHandle}"));
 var mentionPostResult = await agent.Post(builder);
 ```
 One thing of note: the text doesn't have to match the "@handle" format, that's just convention.
@@ -237,7 +242,7 @@ For links to web sites you create a new instance of a `Link`:
 ```c#
 Uri uriToLinkTo = new("https://bsky.app/");
 
-var builder = new PostBuilder("Click me ") + new Link(uriToLinkTo, uriToLinkTo.ToString());
+var builder = new PostBuilder("Click me ").Append(new Link(uriToLinkTo, uriToLinkTo.ToString()));
 var linkPostResult = await agent.Post(builder);
 ```
 
@@ -246,7 +251,7 @@ Again you can choose whatever text you want, so you could generate links in post
 ```c#
 Uri uriToLinkTo = new("https://bsky.app/");
 
-var builder = new PostBuilder("Click me to ") + new Link(uriToLinkTo, "visit Bluesky");
+var builder = new PostBuilder("Click me to ").Append(new Link(uriToLinkTo, "visit Bluesky"));
 var linkPostResult = await agent.Post(builder);
 ```
 
@@ -255,7 +260,7 @@ var linkPostResult = await agent.Post(builder);
 To insert a hashtag you create a new `HashTag` instance:
 
 ```c#
-PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new HashTag("test");
+PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ").Append(new HashTag("test"));
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
@@ -441,15 +446,19 @@ await agent.Post(post);
 ```
 
 If you want to manually embed a link card create an instance of `EmbeddedExternal` then attach it to your `Post`
-with the `Embed` method, or to a `PostBuilder` with the `EmbedRecord()` method.
+with the `Embed` method, or to a `PostBuilder` with the fluent `WithEmbed()` method.
 
 ```c#
 var embeddedExternal = new(pageUri, title, description ?? string.Empty, thumbnailBlob);
 var postBuilder = new PostBuilder("Embedded record test");
-postBuilder.EmbedRecord(embeddedExternal);
+postBuilder.WithEmbed(embeddedExternal);
 
 var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
+
+To build a reply from an existing `ReplyReferences`, pass them to `ReplyTo(ReplyReferences)`. The
+`ReplyTo(StrongReference, BlueskyAgent, CancellationToken)` builder overload performs a network request to retrieve those references
+and is obsolete; retrieve them explicitly with `BlueskyAgent.GetReplyReferences()` instead.
 
 Standard.Site embedding is also supported, which allows you to embed a card for a page on a [standard.site](https://standard.site/) compatible
 blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https://sequoia.pub).

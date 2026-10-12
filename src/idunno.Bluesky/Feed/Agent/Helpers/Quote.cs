@@ -783,7 +783,7 @@ public partial class BlueskyAgent
 
         if (extractFacets && !string.IsNullOrEmpty(text))
         {
-            await postBuilder.ExtractFacets(FacetExtractor, cancellationToken).ConfigureAwait(false);
+            await postBuilder.ExtractFacetsAsync(FacetExtractor, cancellationToken).ConfigureAwait(false);
         }
 
         return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -889,7 +889,7 @@ public partial class BlueskyAgent
 
         if (extractFacets && !string.IsNullOrEmpty(text))
         {
-            await postBuilder.ExtractFacets(FacetExtractor, cancellationToken).ConfigureAwait(false);
+            await postBuilder.ExtractFacetsAsync(FacetExtractor, cancellationToken).ConfigureAwait(false);
         }
 
         return await Post(rKey, postBuilder, cancellationToken).ConfigureAwait(false);

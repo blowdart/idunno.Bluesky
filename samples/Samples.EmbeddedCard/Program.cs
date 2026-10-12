@@ -95,7 +95,7 @@ public sealed class Program
             var openGraphCard = await openGraphCardGenerator.Generate(pageUri, cancellationToken);
             if (openGraphCard is not null)
             {
-                postBuilder.EmbedRecord(openGraphCard);
+                postBuilder.WithEmbed(openGraphCard);
             }
 
             var postBuilderResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);

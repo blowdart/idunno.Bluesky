@@ -919,11 +919,11 @@ public partial class BlueskyAgent
 
         var postBuilder = new PostBuilder(text, createdAt: createdAt, langs: langs, facets: facets, tags: tags);
 
-        postBuilder.EmbedRecord(externalCard);
+        postBuilder.WithEmbed(externalCard);
 
         if (interactionPreferences is not null)
         {
-            postBuilder.ApplyInteractionPreferences(interactionPreferences);
+            postBuilder.WithInteractionPreferences(interactionPreferences);
         }
 
         if (threadGateRules is not null)
@@ -998,11 +998,11 @@ public partial class BlueskyAgent
             : null;
 
         PostBuilder postBuilder = new(text, createdAt: createdAt, langs: langs, facets: facets, tags: tags);
-        postBuilder.EmbedRecord(externalCard);
+        postBuilder.WithEmbed(externalCard);
 
         if (interactionPreferences is not null)
         {
-            postBuilder.ApplyInteractionPreferences(interactionPreferences);
+            postBuilder.WithInteractionPreferences(interactionPreferences);
         }
 
         if (threadGateRules is not null)

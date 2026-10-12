@@ -154,7 +154,7 @@ public class RecordKeyCreationTests
             Assert.True((await agent.Post(key, new PostBuilder(text), cancellationToken)).Succeeded);
             PostBuilder builder = new();
             builder.WithText(text);
-            builder.EmbedRecord(externalCard);
+            builder.WithEmbed(externalCard);
             Assert.True((await agent.Post(builder, cancellationToken)).Succeeded);
             Assert.True((await agent.Post(key, builder, cancellationToken)).Succeeded);
 
