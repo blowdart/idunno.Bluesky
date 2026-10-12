@@ -36,6 +36,7 @@
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
     <File Path=".github/prompts/lexicon-conformance.prompt.md" />
+    <File Path=".github/prompts/obsolete-api-audit.prompt.md" />
     <File Path=".github/prompts/security-audit.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">

@@ -320,6 +320,7 @@
 #### idunno.Bluesky
 
 * `Post` now throws `ArgumentException` with an explanatory message for empty text without an embed, rather than incorrectly reporting it as null. Null text without an embed still throws `ArgumentNullException`.
+* Corrected `ChatPreference` obsolete guidance to reference the existing chat notification APIs and types, clarifying that they use separate endpoints rather than being drop-in replacements. The legacy type remains available for compatibility.
 * Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved without changing null/empty text policies or text length limits.
 * Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation, top-level post tags and `HashTag` authoring validation remain unchanged.
 * Fixed schema-valid empty post-level tags and rich-text facets with empty feature arrays being rejected during record deserialization. Null values and required-field validation remain enforced.
