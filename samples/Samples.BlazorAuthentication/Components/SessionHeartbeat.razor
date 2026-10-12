@@ -1,0 +1,90 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+@implements IAsyncDisposable
+
+@if (_error is not null)
+{
+    <p role="alert" class="error">
+        @_error
+        @if (_sessionEnded)
+        {
+            <span>Profile drafts are kept in this tab. <a href="@SignInUrl" data-enhance-nav="false">Sign in again</a> to continue.</span>
+        }
+    </p>
+}
+
+@code {
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _heartbeat;
+    private DotNetObjectReference<SessionHeartbeat>? _reference;
+    private string? _error;
+    private bool _sessionEnded;
+    private string SignInUrl => "/Bluesky/Login?returnUrl=" +
+        Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && (await Authentication.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "./sessionHeartbeat.js");
+            _reference = DotNetObjectReference.Create(this);
+            _heartbeat = await _module.InvokeAsync<IJSObjectReference>("start", _reference);
+        }
+    }
+
+    [JSInvokable]
+    public async Task<bool> RenewalSucceeded(string receipt)
+    {
+        try
+        {
+            await ((CircuitAuthenticationStateProvider)Authentication).AcceptRenewalAsync(receipt);
+            _error = null;
+            _sessionEnded = false;
+        }
+        catch (AuthenticationException ex)
+        {
+            _error = ex.Message;
+            _sessionEnded = true;
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        return !_sessionEnded;
+    }
+
+    [JSInvokable]
+    public Task RenewalFailed(bool sessionEnded)
+    {
+        _sessionEnded = sessionEnded;
+        _error = sessionEnded
+            ? "Your session has expired or ended. Account operations are unavailable until you sign in again."
+            : "Connection interrupted. Session renewal will retry while you are active.";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_heartbeat is not null)
+            {
+                await _heartbeat.InvokeVoidAsync("dispose");
+                await _heartbeat.DisposeAsync();
+            }
+
+            if (_module is not null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        finally
+        {
+            _reference?.Dispose();
+        }
+    }
+}

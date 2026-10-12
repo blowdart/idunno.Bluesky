@@ -41,10 +41,13 @@ production applications should choose permissions appropriate to their features.
 For a React frontend with server-side OAuth credentials, see the [React BFF sample](reactBff.md).
 
 `Samples.BlazorAuthentication` provides the same timeline, claims and profile-editing functionality in a Blazor Web App
-using static server-side rendering, with the library's Razor Pages UI for login, logout and callbacks.
+using Interactive Server, with the library's Razor Pages UI for login, logout and callbacks.
 See its [setup and rendering notes](../../samples/Samples.BlazorAuthentication/readme.md).
-Request-scoped agents and cookie renewal require an HTTP request; adding an interactive render mode is not sufficient
-to adapt this authentication pattern to a long-lived Blazor circuit.
+Its circuit client uses current server-side credentials and coordinates refresh through the identity store, while a
+revalidating authentication state provider checks session removal and cookie expiry. Cookie renewal still requires an
+HTTP request; the sample sends antiforgery-protected, activity-based renewal requests without reloading the page and
+passes a server-protected expiry receipt back to the circuit. Idle tabs still expire. Login and logout use full-page
+navigation rather than circuit events.
 
 ### Adding Bluesky Authentication to your ASP.NET Razor Pages application
 

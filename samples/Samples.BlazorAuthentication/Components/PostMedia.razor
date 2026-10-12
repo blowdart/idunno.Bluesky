@@ -1,0 +1,91 @@
+@using idunno.Bluesky.Embed
+
+@switch (Embed)
+{
+    case EmbeddedRecordWithMediaView quoted:
+        <PostMedia Embed="quoted.Media" PostUri="PostUri" />
+        break;
+    case EmbeddedImagesView images:
+        @foreach (var image in images.Images)
+        {
+            @if (IsWebUri(image.ThumbnailUri) && IsWebUri(image.FullSizeUri))
+            {
+                <div class="post-image-viewer">
+                    <button type="button" class="image-preview" data-open-image aria-haspopup="dialog" aria-label="View full-size image">
+                        <img class="post-image" src="@image.ThumbnailUri" alt="@image.AltText" title="@image.AltText" loading="lazy" />
+                    </button>
+                    <dialog class="image-dialog" aria-label="Full-size post image">
+                        <form method="dialog">
+                            <button type="submit" autofocus>Close</button>
+                        </form>
+                        <figure>
+                            <img src="@image.FullSizeUri" alt="@image.AltText" loading="lazy" />
+                            <figcaption>@image.AltText</figcaption>
+                        </figure>
+                    </dialog>
+                </div>
+            }
+            else
+            {
+                <p>Image unavailable. <a href="@PostUri" target="_blank" rel="noopener noreferrer">View post on Bluesky</a></p>
+            }
+        }
+        break;
+    case EmbeddedVideoView video:
+        @if (IsWebUri(video.PlaylistUri))
+        {
+            <video class="post-video" controls playsinline preload="none"
+                   poster="@(IsWebUri(video.ThumbnailUri) ? video.ThumbnailUri : null)"
+                   aria-label="@(string.IsNullOrWhiteSpace(video.AltText) ? "Post video" : video.AltText)">
+                <source src="@video.PlaylistUri" type="application/vnd.apple.mpegurl" />
+            </video>
+        }
+        <p>@video.AltText <a href="@PostUri" target="_blank" rel="noopener noreferrer">Watch video on Bluesky</a> (if your browser cannot play it here).</p>
+        break;
+    case EmbeddedExternalView external:
+        @if (Uri.TryCreate(external.External.Uri, UriKind.Absolute, out Uri? target) && IsWebUri(target))
+        {
+            @if (target.AbsolutePath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+            {
+                <img class="post-image post-gif" src="@target" alt="@GifAltText(external.External.Description)" title="@GifAltText(external.External.Description)" loading="lazy" />
+            }
+            else
+            {
+                <a class="external-card" href="@target" target="_blank" rel="noopener noreferrer">
+                    @if (IsWebUri(external.External.ThumbnailUri))
+                    {
+                        <img class="post-image" src="@external.External.ThumbnailUri" alt="@external.External.Title" loading="lazy" />
+                    }
+                    <strong>@(string.IsNullOrWhiteSpace(external.External.Title) ? "Open external media" : external.External.Title)</strong>
+                    <span>@external.External.Description</span>
+                </a>
+            }
+        }
+        else
+        {
+            <p>External media unavailable. <a href="@PostUri" target="_blank" rel="noopener noreferrer">View post on Bluesky</a></p>
+        }
+        break;
+}
+
+@code {
+    /// <summary>
+    /// Gets or sets the hydrated media to display.
+    /// </summary>
+    [Parameter]
+    public EmbeddedView? Embed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Bluesky post link used when media cannot play in this browser.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string PostUri { get; set; } = default!;
+
+    private static bool IsWebUri(Uri? uri) =>
+        uri is { IsAbsoluteUri: true } && uri.Scheme is "https" or "http";
+
+    private static string GifAltText(string description) =>
+        description.StartsWith("Alt: ", StringComparison.Ordinal) || description.StartsWith("ALT: ", StringComparison.Ordinal)
+            ? description[5..]
+            : description;
+}

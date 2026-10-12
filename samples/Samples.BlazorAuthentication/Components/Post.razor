@@ -11,13 +11,7 @@
     <time datetime="@PostView.Record.CreatedAt.ToString("O")">@PostView.Record.CreatedAt.ToLocalTime().ToString("g")</time>
 </div>
 <p class="post-text">@PostView.Record.Text</p>
-@if (PostView.Embed is EmbeddedImagesView images)
-{
-    @foreach (var image in images.Images)
-    {
-        <img class="post-image" src="@image.ThumbnailUri" alt="@image.AltText" loading="lazy" />
-    }
-}
+<PostMedia Embed="PostView.Embed" PostUri="PostLink" />
 <p>@PostView.ReplyCount replies &middot; @PostView.LikeCount likes &middot; @PostView.RepostCount reposts</p>
 
 @code {
@@ -26,4 +20,6 @@
     /// </summary>
     [Parameter, EditorRequired]
     public PostView PostView { get; set; } = default!;
+
+    private string PostLink => $"https://bsky.app/profile/{PostView.Author.Did}/post/{PostView.Uri.RecordKey}";
 }
