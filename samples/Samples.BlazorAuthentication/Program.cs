@@ -5,9 +5,12 @@ using idunno.Bluesky;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.Authentication;
 
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
+using Samples.BlazorAuthentication;
 using Samples.BlazorAuthentication.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,8 +25,15 @@ builder.Services
         options.AccessDeniedPath = "/Bluesky/Error";
         options.Cookie.Name = ".AspNetCore.Bluesky.Blazor";
         options.CorrelationCookie.Name = ".AspNetCore.Bluesky.Blazor.Correlation";
+        options.Events.OnCheckSlidingExpiration = SessionRenewal.CheckSlidingExpiration;
     })
     .AddBlueskyAuthenticationUI();
+
+builder.Services.PostConfigure<BlueskyAuthenticationOptions>(BlueskyAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.IdentityStore = new SessionIdentityStore(options.IdentityStore ??
+        throw new InvalidOperationException("An identity store is required."));
+});
 
 builder.Services.PostConfigure<BlueskyAgentOptions>(options =>
 {
@@ -33,12 +43,14 @@ builder.Services.PostConfigure<BlueskyAgentOptions>(options =>
 
 builder.Services
     .AddBlueskyOAuthClientMetadata()
-    .AddBlueskyClaimsTransformer()
-    .AddBlueskyAgentFactory();
+    .AddBlueskyClaimsTransformer();
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddScoped<AuthenticationStateProvider, CircuitAuthenticationStateProvider>();
+builder.Services.AddScoped<CircuitBlueskyClient>();
+builder.Services.AddSingleton<SessionRenewal>();
 
 var app = builder.Build();
 
@@ -70,11 +82,8 @@ app.Use(async (context, next) =>
 
 app.MapStaticAssets();
 app.MapRazorPages().WithStaticAssets();
-app.MapRazorComponents<App>();
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapPost("/session/renew", (HttpContext context, IAntiforgery antiforgery, SessionRenewal renewal) =>
+    renewal.RenewAsync(context, antiforgery));
 
 app.Run();
-
-/// <summary>
-/// Exposes the sample entry point for application integration tests.
-/// </summary>
-public partial class Program;

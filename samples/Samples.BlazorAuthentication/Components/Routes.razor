@@ -1,9 +1,17 @@
+@inject NavigationManager Navigation
+
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
-                <p role="alert">You must <a href="/Bluesky/Login">sign in</a> to view this page.</p>
+                <p role="alert">Your session has ended or you are not signed in. Profile drafts are retained in this tab.
+                    <a href="@SignInUrl" data-enhance-nav="false">Sign in</a> to continue.</p>
             </NotAuthorized>
         </AuthorizeRouteView>
     </Found>
 </Router>
+
+@code {
+    private string SignInUrl => "/Bluesky/Login?returnUrl=" +
+        Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
+}

@@ -1,6 +1,7 @@
 @page "/Claims"
 @attribute [Authorize]
-@using Microsoft.IdentityModel.JsonWebTokens
+@inject CircuitBlueskyClient Client
+@implements IDisposable
 
 <PageTitle>User claims</PageTitle>
 <h1>User claims</h1>
@@ -14,6 +15,10 @@
         }
     </tbody>
 </table>
+@if (_error is not null)
+{
+    <p role="alert" class="error">@_error</p>
+}
 @if (_expiresOn is not null)
 {
     <p>Access token expires on @_expiresOn.Value.ToLocalTime().ToString("G").</p>
@@ -25,16 +30,30 @@
 
     private IEnumerable<Claim> _claims = [];
     private DateTimeOffset? _expiresOn;
+    private string? _error;
+    private readonly CancellationTokenSource _cancellation = new();
 
     protected override async Task OnInitializedAsync()
     {
         var user = (await AuthenticationState).User;
         _claims = user.Claims.Where(claim => claim.Type is not
             (AtProtoClaims.AccessToken or AtProtoClaims.RefreshToken or AtProtoClaims.DPoPProof or AtProtoClaims.DPoPNonce));
-        if (user.FindFirst(AtProtoClaims.AccessToken) is Claim tokenClaim)
+        try
         {
-            var token = new JsonWebToken(tokenClaim.Value);
-            _expiresOn = new DateTimeOffset(DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
+            _expiresOn = await Client.ExecuteAsync((agent, _) => Task.FromResult(agent.Credentials!.ExpiresOn), _cancellation.Token);
         }
+        catch (AuthenticationException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    public void Dispose()
+    {
+        _cancellation.Cancel();
+        _cancellation.Dispose();
     }
 }

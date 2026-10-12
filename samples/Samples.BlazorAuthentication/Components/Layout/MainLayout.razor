@@ -7,16 +7,30 @@
         <AuthorizeView>
             <Authorized>
                 <a href="/Claims">Claims</a>
-                <a href="/Manage">Manage profile</a>
-                <span>@context.User.GetDisplayName()</span>
-                <a href="/Bluesky/Logout?returnUrl=%2F">Sign out</a>
+                <details class="account-menu">
+                    <summary class="signed-in-user" aria-label="Account options">
+                        @if (context.User.GetAvatar() is Uri avatar)
+                        {
+                            <img src="@avatar" alt="Avatar" width="30" height="30" />
+                        }
+                        <span>@(context.User.GetHandle()?.ToString() ?? context.User.GetDisplayName() ?? "Account")</span>
+                    </summary>
+                    <div class="account-menu-options">
+                        <a href="/Manage">Manage profile</a>
+                        <a href="/Bluesky/Logout?returnUrl=%2F" data-enhance-nav="false">Sign out</a>
+                    </div>
+                </details>
             </Authorized>
             <NotAuthorized>
-                <a href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
+                <a class="sign-in-link" href="/Bluesky/Login?returnUrl=%2F" data-enhance-nav="false">Sign in</a>
             </NotAuthorized>
         </AuthorizeView>
     </nav>
 </header>
 <main>
+    <SessionHeartbeat />
     @Body
 </main>
+<div id="blazor-error-ui">
+    An unexpected error occurred. <a href="" class="reload">Reload</a>
+</div>

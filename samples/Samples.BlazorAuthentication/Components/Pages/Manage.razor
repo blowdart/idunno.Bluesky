@@ -1,7 +1,10 @@
 @page "/Manage"
 @attribute [Authorize]
-@inject BlueskyAgent Agent
-@inject NavigationManager Navigation
+@inject CircuitBlueskyClient Client
+@inject AuthenticationStateProvider Authentication
+@inject Microsoft.JSInterop.IJSRuntime JS
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
 
 <PageTitle>Manage profile</PageTitle>
 <h1>Manage profile</h1>
@@ -9,66 +12,155 @@
 {
     <p role="alert" class="error">@_error</p>
 }
-@if (Saved && _error is null && HttpMethods.IsGet(HttpContext.Request.Method))
+@if (_saved && _error is null)
 {
     <p role="status">Your profile was saved.</p>
 }
+@if (_draftMessage is not null)
+{
+    <p role="status">@_draftMessage</p>
+}
 @if (Input is not null)
 {
-    <EditForm Model="Input" OnValidSubmit="Save" FormName="profile">
+    <EditForm id="profile-editor" Model="Input" OnValidSubmit="Save" FormName="profile">
         <DataAnnotationsValidator />
         <ValidationSummary />
-        <input type="hidden" name="Input.Cid" value="@Input.Cid" />
         <label for="display-name">Display name</label>
-        <InputText id="display-name" @bind-Value="Input.DisplayName" />
+        <InputText id="display-name" @bind-Value="Input.DisplayName" disabled="@_saving" />
         <ValidationMessage For="() => Input.DisplayName" />
         <label for="description">Description</label>
-        <InputTextArea id="description" @bind-Value="Input.Description" />
+        <InputTextArea id="description" @bind-Value="Input.Description" disabled="@_saving" />
         <ValidationMessage For="() => Input.Description" />
         <label for="pronouns">Pronouns</label>
-        <InputText id="pronouns" @bind-Value="Input.Pronouns" />
+        <InputText id="pronouns" @bind-Value="Input.Pronouns" disabled="@_saving" />
         <ValidationMessage For="() => Input.Pronouns" />
-        <button type="submit">Save profile</button>
+        <button type="submit" disabled="@_saving">Save profile</button>
+        <button type="button" @onclick="DiscardDraft" disabled="@_saving">Discard draft and reload profile</button>
     </EditForm>
 }
 
 @code {
-    [CascadingParameter]
-    private HttpContext HttpContext { get; set; } = default!;
-
-    [SupplyParameterFromForm(FormName = "profile")]
     private ProfileInput? Input { get; set; }
-
-    [SupplyParameterFromQuery]
-    private bool Saved { get; set; }
-
+    private readonly CancellationTokenSource _cancellation = new();
     private string? _error;
+    private bool _saved;
+    private bool _saving;
+    private string? _did;
+    private string? _draftMessage;
+    private IJSObjectReference? _draftModule;
+    private IJSObjectReference? _draft;
+    private DotNetObjectReference<Manage>? _reference;
+    private bool _attachingDraft;
 
     protected override async Task OnInitializedAsync()
     {
-        // Static SSR recreates the component for POSTs; never replace the submitted edits or their original CID.
-        if (Input is not null)
+        _did = (await Authentication.GetAuthenticationStateAsync()).User.FindFirstValue(AtProtoClaims.Did);
+        try
         {
-            return;
+            await Client.ExecuteAsync(async (agent, cancellationToken) =>
+            {
+                var profile = await agent.GetProfile(cancellationToken: cancellationToken);
+                if (!profile.Succeeded)
+                {
+                    _error = $"Could not load your profile: {profile.StatusCode} ({profile.AtErrorDetail?.Error}).";
+                    return false;
+                }
+
+                Input = new ProfileInput
+                {
+                    Cid = profile.Result.Cid.ToString(),
+                    DisplayName = profile.Result.Value.DisplayName ?? string.Empty,
+                    Description = profile.Result.Value.Description ?? string.Empty,
+                    Pronouns = profile.Result.Value.Pronouns ?? string.Empty
+                };
+                return true;
+            }, _cancellation.Token);
+        }
+        catch (AuthenticationException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        {
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_attachingDraft && _draft is null && Input is not null && _did is not null)
+        {
+            _attachingDraft = true;
+            _draftModule = await JS.InvokeAsync<IJSObjectReference>("import", "./profileDraft.js");
+            _reference = DotNetObjectReference.Create(this);
+            _draft = await _draftModule.InvokeAsync<IJSObjectReference>("attach", _did, Input.Cid, _reference);
+        }
+    }
+
+    [JSInvokable]
+    public Task RestoreDraft(string cid, string displayName, string description, string pronouns)
+    {
+        Input = new ProfileInput { Cid = cid, DisplayName = displayName, Description = description, Pronouns = pronouns };
+        _draftMessage = "Restored your unsaved draft for this account. Review it before saving; its original profile version is retained.";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task DraftStorageFailed()
+    {
+        _draftMessage = "This browser could not retain your profile draft. Copy your edits before signing in or leaving this page.";
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DiscardDraft()
+    {
+        if (_draft is not null)
+        {
+            await _draft.InvokeVoidAsync("clear");
         }
 
-        var profile = await Agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
-        if (!profile.Succeeded)
+        _draftMessage = null;
+        _saved = false;
+        _error = null;
+        Input = null;
+        await OnInitializedAsync();
+        if (_draft is not null && Input is not null)
         {
-            _error = $"Could not load your profile: {profile.StatusCode} ({profile.AtErrorDetail?.Error}).";
-            return;
+            await _draft.InvokeVoidAsync("reset", Input.Cid, Input.DisplayName, Input.Description, Input.Pronouns);
         }
-
-        Input = new ProfileInput
-        {
-            Cid = profile.Result.Cid.ToString(),
-            DisplayName = profile.Result.Value.DisplayName ?? string.Empty,
-            Description = profile.Result.Value.Description ?? string.Empty,
-            Pronouns = profile.Result.Value.Pronouns ?? string.Empty
-        };
     }
 
     private async Task Save()
+    {
+        if (_saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        _saved = false;
+        _error = null;
+        try
+        {
+            await Client.ExecuteAsync(async (agent, cancellationToken) =>
+            {
+                await SaveCore(agent, cancellationToken);
+                return true;
+            }, _cancellation.Token);
+        }
+        catch (AuthenticationException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task SaveCore(BlueskyAgent agent, CancellationToken cancellationToken)
     {
         if (Input is null || !Cid.TryParse(Input.Cid, out Cid? cid))
         {
@@ -76,7 +168,7 @@
             return;
         }
 
-        var current = await Agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
+        var current = await agent.GetProfile(cancellationToken: cancellationToken);
         if (!current.Succeeded)
         {
             _error = $"Could not load your profile: {current.StatusCode} ({current.AtErrorDetail?.Error}).";
@@ -94,13 +186,45 @@
         profile.DisplayName = Input.DisplayName;
         profile.Description = Input.Description;
         profile.Pronouns = Input.Pronouns;
-        var result = await Agent.UpdateProfile(profile, cid: cid, cancellationToken: HttpContext.RequestAborted);
+        var result = await agent.UpdateProfile(profile, cid: cid, cancellationToken: cancellationToken);
         if (!result.Succeeded)
         {
             _error = $"Could not save your profile: {result.StatusCode} ({result.AtErrorDetail?.Error}). Copy your edits before reloading.";
             return;
         }
 
-        Navigation.NavigateTo("/Manage?saved=true");
+        Input.Cid = result.Result.Cid.ToString();
+        _saved = true;
+        _draftMessage = null;
+        if (_draft is not null)
+        {
+            await _draft.InvokeVoidAsync("reset", Input.Cid, Input.DisplayName, Input.Description, Input.Pronouns);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cancellation.Cancel();
+        _cancellation.Dispose();
+        try
+        {
+            if (_draft is not null)
+            {
+                await _draft.InvokeVoidAsync("dispose");
+                await _draft.DisposeAsync();
+            }
+
+            if (_draftModule is not null)
+            {
+                await _draftModule.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        finally
+        {
+            _reference?.Dispose();
+        }
     }
 }
