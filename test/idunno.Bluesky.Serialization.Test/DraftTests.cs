@@ -706,13 +706,15 @@ public class DraftTests
     }
 
     [Fact]
-    public void DraftPostTextSetterValidatesWhenVideosArePresent()
+    public void DraftPostTextSetterAllowsEmptyTextWhenVideosArePresent()
     {
         DraftPost draftPost = new(
             text: "Text",
             embedVideo: new DraftEmbedVideo(new DraftEmbedLocalRef("video:abc")));
 
-        Assert.Throws<ArgumentException>(() => draftPost.Text = string.Empty);
+        draftPost.Text = string.Empty;
+
+        Assert.Equal(string.Empty, draftPost.Text);
     }
 
     [Fact]

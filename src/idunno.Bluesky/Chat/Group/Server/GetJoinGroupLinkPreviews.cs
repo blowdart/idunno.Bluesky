@@ -25,9 +25,9 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="codes"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="codes"/> contains a <see langword="null"/> entry.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="codes"/> is empty or contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -53,9 +53,9 @@ public partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
-        if (codes.Any(code => string.IsNullOrEmpty(code)))
+        if (codes.Any(code => code is null))
         {
-            throw new ArgumentException("Codes cannot contain null or empty values.", nameof(codes));
+            throw new ArgumentException("Codes cannot contain null values.", nameof(codes));
         }
 
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));

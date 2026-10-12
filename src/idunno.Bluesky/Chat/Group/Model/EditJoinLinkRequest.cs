@@ -9,7 +9,7 @@ internal sealed record EditJoinLinkRequest
 {
     internal EditJoinLinkRequest(string conversationId, bool? requireApproval, string? joinRule)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         ConversationId = conversationId;
         RequireApproval = requireApproval;

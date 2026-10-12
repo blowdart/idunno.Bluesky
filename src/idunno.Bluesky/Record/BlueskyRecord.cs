@@ -36,6 +36,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(ReferenceListOptOut), RecordType.ReferenceListOptOut)]
 [JsonDerivedType(typeof(ListBlock), RecordType.ListBlock)]
 [JsonDerivedType(typeof(ContentVisibilityDeclaration), RecordType.ContentVisibilityDeclaration)]
+[JsonDerivedType(typeof(Chat.Actor.Declaration), "chat.bsky.actor.declaration")]
 public record BlueskyRecord : AtProtoRecord
 {
     /// <summary>

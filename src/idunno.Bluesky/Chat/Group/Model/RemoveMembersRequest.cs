@@ -11,7 +11,7 @@ internal sealed record RemoveMembersRequest
 {
     public RemoveMembersRequest(string conversationId, ICollection<Did> members)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(members);
         if (members.Count == 0)
         {

@@ -93,6 +93,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.MessageReference))]
 [JsonSerializable(typeof(Chat.Messages))]
 [JsonSerializable(typeof(Chat.MessageView))]
+[JsonSerializable(typeof(Json.MessageViewConverter.MessageViewData))]
+[JsonSerializable(typeof(Chat.Embed.JoinLinkView))]
 [JsonSerializable(typeof(Chat.MessageViewBase))]
 [JsonSerializable(typeof(Chat.MessageViewSender))]
 [JsonSerializable(typeof(Chat.ReactionView))]

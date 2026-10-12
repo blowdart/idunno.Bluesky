@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -24,8 +23,9 @@ public sealed record MessageInput
     /// <param name="facets">The rich text <see cref="Facet"/>s for the message, if any.</param>
     /// <param name="embed">The <see cref="EmbeddedRecord"/> for the message, if any.</param>
     /// <param name="replyTo">The message this message is replying to. The referenced message must be in the same conversation.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> exceeds the maximum allowed length.</exception>
+    /// <exception cref="ArgumentException"><paramref name="facets"/> contains a <see langword="null"/> entry.</exception>
     public MessageInput(string text, ICollection<Facet>? facets = null, EmbeddedRecord? embed = null, ReplyReference? replyTo = null)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -69,6 +69,7 @@ public sealed record MessageInput
     /// <summary>
     /// Gets the rich text <see cref="Facet"/>s of the message, if any.
     /// </summary>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     /// <para>
     /// A facet's range is a pair of byte offsets into <see cref="Text"/>, so facets are only meaningful alongside the text they were
@@ -80,7 +81,7 @@ public sealed record MessageInput
     public IReadOnlyCollection<Facet>? Facets
     {
         get => _facets;
-        init => _facets = value is not null ? new ReadOnlyCollection<Facet>([.. value]) : null;
+        init => _facets = value is not null ? ChatCollection.Copy(value) : null;
     }
 
     /// <summary>

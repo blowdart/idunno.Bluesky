@@ -35,5 +35,12 @@ public sealed record AddMembersResponse
     /// <summary>
     /// Gets the read-only collection of <see cref="ProfileViewBasic"/> of members that were added to the group conversation, if any.
     /// </summary>
-    public IReadOnlyCollection<ProfileViewBasic>? AddedMembers { get; init; }
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
+    public IReadOnlyCollection<ProfileViewBasic>? AddedMembers
+    {
+        get => _addedMembers;
+        init => _addedMembers = value is null ? null : ChatCollection.Copy(value);
+    }
+
+    private readonly IReadOnlyCollection<ProfileViewBasic>? _addedMembers;
 }

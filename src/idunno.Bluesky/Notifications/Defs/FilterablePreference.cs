@@ -34,16 +34,19 @@ public sealed record FilterablePreference
     /// <summary>
     /// Gets or sets the type of users that notifications should be sent for.
     /// </summary>
+    [JsonRequired]
     public LimitTo Include { get; set; }
 
     /// <summary>
     /// Gets or sets a flag indicating whether the notification type should be shown in the user's notifications list.
     /// </summary>
+    [JsonRequired]
     public bool List { get; set; }
 
     /// <summary>
     /// Gets or sets a flag indicating whether the notification type should be pushed.
     /// </summary>
+    [JsonRequired]
     public bool Push { get; set; }
 }
 

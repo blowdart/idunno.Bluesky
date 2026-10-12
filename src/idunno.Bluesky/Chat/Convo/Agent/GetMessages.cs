@@ -16,7 +16,7 @@ public partial class BlueskyAgent
     /// <param name="cursor">An optional cursor used for pagination.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is <see langword="null"/> or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<Messages>> GetMessages(
         string id,
@@ -24,7 +24,7 @@ public partial class BlueskyAgent
         string? cursor = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(id);
 
         if (!IsAuthenticated)
         {

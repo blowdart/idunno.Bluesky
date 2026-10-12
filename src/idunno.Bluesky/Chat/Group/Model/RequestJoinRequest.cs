@@ -7,7 +7,7 @@ internal sealed record RequestJoinRequest
 {
     public RequestJoinRequest(string code)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentNullException.ThrowIfNull(code);
         Code = code;
     }
 

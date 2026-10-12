@@ -76,5 +76,6 @@ public record BlueskyTimestampedRecord : BlueskyRecord
     /// Gets the date and time the record was created at, if known.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public DateTimeOffset CreatedAt { get; init; }
 }

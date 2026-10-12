@@ -48,12 +48,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (result.Succeeded &&
-            (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))
-        {
-            throw new ResponseParseException("Response missing required availableUserDomains array.");
-        }
-
         return result;
     }
 }

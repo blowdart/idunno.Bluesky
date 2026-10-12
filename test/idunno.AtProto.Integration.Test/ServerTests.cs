@@ -15,6 +15,26 @@ namespace idunno.AtProto.Integration.Test;
 public class ServerTests
 {
     [Fact]
+    public async Task DescribeServerAcceptsAnEmptyRequiredDomainsArray()
+    {
+        string domainName = TestServerBuilder.CreateRandomHostName();
+        using TestServer server = TestServerBuilder.CreateServer(domainName, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.server.describeServer", context.Request.Path);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"did":"did:web:example.com","availableUserDomains":[]}""", TestContext.Current.CancellationToken);
+        });
+        using HttpClient httpClient = server.CreateClient();
+
+        AtProtoHttpResult<ServerDescription> result = await AtProtoServer.DescribeServer(
+            new Uri($"https://{domainName}"), httpClient, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Empty(result.Result.AvailableUserDomains);
+    }
+
+    [Fact]
     public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider()
     {
         string domainName = TestServerBuilder.CreateRandomHostName();

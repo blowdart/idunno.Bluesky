@@ -9,7 +9,7 @@ internal sealed record EnableJoinLinkRequest
 {
     public EnableJoinLinkRequest(string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
         ConversationId = conversationId;
     }
 

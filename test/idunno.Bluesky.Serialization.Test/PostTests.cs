@@ -56,10 +56,10 @@ public class PostTests
     [InlineData("\n\n", false)]
     [InlineData("\r\n", false)]
     [InlineData(" \t\r\n ", false)]
+    [InlineData("", false)]
     [InlineData(" ", true)]
     [InlineData("\t\t", true)]
     [InlineData("\n\n", true)]
-    [InlineData(null, true)]
     [InlineData("", true)]
     public void PostTextRoundTripsUnchanged(string? text, bool hasEmbed)
     {
@@ -90,27 +90,14 @@ public class PostTests
         }
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public void NullOrEmptyTextWithoutEmbedStillFailsDeserialization(string? text)
+    [Fact]
+    public void NullTextWithoutEmbedStillFailsDeserialization()
     {
-        foreach (JsonSerializerOptions options in new[] { _jsonSerializerOptions, BlueskyServer.BlueskyJsonSerializerOptions })
-        {
-            if (text is null)
-            {
-                ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
-                    () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
-                Assert.Equal("text", exception.ParamName);
-            }
-            else
-            {
-                ArgumentException exception = Assert.Throws<ArgumentException>(
-                    () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
-                Assert.Equal("text", exception.ParamName);
-                Assert.Contains("Post text cannot be empty unless an embedded record is provided.", exception.Message);
-            }
-        }
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
+            () => JsonSerializer.Deserialize<Post>(CreatePostJson(null, false), _jsonSerializerOptions));
+        Assert.Equal("text", exception.ParamName);
+        Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<Post>(CreatePostJson(null, false), BlueskyServer.BlueskyJsonSerializerOptions));
     }
 
     [Theory]

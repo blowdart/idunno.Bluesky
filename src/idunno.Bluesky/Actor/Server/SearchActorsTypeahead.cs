@@ -15,9 +15,25 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     /// <summary>
+    /// Finds actor suggestions without supplying a search query prefix.
+    /// </summary>
+    /// <param name="service">The service to query.</param>
+    /// <param name="accessCredentials">The credentials used to authenticate to the service.</param>
+    /// <param name="httpClient">An HTTP client for the request.</param>
+    /// <returns>The result of the actor suggestion search.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    public static Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>> SearchActorsTypeahead(
+        Uri service,
+        AccessCredentials? accessCredentials,
+        HttpClient httpClient)
+    {
+        return SearchActorsTypeahead(null, null, service, accessCredentials, httpClient);
+    }
+
+    /// <summary>
     /// Find actor suggestions for a prefix search term. Expected use is for auto-completion during text field entry. Does not require authentication.
     /// </summary>
-    /// <param name="q">"Search query prefix; not a full query string.</param>
+    /// <param name="q">An optional search query prefix. An empty string is preserved; <see langword="null"/> omits the parameter.</param>
     /// <param name="limit">The number of suggested actors to return. Defaults to 10 if <see langword="null"/>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -28,7 +44,6 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="q"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
     [UnconditionalSuppressMessage(
@@ -39,7 +54,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>> SearchActorsTypeahead(
-        string q,
+        string? q,
         int? limit,
         Uri service,
         AccessCredentials? accessCredentials,
@@ -50,7 +65,6 @@ public static partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(q);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -61,9 +75,15 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ActorTypeaheadSearchResults);
 
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
+        string requestUri = $"/xrpc/app.bsky.actor.searchActorsTypeahead?limit={limitValue}";
+        if (q is not null)
+        {
+            requestUri += $"&q={Uri.EscapeDataString(q)}";
+        }
+
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.searchActorsTypeahead?q={Uri.EscapeDataString(q)}&limit={limitValue}",
+            requestUri,
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

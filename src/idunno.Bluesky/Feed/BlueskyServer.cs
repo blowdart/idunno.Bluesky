@@ -690,7 +690,7 @@ public static partial class BlueskyServer
         queryStringBuilder.Append(CultureInfo.InvariantCulture, $"uri={Uri.EscapeDataString(uri.ToString())}");
         if (cid is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"cid={Uri.EscapeDataString(cid.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cid={Uri.EscapeDataString(cid.ToString())}");
         }
         if (limit is not null)
         {

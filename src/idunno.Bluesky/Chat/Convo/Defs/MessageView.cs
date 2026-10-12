@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Json;
 using idunno.Bluesky.RichText;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -14,6 +15,7 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// Presents a view over a message.
 /// </summary>
+[JsonConverter(typeof(MessageViewConverter))]
 public sealed record MessageView : MessageViewBase
 {
     /// <summary>
@@ -27,12 +29,8 @@ public sealed record MessageView : MessageViewBase
     /// <param name="reactions">Reactions to the message <paramref name="text"/>, if any.</param>
     /// <param name="sender">A view over the message author.</param>
     /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when either <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
-    /// </exception>
-    /// <exception cref="ArgumentNullException">
-    ///   Thrown when <paramref name="text"/> or <paramref name="sender"/> is <see langword="null"/>.
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/>, <paramref name="revision"/>, <paramref name="text"/> or <paramref name="sender"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="facets"/> or <paramref name="reactions"/> contains a <see langword="null"/> entry.</exception>
     public MessageView(
         string id,
         string revision,
@@ -43,8 +41,8 @@ public sealed record MessageView : MessageViewBase
         MessageViewSender sender,
         DateTimeOffset sentAt) : base()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(revision);
 
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(sender);
@@ -54,7 +52,7 @@ public sealed record MessageView : MessageViewBase
         SentAt = sentAt;
 
         Text = text;
-        Embed = embed;
+        EmbeddedView = embed;
         Sender = sender;
 
         Facets = facets ?? [];
@@ -93,6 +91,7 @@ public sealed record MessageView : MessageViewBase
     /// <summary>
     /// Gets any facets to apply to <see cref="Text"/>.
     /// </summary>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     /// <para>
     /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
@@ -104,18 +103,30 @@ public sealed record MessageView : MessageViewBase
     public IReadOnlyCollection<Facet> Facets
     {
         get => _facets;
-        init => _facets = value is null ? new List<Facet>().AsReadOnly() : new List<Facet>(value).AsReadOnly();
+        init => _facets = value is null ? [] : ChatCollection.Copy(value);
     }
 
     /// <summary>
     /// Gets a view over the embedded record, if any.
     /// </summary>
+    [JsonIgnore]
+    public EmbeddedRecordView? Embed
+    {
+        get => EmbeddedView as EmbeddedRecordView;
+        init => EmbeddedView = value;
+    }
+
+    /// <summary>
+    /// Gets the embedded record or join link view, if any.
+    /// </summary>
     [JsonInclude]
-    public EmbeddedRecordView? Embed { get; init; }
+    [JsonPropertyName("embed")]
+    public EmbeddedView? EmbeddedView { get; init; }
 
     /// <summary>
     /// Gets reactions to the message, in ascending order of creation time.
     /// </summary>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     /// <para>
     /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
@@ -127,7 +138,7 @@ public sealed record MessageView : MessageViewBase
     public IReadOnlyCollection<ReactionView> Reactions
     {
         get => _reactions;
-        init => _reactions = value is null ? new List<ReactionView>().AsReadOnly() : new List<ReactionView>(value).AsReadOnly();
+        init => _reactions = value is null ? [] : ChatCollection.Copy(value);
     }
 
     /// <summary>

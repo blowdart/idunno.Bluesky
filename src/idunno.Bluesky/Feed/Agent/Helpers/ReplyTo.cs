@@ -100,8 +100,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes,
     ///   or <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -128,7 +127,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -161,8 +160,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text, tags, or image exceeds its supported limit.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -184,7 +182,7 @@ public partial class BlueskyAgent
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -210,11 +208,10 @@ public partial class BlueskyAgent
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is <see langword="null"/> or empty, or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="images"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
-    ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes, or
-    ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+    ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes,
+    ///   <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags or contains a tag whose length is greater than the maximum allowed characters or graphemes.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
@@ -238,7 +235,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -269,8 +266,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets"><see langword="true"/> to extract facets from the reply text automatically (the default); otherwise, <see langword="false"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="images"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text, image collection, or tags exceed their supported limits.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -293,7 +289,7 @@ public partial class BlueskyAgent
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -339,7 +335,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }

@@ -9,7 +9,7 @@ internal sealed record DisableJoinLinkRequest
 {
     public DisableJoinLinkRequest(string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
         ConversationId = conversationId;
     }
 

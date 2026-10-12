@@ -9,7 +9,7 @@ internal sealed record SendMessageRequest
 {
     public SendMessageRequest(string convoId, MessageInput message)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(convoId);
+        ArgumentNullException.ThrowIfNull(convoId);
         ArgumentNullException.ThrowIfNull(message);
 
         ConvoId = convoId;

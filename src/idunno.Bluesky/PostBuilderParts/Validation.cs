@@ -33,9 +33,9 @@ public sealed partial class PostBuilder
     {
         // Every value the rules depend on is read in a single pass. Reading the properties one at a time would take a
         // separate snapshot for each rule, so a builder being mutated on another thread could be judged against a
-        // combination of values it never actually held, and text going away between the HasText check and the Text
-        // read would dereference null.
-        bool hasText;
+        // combination of values it never actually held, and text going away between the null check and the Text read
+        // would dereference null.
+        bool textIsNull;
         bool hasImages;
         bool hasGalleryImages;
         bool hasEmbed;
@@ -47,8 +47,8 @@ public sealed partial class PostBuilder
 
         lock (_syncLock)
         {
+            textIsNull = _post.UnnormalizedText is null;
             text = _post.Text ?? string.Empty;
-            hasText = text.Length != 0;
             length = _post.Length;
             imageCount = _embeddedImages.Count;
             hasImages = imageCount > 0;
@@ -60,7 +60,7 @@ public sealed partial class PostBuilder
 
         List<string> errors = [];
 
-        if (!hasText && !hasImages && !hasEmbed && !hasVideo)
+        if (textIsNull && !hasImages && !hasEmbed && !hasVideo)
         {
             errors.Add(Properties.Resources.EmptyPostTextValidationError);
         }
@@ -80,12 +80,12 @@ public sealed partial class PostBuilder
             errors.Add(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
         }
 
-        if (hasText && length > MaxCapacity)
+        if (!textIsNull && length > MaxCapacity)
         {
             errors.Add(string.Format(null, s_postTextExceedsMaxLengthValidationError, MaxCapacity));
         }
 
-        if (hasText && text.GetGraphemeLength() > MaxCapacityGraphemes)
+        if (!textIsNull && text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
             errors.Add(string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, MaxCapacityGraphemes));
         }

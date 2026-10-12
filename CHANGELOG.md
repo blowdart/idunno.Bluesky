@@ -246,6 +246,8 @@
 #### idunno.Bluesky
 
 * `PostView.SelfLabels` and `ProfileViewBasic.SelfLabels` (for both actors and chat members) no longer allocate when there are no labels, and allocate less when there are.
+* Posts and `PostBuilder` now accept empty text without requiring an embed, matching the lexicon's required-string semantics. Null text without an embed remains invalid.
+* Embedded-only posts now expose and serialize empty `text` instead of omitting the required field. A builder still distinguishes unset text from explicitly empty text.
 
 ### Breaking Changes
 
@@ -296,6 +298,9 @@
 
 #### idunno.AtProto
 
+* Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.
+* `DescribeServer()` now accepts an empty required `availableUserDomains` array.
+
 * Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
 * Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.
 * Concurrent Jetstream asynchronous disposal calls share one cleanup operation, and parser drains are serialized to prevent competing drains from deadlocking.
@@ -325,11 +330,25 @@
 
 #### idunno.Bluesky
 
-* `Post` now throws `ArgumentException` with an explanatory message for empty text without an embed, rather than incorrectly reporting it as null. Null text without an embed still throws `ArgumentNullException`.
 * Corrected `ChatPreference` obsolete guidance to reference the existing chat notification APIs and types, clarifying that they use separate endpoints rather than being drop-in replacements. The legacy type remains available for compatibility.
-* Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved without changing null/empty text policies or text length limits.
-* Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation, top-level post tags and `HashTag` authoring validation remain unchanged.
+* Fixed the missing query separator before `cid` in `GetLikes()`.
+* Fixed view polymorphism metadata by making `LabelerView` derive from `View` and removing a duplicate chat join-link registration.
+* Added chat join-link embedded views through `MessageView.EmbeddedView`, retaining the existing record-only `Embed` property and constructor.
+* Unknown rich-text facet features and chat message views now retain their `$type` and all extra fields when round-tripped.
+* Post deserialization now requires `text`, and timestamped record deserialization requires `createdAt`. Empty text remains valid.
+* Draft post text, draft caption content and generator display names now accept empty strings without weakening their explicit limits or formats.
+* Actor searches now accept empty or omitted query strings, preserving the distinction between `q=` and an absent `q`.
+* Chat methods and models now accept empty unconstrained identifiers, revisions, join-link codes and open-string values, while retaining null, group-name and reaction constraints.
+* Chat member, facet, facet-feature, reaction, label, join-link preview and related-profile collections now reject null entries instead of exposing them through non-nullable contracts.
+* Corrected generator `descriptionFacets` and profile-associated `feedgens` JSON property names.
+* Registered chat actor declarations for deserialization through `BlueskyRecord`.
+* Notification filterable preferences now enforce required `include`, `list` and `push` fields.
+* Blocked posts now expose the required author and enforce the required `blocked: true` flag.
+* Corrected post, quote and reply helper documentation to identify null-tag failures as `ArgumentNullException`.
+* Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved, and text length limits are unchanged.
+* Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation and `HashTag` authoring validation remain unchanged.
 * Fixed schema-valid empty post-level tags and rich-text facets with empty feature arrays being rejected during record deserialization. Null values and required-field validation remain enforced.
+* `PostBuilder` and the `BlueskyAgent` post, quote and reply authoring methods now accept empty post-level tags, matching the post lexicon. Null tags and tag length limits remain enforced.
 * `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
 * Textless video and external-card `Quote()` helpers omit language metadata, matching textless image quotes. Text-bearing quotes retain their language metadata.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.

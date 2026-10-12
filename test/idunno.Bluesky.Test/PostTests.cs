@@ -199,11 +199,11 @@ public class PostTests
     }
 
     [Fact]
-    public void TextLangConstructorThrowsIfTextIsEmpty()
+    public void TextLangConstructorAllowsEmptyText()
     {
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty));
-
-        Assert.Equal("text", caughtException.ParamName);
+        Assert.Equal(string.Empty, new Post(string.Empty).Text);
+        Assert.Equal(string.Empty, new Post(string.Empty, DateTimeOffset.UtcNow).Text);
+        Assert.Equal(string.Empty, new Post(string.Empty, "en").Text);
     }
 
     [Fact]
@@ -215,11 +215,9 @@ public class PostTests
     }
 
     [Fact]
-    public void TextLangsConstructorThrowsIfTextIsEmpty()
+    public void TextLangsConstructorAllowsEmptyText()
     {
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty, ["en-gb"]));
-
-        Assert.Equal("text", caughtException.ParamName);
+        Assert.Equal(string.Empty, new Post(string.Empty, ["en-gb"]).Text);
     }
 
     [Fact]
@@ -254,7 +252,7 @@ public class PostTests
 
         var post = new Post(null, embeddedRecord: expectedEmbedded);
 
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
         Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
     }
 
@@ -268,6 +266,15 @@ public class PostTests
 
         Assert.Equal(string.Empty, post.Text);
         Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void ConstructorAllowsEmptyTextWithoutAnEmbed()
+    {
+        Post post = new(string.Empty);
+
+        Assert.Equal(string.Empty, post.Text);
+        Assert.Null(post.EmbeddedRecord);
     }
 
     [Fact]
@@ -763,7 +770,7 @@ public class PostTests
         Post post = new(text: null, images: images);
 
         Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
     }
 
     [Fact]
@@ -779,6 +786,6 @@ public class PostTests
         Post post = new(text: null, images: images);
 
         Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
     }
 }

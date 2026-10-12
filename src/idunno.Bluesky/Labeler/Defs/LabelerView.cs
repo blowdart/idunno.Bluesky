@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Labeler;
 /// </summary>
 [JsonDerivedType(typeof(LabelerView), typeDiscriminator: "app.bsky.labeler.defs#labelerView")]
 [JsonDerivedType(typeof(LabelerViewDetailed), typeDiscriminator: "app.bsky.labeler.defs#labelerViewDetailed")]
-public record LabelerView
+public record LabelerView : View
 {
     /// <summary>
     /// Gets the <see cref="AtUri"/> of the labeler.

@@ -41,15 +41,14 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
     /// <param name="tags">A collection of tags to apply to the post, if any.</param>
     /// <exception cref="ArgumentNullException"><paramref name="text"/> and <paramref name="embeddedRecord"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is empty and <paramref name="embeddedRecord"/> is <see langword="null"/>, or a tag position is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">A tag position is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
     ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
     /// </exception>
     /// <remarks>
-    /// <para><paramref name="text"/> may be <see langword="null"/> or empty if <paramref name="embeddedRecord"/> is not <see langword="null"/>. Nonempty whitespace-only text is permitted and preserved unchanged.</para>
+    /// <para><paramref name="text"/> may be empty regardless of whether <paramref name="embeddedRecord"/> is present. A <see langword="null"/> value is allowed when <paramref name="embeddedRecord"/> is present and is normalised to an empty string. Nonempty whitespace-only text is permitted and preserved unchanged.</para>
     /// </remarks>
-    [JsonConstructor]
     public Post(
         string? text,
         DateTimeOffset createdAt,
@@ -67,16 +66,9 @@ public record class Post : BlueskyTimestampedRecord
             labels: labels,
             tags: tags)
     {
-        // The lexicon description permits empty text when embeds are present:
-        // https://github.com/bluesky-social/atproto/blob/41a561e80a6c906e9a6ec8e29f8ea970ce9fe2e9/lexicons/app/bsky/feed/post.json#L17
         if (embeddedRecord is null)
         {
             ArgumentNullException.ThrowIfNull(text);
-
-            if (text.Length == 0)
-            {
-                throw new ArgumentException("Post text cannot be empty unless an embedded record is provided.", nameof(text));
-            }
         }
 
         if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
@@ -86,7 +78,21 @@ public record class Post : BlueskyTimestampedRecord
                 $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
-        Text = text;
+        Text = text ?? string.Empty;
+    }
+
+    [JsonConstructor]
+    internal Post(
+        DateTimeOffset createdAt,
+        string text,
+        ICollection<Facet>? facets,
+        ICollection<string>? langs,
+        EmbeddedBase? embeddedRecord,
+        ReplyReferences? reply,
+        SelfLabels? labels,
+        ICollection<string>? tags) : this(text, createdAt, facets, langs, embeddedRecord, reply, labels, tags)
+    {
+        ArgumentNullException.ThrowIfNull(text);
     }
 
     /// <summary>
@@ -95,9 +101,10 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="post">The <see cref="Post"/> to create the new instance from.</param>
     public Post(Post post) : base(post)
     {
+        _text = null;
         if (post is not null)
         {
-            Text = post.Text;
+            _text = post._text;
             CreatedAt = post.CreatedAt;
             EmbeddedRecord = post.EmbeddedRecord;
             Reply = post.Reply;
@@ -129,12 +136,13 @@ public record class Post : BlueskyTimestampedRecord
     /// </summary>
     /// <param name="text">The text for the post.</param>
     /// <param name="lang">The language the post is written in.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is <see langword="null"/> or empty, or <paramref name="lang" /> is empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> or <paramref name="lang"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="lang" /> is empty.</exception>
     public Post(
         string text,
         string lang) : this(text: text, langs: [lang])
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentException.ThrowIfNullOrEmpty(lang);
     }
 
@@ -143,14 +151,13 @@ public record class Post : BlueskyTimestampedRecord
     /// </summary>
     /// <param name="text">The text for the post.</param>
     /// <param name="langs">The languages the post is written in.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="langs"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> or <paramref name="langs"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is empty.</exception>
     public Post(
         string text,
         ICollection<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels: null, tags: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(langs);
 
         ArgumentOutOfRangeException.ThrowIfZero(langs.Count);
@@ -167,13 +174,13 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
     /// <param name="tags">A collection of tags to apply to the post, if any.</param>
     /// <exception cref="ArgumentNullException"><paramref name="text"/> and <paramref name="embeddedRecord"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is empty and <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">A tag position is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
     ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
     /// </exception>
     /// <remarks>
-    /// <para><paramref name="text"/> may be <see langword="null"/> or empty if <paramref name="embeddedRecord"/> is not <see langword="null"/>. Nonempty whitespace-only text is permitted and preserved unchanged.</para>
+    /// <para><paramref name="text"/> may be empty regardless of whether <paramref name="embeddedRecord"/> is present, and may be <see langword="null"/> if <paramref name="embeddedRecord"/> is present. Nonempty whitespace-only text is permitted and preserved unchanged.</para>
     /// </remarks>
     public Post(
         string? text,
@@ -310,7 +317,7 @@ public record class Post : BlueskyTimestampedRecord
                 nameof(text),
                 $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
-        Text = text;
+        Text = text ?? string.Empty;
     }
 
     /// <summary>
@@ -519,11 +526,19 @@ public record class Post : BlueskyTimestampedRecord
 
 
     /// <summary>
-    /// Gets the text for the post, if any.
+    /// Gets the text for the post. Embedded-only posts use an empty string.
     /// </summary>
     [JsonInclude]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Text { get; internal set; }
+    [JsonRequired]
+    public string? Text
+    {
+        get => _text ?? string.Empty;
+        internal set => _text = value;
+    }
+
+    internal string? UnnormalizedText => _text;
+
+    private string? _text;
 
     /// <summary>
     /// Gets a list of <see cref="Facet"/>s for the post, if any.

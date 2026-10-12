@@ -9,7 +9,7 @@ internal sealed record UpdateJoinRequestsReadRequest
 {
     public UpdateJoinRequestsReadRequest(string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         ConversationId = conversationId;
     }

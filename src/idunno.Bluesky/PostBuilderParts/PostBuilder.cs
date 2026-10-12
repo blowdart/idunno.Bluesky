@@ -89,7 +89,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag,</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> tag.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images,
     ///   or if there are too many <paramref name="images"/> without an <see cref="EmbeddedImage.AspectRatio"/>,
@@ -164,21 +164,19 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             foreach (string tag in tags)
             {
 #pragma warning disable S3236 // Caller information arguments should not be provided explicitly
-                ArgumentException.ThrowIfNullOrEmpty(tag, nameof(tags));
+                ArgumentNullException.ThrowIfNull(tag, nameof(tags));
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes, nameof(tags));
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes, nameof(tags));
 #pragma warning restore S3236 // Caller information arguments should not be provided explicitly
             }
         }
 
-        if (!string.IsNullOrEmpty(text))
+        if (text is not null)
         {
             _post = new Post(text, createdAt: postDate);
         }
         else
         {
-            // We need to create a Post instance with text, then blank it out again due to Post's validation/
-            // The setter for Text is internal.
             _post = new Post("__NULL__", createdAt: postDate)
             {
                 Text = text
@@ -219,8 +217,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> or a tag is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
@@ -249,8 +246,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> or a tag is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
@@ -377,7 +373,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             lock (_syncLock)
             {
-                return _post.Text;
+                return _post.UnnormalizedText;
             }
         }
 
@@ -1104,11 +1100,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="text">The text to set for the post.</param>
     /// <returns>A reference to this instance after the operation has completed.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text exceeds the maximum allowed length.</exception>
     public PostBuilder WithText(string text)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
@@ -1366,7 +1362,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
     /// <exception cref="PostBuilderException">
-    ///  Thrown when <see cref="Text"/> is <see langword="null"/> or empty and this instance has no images, embedded records or video, or
+    ///  Thrown when <see cref="Text"/> is <see langword="null"/> and this instance has no images, embedded records or video, or
     ///  this instance is both a reply and a quote, or this instance has both images and video.
     /// </exception>
     /// <remarks>
@@ -1376,7 +1372,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     {
         lock (_syncLock)
         {
-            if (!HasText && !HasImages && !HasEmbed && !HasVideo)
+            if (_post.UnnormalizedText is null && !HasImages && !HasEmbed && !HasVideo)
             {
                 throw new PostBuilderException(Properties.Resources.EmptyPostTextValidationError);
             }

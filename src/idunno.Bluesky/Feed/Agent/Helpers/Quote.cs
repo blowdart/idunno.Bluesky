@@ -19,8 +19,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -42,8 +41,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -66,8 +64,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -91,8 +88,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -116,8 +112,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -141,8 +136,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -167,8 +161,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -194,8 +187,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="video"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -219,8 +211,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -242,8 +233,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -266,8 +256,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -291,8 +280,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience overloads preserve existing call patterns.")]
@@ -316,8 +304,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -341,8 +328,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/> or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The number of tags or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -367,8 +353,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -394,8 +379,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="strongReference"/>, <paramref name="text"/>, or <paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The explicit record key preserves existing call patterns.")]
@@ -419,8 +403,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when the text length is longer than the maximum permitted or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -445,8 +428,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when the text length is longer than the maximum permitted or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -468,7 +450,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -492,8 +474,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -517,8 +498,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -549,8 +529,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -577,8 +556,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -594,7 +572,7 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(image);
 
         if (tags is not null)
@@ -603,7 +581,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -628,8 +606,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> or a tag is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -655,8 +632,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> or a tag is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text or tags exceed their maximum lengths.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -670,7 +646,7 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(image);
 
         return Quote(
@@ -692,8 +668,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/> or <paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -720,8 +695,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/> or <paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="text"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
     ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -760,7 +734,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -866,7 +840,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -903,8 +877,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
     /// </exception>
@@ -928,8 +901,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
     /// </exception>
@@ -950,7 +922,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -978,8 +950,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tags"/> has too many tags or a tag exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -1003,8 +974,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tags"/> has too many tags or a tag exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -1024,7 +994,7 @@ public partial class BlueskyAgent
 
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
@@ -1052,8 +1022,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
@@ -1076,8 +1045,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
@@ -1107,8 +1075,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
@@ -1133,8 +1100,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the quote post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
@@ -1166,7 +1132,7 @@ public partial class BlueskyAgent
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
             foreach (string tag in tags)
             {
-                ArgumentException.ThrowIfNullOrEmpty(tag);
+                ArgumentNullException.ThrowIfNull(tag);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }

@@ -285,13 +285,21 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void TryingToGetThePostRecordForAPostWithNoTextNoImagesAndIsNotARepostThrowsPostBuilderException()
+    public void TryingToGetThePostRecordForAPostWithNullTextNoImagesAndIsNotARepostThrowsPostBuilderException()
     {
-        var builder = new PostBuilder("");
+        var builder = new PostBuilder((string?)null);
         Assert.Throws<PostBuilderException>(() =>
         {
             _ = builder.ToPost();
         });
+    }
+
+    [Fact]
+    public void TryingToGetThePostRecordForAPostWithEmptyTextAndNoEmbedSucceeds()
+    {
+        PostBuilder builder = new(string.Empty);
+
+        Assert.Equal(string.Empty, builder.ToPost().Text);
     }
 
     [Fact]
@@ -327,7 +335,7 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void TryingToGetThePostRecordForAnEmptyReplyPostThrowsPostBuilderException()
+    public void TryingToGetThePostRecordForAnEmptyReplyPostSucceeds()
     {
         var builder = new PostBuilder("")
         {
@@ -341,20 +349,27 @@ public class PostBuilderTests
 
         };
 
-        Assert.Throws<PostBuilderException>(() =>
-        {
-            _ = builder.ToPost();
-        });
+        Assert.Equal(string.Empty, builder.ToPost().Text);
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnEmptyTagIsPassed()
+    public void ConstructorAllowsAnEmptyTag()
     {
         List<string> tags = [string.Empty];
 
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new PostBuilder("text", tags: tags));
+        PostBuilder builder = new("text", tags: tags);
 
-        Assert.Equal("tags", caughtException.ParamName);
+        Assert.Equal(tags, builder.Tags);
+    }
+
+    [Fact]
+    public void ConstructorThrowsWhenTagsContainNull()
+    {
+        List<string> tags = [null!];
+
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => new PostBuilder("text", tags: tags));
+
+        Assert.Equal("tags", exception.ParamName);
     }
 
     [Fact]

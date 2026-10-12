@@ -29,7 +29,7 @@ public class GeneratorRecordTests
         """{"$type":"app.bsky.labeler.service","policies":{"labelValues":[]},"createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.graph.verification","handle":"example.com","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","displayName":"Example","createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.graph.list","name":"Test list","purpose":"app.bsky.graph.defs#curatelist","createdAt":"2025-04-21T10:49:31.969Z"}""",
-        """{"$type":"app.bsky.graph.listitem","list":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz"}""",
+        """{"$type":"app.bsky.graph.listitem","list":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","subject":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.notification.declaration"}""",
         """{"$type":"app.bsky.actor.status","status":"app.bsky.actor.status#live","createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.graph.referencelistoptout","subject":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
