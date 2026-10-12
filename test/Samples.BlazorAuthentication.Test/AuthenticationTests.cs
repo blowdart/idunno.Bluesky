@@ -19,7 +19,9 @@ using idunno.Bluesky.Authentication;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -229,14 +231,18 @@ public partial class AuthenticationTests
         string token = await RenewalToken(browser);
         clock.Advance(TimeSpan.FromMinutes(6));
         var store = GetStore(factory);
+        var original = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
         var did = new idunno.AtProto.Did(Did);
         string? refreshLock = await store.StartRefresh(did, TestContext.Current.CancellationToken);
         Assert.NotNull(refreshLock);
         try
         {
             using var response = await RenewSession(browser, token);
-            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.True(await store.IsRefreshing(did, TestContext.Current.CancellationToken));
+            var current = (await store.GetIdentity(did, TestContext.Current.CancellationToken))!;
+            Assert.Equal(original.FindFirst(AtProtoClaims.AccessToken)?.Value, current.FindFirst(AtProtoClaims.AccessToken)?.Value);
+            Assert.Equal(original.FindFirst(AtProtoClaims.DPoPProof)?.Value, current.FindFirst(AtProtoClaims.DPoPProof)?.Value);
         }
         finally
         {
@@ -299,6 +305,50 @@ public partial class AuthenticationTests
         return WebUtility.HtmlDecode(match.Groups[1].Value);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RenewalCannotRestoreASessionChangedAfterAuthentication(bool replacement)
+    {
+        var clock = new SessionClock();
+        await using var factory = new SampleFactory(clock);
+        using var browser = factory.CreateClient(new() { AllowAutoRedirect = false });
+        await Login(browser);
+        string token = await RenewalToken(browser);
+        using var scope = await CreateCircuit(factory, browser);
+        var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+        var store = GetStore(factory);
+        ClaimsIdentity? newIdentity = null;
+        factory.BeforeRenewalValidation = async currentStore =>
+        {
+            if (replacement)
+            {
+                newIdentity = new ClaimsIdentity((await currentStore.GetIdentity(new(Did), TestContext.Current.CancellationToken))!);
+                newIdentity.RemoveClaim(newIdentity.FindFirst(AtProtoClaims.DPoPProof)!);
+                newIdentity.AddClaim(new(AtProtoClaims.DPoPProof, JsonWebKeys.CreateRsaJson()));
+                await currentStore.Add(newIdentity, TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                await currentStore.Remove(new(Did), TestContext.Current.CancellationToken);
+            }
+        };
+
+        clock.Advance(TimeSpan.FromMinutes(6));
+        using var response = await RenewSession(browser, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var stored = await store.GetIdentity(new(Did), TestContext.Current.CancellationToken);
+        Assert.Equal(newIdentity?.FindFirst(AtProtoClaims.DPoPProof)?.Value, stored?.FindFirst(AtProtoClaims.DPoPProof)?.Value);
+        Assert.False(await provider.IsCurrentAsync((await provider.GetAuthenticationStateAsync()).User, TestContext.Current.CancellationToken));
+        string receipt = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<AuthenticationException>(() => provider.AcceptRenewalAsync(receipt));
+        if (!replacement)
+        {
+            using var claims = await browser.GetAsync("/Claims", TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.Redirect, claims.StatusCode);
+        }
+    }
+
     private static Task<HttpResponseMessage> RenewSession(HttpClient browser, string token)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/session/renew");
@@ -328,7 +378,7 @@ public partial class AuthenticationTests
             var identity = (await store.GetIdentity(new(Did), TestContext.Current.CancellationToken))!;
             identity.RemoveClaim(identity.FindFirst(AtProtoClaims.DPoPProof)!);
             identity.AddClaim(new(AtProtoClaims.DPoPProof, JsonWebKeys.CreateRsaJson()));
-            await store.Update(identity, TestContext.Current.CancellationToken);
+            await store.Add(identity, TestContext.Current.CancellationToken);
         }
 
         var provider = (CircuitAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
@@ -730,6 +780,29 @@ public partial class AuthenticationTests
     private static ProfileRenderer CreateEditor(IServiceScope scope) =>
         new(scope.ServiceProvider, scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
 
+    [Theory]
+    [InlineData("/Claims", "%2FClaims")]
+    [InlineData("/Manage?draft=1", "%2FManage%3Fdraft%3D1")]
+    public async Task UnauthorizedInteractiveRoutesPreserveTheirReturnUrl(string route, string encoded)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient();
+        await Login(browser);
+        using var scope = await CreateCircuit(factory, browser);
+        var provider = (IHostEnvironmentAuthenticationStateProvider)scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>();
+        provider.SetAuthenticationState(Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()))));
+        var navigation = new TestNavigation();
+        navigation.NavigateTo(route);
+        await using var renderer = new HtmlRenderer(new NavigationServices(scope.ServiceProvider, navigation),
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
+        string html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var component = await renderer.RenderComponentAsync<Samples.BlazorAuthentication.Components.Routes>();
+            return component.ToHtmlString();
+        });
+        Assert.Contains($"href=\"/Bluesky/Login?returnUrl={encoded}\"", html, StringComparison.Ordinal);
+    }
+
     private static async Task<IServiceScope> CreateCircuit(SampleFactory factory, HttpClient browser, DateTimeOffset? expiresUtc = null)
     {
         string cookie = await browser.GetStringAsync("/test/cookie", TestContext.Current.CancellationToken);
@@ -765,6 +838,7 @@ public partial class AuthenticationTests
     private sealed class SampleFactory(SessionClock? clock = null, bool sliding = true, bool allowRefresh = true) : WebApplicationFactory<Program>
     {
         internal FakePds Pds { get; } = new();
+        internal Func<IIdentityStore, Task>? BeforeRenewalValidation { get; set; }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -775,6 +849,17 @@ public partial class AuthenticationTests
                 services.AddSingleton<IHttpClientFactory>(Pds);
                 services.AddSingleton<IStartupFilter, TestLogin>();
                 services.AddScoped<IJSRuntime, TestJavaScript>();
+                services.Configure<BlueskyAuthenticationOptions>(BlueskyAuthenticationDefaults.AuthenticationScheme, options =>
+                {
+                    options.Events.OnValidatePrincipal = async context =>
+                    {
+                        if (context.Request.Path == "/session/renew" && BeforeRenewalValidation is not null)
+                        {
+                            await BeforeRenewalValidation(context.Options.IdentityStore!);
+                        }
+
+                    };
+                });
                 if (clock is not null)
                 {
                     services.Configure<BlueskyAuthenticationOptions>(BlueskyAuthenticationDefaults.AuthenticationScheme, options =>
@@ -791,6 +876,23 @@ public partial class AuthenticationTests
                 }
             });
         }
+    }
+
+    private sealed class TestNavigation : NavigationManager
+    {
+        public TestNavigation() => Initialize("http://localhost/", "http://localhost/");
+
+        protected override void NavigateToCore(string uri, bool forceLoad)
+        {
+            Uri = ToAbsoluteUri(uri).ToString();
+            NotifyLocationChanged(false);
+        }
+    }
+
+    private sealed class NavigationServices(IServiceProvider services, NavigationManager navigation) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(NavigationManager) ? navigation : services.GetService(serviceType);
     }
 
     // Browser module behavior is covered by the Node tests; component tests invoke .NET callbacks directly.

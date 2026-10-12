@@ -48,6 +48,9 @@ request or circuit principal. It uses the identity store's refresh lock to coord
 authentication handler, refreshes credentials near expiry, and awaits persistence of token and nonce updates.
 Background agent refresh remains disabled. No circuit code attempts to set cookies.
 The identity store is keyed by DID, so signing out an account invalidates its other circuits too.
+`SessionIdentityStore` wraps the configured store with a single-process mutation gate. Login replacement and logout
+share this gate with credential writes, which atomically require the original session's proof key to remain stored.
+An in-flight response cannot recreate a removed session or overwrite a replacement login.
 
 ### Staying signed in while active
 
@@ -58,12 +61,13 @@ with the cookie and an antiforgery token rendered by the initial HTTP request.
 Returning to a visible tab counts as activity and immediately checks the session, subject to the same request rate limit.
 
 The endpoint authenticates through the existing Bluesky handler, which handles OAuth refresh. Once more than half the
-cookie ticket lifetime has elapsed, it uses that handler's sign-in path to renew the cookie, respecting
+cookie ticket lifetime has elapsed, the handler's normal sliding renewal writes a DID-reference cookie, respecting
 `SlidingExpiration` and `AllowRefresh`. The original ticket lifetime is preserved. The response contains only an opaque,
 data-protected expiry receipt bound to the account and its login's DPoP key. The circuit validates that receipt and
 updates its expiry, so cookie renewal does not leave it enforcing the old deadline. It never trusts a browser-supplied
 expiry, and a receipt from a replacement login cannot authorize an old circuit. Profile edits and navigation state
-survive renewal without page reloads.
+survive renewal without page reloads. Renewal does not sign in or add an identity to the store, so it cannot revive
+a concurrently removed or replaced session. The expiry receipt is bounded by the renewed cookie's lifetime.
 
 Temporary network failures show a warning and retry while active. Expired, signed-out or replaced sessions require
 sign-in; renewal cannot revive them. Idle sessions still expire according to
@@ -106,4 +110,6 @@ Production settings contain **placeholder** HTTPS client and callback URLs. Set 
 `AllowedHosts`, and publish matching metadata (the middleware serves `/oauth-client-metadata.json` for hosted clients).
 The default in-memory identity/correlation stores are only for development and lose sessions on restart.
 Before deployment, configure persistent protected stores, shared data protection keys, HTTPS and trusted proxy handling.
+In a multi-process deployment, the store must provide equivalent atomic session-proof checks and identity mutations
+across all workers; the sample's process-local gate is not distributed coordination.
 See the [ASP.NET guide](../../docs/docs/asp.net.md) and [production configuration](../../docs/docs/productionConfiguration.md).

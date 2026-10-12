@@ -88,7 +88,7 @@ public sealed partial class CircuitBlueskyClient(
             using var agent = new BlueskyAgent(new ClaimsIdentity(identity), httpClientFactory: httpClientFactory, options: agentOptions.Value);
             agent.CredentialsUpdatedAsync = async (e, token) =>
             {
-                // Recheck the session before persisting an in-flight response's credential changes.
+                // Recheck circuit expiry; SessionIdentityStore atomically guards the proof check and write.
                 if (!await provider.IsCurrentAsync(user, token))
                 {
                     throw SessionExpired();

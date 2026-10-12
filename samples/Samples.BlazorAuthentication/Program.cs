@@ -25,8 +25,15 @@ builder.Services
         options.AccessDeniedPath = "/Bluesky/Error";
         options.Cookie.Name = ".AspNetCore.Bluesky.Blazor";
         options.CorrelationCookie.Name = ".AspNetCore.Bluesky.Blazor.Correlation";
+        options.Events.OnCheckSlidingExpiration = SessionRenewal.CheckSlidingExpiration;
     })
     .AddBlueskyAuthenticationUI();
+
+builder.Services.PostConfigure<BlueskyAuthenticationOptions>(BlueskyAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.IdentityStore = new SessionIdentityStore(options.IdentityStore ??
+        throw new InvalidOperationException("An identity store is required."));
+});
 
 builder.Services.PostConfigure<BlueskyAgentOptions>(options =>
 {

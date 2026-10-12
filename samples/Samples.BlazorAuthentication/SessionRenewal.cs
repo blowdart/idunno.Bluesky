@@ -4,22 +4,34 @@
 using System.Globalization;
 using System.Security.Claims;
 
-using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication;
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Options;
 
 namespace Samples.BlazorAuthentication;
 
-internal sealed partial class SessionRenewal(
-    IDataProtectionProvider protection,
-    IOptionsMonitor<BlueskyAuthenticationOptions> options,
-    ILogger<SessionRenewal> logger)
+internal sealed class SessionRenewal(
+    IDataProtectionProvider protection)
 {
+    private static readonly object s_expiryKey = new();
+
+    internal static Task CheckSlidingExpiration(BlueskySlidingExpirationContext context)
+    {
+        if (context.ShouldRenew && context.Request.Path == "/session/renew")
+        {
+            // RequestRefresh samples time immediately after this event. This conservative expiry
+            // never outlives the renewed reference cookie, even when middleware authenticates first.
+            var now = (context.Options.TimeProvider ?? TimeProvider.System).GetUtcNow();
+            context.HttpContext.Items[s_expiryKey] = now.Add(context.ElapsedTime + context.RemainingTime);
+        }
+
+        return Task.CompletedTask;
+    }
+
     internal string ProtectExpiry(ClaimsPrincipal user, DateTimeOffset expiry) =>
         Protector(user).Protect(expiry.UtcTicks.ToString(CultureInfo.InvariantCulture));
 
@@ -44,54 +56,18 @@ internal sealed partial class SessionRenewal(
 
         var result = await context.AuthenticateAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
         if (!result.Succeeded || result.Principal is null ||
-            result.Properties?.IssuedUtc is not DateTimeOffset issued ||
-            result.Properties.ExpiresUtc is not DateTimeOffset expiry)
+            result.Properties?.ExpiresUtc is not DateTimeOffset expiry)
         {
             return Results.Unauthorized();
         }
 
-        var authentication = options.Get(BlueskyAuthenticationDefaults.AuthenticationScheme);
-        var now = (authentication.TimeProvider ?? TimeProvider.System).GetUtcNow();
-        if (authentication.SlidingExpiration && result.Properties.AllowRefresh != false &&
-            now - issued > expiry - now)
+        // Let the handler renew its DID-reference cookie on response start. SignInAsync would
+        // re-add the request's identity, potentially undoing a concurrent logout or replacement.
+        if (context.Items[s_expiryKey] is DateTimeOffset renewedExpiry)
         {
-            var store = authentication.IdentityStore ?? throw new InvalidOperationException("An identity store is required.");
-            var did = new Did(result.Principal.FindFirstValue(AtProtoClaims.Did)!);
-            string? refreshLock = await store.StartRefresh(did, context.RequestAborted);
-            if (refreshLock is null)
-            {
-                // Do not overwrite credentials while another request is rotating them. The active browser retries.
-                return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
-            }
-
-            try
-            {
-                var identity = await store.GetIdentity(did, context.RequestAborted);
-                if (identity is null ||
-                    identity.FindFirst(AtProtoClaims.DPoPProof)?.Value != result.Principal.FindFirstValue(AtProtoClaims.DPoPProof))
-                {
-                    return Results.Unauthorized();
-                }
-
-                // Use the handler's sign-in path with current credentials, not the request's earlier snapshot.
-                result.Properties.IssuedUtc = now;
-                result.Properties.ExpiresUtc = now.Add(expiry - issued);
-                await context.SignInAsync(BlueskyAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(identity), result.Properties);
-                expiry = result.Properties.ExpiresUtc.Value;
-            }
-            finally
-            {
-                if (!await store.EndRefresh(did, refreshLock, CancellationToken.None))
-                {
-                    RefreshLockLost(logger, did);
-                }
-            }
+            expiry = renewedExpiry;
         }
 
         return Results.Text(ProtectExpiry(result.Principal, expiry));
     }
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Session renewal lost its credential refresh lock for {Did}.")]
-    private static partial void RefreshLockLost(ILogger logger, Did did);
 }
