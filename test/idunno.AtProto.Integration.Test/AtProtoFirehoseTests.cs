@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -15,6 +16,7 @@ using idunno.AtProto.Firehose;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Sync;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Time.Testing;
 
@@ -1051,9 +1053,11 @@ public class AtProtoFirehoseTests
             RefuseWith = attempt => attempt <= 2 ? (HttpStatusCode.ServiceUnavailable, "0", "<html>unavailable</html>") : null
         };
         server.Start(async (socket, _, token) => await Send(socket, Frame("#identity", IdentityPayload(1)), token));
-        await using AtProtoFirehose firehose = CreateFirehose(server);
-        using MetricCollector<long> opened = new(firehose.Metrics.ConnectionsOpened);
-        using MetricCollector<long> closed = new(firehose.Metrics.ConnectionsClosed);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions { MeterFactory = meterFactory });
+        using MetricCollector<long> opened = new(meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.connections_opened");
+        using MetricCollector<long> closed = new(meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.connections_closed");
 
         Assert.Single(await Take(firehose.SubscribeReposAsync(cancellationToken: cancellationToken), 1, cancellationToken));
 

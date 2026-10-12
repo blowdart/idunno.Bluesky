@@ -12,6 +12,7 @@ using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 
@@ -1147,7 +1148,8 @@ public class AtProtoJetstreamV2Tests
                 await SendText(socket, IdentityEvent(100), token);
             }
         });
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
@@ -1219,7 +1221,8 @@ public class AtProtoJetstreamV2Tests
         using var server = new TestJetstreamServer { HoldCloseResponse = true };
         await server.Start((_, _, _) => Task.CompletedTask);
 
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var activeCollector = new MetricCollector<long>(
             meterFactory,
             JetstreamMetrics.MeterName,

@@ -12,6 +12,8 @@ using idunno.AtProto.Jetstream.Archive;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Time.Testing;
 
 using ZstdSharp;
@@ -897,25 +899,15 @@ public class JetstreamArchiveTests
     [InlineData("segment")]
     public async Task SnapshotUsesConfiguredHostAndDecodesBothPlanModes(string mode)
     {
-        Dictionary<string, long> measurements = [];
-        using var meterFactory = new TestMeterFactory();
-        using MeterListener listener = new();
-        listener.InstrumentPublished = (instrument, meterListener) =>
-        {
-            if (instrument.Meter.Name == JetstreamMetrics.MeterName &&
-                ReferenceEquals(instrument.Meter.Scope, meterFactory))
-            {
-                meterListener.EnableMeasurementEvents(instrument);
-            }
-        };
-        listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
-        {
-            lock (measurements)
-            {
-                measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + measurement;
-            }
-        });
-        listener.Start();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> archivePlans = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_plans");
+        using MetricCollector<long> archiveBlocks = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_blocks");
+        using MetricCollector<long> archiveSegments = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_segments");
+        using MetricCollector<long> archiveBytes = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_bytes");
+        using MetricCollector<long> archiveEvents = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_events");
+        using MetricCollector<long> archiveFilteredEvents = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_filtered_events");
+        using MetricCollector<long> archiveRateLimits = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.archive_rate_limits");
         List<string> requests = [];
         bool rateLimited = false;
         using Compressor compressor = new();
@@ -996,16 +988,16 @@ public class JetstreamArchiveTests
         Assert.Equal(mode == "blocks" ? 4 : 2, requests.Count);
         Assert.Equal("/xrpc/network.bsky.jetstream.planSnapshot", requests[0]);
         Assert.Equal($"/xrpc/network.bsky.jetstream.get{(mode == "blocks" ? "Block" : "Segment")}", requests[1]);
-        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_plans"]);
-        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_blocks"]);
-        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_segments"]);
+        Assert.Equal(1, archivePlans.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, archiveBlocks.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, archiveSegments.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         Assert.Equal(mode == "blocks" ? frame.Length : segment.Length,
-            measurements["idunno.atproto.jetstream.total.archive_bytes"]);
-        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_events"]);
-        Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_filtered_events"]);
+            archiveBytes.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, archiveEvents.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, archiveFilteredEvents.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         if (mode == "blocks")
         {
-            Assert.Equal(1, measurements["idunno.atproto.jetstream.total.archive_rate_limits"]);
+            Assert.Equal(1, archiveRateLimits.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         }
     }
 

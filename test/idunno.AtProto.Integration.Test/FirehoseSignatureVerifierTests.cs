@@ -1,11 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Security.Cryptography;
 
 using idunno.AtProto.Firehose;
 using idunno.AtProto.Repo;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Time.Testing;
 
@@ -21,7 +23,8 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly ECDsa _rotatedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-    private readonly TestMeterFactory _meterFactory = new();
+    private readonly ServiceProvider _services;
+    private readonly IMeterFactory _meterFactory;
     private readonly FirehoseMetrics _metrics;
     private readonly Did _did = new(TestDid);
     private int _resolutions;
@@ -29,6 +32,8 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
 
     public FirehoseSignatureVerifierTests()
     {
+        _services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        _meterFactory = _services.GetRequiredService<IMeterFactory>();
         _metrics = new(_meterFactory);
         _document = () => DidDocumentFor(TestDid, SigningKeyVerifier.RepositorySigningKeyFragment, _key);
     }
@@ -37,7 +42,7 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     {
         _key.Dispose();
         _rotatedKey.Dispose();
-        _meterFactory.Dispose();
+        _services.Dispose();
     }
 
     [Fact]
@@ -49,11 +54,12 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     [Fact]
     public void CacheMetricsAreIsolatedFromOtherVerifiers()
     {
-        using TestMeterFactory otherMeterFactory = new();
+        using ServiceProvider otherServices = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory otherMeterFactory = otherServices.GetRequiredService<IMeterFactory>();
         FirehoseMetrics otherMetrics = new(otherMeterFactory);
-        using MetricCollector<long> hits = new(_metrics.SigningKeyCacheHits);
-        using MetricCollector<long> misses = new(_metrics.SigningKeyCacheMisses);
-        using MetricCollector<long> refreshes = new(_metrics.SigningKeyRefreshes);
+        using MetricCollector<long> hits = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_cache_hits");
+        using MetricCollector<long> misses = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_cache_misses");
+        using MetricCollector<long> refreshes = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_refreshes");
 
         otherMetrics.SigningKeyCacheHits.Add(1);
         otherMetrics.SigningKeyCacheMisses.Add(1);
@@ -71,8 +77,8 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     public async Task CachedKeysExpire()
     {
         using FirehoseSignatureVerifier verifier = CreateVerifier();
-        using MetricCollector<long> hits = new(_metrics.SigningKeyCacheHits);
-        using MetricCollector<long> misses = new(_metrics.SigningKeyCacheMisses);
+        using MetricCollector<long> hits = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_cache_hits");
+        using MetricCollector<long> misses = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_cache_misses");
 
         await Verify(verifier, _key);
         await Verify(verifier, _key);
@@ -116,7 +122,7 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     public async Task RotatedKeysAreRefreshedAtMostOncePerInterval()
     {
         using FirehoseSignatureVerifier verifier = CreateVerifier();
-        using MetricCollector<long> refreshes = new(_metrics.SigningKeyRefreshes);
+        using MetricCollector<long> refreshes = new(_meterFactory, FirehoseMetrics.MeterName, "idunno.atproto.firehose.total.signing_key_refreshes");
 
         await Verify(verifier, _key);
         _document = () => DidDocumentFor(TestDid, SigningKeyVerifier.RepositorySigningKeyFragment, _rotatedKey);

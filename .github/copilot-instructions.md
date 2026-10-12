@@ -145,6 +145,7 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 
 ## Testing conventions
 
+* Prefer official Microsoft packages (such as `Microsoft.Extensions.Diagnostics.Testing` for metrics/logging test collectors and `Microsoft.Extensions.Time.Testing` for fake time providers) over hand-rolling custom test helpers or factories.
 * Tests use the xUnit v3 SDK (`xunit.v3`).
 * Don't emit `// Arrange` / `// Act` / `// Assert` comments. Match the method naming and casing of nearby tests.
 * Prefer a single `[Theory]` with `[InlineData]`/`[MemberData]` over many near-duplicate `[Fact]` methods.

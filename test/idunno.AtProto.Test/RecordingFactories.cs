@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Metrics;
 
 namespace idunno.AtProto.Test;
 
@@ -19,38 +18,5 @@ internal sealed class RecordingHttpClientFactory : IHttpClientFactory
         RequestedNames.Add(name);
 
         return new HttpClient();
-    }
-}
-
-/// <summary>
-/// An <see cref="IMeterFactory"/> which records the meter names it was asked to create.
-/// </summary>
-[ExcludeFromCodeCoverage]
-internal sealed class RecordingMeterFactory : IMeterFactory
-{
-    private readonly List<Meter> _meters = [];
-
-    internal List<string> CreatedMeterNames { get; } = [];
-
-    public Meter Create(MeterOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        CreatedMeterNames.Add(options.Name);
-
-        Meter meter = new(options.Name, options.Version, options.Tags, scope: this);
-        _meters.Add(meter);
-
-        return meter;
-    }
-
-    public void Dispose()
-    {
-        foreach (Meter meter in _meters)
-        {
-            meter.Dispose();
-        }
-
-        _meters.Clear();
     }
 }

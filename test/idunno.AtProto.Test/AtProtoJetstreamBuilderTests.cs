@@ -2,9 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Net;
 
 using idunno.AtProto.Jetstream;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 using Microsoft.Extensions.Time.Testing;
 
@@ -80,13 +84,15 @@ public class AtProtoJetstreamBuilderTests
     [Fact]
     public void BuildPassesTheMeterFactoryToTheJetstream()
     {
-        using RecordingMeterFactory meterFactory = new();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> collector = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_opened");
 
         using AtProtoJetstream jetstream = AtProtoJetstreamBuilder.Create()
             .WithMeterFactory(meterFactory)
             .Build();
 
-        Assert.Equal(JetstreamMetrics.MeterName, Assert.Single(meterFactory.CreatedMeterNames));
+        Assert.NotNull(collector.Instrument);
     }
 
     [Fact]
