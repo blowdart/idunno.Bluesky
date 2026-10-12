@@ -233,6 +233,10 @@ jobs:
         name: signed-artifacts
         path : ${{ env.BUILD_OUTPUT }}
 
+    - name: Install Sleet
+      shell: pwsh
+      run: dotnet tool install --tool-path ./sleet sleet --version 7.2.0
+
     - name: Authenticate to Azure
       uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
       with:
@@ -244,7 +248,6 @@ jobs:
     - name: Publish NuGet Packages to Azure blob storage
       shell : pwsh
       run: |
-         dotnet tool install --tool-path ./sleet sleet
          ./sleet/sleet push "${env:BUILD_OUTPUT}" --config ./sleet.json --source feed
 
     - name: Setup MyGet and GitHub Packages as NuGet Sources
