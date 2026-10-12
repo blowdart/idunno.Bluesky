@@ -2,7 +2,8 @@
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
-                <p role="alert">You must <a href="/Bluesky/Login">sign in</a> to view this page.</p>
+                <p role="alert">Your session has ended or you are not signed in. Profile drafts are retained in this tab.
+                    <a href="/Bluesky/Login?returnUrl=%2FManage" data-enhance-nav="false">Sign in</a> to continue.</p>
             </NotAuthorized>
         </AuthorizeRouteView>
     </Found>

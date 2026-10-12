@@ -1,4 +1,5 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using idunno.Bluesky.AspNet.Authentication
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,12 +17,23 @@
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a href="/Claims">Claims</a>
-                <a href="/Manage">Manage profile</a>
-                <a href="/Bluesky/Logout?returnUrl=%2F">Sign out</a>
+                <details class="account-menu">
+                    <summary class="signed-in-user" aria-label="Account options">
+                        @if (User.GetAvatar() is Uri avatar)
+                        {
+                            <img src="@avatar" alt="Avatar" width="30" height="30" />
+                        }
+                        <span>@(User.GetHandle()?.ToString() ?? User.GetDisplayName() ?? "Account")</span>
+                    </summary>
+                    <div class="account-menu-options">
+                        <a href="/Manage">Manage profile</a>
+                        <a href="/Bluesky/Logout?returnUrl=%2F">Sign out</a>
+                    </div>
+                </details>
             }
             else
             {
-                <a href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
+                <a class="sign-in-link" href="/Bluesky/Login?returnUrl=%2F">Sign in</a>
             }
         </nav>
     </header>

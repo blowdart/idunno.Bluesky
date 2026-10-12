@@ -17,7 +17,10 @@
 * Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
 * Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
-* Added `Samples.BlazorAuthentication`, a statically server-rendered Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI.
+* Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
+* Returning to an idle Blazor sample tab checks the session immediately. Account-bound, per-tab profile drafts survive session expiry and sign-in, retaining their original CID for conditional saves.
+* The Blazor sample navigation displays an account dropdown triggered by the authenticated user's avatar and handle, with manage-profile and sign-out options on component and authentication UI pages.
+* The Blazor timeline renders images attached to quoted posts, inline animated GIFs with alt text and hover descriptions, and video controls with a Bluesky playback fallback. Static images open in closable full-size dialogs with alt-text captions. Signed-out navigation places the sign-in link on the right.
 
 #### idunno.AtProto
 

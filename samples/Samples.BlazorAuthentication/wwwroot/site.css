@@ -2,6 +2,17 @@
 body { margin: 0; color: #202020; background: #fff; }
 header { border-bottom: 1px solid #ccc; }
 nav { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; align-items: center; }
+.signed-in-user { display: inline-flex; gap: .5rem; align-items: center; }
+.signed-in-user img { border-radius: 50%; object-fit: cover; }
+.account-menu { position: relative; margin-left: auto; }
+.sign-in-link { margin-left: auto; }
+.account-menu summary { cursor: pointer; list-style: none; }
+.account-menu summary::-webkit-details-marker { display: none; }
+.account-menu summary::after { content: "\25BE"; }
+.account-menu summary:focus-visible { outline: 2px solid #0755b0; outline-offset: 4px; }
+.account-menu-options { position: absolute; right: 0; top: calc(100% + .5rem); z-index: 10; min-width: 12rem; padding: .5rem; background: #fff; border: 1px solid #ccc; border-radius: .25rem; box-shadow: 0 .25rem .5rem #0002; }
+.account-menu-options a { display: block; padding: .5rem; text-decoration: none; }
+.account-menu-options a:hover, .account-menu-options a:focus-visible { background: #eef4fb; }
 main { max-width: 60rem; margin: auto; padding: 1rem; }
 a { color: #0755b0; }
 label { display: block; margin-top: 1rem; }
@@ -14,6 +25,18 @@ button { padding: .5rem 1rem; margin-top: 1rem; cursor: pointer; }
 .author img { border-radius: 50%; }
 .post-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .post-image { max-width: 100%; max-height: 30rem; }
+.image-preview { display: block; padding: 0; margin: .5rem 0; border: 0; background: transparent; cursor: zoom-in; }
+.image-preview:focus-visible { outline: 2px solid #0755b0; outline-offset: 4px; }
+.image-dialog { max-width: 90vw; max-height: 90vh; padding: 1rem; border: 0; border-radius: .25rem; }
+.image-dialog::backdrop { background: #000b; }
+.image-dialog form { display: flex; justify-content: flex-end; }
+.image-dialog button { margin: 0 0 .5rem; }
+.image-dialog figure { margin: 0; }
+.image-dialog img { display: block; max-width: 100%; max-height: 75vh; object-fit: contain; margin: auto; }
+.image-dialog figcaption { padding-top: .5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.post-video { display: block; width: 100%; max-height: 30rem; }
+.external-card { display: flex; flex-direction: column; gap: .5rem; padding: .5rem; border: 1px solid #ccc; border-radius: .25rem; overflow-wrap: anywhere; }
 blockquote { margin-left: 1rem; padding-left: 1rem; border-left: 3px solid #ccc; }
 table { border-collapse: collapse; width: 100%; }
 th, td { padding: .5rem; text-align: left; border-bottom: 1px solid #ccc; overflow-wrap: anywhere; }
+#blazor-error-ui { display: none; position: fixed; bottom: 0; padding: 1rem; background: #fff3cd; color: #000; width: 100%; }

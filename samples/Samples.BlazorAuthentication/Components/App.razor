@@ -4,10 +4,20 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <meta name="session-antiforgery" content="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
     <link rel="stylesheet" href="@Assets["site.css"]" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script type="module" src="@Assets["imageViewer.js"]"></script>
 </body>
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+}
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
