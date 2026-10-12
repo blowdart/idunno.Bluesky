@@ -5,6 +5,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Reflection;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 
 using Microsoft.Extensions.Time.Testing;
@@ -23,13 +25,15 @@ public class DidHandleCacheTests
     [InlineData(-1)]
     public async Task PendingMetricListenerFailuresDoNotStrandLookups(long failingMeasurement)
     {
-        using RecordingMeterFactory meterFactory = new();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        Meter meter = meterFactory.Create(DidHandleCacheMetrics.MeterName, DidHandleCacheMetrics.MeterVersion);
         using MeterListener listener = new();
         InvalidOperationException failure = new("Metric listener failed.");
         bool fail = true;
         listener.InstrumentPublished = (instrument, meterListener) =>
         {
-            if (instrument.Meter.Scope == meterFactory && instrument.Name == "idunno.atproto.didhandlecache.pending_lookups")
+            if (instrument.Meter == meter && instrument.Name == "idunno.atproto.didhandlecache.pending_lookups")
             {
                 meterListener.EnableMeasurementEvents(instrument);
             }
@@ -234,24 +238,30 @@ public class DidHandleCacheTests
     public void CounterIsPublishedUnderItsExpectedName(string propertyName, string instrumentName)
     {
         // Instrument names are a contract with whatever is scraping them, so a rename should not pass silently.
-        using RecordingMeterFactory meterFactory = new();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> collector = new(meterFactory, DidHandleCacheMetrics.MeterName, instrumentName);
         DidHandleCacheMetrics metrics = new(meterFactory);
-        using MeasurementRecorder recorder = new(meterFactory);
 
         Counter<long> counter = (Counter<long>)typeof(DidHandleCacheMetrics)
             .GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(metrics)!;
         counter.Add(1);
 
-        Assert.Equal(1, recorder.Total(instrumentName));
-        Assert.Equal([DidHandleCacheMetrics.MeterName], meterFactory.CreatedMeterNames);
+        Assert.Equal(DidHandleCacheMetrics.MeterName, counter.Meter.Name);
+        Assert.Equal(1, Assert.Single(collector.GetMeasurementSnapshot()).Value);
     }
 
     [Fact]
     public async Task LookupsAndInvalidationsEmitMetrics()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> misses = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.misses");
+        using MetricCollector<long> coalescedLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.coalesced_lookups");
+        using MetricCollector<long> hits = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.hits");
+        using MetricCollector<long> invalidHandles = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.invalid_handles");
+        using MetricCollector<long> invalidations = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.invalidations");
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => completion.Task);
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
@@ -263,58 +273,65 @@ public class DidHandleCacheTests
         await second;
         await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.CoalescedLookups)));
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
-        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
-        Assert.Equal(0, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+        Assert.Equal(1, misses.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, coalescedLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, hits.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Empty(invalidHandles.GetMeasurementSnapshot());
+        Assert.Empty(invalidations.GetMeasurementSnapshot());
 
         cache.Invalidate(s_did);
 
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Invalidations)));
+        Assert.Equal(1, invalidations.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
     }
 
     [Fact]
     public async Task LookupDurationAndPendingLookupCountAreRecorded()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> pendingLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.pending_lookups");
+        using MetricCollector<double> lookupDuration = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.lookup.duration");
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => completion.Task);
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
 
         ValueTask<Handle> lookup = cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, recorder.Total("idunno.atproto.didhandlecache.pending_lookups"));
+        Assert.Equal(1, pendingLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
 
         completion.SetResult(s_handle);
         Assert.Equal(s_handle, await lookup);
 
-        Assert.Equal(0, recorder.Total("idunno.atproto.didhandlecache.pending_lookups"));
-        Assert.Equal(1, recorder.MeasurementCount("idunno.atproto.didhandlecache.lookup.duration"));
+        Assert.Equal(0, pendingLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Single(lookupDuration.GetMeasurementSnapshot());
     }
 
     [Fact]
     public async Task AnInvalidHandleEmitsAMetric()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> invalidHandles = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.invalid_handles");
+        using MetricCollector<long> misses = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.misses");
+        using MetricCollector<long> hits = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.hits");
         TestResolver resolver = new(_ => Task.FromResult(Handle.Invalid));
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { MeterFactory = meterFactory });
 
         await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
         await cache.ResolveHandleAsync(s_did, TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.InvalidHandles)));
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Misses)));
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.Hits)));
+        Assert.Equal(1, invalidHandles.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, misses.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, hits.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
     }
 
     [Fact]
     public async Task LookupsAreRejectedButNotCachedOnceSizeLookupsArePending()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> rejectedLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.rejected_lookups");
+        using MetricCollector<long> coalescedLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.coalesced_lookups");
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => completion.Task);
         using DidHandleCache cache = new(resolver.ResolveAsync, new DidHandleCacheOptions { Size = 1, MeterFactory = meterFactory });
@@ -326,8 +343,8 @@ public class DidHandleCacheTests
         Assert.True(rejected.IsCompleted);
         Assert.Equal(Handle.Invalid, await rejected);
         Assert.Equal(1, resolver.Calls);
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.CoalescedLookups)));
+        Assert.Equal(1, rejectedLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
+        Assert.Equal(1, coalescedLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         Assert.False(cache.TryGetCachedHandle(s_otherDid, out _));
 
         completion.SetResult(s_handle);
@@ -383,8 +400,9 @@ public class DidHandleCacheTests
     [Fact]
     public async Task ATimedOutResolverWhichIgnoresCancellationHoldsItsSlotUntilItFinishes()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> rejectedLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.rejected_lookups");
         FakeTimeProvider timeProvider = new();
         TaskCompletionSource<Handle> ignoresCancellation = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int calls = 0;
@@ -409,7 +427,7 @@ public class DidHandleCacheTests
         timeProvider.Advance(TimeSpan.FromMilliseconds(50));
         Assert.Equal(Handle.Invalid, await blocked);
         Assert.Equal(1, resolver.Calls);
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+        Assert.Equal(1, rejectedLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
 
         ignoresCancellation.SetResult(s_handle);
 
@@ -431,8 +449,9 @@ public class DidHandleCacheTests
     [Fact]
     public async Task ALookupWhichTimesOutWaitingToStartIsRejectedButNotCached()
     {
-        using RecordingMeterFactory meterFactory = new();
-        using MeasurementRecorder recorder = new(meterFactory);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> rejectedLookups = new(meterFactory, DidHandleCacheMetrics.MeterName, "idunno.atproto.didhandlecache.total.rejected_lookups");
         FakeTimeProvider timeProvider = new();
         TaskCompletionSource<Handle> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TestResolver resolver = new(_ => completion.Task);
@@ -452,7 +471,7 @@ public class DidHandleCacheTests
         Assert.Equal(Handle.Invalid, await first);
         Assert.Equal(Handle.Invalid, await waiting);
         Assert.Equal(1, resolver.Calls);
-        Assert.Equal(1, recorder.Total(nameof(DidHandleCacheMetrics.RejectedLookups)));
+        Assert.Equal(1, rejectedLookups.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
         Assert.False(cache.TryGetCachedHandle(s_otherDid, out _));
 
         completion.SetResult(s_handle);
@@ -713,58 +732,6 @@ public class DidHandleCacheTests
             throw new InvalidOperationException("Logging failed.");
     }
 
-    // Records the counters published by meters created from a specific meter factory, keyed by both instrument name and the
-    // name of the DidHandleCacheMetrics property which created them.
-    private sealed class MeasurementRecorder : IDisposable
-    {
-        private static readonly Dictionary<string, string> s_propertyNames = new()
-        {
-            ["idunno.atproto.didhandlecache.total.hits"] = nameof(DidHandleCacheMetrics.Hits),
-            ["idunno.atproto.didhandlecache.total.misses"] = nameof(DidHandleCacheMetrics.Misses),
-            ["idunno.atproto.didhandlecache.total.coalesced_lookups"] = nameof(DidHandleCacheMetrics.CoalescedLookups),
-            ["idunno.atproto.didhandlecache.total.rejected_lookups"] = nameof(DidHandleCacheMetrics.RejectedLookups),
-            ["idunno.atproto.didhandlecache.total.invalid_handles"] = nameof(DidHandleCacheMetrics.InvalidHandles),
-            ["idunno.atproto.didhandlecache.total.invalidations"] = nameof(DidHandleCacheMetrics.Invalidations),
-        };
-
-        private readonly ConcurrentDictionary<string, long> _totals = new();
-        private readonly ConcurrentDictionary<string, int> _measurementCounts = new();
-        private readonly MeterListener _listener = new();
-
-        public MeasurementRecorder(IMeterFactory meterFactory)
-        {
-            _listener.InstrumentPublished = (instrument, listener) =>
-            {
-                if (instrument.Meter.Scope == meterFactory)
-                {
-                    listener.EnableMeasurementEvents(instrument);
-                }
-            };
-
-            _listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
-            {
-                _totals.AddOrUpdate(instrument.Name, measurement, (_, total) => total + measurement);
-
-                if (s_propertyNames.TryGetValue(instrument.Name, out string? propertyName))
-                {
-                    _totals.AddOrUpdate(propertyName, measurement, (_, total) => total + measurement);
-                }
-            });
-
-            _listener.SetMeasurementEventCallback<double>((instrument, _, _, _) =>
-            {
-                _measurementCounts.AddOrUpdate(instrument.Name, 1, (_, count) => count + 1);
-            });
-
-            _listener.Start();
-        }
-
-        public long Total(string name) => _totals.GetValueOrDefault(name);
-
-        public int MeasurementCount(string name) => _measurementCounts.GetValueOrDefault(name);
-
-        public void Dispose() => _listener.Dispose();
-    }
 }
 
 [ExcludeFromCodeCoverage]

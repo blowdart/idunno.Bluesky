@@ -50,6 +50,10 @@ public class AtProtoMetricsExtensionsTests
         Assert.DoesNotContain("test.unregistered.messages", exporter.MetricNames);
     }
 
+    // Microsoft.Extensions.Diagnostics.Testing (MetricCollector<T>) attaches directly to System.Diagnostics.Metrics
+    // listeners, bypassing the OpenTelemetry SDK's meter filtering, readers, and exporter pipeline. A custom
+    // BaseExporter<Metric> is required here to verify that OpenTelemetry's MeterProviderBuilder actually subscribes
+    // to and exports the expected registered meters.
     private sealed class RecordingMetricExporter : BaseExporter<Metric>
     {
         public HashSet<string> MetricNames { get; } = [];

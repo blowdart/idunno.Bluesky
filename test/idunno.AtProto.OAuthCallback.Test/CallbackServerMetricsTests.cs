@@ -255,6 +255,10 @@ public class CallbackServerMetricsTests
         long? Count,
         IReadOnlyDictionary<string, object?> Tags);
 
+    // Microsoft.Extensions.Diagnostics.Testing (MetricCollector<T>) attaches directly to System.Diagnostics.Metrics
+    // listeners, which bypasses the OpenTelemetry SDK's meter registration, readers, and exporter pipeline.
+    // A custom BaseExporter<Metric> is required here to verify that OpenTelemetry's MeterProviderBuilder pipeline
+    // correctly receives, aggregates, and exports the metrics with their associated tags and values.
     private sealed class RecordingMetricExporter : BaseExporter<Metric>
     {
         public List<RecordedMetric> Measurements { get; } = [];

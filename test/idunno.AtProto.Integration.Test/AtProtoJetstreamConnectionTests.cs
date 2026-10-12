@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -10,6 +11,7 @@ using System.Text;
 
 using idunno.AtProto.Jetstream;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
@@ -28,7 +30,8 @@ public class AtProtoJetstreamConnectionTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
         using var server = new TestJetstreamServer();
         await server.Start((_, _, _) => Task.CompletedTask);
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var activeCollector = new MetricCollector<long>(
             meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.connections.active");
         using var closedCollector = new MetricCollector<long>(
@@ -332,7 +335,8 @@ public class AtProtoJetstreamConnectionTests
 
         await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
 
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
@@ -340,7 +344,7 @@ public class AtProtoJetstreamConnectionTests
             collections: [watchedCollection],
             dids: [watchedDid]))
         {
-            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.connections_opened");
+            using var collector = new MetricCollector<long>(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_opened");
 
             using (var httpClient = new HttpClient())
             {
@@ -370,13 +374,14 @@ public class AtProtoJetstreamConnectionTests
 
         Uri deadUri = new(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{FreePort()}"));
 
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
 
         using (var jetstream = new AtProtoJetstream(
             uri: deadUri,
             options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory }))
         {
-            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.connections_failed");
+            using var collector = new MetricCollector<long>(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_failed");
 
             using (var httpClient = new HttpClient())
             {

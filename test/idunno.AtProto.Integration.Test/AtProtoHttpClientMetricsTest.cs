@@ -26,7 +26,8 @@ public class AtProtoHttpClientMetricsTest
     [Fact]
     public async Task DPoPRetryRecordsEachAttemptDurationBeforeTheNextAttemptCompletes()
     {
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = CreateServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var durationCollector = new MetricCollector<double>(
             meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
         TaskCompletionSource retryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -89,7 +90,8 @@ public class AtProtoHttpClientMetricsTest
     [InlineData(true, true)]
     public async Task CallbackFailuresAreNotReportedAsTransportErrors(bool responseCallback, bool cancellationException)
     {
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = CreateServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var durationCollector = new MetricCollector<double>(
             meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
         using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
@@ -123,7 +125,8 @@ public class AtProtoHttpClientMetricsTest
     [InlineData(true)]
     public async Task CallerCancellationDuringCallbacksIsReportedAsCancelled(bool responseCallback)
     {
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = CreateServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var durationCollector = new MetricCollector<double>(
             meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
         using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
@@ -165,7 +168,8 @@ public class AtProtoHttpClientMetricsTest
     [Fact]
     public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
     {
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = CreateServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var durationCollector = new MetricCollector<double>(
             meterFactory,
             AtProtoHttpClientMetrics.MeterName,

@@ -4,6 +4,7 @@
 #pragma warning disable CS0618 // These tests verify the legacy event callback contract.
 
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -13,6 +14,7 @@ using System.Text;
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Events;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 using ZstdSharp;
@@ -560,14 +562,15 @@ public class AtProtoJetstreamReceiveTests
             }
         });
 
-        using var meterFactory = new TestMeterFactory();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
         using var allHandled = new CountdownEvent(messageCount);
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
             options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory }))
         {
-            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.message_parsing_failures");
+            using var collector = new MetricCollector<long>(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.message_parsing_failures");
 
             jetstream.RecordReceived += (sender, e) =>
             {
