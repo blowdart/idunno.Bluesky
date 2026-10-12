@@ -102,6 +102,8 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(ApplyWritesUpdateResponse))]
 [JsonSerializable(typeof(CreateBlobResponse))]
 [JsonSerializable(typeof(ListRecordsResponse))]
+[JsonSerializable(typeof(Repo.MissingBlob))]
+[JsonSerializable(typeof(Repo.Models.ListMissingBlobsResponse))]
 
 [JsonSerializable(typeof(CreateReportRequest))]
 [JsonSerializable(typeof(ModerationReport))]

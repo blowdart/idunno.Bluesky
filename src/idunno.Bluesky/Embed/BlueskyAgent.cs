@@ -12,6 +12,37 @@ namespace idunno.Bluesky;
 partial class BlueskyAgent
 {
     /// <summary>
+    /// Resolves records for an enhanced external embed and returns the complete lexicon response.
+    /// </summary>
+    /// <param name="url">The canonical web URL represented by the embed.</param>
+    /// <param name="canonicalUri">The canonical AT URI of the record found on the webpage.</param>
+    /// <param name="uris">Legacy AT-URI inputs, ignored when <paramref name="canonicalUri"/> is supplied.</param>
+    /// <param name="subscribedLabelers">Optional list of subscribed labelers.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The complete response, including preferred data, persistence references and raw records.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    public async Task<AtProtoHttpResult<EmbeddedExternalViewResponse>> GetEmbedExternalViewResponse(
+        Uri url,
+        AtUri? canonicalUri = null,
+        AtUri[]? uris = null,
+        IEnumerable<Did>? subscribedLabelers = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await BlueskyServer.GetEmbedExternalViewResponse(
+            url,
+            canonicalUri,
+            uris,
+            AuthenticatedOrUnauthenticatedServiceUri,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Resolve one or more <see cref="AtUri"/>s into the data needed to render an enhanced external embed.
     /// </summary>
     /// <param name="url">The canonical web URL the embed represents (typically the URL the user pasted into the composer). Used as the returned view's `uri`. May be used for validation in the future.</param>

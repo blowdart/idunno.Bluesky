@@ -21,13 +21,15 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly ECDsa _rotatedKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-    private readonly FirehoseMetrics _metrics = new(null);
+    private readonly TestMeterFactory _meterFactory = new();
+    private readonly FirehoseMetrics _metrics;
     private readonly Did _did = new(TestDid);
     private int _resolutions;
     private Func<DidDocument?> _document;
 
     public FirehoseSignatureVerifierTests()
     {
+        _metrics = new(_meterFactory);
         _document = () => DidDocumentFor(TestDid, SigningKeyVerifier.RepositorySigningKeyFragment, _key);
     }
 
@@ -35,12 +37,34 @@ public sealed class FirehoseSignatureVerifierTests : IDisposable
     {
         _key.Dispose();
         _rotatedKey.Dispose();
+        _meterFactory.Dispose();
     }
 
     [Fact]
     public void FirehoseTimeProviderCannotBeNull()
     {
         Assert.Throws<ArgumentNullException>(() => new FirehoseOptions { TimeProvider = null! });
+    }
+
+    [Fact]
+    public void CacheMetricsAreIsolatedFromOtherVerifiers()
+    {
+        using TestMeterFactory otherMeterFactory = new();
+        FirehoseMetrics otherMetrics = new(otherMeterFactory);
+        using MetricCollector<long> hits = new(_metrics.SigningKeyCacheHits);
+        using MetricCollector<long> misses = new(_metrics.SigningKeyCacheMisses);
+        using MetricCollector<long> refreshes = new(_metrics.SigningKeyRefreshes);
+
+        otherMetrics.SigningKeyCacheHits.Add(1);
+        otherMetrics.SigningKeyCacheMisses.Add(1);
+        otherMetrics.SigningKeyRefreshes.Add(1);
+        _metrics.SigningKeyCacheHits.Add(2);
+        _metrics.SigningKeyCacheMisses.Add(3);
+        _metrics.SigningKeyRefreshes.Add(4);
+
+        Assert.Equal(2, hits.GetMeasurementSnapshot().EvaluateAsCounter());
+        Assert.Equal(3, misses.GetMeasurementSnapshot().EvaluateAsCounter());
+        Assert.Equal(4, refreshes.GetMeasurementSnapshot().EvaluateAsCounter());
     }
 
     [Fact]

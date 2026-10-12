@@ -87,6 +87,11 @@ public static partial class AtProtoServer
         }
     }
 
+    internal static Stream OwnResponseStream(Stream stream, HttpResponseMessage response)
+    {
+        return new ResponseOwnedStream(stream, response);
+    }
+
     private sealed class ResponseOwnedStream(Stream stream, HttpResponseMessage response) : Stream
     {
         private readonly Stream _stream = stream;

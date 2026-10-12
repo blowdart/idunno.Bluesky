@@ -843,11 +843,33 @@ public class AtProtoJetstreamConnectionTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer();
+        using var server = new TestJetstreamServer { DrainSockets = false };
+        TaskCompletionSource<WebSocket> firstConnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await server.Start((webSocket, connectionNumber, serverCancellationToken) => Task.CompletedTask);
+        await server.Start((webSocket, connectionNumber, serverCancellationToken) =>
+        {
+            if (connectionNumber == 1)
+            {
+                firstConnection.SetResult(webSocket);
+            }
 
-        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1 });
+            return Task.CompletedTask;
+        });
+        using var provider = new FakeLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(provider).SetMinimumLevel(LogLevel.Trace));
+        using var jetstream = new AtProtoJetstream(uri: server.Uri, options: new JetstreamOptions
+        {
+            ProtocolVersion = JetstreamProtocolVersion.V1,
+            LoggerFactory = loggerFactory
+        });
+        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        jetstream.ConnectionStateChanged += (_, e) =>
+        {
+            if (e.State == WebSocketState.Closed)
+            {
+                closed.TrySetResult();
+            }
+        };
 
         using var httpClient = new HttpClient();
 
@@ -857,9 +879,16 @@ public class AtProtoJetstreamConnectionTests
             httpClient: httpClient,
             cancellationToken: cancellationToken);
 
-        await jetstream.CloseAsync(cancellationToken: cancellationToken);
+        WebSocket serverSocket = await firstConnection.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
-        Assert.True(jetstream.DisconnectedGracefully);
+        // Establish the graceful-disconnection precondition through the receive loop before reconnecting.
+        await serverSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        await closed.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+        Assert.Equal(WebSocketState.Closed, jetstream.State);
+        Assert.True(jetstream.DisconnectedGracefully,
+            string.Join(Environment.NewLine, provider.Collector.GetSnapshot().Select(record => $"{record.Message} {record.Exception}")));
 
         await jetstream.ConnectAsync(
             uri: server.Uri,

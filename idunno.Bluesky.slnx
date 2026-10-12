@@ -35,6 +35,7 @@
   </Folder>
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
+    <File Path=".github/prompts/lexicon-conformance.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />

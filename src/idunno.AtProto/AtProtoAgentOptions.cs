@@ -148,7 +148,7 @@ public class AtProtoAgentOptions
     }
 
     /// <summary>
-    /// Gets or sets the maximum number of bytes read from an XRPC response body. Defaults to <see cref="AtProtoHttpClient.DefaultMaximumResponseSize"/>.
+    /// Gets or sets the maximum number of bytes buffered from an XRPC response body. Defaults to <see cref="AtProtoHttpClient.DefaultMaximumResponseSize"/>.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
     /// <remarks>
@@ -158,7 +158,13 @@ public class AtProtoAgentOptions
     ///   only needs raising if you call an endpoint which legitimately returns a very large response.
     /// </para>
     /// <para>
-    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    ///   A buffered response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// <para>
+    ///   Successful streamed responses, such as chat account exports and repository CAR downloads, are not limited
+    ///   by this setting. Their callers must dispose the streams and bound consumption as needed. Error bodies remain
+    ///   bounded. An HTTP client's configured response callback buffers responses under its limit before invocation,
+    ///   including streamed responses, and rejects larger responses without invoking the callback.
     /// </para>
     /// </remarks>
     public int MaximumResponseSize

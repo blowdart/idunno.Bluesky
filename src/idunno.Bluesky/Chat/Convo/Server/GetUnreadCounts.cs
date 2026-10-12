@@ -53,7 +53,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<UnreadConversationCounts> response = await client.Get(
             service,
-            $"/xrpc/chat.bsky.convo.getUnreadCounts",
+            $"/xrpc/chat.bsky.convo.getUnreadCounts?includeGroupChats={(includeGroupChats ? "true" : "false")}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

@@ -26,5 +26,10 @@ public enum FeedFilter
     /// <summary>
     /// Include posts and author threads.
     /// </summary>
-    PostsAndAuthorThreads
+    PostsAndAuthorThreads,
+
+    /// <summary>
+    /// Include posts with video.
+    /// </summary>
+    PostsWithVideo
 }

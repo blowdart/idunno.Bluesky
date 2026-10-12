@@ -21,6 +21,7 @@
 
 #### idunno.AtProto
 
+* Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
   buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
   Overflow diagnostics now include the configured capacity alongside occupancy; draining and recovery remain unchanged.
@@ -41,6 +42,7 @@
 * Added `OAuthOptions.PermissionSets` and `GetRequestedScopes()` to combine typed permission sets with existing raw scopes for OAuth requests.
 * Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
 * Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
+  Overloads accept a `since` revision to download a CAR diff, retaining the original signatures and keeping cancellation tokens last.
 * Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
   They return a disposable `BlobContent` containing the blob stream and the server-reported, untrusted, content type and length.
 * Added streaming `AtProtoServer.GetBlocks()` and `AtProtoAgent.GetBlocks()` methods to download specific repository blocks as a CAR file.
@@ -120,6 +122,7 @@
   timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
+* Added `AtProtoServer.ListMissingBlobs()` and `AtProtoAgent.ListMissingBlobs()` to find blobs missing from the authenticated repository, and `AtProtoServer.ImportRepo()` and `AtProtoAgent.ImportRepo()` to import a repository from a CAR file.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -136,6 +139,15 @@
 
 #### idunno.Bluesky
 
+* Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
+* Chat account export requests advertise the lexicon's `application/jsonl` response media type.
+* Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
+* Age-assurance configuration responses exclude null regions and rules, and complete external-embed responses exclude null verified and unverified strong references.
+* Corrected author-feed filter wire values, added the video filter, corrected the popular-feed-generator query parameter name, and corrected unread-count group-chat query parameters.
+* Added list-feed and timeline `since` options, quote sorting, suggested-feed pagination, and list-purpose filtering through compatibility overloads.
+* Added `GetEmbedExternalViewResponse()` and `EmbeddedExternalViewResponse` for complete external-embed data and associated references/records, including the `canonicalUri` query option.
+* Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
+* Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.
 * Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.
 * Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used in `EmbeddedRecordWithMedia`, where they are represented by `EmbeddedExternalMedia`, without changing the existing `EmbeddedExternal` inheritance or equality APIs.
 * Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
