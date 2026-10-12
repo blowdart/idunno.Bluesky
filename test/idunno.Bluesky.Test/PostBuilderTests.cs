@@ -4,6 +4,7 @@
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Embed.Gallery;
 using idunno.Bluesky.Feed.Gates;
@@ -14,6 +15,23 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostBuilderTests
 {
+    [Fact]
+    public void FluentEmbedAndInteractionPreferencesMethodsReturnTheBuilder()
+    {
+        PostBuilder builder = new("Test post");
+
+        PostBuilder result = builder
+            .WithEmbed(new EmbeddedExternal("https://example.com", "Example", "An example card"))
+            .WithInteractionPreferences(new PostInteractionSettingsPreferences(
+                [new FollowerRule()],
+                [new DisableEmbeddingRule()]));
+
+        Assert.Same(builder, result);
+        Assert.IsType<EmbeddedExternal>(builder.Embed);
+        Assert.IsType<FollowerRule>(Assert.Single(builder.ThreadGateRules!));
+        Assert.IsType<DisableEmbeddingRule>(Assert.Single(builder.PostGateRules!));
+    }
+
     [Theory]
     [InlineData(" ")]
     [InlineData("   ")]
@@ -30,7 +48,7 @@ public class PostBuilderTests
         fluentBuilder.WithText(text);
         Assert.Equal(text, fluentBuilder.ToPost().Text);
 
-        builder.EmbedRecord(new EmbeddedExternal("https://example.com", "Example", "An example card"));
+        builder.WithEmbed(new EmbeddedExternal("https://example.com", "Example", "An example card"));
         Post post = builder.ToPost();
         Assert.Equal(text, post.Text);
         Assert.IsType<EmbeddedExternal>(post.EmbeddedRecord);
@@ -96,8 +114,9 @@ public class PostBuilderTests
         // extracted from text that has since been replaced must be discarded.
         MutatingFacetExtractor extractor = new(postBuilder, "Something completely different");
 
-        await postBuilder.ExtractFacets(extractor, TestContext.Current.CancellationToken);
+        PostBuilder result = await postBuilder.ExtractFacetsAsync(extractor, TestContext.Current.CancellationToken);
 
+        Assert.Same(postBuilder, result);
         Assert.Empty(postBuilder.Facets);
     }
 
@@ -108,8 +127,9 @@ public class PostBuilderTests
 
         MutatingFacetExtractor extractor = new(postBuilder, null);
 
-        await postBuilder.ExtractFacets(extractor, TestContext.Current.CancellationToken);
+        PostBuilder result = await postBuilder.ExtractFacetsAsync(extractor, TestContext.Current.CancellationToken);
 
+        Assert.Same(postBuilder, result);
         Assert.Single(postBuilder.Facets);
     }
 
@@ -522,7 +542,7 @@ public class PostBuilderTests
             "text",
             images: [new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")],
             createdAt: DateTimeOffset.UtcNow)
-            .Label(postSelfLabels);
+            .SetSelfLabels(postSelfLabels);
 
         var post = postBuilder.ToPost();
         Assert.Equivalent(
@@ -809,23 +829,41 @@ public class PostBuilderTests
     public void CannotAddedStrongReferenceWhenAPostBuilderAlreadyHasAQuote()
     {
         PostBuilder postBuilder = new("Double Quote Test");
-        postBuilder.Quote(new StrongReference(
+        StrongReference originalQuote = new(
             "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
-            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        StrongReference replacementQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs28",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+
+        postBuilder.Quote(originalQuote);
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
         {
-            postBuilder.Quote(new StrongReference(
-                "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
-                "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+            _ = postBuilder + replacementQuote;
         });
 
-        InvalidOperationException addEx = Assert.Throws<InvalidOperationException>(() =>
-        {
-            postBuilder.Add(new StrongReference(
-                "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
-                "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
-        });
+        Assert.Equal(originalQuote, postBuilder.QuotePost);
+    }
+
+    [Fact]
+    public void ObsoleteStaticAddReplacesAnExistingQuoteForCompatibility()
+    {
+        PostBuilder postBuilder = new("Replace quote");
+        StrongReference originalQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        StrongReference replacementQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs28",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        postBuilder.Quote(originalQuote);
+
+#pragma warning disable CS0618 // Verify the obsolete static overload retains its original behavior.
+        PostBuilder result = PostBuilder.Add(postBuilder, replacementQuote);
+#pragma warning restore CS0618
+
+        Assert.Same(postBuilder, result);
+        Assert.Equal(replacementQuote, postBuilder.QuotePost);
     }
 
     [Fact]

@@ -1008,8 +1008,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
     /// </summary>
     /// <param name="embeddedRecord">The record to embed.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
-    public void EmbedRecord(EmbeddedBase embeddedRecord)
+    public PostBuilder WithEmbed(EmbeddedBase embeddedRecord)
     {
         ArgumentNullException.ThrowIfNull(embeddedRecord);
 
@@ -1017,18 +1018,36 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             _post.EmbeddedRecord = embeddedRecord;
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
+    /// </summary>
+    /// <param name="embeddedRecord">The record to embed.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="WithEmbed(EmbeddedBase)"/> to configure the embed fluently.</para>
+    /// </remarks>
+    [Obsolete("Use WithEmbed instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public void EmbedRecord(EmbeddedBase embeddedRecord)
+    {
+        WithEmbed(embeddedRecord);
     }
 
     /// <summary>
     /// Extracts facets from the post text, if any.
     /// </summary>
-    /// <param name="facetExtractor">The facet extractor to use</param>
+    /// <param name="facetExtractor">The facet extractor to use.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>This instance after facet extraction has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
     /// </remarks>
-    public async Task ExtractFacets(IFacetExtractor facetExtractor, CancellationToken cancellationToken)
+    public async Task<PostBuilder> ExtractFacetsAsync(IFacetExtractor facetExtractor, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(facetExtractor);
 
@@ -1038,7 +1057,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             if (string.IsNullOrEmpty(_post.Text) || _post.Facets is { Count: > 0 })
             {
-                return;
+                return this;
             }
 
             text = _post.Text;
@@ -1059,6 +1078,25 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 }
             }
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Extracts facets from the post text, if any.
+    /// </summary>
+    /// <param name="facetExtractor">The facet extractor to use.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="ExtractFacetsAsync(IFacetExtractor, CancellationToken)"/> to extract facets fluently.</para>
+    /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
+    /// </remarks>
+    [Obsolete("Use ExtractFacetsAsync instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public Task ExtractFacets(IFacetExtractor facetExtractor, CancellationToken cancellationToken)
+    {
+        return ExtractFacetsAsync(facetExtractor, cancellationToken);
     }
 
     /// <summary>
@@ -1107,6 +1145,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns>A reference to this instance after the operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postReference"/> or <paramref name="agent"/> is <see langword="null"/>.</exception>
     /// <exception cref="BlueskyException">Thrown when the reply references for <paramref name="postReference"/> could not be retrieved.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This method makes a network request through <paramref name="agent"/> to retrieve the reply references.
+    ///   Prefer calling <see cref="BlueskyAgent.GetReplyReferences(StrongReference, CancellationToken)"/> explicitly
+    ///   and checking the returned <see cref="AtProtoHttpResult{T}.Succeeded"/> before passing its
+    ///   <see cref="AtProtoHttpResult{T}.Result"/> to <see cref="ReplyTo(ReplyReferences)"/>.
+    /// </para>
+    /// </remarks>
+    [Obsolete("This method makes a network request. Call BlueskyAgent.GetReplyReferences(postReference, cancellationToken), check Succeeded, and pass its Result to ReplyTo(ReplyReferences) instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(postReference);
@@ -1130,8 +1178,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Applies the user's interaction preferences to this instance.
     /// </summary>
     /// <param name="interactionPreferences">The user's interaction preferences.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
-    public void ApplyInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
+    public PostBuilder WithInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
     {
         ArgumentNullException.ThrowIfNull(interactionPreferences);
         lock (_syncLock)
@@ -1146,6 +1195,23 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 _postGateRules = [.. interactionPreferences.PostGateEmbeddingRules];
             }
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Applies the user's interaction preferences to this instance.
+    /// </summary>
+    /// <param name="interactionPreferences">The user's interaction preferences.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="WithInteractionPreferences(PostInteractionSettingsPreferences)"/> to configure interaction preferences fluently.</para>
+    /// </remarks>
+    [Obsolete("Use WithInteractionPreferences instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public void ApplyInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
+    {
+        WithInteractionPreferences(interactionPreferences);
     }
 
     /// <summary>
@@ -1155,6 +1221,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not point to a valid Bluesky Post record.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when this instance already contains a quote post.</exception>
     public PostBuilder Quote(StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
@@ -1164,7 +1231,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             throw new ArgumentException(Properties.Resources.PostBuilderAddQuoteToNonPostError, nameof(strongReference));
         }
 
-        Add(strongReference);
+        lock (_syncLock)
+        {
+            if (QuotePost is not null)
+            {
+                throw new InvalidOperationException("Cannot add a quote post that already has a quote post.");
+            }
+
+            QuotePost = strongReference;
+        }
+
         return this;
     }
 
@@ -1210,6 +1286,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="labels">The self label values to set.</param>
     /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="SetSelfLabels(PostSelfLabels)"/> instead.</para>
+    /// </remarks>
+    [Obsolete("Use SetSelfLabels instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Label(PostSelfLabels labels)
     {
         ArgumentNullException.ThrowIfNull(labels);

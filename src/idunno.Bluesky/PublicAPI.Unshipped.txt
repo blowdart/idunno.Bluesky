@@ -193,6 +193,9 @@ idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(idunno.Bluesky.Embed.EmbeddedE
 idunno.Bluesky.Embed.EmbeddedExternalMedia.External.get -> idunno.Bluesky.Embed.External.Properties!
 idunno.Bluesky.Embed.EmbeddedExternalMedia.External.init -> void
 idunno.Bluesky.Embed.EmbeddedRecordWithMedia.EmbeddedRecordWithMedia(idunno.Bluesky.Embed.EmbeddedRecord! record, idunno.Bluesky.Embed.EmbeddedBase! media) -> void
+idunno.Bluesky.PostBuilder.ExtractFacetsAsync(idunno.Bluesky.RichText.IFacetExtractor! facetExtractor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PostBuilder!>!
+idunno.Bluesky.PostBuilder.WithEmbed(idunno.Bluesky.Embed.EmbeddedBase! embeddedRecord) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.WithInteractionPreferences(idunno.Bluesky.Actor.PostInteractionSettingsPreferences! interactionPreferences) -> idunno.Bluesky.PostBuilder!
 override idunno.Bluesky.AgeAssurance.Config.Equals(object? obj) -> bool
 override idunno.Bluesky.AgeAssurance.Config.GetHashCode() -> int
 override idunno.Bluesky.AgeAssurance.Config.ToString() -> string!

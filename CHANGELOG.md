@@ -139,6 +139,11 @@
 
 #### idunno.Bluesky
 
+* Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
+  `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
+  `Add(StrongReference)` is obsolete in favor of `Quote()`, and `Label()` is obsolete in favor of `SetSelfLabels()`.
+  The network-backed `ReplyTo(StrongReference, BlueskyAgent, CancellationToken)` overload is obsolete; retrieve references explicitly and use `ReplyTo(ReplyReferences)`.
+  Added chainable `PostBuilder.ExtractFacetsAsync()`; the original `ExtractFacets()` method is obsolete.
 * Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
 * Chat account export requests advertise the lexicon's `application/jsonl` response media type.
 * Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
@@ -246,6 +251,7 @@
 
 #### idunno.Bluesky
 
+* The `PostBuilder + StrongReference` operator now follows `Quote()` behavior: it throws `InvalidOperationException` when a quote already exists instead of replacing it, and `ArgumentException` when the reference does not identify a Bluesky post. The obsolete static `PostBuilder.Add(PostBuilder, StrongReference)` overload retains its previous quote-replacement behavior for compatibility.
 * `Quote` text-only and image helpers now extract facets by default, matching text-bearing `Post` and `ReplyTo` helpers. URLs and mentions can gain facets, and mentions can trigger handle-resolution network requests. Pass `extractFacets: false` to preserve the previous quote behavior. All quote and card-only post helpers expose explicit facet control while retaining existing method signatures and positional cancellation-token calls. `PostBuilder` publishing remains prepared-facets-only.
 
 #### idunno.AtProto
