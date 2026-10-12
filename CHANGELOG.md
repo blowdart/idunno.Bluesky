@@ -251,6 +251,7 @@
 
 #### idunno.Bluesky
 
+* The `PostBuilder + StrongReference` operator now follows `Quote()` behavior: it throws `InvalidOperationException` when a quote already exists instead of replacing it, and `ArgumentException` when the reference does not identify a Bluesky post. The obsolete static `PostBuilder.Add(PostBuilder, StrongReference)` overload retains its previous quote-replacement behavior for compatibility.
 * `Quote` text-only and image helpers now extract facets by default, matching text-bearing `Post` and `ReplyTo` helpers. URLs and mentions can gain facets, and mentions can trigger handle-resolution network requests. Pass `extractFacets: false` to preserve the previous quote behavior. All quote and card-only post helpers expose explicit facet control while retaining existing method signatures and positional cancellation-token calls. `PostBuilder` publishing remains prepared-facets-only.
 
 #### idunno.AtProto
