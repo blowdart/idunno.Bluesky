@@ -9,7 +9,14 @@ namespace idunno.Bluesky.Notifications.PreferenceTypes;
 /// <summary>
 /// Encapsulates notification preferences for chats
 /// </summary>
-[Obsolete("Deprecated, use ChatNotificationPreferences instead.")]
+/// <remarks>
+/// <para>Retained for compatibility with the legacy chat field in <see cref="idunno.Bluesky.Notifications.Preferences"/>.
+/// Manage chat notifications through <see cref="BlueskyAgent.GetChatNotificationPreferences"/> and
+/// <see cref="BlueskyAgent.PutChatNotificationPreferences(idunno.Bluesky.Chat.Notifications.Preferences, CancellationToken)"/>
+/// using <see cref="idunno.Bluesky.Chat.Notifications.Preferences"/> and <see cref="idunno.Bluesky.Chat.Notifications.Preference"/>.
+/// These use the separate <c>chat.bsky.notification</c> endpoints and are not drop-in replacements for this type.</para>
+/// </remarks>
+[Obsolete("Deprecated. Manage chat notifications through BlueskyAgent.GetChatNotificationPreferences() and PutChatNotificationPreferences(), using idunno.Bluesky.Chat.Notifications.Preferences and Preference. Retained for legacy notification preferences; the new APIs are not drop-in replacements.")]
 [SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "Kept for compatibility")]
 public sealed record ChatPreference
 {

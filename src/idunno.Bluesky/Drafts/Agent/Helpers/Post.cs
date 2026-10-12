@@ -159,7 +159,7 @@ public partial class BlueskyAgent
 
                 if (extractFacets)
                 {
-                    await postBuilder.ExtractFacets(FacetExtractor, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await postBuilder.ExtractFacetsAsync(FacetExtractor, cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
 
                 if (draftPost.Labels is not null)
@@ -211,7 +211,7 @@ public partial class BlueskyAgent
                 if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords.Count != 0)
                 {
                     EmbeddedRecord embeddedRecord = new(draftPost.EmbedRecords[0].Record);
-                    postBuilder.EmbedRecord(embeddedRecord);
+                    postBuilder.WithEmbed(embeddedRecord);
                 }
 
                 // Upload the images for the post, then attach.

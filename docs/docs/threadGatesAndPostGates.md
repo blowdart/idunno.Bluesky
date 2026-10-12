@@ -79,5 +79,4 @@ await agent.Post(
 Note that the Bluesky application allows a user to override their preferences on a post by post basis.
 If you specify a `threadGateRules` or `postGateRules` value to `agent.Post()` they will take precedence.
 
-If you are using a `PostBuilder` you can apply the user preferences to the builder with `PostBuilder.ApplyInteractionPreferences()`.
-
+If you are using a `PostBuilder` you can apply the user preferences fluently with `PostBuilder.WithInteractionPreferences()`.
