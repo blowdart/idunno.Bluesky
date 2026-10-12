@@ -108,6 +108,53 @@ public class GetEmbedExternalViewTests
     }
 
     [Fact]
+    public async Task CompleteResponseFiltersBothStrongReferenceArrays()
+    {
+        const string json = """
+            {
+              "associatedRefs":[null,{"uri":"at://did:plc:test/app.bsky.feed.post/abcdefghijklm","cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"},null],
+              "unverifiedAssociatedRefs":[null,{"uri":"at://did:plc:test/app.bsky.feed.post/nopqrstuvwxyz","cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"},null]
+            }
+            """;
+        using TestServer testServer = CreateServer(json);
+        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Credentials = CreateCredentials() };
+
+        AtProtoHttpResult<EmbeddedExternalViewResponse> result = await agent.GetEmbedExternalViewResponse(
+            new Uri("https://example.org/article"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(new AtUri("at://did:plc:test/app.bsky.feed.post/abcdefghijklm"), Assert.Single(result.Result.AssociatedRefs!).Uri);
+        Assert.Equal(new AtUri("at://did:plc:test/app.bsky.feed.post/nopqrstuvwxyz"), Assert.Single(result.Result.UnverifiedAssociatedRefs!).Uri);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("""{"associatedRefs":null,"unverifiedAssociatedRefs":null}""")]
+    [InlineData("""{"associatedRefs":[null],"unverifiedAssociatedRefs":[null]}""")]
+    public async Task CompleteResponsePreservesOptionalReferenceCollections(string json)
+    {
+        using TestServer testServer = CreateServer(json);
+        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Credentials = CreateCredentials() };
+
+        AtProtoHttpResult<EmbeddedExternalViewResponse> result = await agent.GetEmbedExternalViewResponse(
+            new Uri("https://example.org/article"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        if (json.Contains("[null]", StringComparison.Ordinal))
+        {
+            Assert.Empty(result.Result.AssociatedRefs!);
+            Assert.Empty(result.Result.UnverifiedAssociatedRefs!);
+        }
+        else
+        {
+            Assert.Null(result.Result.AssociatedRefs);
+            Assert.Null(result.Result.UnverifiedAssociatedRefs);
+        }
+    }
+
+    [Fact]
     public async Task CompleteResponseUsesCanonicalUriAndPreservesTheLexiconData()
     {
         const string json = """

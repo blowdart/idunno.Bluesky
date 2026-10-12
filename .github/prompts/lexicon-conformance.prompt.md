@@ -37,6 +37,9 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   annotation enforcement does not reject null array elements. Follow existing
   `WithoutNullEntries` mappings where appropriate, and distinguish malformed required
   fields from optional or unknown data rather than silently defaulting them.
+  Recursively inventory every response collection, including nested collections and DTOs
+  returned directly without a mapping layer. Check verified and unverified collections
+  separately; one sanitized array does not prove its sibling arrays are safe.
 * Verify source-generated metadata using the library's configured serializer options;
   reflection is disabled. Repository records need both concrete type and
   `AtProtoRepositoryRecord<TRecord>` registrations.
@@ -60,6 +63,13 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   credential updates, nonce retry behavior and error mapping, not just return a stream.
 * Compare XML exception documentation with actual argument guards and nested calls.
   Check null, empty and out-of-range inputs and document the specific exception thrown.
+  Check both public agent and server overloads independently, including exceptions from
+  delegated validation and null, empty or whitespace entries in collection parameters.
+* When streaming changes response-size or buffering guarantees, reconcile documentation
+  on the endpoint, shared client and agent properties, options and response callbacks.
+  Describe which successful responses bypass size limits, which error bodies remain
+  bounded, and when a callback causes buffering or rejection. Endpoint documentation
+  alone does not establish an accurate shared contract.
 * Check every changed `<inheritdoc cref="...">` against the exact intended overload,
   including new parameter types and order. Reject self-references and circular chains;
   a clean compile alone does not prove inherited documentation is useful.
@@ -121,6 +131,10 @@ authentication states, actual argument exceptions, and logger/callback forwardin
 For streaming changes, verify lazy consumption, exports exceeding the normal response
 limit, response disposal, HTTP errors and cancellation. Use existing test helpers and
 avoid live writes or private-data fixtures.
+Test null elements at every response collection level, including nested collections,
+directly returned DTOs and verified/unverified sibling arrays. For each public overload
+with new validation, test invalid bounds and collection entries where applicable and
+compare the actual exception with both agent and server documentation.
 
 Preserve AOT and trimming compliance in every fix, using source-generated serialization
 and existing AOT-safe helpers. Do not disable AOT or trimming checks to make a build pass.
@@ -163,3 +177,34 @@ Reconcile every added or broadened suppression with the permitted exceptions or 
 user approval, and reconcile the full inventory with the completion report and PR body.
 Stop for approval if any non-permitted suppression remains unapproved. Do not claim that
 no AOT/trimming suppressions were added merely because their pattern matches existing code.
+
+### Evidence-backed completion gate
+
+Before declaring an authorized fix complete or committing, review the entire task diff
+against its starting revision, or the entire PR diff against its base when working on a PR.
+Do not limit this check to the latest correction or commit. Account for new/untracked files
+and changes introduced earlier in the task.
+
+Reconcile each of the following with concrete evidence:
+
+* Every response collection and nested collection has a recorded element-nullability
+  decision, the corresponding sanitization or validation path, and null-element regression
+  coverage where its elements are non-nullable. Include directly returned DTOs and every
+  verified/unverified sibling collection; do not substitute one representative test.
+* Every new or changed public agent and server overload documents the exceptions from
+  its own guards and delegated calls. Compare overloads side by side and link applicable
+  invalid-input tests, including boundary values and invalid collection entries.
+* Every user-visible addition, behavior change and removal in the full diff is represented
+  in the unreleased changelog under the affected package. Include corrected query
+  serialization, enum/filter additions, optional parameters and expanded response APIs,
+  not just new endpoints. Record an explicit rationale for any omission.
+* Every changed streaming guarantee is reflected consistently in endpoint and shared
+  property, option and callback documentation, with tests for the stated size-limit and
+  buffering behavior.
+* Every suppression change is reconciled with the complete inventory, approval policy,
+  proving tests where required, completion report and PR description.
+
+Keep this checklist and its evidence in session artifacts or the completion report;
+do not create repository tracking files unless requested. A passing build, a green test
+suite or a resolved review thread is not a substitute for these comparisons. Report
+remaining gaps explicitly rather than marking the whole change complete.

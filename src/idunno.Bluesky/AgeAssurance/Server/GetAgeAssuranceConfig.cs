@@ -41,11 +41,32 @@ public static partial class BlueskyServer
 
         BlueskyHttpClient<Config> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
-        return await client.Get(
+        AtProtoHttpResult<Config> response = await client.Get(
             service,
             "/xrpc/app.bsky.ageassurance.getConfig",
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            Config config = response.Result with
+            {
+                Regions = WithoutNullEntries(response.Result.Regions, service, nameof(Config.Regions), loggerFactory)
+                    .Select(region => region with
+                    {
+                        Rules = WithoutNullEntries(region.Rules, service, nameof(ConfigRegion.Rules), loggerFactory)
+                    }).ToList()
+            };
+
+            return new AtProtoHttpResult<Config>(
+                config,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+
+        return response;
     }
 }

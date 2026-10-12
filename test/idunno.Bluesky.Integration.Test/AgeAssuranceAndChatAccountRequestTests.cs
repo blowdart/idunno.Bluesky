@@ -70,6 +70,59 @@ public class AgeAssuranceAndChatAccountRequestTests
     }
 
     [Fact]
+    public async Task GetAgeAssuranceConfigFiltersNullRegionsAndRules()
+    {
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            context.Response.Headers["X-Test"] = "preserved";
+            await context.Response.WriteAsync(
+                """
+                {"regions":[null,
+                  {"countryCode":"US","minAccessAge":13,"rules":[null,{"$type":"app.bsky.ageassurance.defs#configRegionRuleDefault","access":"full"},null]},
+                  {"countryCode":"GB","minAccessAge":13,"rules":[null,null]},
+                  null]}
+                """, TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        AtProtoHttpResult<Config> result = await agent.GetAgeAssuranceConfig(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Equal("preserved", Assert.Single(result.HttpResponseHeaders!.GetValues("X-Test")));
+        Assert.Collection(result.Result.Regions,
+            region =>
+            {
+                Assert.Equal("US", region.CountryCode);
+                Assert.IsType<ConfigRegionRuleDefault>(Assert.Single(region.Rules));
+            },
+            region =>
+            {
+                Assert.Equal("GB", region.CountryCode);
+                Assert.Empty(region.Rules);
+            });
+    }
+
+    [Fact]
+    public async Task GetAgeAssuranceConfigPreservesErrorResponses()
+    {
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("""{"error":"InvalidRequest","message":"Invalid configuration request."}""", TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        AtProtoHttpResult<Config> result = await agent.GetAgeAssuranceConfig(TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
+        Assert.Equal("InvalidRequest", result.AtErrorDetail?.Error);
+    }
+
+    [Fact]
     public async Task GetAgeAssuranceStateEncodesCountryAndRegionCodes()
     {
         string? queryString = null;
@@ -170,8 +223,10 @@ public class AgeAssuranceAndChatAccountRequestTests
         Assert.Equal(1, callbacks);
     }
 
-    [Fact]
-    public async Task StreamingResponseCallbacksRemainBounded()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StreamingResponseCallbacksRemainBounded(bool exceedsLimit)
     {
         using TrackingStream content = new(2);
         using HttpResponseMessage response = new(HttpStatusCode.OK) { Content = new StreamContent(content) };
@@ -180,11 +235,11 @@ public class AgeAssuranceAndChatAccountRequestTests
         bool callbackInvoked = false;
         AtProtoHttpClient<Stream> client = new("did:web:api.bsky.chat#bsky_chat", loggerFactory: null)
         {
-            MaximumResponseSize = 1,
-            OnResponseReceived = (_, _) =>
+            MaximumResponseSize = exceedsLimit ? 1 : 2,
+            OnResponseReceived = async (receivedResponse, cancellationToken) =>
             {
                 callbackInvoked = true;
-                return Task.CompletedTask;
+                Assert.Equal(2, (await receivedResponse.Content.ReadAsByteArrayAsync(cancellationToken)).Length);
             }
         };
 
@@ -193,9 +248,22 @@ public class AgeAssuranceAndChatAccountRequestTests
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal("ResponseTooLarge", result.AtErrorDetail?.Error);
-        Assert.False(callbackInvoked);
+        if (exceedsLimit)
+        {
+            Assert.False(result.Succeeded);
+            Assert.Equal("ResponseTooLarge", result.AtErrorDetail?.Error);
+            Assert.False(callbackInvoked);
+        }
+        else
+        {
+            Assert.True(result.Succeeded);
+            Assert.True(callbackInvoked);
+            await using Stream stream = result.Result;
+            using MemoryStream copy = new();
+            await stream.CopyToAsync(copy, TestContext.Current.CancellationToken);
+            Assert.Equal(2, copy.Length);
+        }
+
         Assert.True(content.Disposed);
     }
 

@@ -45,7 +45,7 @@ public class AtProtoHttpClient(
     public const int DefaultMaximumResponseSize = 32 * 1024 * 1024;
 
     /// <summary>
-    /// Gets the maximum number of bytes read from an XRPC response body.
+    /// Gets the maximum number of bytes buffered from an XRPC response body.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
     /// <remarks>
@@ -407,7 +407,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     private readonly int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
 
     /// <summary>
-    /// Gets the maximum number of bytes read from an XRPC response body.
+    /// Gets the maximum number of bytes buffered from an XRPC response body.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
     /// <remarks>
@@ -417,7 +417,13 @@ public class AtProtoHttpClient<TResult> where TResult : class
     ///   only needs raising if you call an endpoint which legitimately returns a very large response.
     /// </para>
     /// <para>
-    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    ///   A buffered response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// <para>
+    ///   Successful responses returned as <see cref="Stream"/> are not limited when no <see cref="OnResponseReceived"/>
+    ///   callback is configured. The caller must dispose the stream and bound its own consumption as needed.
+    ///   Error bodies remain bounded. Configuring a response callback buffers the body under this limit before
+    ///   invoking the callback, including for streamed responses; larger responses are rejected without invoking it.
     /// </para>
     /// </remarks>
     public int MaximumResponseSize
@@ -718,6 +724,11 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <para>
     ///   The response body is buffered, up to <see cref="MaximumResponseSize"/> bytes, before the function is called, so that
     ///   reading it cannot allocate without limit. A response larger than that limit is rejected and the function is not called.
+    /// </para>
+    /// <para>
+    ///   Configuring this callback also buffers successful responses returned as <see cref="Stream"/>.
+    ///   Without a configured callback, successful streamed responses bypass buffering and the size limit;
+    ///   error bodies remain bounded.
     /// </para>
     /// </remarks>
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived

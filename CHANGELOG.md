@@ -141,7 +141,10 @@
 
 * Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
 * Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
-
+* Age-assurance configuration responses exclude null regions and rules, and complete external-embed responses exclude null verified and unverified strong references.
+* Corrected author-feed filter wire values, added the video filter, corrected the popular-feed-generator query parameter name, and corrected unread-count group-chat query parameters.
+* Added list-feed and timeline `since` options, quote sorting, suggested-feed pagination, and list-purpose filtering through compatibility overloads.
+* Added `GetEmbedExternalViewResponse()` and `EmbeddedExternalViewResponse` for complete external-embed data and associated references/records, including the `canonicalUri` query option.
 * Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
 * Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.
 * Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.

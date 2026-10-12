@@ -192,9 +192,13 @@ public static partial class BlueskyServer
                 new EmbeddedExternalViewResponse(
                     response.Result.View,
                     response.Result.Data,
-                    response.Result.AssociatedRefs,
+                    response.Result.AssociatedRefs is not null
+                        ? WithoutNullEntries(response.Result.AssociatedRefs, service, nameof(response.Result.AssociatedRefs), loggerFactory)
+                        : null,
                     response.Result.AssociatedRecords,
-                    response.Result.UnverifiedAssociatedRefs,
+                    response.Result.UnverifiedAssociatedRefs is not null
+                        ? WithoutNullEntries(response.Result.UnverifiedAssociatedRefs, service, nameof(response.Result.UnverifiedAssociatedRefs), loggerFactory)
+                        : null,
                     response.Result.UnverifiedAssociatedRecords),
                 response.StatusCode,
                 response.HttpResponseHeaders,

@@ -300,6 +300,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
         AtUri list,
         int? limit,
@@ -677,6 +678,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
     public async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
         AtUri uri,
         Cid? cid,
@@ -767,6 +769,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
     public async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
         int? limit,
         string? cursor,
@@ -826,6 +829,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
     public async Task<AtProtoHttpResult<Timeline>> GetTimeline(
         string? algorithm,
         int? limit,

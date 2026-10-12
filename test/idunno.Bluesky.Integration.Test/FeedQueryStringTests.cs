@@ -508,4 +508,49 @@ public class FeedQueryStringTests
         Assert.Contains("purposes=curatelist", queryString, StringComparison.Ordinal);
         Assert.Contains("purposes=modlist", queryString, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public async Task ExpandedFeedOverloadsRejectInvalidLimits(int limit)
+    {
+        using HttpClient httpClient = new();
+        using BlueskyAgent agent = new() { Service = TestServerBuilder.DefaultUri, Credentials = CreateCredentials() };
+        AtUri uri = new("at://did:plc:test/app.bsky.graph.list/abcdefghijklm");
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.GetSuggestedFeeds(limit, null, null, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetSuggestedFeeds(
+            limit, null, TestServerBuilder.DefaultUri, CreateCredentials(), httpClient,
+            null, null, null, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.GetListFeed(uri, limit, null, null, null, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetListFeed(
+            uri, limit, null, null, TestServerBuilder.DefaultUri, null, httpClient,
+            null, null, null, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.GetQuotes(uri, null, limit, null, null, null, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetQuotes(
+            uri, null, limit, null, null, TestServerBuilder.DefaultUri, null, httpClient,
+            null, null, null, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => agent.GetTimeline(null, limit, null, null, null, cancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetTimeline(
+            null, limit, null, null, TestServerBuilder.DefaultUri, CreateCredentials(), httpClient,
+            null, null, null, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task GetListsRejectsInvalidPurposeEntries(string? purpose)
+    {
+        using HttpClient httpClient = new();
+        using BlueskyAgent agent = new() { Service = TestServerBuilder.DefaultUri };
+        string[] purposes = [purpose!];
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => agent.GetLists(s_did, null, null, null, purposes, cancellationToken));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => BlueskyServer.GetLists(
+            s_did, null, null, purposes, TestServerBuilder.DefaultUri, null, httpClient,
+            null, null, null, AtProtoHttpClient.DefaultMaximumResponseSize, cancellationToken));
+    }
 }

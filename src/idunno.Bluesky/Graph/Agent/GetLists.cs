@@ -45,6 +45,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    /// <exception cref="ArgumentException">An entry in <paramref name="purposes"/> is <see langword="null"/> or whitespace.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
         AtIdentifier actor,
         int? limit,
