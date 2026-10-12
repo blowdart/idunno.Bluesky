@@ -40,8 +40,8 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
     /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
     /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/> or empty and <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when a tag position is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> and <paramref name="embeddedRecord"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="text"/> is empty and <paramref name="embeddedRecord"/> is <see langword="null"/>, or a tag position is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
     ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
@@ -67,9 +67,16 @@ public record class Post : BlueskyTimestampedRecord
             labels: labels,
             tags: tags)
     {
-        if (string.IsNullOrEmpty(text) && embeddedRecord is null)
+        // The lexicon description permits empty text when embeds are present:
+        // https://github.com/bluesky-social/atproto/blob/41a561e80a6c906e9a6ec8e29f8ea970ce9fe2e9/lexicons/app/bsky/feed/post.json#L17
+        if (embeddedRecord is null)
         {
-            throw new ArgumentNullException(nameof(text));
+            ArgumentNullException.ThrowIfNull(text);
+
+            if (text.Length == 0)
+            {
+                throw new ArgumentException("Post text cannot be empty unless an embedded record is provided.", nameof(text));
+            }
         }
 
         if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
@@ -159,7 +166,8 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
     /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
     /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/> or empty and <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> and <paramref name="embeddedRecord"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="text"/> is empty and <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
     ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.

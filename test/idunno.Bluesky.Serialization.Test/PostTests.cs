@@ -97,9 +97,19 @@ public class PostTests
     {
         foreach (JsonSerializerOptions options in new[] { _jsonSerializerOptions, BlueskyServer.BlueskyJsonSerializerOptions })
         {
-            ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
-                () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
-            Assert.Equal("text", exception.ParamName);
+            if (text is null)
+            {
+                ArgumentNullException exception = Assert.Throws<ArgumentNullException>(
+                    () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
+                Assert.Equal("text", exception.ParamName);
+            }
+            else
+            {
+                ArgumentException exception = Assert.Throws<ArgumentException>(
+                    () => JsonSerializer.Deserialize<Post>(CreatePostJson(text, false), options));
+                Assert.Equal("text", exception.ParamName);
+                Assert.Contains("Post text cannot be empty unless an embedded record is provided.", exception.Message);
+            }
         }
     }
 

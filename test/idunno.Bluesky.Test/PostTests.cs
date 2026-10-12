@@ -201,7 +201,7 @@ public class PostTests
     [Fact]
     public void TextLangConstructorThrowsIfTextIsEmpty()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty));
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty));
 
         Assert.Equal("text", caughtException.ParamName);
     }
@@ -217,7 +217,7 @@ public class PostTests
     [Fact]
     public void TextLangsConstructorThrowsIfTextIsEmpty()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty, ["en-gb"]));
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty, ["en-gb"]));
 
         Assert.Equal("text", caughtException.ParamName);
     }
