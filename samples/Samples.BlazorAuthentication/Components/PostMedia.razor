@@ -11,7 +11,7 @@
             @if (IsWebUri(image.ThumbnailUri) && IsWebUri(image.FullSizeUri))
             {
                 <div class="post-image-viewer">
-                    <button type="button" class="image-preview" data-open-image aria-haspopup="dialog">
+                    <button type="button" class="image-preview" data-open-image aria-haspopup="dialog" aria-label="View full-size image">
                         <img class="post-image" src="@image.ThumbnailUri" alt="@image.AltText" title="@image.AltText" loading="lazy" />
                     </button>
                     <dialog class="image-dialog" aria-label="Full-size post image">

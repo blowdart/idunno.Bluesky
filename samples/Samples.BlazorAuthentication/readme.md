@@ -24,7 +24,8 @@ on other browsers without adding a third-party video player.
 
 The local `imageViewer.js` module opens native browser dialogs without a circuit round trip. Native dialogs provide
 keyboard focus containment and return focus to the thumbnail on close. Its delegated click listener also handles
-images added by timeline refresh or interactive navigation.
+images added by timeline refresh or interactive navigation. Thumbnail buttons have an accessible action name
+even when the image has no alt text.
 
 ## Rendering and authentication
 
@@ -97,6 +98,9 @@ Storage failures show a warning to copy edits manually. Drafts contain profile t
 encrypted: same-origin scripts can access them. Avoid sensitive drafts on shared devices; closing the tab normally
 clears its session storage. A disconnected circuit can still retain typed input locally, but cannot save it remotely
 until authentication and connectivity are restored.
+Discarding a draft removes its values from the editor before reloading the profile; if reload fails, the error is
+shown without leaving discarded values available to save. Session-recovery sign-in links retain the current page
+and query rather than always redirecting to the profile editor.
 
 ## Configuration
 

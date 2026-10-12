@@ -22,6 +22,7 @@
 * The Blazor sample navigation displays an account dropdown triggered by the authenticated user's avatar and handle, with manage-profile and sign-out options on component and authentication UI pages.
 * The Blazor timeline renders images attached to quoted posts, inline animated GIFs with alt text and hover descriptions, and video controls with a Bluesky playback fallback. Static images open in closable full-size dialogs with alt-text captions. Signed-out navigation places the sign-in link on the right.
 * Blazor sample credential writes atomically check the original session against logout and login replacement. Cookie renewal uses the handler's reference-cookie sliding renewal without re-adding identities, and authorization-failure sign-in links retain the current local route.
+* Blazor sample heartbeat recovery retains the current page, discarded drafts are removed from the editor even when profile reload fails, and image-viewer buttons have an accessible action name.
 
 #### idunno.AtProto
 

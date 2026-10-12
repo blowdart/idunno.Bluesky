@@ -501,6 +501,7 @@ public partial class AuthenticationTests
 
     [Theory]
     [InlineData("images", "first-thumb.jpg")]
+    [InlineData("empty-alt", "first-thumb.jpg")]
     [InlineData("quote-images", "quote-thumb.jpg")]
     [InlineData("gif", "tenor.gif")]
     [InlineData("video", "<video")]
@@ -511,6 +512,9 @@ public partial class AuthenticationTests
         factory.Pds.MediaOnly = true;
         factory.Pds.EmbedJson = kind switch
         {
+            "empty-alt" => """
+                {"$type":"app.bsky.embed.images#view","images":[{"thumb":"https://images.example/first-thumb.jpg","fullsize":"https://images.example/first.jpg","alt":""}]}
+                """,
             "quote-images" => $$$"""
                 {"$type":"app.bsky.embed.recordWithMedia#view",
                 "record":{"record":{"$type":"app.bsky.embed.record#viewNotFound","uri":"at://{{{Did}}}/app.bsky.feed.post/quote","notFound":true}},
@@ -542,14 +546,15 @@ public partial class AuthenticationTests
         {
             Assert.DoesNotContain("javascript:", html, StringComparison.Ordinal);
         }
-        if (kind is "images" or "quote-images")
+        if (kind is "images" or "quote-images" or "empty-alt")
         {
             Assert.Contains("data-open-image", html, StringComparison.Ordinal);
+            Assert.Contains("aria-label=\"View full-size image\"", html, StringComparison.Ordinal);
             Assert.Contains("<dialog class=\"image-dialog\"", html, StringComparison.Ordinal);
             Assert.Contains("<form method=\"dialog\">", html, StringComparison.Ordinal);
             Assert.Contains(">Close</button>", html, StringComparison.Ordinal);
-            string fullSize = kind == "images" ? "first.jpg" : "quote-full.jpg";
-            string alt = kind == "images" ? "First image description" : "Quoted image";
+            string fullSize = kind == "quote-images" ? "quote-full.jpg" : "first.jpg";
+            string alt = kind switch { "images" => "First image description", "quote-images" => "Quoted image", _ => "" };
             Assert.Contains($"src=\"https://images.example/{fullSize}\" alt=\"{alt}\"", html, StringComparison.Ordinal);
             Assert.Contains($"<figcaption>{alt}</figcaption>", html, StringComparison.Ordinal);
             Assert.DoesNotContain($"href=\"https://images.example/{fullSize}\"", html, StringComparison.Ordinal);
@@ -779,6 +784,50 @@ public partial class AuthenticationTests
 
     private static ProfileRenderer CreateEditor(IServiceScope scope) =>
         new(scope.ServiceProvider, scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiscardedDraftIsNotAvailableAfterFailedReload(bool reloadFails)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient();
+        await Login(browser);
+        using var scope = await CreateCircuit(factory, browser);
+        await using var editor = CreateEditor(scope);
+        await editor.RenderAsync();
+        await editor.RestoreAsync(ProfileCid, "Discarded name", "Discarded description", "they/them");
+        factory.Pds.Failure = reloadFails ? "profile" : null;
+        await editor.DiscardAsync();
+        Assert.Equal(!reloadFails, editor.HasForm);
+        Assert.DoesNotContain("Restored your unsaved draft", editor.Text, StringComparison.Ordinal);
+        Assert.Equal(0, factory.Pds.Writes);
+        if (reloadFails)
+        {
+            Assert.Contains("Could not load your profile", editor.Text, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal("Original name", editor.Input.DisplayName);
+        }
+    }
+
+    [Theory]
+    [InlineData("/", "%2F")]
+    [InlineData("/Claims", "%2FClaims")]
+    [InlineData("/Manage?draft=1", "%2FManage%3Fdraft%3D1")]
+    public async Task HeartbeatSessionRecoveryPreservesCurrentRoute(string route, string encoded)
+    {
+        await using var factory = new SampleFactory();
+        using var browser = factory.CreateClient();
+        await Login(browser);
+        using var scope = await CreateCircuit(factory, browser);
+        var navigation = new TestNavigation();
+        navigation.NavigateTo(route);
+        await using var renderer = new ProfileRenderer(new NavigationServices(scope.ServiceProvider, navigation),
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
+        Assert.Equal($"/Bluesky/Login?returnUrl={encoded}", await renderer.HeartbeatFailureLinkAsync());
+    }
 
     [Theory]
     [InlineData("/Claims", "%2FClaims")]

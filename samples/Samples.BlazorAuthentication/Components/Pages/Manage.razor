@@ -35,7 +35,7 @@
         <InputText id="pronouns" @bind-Value="Input.Pronouns" disabled="@_saving" />
         <ValidationMessage For="() => Input.Pronouns" />
         <button type="submit" disabled="@_saving">Save profile</button>
-        <button type="button" @onclick="DiscardDraft">Discard draft and reload profile</button>
+        <button type="button" @onclick="DiscardDraft" disabled="@_saving">Discard draft and reload profile</button>
     </EditForm>
 }
 
@@ -121,6 +121,7 @@
         _draftMessage = null;
         _saved = false;
         _error = null;
+        Input = null;
         await OnInitializedAsync();
         if (_draft is not null && Input is not null)
         {

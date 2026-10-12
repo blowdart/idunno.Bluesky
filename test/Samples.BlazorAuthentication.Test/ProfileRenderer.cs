@@ -6,6 +6,7 @@ using System.Text;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.RenderTree;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 
 using Samples.BlazorAuthentication.Components.Pages;
@@ -23,6 +24,50 @@ internal sealed class ProfileRenderer(IServiceProvider services, ILoggerFactory 
 
     internal ProfileInput Input => (ProfileInput)Form.Model!;
     internal IEnumerable<string> ValidationErrors => Form.EditContext!.GetValidationMessages();
+    internal bool HasForm => ComponentFrames(_root)
+        .Any(frame => frame.FrameType == RenderTreeFrameType.Component && frame.Component is EditForm);
+
+    private IEnumerable<RenderTreeFrame> ComponentFrames(int componentId) =>
+        GetCurrentRenderTreeFrames(componentId).Array.Take(GetCurrentRenderTreeFrames(componentId).Count);
+
+    internal Task DiscardAsync() => Dispatcher.InvokeAsync(async () =>
+    {
+        ulong FindClick(int componentId)
+        {
+            foreach (var frame in ComponentFrames(componentId))
+            {
+                if (frame.FrameType == RenderTreeFrameType.Attribute && frame.AttributeName == "onclick")
+                {
+                    return frame.AttributeEventHandlerId;
+                }
+                if (frame.FrameType == RenderTreeFrameType.Component)
+                {
+                    ulong result = FindClick(frame.ComponentId);
+                    if (result != 0)
+                    {
+                        return result;
+                    }
+                }
+            }
+
+            return 0;
+        }
+
+        await DispatchEventAsync(FindClick(_root), null, new MouseEventArgs());
+    });
+
+    internal Task<string> HeartbeatFailureLinkAsync() => Dispatcher.InvokeAsync(async () =>
+    {
+        var heartbeat = (Samples.BlazorAuthentication.Components.SessionHeartbeat)InstantiateComponent(
+            typeof(Samples.BlazorAuthentication.Components.SessionHeartbeat));
+        _root = AssignRootComponentId(heartbeat);
+        await RenderRootComponentAsync(_root);
+        await heartbeat.RenewalFailed(true);
+
+        return ComponentFrames(_root)
+            .Single(frame => frame.FrameType == RenderTreeFrameType.Attribute && frame.AttributeName == "href")
+            .AttributeValue.ToString()!;
+    });
 
     private EditForm Form => GetCurrentRenderTreeFrames(_root).Array
         .Take(GetCurrentRenderTreeFrames(_root).Count)

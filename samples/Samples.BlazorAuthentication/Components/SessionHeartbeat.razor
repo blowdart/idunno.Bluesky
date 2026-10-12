@@ -1,6 +1,7 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 @if (_error is not null)
@@ -9,7 +10,7 @@
         @_error
         @if (_sessionEnded)
         {
-            <span>Profile drafts are kept in this tab. <a href="/Bluesky/Login?returnUrl=%2FManage" data-enhance-nav="false">Sign in again</a> to continue.</span>
+            <span>Profile drafts are kept in this tab. <a href="@SignInUrl" data-enhance-nav="false">Sign in again</a> to continue.</span>
         }
     </p>
 }
@@ -20,6 +21,8 @@
     private DotNetObjectReference<SessionHeartbeat>? _reference;
     private string? _error;
     private bool _sessionEnded;
+    private string SignInUrl => "/Bluesky/Login?returnUrl=" +
+        Uri.EscapeDataString(new Uri(Navigation.Uri).PathAndQuery);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
