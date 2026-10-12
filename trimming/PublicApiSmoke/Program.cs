@@ -1,15 +1,113 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
+using idunno.AtProto.Jetstream;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
+using idunno.Bluesky.RichText;
+
+const string whitespacePostJson = """
+    {
+      "text": " ",
+      "$type": "app.bsky.feed.post",
+      "createdAt": "2026-10-08T15:43:06.08711400Z"
+    }
+    """;
+
+JsonTypeInfo<Post> postTypeInfo = (JsonTypeInfo<Post>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(Post));
+JsonTypeInfo<BlueskyRecord> recordTypeInfo = (JsonTypeInfo<BlueskyRecord>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(BlueskyRecord));
+Post whitespacePost = JsonSerializer.Deserialize(whitespacePostJson, postTypeInfo)
+    ?? throw new InvalidOperationException("The whitespace-only post was not deserialized.");
+BlueskyRecord? whitespaceRecord = JsonSerializer.Deserialize(whitespacePostJson, recordTypeInfo);
+using (JsonDocument serializedPost = JsonDocument.Parse(JsonSerializer.Serialize(whitespacePost, postTypeInfo)))
+{
+    if (whitespacePost.Text != " " || whitespaceRecord is not Post { Text: " " } ||
+        serializedPost.RootElement.GetProperty("text").GetString() != " ")
+    {
+        throw new InvalidOperationException("The whitespace-only post text was not preserved.");
+    }
+}
+
+string whitespaceEnvelopeJson = $$"""
+    {
+      "uri": "at://did:plc:kaxwhrcwrqdxm2ppaaczwhcn/app.bsky.feed.post/3mxesfgzw4q2r",
+      "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+      "value": {{whitespacePostJson}}
+    }
+    """;
+JsonTypeInfo<AtProtoRepositoryRecord<Post>> envelopeTypeInfo =
+    (JsonTypeInfo<AtProtoRepositoryRecord<Post>>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(AtProtoRepositoryRecord<Post>));
+AtProtoRepositoryRecord<Post>? whitespaceEnvelope = JsonSerializer.Deserialize(whitespaceEnvelopeJson, envelopeTypeInfo);
+if (whitespaceEnvelope?.Value.Text != " " || new PostBuilder(" ").ToPost().Text != " ")
+{
+    throw new InvalidOperationException("The whitespace-only repository record or post builder text was not preserved.");
+}
+
+const string emptyTagPostJson = """
+    {
+      "$type":"app.bsky.feed.post",
+      "text":"# #normal",
+      "createdAt":"2026-10-08T15:43:06.08711400Z",
+      "facets":[
+        {"index":{"byteStart":0,"byteEnd":1},"features":[{"$type":"app.bsky.richtext.facet#tag","tag":""}]},
+        {"index":{"byteStart":2,"byteEnd":9},"features":[{"$type":"app.bsky.richtext.facet#tag","tag":"normal"}]}
+      ],
+      "tags":["","normal"]
+    }
+    """;
+Post emptyTagPost = JsonSerializer.Deserialize(emptyTagPostJson, postTypeInfo)
+    ?? throw new InvalidOperationException("The post with an empty tag facet was not deserialized.");
+Post? emptyTagRoundTrip = JsonSerializer.Deserialize(JsonSerializer.Serialize(emptyTagPost, postTypeInfo), postTypeInfo);
+if (emptyTagRoundTrip?.Facets is not { Count: 2 } tagFacets ||
+    tagFacets.First().Features.Single() is not TagFacetFeature { Tag: "" } ||
+    tagFacets.Last().Features.Single() is not TagFacetFeature { Tag: "normal" })
+{
+    throw new InvalidOperationException("The empty and normal tag facets were not preserved.");
+}
+if (emptyTagRoundTrip.Tags is not { Count: 2 } externalTags ||
+    externalTags.First() != "" ||
+    externalTags.Last() != "normal")
+{
+    throw new InvalidOperationException("The empty top-level post tag was not preserved.");
+}
+
+const string emptyFeaturesFacetJson = """
+    {"$type":"app.bsky.richtext.facet","index":{"byteStart":0,"byteEnd":0},"features":[]}
+    """;
+JsonTypeInfo<Facet> facetTypeInfo = (JsonTypeInfo<Facet>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(Facet));
+Facet emptyFeaturesFacet = JsonSerializer.Deserialize(emptyFeaturesFacetJson, facetTypeInfo)
+    ?? throw new InvalidOperationException("The empty-features facet was not deserialized.");
+Facet? emptyFeaturesRoundTrip = JsonSerializer.Deserialize(
+    JsonSerializer.Serialize(emptyFeaturesFacet, facetTypeInfo),
+    facetTypeInfo);
+if (emptyFeaturesRoundTrip is null || emptyFeaturesRoundTrip.Features.Count != 0)
+{
+    throw new InvalidOperationException("The empty-features facet was not preserved.");
+}
 
 Uri service = new("https://offline.invalid");
 using OfflineHttpMessageHandler handler = new();
 OfflineHttpClientFactory httpClientFactory = new(handler);
+
+JetstreamOptions replayOptions = new() { ReplayLiveBufferCapacity = 8192 };
+using (AtProtoJetstream replay = new(options: replayOptions))
+using (AtProtoJetstream factoryReplay = new(httpClientFactory, options: replayOptions))
+using (AtProtoJetstream builtReplay = AtProtoJetstream.CreateBuilder()
+    .SetReplayLiveBufferCapacity(8192)
+    .WithHttpClientFactory(httpClientFactory)
+    .Build())
+{
+    if (!replayOptions.ToString().Contains("ReplayLiveBufferCapacity = 8192", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException("The replay capacity was not retained in option diagnostics.");
+    }
+}
 
 using (AtProtoAgent agent = new(service, httpClientFactory))
 {

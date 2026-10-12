@@ -96,6 +96,8 @@ items:
         href: avoidingTheAgent.md
       - name: Custom Lexicons and Records
         href: customLexiconsAndRecords.md
+      - name: Reliable repository-record creation with fixed keys
+        href: recordKeys.md
       - name: Unspecced APIS
         href: unspecced.md
       - name: Built-in Metrics

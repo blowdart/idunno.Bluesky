@@ -10,6 +10,7 @@ namespace idunno.Bluesky.Embed;
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(EmbeddedImages), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Images)]
+[JsonDerivedType(typeof(EmbeddedExternalMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.External)]
 [JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Video)]
 [JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.RecordWithMedia)]
 [JsonDerivedType(typeof(EmbeddedGallery), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Gallery)]

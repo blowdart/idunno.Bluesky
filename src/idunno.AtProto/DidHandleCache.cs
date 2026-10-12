@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.Extensions.Caching.Memory;
@@ -90,18 +91,22 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
 
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">The cache has been disposed.</exception>
+    /// <exception cref="Exception">A metric listener failed while recording a pending lookup.</exception>
     /// <remarks>
     /// <para>If <see cref="DidHandleCacheOptions.Size"/> lookups are already pending, and <paramref name="did"/> is not one of them,
     /// <see cref="Handle.Invalid"/> is returned without being cached.</para>
     /// <para>If the cache is disposed whilst a resolution is in progress the returned task is cancelled.</para>
     /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failing metric listener must not leave a lookup registered without an owner.")]
     public ValueTask<Handle> ResolveHandleAsync(Did did, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
         cancellationToken.ThrowIfCancellationRequested();
 
+        long startTimestamp = Stopwatch.GetTimestamp();
         InFlightLookup? lookup;
         bool owner = false;
+        string outcome;
 
         lock (_lock)
         {
@@ -110,28 +115,42 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             if (TryGetLiveEntry(did, out Handle? cachedHandle))
             {
                 _metrics.Hits.Add(1);
+                _metrics.RecordLookupDuration(startTimestamp, "hit");
                 return ValueTask.FromResult(cachedHandle);
             }
 
             if (_inFlight.TryGetValue(did, out lookup))
             {
                 _metrics.CoalescedLookups.Add(1);
+                outcome = "coalesced";
             }
             else if (_pendingLookups >= _options.Size)
             {
                 // Bounded so a flood of distinct DIDs cannot grow the number of pending lookups without limit. The rejection says
                 // nothing about the DID, so it is not cached and a later lookup tries again.
                 _metrics.RejectedLookups.Add(1);
+                _metrics.RecordLookupDuration(startTimestamp, "rejected");
                 return ValueTask.FromResult(Handle.Invalid);
             }
             else
             {
                 _metrics.Misses.Add(1);
+                outcome = "miss";
 
                 // Every lookup is registered, so an invalidation can always find, and mark, a lookup in progress for its DID.
                 lookup = new InFlightLookup();
                 _inFlight.Add(did, lookup);
                 _pendingLookups++;
+                try
+                {
+                    _metrics.PendingLookups.Add(1);
+                }
+                catch (Exception)
+                {
+                    _inFlight.Remove(did);
+                    _pendingLookups--;
+                    throw;
+                }
                 owner = true;
             }
         }
@@ -141,7 +160,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             _ = RunLookupAsync(did, lookup);
         }
 
-        return new ValueTask<Handle>(lookup.Completion.Task.WaitAsync(cancellationToken));
+        return new ValueTask<Handle>(AwaitLookupAsync(lookup.Completion.Task, startTimestamp, outcome, cancellationToken));
     }
 
     /// <inheritdoc/>
@@ -219,6 +238,22 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
             // measures wall-clock time, so it is disabled rather than set to the same value.
             timeout: Timeout.InfiniteTimeSpan,
             cancellationToken: cancellationToken);
+
+    private async Task<Handle> AwaitLookupAsync(
+        Task<Handle> lookup,
+        long startTimestamp,
+        string outcome,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await lookup.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _metrics.RecordLookupDuration(startTimestamp, outcome);
+        }
+    }
 
     // Must be called whilst holding _lock, and only when the cache has not been disposed.
     // The cache is keyed by the DID's string value, because Did converts implicitly to a string and MemoryCache has string keyed
@@ -350,6 +385,7 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
     }
 
     // Must not throw, as it is called from a finally block to complete the lookup.
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A failing metric listener is surfaced through the lookup task after releasing its capacity.")]
     private void CompleteLookup(Did did, InFlightLookup lookup, Handle? handle, bool cacheable)
     {
         lock (_lock)
@@ -373,6 +409,16 @@ public sealed class DidHandleCache : IDidHandleResolver, IDisposable
                     AbsoluteExpirationRelativeToNow = duration
                 });
             }
+        }
+
+        try
+        {
+            _metrics.PendingLookups.Add(-1);
+        }
+        catch (Exception exception)
+        {
+            lookup.Completion.TrySetException(exception);
+            return;
         }
 
         if (handle is null)

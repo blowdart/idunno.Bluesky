@@ -14,13 +14,20 @@
 
 #### Samples
 
+* Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
 * Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
 * Added `Samples.BlazorAuthentication`, a statically server-rendered Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI.
 
 #### idunno.AtProto
 
+* Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
+* Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
+  buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
+  Overflow diagnostics now include the configured capacity alongside occupancy; draining and recovery remain unchanged.
 * Added `AddAtProtoFirehoseMetrics()` to register firehose instrumentation with OpenTelemetry.
+* Added HTTP request outcome tags, declared request and response `Content-Length` counters, DID handle cache lookup duration and pending lookup metrics,
+  and active connection, connection duration and message inter-arrival metrics for the firehose and Jetstream.
 * Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
 * Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
   `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.
@@ -35,6 +42,7 @@
 * Added `OAuthOptions.PermissionSets` and `GetRequestedScopes()` to combine typed permission sets with existing raw scopes for OAuth requests.
 * Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
 * Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
+  Overloads accept a `since` revision to download a CAR diff, retaining the original signatures and keeping cancellation tokens last.
 * Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
   They return a disposable `BlobContent` containing the blob stream and the server-reported, untrusted, content type and length.
 * Added streaming `AtProtoServer.GetBlocks()` and `AtProtoAgent.GetBlocks()` methods to download specific repository blocks as a CAR file.
@@ -114,10 +122,13 @@
   timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
+* Added `AtProtoServer.ListMissingBlobs()` and `AtProtoAgent.ListMissingBlobs()` to find blobs missing from the authenticated repository, and `AtProtoServer.ImportRepo()` and `AtProtoAgent.ImportRepo()` to import a repository from a CAR file.
 
 #### idunno.AtProto.OAuthCallback
 
 * Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+* Added `AddAtProtoOAuthCallbackMetrics()` and the `idunno.AtProto.OAuthCallback` meter, reporting callback outcomes, wait duration and rejected requests.
+  The package now depends on `OpenTelemetry.Extensions.Hosting`.
 
 #### idunno.AtProto.Types
 
@@ -128,6 +139,17 @@
 
 #### idunno.Bluesky
 
+* Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
+* Chat account export requests advertise the lexicon's `application/jsonl` response media type.
+* Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
+* Age-assurance configuration responses exclude null regions and rules, and complete external-embed responses exclude null verified and unverified strong references.
+* Corrected author-feed filter wire values, added the video filter, corrected the popular-feed-generator query parameter name, and corrected unread-count group-chat query parameters.
+* Added list-feed and timeline `since` options, quote sorting, suggested-feed pagination, and list-purpose filtering through compatibility overloads.
+* Added `GetEmbedExternalViewResponse()` and `EmbeddedExternalViewResponse` for complete external-embed data and associated references/records, including the `canonicalUri` query option.
+* Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
+* Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.
+* Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.
+* Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used in `EmbeddedRecordWithMedia`, where they are represented by `EmbeddedExternalMedia`, without changing the existing `EmbeddedExternal` inheritance or equality APIs.
 * Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
 * Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
 * Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
@@ -222,6 +244,10 @@
 
 ### Breaking Changes
 
+#### idunno.Bluesky
+
+* `Quote` text-only and image helpers now extract facets by default, matching text-bearing `Post` and `ReplyTo` helpers. URLs and mentions can gain facets, and mentions can trigger handle-resolution network requests. Pass `extractFacets: false` to preserve the previous quote behavior. All quote and card-only post helpers expose explicit facet control while retaining existing method signatures and positional cancellation-token calls. `PostBuilder` publishing remains prepared-facets-only.
+
 #### idunno.AtProto
 
 * `Cid.Hash` now returns an `IReadOnlyList<byte>` rather than a `byte[]`, so callers can no longer cast it to `byte[]` and change the hash.
@@ -264,6 +290,12 @@
 
 #### idunno.AtProto
 
+* Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
+* Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.
+* Concurrent Jetstream asynchronous disposal calls share one cleanup operation, and parser drains are serialized to prevent competing drains from deadlocking.
+* Replay reconnect diagnostics retain queued server errors instead of masking them with a following remote close or transport disconnect.
+* Jetstream queues collected connection transitions before allowing a competing close, preserving same-socket notification order without invoking callbacks under the connection semaphore.
+* Replay now drains pending message parsers before completing a faulted live handoff, and logs distinct overflow, close, transport, server-error and expired-cursor recovery reasons without changing the bounded buffer or checkpoint semantics.
 * Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
 * OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.
 * Missing-scope warnings no longer compare permission-set references literally against expanded grants, or opaque `ref:` grants against requested scopes.
@@ -287,7 +319,12 @@
 
 #### idunno.Bluesky
 
+* `Post` now throws `ArgumentException` with an explanatory message for empty text without an embed, rather than incorrectly reporting it as null. Null text without an embed still throws `ArgumentNullException`.
+* Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved without changing null/empty text policies or text length limits.
+* Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation, top-level post tags and `HashTag` authoring validation remain unchanged.
+* Fixed schema-valid empty post-level tags and rich-text facets with empty feature arrays being rejected during record deserialization. Null values and required-field validation remain enforced.
 * `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
+* Textless video and external-card `Quote()` helpers omit language metadata, matching textless image quotes. Text-bearing quotes retain their language metadata.
 * Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
 * `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
   `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.

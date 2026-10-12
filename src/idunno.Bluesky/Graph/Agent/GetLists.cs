@@ -19,12 +19,40 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
-    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
         AtIdentifier actor,
         int? limit = null,
         string? cursor = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
+    {
+        return GetLists(actor, limit, cursor, subscribedLabelers, purposes: null, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets a paged list of lists created by the specified actor.
+    /// </summary>
+    /// <param name="actor">The actor whose lists to enumerate.</param>
+    /// <param name="limit">The maximum number of lists in a page.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="subscribedLabelers">An optional list of labelers to include.</param>
+    /// <param name="purposes">An optional list-purpose filter, such as <c>modlist</c> or <c>curatelist</c>.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    /// <exception cref="ArgumentException">An entry in <paramref name="purposes"/> is <see langword="null"/> or whitespace.</exception>
+    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
+        AtIdentifier actor,
+        int? limit,
+        string? cursor,
+        IEnumerable<Did>? subscribedLabelers,
+        string[]? purposes,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);
 
@@ -39,6 +67,7 @@ public partial class BlueskyAgent
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
             maximumResponseSize: MaximumResponseSize,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken,
+            purposes: purposes).ConfigureAwait(false);
     }
 }

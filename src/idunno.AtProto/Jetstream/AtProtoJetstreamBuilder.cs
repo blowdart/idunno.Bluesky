@@ -141,6 +141,30 @@ public sealed class AtProtoJetstreamBuilder
     } = 8096;
 
     /// <summary>
+    /// Gets or sets the maximum number of decoded events buffered by the live portion of replay.
+    /// </summary>
+    /// <value>A positive event count. The default is 1,024.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>This includes live-cursor catch-up, not archive download blocks or WebSocket bytes.
+    /// The value is copied by <see cref="Build"/>; later builder changes do not affect an existing client.
+    /// Each replay live channel captures its capacity when created.</para>
+    /// <para>Larger buffers use more memory and do not fix sustained slow consumption.
+    /// Overflow retains the existing draining and recovery behavior.</para>
+    /// </remarks>
+    public int ReplayLiveBufferCapacity
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 1024;
+
+    /// <summary>
     /// Gets or sets the maximum total size of a message the jetstream will accept. Messages exceeding this limit are rejected.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value being set is equal to, or less than, zero.</exception>
@@ -442,6 +466,26 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures the maximum number of decoded events buffered by the live portion of replay.
+    /// </summary>
+    /// <param name="replayLiveBufferCapacity">A positive capacity in decoded events, not bytes.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="replayLiveBufferCapacity"/> is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>The capacity includes live-cursor catch-up, not archive download blocks.
+    /// It is copied by <see cref="Build"/> and captured when each replay live channel is created.
+    /// Larger buffers use more memory; overflow still drains queued events and recovers from consumed progress.</para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder SetReplayLiveBufferCapacity(int replayLiveBufferCapacity)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(replayLiveBufferCapacity);
+
+        ReplayLiveBufferCapacity = replayLiveBufferCapacity;
+
+        return this;
+    }
+
+    /// <summary>
     /// Configures the maximum total size of a message the <see cref="AtProtoJetstream"/> will accept.
     /// </summary>
     /// <param name="maximumTotalMessageSize">The maximum total size, in bytes, of a message the jetstream will accept.</param>
@@ -670,6 +714,7 @@ public sealed class AtProtoJetstreamBuilder
             UseCompression = EnableCompression,
             Dictionary = CompressionDictionary,
             BufferSize = ReadBufferSize,
+            ReplayLiveBufferCapacity = ReplayLiveBufferCapacity,
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
             CloseTimeout = CloseTimeout,

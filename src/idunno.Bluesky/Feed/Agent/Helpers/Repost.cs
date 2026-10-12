@@ -26,6 +26,22 @@ public partial class BlueskyAgent
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(StrongReference post, CancellationToken cancellationToken = default)
     {
+        return await Repost(rKey: null, post, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a repost record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the repost record.</param>
+    /// <param name="post">A <see cref="StrongReference"/> to the post to be reposted.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="post"/> does not point to a Bluesky feed post record.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(RecordKey? rKey, StrongReference post, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(post);
 
         if (post.Uri.Collection != CollectionNsid.Post)
@@ -39,7 +55,7 @@ public partial class BlueskyAgent
         }
 
         Repost repostRecord = new(post);
-        return await Repost(repostRecord, cancellationToken).ConfigureAwait(false);
+        return await Repost(repostRecord, rKey, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -57,6 +73,23 @@ public partial class BlueskyAgent
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
     {
+        return await Repost(rKey: null, uri, cid, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a repost record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the repost record.</param>
+    /// <param name="uri">An <see cref="AtUri"/> to the record to be reposted.</param>
+    /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be reposted.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, its collection, or <paramref name="cid"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(RecordKey? rKey, AtUri uri, Cid cid, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
 
@@ -68,7 +101,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await Repost(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Repost(rKey, new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -82,6 +115,22 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(PostView postView, CancellationToken cancellationToken = default)
     {
+        return await Repost(rKey: null, postView, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a repost record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the repost record.</param>
+    /// <param name="postView">A <see cref="PostView"/> of the post to be reposted.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, its Uri property, or its Uri collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="postView"/> Uri does not point to a post.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(RecordKey? rKey, PostView postView, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(postView);
 
         ArgumentNullException.ThrowIfNull(postView.Uri);
@@ -93,7 +142,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await Repost(postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Repost(rKey, postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -110,6 +159,22 @@ public partial class BlueskyAgent
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(FeedViewPost post, CancellationToken cancellationToken = default)
+    {
+        return await Repost(rKey: null, post, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a repost record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the repost record.</param>
+    /// <param name="post">A <see cref="FeedViewPost"/> of the post to be reposted.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> or its <see cref="FeedViewPost.Post"/> property is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the post or repost references do not point to their expected collections.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(RecordKey? rKey, FeedViewPost post, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
         ArgumentNullException.ThrowIfNull(post.Post);
@@ -137,7 +202,7 @@ public partial class BlueskyAgent
             repostRecord = new(post.Post.StrongReference);
         }
 
-        return await Repost(repostRecord, cancellationToken).ConfigureAwait(false);
+        return await Repost(repostRecord, rKey, cancellationToken).ConfigureAwait(false);
     }
 
     [UnconditionalSuppressMessage(
@@ -147,13 +212,14 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    private async Task<AtProtoHttpResult<CreateRecordResult>> Repost(Repost repostRecord, CancellationToken cancellationToken = default)
+    private async Task<AtProtoHttpResult<CreateRecordResult>> Repost(Repost repostRecord, RecordKey? rKey, CancellationToken cancellationToken = default)
     {
         // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
         return await CreateRecord<BlueskyTimestampedRecord>(
             record: repostRecord,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             collection: CollectionNsid.Repost,
+            rKey: rKey,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

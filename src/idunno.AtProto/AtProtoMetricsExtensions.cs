@@ -76,4 +76,5 @@ public static class AtProtoMetricsExtensions
         ArgumentNullException.ThrowIfNull(builder);
         return builder.AddMeter(DidHandleCacheMetrics.MeterName);
     }
+
 }

@@ -35,6 +35,7 @@
   </Folder>
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
+    <File Path=".github/prompts/lexicon-conformance.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />
@@ -102,6 +103,7 @@
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
     <File Path="docs/docs/rawClient.md" />
+    <File Path="docs/docs/recordKeys.md" />
     <File Path="docs/docs/reactBff.md" />
     <File Path="docs/docs/requestsAndResponses.md" />
     <File Path="docs/docs/savingAndRestoringAuthentication.md" />

@@ -24,6 +24,173 @@ public class AtProtoHttpClientMetricsTest
     // https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#test-custom-metrics
 
     [Fact]
+    public async Task DPoPRetryRecordsEachAttemptDurationBeforeTheNextAttemptCompletes()
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        TaskCompletionSource retryStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseRetry = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int requests = 0;
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            if (Interlocked.Increment(ref requests) == 1)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["DPoP-Nonce"] = "updatedNonce";
+                await context.Response.WriteAsync("""{"error":"use_dpop_nonce"}""");
+            }
+            else
+            {
+                retryStarted.SetResult();
+                await releaseRetry.Task.WaitAsync(context.RequestAborted);
+                await context.Response.WriteAsync("{}");
+            }
+        });
+        using HttpClient httpClient = testServer.CreateClient();
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        DPoPAccessCredentials credentials = new(
+            service: TestServerBuilder.DefaultUri,
+            accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), TestServerBuilder.DefaultUri.ToString()),
+            refreshToken: "refreshToken",
+            dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+            dPoPNonce: "initialNonce");
+        Task<AtProtoHttpResult<string>> request = client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: credentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        CollectedMeasurement<double> firstAttempt;
+        try
+        {
+            await retryStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            firstAttempt = Assert.Single(durationCollector.GetMeasurementSnapshot());
+            Assert.Equal("http_error", firstAttempt.Tags["outcome"]);
+        }
+        finally
+        {
+            releaseRetry.TrySetResult();
+        }
+
+        Assert.True((await request).Succeeded);
+        IReadOnlyList<CollectedMeasurement<double>> measurements = durationCollector.GetMeasurementSnapshot();
+        Assert.Equal(2, measurements.Count);
+        Assert.Equal(firstAttempt.Value, measurements[0].Value);
+        Assert.Equal("success", measurements[1].Tags["outcome"]);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task CallbackFailuresAreNotReportedAsTransportErrors(bool responseCallback, bool cancellationException)
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
+            context => context.Response.WriteAsync("{}"));
+        using HttpClient httpClient = testServer.CreateClient();
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        Exception failure = cancellationException ? new OperationCanceledException() : new HttpRequestException();
+
+        if (responseCallback)
+        {
+            client.OnResponseReceived = (_, _) => Task.FromException(failure);
+        }
+        else
+        {
+            client.OnSendingRequest = (_, _) => Task.FromException(failure);
+        }
+
+        Exception? thrown = await Record.ExceptionAsync(async () => await client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Same(failure, thrown);
+        Assert.Equal("exception", Assert.Single(durationCollector.GetMeasurementSnapshot()).Tags["outcome"]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CallerCancellationDuringCallbacksIsReportedAsCancelled(bool responseCallback)
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri,
+            context => context.Response.WriteAsync("{}"));
+        using HttpClient httpClient = testServer.CreateClient();
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        AtProtoHttpClient client = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+        TaskCompletionSource callbackStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task WaitForCancellation(CancellationToken token)
+        {
+            callbackStarted.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+        }
+
+        if (responseCallback)
+        {
+            client.OnResponseReceived = (_, token) => WaitForCancellation(token);
+        }
+        else
+        {
+            client.OnSendingRequest = (_, token) => WaitForCancellation(token);
+        }
+
+        Task<AtProtoHttpResult<string>> request = client.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: cancellation.Token);
+
+        await callbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await request);
+
+        Assert.Equal("cancelled", Assert.Single(durationCollector.GetMeasurementSnapshot()).Tags["outcome"]);
+    }
+
+    [Fact]
+    public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
+    {
+        using var meterFactory = new TestMeterFactory();
+        using var durationCollector = new MetricCollector<double>(
+            meterFactory,
+            AtProtoHttpClientMetrics.MeterName,
+            "idunno.atproto.atprotohttpclient.request.duration");
+
+        using TestServer testServer = TestServerBuilder.CreateServer(
+            TestServerBuilder.DefaultUri,
+            async context => await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted));
+        using HttpClient httpClient = testServer.CreateClient();
+        httpClient.Timeout = TimeSpan.FromMilliseconds(100);
+
+        AtProtoHttpClient atProtoHttpClient = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await atProtoHttpClient.Get(
+            service: TestServerBuilder.DefaultUri,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
+            credentials: null,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        CollectedMeasurement<double> requestDuration = Assert.Single(durationCollector.GetMeasurementSnapshot());
+        Assert.Equal("transport_error", requestDuration.Tags["outcome"]);
+    }
+
+    [Fact]
     public async Task CreateRequestIncrementsIncrementsMetrics()
     {
         IServiceProvider services = CreateServiceProvider();
@@ -35,6 +202,9 @@ public class AtProtoHttpClientMetricsTest
         var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
         var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
         var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
+        var requestContentLengthCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.content_length");
+        var responseContentLengthCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.response.content_length");
+        var requestDurationCollector = new MetricCollector<double>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.request.duration");
 
         Did expectedDid = "did:plc:test";
         Nsid expectedCollection = "blue.idunno.test";
@@ -55,7 +225,8 @@ public class AtProtoHttpClientMetricsTest
             expectedCollection: expectedCollection,
             expectedRecordKey: expectedRecordKey,
             expectedAtUri: expectedAtUri,
-            expectedCid: expectedCid);
+            expectedCid: expectedCid,
+            includeResponseContentLength: true);
 
         JsonNode record = JsonSerializer.SerializeToNode(new TestRecord { TestValue = "test" })!;
         var createRequest = new CreateRecordRequest(
@@ -125,6 +296,15 @@ public class AtProtoHttpClientMetricsTest
         Assert.Equal(
             "POST",
             xrpcRequestMeasurements[0]!.Tags["http_method"]);
+
+        CollectedMeasurement<long> requestLength = Assert.Single(requestContentLengthCollector.GetMeasurementSnapshot());
+        Assert.True(requestLength.Value > 0);
+
+        CollectedMeasurement<long> responseLength = Assert.Single(responseContentLengthCollector.GetMeasurementSnapshot());
+        Assert.True(responseLength.Value > 0);
+
+        CollectedMeasurement<double> requestDuration = Assert.Single(requestDurationCollector.GetMeasurementSnapshot());
+        Assert.Equal("success", requestDuration.Tags["outcome"]);
     }
 
     [Fact]
@@ -1463,7 +1643,8 @@ public class AtProtoHttpClientMetricsTest
         AtUri expectedAtUri,
         Cid expectedCid,
         bool triggerDPoPRetry = false,
-        bool returnBadGetResult = false)
+        bool returnBadGetResult = false,
+        bool includeResponseContentLength = false)
     {
         bool dPoPRotationSent = false;
 
@@ -1534,7 +1715,20 @@ public class AtProtoHttpClientMetricsTest
                     ValidationStatus = "valid"
                 };
 
-                await response.WriteAsJsonAsync(createRecordResponse);
+                if (includeResponseContentLength)
+                {
+                    byte[] responseBody = JsonSerializer.SerializeToUtf8Bytes(
+                        createRecordResponse,
+                        AtProtoServer.AtProtoJsonSerializerOptions);
+
+                    response.ContentLength = responseBody.Length;
+                    await response.Body.WriteAsync(responseBody, context.RequestAborted);
+                }
+                else
+                {
+                    await response.WriteAsJsonAsync(createRecordResponse);
+                }
+
                 return;
             }
             else if (request.Path == AtProtoServer.GetRecordEndpoint)

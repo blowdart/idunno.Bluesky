@@ -19,6 +19,21 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when the provided subject is not a valid list record.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> CreateReferenceListOptOut(AtUri subject, CancellationToken cancellationToken = default)
     {
+        return await CreateReferenceListOptOut(rKey: null, subject, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a reference list opt out record using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the opt out record.</param>
+    /// <param name="subject">Canonical, <see cref="Did"/>-based <see cref="AtUri"/> of the app.bsky.graph.list record from which the author requests omission.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentException">Thrown when the provided subject is not a valid list record.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> CreateReferenceListOptOut(RecordKey? rKey, AtUri subject, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(subject);
 
         if (!IsAuthenticated)
@@ -41,6 +56,7 @@ public partial class BlueskyAgent
         return await CreateBlueskyRecord(
             record,
             collection: CollectionNsid.ReferenceListOptOut,
+            rKey: rKey,
             validate: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }

@@ -15,4 +15,6 @@ public sealed class ConnectionStateChangedEventArgs(WebSocketState state) : Even
     /// Gets the new state of the underlying WebSocket.
     /// </summary>
     public WebSocketState State { get; } = state;
+
+    internal ClientWebSocket? SourceClient { get; init; }
 }

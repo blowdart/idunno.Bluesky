@@ -52,6 +52,7 @@ public record JetstreamOptions
             .Append(", Dictionary = ").Append(Dictionary)
             .Append(", TaskFactory = ").Append(TaskFactory)
             .Append(", BufferSize = ").Append(BufferSize)
+            .Append(", ReplayLiveBufferCapacity = ").Append(ReplayLiveBufferCapacity)
             .Append(", MaxMessageSize = ").Append(MaxMessageSize)
             .Append(", CloseTimeout = ").Append(CloseTimeout)
             .Append(", SendTimeout = ").Append(SendTimeout)
@@ -181,6 +182,34 @@ public record JetstreamOptions
             field = value;
         }
     } = 8096;
+
+    /// <summary>
+    /// Gets the maximum number of decoded events buffered by the live portion of replay.
+    /// </summary>
+    /// <value>A positive event count. The default is 1,024.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>This includes live-cursor catch-up, not archive download blocks, and is independent of
+    /// <see cref="BufferSize"/> and <see cref="MaxMessageSize"/>, which count bytes.</para>
+    /// <para>The capacity is captured when each replay live channel is created and cannot resize that channel.
+    /// This property is init-only; creating a copy with a different capacity does not change an existing client
+    /// or its later replay enumerations. Supply the copy to a new client to use the new capacity.</para>
+    /// <para>A larger buffer can absorb bursts or temporary consumer pauses, but cannot fix sustained consumption
+    /// slower than incoming traffic. Events have variable memory cost; this count is not a fixed memory budget.
+    /// Overflow still drains queued events and recovers from consumed progress without silently dropping events.
+    /// Buffering is not durable storage: persist effects before complete checkpoints and tolerate repeated delivery.</para>
+    /// </remarks>
+    public int ReplayLiveBufferCapacity
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 1024;
 
     /// <summary>
     /// Gets the maximum total message size, in bytes. Messages exceeding this limit will be rejected. Defaults to 1 MB.

@@ -102,12 +102,16 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 
 ## Key conventions
 
-* **Text file encoding.** Create new text files as UTF-8 without a byte-order mark (BOM), using CRLF line endings.
+* **Text file encoding and line endings.** Create new text files as UTF-8 without a byte-order mark (BOM). Use CRLF in Windows working trees, while respecting Git's line-ending normalization and `.gitattributes`.
+  The default `text=auto` stores normalized LF in Git; `core.autocrlf=true` checks those files out as CRLF on Windows. LF in a committed file or GitHub diff is therefore expected and is not a CRLF violation.
+  Do not raise review findings solely because normalized text files contain LF in Git, or add `-text` exceptions to bypass normalization. Preserve existing explicit `.gitattributes` exceptions.
+  When checking line endings locally, use `git ls-files --eol` and `git check-attr text eol` to distinguish indexed content from working-tree content.
 * **Public API tracking.** Public surface is tracked by the Roslyn `PublicApiAnalyzers` in `PublicAPI.Shipped.txt` / `PublicAPI.Unshipped.txt` per project. When you add, change, or remove a public member the build will fail until you update `PublicAPI.Unshipped.txt` accordingly.
   Public `record` types also generate `Equals`, `GetHashCode`, `ToString`, `<Clone>$`, `==` and `!=`. All of these must be listed
   in `PublicAPI.Unshipped.txt`, alongside the properties and their `init` accessors.
 * **Add new doc files to the solution.** When you create a documentation file under `docs/`, add a `<File Path="..." />` entry for it to the matching `<Folder>` in `idunno.Bluesky.slnx`, keeping entries in alphabetical order, and add it to the relevant `toc.yml`.
 * **Update the changelog.** Record user-visible additions/changes/removals under the unreleased section of `CHANGELOG.md`, grouped by package (`### idunno.AtProto`, `### idunno.Bluesky`, ...).
+* **Third-party notices.** Whenever a dependency is added, removed, upgraded, or changes license, update `THIRD-PARTY-NOTICES.txt` for the affected distributed component. Keep dependency listings version-free and preserve any copyright or license text required for third-party code bundled in the repository.
 * **Targeting & trimming.** Trimming/AOT (`IsTrimmable`, `IsAotCompatible`) is enabled for net9.0+ only (net8.0 is excluded). Keep new code trimming-safe.
 * **Strong naming / InternalsVisibleTo.** Assemblies are strong-named (`key.snk`). Internal members are exposed to matching test projects via `InternalsVisibleTo` in the csproj, so internal types are testable.
 * **Spelling.** A spell-check analyzer runs during build; add legitimate domain words to the shared `exclusion.dic` at the repo root rather than suppressing warnings inline.

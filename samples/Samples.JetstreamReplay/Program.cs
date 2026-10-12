@@ -47,6 +47,18 @@ public sealed class Program
         {
             Description = "Jetstream v2 host URI (defaults to wss://jetstream.us-west.bsky.network)."
         };
+        Option<int> replayLiveBufferCapacityOption = new("--replay-live-buffer-capacity")
+        {
+            Description = "Maximum decoded events buffered during live replay, not bytes. Larger buffers use more memory, not durable storage.",
+            DefaultValueFactory = _ => new JetstreamOptions().ReplayLiveBufferCapacity
+        };
+        replayLiveBufferCapacityOption.Validators.Add(result =>
+        {
+            if (result.GetValue(replayLiveBufferCapacityOption) <= 0)
+            {
+                result.AddError("--replay-live-buffer-capacity must be positive.");
+            }
+        });
         Option<string?> handleOption = new("--handle", "-u", "/u")
         {
             Description = "Handle to replay (defaults to the _BlueskyHandle environment variable).",
@@ -75,6 +87,7 @@ public sealed class Program
         {
             keyOption,
             hostOption,
+            replayLiveBufferCapacityOption,
             handleOption
         };
         command.SetAction((result, cancellationToken) =>
@@ -82,11 +95,12 @@ public sealed class Program
                 apiKey: result.GetValue(keyOption),
                 host: result.GetValue(hostOption),
                 handle: result.GetValue(handleOption),
+                replayLiveBufferCapacity: result.GetValue(replayLiveBufferCapacityOption),
                 cancellationToken: cancellationToken));
         return await command.Parse(args).InvokeAsync().ConfigureAwait(false);
     }
 
-    private static async Task RunAsync(string? apiKey, string? host, string? handle, CancellationToken cancellationToken)
+    private static async Task RunAsync(string? apiKey, string? host, string? handle, int replayLiveBufferCapacity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(handle);
 
@@ -101,7 +115,8 @@ public sealed class Program
 
         using AtProtoJetstream jetstream = new(uri: uri, options: new JetstreamOptions
         {
-            ApiKey = apiKey
+            ApiKey = apiKey,
+            ReplayLiveBufferCapacity = replayLiveBufferCapacity
         });
 
         SnapshotRequest request = new()

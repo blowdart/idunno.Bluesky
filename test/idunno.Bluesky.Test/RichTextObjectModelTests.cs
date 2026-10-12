@@ -10,6 +10,39 @@ namespace idunno.Bluesky.Test;
 public class RichTextObjectModelTests
 {
     [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    [InlineData("\r\n")]
+    [InlineData(" \t\r\n ")]
+    [InlineData("normal")]
+    [InlineData("\u65e5\u672c\u8a9e")]
+    public void TagFacetFeaturePreservesLexiconValidTagValues(string tag)
+    {
+        Assert.Equal(tag, new TagFacetFeature(tag).Tag);
+    }
+
+    [Fact]
+    public void TagFacetFeatureStillRejectsNull()
+    {
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => new TagFacetFeature(null!));
+        Assert.Equal("tag", exception.ParamName);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    public void HashTagAuthoringStillRejectsEmptyOrWhitespaceTags(string tag)
+    {
+        Assert.Throws<ArgumentException>(() => new HashTag(tag));
+        Assert.Throws<ArgumentException>(() => new HashTag(tag, "#display"));
+    }
+
+    [Theory]
     [InlineData(-1, 10)]
     [InlineData(0, -1)]
     [InlineData(-10, -5)]

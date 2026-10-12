@@ -275,12 +275,39 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
         AtUri list,
         int? limit = null,
         string? cursor = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
+    {
+        return GetListFeed(list, limit, cursor, subscribedLabelers, since: null, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets a feed of recent posts from a list.
+    /// </summary>
+    /// <param name="list">The list whose posts should be retrieved.</param>
+    /// <param name="limit">The maximum number of items to return.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="subscribedLabelers">An optional list of labelers to include.</param>
+    /// <param name="since">An optional cursor boundary for returning only newer feed items.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
+        AtUri list,
+        int? limit,
+        string? cursor,
+        IEnumerable<Did>? subscribedLabelers,
+        string? since,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(list);
 
@@ -288,14 +315,15 @@ public partial class BlueskyAgent
             list,
             limit,
             cursor,
-            AuthenticatedOrUnauthenticatedServiceUri,
+            service: AuthenticatedOrUnauthenticatedServiceUri,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
             maximumResponseSize: MaximumResponseSize,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken,
+            since: since).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -623,13 +651,42 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" /> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
         AtUri uri,
         Cid? cid = null,
         int? limit = null,
         string? cursor = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
+    {
+        return GetQuotes(uri, cid, limit, cursor, subscribedLabelers, sort: null, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets quotes for a post.
+    /// </summary>
+    /// <param name="uri">The post whose quotes should be retrieved.</param>
+    /// <param name="cid">An optional content identifier to filter quote results.</param>
+    /// <param name="limit">The maximum number of quotes to return.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="subscribedLabelers">An optional list of labelers to include.</param>
+    /// <param name="sort">The optional ordering of quote results; the lexicon currently defines <c>latest</c> and <c>top</c>.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    public async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
+        AtUri uri,
+        Cid? cid,
+        int? limit,
+        string? cursor,
+        IEnumerable<Did>? subscribedLabelers,
+        string? sort,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
@@ -638,7 +695,8 @@ public partial class BlueskyAgent
             cid,
             limit,
             cursor,
-            AuthenticatedOrUnauthenticatedServiceUri,
+            sort,
+            service: AuthenticatedOrUnauthenticatedServiceUri,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
@@ -691,9 +749,32 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds pagination options.")]
+    public Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
+    {
+        return GetSuggestedFeeds(limit: null, cursor: null, subscribedLabelers: subscribedLabelers, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets a list of suggested feeds for the current user.
+    /// </summary>
+    /// <param name="limit">The maximum number of suggested feeds to return.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="subscribedLabelers">An optional list of labelers to include.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    public async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
+        int? limit,
+        string? cursor,
+        IEnumerable<Did>? subscribedLabelers,
+        CancellationToken cancellationToken)
     {
         if (!IsAuthenticated)
         {
@@ -701,7 +782,9 @@ public partial class BlueskyAgent
         }
 
         return await BlueskyServer.GetSuggestedFeeds(
-            Service,
+            limit,
+            cursor,
+            service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
@@ -721,12 +804,39 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Timeline>> GetTimeline(
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public Task<AtProtoHttpResult<Timeline>> GetTimeline(
         string? algorithm = null,
         int? limit = 50,
         string? cursor = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
+    {
+        return GetTimeline(algorithm, limit, cursor, subscribedLabelers, since: null, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets a view of the requesting account's home timeline.
+    /// </summary>
+    /// <param name="algorithm">An implementation-specific timeline variant.</param>
+    /// <param name="limit">The maximum number of posts to return.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="subscribedLabelers">An optional list of labelers to include.</param>
+    /// <param name="since">An optional cursor boundary for returning only newer timeline items.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 100.</exception>
+    public async Task<AtProtoHttpResult<Timeline>> GetTimeline(
+        string? algorithm,
+        int? limit,
+        string? cursor,
+        IEnumerable<Did>? subscribedLabelers,
+        string? since,
+        CancellationToken cancellationToken)
     {
         if (!IsAuthenticated)
         {
@@ -737,7 +847,8 @@ public partial class BlueskyAgent
             algorithm,
             limit,
             cursor,
-            Service,
+            since,
+            service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,

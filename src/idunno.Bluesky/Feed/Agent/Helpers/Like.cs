@@ -26,6 +26,22 @@ public partial class BlueskyAgent
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
     {
+        return await Like(rKey: null, strongReference, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a like record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the like record.</param>
+    /// <param name="strongReference">A <see cref="StrongReference"/> to the record to be liked.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or its <see cref="StrongReference.Uri"/> collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="strongReference"/> does not point to a post.</exception>
+    /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Like(RecordKey? rKey, StrongReference strongReference, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(strongReference);
         ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
         ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
@@ -37,7 +53,7 @@ public partial class BlueskyAgent
 
         Feed.Like likeRecord = new(strongReference);
 
-        return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
+        return await Like(likeRecord, rKey, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -55,6 +71,23 @@ public partial class BlueskyAgent
     /// </remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
     {
+        return await Like(rKey: null, uri, cid, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a like record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the like record.</param>
+    /// <param name="uri">An <see cref="AtUri"/> to the record to be liked.</param>
+    /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be liked.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
+    /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Like(RecordKey? rKey, AtUri uri, Cid cid, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
 
@@ -66,7 +99,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await Like(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Like(rKey, new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -80,6 +113,22 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(PostView postView, CancellationToken cancellationToken = default)
     {
+        return await Like(rKey: null, postView, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a like record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the like record.</param>
+    /// <param name="postView">A <see cref="PostView"/> of the post to be liked.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, its Uri property, or its Uri collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="postView"/> Uri does not point to a post.</exception>
+    /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Like(RecordKey? rKey, PostView postView, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(postView);
 
         ArgumentNullException.ThrowIfNull(postView.Uri);
@@ -91,7 +140,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await Like(postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Like(rKey, postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -108,6 +157,22 @@ public partial class BlueskyAgent
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Like(FeedViewPost post, CancellationToken cancellationToken = default)
+    {
+        return await Like(rKey: null, post, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a like record in the current user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the like record.</param>
+    /// <param name="post">A <see cref="FeedViewPost"/> of the post to be liked.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> or its <see cref="FeedViewPost.Post"/> property is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the post or repost references do not point to their expected collections.</exception>
+    /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Like(RecordKey? rKey, FeedViewPost post, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
         ArgumentNullException.ThrowIfNull(post.Post);
@@ -135,7 +200,7 @@ public partial class BlueskyAgent
             likeRecord = new(post.Post.StrongReference);
         }
 
-        return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
+        return await Like(likeRecord, rKey, cancellationToken).ConfigureAwait(false);
     }
 
     [UnconditionalSuppressMessage(
@@ -145,13 +210,14 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    private async Task<AtProtoHttpResult<CreateRecordResult>> Like(Feed.Like likeRecord, CancellationToken cancellationToken = default)
+    private async Task<AtProtoHttpResult<CreateRecordResult>> Like(Feed.Like likeRecord, RecordKey? rKey, CancellationToken cancellationToken = default)
     {
         // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
         return await CreateRecord<BlueskyTimestampedRecord>(
             record: likeRecord,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             collection: CollectionNsid.Like,
+            rKey: rKey,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

@@ -83,12 +83,55 @@ public class JetstreamV2Tests
     }
 
     [Fact]
+    public void TheDefaultReplayLiveBufferCapacityIs1024()
+    {
+        Assert.Equal(1024, new JetstreamOptions().ReplayLiveBufferCapacity);
+        Assert.Equal(1024, AtProtoJetstreamBuilder.Create().ReplayLiveBufferCapacity);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public void ReplayLiveBufferCapacityRejectsNonPositiveValues(int capacity)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>("value",
+            () => new JetstreamOptions { ReplayLiveBufferCapacity = capacity });
+        Assert.Throws<ArgumentOutOfRangeException>("value",
+            () => AtProtoJetstreamBuilder.Create().ReplayLiveBufferCapacity = capacity);
+        Assert.Throws<ArgumentOutOfRangeException>("replayLiveBufferCapacity",
+            () => AtProtoJetstreamBuilder.Create().SetReplayLiveBufferCapacity(capacity));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConstructorsRetainInitOnlyReplayCapacityWhenOptionsAreCopied(bool withHttpClientFactory)
+    {
+        JetstreamOptions options = new() { ReplayLiveBufferCapacity = 8192 };
+        using AtProtoJetstream jetstream = withHttpClientFactory
+            ? new(new RecordingHttpClientFactory(), options: options)
+            : new(options: options);
+        JetstreamOptions changed = options with { ReplayLiveBufferCapacity = 1 };
+
+        Assert.Same(options, jetstream.Options);
+        Assert.Equal(8192, jetstream.Options.ReplayLiveBufferCapacity);
+        Assert.Equal(1, changed.ReplayLiveBufferCapacity);
+        Assert.Equal(new JetstreamOptions().BufferSize, options.BufferSize);
+        Assert.Equal(new JetstreamOptions().MaxMessageSize, options.MaxMessageSize);
+    }
+
+    [Fact]
     public void OptionsDiagnosticsKeepConfigurationButRedactApiKey()
     {
         JetstreamOptions options = new()
         {
-            ApiKey = "private-test-key", ProtocolVersion = JetstreamProtocolVersion.V1,
-            UseCompression = false, BufferSize = 4096, MaxMessageSize = 8192
+            ApiKey = "private-test-key",
+            ProtocolVersion = JetstreamProtocolVersion.V1,
+            UseCompression = false,
+            BufferSize = 4096,
+            MaxMessageSize = 8192,
+            ReplayLiveBufferCapacity = 123
         };
 
         string printed = options.ToString();
@@ -97,6 +140,7 @@ public class JetstreamV2Tests
         Assert.Contains("ProtocolVersion = V1", printed, StringComparison.Ordinal);
         Assert.Contains("UseCompression = False", printed, StringComparison.Ordinal);
         Assert.Contains("BufferSize = 4096", printed, StringComparison.Ordinal);
+        Assert.Contains("ReplayLiveBufferCapacity = 123", printed, StringComparison.Ordinal);
         Assert.Contains("MaxMessageSize = 8192", printed, StringComparison.Ordinal);
         Assert.Contains("CloseTimeout = ", printed, StringComparison.Ordinal);
         Assert.Contains("SendTimeout = ", printed, StringComparison.Ordinal);

@@ -12,6 +12,25 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostTests
 {
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    [InlineData(" \t\r\n ")]
+    public void TextConstructorsPreserveNonemptyWhitespace(string text)
+    {
+        EmbeddedExternal embed = new("https://example.com", "Example", "An example card");
+        DateTimeOffset createdAt = DateTimeOffset.UtcNow;
+
+        Assert.Equal(text, new Post(text).Text);
+        Assert.Equal(text, new Post(text, createdAt).Text);
+        Assert.Equal(text, new Post(text, "en").Text);
+        Assert.Equal(text, new Post(text, new[] { "en" }).Text);
+        Assert.Equal(text, new Post(text, embeddedRecord: embed).Text);
+        Assert.Equal(text, new Post(text, createdAt, embeddedRecord: embed).Text);
+    }
+
     [Fact]
     public void EmptyConstructorSetsText()
     {
@@ -182,7 +201,7 @@ public class PostTests
     [Fact]
     public void TextLangConstructorThrowsIfTextIsEmpty()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty));
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty));
 
         Assert.Equal("text", caughtException.ParamName);
     }
@@ -198,7 +217,7 @@ public class PostTests
     [Fact]
     public void TextLangsConstructorThrowsIfTextIsEmpty()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty, ["en-gb"]));
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post(string.Empty, ["en-gb"]));
 
         Assert.Equal("text", caughtException.ParamName);
     }
@@ -297,13 +316,12 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnEmptyTagIsPassed()
+    public void ConstructorAllowsAnEmptyTag()
     {
         List<string> tags = [string.Empty];
 
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
-
-        Assert.Equal("tags", caughtException.ParamName);
+        Post post = new("text", tags: tags);
+        Assert.Equal(string.Empty, Assert.Single(post.Tags!));
     }
 
     [Fact]
@@ -649,13 +667,12 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenTagsContainEmptyTag()
+    public void ConstructorAllowsEmptyTagAlongsideOtherTags()
     {
         List<string> tags = ["1", "2", "3", "4", "5", "6", "7", string.Empty];
 
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
-
-        Assert.Equal("tags", caughtException.ParamName);
+        var actual = new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags);
+        Assert.Equal(tags, actual.Tags);
     }
 
     [Fact]

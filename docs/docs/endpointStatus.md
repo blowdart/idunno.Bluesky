@@ -4,6 +4,8 @@
 
 | Group | Endpoint | Class / Method | Status |
 | ----- | -------- | -------------- | ------ |
+| **Age Assurance** | [app.bsky.ageassurance.getConfig](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/ageassurance/getConfig.json) | `BlueskyAgent.GetAgeAssuranceConfig()` | ✔ |
+| | [app.bsky.ageassurance.getState](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/ageassurance/getState.json) | `BlueskyAgent.GetAgeAssuranceStateForRegion()` | ✔ |
 | **Actor** | [app.bsky.actor.getProfile](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfile) | `BlueskyAgent.GetProfile()` | ✔ |
 | | [app.bsky.actor.getProfiles](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfiles) | `BlueskyAgent.GetProfiles()` | ✔ |
 | | [app.bsky.actor.getPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getPreferences) | `BlueskyAgent.GetPreferences()` | ✔ |
@@ -99,7 +101,9 @@
 ## Chat Endpoints
 | Group | Endpoint | Class / Method | Status |
 | ----- | -------- | -------------- | ------ |
-| **Actor** | [chat.bsky.actor.getStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/getStatus.json) | `BlueskyAgent.GetActorChatStatus()` | ✔ |
+| **Actor** | [chat.bsky.actor.deleteAccount](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/deleteAccount.json) | `BlueskyAgent.DeleteChatAccount()` | ✔ |
+| | [chat.bsky.actor.exportAccountData](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/exportAccountData.json) | `BlueskyAgent.ExportChatAccountData()` | ✔ |
+| | [chat.bsky.actor.getStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/getStatus.json) | `BlueskyAgent.GetActorChatStatus()` | ✔ |
 | **Convo** | [chat.bsky.convo.acceptConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/acceptConvo.json) | `BlueskyAgent.AcceptConversation()` | ✔ |
 | | [chat.bsky.convo.addReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
 | | [chat.bsky.convo.deleteMessageForSelf](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/deleteMessageForSelf.json) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
@@ -153,6 +157,8 @@
 | | [com.atproto.repo.deleteRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.deleteRecord) | `AtProtoAgent.DeleteRecord()` | ✔ |
 | | [com.atproto.repo.describeRepo](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.describeRepo) | `AtProtoAgent.DescribeRepo()` | ✔ |
 | | [com.atproto.repo.getRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.getRecord) | `AtProtoAgent.GetRecord()` | ✔ |
+| | [com.atproto.repo.importRepo](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/repo/importRepo.json) | `AtProtoAgent.ImportRepo()` | ✔ |
+| | [com.atproto.repo.listMissingBlobs](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/repo/listMissingBlobs.json) | `AtProtoAgent.ListMissingBlobs()` | ✔ |
 | | [com.atproto.repo.listRecords](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.listRecords) | `AtProtoAgent.ListRecords()` | ✔ |
 | | [com.atproto.repo.putRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.putRecord) | `AtProtoAgent.PutRecord()` | ✔ |
 | | [com.atproto.repo.uploadBlob](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.uploadBlob) | `AtProtoAgent.UploadBlob()` | ✔ |
