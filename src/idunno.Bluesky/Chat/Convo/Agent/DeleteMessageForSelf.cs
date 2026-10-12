@@ -15,17 +15,15 @@ public partial class BlueskyAgent
     /// <param name="messageId">The message identifier to delete from <paramref name="conversationId"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is <see langword="null"/> or whitespace,
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> or <paramref name="messageId"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
         string conversationId,
         string messageId,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(messageId);
 
         if (!IsAuthenticated)
         {

@@ -64,8 +64,9 @@ public sealed record ServerDescription
     public long? BlobUploadLimit { get; init; }
 
     /// <summary>
-    /// Gets a list of one or more domains that users can create handles with on this server.
+    /// Gets a list of domains that users can create handles with on this server, which may be empty.
     /// </summary>
+    [JsonRequired]
     public IReadOnlyList<string> AvailableUserDomains { get; init; } = [];
 
     /// <summary>

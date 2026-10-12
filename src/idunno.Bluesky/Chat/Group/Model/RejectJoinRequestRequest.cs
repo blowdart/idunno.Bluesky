@@ -11,7 +11,7 @@ internal sealed record RejectJoinRequestRequest
 {
     public RejectJoinRequestRequest(string conversationId, Did member)
     {
-        ArgumentException.ThrowIfNullOrEmpty(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(member);
 
         ConversationId = conversationId;

@@ -32,7 +32,6 @@ public sealed record Label : AtProtoObject
     /// <param name="isNegationLabel">Flag indicating whether the <see cref="Label"/> is a negation label, overwriting a previous label.</param>
     /// <param name="creationTimestamp">Timestamp when the label was created.</param>
     /// <param name="signature">Signature of dag-cbor encoded label.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="source"/>, <paramref name="uri"/> or <paramref name="value"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 UTF-8 bytes.</exception>
     public Label(
@@ -47,7 +46,7 @@ public sealed record Label : AtProtoObject
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(uri);
-        ArgumentException.ThrowIfNullOrEmpty(value);
+        ArgumentNullException.ThrowIfNull(value);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 128);
 
         Version = version;

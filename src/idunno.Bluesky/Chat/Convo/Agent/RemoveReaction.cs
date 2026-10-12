@@ -16,10 +16,8 @@ public partial class BlueskyAgent
     /// <param name="value">The reaction to add.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is <see langword="null"/>.
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="value"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<MessageView>> RemoveReaction(
@@ -28,8 +26,8 @@ public partial class BlueskyAgent
         string value,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
 

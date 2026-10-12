@@ -34,15 +34,13 @@ public class ChatGroupValidationTests
             () => agent.CreateGroup([s_member], "A group", TestContext.Current.CancellationToken));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    public async Task GetJoinGroupLinkPreviewsThrowsWhenACodeIsNullOrEmpty(string? code)
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsThrowsWhenACodeIsNull()
     {
         using BlueskyAgent agent = new();
 
         ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => agent.GetJoinGroupLinkPreviews(["valid", code!], TestContext.Current.CancellationToken));
+            () => agent.GetJoinGroupLinkPreviews(["valid", null!], TestContext.Current.CancellationToken));
 
         Assert.Equal("codes", exception.ParamName);
     }
@@ -54,6 +52,17 @@ public class ChatGroupValidationTests
 
         await Assert.ThrowsAsync<AuthenticationRequiredException>(
             () => agent.GetJoinGroupLinkPreviews(["valid"], TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task GetJoinGroupLinkPreviewsAcceptsEmptyAndWhitespaceCodes(string code)
+    {
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<AuthenticationRequiredException>(
+            () => agent.GetJoinGroupLinkPreviews([code], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -77,5 +86,14 @@ public class ChatGroupValidationTests
         Messages messages = new();
 
         Assert.Empty(messages.RelatedProfiles);
+    }
+
+    [Fact]
+    public void MessagesRejectsNullRelatedProfilesInBothCollectionOverloads()
+    {
+        IReadOnlyCollection<Chat.Actor.ProfileViewBasic> relatedProfiles = new List<Chat.Actor.ProfileViewBasic> { null! };
+
+        Assert.Throws<ArgumentException>(() => new Messages((IList<MessageViewBase>)[], relatedProfiles: relatedProfiles));
+        Assert.Throws<ArgumentException>(() => new Messages((ICollection<MessageViewBase>)[], relatedProfiles: relatedProfiles));
     }
 }

@@ -9,8 +9,8 @@ internal record AddReactionRequest
 {
     public AddReactionRequest(string conversationId, string messageId, string value)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
         ConversationId = conversationId;

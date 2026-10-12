@@ -14,6 +14,93 @@ namespace idunno.Bluesky.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class ChatRequestTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task GetConversationPreservesUnconstrainedIdentifiers(string id)
+    {
+        bool received = false;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/chat.bsky.convo.getConvo", context.Request.Path);
+            Assert.Equal(id, context.Request.Query["convoId"]);
+            received = true;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"convo":{"id":"","rev":"","members":[],"muted":false,"unreadCount":0}}""", TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = new(new TestHttpClientFactory(server)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri };
+
+        AtProtoHttpResult<Chat.ConversationView> result = await agent.GetConversation(id, TestContext.Current.CancellationToken);
+
+        Assert.True(received);
+        Assert.True(result.Succeeded);
+        Assert.Equal(string.Empty, result.Result.Id);
+        Assert.Equal(string.Empty, result.Result.Revision);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task DeleteMessagePreservesEmptyConversationAndMessageIdentifiers(string id)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/chat.bsky.convo.deleteMessageForSelf", context.Request.Path);
+            using JsonDocument request = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Equal(id, request.RootElement.GetProperty("convoId").GetString());
+            Assert.Equal(id, request.RootElement.GetProperty("messageId").GetString());
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"id":"","rev":"","sender":{"did":"did:plc:test"},"sentAt":"2026-10-12T00:00:00Z"}""", TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = new(new TestHttpClientFactory(server)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri };
+
+        AtProtoHttpResult<Chat.DeletedMessageView> result = await agent.DeleteMessageForSelf(id, id, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(string.Empty, result.Result.Id);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task ListConversationsPreservesEmptyAndWhitespaceOpenStringFilters(string value)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/chat.bsky.convo.listConvos", context.Request.Path);
+            foreach (string name in new[] { "cursor", "readState", "status", "kind", "lockStatus" })
+            {
+                Assert.True(context.Request.Query.ContainsKey(name));
+                Assert.Equal(value, context.Request.Query[name]);
+            }
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync("""{"convos":[]}""", TestContext.Current.CancellationToken);
+        });
+        using HttpClient client = server.CreateClient();
+
+        AtProtoHttpResult<Chat.Conversations> result = await BlueskyServer.ListConversations(
+            null, value, value, value, value, value, TestServerBuilder.DefaultUri, CreateCredentials(), client,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public async Task GetConversationDoesNotExposeNullMembers()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                """{"convo":{"id":"","rev":"","members":[null],"muted":false,"unreadCount":0}}""", TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = new(new TestHttpClientFactory(server)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => agent.GetConversation("", TestContext.Current.CancellationToken));
+    }
+
     private static readonly Did s_did = "did:plc:test";
 
     private static AccessCredentials CreateCredentials()

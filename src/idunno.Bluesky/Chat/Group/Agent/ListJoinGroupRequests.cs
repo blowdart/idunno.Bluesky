@@ -16,8 +16,7 @@ public partial class BlueskyAgent
     /// <param name="cursor">An optional cursor used for pagination.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is out of range.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>> ListJoinGroupRequests(
@@ -26,7 +25,7 @@ public partial class BlueskyAgent
         string? cursor = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         if (limit is not null)
         {

@@ -15,19 +15,14 @@ public partial class BlueskyAgent
     /// <param name="messageId">The message identifier in the conversation identified by <paramref name="conversationId"/> to mark as read.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is <see langword="null"/> or white space or <paramref name="messageId"/> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<ConversationView>> UpdateRead(
         string conversationId,
         string? messageId = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-
-        if (messageId is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
-        }
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         if (!IsAuthenticated)
         {

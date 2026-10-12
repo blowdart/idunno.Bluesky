@@ -34,7 +34,15 @@ Never use `gh run rerun --failed` as the first response to a failed CI test job.
 
 ## Requesting Copilot code review
 
-To request Copilot code review on a pull request, run `gh pr edit <number> --repo <owner/repo> --add-reviewer '@copilot'`, then verify with `gh pr view <number> --repo <owner/repo> --json reviewRequests`. Do not claim success unless Copilot is present in `reviewRequests`. If it is not present, report that the request could not be verified and use the PR page's reviewer UI or explain that Copilot code review may be disabled or unavailable for the repository. Do not use `gh pr review` to request Copilot: it submits a review as the authenticated user instead.
+This repository automatically runs Copilot code review. Before requesting another review, check for an existing review run on the PR's current head commit:
+
+1. Read the current head SHA with `gh pr view <number> --repo <owner/repo> --json headRefOid --jq .headRefOid`.
+2. Query `gh api repos/<owner>/<repo>/commits/<head-sha>/check-runs --paginate` and inspect checks named `copilot-pull-request-reviewer`. A `queued` or `in_progress` status means review is pending or running; do not request a duplicate.
+3. Read completed review bodies with `gh api repos/<owner>/<repo>/pulls/<number>/reviews --paginate`, as well as inline review threads as described below. A successful check alone does not establish that there are no findings.
+
+An empty `reviewRequests` or REST `requested_reviewers` list does **not** mean automatic review is unavailable or not running. Use the current-head check runs to determine execution status, and completed reviews/threads to determine findings.
+
+When a manual review request is needed, run `gh pr edit <number> --repo <owner/repo> --add-reviewer '@copilot'`, then inspect both `reviewRequests` and current-head check runs. Do not claim that the manual request succeeded without evidence of assignment or a newly queued/running review. If neither is visible, report only that the request could not be verified; do not infer that automatic review is disabled. Do not use `gh pr review` to request Copilot: it submits a review as the authenticated user instead.
 
 ## Checking Copilot review findings
 

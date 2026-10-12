@@ -8,6 +8,21 @@ Audit this repository against the published lexicons at
 https://github.com/bluesky-social/atproto/tree/main/lexicons.
 Do not modify SDK code, tests, documentation or configuration unless explicitly asked.
 
+## Normative grounding
+
+* Use the [AT Protocol Lexicon standard](https://atproto.com/specs/lexicon) as the normative
+  grounding for validation and conformance. Apply its schema and validation semantics when
+  interpreting lexicon constraints; do not infer stricter requirements from SDK conventions
+  or examples.
+* Use the published lexicon definitions as the endpoint- and type-specific source of truth,
+  interpreted according to the standard. Resolve apparent ambiguity by checking both sources
+  and record any remaining uncertainty rather than inventing a restriction.
+* A required string field must be present, but `required` does not imply non-empty.
+  Accept empty strings unless an explicit lexicon constraint, such as a positive
+  `minLength`, `minGraphemes`, `format`, `enum` or `const`, excludes them. Distinguish
+  an empty string from a missing field or `null`, including for string array elements.
+  Flag SDK guards that reject empty strings without a corresponding lexicon constraint.
+
 ## Scope and evidence
 
 * Cover AT Protocol, Bluesky and chat endpoints and all reachable request, response,

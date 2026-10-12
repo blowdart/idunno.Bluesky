@@ -9,10 +9,7 @@ namespace idunno.Bluesky.RichText;
 /// <summary>
 /// The detailed features of a <see cref="Facet"/>.
 /// </summary>
-[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
-[JsonDerivedType(typeof(MentionFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#mention")]
-[JsonDerivedType(typeof(LinkFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#link")]
-[JsonDerivedType(typeof(TagFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#tag")]
+[JsonConverter(typeof(Json.FacetFeatureConverter))]
 public record FacetFeature
 {
     /// <summary>

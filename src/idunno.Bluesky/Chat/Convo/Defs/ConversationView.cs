@@ -26,8 +26,8 @@ public sealed record ConversationView : ConversationViewBase
     /// <param name="unreadCount">A count of the number of unread messages in the conversation.</param>
     /// <param name="status">The status of the conversation. Known values are defined in <see cref="ConversationStatus"/>.</param>
     /// <param name="kind">The kind of conversation, if any.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/>, <paramref name="revision"/> or <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="members"/> contains a <see langword="null"/> entry.</exception>
     [JsonConstructor]
     public ConversationView(
         string id,
@@ -40,8 +40,8 @@ public sealed record ConversationView : ConversationViewBase
         string? status,
         ConversationKind? kind)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(revision);
 
         ArgumentNullException.ThrowIfNull(members);
 
@@ -78,6 +78,7 @@ public sealed record ConversationView : ConversationViewBase
     /// but will not contain the full list of members. Use <see cref="BlueskyAgent.GetConversationMembers(string, int?, string?, CancellationToken)"/> to list all members.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value set is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     /// <para>
     /// The value supplied is copied, so later changes to the collection assigned are not reflected here.
@@ -93,7 +94,7 @@ public sealed record ConversationView : ConversationViewBase
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            _members = new List<Actor.ProfileViewBasic>(value).AsReadOnly();
+            _members = ChatCollection.Copy(value);
         }
     }
 

@@ -70,7 +70,7 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Post text cannot be null or empty unless there are images, video or another type of embedded record..
+        ///   Looks up a localized string similar to Post text cannot be null unless there are images, video or another type of embedded record..
         /// </summary>
         internal static string EmptyPostTextValidationError {
             get {

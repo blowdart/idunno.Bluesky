@@ -149,14 +149,15 @@ public sealed partial class PostBuilder
                     string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
             }
 
-            if (_post.Text is null)
+            string? text = _post.UnnormalizedText;
+            if (text is null)
             {
                 _post.Text = value;
                 return this;
             }
 
-            int newLength = value.GetUtf8Length() + _post.Text.GetUtf8Length();
-            int newGraphemeLength = value.GetGraphemeLength() + _post.Text.GetGraphemeLength();
+            int newLength = value.GetUtf8Length() + text.GetUtf8Length();
+            int newGraphemeLength = value.GetGraphemeLength() + text.GetGraphemeLength();
 
             if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
             {

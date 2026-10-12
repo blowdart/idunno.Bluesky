@@ -17,6 +17,22 @@ namespace idunno.Bluesky.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class FeedQueryStringTests
 {
+    [Fact]
+    public async Task GetLikesSendsUriAndCidAsSeparateQueryParameters()
+    {
+        string queryString = string.Empty;
+        AtUri uri = new("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/test");
+        Cid cid = new("bafyreiaxqkvwjv5y45xq7huunf6mjvh7tf6ls44imkgjkqi3uthn57vjxu");
+        string response = $$"""{"uri":"{{uri}}","cid":"{{cid}}","likes":[]}""";
+        using TestServer testServer = CreateSearchServer("/xrpc/app.bsky.feed.getLikes", response, q => queryString = q);
+        using BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Credentials = CreateCredentials(), Service = TestServerBuilder.DefaultUri };
+
+        AtProtoHttpResult<LikesCollection> result = await agent.GetLikes(uri, cid, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Contains($"uri={Uri.EscapeDataString(uri.ToString())}&cid={cid}", queryString, StringComparison.Ordinal);
+    }
+
     private const string EmptySearchV2Response = """{"posts":[]}""";
 
     private const string EmptySearchResponse = """{"posts":[]}""";

@@ -29,7 +29,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
@@ -80,7 +80,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -127,7 +127,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
@@ -143,7 +143,7 @@ public partial class BlueskyAgent
         bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
@@ -196,7 +196,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
@@ -213,7 +213,7 @@ public partial class BlueskyAgent
         bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
@@ -264,7 +264,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -282,7 +282,7 @@ public partial class BlueskyAgent
         bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
@@ -326,7 +326,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   if <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
@@ -348,7 +348,7 @@ public partial class BlueskyAgent
     {
         EmbeddedImages? embeddedImages = null;
 
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
@@ -438,7 +438,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the post text, number of images, or gate rule counts exceed their maximums.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -458,7 +458,7 @@ public partial class BlueskyAgent
     {
         EmbeddedImages? embeddedImages = null;
 
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
@@ -800,8 +800,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The gate rule counts, tag count, or tag lengths exceed their permitted maximums.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Explicit facet control preserves existing signatures.")]
@@ -837,8 +836,7 @@ public partial class BlueskyAgent
     /// <param name="tags">Any tags to apply to the post.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException"><paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="externalCard"/> is <see langword="null"/>. A <paramref name="tags"/> entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The gate rule counts, tag count, or tag lengths exceed their permitted maximums.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Explicit facet control preserves existing signatures.")]
@@ -878,8 +876,8 @@ public partial class BlueskyAgent
     /// <param name="tags">Optional collection of tags to apply to the post.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>, empty or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> or <paramref name="externalCard"/> is <see langword="null"/>, or a <paramref name="tags"/> entry is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The text's UTF-8 byte or grapheme length, number of tags, or a tag's UTF-8 byte or grapheme length exceeds the permitted maximum.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
@@ -1243,7 +1241,7 @@ public partial class BlueskyAgent
     /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException"><paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
@@ -1260,7 +1258,7 @@ public partial class BlueskyAgent
         bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {

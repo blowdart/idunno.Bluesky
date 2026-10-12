@@ -15,9 +15,25 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     /// <summary>
+    /// Finds actors without supplying a search query.
+    /// </summary>
+    /// <param name="service">The service to query.</param>
+    /// <param name="accessCredentials">The credentials used to authenticate to the service.</param>
+    /// <param name="httpClient">An HTTP client for the request.</param>
+    /// <returns>The result of the actor search.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    public static Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> SearchActors(
+        Uri service,
+        AccessCredentials? accessCredentials,
+        HttpClient httpClient)
+    {
+        return SearchActors(null, null, null, service, accessCredentials, httpClient);
+    }
+
+    /// <summary>
     /// Find actors (profiles) matching search criteria. Does not require authentication.
     /// </summary>
-    /// <param name="q">The search query string. Syntax, phrase, Boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
+    /// <param name="q">An optional search query string. An empty string is preserved; <see langword="null"/> omits the parameter.</param>
     /// <param name="limit">The number of suggested actors to return. Defaults to 25 if <see langword="null"/>.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
@@ -29,7 +45,6 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="q"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
     [UnconditionalSuppressMessage(
@@ -40,7 +55,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> SearchActors(
-        string q,
+        string? q,
         int? limit,
         string? cursor,
         Uri service,
@@ -52,7 +67,6 @@ public static partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(q);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -64,9 +78,14 @@ public static partial class BlueskyServer
 
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
-        string requestUri = $"/xrpc/app.bsky.actor.searchActors?q={Uri.EscapeDataString(q)}&limit={limitValue}";
+        string requestUri = $"/xrpc/app.bsky.actor.searchActors?limit={limitValue}";
 
-        if (!string.IsNullOrEmpty(cursor))
+        if (q is not null)
+        {
+            requestUri += $"&q={Uri.EscapeDataString(q)}";
+        }
+
+        if (cursor is not null)
         {
             requestUri += $"&cursor={Uri.EscapeDataString(cursor)}";
         }

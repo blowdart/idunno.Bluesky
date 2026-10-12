@@ -9,7 +9,7 @@ internal sealed class WithdrawJoinRequestRequest
 {
     public WithdrawJoinRequestRequest(string conversationId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         ConversationId = conversationId;
     }

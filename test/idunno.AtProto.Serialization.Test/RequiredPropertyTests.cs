@@ -12,6 +12,15 @@ namespace idunno.AtProto.Serialization.Test;
 [ExcludeFromCodeCoverage]
 public class RequiredPropertyTests
 {
+    [Theory]
+    [InlineData("""{"did":"did:web:example.com"}""")]
+    [InlineData("""{"did":"did:web:example.com","availableUserDomains":null}""")]
+    public void ServerDescriptionRequiresANonNullDomainsArray(string json)
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Server.ServerDescription>(
+            json, AtProtoServer.AtProtoJsonSerializerOptions));
+    }
+
     [Fact]
     public void LabelWithNoSignatureDeserializesWithANullSignature()
     {

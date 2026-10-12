@@ -13,16 +13,41 @@ namespace idunno.Bluesky.Feed;
 public sealed record BlockedPost : PostViewBase
 {
     [JsonConstructor]
-    internal BlockedPost(AtUri uri)
+    internal BlockedPost(AtUri uri, bool blocked, BlockedAuthor author)
     {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(author);
         Uri = uri;
+        Blocked = blocked;
+        Author = author;
     }
 
     /// <summary>
     /// Flag indicating the view of the post is blocked.
     /// </summary>
-    [JsonIgnore]
-    public bool Blocked { get; init; } = true;
+    /// <exception cref="ArgumentException">The value is not <see langword="true"/>.</exception>
+    [JsonRequired]
+    public bool Blocked
+    {
+        get => _blocked;
+        init
+        {
+            if (!value)
+            {
+                throw new ArgumentException("A blocked post must have its blocked flag set.", nameof(value));
+            }
+
+            _blocked = value;
+        }
+    }
+
+    private readonly bool _blocked = true;
+
+    /// <summary>
+    /// Gets the blocked author of the post.
+    /// </summary>
+    [JsonRequired]
+    public BlockedAuthor Author { get; init; }
 
     /// <summary>
     /// The <see cref="AtUri"/> of the blocked post.

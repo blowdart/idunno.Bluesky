@@ -14,9 +14,9 @@ public partial class BlueskyAgent
     /// <param name="codes">The codes of the group conversations to get join link previews for.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty or contains a <see langword="null"/> or empty code.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="codes"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="codes"/> contains a <see langword="null"/> code.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="codes"/> is empty or contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
     public async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
         ICollection<string> codes,
@@ -26,9 +26,9 @@ public partial class BlueskyAgent
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
-        if (codes.Any(code => string.IsNullOrEmpty(code)))
+        if (codes.Any(code => code is null))
         {
-            throw new ArgumentException("Codes cannot contain null or empty values.", nameof(codes));
+            throw new ArgumentException("Codes cannot contain null values.", nameof(codes));
         }
 
         if (!IsAuthenticated)

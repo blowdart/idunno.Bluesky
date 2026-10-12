@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
@@ -40,6 +42,7 @@ public record ProfileAssociated
     /// Gets the number of feed gens the actor currently has.
     /// </summary>
 
+    [JsonPropertyName("feedgens")]
     public int FeedGens { get; init; }
 
     /// <summary>
