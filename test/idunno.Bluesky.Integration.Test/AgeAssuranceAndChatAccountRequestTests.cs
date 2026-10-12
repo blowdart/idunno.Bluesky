@@ -183,6 +183,7 @@ public class AgeAssuranceAndChatAccountRequestTests
         using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             Assert.Equal("DPoP", context.Request.Headers.Authorization.ToString().Split(' ')[0]);
+            Assert.Equal("application/jsonl", context.Request.Headers.Accept.ToString());
             Assert.Equal("did:web:api.bsky.chat#bsky_chat", context.Request.Headers["atproto-proxy"]);
             if (Interlocked.Increment(ref requests) == 1)
             {
@@ -327,6 +328,7 @@ public class AgeAssuranceAndChatAccountRequestTests
             async context =>
             {
                 path = context.Request.Path;
+                Assert.Equal("application/jsonl", context.Request.Headers.Accept.ToString());
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.ContentType = "application/jsonl";
                 await context.Response.WriteAsync(export, TestContext.Current.CancellationToken);

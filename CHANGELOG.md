@@ -140,6 +140,7 @@
 #### idunno.Bluesky
 
 * Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
+* Chat account export requests advertise the lexicon's `application/jsonl` response media type.
 * Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
 * Age-assurance configuration responses exclude null regions and rules, and complete external-embed responses exclude null verified and unverified strong references.
 * Corrected author-feed filter wire values, added the video filter, corrected the popular-feed-generator query parameter name, and corrected unread-count group-chat query parameters.

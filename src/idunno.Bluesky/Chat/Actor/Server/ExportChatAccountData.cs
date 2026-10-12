@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -52,6 +53,7 @@ public static partial class BlueskyServer
             credentials: accessCredentials,
             httpClient: httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
+            requestHeaders: [new NameValueHeaderValue("Accept", "application/jsonl")],
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
