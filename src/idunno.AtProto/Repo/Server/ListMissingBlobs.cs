@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+
 using System.Globalization;
 
 using idunno.AtProto.Authentication;
@@ -88,7 +89,9 @@ public static partial class AtProtoServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedReadOnlyCollection<MissingBlob>>(
-                new PagedReadOnlyCollection<MissingBlob>(response.Result.Blobs, response.Result.Cursor),
+                new PagedReadOnlyCollection<MissingBlob>(
+                    WithoutNullEntries(response.Result.Blobs, service, nameof(response.Result.Blobs), loggerFactory),
+                    response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

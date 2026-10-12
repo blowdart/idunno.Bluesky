@@ -6,6 +6,8 @@ using System.Net.Http.Headers;
 
 using idunno.AtProto.Authentication;
 
+using Microsoft.Extensions.Logging;
+
 namespace idunno.AtProto;
 
 public static partial class AtProtoServer
@@ -18,10 +20,11 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">The credentials used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">The HTTP client to use when making the request.</param>
     /// <param name="onCredentialsUpdated">A callback to invoke if the credentials are updated during the request.</param>
+    /// <param name="loggerFactory">An optional logger factory.</param>
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the request.</param>
     /// <returns>The result of the import request.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="car"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="car"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="car"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials"/> are not valid for <paramref name="service"/>.</exception>
     [UnconditionalSuppressMessage(
@@ -37,6 +40,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = null,
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
@@ -57,7 +61,7 @@ public static partial class AtProtoServer
             new NameValueHeaderValue("Content-Type", "application/vnd.ipld.car")
         ];
 
-        AtProtoHttpClient<EmptyResponse> client = new() { MaximumResponseSize = maximumResponseSize };
+        AtProtoHttpClient<EmptyResponse> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         return await client.PostBlob(
             service: service,

@@ -16,7 +16,7 @@ public partial class BlueskyAgent
     public async Task<AtProtoHttpResult<Config>> GetAgeAssuranceConfig(CancellationToken cancellationToken = default)
     {
         return await BlueskyServer.GetAgeAssuranceConfig(
-            service: Service,
+            service: ReadOnlyServiceUri,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory,
             maximumResponseSize: MaximumResponseSize,

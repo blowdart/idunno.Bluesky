@@ -9,9 +9,9 @@ public partial class BlueskyAgent
     /// Exports the authenticated user's chat account data as JSON Lines.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the request.</param>
-    /// <returns>The JSON Lines export result.</returns>
+    /// <returns>A result containing the JSON Lines stream. The stream owns the response and must be disposed.</returns>
     /// <exception cref="idunno.AtProto.AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<global::idunno.AtProto.AtProtoHttpResult<string>> ExportChatAccountData(CancellationToken cancellationToken = default)
+    public async Task<global::idunno.AtProto.AtProtoHttpResult<Stream>> ExportChatAccountData(CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {

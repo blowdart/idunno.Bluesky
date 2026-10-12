@@ -21,6 +21,7 @@
 
 #### idunno.AtProto
 
+* Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
   buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
   Overflow diagnostics now include the configured capacity alongside occupancy; draining and recovery remain unchanged.
@@ -137,6 +138,9 @@
   use `TryParse()` to validate a value fully.
 
 #### idunno.Bluesky
+
+* Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
+* Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
 
 * Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
 * Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.

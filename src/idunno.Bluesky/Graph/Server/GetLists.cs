@@ -16,7 +16,7 @@ namespace idunno.Bluesky;
 
 public static partial class BlueskyServer
 {
-    /// <inheritdoc cref="GetLists(AtIdentifier, int?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    /// <inheritdoc cref="GetLists(AtIdentifier, int?, string?, string[], Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "RS0027",

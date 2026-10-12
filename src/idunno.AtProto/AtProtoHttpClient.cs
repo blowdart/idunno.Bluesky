@@ -1939,7 +1939,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 ));
                     }
 
-                    using (HttpResponseMessage httpResponseMessage = await AwaitTransportAsync(httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken)).ConfigureAwait(false))
+                    HttpResponseMessage httpResponseMessage = await AwaitTransportAsync(httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken)).ConfigureAwait(false);
+                    bool responseOwnershipTransferred = false;
+                    try
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
@@ -2018,6 +2020,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             if (typeof(TResult) == typeof(EmptyResponse))
                             {
                                 result.Result = new EmptyResponse() as TResult;
+                            }
+                            else if (typeof(TResult) == typeof(Stream))
+                            {
+                                Stream stream = await AwaitTransportAsync(httpResponseMessage.Content.ReadAsStreamAsync(cancellationToken)).ConfigureAwait(false);
+                                result.Result = (TResult)(object)AtProtoServer.OwnResponseStream(stream, httpResponseMessage);
+                                responseOwnershipTransferred = true;
                             }
                             else
                             {
@@ -2198,6 +2206,13 @@ public class AtProtoHttpClient<TResult> where TResult : class
                         result.HttpResponseHeaders = httpResponseMessage.Headers;
 
                         return result;
+                    }
+                    finally
+                    {
+                        if (!responseOwnershipTransferred)
+                        {
+                            httpResponseMessage.Dispose();
+                        }
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

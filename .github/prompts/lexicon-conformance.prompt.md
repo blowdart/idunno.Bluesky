@@ -30,6 +30,13 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   Distinguish wire mismatches from SDK conveniences and from omitted optional capabilities.
 * Treat lexicon `knownValues` as open sets. Check unknown-value handling, custom converters
   and preservation of unknown union members rather than assuming closed enums.
+* Verify unknown-union round trips retain the original `$type` and all extra fields,
+  including nested values. `JsonExtensionData` alone is not proof: polymorphic metadata
+  handling can consume an unknown discriminator before extension data sees it.
+* Check that result mappings uphold non-nullable collection element contracts. Nullable
+  annotation enforcement does not reject null array elements. Follow existing
+  `WithoutNullEntries` mappings where appropriate, and distinguish malformed required
+  fields from optional or unknown data rather than silently defaulting them.
 * Verify source-generated metadata using the library's configured serializer options;
   reflection is disabled. Repository records need both concrete type and
   `AtProtoRepositoryRecord<TRecord>` registrations.
@@ -39,8 +46,23 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   A passing ordinary runtime test alone does not establish AOT compliance.
 * For `BlueskyRecord` derivatives, check base-type discriminator dispatch and direct
   concrete serialization of the lexicon `$type`. These are separate requirements.
-* Check that streaming binary responses are not buffered through the JSON response helper,
-  that streams own their responses, and that server-reported metadata is treated as untrusted.
+* Classify binary responses, account exports and JSON Lines responses for potentially
+  unbounded size. Such responses must stream rather than buffer through the JSON response
+  helper; increasing the buffer limit is not a streaming fix. Verify response ownership,
+  disposal on success, failure and cancellation, bounded error-body reads, and untrusted
+  server-reported metadata.
+* Verify service routing separately for authenticated and unauthenticated agents, including
+  explicitly configured public AppView URLs. Use distinct PDS and AppView addresses in
+  routing tests so an incorrect route cannot pass because both services share one address.
+  Confirm that public reads do not inadvertently send private credentials.
+* Verify configured logging and credential-update callbacks flow through agent, server
+  and HTTP client layers. Streaming paths must retain authentication, proxy headers,
+  credential updates, nonce retry behavior and error mapping, not just return a stream.
+* Compare XML exception documentation with actual argument guards and nested calls.
+  Check null, empty and out-of-range inputs and document the specific exception thrown.
+* Check every changed `<inheritdoc cref="...">` against the exact intended overload,
+  including new parameter types and order. Reject self-references and circular chains;
+  a clean compile alone does not prove inherited documentation is useful.
 
 ## Read endpoints: actual calls
 
@@ -93,6 +115,13 @@ under the unreleased section and the affected package heading. The completion su
 explicitly state whether the changelog was updated and where, or why no update was needed.
 Apply the repository's full pre-commit gate before committing.
 
+Add focused regression coverage for the relevant failure modes: null collection elements,
+unknown-union discriminator and field round trips, distinct-service routing in both
+authentication states, actual argument exceptions, and logger/callback forwarding.
+For streaming changes, verify lazy consumption, exports exceeding the normal response
+limit, response disposal, HTTP errors and cancellation. Use existing test helpers and
+avoid live writes or private-data fixtures.
+
 Preserve AOT and trimming compliance in every fix, using source-generated serialization
 and existing AOT-safe helpers. Do not disable AOT or trimming checks to make a build pass.
 
@@ -100,9 +129,37 @@ Only the following analyzer suppressions may be added without asking the user:
 
 * `RS0027`, when retaining an existing shorter overload's optional parameters for compatibility.
 * `BSKYUnspecced`, when intentionally exercising or implementing an unspecced endpoint.
+* `CA2227`, only on a JSON extension-data collection property marked with
+  `[JsonExtensionData]`, where the setter supports JSON deserialization.
+* `IL2026` (trimming) and `IL3050` (AOT), matching existing narrowly scoped endpoint
+  suppressions, only when the serializer options actually passed to the suppressed call
+  preserve every required type through source-generated metadata. Verify the response,
+  request and all reachable nested, union and closed generic types; copying an existing
+  justification or registering only the top-level DTO is insufficient.
+
+For each permitted `IL2026`/`IL3050` suppression, require regression tests that use the
+same configured serializer options as the endpoint, with reflection-based serialization
+disabled. Assert required type metadata resolves, and exercise representative serialization
+or deserialization through the actual request/response path, including known union members
+and repository envelopes where applicable. Link each suppression to the tests proving its
+justification in the completion report. Raw-string and empty-body paths must be tested as
+such rather than claiming DTO deserialization coverage. Runtime tests prove metadata
+coverage, not full Native AOT compatibility: retain the AOT/trimming analyzer gate, run
+existing relevant publish checks when available, and report any unverified publish coverage.
 
 Keep these suppressions narrowly scoped and justified. For every other diagnostic, obtain
 explicit user approval before adding or broadening a suppression, whether by attribute,
 pragma, project setting or analyzer configuration. This includes `CA1068` and AOT or trimming
-diagnostics. Prefer compliant code or overloads instead. Always report every suppression
-added, changed or removed, including the two permitted diagnostic IDs.
+diagnostics outside the narrowly defined metadata-backed exception above. Prefer compliant
+code or overloads instead. Always report every suppression
+added, changed or removed, including the permitted diagnostic IDs.
+
+Before declaring completion or committing, inventory suppression changes directly from
+the complete task diff against its starting revision or PR base, including new/untracked
+files and attributes moved onto new overloads. Cover `SuppressMessage`,
+`UnconditionalSuppressMessage`, warning pragmas and analyzer configuration changes.
+Do not infer this inventory from build output, recollection or a list of known diagnostics.
+Reconcile every added or broadened suppression with the permitted exceptions or explicit
+user approval, and reconcile the full inventory with the completion report and PR body.
+Stop for approval if any non-permitted suppression remains unapproved. Do not claim that
+no AOT/trimming suppressions were added merely because their pattern matches existing code.

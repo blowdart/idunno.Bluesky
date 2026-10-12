@@ -11,7 +11,7 @@ public partial class AtProtoAgent
     /// <param name="car">The repository CAR file contents.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the request.</param>
     /// <returns>The result of the import request.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="car"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="car"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="car"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<EmptyResponse>> ImportRepo(
@@ -32,6 +32,7 @@ public partial class AtProtoAgent
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
             maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }

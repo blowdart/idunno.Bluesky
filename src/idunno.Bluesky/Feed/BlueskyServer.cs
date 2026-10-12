@@ -733,7 +733,7 @@ public static partial class BlueskyServer
         }
     }
 
-    /// <inheritdoc cref="GetListFeed(AtUri, int?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    /// <inheritdoc cref="GetListFeed(AtUri, int?, string?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "RS0027",
@@ -1012,7 +1012,7 @@ public static partial class BlueskyServer
         }
     }
 
-    /// <inheritdoc cref="GetQuotes(AtUri, Cid?, int?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    /// <inheritdoc cref="GetQuotes(AtUri, Cid?, int?, string?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "RS0027",
@@ -1237,7 +1237,7 @@ public static partial class BlueskyServer
         }
     }
 
-    /// <inheritdoc cref="GetSuggestedFeeds(Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    /// <inheritdoc cref="GetSuggestedFeeds(int?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "RS0027",
@@ -1344,7 +1344,7 @@ public static partial class BlueskyServer
         }
     }
 
-    /// <inheritdoc cref="GetTimeline(string?, int?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    /// <inheritdoc cref="GetTimeline(string?, int?, string?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Usage",
         "RS0027",

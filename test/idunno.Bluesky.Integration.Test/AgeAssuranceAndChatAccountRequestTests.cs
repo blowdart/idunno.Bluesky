@@ -4,6 +4,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
+using Duende.IdentityModel.OidcClient.DPoP;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AgeAssurance;
@@ -26,7 +28,7 @@ public class AgeAssuranceAndChatAccountRequestTests
 
     private static BlueskyAgent CreateAgent(TestServer testServer, bool authenticated = true)
     {
-        BlueskyAgent agent = new(new TestHttpClientFactory(testServer))
+        BlueskyAgent agent = new(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { PublicAppViewUri = TestServerBuilder.DefaultUri })
         {
             Service = TestServerBuilder.DefaultUri
         };
@@ -39,8 +41,10 @@ public class AgeAssuranceAndChatAccountRequestTests
         return agent;
     }
 
-    [Fact]
-    public async Task GetAgeAssuranceConfigCallsTheLexiconEndpoint()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetAgeAssuranceConfigCallsTheLexiconEndpoint(bool authenticated)
     {
         string? path = null;
 
@@ -49,11 +53,14 @@ public class AgeAssuranceAndChatAccountRequestTests
             async context =>
             {
                 path = context.Request.Path;
+                Assert.Equal(TestServerBuilder.DefaultUri.Host, context.Request.Host.Host);
+                Assert.False(context.Request.Headers.ContainsKey("Authorization"));
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync("""{"regions":[]}""", TestContext.Current.CancellationToken);
             });
-        using BlueskyAgent agent = CreateAgent(testServer, authenticated: false);
+        using BlueskyAgent agent = CreateAgent(testServer, authenticated);
+        agent.Service = new Uri("https://pds.example.com");
 
         AtProtoHttpResult<Config> result = await agent.GetAgeAssuranceConfig(TestContext.Current.CancellationToken);
 
@@ -116,6 +123,132 @@ public class AgeAssuranceAndChatAccountRequestTests
     }
 
     [Fact]
+    public async Task ExportChatAccountDataPreservesNonceRetryAndCredentialCallbacks()
+    {
+        int requests = 0;
+        int callbacks = 0;
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("DPoP", context.Request.Headers.Authorization.ToString().Split(' ')[0]);
+            Assert.Equal("did:web:api.bsky.chat#bsky_chat", context.Request.Headers["atproto-proxy"]);
+            if (Interlocked.Increment(ref requests) == 1)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["DPoP-Nonce"] = "updatedNonce";
+                await context.Response.WriteAsync("""{"error":"use_dpop_nonce"}""", TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                context.Response.ContentType = "application/jsonl";
+                await context.Response.WriteAsync("""{"type":"account"}""", TestContext.Current.CancellationToken);
+            }
+        });
+        using HttpClient httpClient = testServer.CreateClient();
+        DPoPAccessCredentials credentials = new(
+            TestServerBuilder.DefaultUri,
+            JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString()),
+            "refreshToken",
+            JsonWebKeys.CreateRsaJson(),
+            "initialNonce");
+
+        AtProtoHttpResult<Stream> result = await BlueskyServer.ExportChatAccountData(
+            TestServerBuilder.DefaultUri, credentials, httpClient,
+            onCredentialsUpdated: (credential, _) =>
+            {
+                Assert.Equal("updatedNonce", Assert.IsType<DPoPAccessCredentials>(credential).DPoPNonce);
+                callbacks++;
+                return Task.CompletedTask;
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        await using Stream stream = result.Result;
+        using StreamReader reader = new(stream);
+        Assert.Equal("""{"type":"account"}""", await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(2, requests);
+        Assert.Equal(1, callbacks);
+    }
+
+    [Fact]
+    public async Task StreamingResponseCallbacksRemainBounded()
+    {
+        using TrackingStream content = new(2);
+        using HttpResponseMessage response = new(HttpStatusCode.OK) { Content = new StreamContent(content) };
+        using ExportHandler handler = new(response);
+        using HttpClient httpClient = new(handler);
+        bool callbackInvoked = false;
+        AtProtoHttpClient<Stream> client = new("did:web:api.bsky.chat#bsky_chat", loggerFactory: null)
+        {
+            MaximumResponseSize = 1,
+            OnResponseReceived = (_, _) =>
+            {
+                callbackInvoked = true;
+                return Task.CompletedTask;
+            }
+        };
+
+        AtProtoHttpResult<Stream> result = await client.Get(
+            TestServerBuilder.DefaultUri, "/xrpc/chat.bsky.actor.exportAccountData", CreateCredentials(), httpClient,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("ResponseTooLarge", result.AtErrorDetail?.Error);
+        Assert.False(callbackInvoked);
+        Assert.True(content.Disposed);
+    }
+
+    [Fact]
+    public async Task ExportChatAccountDataStreamsBeyondTheNormalLimitAndOwnsTheResponse()
+    {
+        using TrackingStream content = new(AtProtoHttpClient.DefaultMaximumResponseSize + 1);
+        using HttpResponseMessage response = new(HttpStatusCode.OK) { Content = new StreamContent(content) };
+        response.Content.Headers.ContentType = new("application/jsonl");
+        using ExportHandler handler = new(response);
+        using HttpClient httpClient = new(handler);
+
+        AtProtoHttpResult<Stream> result = await BlueskyServer.ExportChatAccountData(
+            TestServerBuilder.DefaultUri, CreateCredentials(), httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(0, content.Position);
+        Assert.False(content.Disposed);
+        Assert.Equal("did:web:api.bsky.chat#bsky_chat", handler.Proxy);
+        Assert.StartsWith("Bearer ", handler.Authorization);
+        await using (Stream stream = result.Result)
+        {
+            await stream.CopyToAsync(Stream.Null, TestContext.Current.CancellationToken);
+            Assert.Equal(AtProtoHttpClient.DefaultMaximumResponseSize + 1, content.Position);
+            using CancellationTokenSource cancelled = new();
+            cancelled.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await stream.ReadExactlyAsync(new byte[1], cancelled.Token));
+        }
+
+        Assert.True(content.Disposed);
+    }
+
+    [Fact]
+    public async Task ExportChatAccountDataReturnsErrorsAndDisposesTheResponse()
+    {
+        using TrackingStream content = new(System.Text.Encoding.UTF8.GetBytes("""{"error":"AccountNotFound","message":"Missing account."}"""));
+        using HttpResponseMessage response = new(HttpStatusCode.NotFound) { Content = new StreamContent(content) };
+        response.Content.Headers.ContentType = new("application/json");
+        using ExportHandler handler = new(response);
+        using HttpClient httpClient = new(handler);
+
+        AtProtoHttpResult<Stream> result = await BlueskyServer.ExportChatAccountData(
+            TestServerBuilder.DefaultUri, CreateCredentials(), httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Result);
+        Assert.Equal("AccountNotFound", result.AtErrorDetail?.Error);
+        Assert.True(content.Disposed);
+    }
+
+    [Fact]
     public async Task ExportChatAccountDataReturnsJsonLinesFromTheChatEndpoint()
     {
         const string export = """{"type":"account"}""" + "\n";
@@ -132,10 +265,41 @@ public class AgeAssuranceAndChatAccountRequestTests
             });
         using BlueskyAgent agent = CreateAgent(testServer);
 
-        AtProtoHttpResult<string> result = await agent.ExportChatAccountData(TestContext.Current.CancellationToken);
+        AtProtoHttpResult<Stream> result = await agent.ExportChatAccountData(TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal("/xrpc/chat.bsky.actor.exportAccountData", path);
-        Assert.Equal(export, result.Result);
+        await using Stream stream = result.Result;
+        using StreamReader reader = new(stream);
+        Assert.Equal(export, await reader.ReadToEndAsync(TestContext.Current.CancellationToken));
+    }
+
+    private sealed class TrackingStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public TrackingStream(int length) : this(new byte[length])
+        {
+        }
+
+        public bool Disposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
+
+    private sealed class ExportHandler(HttpResponseMessage response) : HttpMessageHandler
+    {
+        public string? Proxy { get; private set; }
+        public string? Authorization { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Assert.Equal("/xrpc/chat.bsky.actor.exportAccountData", request.RequestUri?.AbsolutePath);
+            Proxy = Assert.Single(request.Headers.GetValues("atproto-proxy"));
+            Authorization = request.Headers.Authorization?.ToString();
+            return Task.FromResult(response);
+        }
     }
 }

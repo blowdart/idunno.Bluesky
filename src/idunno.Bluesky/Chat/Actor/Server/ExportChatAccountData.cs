@@ -20,18 +20,18 @@ public static partial class BlueskyServer
     /// <param name="httpClient">The HTTP client to use when making the request.</param>
     /// <param name="onCredentialsUpdated">A callback to invoke if the credentials are updated during the request.</param>
     /// <param name="loggerFactory">A logger factory to use when creating a logger.</param>
-    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from an error response. Successful exports are streamed without this limit.</param>
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the request.</param>
-    /// <returns>The JSON Lines export result.</returns>
+    /// <returns>A result containing the JSON Lines stream. The stream owns the response and must be disposed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        Justification = "Successful exports are raw streams; error types are preserved by the supplied source-generated JsonSerializerOptions.")]
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<string>> ExportChatAccountData(
+        Justification = "Successful exports are raw streams; error types are preserved by the supplied source-generated JsonSerializerOptions.")]
+    public static async Task<AtProtoHttpResult<Stream>> ExportChatAccountData(
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -44,7 +44,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<string> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
+        BlueskyHttpClient<Stream> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         return await client.Get(
             service,
@@ -52,6 +52,7 @@ public static partial class BlueskyServer
             credentials: accessCredentials,
             httpClient: httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
