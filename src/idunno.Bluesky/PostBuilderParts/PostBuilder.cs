@@ -1149,10 +1149,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <para>
     ///   This method makes a network request through <paramref name="agent"/> to retrieve the reply references.
     ///   Prefer calling <see cref="BlueskyAgent.GetReplyReferences(StrongReference, CancellationToken)"/> explicitly
-    ///   and passing the result to <see cref="ReplyTo(ReplyReferences)"/>.
+    ///   and checking the returned <see cref="AtProtoHttpResult{T}.Succeeded"/> before passing its
+    ///   <see cref="AtProtoHttpResult{T}.Result"/> to <see cref="ReplyTo(ReplyReferences)"/>.
     /// </para>
     /// </remarks>
-    [Obsolete("This method makes a network request. Retrieve reply references with BlueskyAgent.GetReplyReferences() and pass them to ReplyTo(ReplyReferences) instead.")]
+    [Obsolete("This method makes a network request. Call BlueskyAgent.GetReplyReferences(postReference, cancellationToken), check Succeeded, and pass its Result to ReplyTo(ReplyReferences) instead.")]
     [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent, CancellationToken cancellationToken = default)
     {

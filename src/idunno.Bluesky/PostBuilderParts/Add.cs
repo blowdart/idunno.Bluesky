@@ -467,13 +467,17 @@ public sealed partial class PostBuilder
     /// <param name="strongReference">The <see cref="StrongReference"/> to embed.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>This obsolete overload retains its original behavior of replacing an existing quote. Use <see cref="PostBuilder.Quote(StrongReference)"/> for the current behavior, which rejects a second quote.</para>
+    /// </remarks>
     [Obsolete("Use postBuilder.Quote(StrongReference) instead.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(strongReference);
-        return postBuilder.Quote(strongReference);
+        postBuilder.QuotePost = strongReference;
+        return postBuilder;
     }
 
     /// <summary>
@@ -760,6 +764,11 @@ public sealed partial class PostBuilder
     /// <param name="strongReference">The <see cref="StrongReference"/> to embed.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not reference a Bluesky post.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="postBuilder"/> already has a quote.</exception>
+    /// <remarks>
+    /// <para>This operator follows <see cref="PostBuilder.Quote(StrongReference)"/> behavior and rejects adding a second quote. Unlike the obsolete static <see cref="Add(PostBuilder, StrongReference)"/> overload, it does not replace an existing quote.</para>
+    /// </remarks>
     public static PostBuilder operator +(PostBuilder postBuilder, StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);

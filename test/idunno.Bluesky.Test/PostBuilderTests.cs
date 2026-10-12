@@ -829,16 +829,41 @@ public class PostBuilderTests
     public void CannotAddedStrongReferenceWhenAPostBuilderAlreadyHasAQuote()
     {
         PostBuilder postBuilder = new("Double Quote Test");
-        postBuilder.Quote(new StrongReference(
+        StrongReference originalQuote = new(
             "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
-            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        StrongReference replacementQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs28",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+
+        postBuilder.Quote(originalQuote);
 
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
         {
-            postBuilder.Quote(new StrongReference(
-                "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
-                "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+            _ = postBuilder + replacementQuote;
         });
+
+        Assert.Equal(originalQuote, postBuilder.QuotePost);
+    }
+
+    [Fact]
+    public void ObsoleteStaticAddReplacesAnExistingQuoteForCompatibility()
+    {
+        PostBuilder postBuilder = new("Replace quote");
+        StrongReference originalQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        StrongReference replacementQuote = new(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs28",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu");
+        postBuilder.Quote(originalQuote);
+
+#pragma warning disable CS0618 // Verify the obsolete static overload retains its original behavior.
+        PostBuilder result = PostBuilder.Add(postBuilder, replacementQuote);
+#pragma warning restore CS0618
+
+        Assert.Same(postBuilder, result);
+        Assert.Equal(replacementQuote, postBuilder.QuotePost);
     }
 
     [Fact]

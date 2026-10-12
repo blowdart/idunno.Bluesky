@@ -458,7 +458,22 @@ var postResult = await agent.Post(postBuilder, cancellationToken: cancellationTo
 
 To build a reply from an existing `ReplyReferences`, pass them to `ReplyTo(ReplyReferences)`. The
 `ReplyTo(StrongReference, BlueskyAgent, CancellationToken)` builder overload performs a network request to retrieve those references
-and is obsolete; retrieve them explicitly with `BlueskyAgent.GetReplyReferences()` instead.
+and is obsolete. Retrieve them explicitly with `BlueskyAgent.GetReplyReferences()`, check that the returned
+`AtProtoHttpResult<ReplyReferences>.Succeeded` is `true`, then pass its `Result` to `ReplyTo`:
+
+```c#
+AtProtoHttpResult<ReplyReferences> replyReferencesResult =
+    await agent.GetReplyReferences(postReference, cancellationToken);
+
+if (replyReferencesResult.Succeeded)
+{
+    postBuilder.ReplyTo(replyReferencesResult.Result);
+}
+else
+{
+    // Handle the unsuccessful result, for example by inspecting AtErrorDetail.
+}
+```
 
 Standard.Site embedding is also supported, which allows you to embed a card for a page on a [standard.site](https://standard.site/) compatible
 blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https://sequoia.pub).
