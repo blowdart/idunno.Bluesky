@@ -300,4 +300,212 @@ public class FeedQueryStringTests
 
         Assert.True(result.Succeeded);
     }
+
+    [Fact]
+    public async Task GetAuthorFeedUsesTheLexiconFilterNameAndVideoValue()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getAuthorFeed",
+            """{"feed":[]}""",
+            value => queryString = value);
+        BlueskyAgent agent = new(new TestHttpClientFactory(testServer)) { Service = TestServerBuilder.DefaultUri };
+
+        await agent.GetAuthorFeed(
+            s_did,
+            filter: FeedFilter.PostsWithVideo,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("filter=posts_with_video", queryString, StringComparison.Ordinal);
+        Assert.DoesNotContain("feedFilter=", queryString, StringComparison.Ordinal);
+    }
+
+#pragma warning disable BSKYUnspecced // The unspecced endpoint is called to verify its lexicon query parameter.
+    [Fact]
+    public async Task GetPopularFeedGeneratorsUsesTheLexiconQueryName()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.unspecced.getPopularFeedGenerators",
+            """{"feeds":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetPopularFeedGenerators(
+            query: "cats",
+            limit: null,
+            cursor: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: null,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("query=cats", queryString, StringComparison.Ordinal);
+        Assert.DoesNotContain("q=", queryString, StringComparison.Ordinal);
+    }
+#pragma warning restore BSKYUnspecced
+
+    [Fact]
+    public async Task GetUnreadCountsSendsFalseForExcludeGroupChats()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/chat.bsky.convo.getUnreadCounts",
+            """{"unreadAcceptedConvos":0,"unreadRequestConvos":0}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetUnreadCounts(
+            includeGroupChats: false,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("includeGroupChats=false", queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetSuggestedFeedsSendsPaginationParameters()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getSuggestedFeeds",
+            """{"feeds":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetSuggestedFeeds(
+            limit: 10,
+            cursor: "next page",
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            onCredentialsUpdated: null,
+            loggerFactory: null,
+            subscribedLabelers: null,
+            maximumResponseSize: AtProtoHttpClient.DefaultMaximumResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("limit=10", queryString, StringComparison.Ordinal);
+        Assert.Contains("cursor=next%20page", queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetTimelineSendsSinceParameter()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getTimeline",
+            """{"feed":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetTimeline(
+            algorithm: null,
+            limit: null,
+            cursor: null,
+            since: "2024-01-01T00:00:00Z",
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            onCredentialsUpdated: null,
+            loggerFactory: null,
+            subscribedLabelers: null,
+            maximumResponseSize: AtProtoHttpClient.DefaultMaximumResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("since=2024-01-01T00%3A00%3A00Z", queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetQuotesSendsSortParameter()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getQuotes",
+            """{"uri":"at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3lcf6ry7xy22x","posts":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetQuotes(
+            uri: new AtUri("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3lcf6ry7xy22x"),
+            cid: null,
+            limit: null,
+            cursor: null,
+            sort: "top",
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: null,
+            httpClient: httpClient,
+            onCredentialsUpdated: null,
+            loggerFactory: null,
+            subscribedLabelers: null,
+            maximumResponseSize: AtProtoHttpClient.DefaultMaximumResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("sort=top", queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetListFeedSendsSinceParameter()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.feed.getListFeed",
+            """{"feed":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetListFeed(
+            list: new AtUri("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.graph.list/3lcf6ry7xy22x"),
+            limit: null,
+            cursor: null,
+            since: "2024-01-01T00:00:00Z",
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: null,
+            httpClient: httpClient,
+            onCredentialsUpdated: null,
+            loggerFactory: null,
+            subscribedLabelers: null,
+            maximumResponseSize: AtProtoHttpClient.DefaultMaximumResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("since=2024-01-01T00%3A00%3A00Z", queryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetListsSendsPurposeFilters()
+    {
+        string queryString = string.Empty;
+
+        using TestServer testServer = CreateSearchServer(
+            "/xrpc/app.bsky.graph.getLists",
+            """{"lists":[]}""",
+            value => queryString = value);
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await BlueskyServer.GetLists(
+            actor: s_did,
+            limit: null,
+            cursor: null,
+            purposes: ["curatelist", "modlist"],
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: null,
+            httpClient: httpClient,
+            onCredentialsUpdated: null,
+            loggerFactory: null,
+            subscribedLabelers: null,
+            maximumResponseSize: AtProtoHttpClient.DefaultMaximumResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Contains("purposes=curatelist", queryString, StringComparison.Ordinal);
+        Assert.Contains("purposes=modlist", queryString, StringComparison.Ordinal);
+    }
 }

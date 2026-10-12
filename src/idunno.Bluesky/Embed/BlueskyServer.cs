@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Globalization;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -64,22 +66,118 @@ public static partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(url);
         ArgumentNullException.ThrowIfNull(uris);
         ArgumentOutOfRangeException.ThrowIfLessThan(uris.Length, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Length, Maximum.EmbedExternalViewUris);
 
+        AtProtoHttpResult<EmbeddedExternalViewResponse> response = await GetEmbedExternalViewResponse(
+            url,
+            canonicalUri: null,
+            uris: uris,
+            service: service,
+            accessCredentials: accessCredentials,
+            httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated,
+            loggerFactory: loggerFactory,
+            subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: maximumResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (!response.Succeeded)
+        {
+            return new AtProtoHttpResult<EmbeddedExternalView>(
+                null,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+
+        if (response.Result.View is null)
+        {
+            return new AtProtoHttpResult<EmbeddedExternalView>(
+                null,
+                statusCode: HttpStatusCode.NoContent,
+                httpResponseHeaders: response.HttpResponseHeaders,
+                atErrorDetail: response.AtErrorDetail,
+                rateLimit: response.RateLimit);
+        }
+
+        return new AtProtoHttpResult<EmbeddedExternalView>(
+            response.Result.View,
+            response.StatusCode,
+            response.HttpResponseHeaders,
+            response.AtErrorDetail,
+            response.RateLimit);
+    }
+
+    /// <summary>
+    /// Resolves records for an enhanced external embed and returns the complete lexicon response.
+    /// </summary>
+    /// <param name="url">The canonical web URL represented by the embed.</param>
+    /// <param name="canonicalUri">The canonical AT URI of the record found on the webpage.</param>
+    /// <param name="uris">Legacy AT-URI inputs, ignored when <paramref name="canonicalUri"/> is supplied.</param>
+    /// <param name="service">The service URI to use for the request.</param>
+    /// <param name="accessCredentials">Optional credentials for authentication.</param>
+    /// <param name="httpClient">The HTTP client to use for the request.</param>
+    /// <param name="onCredentialsUpdated">An optional callback for credential updates.</param>
+    /// <param name="loggerFactory">An optional logger factory.</param>
+    /// <param name="subscribedLabelers">Optional labelers whose labels should be included.</param>
+    /// <param name="maximumResponseSize">The maximum response size in bytes.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The complete response, including preferred data, persistence references and raw records.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="uris"/> contains a <see langword="null"/> entry.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The <paramref name="uris"/> array contains more than the supported number of values.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public static async Task<AtProtoHttpResult<EmbeddedExternalViewResponse>> GetEmbedExternalViewResponse(
+        Uri url,
+        AtUri? canonicalUri,
+        AtUri[]? uris,
+        Uri service,
+        AccessCredentials? accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(url);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        string queryString = $"url={Uri.EscapeDataString(url.ToString())}&";
-        queryString += string.Join("&", uris.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
+        if (uris is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Length, Maximum.EmbedExternalViewUris);
+            if (uris.Any(uri => uri is null))
+            {
+                throw new ArgumentException("The AT-URI collection cannot contain null entries.", nameof(uris));
+            }
+        }
+
+        StringBuilder queryStringBuilder = new($"url={Uri.EscapeDataString(url.ToString())}");
+        if (canonicalUri is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&canonicalUri={Uri.EscapeDataString(canonicalUri.ToString())}");
+        }
+        else if (uris is not null)
+        {
+            foreach (AtUri uri in uris)
+            {
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&uris={Uri.EscapeDataString(uri.ToString())}");
+            }
+        }
 
         BlueskyHttpClient<GetEmbedExternalResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
-
         AtProtoHttpResult<GetEmbedExternalResponse> response = await request.Get(
             service,
-            $"{GetEmbedExternalViewEndpoint}?{queryString}",
+            $"{GetEmbedExternalViewEndpoint}?{queryStringBuilder}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -89,34 +187,25 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            if (response.Result.View is null)
-            {
-                // The service returned an empty response, which the lexicon documents as meaning nothing resolved, or the resolved records did not
-                // back the requested url. Report that as NoContent so it can be told apart from a failure.
-                return new AtProtoHttpResult<EmbeddedExternalView>(
-                    null,
-                    statusCode: HttpStatusCode.NoContent,
-                    httpResponseHeaders: response.HttpResponseHeaders,
-                    atErrorDetail: response.AtErrorDetail,
-                    rateLimit: response.RateLimit);
-            }
-
-            return new AtProtoHttpResult<EmbeddedExternalView>(
-                response.Result.View,
-                statusCode: response.StatusCode,
-                httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: response.AtErrorDetail,
-                rateLimit: response.RateLimit);
-        }
-        else
-        {
-            return new AtProtoHttpResult<EmbeddedExternalView>(
-                null,
-                statusCode: response.StatusCode,
-                httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: response.AtErrorDetail,
-                rateLimit: response.RateLimit);
+            return new AtProtoHttpResult<EmbeddedExternalViewResponse>(
+                new EmbeddedExternalViewResponse(
+                    response.Result.View,
+                    response.Result.Data,
+                    response.Result.AssociatedRefs,
+                    response.Result.AssociatedRecords,
+                    response.Result.UnverifiedAssociatedRefs,
+                    response.Result.UnverifiedAssociatedRecords),
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
         }
 
+        return new AtProtoHttpResult<EmbeddedExternalViewResponse>(
+            null,
+            response.StatusCode,
+            response.HttpResponseHeaders,
+            response.AtErrorDetail,
+            response.RateLimit);
     }
 }

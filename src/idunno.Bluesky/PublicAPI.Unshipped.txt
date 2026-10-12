@@ -1,12 +1,139 @@
 #nullable enable
+idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod
+idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod.Device = 1 -> idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod
+idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod.Unknown = 0 -> idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod
+idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.AgeAssuranceAccess.Full = 3 -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.AgeAssuranceAccess.None = 1 -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.AgeAssuranceAccess.Safe = 2 -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.AgeAssuranceAccess.Unknown = 0 -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.AgeAssurancePlatform
+idunno.Bluesky.AgeAssurance.AgeAssurancePlatform.Android = 3 -> idunno.Bluesky.AgeAssurance.AgeAssurancePlatform
+idunno.Bluesky.AgeAssurance.AgeAssurancePlatform.Ios = 2 -> idunno.Bluesky.AgeAssurance.AgeAssurancePlatform
+idunno.Bluesky.AgeAssurance.AgeAssurancePlatform.Unknown = 0 -> idunno.Bluesky.AgeAssurance.AgeAssurancePlatform
+idunno.Bluesky.AgeAssurance.AgeAssurancePlatform.Web = 1 -> idunno.Bluesky.AgeAssurance.AgeAssurancePlatform
+idunno.Bluesky.AgeAssurance.Config
+idunno.Bluesky.AgeAssurance.Config.<Clone>$() -> idunno.Bluesky.AgeAssurance.Config!
+idunno.Bluesky.AgeAssurance.Config.Config(System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegion!>! Regions) -> void
+idunno.Bluesky.AgeAssurance.Config.Deconstruct(out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegion!>! Regions) -> void
+idunno.Bluesky.AgeAssurance.Config.Equals(idunno.Bluesky.AgeAssurance.Config? other) -> bool
+idunno.Bluesky.AgeAssurance.Config.Regions.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegion!>!
+idunno.Bluesky.AgeAssurance.Config.Regions.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion
+idunno.Bluesky.AgeAssurance.ConfigRegion.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegion!
+idunno.Bluesky.AgeAssurance.ConfigRegion.AdditionalVerificationMethods.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod>?
+idunno.Bluesky.AgeAssurance.ConfigRegion.AdditionalVerificationMethods.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.ConfigRegion(string! CountryCode, int MinAccessAge, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegionRule!>! Rules, string? RegionCode, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AgeAssurancePlatform>? Platforms, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod>? AdditionalVerificationMethods) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.CountryCode.get -> string!
+idunno.Bluesky.AgeAssurance.ConfigRegion.CountryCode.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.Deconstruct(out string! CountryCode, out int MinAccessAge, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegionRule!>! Rules, out string? RegionCode, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AgeAssurancePlatform>? Platforms, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod>? AdditionalVerificationMethods) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.Equals(idunno.Bluesky.AgeAssurance.ConfigRegion? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegion.MinAccessAge.get -> int
+idunno.Bluesky.AgeAssurance.ConfigRegion.MinAccessAge.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.Platforms.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.AgeAssurancePlatform>?
+idunno.Bluesky.AgeAssurance.ConfigRegion.Platforms.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.RegionCode.get -> string?
+idunno.Bluesky.AgeAssurance.ConfigRegion.RegionCode.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegion.Rules.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.AgeAssurance.ConfigRegionRule!>!
+idunno.Bluesky.AgeAssurance.ConfigRegion.Rules.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRule
+idunno.Bluesky.AgeAssurance.ConfigRegionRule.ConfigRegionRule() -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRule.ConfigRegionRule(idunno.Bluesky.AgeAssurance.ConfigRegionRule! original) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRule.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.Bluesky.AgeAssurance.ConfigRegionRule.ExtensionData.set -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.ConfigRegionRuleDefault(idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Deconstruct(out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.ConfigRegionRuleIfAccountNewerThan(System.DateTimeOffset Date, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Date.get -> System.DateTimeOffset
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Date.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Deconstruct(out System.DateTimeOffset Date, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.ConfigRegionRuleIfAccountOlderThan(System.DateTimeOffset Date, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Date.get -> System.DateTimeOffset
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Date.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Deconstruct(out System.DateTimeOffset Date, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Age.get -> int
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Age.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.ConfigRegionRuleIfAssuredOverAge(int Age, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Deconstruct(out int Age, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Age.get -> int
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Age.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.ConfigRegionRuleIfAssuredUnderAge(int Age, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Deconstruct(out int Age, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Age.get -> int
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Age.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.ConfigRegionRuleIfDeclaredOverAge(int Age, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Deconstruct(out int Age, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge? other) -> bool
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Access.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Age.get -> int
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Age.init -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.ConfigRegionRuleIfDeclaredUnderAge(int Age, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Deconstruct(out int Age, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access) -> void
+idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge? other) -> bool
+idunno.Bluesky.AgeAssurance.State
+idunno.Bluesky.AgeAssurance.State.<Clone>$() -> idunno.Bluesky.AgeAssurance.State!
+idunno.Bluesky.AgeAssurance.State.Access.get -> idunno.Bluesky.AgeAssurance.AgeAssuranceAccess
+idunno.Bluesky.AgeAssurance.State.Access.init -> void
+idunno.Bluesky.AgeAssurance.State.Deconstruct(out idunno.Bluesky.Unspecced.AgeAssuranceStatus Status, out idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access, out System.DateTimeOffset? LastInitiatedAt) -> void
+idunno.Bluesky.AgeAssurance.State.Equals(idunno.Bluesky.AgeAssurance.State? other) -> bool
+idunno.Bluesky.AgeAssurance.State.LastInitiatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.AgeAssurance.State.LastInitiatedAt.init -> void
+idunno.Bluesky.AgeAssurance.State.State(idunno.Bluesky.Unspecced.AgeAssuranceStatus Status, idunno.Bluesky.AgeAssurance.AgeAssuranceAccess Access, System.DateTimeOffset? LastInitiatedAt) -> void
+idunno.Bluesky.AgeAssurance.State.Status.get -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
+idunno.Bluesky.AgeAssurance.State.Status.init -> void
+idunno.Bluesky.AgeAssurance.StateMetadata
+idunno.Bluesky.AgeAssurance.StateMetadata.<Clone>$() -> idunno.Bluesky.AgeAssurance.StateMetadata!
+idunno.Bluesky.AgeAssurance.StateMetadata.AccountCreatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.AgeAssurance.StateMetadata.AccountCreatedAt.init -> void
+idunno.Bluesky.AgeAssurance.StateMetadata.Deconstruct(out System.DateTimeOffset? AccountCreatedAt) -> void
+idunno.Bluesky.AgeAssurance.StateMetadata.Equals(idunno.Bluesky.AgeAssurance.StateMetadata? other) -> bool
+idunno.Bluesky.AgeAssurance.StateMetadata.StateMetadata(System.DateTimeOffset? AccountCreatedAt) -> void
+idunno.Bluesky.AgeAssurance.StateResult
+idunno.Bluesky.AgeAssurance.StateResult.<Clone>$() -> idunno.Bluesky.AgeAssurance.StateResult!
+idunno.Bluesky.AgeAssurance.StateResult.Deconstruct(out idunno.Bluesky.AgeAssurance.State! State, out idunno.Bluesky.AgeAssurance.StateMetadata! Metadata) -> void
+idunno.Bluesky.AgeAssurance.StateResult.Equals(idunno.Bluesky.AgeAssurance.StateResult? other) -> bool
+idunno.Bluesky.AgeAssurance.StateResult.Metadata.get -> idunno.Bluesky.AgeAssurance.StateMetadata!
+idunno.Bluesky.AgeAssurance.StateResult.Metadata.init -> void
+idunno.Bluesky.AgeAssurance.StateResult.State.get -> idunno.Bluesky.AgeAssurance.State!
+idunno.Bluesky.AgeAssurance.StateResult.State.init -> void
+idunno.Bluesky.AgeAssurance.StateResult.StateResult(idunno.Bluesky.AgeAssurance.State! State, idunno.Bluesky.AgeAssurance.StateMetadata! Metadata) -> void
 idunno.Bluesky.BlueskyAgent.AddToList(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! uri, idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.AddToList(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! uri, idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Block(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.BlockModList(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateList(idunno.AtProto.RecordKey? rKey, idunno.Bluesky.Graph.List! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateReferenceListOptOut(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! subject, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteChatAccount(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.ExportChatAccountData(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
 idunno.Bluesky.BlueskyAgent.Follow(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Follow(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.GetAgeAssuranceConfig(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.AgeAssurance.Config!>!>!
+idunno.Bluesky.BlueskyAgent.GetAgeAssuranceStateForRegion(string! countryCode, string? regionCode = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.AgeAssurance.StateResult!>!>!
 idunno.Bluesky.BlueskyAgent.Like(idunno.AtProto.RecordKey? rKey, idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Like(idunno.AtProto.RecordKey? rKey, idunno.AtProto.Repo.StrongReference! strongReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.Like(idunno.AtProto.RecordKey? rKey, idunno.Bluesky.Feed.FeedViewPost! post, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -66,13 +193,96 @@ idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(idunno.Bluesky.Embed.EmbeddedE
 idunno.Bluesky.Embed.EmbeddedExternalMedia.External.get -> idunno.Bluesky.Embed.External.Properties!
 idunno.Bluesky.Embed.EmbeddedExternalMedia.External.init -> void
 idunno.Bluesky.Embed.EmbeddedRecordWithMedia.EmbeddedRecordWithMedia(idunno.Bluesky.Embed.EmbeddedRecord! record, idunno.Bluesky.Embed.EmbeddedBase! media) -> void
+override idunno.Bluesky.AgeAssurance.Config.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.Config.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.Config.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegion.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegion.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegion.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRule.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRule.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRule.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge!
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.State.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.State.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.State.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.StateMetadata.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.StateMetadata.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.StateMetadata.ToString() -> string!
+override idunno.Bluesky.AgeAssurance.StateResult.Equals(object? obj) -> bool
+override idunno.Bluesky.AgeAssurance.StateResult.GetHashCode() -> int
+override idunno.Bluesky.AgeAssurance.StateResult.ToString() -> string!
 override idunno.Bluesky.BlueskyAgentBuilder.WithTimeProvider(System.TimeProvider! timeProvider) -> idunno.Bluesky.BlueskyAgentBuilder!
 const idunno.Bluesky.RecordType.Generator = "app.bsky.feed.generator" -> string!
 override idunno.Bluesky.Embed.EmbeddedExternalMedia.<Clone>$() -> idunno.Bluesky.Embed.EmbeddedExternalMedia!
 override idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(object? obj) -> bool
 override idunno.Bluesky.Embed.EmbeddedExternalMedia.GetHashCode() -> int
 override idunno.Bluesky.Embed.EmbeddedExternalMedia.ToString() -> string!
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+override sealed idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
 override sealed idunno.Bluesky.Embed.EmbeddedExternalMedia.Equals(idunno.Bluesky.Embed.EmbeddedMediaBase? other) -> bool
+static idunno.Bluesky.AgeAssurance.Config.operator !=(idunno.Bluesky.AgeAssurance.Config? left, idunno.Bluesky.AgeAssurance.Config? right) -> bool
+static idunno.Bluesky.AgeAssurance.Config.operator ==(idunno.Bluesky.AgeAssurance.Config? left, idunno.Bluesky.AgeAssurance.Config? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegion.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegion? left, idunno.Bluesky.AgeAssurance.ConfigRegion? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegion.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegion? left, idunno.Bluesky.AgeAssurance.ConfigRegion? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRule.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRule? left, idunno.Bluesky.AgeAssurance.ConfigRegionRule? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRule.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRule? left, idunno.Bluesky.AgeAssurance.ConfigRegionRule? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleDefault? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountNewerThan? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAccountOlderThan? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredOverAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfAssuredUnderAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredOverAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.operator !=(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge.operator ==(idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge? left, idunno.Bluesky.AgeAssurance.ConfigRegionRuleIfDeclaredUnderAge? right) -> bool
+static idunno.Bluesky.AgeAssurance.State.operator !=(idunno.Bluesky.AgeAssurance.State? left, idunno.Bluesky.AgeAssurance.State? right) -> bool
+static idunno.Bluesky.AgeAssurance.State.operator ==(idunno.Bluesky.AgeAssurance.State? left, idunno.Bluesky.AgeAssurance.State? right) -> bool
+static idunno.Bluesky.AgeAssurance.StateMetadata.operator !=(idunno.Bluesky.AgeAssurance.StateMetadata? left, idunno.Bluesky.AgeAssurance.StateMetadata? right) -> bool
+static idunno.Bluesky.AgeAssurance.StateMetadata.operator ==(idunno.Bluesky.AgeAssurance.StateMetadata? left, idunno.Bluesky.AgeAssurance.StateMetadata? right) -> bool
+static idunno.Bluesky.AgeAssurance.StateResult.operator !=(idunno.Bluesky.AgeAssurance.StateResult? left, idunno.Bluesky.AgeAssurance.StateResult? right) -> bool
+static idunno.Bluesky.AgeAssurance.StateResult.operator ==(idunno.Bluesky.AgeAssurance.StateResult? left, idunno.Bluesky.AgeAssurance.StateResult? right) -> bool
+static idunno.Bluesky.BlueskyServer.DeleteChatAccount(System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.Bluesky.BlueskyServer.ExportChatAccountData(System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
+static idunno.Bluesky.BlueskyServer.GetAgeAssuranceConfig(System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.AgeAssurance.Config!>!>!
+static idunno.Bluesky.BlueskyServer.GetAgeAssuranceStateForRegion(string! countryCode, string? regionCode, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.AgeAssurance.StateResult!>!>!
 static idunno.Bluesky.CollectionNsid.Generator.get -> idunno.AtProto.Nsid!
 idunno.Bluesky.Feed.Generator
 idunno.Bluesky.Feed.Generator.AcceptsInteractions.get -> bool?
@@ -93,6 +303,10 @@ idunno.Bluesky.Feed.Generator.DisplayName.get -> string!
 idunno.Bluesky.Feed.Generator.DisplayName.init -> void
 static idunno.Bluesky.Embed.EmbeddedExternalMedia.operator !=(idunno.Bluesky.Embed.EmbeddedExternalMedia? left, idunno.Bluesky.Embed.EmbeddedExternalMedia? right) -> bool
 static idunno.Bluesky.Embed.EmbeddedExternalMedia.operator ==(idunno.Bluesky.Embed.EmbeddedExternalMedia? left, idunno.Bluesky.Embed.EmbeddedExternalMedia? right) -> bool
+virtual idunno.Bluesky.AgeAssurance.ConfigRegionRule.<Clone>$() -> idunno.Bluesky.AgeAssurance.ConfigRegionRule!
+virtual idunno.Bluesky.AgeAssurance.ConfigRegionRule.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.AgeAssurance.ConfigRegionRule.Equals(idunno.Bluesky.AgeAssurance.ConfigRegionRule? other) -> bool
+virtual idunno.Bluesky.AgeAssurance.ConfigRegionRule.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Feed.Generator.Equals(idunno.Bluesky.Feed.Generator? other) -> bool
 idunno.Bluesky.Feed.Generator.Generator() -> void
 idunno.Bluesky.Feed.Generator.Generator(idunno.Bluesky.Feed.Generator! original) -> void
@@ -157,3 +371,38 @@ static idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ManageModeration
 static idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ManageNotifications.get -> idunno.AtProto.Authentication.OAuthPermissionSet!
 static idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ManageProfile.get -> idunno.AtProto.Authentication.OAuthPermissionSet!
 static idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ViewAll.get -> idunno.AtProto.Authentication.OAuthPermissionSet!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalViewResponse(System.Uri! url, idunno.AtProto.AtUri? canonicalUri = null, idunno.AtProto.AtUri![]? uris = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalViewResponse!>!>!
+idunno.Bluesky.BlueskyAgent.GetListFeed(idunno.AtProto.AtUri! list, int? limit, string? cursor, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, string? since, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetLists(idunno.AtProto.AtIdentifier! actor, int? limit, string? cursor, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, string![]? purposes, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListView!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetQuotes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, string? sort, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.QuotesCollection!>!>!
+idunno.Bluesky.BlueskyAgent.GetSuggestedFeeds(int? limit, string? cursor, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.SuggestedFeeds!>!>!
+idunno.Bluesky.BlueskyAgent.GetTimeline(string? algorithm, int? limit, string? cursor, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, string? since, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.Timeline!>!>!
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.<Clone>$() -> idunno.Bluesky.Embed.EmbeddedExternalViewResponse!
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.AssociatedRecords.get -> System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.AssociatedRecords.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.AssociatedRefs.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.AssociatedRefs.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.Data.get -> System.Text.Json.JsonElement?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.Data.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.Deconstruct(out idunno.Bluesky.Embed.EmbeddedExternalView? View, out System.Text.Json.JsonElement? Data, out System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>? AssociatedRefs, out System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? AssociatedRecords, out System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>? UnverifiedAssociatedRefs, out System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? UnverifiedAssociatedRecords) -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.EmbeddedExternalViewResponse(idunno.Bluesky.Embed.EmbeddedExternalView? View, System.Text.Json.JsonElement? Data, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>? AssociatedRefs, System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? AssociatedRecords, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>? UnverifiedAssociatedRefs, System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>? UnverifiedAssociatedRecords) -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.Equals(idunno.Bluesky.Embed.EmbeddedExternalViewResponse? other) -> bool
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.UnverifiedAssociatedRecords.get -> System.Collections.Generic.IReadOnlyList<System.Text.Json.JsonElement>?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.UnverifiedAssociatedRecords.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.UnverifiedAssociatedRefs.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.StrongReference!>?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.UnverifiedAssociatedRefs.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.View.get -> idunno.Bluesky.Embed.EmbeddedExternalView?
+idunno.Bluesky.Embed.EmbeddedExternalViewResponse.View.init -> void
+idunno.Bluesky.Feed.FeedFilter.PostsWithVideo = 4 -> idunno.Bluesky.Feed.FeedFilter
+override idunno.Bluesky.Embed.EmbeddedExternalViewResponse.Equals(object? obj) -> bool
+override idunno.Bluesky.Embed.EmbeddedExternalViewResponse.GetHashCode() -> int
+override idunno.Bluesky.Embed.EmbeddedExternalViewResponse.ToString() -> string!
+static idunno.Bluesky.BlueskyServer.GetEmbedExternalViewResponse(System.Uri! url, idunno.AtProto.AtUri? canonicalUri, idunno.AtProto.AtUri![]? uris, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalViewResponse!>!>!
+static idunno.Bluesky.BlueskyServer.GetListFeed(idunno.AtProto.AtUri! list, int? limit, string? cursor, string? since, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, int maximumResponseSize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
+static idunno.Bluesky.BlueskyServer.GetLists(idunno.AtProto.AtIdentifier! actor, int? limit, string? cursor, string![]? purposes, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, int maximumResponseSize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListView!>!>!>!
+static idunno.Bluesky.BlueskyServer.GetQuotes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, string? sort, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, int maximumResponseSize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.QuotesCollection!>!>!
+static idunno.Bluesky.BlueskyServer.GetSuggestedFeeds(int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, int maximumResponseSize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.SuggestedFeeds!>!>!
+static idunno.Bluesky.BlueskyServer.GetTimeline(string? algorithm, int? limit, string? cursor, string? since, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, int maximumResponseSize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.Timeline!>!>!
+static idunno.Bluesky.Embed.EmbeddedExternalViewResponse.operator !=(idunno.Bluesky.Embed.EmbeddedExternalViewResponse? left, idunno.Bluesky.Embed.EmbeddedExternalViewResponse? right) -> bool
+static idunno.Bluesky.Embed.EmbeddedExternalViewResponse.operator ==(idunno.Bluesky.Embed.EmbeddedExternalViewResponse? left, idunno.Bluesky.Embed.EmbeddedExternalViewResponse? right) -> bool

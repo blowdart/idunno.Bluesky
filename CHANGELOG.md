@@ -41,6 +41,7 @@
 * Added `OAuthOptions.PermissionSets` and `GetRequestedScopes()` to combine typed permission sets with existing raw scopes for OAuth requests.
 * Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
 * Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
+  Overloads accept a `since` revision to download a CAR diff, retaining the original signatures and keeping cancellation tokens last.
 * Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
   They return a disposable `BlobContent` containing the blob stream and the server-reported, untrusted, content type and length.
 * Added streaming `AtProtoServer.GetBlocks()` and `AtProtoAgent.GetBlocks()` methods to download specific repository blocks as a CAR file.
@@ -120,6 +121,7 @@
   timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
 * Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
 * Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
+* Added `AtProtoServer.ListMissingBlobs()` and `AtProtoAgent.ListMissingBlobs()` to find blobs missing from the authenticated repository, and `AtProtoServer.ImportRepo()` and `AtProtoAgent.ImportRepo()` to import a repository from a CAR file.
 
 #### idunno.AtProto.OAuthCallback
 
@@ -136,6 +138,8 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
+* Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.
 * Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.
 * Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used in `EmbeddedRecordWithMedia`, where they are represented by `EmbeddedExternalMedia`, without changing the existing `EmbeddedExternal` inheritance or equality APIs.
 * Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.

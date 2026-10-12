@@ -54,8 +54,11 @@ public class ServerTests
         Assert.True(result.Succeeded);
     }
 
-    [Fact]
-    public async Task DirectGetRepoStreamsCarResponse()
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(true, "3l2k4j5h6g7f2")]
+    public async Task DirectGetRepoStreamsCarResponse(bool useSinceOverload, string? revision)
     {
         string domainName = TestServerBuilder.CreateRandomHostName();
         Did repo = new("did:plc:abcdefghijklmnopqrstuvwx");
@@ -66,17 +69,34 @@ public class ServerTests
         {
             Assert.Equal("/xrpc/com.atproto.sync.getRepo", context.Request.Path);
             Assert.Equal(repo.Value, context.Request.Query["did"]);
+            if (revision is null)
+            {
+                Assert.False(context.Request.Query.ContainsKey("since"));
+            }
+            else
+            {
+                Assert.Equal(revision, context.Request.Query["since"]);
+            }
             receivedExpectedAcceptHeader = context.Request.Headers.Accept.Any(
                 value => value?.StartsWith("application/vnd.ipld.car", StringComparison.OrdinalIgnoreCase) == true);
             context.Response.StatusCode = StatusCodes.Status200OK;
             await context.Response.Body.WriteAsync(carContent, TestContext.Current.CancellationToken);
         });
 
-        AtProtoHttpResult<Stream> result = await AtProtoServer.GetRepo(
-            repo,
-            new Uri($"https://{domainName}"),
-            testServer.CreateClient(),
-            cancellationToken: TestContext.Current.CancellationToken);
+        AtProtoHttpResult<Stream> result = useSinceOverload
+            ? await AtProtoServer.GetRepo(
+                repo,
+                revision is null ? null : new TimestampIdentifier(revision),
+                new Uri($"https://{domainName}"),
+                testServer.CreateClient(),
+                AtProtoHttpClient.DefaultMaximumResponseSize,
+                cancellationToken: TestContext.Current.CancellationToken)
+            : await AtProtoServer.GetRepo(
+                repo,
+                new Uri($"https://{domainName}"),
+                testServer.CreateClient(),
+                AtProtoHttpClient.DefaultMaximumResponseSize,
+                TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.True(receivedExpectedAcceptHeader);
