@@ -24,7 +24,7 @@ internal static partial class Logger
     [LoggerMessage(262, LogLevel.Debug, "EndRefresh finished for {did}")]
     public static partial void EndRefreshFinished(this ILogger logger, Did did);
 
-    [LoggerMessage(264, LogLevel.Warning, "EndRefresh for {did} did not release the refresh lock as it is now held by another caller.")]
+    [LoggerMessage(264, LogLevel.Warning, "EndRefresh for {did} did not release the refresh lock as this caller does not own an unexpired lock.")]
     public static partial void EndRefreshLockNotOwned(this ILogger logger, Did did);
 
     [LoggerMessage(270, LogLevel.Debug, "StartRefresh entered for {did}")]

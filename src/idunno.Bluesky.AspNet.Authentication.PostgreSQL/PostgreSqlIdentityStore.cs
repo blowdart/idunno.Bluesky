@@ -474,7 +474,7 @@ public class PostgreSqlIdentityStore : IIdentityStore
             {
                 command.CommandText = """
                     DELETE FROM "idunno_bluesky_identities"
-                    WHERE "ExpiresAtUtc" <= clock_timestamp();
+                    WHERE "ExpiresAtUtc" <= CURRENT_TIMESTAMP;
                     """;
 
                 int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -487,7 +487,7 @@ public class PostgreSqlIdentityStore : IIdentityStore
             {
                 command.CommandText = """
                     DELETE FROM "idunno_bluesky_refresh_locks"
-                    WHERE "ExpiresAtUtc" <= clock_timestamp();
+                    WHERE "ExpiresAtUtc" <= CURRENT_TIMESTAMP;
                     """;
 
                 int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

@@ -237,7 +237,7 @@ public class PostgreSqlCorrelationStateCache : ICorrelationStateCache
             using NpgsqlCommand command = connection.CreateCommand();
             command.CommandText = """
                 DELETE FROM "idunno_bluesky_correlation_states"
-                WHERE "ExpiresAtUtc" <= clock_timestamp();
+                WHERE "ExpiresAtUtc" <= CURRENT_TIMESTAMP;
                 """;
 
             int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);

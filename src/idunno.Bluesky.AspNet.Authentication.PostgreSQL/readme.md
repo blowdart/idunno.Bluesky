@@ -21,7 +21,7 @@ builder.Services
     .AddBluesky(options =>
     {
         options.IdentityStore = new PostgreSqlIdentityStore(connectionString);
-        options.CorrelationCache = new PostgreSqlCorrelationStateCache(connectionString);
+        options.CorrelationStateCache = new PostgreSqlCorrelationStateCache(connectionString);
     });
 ```
 
