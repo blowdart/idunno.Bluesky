@@ -59,7 +59,7 @@ public sealed class SqliteDatabaseProvider(
     {
         SqliteConnectionStringBuilder builder = new(connectionString);
         if (string.IsNullOrWhiteSpace(builder.DataSource) || builder.DataSource == ":memory:" ||
-            builder.Mode == SqliteOpenMode.Memory)
+            builder.Mode == SqliteOpenMode.Memory || IsMemoryUri(builder.DataSource))
         {
             throw new ArgumentException("SQLite bot storage requires a persistent local file, not an in-memory database.", nameof(connectionString));
         }
@@ -68,6 +68,39 @@ public sealed class SqliteDatabaseProvider(
         builder.Pooling = false;
 
         return builder.ConnectionString;
+    }
+
+    /// <summary>Recognizes SQLite URI filenames that select volatile memory storage.</summary>
+    /// <param name="dataSource">The configured SQLite filename.</param>
+    /// <returns><see langword="true"/> when the URI selects memory storage; otherwise, <see langword="false"/>.</returns>
+    private static bool IsMemoryUri(string dataSource)
+    {
+        if (!dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string[] parts = dataSource[5..].Split('?', 2);
+        if (Uri.UnescapeDataString(parts[0]).Equals(":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (parts.Length == 2)
+        {
+            foreach (string parameter in parts[1].Split('&'))
+            {
+                string[] pair = parameter.Split('=', 2);
+                if (pair.Length == 2 &&
+                    Uri.UnescapeDataString(pair[0]).Equals("mode", StringComparison.OrdinalIgnoreCase) &&
+                    Uri.UnescapeDataString(pair[1]).Equals("memory", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Gets the unique identity of this provider's process owner.</summary>

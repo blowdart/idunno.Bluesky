@@ -12,6 +12,7 @@ internal sealed class ReplayClock(TimeProvider inner) : TimeProvider
 {
     private readonly object _gate = new();
     private readonly Dictionary<long, DateTimeOffset> _waits = [];
+    private DateTimeOffset _resumeDeadline;
     private long _nextId;
 
     /// <inheritdoc/>
@@ -23,18 +24,17 @@ internal sealed class ReplayClock(TimeProvider inner) : TimeProvider
     /// <inheritdoc/>
     public override TimeZoneInfo LocalTimeZone => inner.LocalTimeZone;
 
-    /// <summary>Extends the normal read deadline only while a real SDK wait is outstanding.</summary>
+    /// <summary>Extends the normal read deadline for an outstanding SDK wait and its bounded resume margin.</summary>
     /// <param name="ordinaryDeadline">The worker's deadline without a quota or recovery timer.</param>
     /// <returns>The later deadline, allowing a short resume margin after an actual timer wait.</returns>
     public DateTimeOffset Deadline(DateTimeOffset ordinaryDeadline)
     {
         lock (_gate)
         {
-            // Allow the timer's requested wait plus a short resume margin. Once it fires or is
-            // disposed, it stops extending the reader's deadline; it cannot keep a hang healthy.
             DateTimeOffset latest = _waits.Values.DefaultIfEmpty(ordinaryDeadline).Max();
+            DateTimeOffset deadline = latest > ordinaryDeadline ? latest.AddSeconds(60) : ordinaryDeadline;
 
-            return latest > ordinaryDeadline ? latest.AddSeconds(60) : ordinaryDeadline;
+            return _resumeDeadline > deadline ? _resumeDeadline : deadline;
         }
     }
 
@@ -47,7 +47,7 @@ internal sealed class ReplayClock(TimeProvider inner) : TimeProvider
         ITimer timer = inner.CreateTimer(
             _ =>
         {
-            Remove(id);
+            Fired(id);
             callback(state);
         },
             null,
@@ -83,7 +83,24 @@ internal sealed class ReplayClock(TimeProvider inner) : TimeProvider
         }
     }
 
-    /// <summary>Removes a completed or disposed timer so it no longer extends worker liveness.</summary>
+    /// <summary>Preserves a bounded resume deadline only when an outstanding timer actually fires.</summary>
+    /// <param name="id">The completed timer identity.</param>
+    private void Fired(long id)
+    {
+        lock (_gate)
+        {
+            if (_waits.Remove(id))
+            {
+                DateTimeOffset resumeDeadline = inner.GetUtcNow().AddSeconds(60);
+                if (resumeDeadline > _resumeDeadline)
+                {
+                    _resumeDeadline = resumeDeadline;
+                }
+            }
+        }
+    }
+
+    /// <summary>Removes a disposed or cancelled timer without granting a resume margin.</summary>
     /// <param name="id">The timer identity to remove.</param>
     private void Remove(long id)
     {

@@ -24,6 +24,40 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Verifies that the reusable SDK can register policies, workers, and AOT-safe probes without remote writes.</summary>
 public sealed class BotHostingTests
 {
+    /// <summary>Retains configured instances of one handler type for multiple persisted payload versions.</summary>
+    [Fact]
+    public void BuilderPreservesConfiguredHandlerVersions()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        CustomHandler first = new("application-action", 1);
+        CustomHandler second = new("application-action", 2);
+        services.AddBlueskyBot<NoReplyPolicy>(TestRecords.Options(), "handler-versions-test/1.0")
+            .WithInMemoryStorage()
+            .AddActionHandler(first)
+            .AddActionHandler(second);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        ActionHandlerRegistry registry = provider.GetRequiredService<ActionHandlerRegistry>();
+        BotAction action = TestRecords.Work() with { ActionKind = first.Kind };
+        Assert.Same(first, registry.Get(action));
+        Assert.Same(second, registry.Get(action with { PayloadVersion = 2 }));
+        Assert.Equal(7, provider.GetServices<IBotActionHandler>().Count());
+    }
+
+    /// <summary>Reports kind/version collisions instead of silently dropping a configured instance.</summary>
+    [Fact]
+    public void BuilderRejectsConfiguredHandlerCollisions()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddBlueskyBot<NoReplyPolicy>(TestRecords.Options(), "handler-collision-test/1.0")
+            .WithInMemoryStorage()
+            .AddActionHandler(new CustomHandler("application-action", 1))
+            .AddActionHandler(new CustomHandler("application-action", 1));
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Assert.Throws<InvalidOperationException>(() => provider.GetRequiredService<ActionHandlerRegistry>());
+    }
+
     /// <summary>Resolves an application handler from DI using its exact persisted payload version.</summary>
     [Fact]
     public void RegistrationResolvesCustomHandlerVersion()

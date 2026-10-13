@@ -41,7 +41,7 @@ public sealed class BlueskyBotBuilder
     public BlueskyBotBuilder AddActionHandler(IBotActionHandler handler)
     {
         ArgumentNullException.ThrowIfNull(handler);
-        Services.TryAddEnumerable(ServiceDescriptor.Singleton(handler));
+        Services.AddSingleton(handler);
         return this;
     }
 }

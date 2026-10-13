@@ -7,7 +7,7 @@ A hosted durable event-to-action runtime for [Bluesky](https://bsky.social/) bot
 ## Key Features
 
 * Sequential Jetstream v2 live streaming with automatic archive snapshot replay fallback.
-* Transactional outbox pattern committing stream checkpoints and action intents atomically.
+* Transactional outbox pattern committing action intents and processed-through event progress atomically. The complete replay checkpoint is saved separately by the replay callback.
 * Durable actions for replies, likes, reposts, bookmarks, list memberships, and custom application handlers.
 * Stable action identities and safe reconciliation of uncertain remote writes.
 * Distributed database lease fencing and conservative rate-limit accounting.
