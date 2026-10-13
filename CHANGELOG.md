@@ -184,6 +184,10 @@
 * Added `SqliteCorrelationStateCache.CreateWithTimeProvider()` and `SqliteIdentityStore.CreateWithTimeProvider()`, which create stores that
   use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
 
+#### idunno.Bluesky.AspNet.Authentication.PostgreSQL
+
+* Added PostgreSQL implementations of the identity store and correlation state cache, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache`, with schema definitions in `schema.sql` and development container setup in `Start-PostgreSqlContainer.ps1`.
+
 #### Samples
 
 * Updated `Samples.AspNetAuthentication` to request `BlueskyOAuthPermissionSets.FullApp` at login, keeping its standard authentication UI and direct profile-save flow. Added an ASP.NET progressive authorization guide covering permission planning, same-session consent and safe completion of pending operations.

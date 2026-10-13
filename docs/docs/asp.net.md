@@ -414,8 +414,8 @@ By default two ephemeral, in memory, stores are used, so you can develop your ap
 suitable for production use as they store a limited number of identities and are not persistent, so when your application restarts any authenticated users will
 be logged out.
 
-Persistent store implementations are provided for SQLite, MySQL and Redis, in the `idunno.Bluesky.AspNet.Authentication.SQLite`,
-`idunno.Bluesky.AspNet.Authentication.MySQL` and `idunno.Bluesky.AspNet.Authentication.Redis` packages. If none of those suit your deployment you can implement
+Persistent store implementations are provided for SQLite, MySQL, PostgreSQL and Redis, in the `idunno.Bluesky.AspNet.Authentication.SQLite`,
+`idunno.Bluesky.AspNet.Authentication.MySQL`, `idunno.Bluesky.AspNet.Authentication.PostgreSQL` and `idunno.Bluesky.AspNet.Authentication.Redis` packages. If none of those suit your deployment you can implement
 your own using the `IIdentityStore` and `ICorrelationStateCache` interfaces.
 
 > [!IMPORTANT]
@@ -429,7 +429,7 @@ your own using the `IIdentityStore` and `ICorrelationStateCache` interfaces.
 > ./New-AuthenticationDatabase.ps1 -OutputDirectory ./App_Data
 > ```
 >
-> The `idunno.Bluesky.AspNet.Authentication.MySQL` package includes `schema.sql`, which you apply to an existing database with the MySQL client of your choice.
+> The `idunno.Bluesky.AspNet.Authentication.MySQL` and `idunno.Bluesky.AspNet.Authentication.PostgreSQL` packages include `schema.sql`, which you apply to an existing database with the database client of your choice.
 >
 > Both files are added to your project as content when you install the package. Redis needs no schema.
 
@@ -450,8 +450,9 @@ builder.Services
     });
 ```
 
-MySQL and Redis are configured the same way, using `MySqlIdentityStore` and `MySqlCorrelationStateCache` from the
-`idunno.Bluesky.AspNet.Authentication.MySQL` namespace, or `RedisIdentityStore` and `RedisCorrelationStateCache` from the
+MySQL, PostgreSQL and Redis are configured the same way, using `MySqlIdentityStore` and `MySqlCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.MySQL` namespace, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.PostgreSQL` namespace, or `RedisIdentityStore` and `RedisCorrelationStateCache` from the
 `idunno.Bluesky.AspNet.Authentication.Redis` namespace.
 
 #### Expiry and housekeeping
@@ -464,7 +465,7 @@ expired rows so the tables do not grow without limit. Each store constructor tak
 | `entryTimeToLive` | Identity stores | 7 days | How long a stored identity lives before it is treated as expired. |
 | `refreshLockLength` | Identity stores | 90 seconds | How long a token refresh lock is held before another instance may take it over. |
 | `entryTimeToLive` | Correlation state caches | 15 minutes | How long a login in flight may take before its state is discarded. |
-| `expiredEntrySweepInterval` | SQLite and MySQL stores | 5 minutes | How often expired rows are deleted. |
+| `expiredEntrySweepInterval` | SQLite, MySQL and PostgreSQL stores | 5 minutes | How often expired rows are deleted. |
 
 For example,
 
@@ -481,7 +482,7 @@ becomes your responsibility. The Redis stores have no sweep setting, as Redis ex
 
 > [!NOTE]
 > The `IdentityStoreEntryTimeToLive` and `RefreshLockLength` properties on `BlueskyAuthenticationOptions` apply to the default in memory store and to
-> `DistributedCacheIdentityStore`. The SQLite, MySQL and Redis stores take their lifetimes from their own constructors, so if you supply one of those these
+> `DistributedCacheIdentityStore`. The SQLite, MySQL, PostgreSQL and Redis stores take their lifetimes from their own constructors, so if you supply one of those these
 > properties are ignored and you should set the lifetimes on the constructor instead.
 >
 > `IdentityStoreEntryTimeToLive` defaults to the authentication cookie's `ExpireTimeSpan`. If you shorten a lifetime so that stored credentials expire before
@@ -570,7 +571,7 @@ reach, and configure data protection with a shared key store, otherwise a login 
 
 > [!TIP]
 > If your application already has an `IDistributedCache` you can use it for either store, with `DistributedCacheIdentityStore` and
-> `DistributedCacheCorrelationStateCache`, rather than adding SQLite, MySQL or Redis specifically for authentication.
+> `DistributedCacheCorrelationStateCache`, rather than adding SQLite, MySQL, PostgreSQL or Redis specifically for authentication.
 
 > [!TIP]
 > Bluesky special cases the `http://localhost` ClientId, to allow for local development of client applications, including
