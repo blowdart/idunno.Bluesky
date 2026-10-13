@@ -203,7 +203,7 @@ public class PostgreSqlIdentityStore : IIdentityStore
             VALUES (@did, @lockToken, clock_timestamp() + (@refreshLockMicroseconds * INTERVAL '1 microsecond'))
             ON CONFLICT ("Did") DO UPDATE SET
                 "LockToken" = EXCLUDED."LockToken",
-                "ExpiresAtUtc" = EXCLUDED."ExpiresAtUtc"
+                "ExpiresAtUtc" = clock_timestamp() + (@refreshLockMicroseconds * INTERVAL '1 microsecond')
             WHERE "idunno_bluesky_refresh_locks"."ExpiresAtUtc" <= clock_timestamp()
             RETURNING "LockToken";
             """;
