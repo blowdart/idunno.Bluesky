@@ -49,6 +49,7 @@ To rotate the key, move the previous key's path to `OAuthOptions.AdditionalClien
 
 * [idunno.Bluesky.AspNet.Authentication.UI](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.UI) which provides a UI for the Bluesky authentication flow.
 * [idunno.Bluesky.AspNet.Authentication.MySQL](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.MySQL) which provides a MySQL database implementation for storing Bluesky authentication tokens with this package.
+* [idunno.Bluesky.AspNet.Authentication.PostgreSQL](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.PostgreSQL) which provides a PostgreSQL database implementation for storing Bluesky authentication tokens with this package.
 * [idunno.Bluesky.AspNet.Authentication.SQLite](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.SQLite) which provides a SQLite database implementation for storing Bluesky authentication tokens with this package.
 * [idunno.Bluesky.AspNet.Authentication.Redis](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.Redis) which provides a Redis cache implementation for storing Bluesky authentication tokens with this package.
 * [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).

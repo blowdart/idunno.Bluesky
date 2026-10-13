@@ -27,6 +27,7 @@ Microsoft.Extensions.Http                       MIT
 Microsoft.Extensions.Logging                    MIT
 Microsoft.IdentityModel.JsonWebTokens           MIT
 MySqlConnector                                  MIT
+Npgsql                                          PostgreSQL
 OpenTelemetry.Extensions.Hosting                Apache-2.0
 SimpleBase                                      Apache-2.0
 StackExchange.Redis                             MIT
