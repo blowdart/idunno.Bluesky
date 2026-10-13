@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk\idunno.Bluesky.BotSdk.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.MySQL\idunno.Bluesky.BotSdk.MySQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.PostgreSQL\idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.SQLite\idunno.Bluesky.BotSdk.SQLite.csproj" />
+  </ItemGroup>
+
+</Project>
