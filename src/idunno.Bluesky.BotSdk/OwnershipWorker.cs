@@ -174,7 +174,7 @@ internal sealed class OwnershipWorker(
         }
         catch (Exception exception)
         {
-            health.Fail("ownership", exception.Message);
+            health.Fail("ownership");
             BotLog.Failed(logger, "ownership", exception.Message, exception);
             throw;
         }

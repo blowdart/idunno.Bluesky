@@ -294,6 +294,44 @@ public sealed class BotHostingTests
         Assert.Equal(2, endpoints.Length);
     }
 
+    /// <summary>Exposes only a generic worker failure through the unauthenticated liveness response.</summary>
+    [Fact]
+    public async Task HealthEndpointDoesNotExposeWorkerExceptionDetails()
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(BotHostingTests).Assembly.FullName,
+            Args = []
+        });
+        builder.Services.AddBlueskyBot<NoReplyPolicy>(TestRecords.Options(), "probe-test/1.0")
+            .WithInMemoryStorage();
+        await using WebApplication app = builder.Build();
+        app.MapBlueskyBotHealthEndpoints();
+        app.Services.GetRequiredService<WorkerHealth>().Fail("reader");
+
+        RouteEndpoint endpoint = Assert.Single(((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(source => source.Endpoints).OfType<RouteEndpoint>(),
+            item => item.RoutePattern.RawText == "/health/live");
+        DefaultHttpContext context = new() { RequestServices = app.Services };
+        await using MemoryStream body = new();
+        context.Response.Body = body;
+        await endpoint.RequestDelegate!(context);
+        body.Position = 0;
+        using JsonDocument json = await JsonDocument.ParseAsync(
+            body,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(503, context.Response.StatusCode);
+        Assert.Equal("unhealthy", json.RootElement.GetProperty("status").GetString());
+        Assert.Equal("failed", json.RootElement.GetProperty("workers").GetProperty("reader").GetProperty("phase").GetString());
+        Assert.DoesNotContain("Host=db.internal;Username=secret", json.RootElement.ToString(), StringComparison.Ordinal);
+    }
+
+    /// <summary>Reports oversized lookback durations as invalid duration syntax.</summary>
+    [Fact]
+    public void ParseLookbackReportsOverflowAsFormatException() =>
+        Assert.Throws<FormatException>(() => BotHosting.ParseLookback("9223372036854775807d"));
+
     /// <summary>Renders durable storage metrics as Prometheus text without changing health probe behavior.</summary>
     [Fact]
     public async Task MetricsEndpointReturnsPrometheusSnapshot()

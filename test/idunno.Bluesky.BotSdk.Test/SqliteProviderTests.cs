@@ -29,6 +29,33 @@ public sealed class SqliteProviderTests
         Assert.False(File.Exists(path));
     }
 
+    /// <summary>Checks read-only diagnostics against a persistent SQLite URI configured with mode=rwc.</summary>
+    [Fact]
+    public async Task ReadOnlyConnectionCheckOverridesCreateModeInUri()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"bot-doctor-{Guid.NewGuid():N}.db");
+        string uri = $"file:{new Uri(path).AbsolutePath}?mode=rwc";
+        try
+        {
+            await using (SqliteConnection connection = new($"Data Source={uri};Pooling=False"))
+            {
+                await connection.OpenAsync(TestContext.Current.CancellationToken);
+            }
+
+            SqliteDatabaseProvider database = new(
+                $"Data Source={uri}",
+                TestRecords.Options(),
+                TimeProvider.System,
+                NullLogger<SqliteDatabaseProvider>.Instance);
+
+            await ((IBotDatabaseDiagnostics)database).CheckConnectionAsync(TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     /// <summary>Rejects SQLite connection strings that do not identify persistent storage.</summary>
     /// <param name="connectionString">A nonpersistent SQLite connection string.</param>
     [Theory]

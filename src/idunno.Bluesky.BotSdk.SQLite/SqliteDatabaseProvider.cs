@@ -350,11 +350,10 @@ public sealed class SqliteDatabaseProvider(
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task CheckConnectionAsync(CancellationToken cancellationToken)
     {
-        SqliteConnectionStringBuilder builder = new(_connectionString)
-        {
-            Mode = SqliteOpenMode.ReadOnly,
-            Pooling = false
-        };
+        SqliteConnectionStringBuilder builder = new(_connectionString);
+        builder.DataSource = SetSqliteUriMode(builder.DataSource, "ro");
+        builder.Mode = SqliteOpenMode.ReadOnly;
+        builder.Pooling = false;
         SqliteConnection connection = new(builder.ConnectionString);
         await using ConfiguredAsyncDisposable connectionDisposal = connection.ConfigureAwait(false);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -362,6 +361,34 @@ public sealed class SqliteDatabaseProvider(
         await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
         command.CommandText = "SELECT 1";
         _ = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string SetSqliteUriMode(string dataSource, string mode)
+    {
+        if (!dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            return dataSource;
+        }
+
+        string[] parts = dataSource.Split('?', 2);
+        List<string> parameters = parts.Length == 2 ? [.. parts[1].Split('&')] : [];
+        bool foundMode = false;
+        for (int i = 0; i < parameters.Count; i++)
+        {
+            string[] pair = parameters[i].Split('=', 2);
+            if (Uri.UnescapeDataString(pair[0]).Equals("mode", StringComparison.OrdinalIgnoreCase))
+            {
+                parameters[i] = $"mode={mode}";
+                foundMode = true;
+            }
+        }
+
+        if (!foundMode)
+        {
+            parameters.Add($"mode={mode}");
+        }
+
+        return $"{parts[0]}?{string.Join("&", parameters)}";
     }
 
     /// <summary>Supplies repeatable creation statements for the provider's durable tables.</summary>

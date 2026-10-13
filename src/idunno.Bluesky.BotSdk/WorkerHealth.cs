@@ -33,12 +33,11 @@ internal sealed class WorkerHealth(TimeProvider time)
 
     /// <summary>Marks a worker unhealthy after an unrecoverable failure.</summary>
     /// <param name="worker">The failing worker name.</param>
-    /// <param name="reason">The diagnostic failure reason.</param>
-    public void Fail(string worker, string reason)
+    public void Fail(string worker)
     {
         lock (_gate)
         {
-            _states[worker] = new($"failed: {reason}", DateTimeOffset.MinValue, null);
+            _states[worker] = new("failed", DateTimeOffset.MinValue, null);
         }
     }
 
@@ -58,7 +57,7 @@ internal sealed class WorkerHealth(TimeProvider time)
 }
 
 /// <summary>Describes an actual worker operation and its liveness deadline.</summary>
-/// <param name="Phase">The current activity or failure reason.</param>
+/// <param name="Phase">The current activity or generic failure state.</param>
 /// <param name="Deadline">The time after which the operation is overdue.</param>
 /// <param name="Dependency">The recovering dependency, or <see langword="null"/>.</param>
 internal sealed record HealthState(

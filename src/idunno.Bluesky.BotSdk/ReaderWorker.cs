@@ -146,7 +146,7 @@ internal sealed class ReaderWorker(
         }
         catch (Exception exception)
         {
-            health.Fail("reader", exception.Message);
+            health.Fail("reader");
             BotLog.Failed(logger, "reader", exception.Message, exception);
             throw;
         }

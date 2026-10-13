@@ -147,7 +147,7 @@ internal sealed class SenderWorker(
         {
             // Invariant failures and unexpected errors are not ordinary dependency outages.
             // Fail liveness and let the host stop rather than silently abandoning the sender.
-            health.Fail("sender", exception.Message);
+            health.Fail("sender");
             BotLog.Failed(logger, "sender", exception.Message, exception);
             throw;
         }

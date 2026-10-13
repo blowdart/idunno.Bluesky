@@ -433,8 +433,7 @@ public static class BotHosting
     /// <param name="value">The duration text, such as <c>30m</c>.</param>
     /// <returns>The duration to subtract from invocation time.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
-    /// <exception cref="FormatException">The duration syntax is invalid.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">The duration exceeds the supported range.</exception>
+    /// <exception cref="FormatException">The duration syntax is invalid or the duration exceeds the supported range.</exception>
     public static TimeSpan ParseLookback(string value)
     {
         ArgumentNullException.ThrowIfNull(value);
