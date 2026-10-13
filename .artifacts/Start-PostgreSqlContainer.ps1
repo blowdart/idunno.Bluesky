@@ -260,4 +260,11 @@ if ($null -ne $missingTables -and @($missingTables).Count -gt 0)
 
 Write-Verbose "'$ContainerName' is ready with $(@($expectedTables).Count) tables in '$Database'."
 
-Write-Output "Host=localhost;Port=$Port;Database=$Database;Username=$UserName;Password=$Password;"
+$builder = [System.Data.Common.DbConnectionStringBuilder]::new()
+$builder['Host'] = 'localhost'
+$builder['Port'] = $Port
+$builder['Database'] = $Database
+$builder['Username'] = $UserName
+$builder['Password'] = $Password
+
+Write-Output $builder.ConnectionString

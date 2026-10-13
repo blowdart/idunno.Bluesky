@@ -254,7 +254,8 @@ public class PostgreSqlIdentityStore : IIdentityStore
         command.CommandText = """
             DELETE FROM "idunno_bluesky_refresh_locks"
             WHERE "Did" = @did
-                AND "LockToken" = @refreshLockToken;
+                AND "LockToken" = @refreshLockToken
+                AND "ExpiresAtUtc" > clock_timestamp();
             """;
         command.Parameters.Add("@did", NpgsqlDbType.Varchar).Value = did.ToString();
         command.Parameters.Add("@refreshLockToken", NpgsqlDbType.Varchar).Value = refreshLockToken;
