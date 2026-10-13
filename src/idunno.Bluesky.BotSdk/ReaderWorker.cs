@@ -41,7 +41,7 @@ internal sealed class ReaderWorker(
     ActionHandlerRegistry handlers) : BackgroundService
 {
     private static readonly TimeSpan s_readSlice = TimeSpan.FromMinutes(5);
-    private int _generationRetries;
+    private readonly GenerationRecovery _generationRecovery = new();
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,15 +63,15 @@ internal sealed class ReaderWorker(
                     await ReadAsync(diagnostics, stoppingToken, leaseToken, active.Token).ConfigureAwait(false);
                     throw new InvalidOperationException("Replay ended unexpectedly.");
                 }
-                catch (InvalidDataException exception) when (ReplyRecords.IsGenerationMismatch(exception) && _generationRetries < 5)
+                catch (InvalidDataException exception) when (ReplyRecords.IsGenerationMismatch(exception) && _generationRecovery.Retries < 5)
                 {
                     LogExit(exception, diagnostics, stoppingToken, leaseToken);
 
                     // Compaction may change an archive segment between planning and downloading.
                     // Start a fresh enumeration from saved state, with a bounded retry count.
                     // Other InvalidDataExceptions are not assumed to be generation races.
-                    _generationRetries++;
-                    BotLog.GenerationChanged(logger, _generationRetries);
+                    _generationRecovery.Retry();
+                    BotLog.GenerationChanged(logger, _generationRecovery.Retries);
                     await RecoverAsync("archive generation", TimeSpan.FromSeconds(30), stoppingToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException exception) when (leaseToken.IsCancellationRequested && !stoppingToken.IsCancellationRequested)
@@ -208,6 +208,7 @@ internal sealed class ReaderWorker(
                 ?? throw new InvalidDataException("Stored replay checkpoint is null.");
 
         long processed = state.ProcessedThrough;
+        _generationRecovery.Observe(processed);
         long checkpointSavedAt = time.GetTimestamp();
         diagnostics.Start(state.Service, request, processed, saved);
         BotLog.ReplayStarting(logger, request.AfterSeq.Value, state.StartedAt, state.Service);
@@ -369,6 +370,7 @@ internal sealed class ReaderWorker(
                         }
 
                         processed = sequence;
+                        _generationRecovery.Observe(processed);
                         diagnostics.Processed(sequence, item.WitnessedAt);
 
                         if (malformed is not null)
@@ -467,7 +469,7 @@ internal sealed class ReaderWorker(
         {
             string? recovery = exception switch
             {
-                InvalidDataException invalid when ReplyRecords.IsGenerationMismatch(invalid) && _generationRetries < 5 => "archive generation",
+                InvalidDataException invalid when ReplyRecords.IsGenerationMismatch(invalid) && _generationRecovery.Retries < 5 => "archive generation",
                 RateWaitException => "archive bandwidth",
                 OwnershipLostException => "ownership",
                 _ when database.IsTransientDatabaseException(exception) => "database",

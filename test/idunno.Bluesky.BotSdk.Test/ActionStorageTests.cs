@@ -51,6 +51,44 @@ public sealed class ActionPostgresDataAttribute : DataAttribute
 /// <summary>Checks generalized action identity, atomicity, migration, and recovery across storage providers.</summary>
 public sealed class ActionStorageTests
 {
+    /// <summary>Preserves arbitrary custom JSON and applies root deletion only to replies.</summary>
+    /// <param name="provider">The provider under test.</param>
+    [Theory]
+    [InlineData("Sqlite")]
+    [MySqlData]
+    [ActionPostgresData]
+    public async Task CustomPayloadsDoNotInheritReplyDeletionSemantics(string provider)
+    {
+        await using Store store = await Store.CreateAsync(provider);
+        BotAction reply = TestRecords.Work();
+        string[] payloads =
+        [
+            """{"reply":"text"}""",
+            "[]",
+            "\"saved text\"",
+            JsonSerializer.Serialize(new { reply = new { root = new { uri = reply.SourceUri.ToString() } } })
+        ];
+        List<BotAction> actions = [];
+        for (int index = 0; index < payloads.Length; index++)
+        {
+            actions.Add(Action("custom", $"payload{index}", $"custom{index}") with { RecordJson = payloads[index] });
+        }
+
+        actions.Add(reply);
+        Assert.Equal(5, await store.Database.HandleAsync(11, actions, null, CancellationToken.None));
+        if (provider != "Postgres")
+        {
+            // Older versions also extracted root_uri from custom payloads.
+            await store.SqlAsync($"UPDATE reply_work SET root_uri = '{reply.SourceUri}' WHERE action_kind = 'custom'");
+        }
+
+        await store.Database.HandleAsync(12, [], null, CancellationToken.None, reply.SourceUri);
+        Assert.Equal(1, await store.CountAsync($"action_kind = 'reply' AND target_deleted = {store.TrueSql}"));
+        Assert.Equal(0, await store.CountAsync($"action_kind = 'custom' AND target_deleted = {store.TrueSql}"));
+        await store.Database.HandleAsync(13, [], null, CancellationToken.None, actions[0].SourceUri);
+        Assert.Equal(4, await store.CountAsync($"action_kind = 'custom' AND target_deleted = {store.TrueSql}"));
+    }
+
     /// <summary>Removes legacy record-key indexes and preserves separate actions sharing a remote membership.</summary>
     /// <param name="provider">The provider under test.</param>
     [Theory]
@@ -581,7 +619,7 @@ public sealed class ActionStorageTests
             return Convert.ToInt64(await command.ExecuteScalarAsync());
         }
 
-        private async Task SqlAsync(
+        public async Task SqlAsync(
             string sql,
             bool admin = false)
         {

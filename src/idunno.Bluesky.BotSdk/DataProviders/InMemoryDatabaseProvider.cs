@@ -215,7 +215,7 @@ internal sealed class InMemoryDatabaseProvider(
                         nameof(actions));
                 }
 
-                string? rootUri = GetRootUri(action.RecordJson);
+                string? rootUri = GetRootUri(action);
                 newWork.Add((identity, new WorkState(action, timeProvider.GetUtcNow(), null, rootUri, null, null)));
                 inserted++;
             }
@@ -225,7 +225,8 @@ internal sealed class InMemoryDatabaseProvider(
                 foreach ((ActionIdentity identity, WorkState work) in _work.ToArray())
                 {
                     if ((work.Action.Status is "pending" or "uncertain") &&
-                        (work.Action.SourceUri == deletedUri || work.RootUri == deletedUri.ToString()))
+                        (work.Action.SourceUri == deletedUri ||
+                            (work.Action.ActionKind == "reply" && work.RootUri == deletedUri.ToString())))
                     {
                         _work[identity] = work with { Action = work.Action with { TargetDeleted = true } };
                     }
@@ -658,9 +659,14 @@ internal sealed class InMemoryDatabaseProvider(
     private static ActionIdentity Identity(BotAction action) =>
         new(action.SourceUri, action.ActionKind, action.ActionKey);
 
-    private static string? GetRootUri(string recordJson)
+    private static string? GetRootUri(BotAction action)
     {
-        using JsonDocument record = JsonDocument.Parse(recordJson);
+        using JsonDocument record = JsonDocument.Parse(action.RecordJson);
+        if (action.ActionKind != "reply")
+        {
+            return null;
+        }
+
         if (record.RootElement.TryGetProperty("reply", out JsonElement reply) &&
             reply.TryGetProperty("root", out JsonElement root) &&
             root.TryGetProperty("uri", out JsonElement uri))

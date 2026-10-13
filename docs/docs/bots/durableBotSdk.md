@@ -112,6 +112,13 @@ public sealed class SimpleReplyBotPolicy : IBotPolicy
 {
     public IReadOnlyList<BotAction> Evaluate(JetstreamEvent item, DateTimeOffset startedAt)
     {
+        // Ignore earlier events included in a covering archive segment.
+        // Use server witnessed time, not the author's post creation time.
+        if (item.WitnessedAt is not DateTimeOffset witnessedAt || witnessedAt < startedAt)
+        {
+            return [];
+        }
+
         // Only inspect new post creations from the Jetstream
         if (item is not JetstreamCommitEvent
             {
@@ -322,8 +329,8 @@ To prevent sending duplicate replies:
 
 The runtime provides endpoints you can wire up to monitoring tools:
 
-- **`/health/live`**: Reports overall process and worker liveness. Returns HTTP 200 when healthy, or HTTP 503 if a worker has failed.
-- **`/health/dependencies`**: Details the health of external dependencies (such as database connectivity).
+- **`/health/live`**: Reports tracked worker liveness. Returns HTTP 200 when healthy, or HTTP 503 if a worker has failed or exceeded its operation deadline.
+- **`/health/dependencies`**: Reports the dependency waits recorded by workers, returning HTTP 503 while any dependency is flagged. Both health endpoints inspect in-memory worker state; neither actively probes database connectivity or remote services.
 - **`/metrics`**: Emits Prometheus-formatted metrics, including:
   - `bluesky_bot_processed_through_sequence`: The highest Jetstream sequence number durably committed.
   - `bluesky_bot_actions`: The count of actions grouped by status (`pending`, `uncertain`, `sent`, `simulated`, `not-sent`).
@@ -332,5 +339,9 @@ The runtime provides endpoints you can wire up to monitoring tools:
 ### Rate limiting and cooldowns
 
 The runtime enforces conservative outbound rate limits to prevent your bot from exceeding Bluesky's API budgets. If the server signals that a rate limit has been hit, the sender automatically pauses and schedules retries according to the server's cooldown.
+
+Repository writes made through the runtime's agent reserve their points before reaching the network, including failed or uncertain requests. Creates cost three points, deletes one, and `putRecord` reserves three because it can create as well as update. `applyWrites` sums each create (three), update (two), and delete (one); an unknown operation is rejected instead of bypassing accounting. Requests to other services need their own rate limiting.
+
+Archive-generation mismatch recovery permits up to five retries without forward progress, waiting 30 seconds between attempts. Successfully handling a sequence beyond the reader's high-water mark resets the count for a later recovery episode; replaying an already-handled prefix does not. Exhausting the bound stops the reader rather than silently skipping unavailable history.
 
 For more details on low-level Jetstream replay and snapshot checkpoints, see [Network replay and snapshots](../jetstreamReplay.md).

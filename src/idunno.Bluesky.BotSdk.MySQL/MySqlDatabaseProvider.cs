@@ -567,7 +567,7 @@ public sealed class MySqlDatabaseProvider(
                 await ExecuteAsync(
                     connection,
                     transaction,
-                    "UPDATE reply_work SET target_deleted = 1 WHERE (source_uri = @uri OR root_uri = @uri) AND status IN ('pending','uncertain')",
+                    "UPDATE reply_work SET target_deleted = 1 WHERE (source_uri = @uri OR (action_kind = 'reply' AND root_uri = @uri)) AND status IN ('pending','uncertain')",
                     cancellationToken,
                     ("@uri", deletedUri.ToString())).ConfigureAwait(false);
             }
@@ -603,7 +603,8 @@ public sealed class MySqlDatabaseProvider(
                     }
 
                     using JsonDocument record = JsonDocument.Parse(work.RecordJson);
-                    string? root = record.RootElement.TryGetProperty("reply", out JsonElement reply) &&
+                    string? root = work.ActionKind == "reply" &&
+                        record.RootElement.TryGetProperty("reply", out JsonElement reply) &&
                         reply.TryGetProperty("root", out JsonElement reference) &&
                         reference.TryGetProperty("uri", out JsonElement uri) ? uri.GetString() : null;
                     inserted += await ExecuteAsync(

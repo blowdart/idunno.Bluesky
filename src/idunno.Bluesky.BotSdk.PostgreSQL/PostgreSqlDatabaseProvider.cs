@@ -447,7 +447,7 @@ public sealed class PostgreSqlDatabaseProvider(
                 NpgsqlCommand deleted = new(
                     """
                     UPDATE reply_work SET target_deleted = true
-                    WHERE (source_uri = @uri OR record #>> '{reply,root,uri}' = @uri)
+                    WHERE (source_uri = @uri OR (action_kind = 'reply' AND record #>> '{reply,root,uri}' = @uri))
                         AND status IN ('pending', 'uncertain')
                     """,
                     connection,

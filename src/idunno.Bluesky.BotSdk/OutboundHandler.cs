@@ -3,6 +3,7 @@
 
 using System.Globalization;
 using System.Net;
+using System.Text.Json;
 
 using idunno.Bluesky.BotSdk.DataProviders;
 
@@ -29,15 +30,14 @@ internal sealed class OutboundHandler(
         string operation = request.RequestUri?.AbsolutePath.Split('/')[^1]
             ?? throw new InvalidOperationException("An outbound request has no URI.");
 
-        bool create = operation == "com.atproto.repo.createRecord";
-
         if (options.DeveloperMode && request.Method != HttpMethod.Get)
         {
             throw new InvalidOperationException("Developer mode prohibits outbound mutation requests.");
         }
 
+        int writePoints = await WritePointsAsync(operation, request, cancellationToken).ConfigureAwait(false);
         while (await database.ReserveRequestAsync(
-            create ? 3 : 0,
+            writePoints,
             operation == "com.atproto.server.createSession",
             cancellationToken).ConfigureAwait(false) is DateTimeOffset until)
         {
@@ -85,6 +85,47 @@ internal sealed class OutboundHandler(
             response.Dispose();
             throw;
         }
+    }
+
+    /// <summary>Counts repository write costs before admitting a request to the network.</summary>
+    /// <param name="operation">The XRPC endpoint name.</param>
+    /// <param name="request">The request containing any batch operations.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The conservative write-point cost.</returns>
+    private static async Task<int> WritePointsAsync(
+        string operation,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        if (operation != "com.atproto.repo.applyWrites")
+        {
+            return operation switch
+            {
+                // putRecord is an upsert: reserve the create cost even when updating.
+                "com.atproto.repo.createRecord" or "com.atproto.repo.putRecord" => 3,
+                "com.atproto.repo.deleteRecord" => 1,
+                _ => 0
+            };
+        }
+
+        HttpContent content = request.Content
+            ?? throw new InvalidOperationException("applyWrites has no request body.");
+        // Buffer through HttpContent so inspecting the body does not consume the outgoing stream.
+        using JsonDocument body = JsonDocument.Parse(
+            await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+        int points = 0;
+        foreach (JsonElement write in body.RootElement.GetProperty("writes").EnumerateArray())
+        {
+            points = checked(points + (write.GetProperty("$type").GetString() switch
+            {
+                "com.atproto.repo.applyWrites#create" => 3,
+                "com.atproto.repo.applyWrites#update" => 2,
+                "com.atproto.repo.applyWrites#delete" => 1,
+                _ => throw new InvalidOperationException("Cannot account for an unknown applyWrites operation.")
+            }));
+        }
+
+        return points;
     }
 
     /// <summary>Combines Retry-After and server reset advice without shortening an existing wait.</summary>

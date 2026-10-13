@@ -11,7 +11,7 @@ A hosted durable event-to-action runtime for [Bluesky](https://bsky.social/) bot
 * Durable actions for replies, likes, reposts, bookmarks, list memberships, and custom application handlers.
 * Stable action identities and safe reconciliation of uncertain remote writes.
 * Distributed database lease fencing and conservative rate-limit accounting.
-* Operational health endpoints (`/health/live`, `/health/ready`, `/health/startup`) and Prometheus metrics (`/metrics`).
+* Memory-only operational health endpoints (`/health/live`, `/health/dependencies`) and durable-state Prometheus gauges (`/metrics`).
 * Pluggable storage providers (SQLite, PostgreSQL, MySQL) plus an in-memory testing provider.
 
 Trimming is supported for applications targeting .NET 9.0 or later.

@@ -20,6 +20,38 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks volatile provider registration, warning, lease fencing, replay, and action durability semantics.</summary>
 public sealed class InMemoryProviderTests
 {
+    /// <summary>Does not interpret custom payload properties as reply roots, but retains source deletion.</summary>
+    /// <param name="payload">The application-defined JSON payload.</param>
+    [Theory]
+    [InlineData("""{"reply":"text"}""")]
+    [InlineData("[]")]
+    [InlineData("\"saved text\"")]
+    [InlineData("""{"reply":{"root":{"uri":"at://did:plc:7e6kocyzb77xkncplrkoojej/app.bsky.feed.post/root"}}}""")]
+    public async Task CustomPayloadsKeepIndependentDeletionSemantics(string payload)
+    {
+        (InMemoryDatabaseProvider database, _) = await CreateProvider();
+        AtUri root = new($"at://{TestRecords.AuthorDid}/app.bsky.feed.post/root");
+        StrongReference rootReference = new(root, new Cid(TestRecords.CidValue));
+        BotAction reply = TestRecords.Work(new ReplyReferences(rootReference, rootReference));
+        BotAction custom = reply with
+        {
+            ActionKind = "custom",
+            SourceUri = new AtUri($"at://{TestRecords.AuthorDid}/app.bsky.feed.post/custom-source"),
+            RecordKey = "custom",
+            RecordJson = payload
+        };
+        await database.HandleAsync(11, [custom, reply], null, CancellationToken.None);
+        await database.HandleAsync(12, [], null, CancellationToken.None, root);
+        BotAction work = (await database.NextWorkAsync(CancellationToken.None))!;
+        Assert.Equal("custom", work.ActionKind);
+        Assert.Equal(payload, work.RecordJson);
+        Assert.False(work.TargetDeleted);
+        await database.HandleAsync(13, [], null, CancellationToken.None, custom.SourceUri);
+        Assert.True((await database.NextWorkAsync(CancellationToken.None))!.TargetDeleted);
+        await database.FinishAsync(custom, "sent", null, "custom action completed", CancellationToken.None);
+        Assert.True((await database.NextWorkAsync(CancellationToken.None))!.TargetDeleted);
+    }
+
     /// <summary>Warns once at initialization and resolves the provider from the main BotSdk registration.</summary>
     [Fact]
     public async Task InitializationWarnsThatStorageIsNotProductionDurable()

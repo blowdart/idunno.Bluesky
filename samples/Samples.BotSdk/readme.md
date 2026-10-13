@@ -9,7 +9,7 @@ This sample connects to the live Jetstream event stream, evaluates public posts 
 * **Durable Architecture**: Bot logic lives in an `IBotPolicy`. Policies are purely evaluative and never make network calls directly. When a post matches the trigger, the policy returns an action intent (`BotActions.Reply`), which the runtime commits to storage alongside stream progress before dispatching to Bluesky.
 * **Developer Mode**: `DeveloperMode = true` logs and simulates replies without publishing them. The bot still listens to the live Jetstream.
 * **In-Memory Storage**: The `.WithInMemoryStorage()` provider keeps state in RAM for easy local experimentation without needing to set up an external database.
-* **Operational Monitoring**: Built-in health endpoints (`/health/live`, `/health/ready`) and Prometheus metrics (`/metrics`) allow monitoring worker health and throughput.
+* **Operational Monitoring**: Memory-only health endpoints (`/health/live`, `/health/dependencies`) report worker liveness and tracked dependency waits. `/metrics` exposes Prometheus gauges for the durable processed sequence, action counts by status, and due retries, not throughput or latency counters.
 
 > [!WARNING]
 > Setting `Bot:DeveloperMode` to `false` enables actual replies to Bluesky whenever someone posts `#beans`. Use a dedicated bot account when enabling publishing.

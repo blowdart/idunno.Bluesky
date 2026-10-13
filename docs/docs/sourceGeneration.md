@@ -106,7 +106,7 @@ For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProt
 
 # Native AOT
 
-`idunno.AtProto`, `idunno.Bluesky`, and the non-UI ASP.NET authentication packages support
+`idunno.AtProto`, `idunno.Bluesky`, the non-UI ASP.NET authentication packages, and the BotSdk packages (including their storage providers) support
 [.NET native ahead-of-time (AOT)](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/).
 
 `idunno.Bluesky.AspNet.Authentication.UI` contains Razor Pages and does not support trimming or Native AOT. Its

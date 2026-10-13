@@ -3,6 +3,7 @@
 
 using idunno.Bluesky.BotSdk;
 using idunno.Bluesky.BotSdk.DataProviders;
+
 using Samples.BotSdk;
 
 // -----------------------------------------------------------------------------------------
@@ -101,11 +102,12 @@ WebApplication app = builder.Build();
 // -----------------------------------------------------------------------------------------
 // The SDK provides built-in endpoints for monitoring:
 // - /health/live    : Process and worker liveness (returns HTTP 200 when background workers are running).
-// - /health/ready   : Startup readiness (returns HTTP 200 once database leases and checkpoints are ready).
-// - /health/startup : Startup check for container orchestrators.
+// - /health/dependencies: Reports tracked dependency waits (HTTP 503 while a dependency is flagged).
+// These memory-only probes do not actively test the database or remote services.
 app.MapBlueskyBotHealthEndpoints();
 
-// Exposes Prometheus metrics at /metrics (counters for events processed, replies dispatched, latency):
+// Exposes Prometheus gauges at /metrics for the durable processed sequence, action counts
+// by status, and actions whose retry time has arrived. These are not throughput or latency counters.
 app.MapBlueskyBotMetricsEndpoint();
 
 // -----------------------------------------------------------------------------------------

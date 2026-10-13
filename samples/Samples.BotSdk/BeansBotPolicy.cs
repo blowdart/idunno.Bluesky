@@ -54,13 +54,21 @@ public sealed class BeansBotPolicy : IBotPolicy
     /// Evaluates an incoming Jetstream event to decide if any bot actions should be enqueued.
     /// </summary>
     /// <param name="item">The event received from the Jetstream stream.</param>
-    /// <param name="startedAt">The timestamp when event processing started.</param>
+    /// <param name="startedAt">The durable start time used to exclude earlier witnessed events.</param>
     /// <returns>
     /// A list of <see cref="BotAction"/> items to be saved and dispatched.
     /// Returns an empty list if no action is needed for this event.
     /// </returns>
     public IReadOnlyList<BotAction> Evaluate(JetstreamEvent item, DateTimeOffset startedAt)
     {
+        // Archive replay can start at a segment boundary before the bot's durable start time.
+        // Use the server's witnessed time, not the author's post creation time, to reject
+        // earlier events. Missing witnessed times cannot establish eligibility.
+        if (item.WitnessedAt is not DateTimeOffset witnessedAt || witnessedAt < startedAt)
+        {
+            return [];
+        }
+
         // ---------------------------------------------------------------------------------
         // Step 1: Filter for new post creation events.
         // ---------------------------------------------------------------------------------

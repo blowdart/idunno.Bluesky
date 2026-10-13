@@ -66,6 +66,12 @@ public sealed class SaveMatchPolicy : IBotPolicy
         JetstreamEvent item,
         DateTimeOffset startedAt)
     {
+        // A covering archive segment can include events from before initialization.
+        if (item.WitnessedAt is not DateTimeOffset witnessedAt || witnessedAt < startedAt)
+        {
+            return [];
+        }
+
         // Match only new posts with the information needed for a durable action.
         if (item is not JetstreamCommitEvent
             {
@@ -109,7 +115,9 @@ public sealed class SaveMatchPolicy : IBotPolicy
 }
 ```
 
-The policy deliberately lets malformed JSON raise an error. Returning an empty list after a parsing failure would tell the runtime that the event was handled successfully and allow progress to advance past it.
+The policy uses the server's witnessed time to exclude events before the durable `startedAt` boundary, including earlier events in a covering archive segment. This is not the author's `Post.CreatedAt`, which may be old or chosen by the author.
+
+The policy deliberately lets malformed JSON raise an error rather than silently ignoring it. The reader records supported source-data errors in its skip audit and logs them before committing progress.
 
 ### Action kinds, keys, and multiple actions
 
