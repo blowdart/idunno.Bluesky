@@ -229,7 +229,7 @@ $schemaOutput = $schema | & $script:DockerPath `
     '--interactive' `
     '--env' "PGPASSWORD=$Password" `
     $ContainerName `
-    'psql' '--host=127.0.0.1' '--port=5432' '--username' $UserName '--dbname' $Database 2>&1
+    'psql' '--host=127.0.0.1' '--port=5432' '--username' $UserName '--dbname' $Database '--variable=ON_ERROR_STOP=1' 2>&1
 
 if ($LASTEXITCODE -ne 0)
 {
