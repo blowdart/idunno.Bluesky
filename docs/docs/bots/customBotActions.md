@@ -117,7 +117,7 @@ public sealed class SaveMatchPolicy : IBotPolicy
 
 The policy uses the server's witnessed time to exclude events before the durable `startedAt` boundary, including earlier events in a covering archive segment. This is not the author's `Post.CreatedAt`, which may be old or chosen by the author.
 
-The policy deliberately lets malformed JSON raise an error rather than silently ignoring it. The reader records supported source-data errors in its skip audit and logs them before committing progress.
+The policy deliberately lets malformed JSON raise `JsonException` rather than silently ignoring it. The reader records that exception in its skip audit and logs it before committing progress. Other exceptions, including invalid action arguments, stop processing without committing the event; do not throw `JsonException` for policy configuration or programming errors.
 
 ### Action kinds, keys, and multiple actions
 
@@ -320,7 +320,9 @@ We register the initialized handler instance. If your handler takes DI-registere
 
 Run with `dotnet run`. With `Bot:DeveloperMode` set to `true`, the runtime validates and marks actions simulated; it does **not** call `ReconcileAsync` or `ExecuteAsync`, so `saved_matches` stays empty.
 
-Set `Bot:DeveloperMode` to `false` to execute newly queued actions. Previously simulated actions are terminal and are not automatically replayed. Configure the DID, handle, app password, archive API key, and encryption key as described in the durable bot guide. The current sender authenticates a Bluesky session even for a custom handler that only uses an application database.
+To publish, stop the bot, set `Bot:DeveloperMode` to `false`, and configure a **separate empty runtime database**, for example `Data Source=bot-live.db`. Relational replay state is bound to its original mode; reusing `bot.db` stops during state restoration rather than converting simulated work into live actions. Retain the development database, and do not edit its mode or delete its progress. Previously simulated actions are terminal and are not automatically replayed. The separate application `saved_matches` database can remain unchanged.
+
+Configure the DID, handle, app password, archive API key, and encryption key as described in the durable bot guide. The current sender authenticates a Bluesky session even for a custom handler that only uses an application database.
 
 ## What happens after a crash?
 

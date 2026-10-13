@@ -7,7 +7,7 @@ The `idunno.Bluesky.BotSdk` library provides a durable bot runtime. It listens t
 For this example, we're going to write a simple reply bot that watches for posts containing `#hello` and posts a friendly reply.
 
 > [!NOTE]
-> You must already have created an account for your bot to run as, and generated an [app password](https://bsky.app/settings/app-passwords) for that account. If you plan to replay past events from the Jetstream archive when recovering from downtime, you will also need an [archive API key](https://bsky.network/account#api-keys-section-heading).
+> You must already have created an account for your bot to run as, and generated an [app password](https://bsky.app/settings/app-passwords) for that account. An [archive API key](https://bsky.network/account#api-keys-section-heading) is required in every mode, including first-run setup and developer mode: initialization looks up the covering archive segment before replay transitions to live streaming.
 
 [!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
 
@@ -206,7 +206,9 @@ Next, let's configure your bot settings. Add the following to your `appsettings.
 ```
 
 > [!TIP]
-> `DeveloperMode` is enabled by default. In developer mode, the runtime logs and simulates outbound actions without actually publishing records to Bluesky. This is great for testing your bot against live posts safely! Set `"DeveloperMode": false` when you're ready to post live.
+> `DeveloperMode` is enabled by default. In developer mode, the runtime logs and simulates outbound actions without actually publishing records to Bluesky. This is great for testing your bot against live posts safely! When ready to publish, stop the bot, set `"DeveloperMode": false`, and choose a separate empty runtime database (for example `Data Source=bot-live.db`). Persisted state is bound to its original mode; do not change or discard the development database's saved progress to enable publishing.
+
+The archive API key is required even if you only intend to react to new posts; it is not an optional recovery feature.
 
 ### Storing secrets safely
 

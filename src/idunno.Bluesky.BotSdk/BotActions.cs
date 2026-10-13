@@ -153,6 +153,7 @@ public static class BotActions
         ArgumentException.ThrowIfNullOrWhiteSpace(actionKey);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(metadata);
+        ArgumentNullException.ThrowIfNull(payload);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(sequence);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(payloadVersion);
         if (kind.Length > 128 || actionKey.Length > 128)

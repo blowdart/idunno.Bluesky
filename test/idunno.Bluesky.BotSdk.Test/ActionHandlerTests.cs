@@ -29,6 +29,20 @@ internal sealed record CustomNotificationPayload(string Message);
 /// <summary>Exercises built-in and application-defined action recovery without real remote effects.</summary>
 public sealed class ActionHandlerTests
 {
+    /// <summary>Rejects a null custom payload at the factory boundary rather than saving JSON null.</summary>
+    [Fact]
+    public void CustomActionRequiresPayload()
+    {
+        ArgumentNullException failure = Assert.Throws<ArgumentNullException>(() =>
+            BotActions.Create(
+                "test-notification",
+                Source(),
+                11,
+                null!,
+                ActionHandlerJsonContext.Default.CustomNotificationPayload));
+        Assert.Equal("payload", failure.ParamName);
+    }
+
     /// <summary>Reconciles an application-defined action after its external service accepts a request but its response is lost.</summary>
     [Fact]
     public async Task CustomHandlerReconcilesAcceptedWriteAfterLostResponse()

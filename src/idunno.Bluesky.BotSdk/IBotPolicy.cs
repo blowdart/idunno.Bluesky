@@ -18,6 +18,11 @@ public interface IBotPolicy
     /// <param name="item">The replay event to evaluate.</param>
     /// <param name="startedAt">The durable start time used to exclude earlier events.</param>
     /// <returns>The complete actions to save atomically, or an empty collection when no action is needed.</returns>
+    /// <remarks>
+    /// <para>A <see cref="System.Text.Json.JsonException"/> signals malformed source JSON: the reader logs and audits
+    /// the skipped event before committing progress. Other exceptions, including argument validation failures,
+    /// stop processing without committing the event. Do not use <c>JsonException</c> for policy configuration or programming errors.</para>
+    /// </remarks>
     IReadOnlyList<BotAction> Evaluate(JetstreamEvent item, DateTimeOffset startedAt);
 }
 

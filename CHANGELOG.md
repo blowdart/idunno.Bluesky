@@ -198,6 +198,7 @@
 
 #### Samples
 
+* Added `Samples.BotSdk`, a reply-only durable bot sample with developer-mode simulation, in-memory storage, and health and metrics endpoints.
 * Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
 * Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
 * Added a success indication after saving a profile in `Samples.AspNetAuthentication`.

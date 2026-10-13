@@ -1,6 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+
+using idunno.AtProto.Jetstream;
+
 using Samples.BotSdk;
 
 using Xunit;
@@ -10,6 +14,57 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks sample eligibility and bounded replay generation recovery.</summary>
 public sealed class ReplayEligibilityTests
 {
+    /// <summary>Audits only JSON parsing failures and propagates policy errors before progress can commit.</summary>
+    /// <param name="failureKind">The policy failure category.</param>
+    [Theory]
+    [InlineData("json")]
+    [InlineData("kind")]
+    [InlineData("key")]
+    [InlineData("argument")]
+    [InlineData("data")]
+    public void PolicyValidationErrorsAreNotMalformedSourceData(string failureKind)
+    {
+        FailingPolicy policy = new(failureKind);
+        if (failureKind == "json")
+        {
+            Assert.Empty(ReaderWorker.EvaluatePolicy(policy, TestRecords.Event(), TestRecords.Start, out JsonException? malformed));
+            Assert.Same(policy.Failure, malformed);
+        }
+        else
+        {
+            Exception failure = Assert.ThrowsAny<Exception>(() =>
+                ReaderWorker.EvaluatePolicy(policy, TestRecords.Event(), TestRecords.Start, out _));
+            Assert.True(failure is ArgumentException or InvalidDataException);
+        }
+    }
+
+    private sealed class FailingPolicy(string failureKind) : IBotPolicy
+    {
+        public Exception Failure { get; } = failureKind switch
+        {
+            "json" => new JsonException("Malformed source record."),
+            "data" => new InvalidDataException("Policy data failure."),
+            _ => new ArgumentException("Policy configuration failure.")
+        };
+
+        public IReadOnlyList<BotAction> Evaluate(JetstreamEvent item, DateTimeOffset startedAt)
+        {
+            if (failureKind is "kind" or "key")
+            {
+                BotAction reply = TestRecords.Work();
+                return [BotActions.Create(
+                    failureKind == "kind" ? "" : "custom",
+                    new(reply.SourceUri, new(TestRecords.CidValue)),
+                    11,
+                    new CustomNotificationPayload("saved"),
+                    ActionHandlerJsonContext.Default.CustomNotificationPayload,
+                    actionKey: failureKind == "key" ? "" : "default")];
+            }
+
+            throw Failure;
+        }
+    }
+
     /// <summary>Uses the durable witness boundary, even when the post was authored earlier.</summary>
     /// <param name="seconds">The witnessed-time offset, or a missing timestamp.</param>
     /// <param name="eligible">Whether a reply should be selected.</param>

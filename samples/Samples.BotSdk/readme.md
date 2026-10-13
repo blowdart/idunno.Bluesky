@@ -86,9 +86,9 @@ When started, the application will:
 1. Log an in-memory provider startup warning (Event ID 420).
 2. Connect to the live Jetstream WebSocket stream.
 3. Listen for posts containing `#beans` and log simulated `🫘` replies without publishing them.
-4. Serve health and metrics endpoints on `http://localhost:5000` (or the configured ASP.NET port).
+4. Serve health and metrics endpoints on `http://localhost:58264` (the HTTP port in this sample's launch profile, unless you override the URLs).
 
 To test the health endpoint while running:
 ```PowerShell
-curl http://localhost:5000/health/live
+curl http://localhost:58264/health/live
 ```
