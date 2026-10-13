@@ -423,6 +423,35 @@ public sealed partial class RelationalProviderTests
         await CheckBudgetAsync(provider, budget);
     }
 
+    /// <summary>Rejects requests exceeding an empty write budget without persisting a reservation.</summary>
+    /// <param name="provider">The provider under test.</param>
+    [Theory]
+    [InlineData("Sqlite")]
+    [MySqlData]
+    [PostgreSqlData]
+    public async Task RejectsRequestExceedingEmptyWriteBudget(string provider)
+    {
+        foreach (bool hourly in new[] { true, false })
+        {
+            await using Store store = await Store.CreateAsync(provider);
+            if (hourly)
+            {
+                store.Options.HourlyWritePoints = 3;
+            }
+            else
+            {
+                store.Options.DailyWritePoints = 3;
+            }
+
+            InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.Database.ReserveRequestAsync(4, false, TestContext.Current.CancellationToken));
+            Assert.Equal("A request exceeds its entire configured rate budget.", exception.Message);
+            Assert.Equal(0, await store.CountAsync("rate_accounting"));
+            Assert.Null(await store.Database.ReserveRequestAsync(3, false, TestContext.Current.CancellationToken));
+            Assert.Equal(1, await store.CountAsync("rate_accounting"));
+        }
+    }
+
     private static async Task CheckBudgetAsync(string provider, string budget)
     {
         await using Store store = await Store.CreateAsync(provider);

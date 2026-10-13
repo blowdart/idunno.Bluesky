@@ -172,6 +172,7 @@
 #### idunno.Bluesky.BotSdk.PostgreSQL
 
 * Added a PostgreSQL storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+* Requests exceeding an empty hourly or daily write budget report an explicit invalid-operation error instead of a null timestamp conversion failure.
 
 #### idunno.Bluesky.BotSdk.SQLite
 

@@ -988,6 +988,11 @@ public sealed class PostgreSqlDatabaseProvider(
                 {
                     if (additions[index] > 0 && reader.GetInt64(index) + additions[index] > thresholds[index])
                     {
+                        if (await reader.IsDBNullAsync(index + 5, cancellationToken).ConfigureAwait(false))
+                        {
+                            throw new InvalidOperationException("A request exceeds its entire configured rate budget.");
+                        }
+
                         DateTimeOffset firstRequest = await reader.GetFieldValueAsync<DateTimeOffset>(index + 5, cancellationToken).ConfigureAwait(false);
                         waitUntil = Max(waitUntil, firstRequest + windows[index] + TimeSpan.FromSeconds(1));
                     }
