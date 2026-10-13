@@ -79,18 +79,16 @@ The durable runtime splits bot operations into two distinct steps:
 
 Because your policy never makes network calls directly, a network failure or sudden crash will never cause your bot to lose track of what it was doing.
 
-### Live streaming and automatic archive replay fallback
+### Archive-first startup and live streaming handoff
 
-When your bot starts up:
+The startup and recovery order depends on the saved replay checkpoint:
 
-1. **Live stream first**: The bot connects directly to the live WebSocket Jetstream feed and evaluates incoming events in real time.
-2. **Short disconnections**: If the bot restarts or briefly loses connection, it reconnects to the live stream starting from its last committed sequence number. As long as the missed events are still within the Jetstream server's live buffer (usually a few minutes), streaming resumes with zero missed events.
-3. **Automatic replay fallback**: If the bot was offline longer than the live buffer window, the live connection returns `CursorTooOld`. Instead of failing or skipping missed history, the runtime **automatically falls back to Jetstream archive replay**:
-   - It queries the Jetstream v2 archive service for sealed snapshot segments covering the downtime.
-   - It replays and evaluates events sequentially and transactionally, advancing `ProcessedThrough` progress as each batch is saved.
-   - Once it catches up to the live tip, it automatically switches back to the live Jetstream feed!
+1. **First-run archive initialization**: The runtime records its start time, scans archive segment metadata to select a covering sequence boundary, and persists the complete initial request. This requires an archive API key even in developer mode. If archive coverage is unavailable, the runtime reports the failure rather than silently choosing a later starting point.
+2. **Sequential archive replay**: `ReplayAsync` runs `SnapshotAsync` first, pinning a sealed archive tip and replaying events in order. Event effects and `ProcessedThrough` progress are committed transactionally. A restart with an archive checkpoint resumes this stage using the saved request and complete checkpoint.
+3. **Live stream handoff**: After reaching the pinned sealed archive tip, replay connects to the live WebSocket feed from that tip or the last delivered sequence, whichever is later. A restart with a saved checkpoint containing `LiveAfterSeq` resumes directly in the live stage instead of replaying the archive first.
+4. **Automatic archive fallback**: If the live cursor has expired and the server returns `CursorTooOld`, replay falls back to the archive from the last delivered sequence. It replays sequentially to a newly pinned sealed tip, then hands off to the live stream again. The runtime suppresses repeated events using durable processed-through progress and stable action identity.
 
-All of this happens automatically without any manual intervention.
+Normal handoff and expired-cursor recovery are automatic. Unavailable or malformed history is not silently skipped; recovery remains subject to the runtime's documented limits and may require operator intervention.
 
 ## Writing a bot policy
 
