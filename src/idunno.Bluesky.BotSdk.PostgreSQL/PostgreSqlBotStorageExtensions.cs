@@ -12,6 +12,8 @@ namespace idunno.Bluesky.BotSdk.DataProviders;
 /// <summary>Registers PostgreSQL storage for the durable bot runtime.</summary>
 public static class PostgreSqlBotStorageExtensions
 {
+    private static readonly object s_dataSourceKey = new();
+
     /// <summary>Registers PostgreSQL storage and a host-owned Npgsql connection pool.</summary>
     /// <param name="services">The host service collection.</param>
     /// <param name="connectionString">The PostgreSQL connection string with bounded timeouts and appropriate TLS.</param>
@@ -26,7 +28,7 @@ public static class PostgreSqlBotStorageExtensions
         string? caCertificate = null)
     {
         CheckRegistration(services, connectionString);
-        services.AddSingleton(_ =>
+        services.AddKeyedSingleton<NpgsqlDataSource>(s_dataSourceKey, (_, _) =>
         {
             NpgsqlDataSourceBuilder source = new(connectionString);
             if (!string.IsNullOrWhiteSpace(caCertificate))
@@ -36,7 +38,11 @@ public static class PostgreSqlBotStorageExtensions
 
             return source.Build();
         });
-        services.AddSingleton<IDatabaseProvider, PostgreSqlDatabaseProvider>();
+        services.AddSingleton<IDatabaseProvider>(provider => new PostgreSqlDatabaseProvider(
+            provider.GetRequiredKeyedService<NpgsqlDataSource>(s_dataSourceKey),
+            provider.GetRequiredService<BotOptions>(),
+            provider.GetRequiredService<TimeProvider>(),
+            provider.GetRequiredService<ILogger<PostgreSqlDatabaseProvider>>()));
 
         return services;
     }

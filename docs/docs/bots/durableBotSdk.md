@@ -323,7 +323,7 @@ When your bot starts, the database tables will be created automatically. The bot
 When interacting with a remote network like Bluesky, an operation might succeed on the server even if the network connection dropped before the response reached your bot.
 
 To prevent sending duplicate replies:
-- The runtime uses deterministic Record Keys (TIDs) for generated posts, likes, and reposts.
+- The runtime generates a Record Key (TID) once for each post, like, or repost intent, persists it with the complete payload, and reuses that fixed key for retries and reconciliation. These generated TIDs are not deterministic across regenerated actions; creating a new intent does not recreate the original key.
 - Actions are marked *uncertain* in the database right before sending. If a connection drops, the bot reconciles with the server using the fixed record key before attempting to recreate it.
 - Delivery is *at least once*, and state transitions ensure that events at or below your committed progress are not re-processed.
 

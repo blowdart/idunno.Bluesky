@@ -24,6 +24,43 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Verifies that the reusable SDK can register policies, workers, and AOT-safe probes without remote writes.</summary>
 public sealed class BotHostingTests
 {
+    /// <summary>Isolates the bot pool from an application's unkeyed pool in either registration order.</summary>
+    /// <param name="applicationFirst">Whether to register the application pool first.</param>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PostgreSqlRegistrationIsolatesBotPool(bool applicationFirst)
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        using NpgsqlDataSource application = NpgsqlDataSource.Create("Host=127.0.0.1;Database=application;Username=unused");
+        if (applicationFirst)
+        {
+            services.AddSingleton(application);
+        }
+
+        services.AddBlueskyBot<NoReplyPolicy>(TestRecords.Options(), "pool-isolation-test/1.0")
+            .WithPostgreSqlStorage("Host=127.0.0.1;Database=bot;Username=unused");
+        if (!applicationFirst)
+        {
+            services.AddSingleton(application);
+        }
+
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        Assert.Same(application, provider.GetRequiredService<NpgsqlDataSource>());
+        Assert.IsType<PostgreSqlDatabaseProvider>(provider.GetRequiredService<IDatabaseProvider>());
+        ServiceDescriptor registration = Assert.Single(services,
+            descriptor => descriptor.ServiceType == typeof(NpgsqlDataSource) && descriptor.IsKeyedService);
+        NpgsqlDataSource bot = provider.GetRequiredKeyedService<NpgsqlDataSource>(registration.ServiceKey);
+        Assert.NotSame(application, bot);
+        Assert.Equal("bot", new NpgsqlConnectionStringBuilder(bot.ConnectionString).Database);
+        Assert.Equal("application", new NpgsqlConnectionStringBuilder(application.ConnectionString).Database);
+    }
+
     /// <summary>Retains configured instances of one handler type for multiple persisted payload versions.</summary>
     [Fact]
     public void BuilderPreservesConfiguredHandlerVersions()

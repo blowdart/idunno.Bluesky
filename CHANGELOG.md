@@ -226,6 +226,7 @@
 
 #### idunno.AtProto
 
+* DAG-CBOR readers now consistently limit nesting to 64 levels across supported runtimes and report the SDK depth-limit error before the platform reader rejects the value.
 * XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
   A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
   Raw string responses also reject invalid UTF-8 and report an `InvalidResponse` error.

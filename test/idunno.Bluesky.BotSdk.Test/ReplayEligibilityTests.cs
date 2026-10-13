@@ -14,6 +14,26 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks sample eligibility and bounded replay generation recovery.</summary>
 public sealed class ReplayEligibilityTests
 {
+    /// <summary>Rejects consecutive and nonconsecutive repeated cursors without rejecting distinct pages.</summary>
+    /// <param name="nonconsecutive">Whether a different cursor intervenes before repetition.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ArchiveScanRejectsRepeatedCursors(bool nonconsecutive)
+    {
+        HashSet<string> seen = new(StringComparer.Ordinal);
+        ReaderWorker.ValidateArchiveCursor(seen, "A");
+        if (nonconsecutive)
+        {
+            ReaderWorker.ValidateArchiveCursor(seen, "B");
+            ReaderWorker.ValidateArchiveCursor(seen, "a");
+        }
+
+        Assert.Throws<InvalidDataException>(() => ReaderWorker.ValidateArchiveCursor(seen, "A"));
+        ReaderWorker.ValidateArchiveCursor(seen, null);
+        Assert.Equal(nonconsecutive ? 3 : 1, seen.Count);
+    }
+
     /// <summary>Audits only JSON parsing failures and propagates policy errors before progress can commit.</summary>
     /// <param name="failureKind">The policy failure category.</param>
     [Theory]

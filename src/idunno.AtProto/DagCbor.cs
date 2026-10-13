@@ -24,8 +24,8 @@ public static class DagCbor
     // DAG-CBOR CIDs are prefixed with a zero byte, the multibase identity prefix.
     private const byte CidMultibasePrefix = 0x00;
 
-    // Nesting deeper than this is rejected rather than risking a stack overflow on hostile input.
-    private const int MaximumDepth = 128;
+    // Match the default System.Formats.Cbor reader limit across supported runtime versions.
+    private const int MaximumDepth = 64;
 
     /// <summary>
     /// Converts the DAG-CBOR encoded <paramref name="value"/> to its JSON representation.
@@ -89,7 +89,7 @@ public static class DagCbor
                 throw new InvalidDataException("The value is not valid DAG-CBOR.", exception);
             }
 
-            WriteValue(reader, writer, depth: 0);
+            WriteValue(reader, writer);
 
             if (reader.BytesRemaining != 0)
             {
@@ -126,28 +126,29 @@ public static class DagCbor
         }
     }
 
-    private static void WriteValue(CborReader reader, Utf8JsonWriter writer, int depth)
+    private static void WriteValue(CborReader reader, Utf8JsonWriter writer)
     {
-        if (depth > MaximumDepth)
-        {
-            throw new InvalidDataException(
-                string.Create(CultureInfo.InvariantCulture, $"The value is nested more than {MaximumDepth} levels deep."));
-        }
-
         try
         {
-            switch (reader.PeekState())
+            CborReaderState state = reader.PeekState();
+            if ((state is CborReaderState.StartMap or CborReaderState.StartArray) && reader.CurrentDepth >= MaximumDepth)
+            {
+                throw new InvalidDataException(
+                    string.Create(CultureInfo.InvariantCulture, $"The value is nested more than {MaximumDepth} levels deep."));
+            }
+
+            switch (state)
             {
                 case CborReaderState.Tag:
                     WriteLink(reader, writer);
                     break;
 
                 case CborReaderState.StartMap:
-                    WriteMap(reader, writer, depth);
+                    WriteMap(reader, writer);
                     break;
 
                 case CborReaderState.StartArray:
-                    WriteArray(reader, writer, depth);
+                    WriteArray(reader, writer);
                     break;
 
                 case CborReaderState.TextString:
@@ -245,7 +246,7 @@ public static class DagCbor
         writer.WriteEndObject();
     }
 
-    private static void WriteMap(CborReader reader, Utf8JsonWriter writer, int depth)
+    private static void WriteMap(CborReader reader, Utf8JsonWriter writer)
     {
         int length = reader.ReadStartMap() ?? throw new InvalidDataException("The value contains an indefinite length map, which DAG-CBOR does not allow.");
         int read = 0;
@@ -270,7 +271,7 @@ public static class DagCbor
             }
 
             writer.WritePropertyName(key);
-            WriteValue(reader, writer, depth + 1);
+            WriteValue(reader, writer);
 
             read++;
         }
@@ -279,7 +280,7 @@ public static class DagCbor
         writer.WriteEndObject();
     }
 
-    private static void WriteArray(CborReader reader, Utf8JsonWriter writer, int depth)
+    private static void WriteArray(CborReader reader, Utf8JsonWriter writer)
     {
         int length = reader.ReadStartArray() ?? throw new InvalidDataException("The value contains an indefinite length array, which DAG-CBOR does not allow.");
         int read = 0;
@@ -288,7 +289,7 @@ public static class DagCbor
 
         while (read < length)
         {
-            WriteValue(reader, writer, depth + 1);
+            WriteValue(reader, writer);
             read++;
         }
 

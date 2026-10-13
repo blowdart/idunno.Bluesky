@@ -594,6 +594,7 @@ internal sealed class ReaderWorker(
         long maxSealedSequence = 0;
         long? earliestTime = null;
         string? cursor = null;
+        HashSet<string> seenCursors = new(StringComparer.Ordinal);
         do
         {
             health.Set("reader", "selecting first-run archive boundary", TimeSpan.FromSeconds(60));
@@ -640,11 +641,7 @@ internal sealed class ReaderWorker(
                 }
             }
 
-            if (result.Result.Cursor == cursor && cursor is not null)
-            {
-                throw new InvalidDataException("Archive segment pagination did not advance.");
-            }
-
+            ValidateArchiveCursor(seenCursors, result.Result.Cursor);
             cursor = result.Result.Cursor;
         } while (cursor is not null);
 
@@ -669,6 +666,18 @@ internal sealed class ReaderWorker(
             Collections = [new CollectionSelector("app.bsky.feed.post")],
             Kinds = [JetStreamEventKind.Commit]
         };
+    }
+
+    /// <summary>Rejects cyclic segment pagination, including nonconsecutive repeated cursors.</summary>
+    /// <param name="seenCursors">The cursors already returned during this scan.</param>
+    /// <param name="cursor">The next cursor, or <see langword="null"/> at the end of pagination.</param>
+    /// <exception cref="InvalidDataException">The archive returned a previously seen cursor.</exception>
+    internal static void ValidateArchiveCursor(HashSet<string> seenCursors, string? cursor)
+    {
+        if (cursor is not null && !seenCursors.Add(cursor))
+        {
+            throw new InvalidDataException("Archive segment pagination repeated a cursor.");
+        }
     }
 
     /// <summary>Reports a bounded dependency-recovery wait without changing durable replay progress.</summary>

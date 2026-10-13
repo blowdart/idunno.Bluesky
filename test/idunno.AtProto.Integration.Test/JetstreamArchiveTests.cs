@@ -575,6 +575,8 @@ public class JetstreamArchiveTests
     [InlineData("segment", 65, false, false)]
     [InlineData("blocks", 129, false, false)]
     [InlineData("segment", 129, false, false)]
+    [InlineData("blocks", 64, false, false)]
+    [InlineData("segment", 64, false, false)]
     [InlineData("blocks", 0, true, false)]
     [InlineData("segment", 0, true, false)]
     [InlineData("blocks", 65, false, true)]
@@ -668,10 +670,10 @@ public class JetstreamArchiveTests
         {
             Assert.IsType<ArgumentException>(firstError);
         }
-        else if (nestingDepth > 128)
+        else if (nestingDepth >= 64)
         {
             Assert.IsType<InvalidDataException>(firstError);
-            Assert.Equal("The value is nested more than 128 levels deep.", firstError.Message);
+            Assert.Equal("The value is nested more than 64 levels deep.", firstError.Message);
         }
         else
         {
@@ -1588,8 +1590,12 @@ public class JetstreamArchiveTests
         SnapshotRequest request = new();
         SnapshotCheckpoint checkpoint = new()
         {
-            SealedTipSeq = 11, PlanAfterSeq = 0, RequestFingerprint = request.Fingerprint(s_server),
-            SegmentName = Segment, SegmentChecksum = Checksum, NextBlockIndex = 2,
+            SealedTipSeq = 11,
+            PlanAfterSeq = 0,
+            RequestFingerprint = request.Fingerprint(s_server),
+            SegmentName = Segment,
+            SegmentChecksum = Checksum,
+            NextBlockIndex = 2,
             NextByteOffset = mode == "segment" ? 256 : 0
         };
 
