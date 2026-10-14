@@ -3,6 +3,7 @@
 
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -77,10 +78,90 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
         underlyingOptions.MakeReadOnly();
 
-        JsonSerializerOptions nestedOptions = new(underlyingOptions);
+        JsonSerializerOptions nestedOptions = new(underlyingOptions)
+        {
+            TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>
+            {
+                if (info.Kind != JsonTypeInfoKind.Object)
+                {
+                    return;
+                }
+
+                foreach (JsonPropertyInfo property in info.Properties.Where(property => property.CustomConverter is not null))
+                {
+                    property.CustomConverter = new PropertyConverter(property, underlyingOptions);
+                }
+            })
+        };
         nestedOptions.Converters.Insert(0, new CustomConverterForwarder(underlyingOptions, options));
         nestedOptions.MakeReadOnly();
         return new Converter(typeToConvert, nestedOptions);
+    }
+
+    // A property converter cannot be invoked through JsonConverter's non-generic API. A single
+    // synthetic property lets the serializer invoke the original converter, including factories and
+    // null handling, with SDK options, without constructing generic types through reflection.
+    private sealed class PropertyConverter : JsonConverter<object>
+    {
+        private readonly Type _type;
+        private readonly JsonTypeInfo<PropertyValue> _typeInfo;
+
+        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, which uses the cached metadata instead of reflection.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, avoiding its runtime generic reflection fallback.")]
+        public PropertyConverter(JsonPropertyInfo property, JsonSerializerOptions underlyingOptions)
+        {
+            _type = property.PropertyType;
+            JsonSerializerOptions bridgeOptions = new(underlyingOptions);
+            Configure(bridgeOptions);
+            bridgeOptions.MakeReadOnly();
+            // CreateJsonPropertyInfo delegates to cached typed metadata only on read-only options.
+            // Prime that cache explicitly to avoid its runtime generic reflection fallback.
+            _ = bridgeOptions.GetTypeInfo(_type);
+            _typeInfo = JsonMetadataServices.CreateObjectInfo<PropertyValue>(bridgeOptions, new JsonObjectInfoValues<PropertyValue>
+            {
+                ObjectCreator = () => new PropertyValue(),
+                PropertyMetadataInitializer = _ => []
+            });
+            JsonPropertyInfo value = _typeInfo.CreateJsonPropertyInfo(_type, "value");
+            value.CustomConverter = property.CustomConverter;
+            value.NumberHandling = property.NumberHandling;
+            value.Get = holder => ((PropertyValue)holder).Value;
+            value.Set = (holder, item) => ((PropertyValue)holder).Value = item;
+            value.ShouldSerialize = (_, _) => true;
+            _typeInfo.Properties.Add(value);
+            _typeInfo.MakeReadOnly();
+        }
+
+        public override bool HandleNull => true;
+
+        public override bool CanConvert(Type typeToConvert) => typeToConvert == _type;
+
+        public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using JsonDocument document = JsonDocument.ParseValue(ref reader);
+            ArrayBufferWriter<byte> buffer = new();
+            using (Utf8JsonWriter writer = new(buffer))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("value");
+                document.RootElement.WriteTo(writer);
+                writer.WriteEndObject();
+            }
+
+            return JsonSerializer.Deserialize(buffer.WrittenSpan, _typeInfo)!.Value;
+        }
+
+        public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+        {
+            byte[] json = JsonSerializer.SerializeToUtf8Bytes(new PropertyValue { Value = value }, _typeInfo);
+            using JsonDocument document = JsonDocument.Parse(json);
+            document.RootElement.GetProperty("value").WriteTo(writer);
+        }
+    }
+
+    private sealed class PropertyValue
+    {
+        public object? Value { get; set; }
     }
 
     // Opaque converters have no property contracts to traverse. Forward them to the SDK options so

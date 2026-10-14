@@ -130,6 +130,134 @@ public class JsonSerializerOptionsTests
         AssertLateBoundRecord(jsonOptions.JsonSerializerOptions);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MutableOptionsResolveInsertedAndReplacementResolversWithoutChangingDefaults(bool replace)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        if (replace)
+        {
+            options.TypeInfoResolverChain.Add(ChainedTestContext.Default);
+            options.TypeInfoResolverChain[1] = TolerantTestContext.Default;
+        }
+        else
+        {
+            options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        }
+
+        AssertLateBoundRecord(options);
+        Assert.Throws<NotSupportedException>(() => AtProtoJsonSerializerOptions.Default.GetTypeInfo(typeof(LateBoundRecordBase)));
+        Assert.IsType<StrongReference>(JsonSerializer.Deserialize<SubjectType>(
+            SubjectWithTrailingTypeDiscriminator, AtProtoJsonSerializerOptions.Default));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReplacingOrPrependingTheSdkResolverRequiresExplicitContractChaining(bool replace)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        if (replace)
+        {
+            options.TypeInfoResolver = TolerantTestContext.Default;
+        }
+        else
+        {
+            options.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
+        }
+
+        AssertLateBoundRecord(AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(options));
+    }
+
+    [Fact]
+    public void CallerCopiedOptionsSupportExistingContractsAndExplicitlyChainedCustomResolvers()
+    {
+        JsonSerializerOptions copy = new(AtProtoJsonSerializerOptions.Default);
+        Assert.IsType<StrongReference>(JsonSerializer.Deserialize<SubjectType>(
+            SubjectWithTrailingTypeDiscriminator.Replace("\"uri\"", "\"$via\":\"copy\",\"uri\"", StringComparison.Ordinal), copy));
+
+        copy = new(AtProtoJsonSerializerOptions.Default);
+        copy.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        AssertLateBoundRecord(AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(copy));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PropertyConvertersForwardSdkOptionsAndPreserveTheirWireFormats(bool normalizeOuter)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        string json = $$$$"""
+            {"$type":"test.properties",{{{{(normalizeOuter ? "\"$via\":\"outer\"," : "")}}}}
+             "reference":{"record":{"$type":"test.nested","$via":"reference","value":"nested"}},
+             "structure":{"record":{"$type":"test.nested","$via":"struct","value":"nested"}}}
+            """;
+
+        PropertyRecord record = Assert.IsType<PropertyRecord>(JsonSerializer.Deserialize<PropertyRecordBase>(json, options));
+        Assert.Equal("reference", Assert.IsType<NestedCustomRecord>(record.Reference).ExtensionData!["$via"].GetString());
+        Assert.Equal("struct", Assert.IsType<NestedCustomRecord>(record.Structure.Record).ExtensionData!["$via"].GetString());
+
+        string serialized = JsonSerializer.Serialize<PropertyRecordBase>(record, options);
+        using JsonDocument document = JsonDocument.Parse(serialized);
+        Assert.Equal("reference", document.RootElement.GetProperty("reference").GetProperty("record").GetProperty("$via").GetString());
+        Assert.Equal("struct", document.RootElement.GetProperty("structure").GetProperty("record").GetProperty("$via").GetString());
+        Assert.IsType<PropertyRecord>(JsonSerializer.Deserialize<PropertyRecordBase>(serialized, options));
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"test.properties","reference":null,"structure":{"record":null}}""")]
+    [InlineData("""{"$type":"test.properties","$via":"outer","reference":null,"structure":{"record":null}}""")]
+    public void PropertyConvertersPreserveNullHandling(string json)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        PropertyRecord record = Assert.IsType<PropertyRecord>(JsonSerializer.Deserialize<PropertyRecordBase>(json, options));
+        Assert.Null(record.Reference);
+        Assert.Null(record.Structure.Record);
+        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize<PropertyRecordBase>(record, options));
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("reference").ValueKind);
+    }
+
+    [Fact]
+    public void PropertyConvertersPreserveExplicitNullConversionWhenDefaultsIgnoreNulls()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        PropertyRecord record = Assert.IsType<PropertyRecord>(JsonSerializer.Deserialize<PropertyRecordBase>(
+            """{"$type":"test.properties","nullableText":null}""", options));
+        Assert.Equal("read-null", record.NullableText);
+
+        record.NullableText = null;
+        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize<PropertyRecordBase>(record, options));
+        Assert.Equal("write-null", document.RootElement.GetProperty("nullableText").GetString());
+    }
+
+    [Theory]
+    [InlineData("reference")]
+    [InlineData("structure")]
+    public void PropertyConvertersPreserveNestedDiscriminatorValidation(string property)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        string json = $$$$"""{"$type":"test.properties","{{{{property}}}}":{"record":{"$type":"invalid","$via":"extension"}}}""";
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PropertyRecordBase>(json, options));
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"test.properties","reference":{"record":{"$type":"test.nested","$via":"extension"}}}""", typeof(JsonException))]
+    [InlineData("""{"$type":"test.properties","structure":{"record":{"$type":"test.nested","$via":"extension"}}}""", typeof(JsonException))]
+    [InlineData("""{"$type":"test.properties","structure":null}""", typeof(JsonException))]
+    [InlineData("""{"$type":"test.properties","reference":{}}""", typeof(KeyNotFoundException))]
+    public void PropertyConvertersPreserveRequiredPropertiesValueTypeNullsAndConverterValidation(string json, Type exceptionType)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
+        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        Assert.Throws(exceptionType, () => JsonSerializer.Deserialize<PropertyRecordBase>(json, options));
+    }
+
     [Fact]
     public void BuilderJsonOptionsResolvesPolymorphicTypesAddedDuringConfiguration()
     {
@@ -276,6 +404,7 @@ internal abstract class NestedCustomRecordBase;
 
 internal sealed class NestedCustomRecord : NestedCustomRecordBase
 {
+    [JsonRequired]
     public string Value { get; set; } = string.Empty;
 
     [JsonExtensionData]
@@ -284,6 +413,77 @@ internal sealed class NestedCustomRecord : NestedCustomRecordBase
 
 [JsonConverter(typeof(CustomStructPayloadConverter))]
 internal readonly record struct CustomStructPayload(NestedCustomRecordBase? Record);
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(PropertyRecord), "test.properties")]
+internal abstract class PropertyRecordBase;
+
+internal sealed class PropertyRecord : PropertyRecordBase
+{
+    [JsonConverter(typeof(PropertyReferenceConverter))]
+    public NestedCustomRecordBase? Reference { get; set; }
+
+    [JsonConverter(typeof(PropertyStructConverterFactory))]
+    public PropertyStructPayload Structure { get; set; }
+
+    [JsonConverter(typeof(NullAwareTextConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public string? NullableText { get; set; }
+}
+
+internal readonly record struct PropertyStructPayload(NestedCustomRecordBase? Record);
+
+internal sealed class PropertyStructConverterFactory : JsonConverterFactory
+{
+    public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(PropertyStructPayload);
+
+    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) => new PropertyStructConverter();
+}
+
+internal sealed class NullAwareTextConverter : JsonConverter<string>
+{
+    public override bool HandleNull => true;
+
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        reader.TokenType == JsonTokenType.Null ? "read-null" : reader.GetString();
+
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value ?? "write-null");
+}
+
+internal sealed class PropertyReferenceConverter : JsonConverter<NestedCustomRecordBase>
+{
+    public override NestedCustomRecordBase? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        return JsonSerializer.Deserialize<NestedCustomRecordBase>(document.RootElement.GetProperty("record"), options);
+    }
+
+    public override void Write(Utf8JsonWriter writer, NestedCustomRecordBase value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonSerializer.Serialize(writer, value, options);
+        writer.WriteEndObject();
+    }
+}
+
+internal sealed class PropertyStructConverter : JsonConverter<PropertyStructPayload>
+{
+    public override PropertyStructPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        return new(JsonSerializer.Deserialize<NestedCustomRecordBase>(document.RootElement.GetProperty("record"), options));
+    }
+
+    public override void Write(Utf8JsonWriter writer, PropertyStructPayload value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonSerializer.Serialize(writer, value.Record, options);
+        writer.WriteEndObject();
+    }
+}
 
 internal sealed class CustomStructPayloadConverter : JsonConverter<CustomStructPayload>
 {
@@ -311,6 +511,9 @@ internal sealed class CustomStructPayloadConverter : JsonConverter<CustomStructP
 [JsonSerializable(typeof(CustomStructPayload))]
 [JsonSerializable(typeof(NestedCustomRecordBase))]
 [JsonSerializable(typeof(NestedCustomRecord))]
+[JsonSerializable(typeof(PropertyRecordBase))]
+[JsonSerializable(typeof(PropertyRecord))]
+[JsonSerializable(typeof(PropertyStructPayload))]
 [ExcludeFromCodeCoverage]
 internal sealed partial class TolerantTestContext : JsonSerializerContext
 {

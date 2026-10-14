@@ -31,6 +31,10 @@ public static class BlueskyJsonSerializerOptions
     /// <remarks>
     /// <para>Each call returns a new, mutable instance, which must resolve its type metadata again the first time it is used.
     /// Use <see cref="Default"/> unless you need to change the options.</para>
+    /// <para>Append custom resolvers to <see cref="JsonSerializerOptions.TypeInfoResolverChain"/> to keep the SDK's
+    /// contract adaptation first. Use <see cref="AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions)"/>
+    /// after replacing or prepending resolvers, including on copies made with the
+    /// <see cref="JsonSerializerOptions.JsonSerializerOptions(JsonSerializerOptions)"/> constructor.</para>
     /// </remarks>
     public static JsonSerializerOptions Options => Create();
 

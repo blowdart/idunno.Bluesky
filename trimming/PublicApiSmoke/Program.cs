@@ -87,6 +87,44 @@ if (lateNested is not { Value: "nested", ExtensionData: not null } ||
     throw new InvalidOperationException("Late-bound polymorphic source generation or nested custom struct conversion failed.");
 }
 
+JsonSerializerOptions callerCopy = new(AtProtoJsonSerializerOptions.Default)
+{
+    TypeInfoResolver = LateBoundSourceGenerationContext.Default
+};
+foreach (JsonSerializerOptions mutableOptions in new[]
+{
+    AtProtoJsonSerializerOptions.Options,
+    BlueskyJsonSerializerOptions.Options,
+    AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(callerCopy)
+})
+{
+    mutableOptions.TypeInfoResolverChain.Add(JsonTypeInfoResolver.Combine());
+    mutableOptions.TypeInfoResolverChain[^1] = LateBoundSourceGenerationContext.Default;
+    JsonTypeInfo<LateBoundRecordBase> mutableTypeInfo =
+        (JsonTypeInfo<LateBoundRecordBase>)mutableOptions.GetTypeInfo(typeof(LateBoundRecordBase));
+    foreach (bool outerMetadata in new[] { false, true })
+    {
+        string propertyJson = $$$$"""
+            {"$type":"smoke.container",{{{{(outerMetadata ? "\"$via\":\"outer\"," : "")}}}}
+             "propertyPayload":{"record":{"$type":"smoke.nested","$via":"property","value":"struct"}},
+             "reference":{"record":{"$type":"smoke.nested","$via":"reference","value":"class"}}}
+            """;
+        LateBoundRecord propertyRecord = JsonSerializer.Deserialize(propertyJson, mutableTypeInfo) as LateBoundRecord
+            ?? throw new InvalidOperationException("The property-converted record was not deserialized.");
+        string roundTripJson = JsonSerializer.Serialize<LateBoundRecordBase>(propertyRecord, mutableTypeInfo);
+        using JsonDocument roundTripDocument = JsonDocument.Parse(roundTripJson);
+        if (propertyRecord.PropertyPayload.Record is not LateBoundNestedRecord { Value: "struct" } propertyNested ||
+            propertyNested.ExtensionData?["$via"].GetString() != "property" ||
+            propertyRecord.Reference is not LateBoundNestedRecord { Value: "class" } referenceNested ||
+            referenceNested.ExtensionData?["$via"].GetString() != "reference" ||
+            roundTripDocument.RootElement.GetProperty("reference").GetProperty("record").GetProperty("$via").GetString() != "reference" ||
+            JsonSerializer.Deserialize(roundTripJson, mutableTypeInfo) is not LateBoundRecord)
+        {
+            throw new InvalidOperationException("Mutable SDK options or property converter read/write forwarding failed.");
+        }
+    }
+}
+
 string extensionEnvelopeJson = $$"""
     {"uri":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r",
      "cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4","value":{{extensionPostJson}}}
@@ -254,6 +292,33 @@ internal abstract class LateBoundRecordBase;
 internal sealed class LateBoundRecord : LateBoundRecordBase
 {
     public LateBoundStructPayload Payload { get; set; }
+
+    [JsonConverter(typeof(LateBoundStructPayloadConverter))]
+    public LateBoundStructPayload PropertyPayload { get; set; }
+
+    [JsonConverter(typeof(LateBoundReferenceConverter))]
+    public LateBoundNestedRecordBase? Reference { get; set; }
+}
+
+internal sealed class LateBoundReferenceConverter : JsonConverter<LateBoundNestedRecordBase>
+{
+    public override LateBoundNestedRecordBase? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        JsonTypeInfo<LateBoundNestedRecordBase?> typeInfo =
+            (JsonTypeInfo<LateBoundNestedRecordBase?>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+        return JsonSerializer.Deserialize(document.RootElement.GetProperty("record"), typeInfo);
+    }
+
+    public override void Write(Utf8JsonWriter writer, LateBoundNestedRecordBase value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonTypeInfo<LateBoundNestedRecordBase?> typeInfo =
+            (JsonTypeInfo<LateBoundNestedRecordBase?>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+        JsonSerializer.Serialize(writer, value, typeInfo);
+        writer.WriteEndObject();
+    }
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]

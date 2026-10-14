@@ -33,8 +33,21 @@ public static class AtProtoJsonSerializerOptions
     /// <remarks>
     /// <para>Each call returns a new, mutable instance, which must resolve its type metadata again the first time it is used.
     /// Use <see cref="Default"/> unless you need to change the options.</para>
+    /// <para>Append custom resolvers to <see cref="JsonSerializerOptions.TypeInfoResolverChain"/> to preserve the SDK's
+    /// contract adaptation. After replacing or prepending resolvers, or customizing a copy made with the
+    /// <see cref="JsonSerializerOptions.JsonSerializerOptions(JsonSerializerOptions)"/> constructor, use
+    /// <see cref="AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions)"/>
+    /// to create options with SDK contract adaptation around the customized resolver.</para>
     /// </remarks>
-    public static JsonSerializerOptions Options => new(s_options);
+    public static JsonSerializerOptions Options
+    {
+        get
+        {
+            JsonSerializerOptions options = new(s_options);
+            Json.TolerantPolymorphicConverter.Configure(options);
+            return options;
+        }
+    }
 
     /// <summary>
     /// Gets a shared, read only set of <see cref="JsonSerializerOptions"/> for AtProto types.
