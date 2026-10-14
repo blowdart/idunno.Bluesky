@@ -550,7 +550,9 @@ public class JsonSerializerOptionsTests
         string json = $$$$"""
             {"$type":"test.collections",{{{{metadata}}}}
              "records":[{"$type":"test.nested","$via":"list","value":"first"}],
-             "dictionary":{"entry":{"$type":"test.nested","$via":"dictionary","value":"second"}}}
+             "dictionary":{"entry":{"$type":"test.nested","$via":"dictionary","value":"second"}},
+             "interfaceRecords":[{"$type":"test.nested","$via":"interface-list","value":"third"}],
+             "interfaceDictionary":{"entry":{"$type":"test.nested","$via":"interface-dictionary","value":"fourth"}}}
             """;
 
         foreach (string payload in new[] { json, JsonSerializer.Serialize(
@@ -564,7 +566,34 @@ public class JsonSerializerOptionsTests
             Assert.Equal("list", first.ExtensionData!["$via"].GetString());
             Assert.Equal("second", second.Value);
             Assert.Equal("dictionary", second.ExtensionData!["$via"].GetString());
+            NestedCustomRecord third = Assert.IsType<NestedCustomRecord>(Assert.Single(record.InterfaceRecords));
+            Assert.Equal("third", third.Value);
+            Assert.Equal("interface-list", third.ExtensionData!["$via"].GetString());
+            NestedCustomRecord fourth = Assert.IsType<NestedCustomRecord>(record.InterfaceDictionary["entry"]);
+            Assert.Equal("fourth", fourth.Value);
+            Assert.Equal("interface-dictionary", fourth.ExtensionData!["$via"].GetString());
         }
+    }
+
+    [Fact]
+    public void OptionsRegisteredConvertersForwardSdkOptionsForNestedPolymorphicValues()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.Converters.Add(new OptionsPayloadConverter());
+        });
+        const string json = """
+            {"$type":"test.optionsConverter","$via":"outer",
+             "payload":{"record":{"$type":"test.nested","$via":"inner","value":"nested"}}}
+            """;
+
+        OptionsConverterRecord record = Assert.IsType<OptionsConverterRecord>(
+            JsonSerializer.Deserialize<OptionsConverterRecordBase>(json, options));
+        NestedCustomRecord nested = Assert.IsType<NestedCustomRecord>(record.Payload.Record);
+        Assert.Equal("outer", record.ExtensionData!["$via"].GetString());
+        Assert.Equal("nested", nested.Value);
+        Assert.Equal("inner", nested.ExtensionData!["$via"].GetString());
     }
 }
 
@@ -622,11 +651,53 @@ internal sealed class CollectionRecord : CollectionRecordBase
     public DerivedRecordList Records { get; set; } = [];
 
     public DerivedRecordDictionary Dictionary { get; set; } = [];
+
+    public IEnumerable<NestedCustomRecordBase> InterfaceRecords { get; set; } = [];
+
+    public IDictionary<string, NestedCustomRecordBase> InterfaceDictionary { get; set; } = new Dictionary<string, NestedCustomRecordBase>();
 }
 
 internal sealed class DerivedRecordList : List<NestedCustomRecordBase>;
 
 internal sealed class DerivedRecordDictionary : Dictionary<string, NestedCustomRecordBase>;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(OptionsConverterRecord), "test.optionsConverter")]
+internal abstract class OptionsConverterRecordBase;
+
+internal sealed class OptionsConverterRecord : OptionsConverterRecordBase
+{
+    public OptionsPayload Payload { get; set; } = new();
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+internal sealed class OptionsPayload
+{
+    public NestedCustomRecordBase? Record { get; set; }
+}
+
+internal sealed class OptionsPayloadConverter : JsonConverter<OptionsPayload>
+{
+    public override OptionsPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        return new()
+        {
+            Record = JsonSerializer.Deserialize<NestedCustomRecordBase>(
+                document.RootElement.GetProperty("record"), options)
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, OptionsPayload value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonSerializer.Serialize(writer, value.Record, options);
+        writer.WriteEndObject();
+    }
+}
 
 [JsonConverter(typeof(CustomStructPayloadConverter))]
 internal readonly record struct CustomStructPayload(NestedCustomRecordBase? Record);
@@ -791,6 +862,9 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(NestedCustomRecord))]
 [JsonSerializable(typeof(CollectionRecordBase))]
 [JsonSerializable(typeof(CollectionRecord))]
+[JsonSerializable(typeof(OptionsConverterRecordBase))]
+[JsonSerializable(typeof(OptionsConverterRecord))]
+[JsonSerializable(typeof(OptionsPayload))]
 [JsonSerializable(typeof(PropertyRecordBase))]
 [JsonSerializable(typeof(PropertyRecord))]
 [JsonSerializable(typeof(PropertyStructPayload))]

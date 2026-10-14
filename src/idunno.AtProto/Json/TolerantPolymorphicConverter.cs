@@ -117,8 +117,20 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, which uses the cached metadata instead of reflection.")]
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, avoiding its runtime generic reflection fallback.")]
         public PropertyConverter(JsonPropertyInfo property, JsonSerializerOptions underlyingOptions)
+            : this(property.PropertyType, property.CustomConverter!, property.NumberHandling, underlyingOptions)
         {
-            _type = property.PropertyType;
+        }
+
+        public PropertyConverter(Type type, JsonConverter converter, JsonSerializerOptions underlyingOptions)
+            : this(type, converter, null, underlyingOptions)
+        {
+        }
+
+        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, which uses the cached metadata instead of reflection.")]
+        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, avoiding its runtime generic reflection fallback.")]
+        private PropertyConverter(Type type, JsonConverter converter, JsonNumberHandling? numberHandling, JsonSerializerOptions underlyingOptions)
+        {
+            _type = type;
             JsonSerializerOptions bridgeOptions = new(underlyingOptions);
             Configure(bridgeOptions);
             bridgeOptions.MakeReadOnly();
@@ -131,8 +143,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 PropertyMetadataInitializer = _ => []
             });
             JsonPropertyInfo value = _typeInfo.CreateJsonPropertyInfo(_type, "value");
-            value.CustomConverter = property.CustomConverter;
-            value.NumberHandling = property.NumberHandling;
+            value.CustomConverter = converter;
+            value.NumberHandling = numberHandling;
             value.Get = holder => ((PropertyValue)holder).Value;
             value.Set = (holder, item) => ((PropertyValue)holder).Value = item;
             value.ShouldSerialize = (_, _) => true;
@@ -179,31 +191,48 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         public override bool CanConvert(Type typeToConvert)
         {
             Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
-            if (valueType.IsEnum)
-            {
-                // Generated enum converters are opaque too, but JsonConverter<object> cannot bridge their value-type contracts.
-                return false;
-            }
-
-            JsonTypeInfo? info = probeOptions.TypeInfoResolver!.GetTypeInfo(typeToConvert, probeOptions);
-            return info?.Kind == JsonTypeInfoKind.None && info.Converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
+            return !valueType.IsEnum &&
+                GetConverter(typeToConvert) is JsonConverter converter &&
+                converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
         }
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-            new ForwardingConverter(typeToConvert, sdkOptions);
+            new ForwardingConverter(typeToConvert, GetConverter(typeToConvert)!, sdkOptions);
+
+        private JsonConverter? GetConverter(Type typeToConvert)
+        {
+            foreach (JsonConverter registeredConverter in probeOptions.Converters)
+            {
+                if (registeredConverter is JsonConverterFactory factory)
+                {
+                    if (factory.CanConvert(typeToConvert))
+                    {
+                        return factory.CreateConverter(typeToConvert, probeOptions);
+                    }
+                }
+                else if (registeredConverter.CanConvert(typeToConvert))
+                {
+                    return registeredConverter;
+                }
+            }
+
+            return probeOptions.TypeInfoResolver!.GetTypeInfo(typeToConvert, probeOptions)?.Converter;
+        }
     }
 
-    private sealed class ForwardingConverter(Type type, JsonSerializerOptions sdkOptions) : JsonConverter<object>
+    private sealed class ForwardingConverter(Type type, JsonConverter converter, JsonSerializerOptions sdkOptions) : JsonConverter<object>
     {
+        private readonly PropertyConverter _converter = new(type, converter, sdkOptions);
+
         public override bool HandleNull => true;
 
         public override bool CanConvert(Type typeToConvert) => typeToConvert == type;
 
         public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-            JsonSerializer.Deserialize(ref reader, sdkOptions.GetTypeInfo(type));
+            _converter.Read(ref reader, typeToConvert, options);
 
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options) =>
-            JsonSerializer.Serialize(writer, value, sdkOptions.GetTypeInfo(type));
+            _converter.Write(writer, value, options);
     }
 
     /// <summary>
@@ -395,7 +424,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             {
                 T item = data[name];
                 data.Remove(name);
-                data.Add(renamedNames[name], item);
+                data[renamedNames[name]] = item;
             }
         }
 
@@ -413,23 +442,48 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 return info.Type.GetElementType();
             }
 
-            Type collectionInterface = info.Kind == JsonTypeInfoKind.Dictionary
-                ? typeof(IDictionary<,>)
-                : typeof(IEnumerable<>);
+            bool isDictionary = info.Kind == JsonTypeInfoKind.Dictionary;
+            Type? elementType = GetCollectionElementType(info.Type, isDictionary);
+            if (elementType is not null)
+            {
+                return elementType;
+            }
+
             foreach (Type implementedInterface in info.Type.GetInterfaces())
             {
-                if (implementedInterface.IsGenericType &&
-                    (implementedInterface.GetGenericTypeDefinition() == collectionInterface ||
-                    (info.Kind == JsonTypeInfoKind.Dictionary &&
-                    implementedInterface.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))))
+                elementType = GetCollectionElementType(implementedInterface, isDictionary);
+                if (elementType is not null)
                 {
-                    return implementedInterface.GenericTypeArguments[^1];
+                    return elementType;
                 }
             }
 
             return null;
 #endif
         }
+
+#if !NET10_0_OR_GREATER
+        private static Type? GetCollectionElementType(Type type, bool isDictionary)
+        {
+            if (!type.IsGenericType)
+            {
+                return null;
+            }
+
+            Type definition = type.GetGenericTypeDefinition();
+            if (isDictionary &&
+                (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>)))
+            {
+                return type.GenericTypeArguments[1];
+            }
+            if (!isDictionary && definition == typeof(IEnumerable<>))
+            {
+                return type.GenericTypeArguments[0];
+            }
+
+            return null;
+        }
+#endif
 
         // Most payloads need no rewriting. Scan a reader copy without allocating property names or a DOM.
         private bool NeedsNormalization(ref Utf8JsonReader reader, JsonTypeInfo info)

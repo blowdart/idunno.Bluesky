@@ -234,6 +234,18 @@ public class UnknownMetadataTests
     }
 
     [Fact]
+    public void DuplicateUnknownMetadataPropertiesKeepTheLastValue()
+    {
+        const string json = """
+            {"$type":"app.bsky.feed.post","$via":"first","text":"hello","createdAt":"2026-10-13T10:24:57.970Z","$via":"last"}
+            """;
+
+        Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(json, BlueskyJsonSerializerOptions.Default));
+
+        Assert.Equal("last", post.ExtensionData!["$via"].GetString());
+    }
+
+    [Fact]
     public void NestedFeedAndQuotedPostRecordsAreTolerant()
     {
         string quotedRecord = $$"""
