@@ -18,20 +18,22 @@ namespace idunno.AtProto.Json;
 /// <remarks>
 /// <para>AT Protocol records can contain client extensions such as <c>$via</c>. System.Text.Json rejects
 /// unrecognized dollar-prefixed names on polymorphic objects before they can reach extension data.
-/// This factory wraps those contracts, temporarily renaming unknown metadata properties when extension
-/// data is available and omitting them otherwise.</para>
+/// This factory wraps object and collection roots, temporarily renaming unknown metadata properties on
+/// polymorphic contracts when extension data is available and omitting them otherwise.</para>
 /// <para>Normalization follows the selected concrete contract through nested objects and collections.
 /// Discriminators, declared properties, and opaque JSON values remain unchanged, leaving type dispatch
 /// and value validation to the original serializer. Deserialization callbacks restore extension names
 /// on their owning objects before existing callbacks run.</para>
+/// <para>Reference-preserving options normalize the complete root before delegating to one built-in
+/// serializer operation, retaining shared references across nested objects and collections.</para>
 /// <para>The implementation uses resolver-provided contracts, including source-generated metadata,
 /// rather than constructing closed generic converters at runtime. Payloads requiring no normalization
 /// bypass the document and rewritten-buffer allocations.</para>
 /// </remarks>
-internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolver) : JsonConverterFactory
+internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions) : JsonConverterFactory
 {
     private readonly JsonSerializerOptions _probeOptions = new() { TypeInfoResolver = resolver };
-    private readonly ConcurrentDictionary<Type, bool> _polymorphicTypes = new();
+    private readonly ConcurrentDictionary<(Type Type, bool PreserveReferences), bool> _supportedTypes = new();
 
     internal static JsonSerializerOptions FinalizeOptions(JsonSerializerOptions options)
     {
@@ -65,12 +67,17 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
 
         IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(trackChanges ? options : null, [.. initialResolvers]);
-        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver));
+        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver, options));
         options.TypeInfoResolver = resolver;
     }
 
     public override bool CanConvert(Type typeToConvert) =>
-        _polymorphicTypes.GetOrAdd(typeToConvert, type => resolver.GetTypeInfo(type, _probeOptions)?.PolymorphismOptions is not null);
+        _supportedTypes.GetOrAdd((typeToConvert, configuredOptions.ReferenceHandler == ReferenceHandler.Preserve), key =>
+        {
+            JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions);
+            return info?.PolymorphismOptions is not null ||
+                (key.PreserveReferences && info?.Kind is JsonTypeInfoKind.Object or JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary);
+        });
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
@@ -88,7 +95,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve)
         {
-            return underlyingOptions.GetTypeInfo(typeToConvert).Converter;
+            // Normalize the complete root, then let one built-in operation resolve all references.
+            return new Converter(typeToConvert, underlyingOptions);
         }
 
         JsonSerializerOptions nestedOptions = new(underlyingOptions)
@@ -382,6 +390,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private sealed class NormalizationState
         {
             private readonly HashSet<string> _propertyNames = new(StringComparer.Ordinal);
+            private readonly HashSet<string> _culturePropertyNames = new(StringComparer.CurrentCultureIgnoreCase);
+            private readonly HashSet<string> _invariantPropertyNames = new(StringComparer.InvariantCultureIgnoreCase);
             private long _nextName;
 
             internal NormalizationState(JsonElement element)
@@ -389,18 +399,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 CollectPropertyNames(element);
             }
 
-            internal List<KeyValuePair<string, string>> RenamedNames { get; } = [];
+            internal Dictionary<string, RenamedProperty> RenamedNames { get; } = new(StringComparer.Ordinal);
 
             internal void ReserveContractNames(JsonTypeInfo info)
             {
                 foreach (JsonPropertyInfo property in info.Properties)
                 {
-                    _propertyNames.Add(property.Name);
+                    ReserveName(property.Name);
                 }
 
                 if (info.PolymorphismOptions is JsonPolymorphismOptions polymorphism)
                 {
-                    _propertyNames.Add(polymorphism.TypeDiscriminatorPropertyName);
+                    ReserveName(polymorphism.TypeDiscriminatorPropertyName);
                 }
             }
 
@@ -409,12 +419,20 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 string temporaryName;
                 do
                 {
-                    temporaryName = "\0" + _nextName++.ToString(CultureInfo.InvariantCulture);
+                    temporaryName = "__idunno_metadata_" + _nextName++.ToString(CultureInfo.InvariantCulture);
                 }
-                while (!_propertyNames.Add(temporaryName));
+                while (!ReserveName(temporaryName));
 
-                RenamedNames.Add(new KeyValuePair<string, string>(temporaryName, originalName));
+                RenamedNames.Add(temporaryName, new(originalName, RenamedNames.Count));
                 return temporaryName;
+            }
+
+            private bool ReserveName(string name)
+            {
+                bool ordinal = _propertyNames.Add(name);
+                bool culture = _culturePropertyNames.Add(name);
+                bool invariant = _invariantPropertyNames.Add(name);
+                return ordinal && culture && invariant;
             }
 
             private void CollectPropertyNames(JsonElement element)
@@ -423,7 +441,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 {
                     foreach (JsonProperty property in element.EnumerateObject())
                     {
-                        _propertyNames.Add(property.Name);
+                        ReserveName(property.Name);
                         CollectPropertyNames(property.Value);
                     }
                 }
@@ -437,13 +455,21 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
         }
 
-        private static void RestoreNames<T>(IDictionary<string, T> data, List<KeyValuePair<string, string>> renamedNames)
+        private sealed record RenamedProperty(string OriginalName, int Order);
+
+        private static void RestoreNames<T>(IDictionary<string, T> data, Dictionary<string, RenamedProperty> renamedNames)
         {
-            foreach ((string temporaryName, string originalName) in renamedNames)
+            // Inspect only this object's keys; sort matching aliases by their source occurrence.
+            KeyValuePair<string, RenamedProperty>[] aliases = data.Keys
+                .Where(renamedNames.ContainsKey)
+                .Select(name => new KeyValuePair<string, RenamedProperty>(name, renamedNames[name]))
+                .OrderBy(pair => pair.Value.Order)
+                .ToArray();
+            foreach ((string temporaryName, RenamedProperty property) in aliases)
             {
                 if (data.Remove(temporaryName, out T? item))
                 {
-                    data[originalName] = item;
+                    data[property.OriginalName] = item;
                 }
             }
         }
@@ -508,6 +534,25 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         // Most payloads need no rewriting. Scan a reader copy without allocating property names or a DOM.
         private bool NeedsNormalization(ref Utf8JsonReader reader, JsonTypeInfo info)
         {
+            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+                reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
+            {
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    bool isValues = reader.ValueTextEquals("$values");
+                    reader.Read();
+                    if (isValues && NeedsNormalization(ref reader, info))
+                    {
+                        return true;
+                    }
+                    if (!isValues)
+                    {
+                        SkipValue(ref reader);
+                    }
+                }
+                return false;
+            }
+
             if (reader.TokenType == JsonTokenType.StartArray && info.Kind == JsonTypeInfoKind.Enumerable &&
                 GetElementType(info) is Type elementType)
             {
@@ -623,6 +668,16 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         private void ReserveContractNames(JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
+            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+                element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
+            {
+                if (element.TryGetProperty("$values", out JsonElement values))
+                {
+                    ReserveContractNames(values, info, state);
+                }
+                return;
+            }
+
             if (element.ValueKind == JsonValueKind.Array && info.Kind == JsonTypeInfoKind.Enumerable &&
                 GetElementType(info) is Type elementType)
             {
@@ -692,6 +747,26 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private bool WriteNormalized(Utf8JsonWriter writer, JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
             bool normalized = false;
+            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+                element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
+            {
+                writer.WriteStartObject();
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    writer.WritePropertyName(property.Name);
+                    if (property.NameEquals("$values"))
+                    {
+                        normalized |= WriteNormalized(writer, property.Value, info, state);
+                    }
+                    else
+                    {
+                        property.Value.WriteTo(writer);
+                    }
+                }
+                writer.WriteEndObject();
+                return normalized;
+            }
+
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary && GetElementType(info) is Type valueType)
             {
                 JsonTypeInfo valueInfo = underlyingOptions.GetTypeInfo(valueType);

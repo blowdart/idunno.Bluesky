@@ -72,10 +72,50 @@ foreach (Post? post in new[] { extensionPost, extensionRecord as Post, extension
     }
 }
 
+JsonSerializerOptions referenceOptions = BlueskyJsonSerializerOptions.Create(options =>
+    options.ReferenceHandler = ReferenceHandler.Preserve);
+JsonTypeInfo<AtProtoRepositoryRecord<Post>> referenceEnvelopeInfo =
+    (JsonTypeInfo<AtProtoRepositoryRecord<Post>>)referenceOptions.GetTypeInfo(typeof(AtProtoRepositoryRecord<Post>));
+string referenceEnvelopeJson = $$"""
+    {
+      "$id": "1",
+      "uri": "at://did:plc:kaxwhrcwrqdxm2ppaaczwhcn/app.bsky.feed.post/3mxesfgzw4q2r",
+      "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+      "value": {{extensionPostJson}}
+    }
+    """;
+AtProtoRepositoryRecord<Post>? referenceEnvelope = JsonSerializer.Deserialize(referenceEnvelopeJson, referenceEnvelopeInfo);
+if (referenceEnvelope?.Value.ExtensionData?["$via"].GetString() != "kazahana")
+{
+    throw new InvalidOperationException("Reference-preserving repository normalization lost unknown metadata.");
+}
+
 JsonOptions lateJsonOptions = new();
 lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
 JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
+JsonSerializerOptions sharedReferenceOptions = AtProtoJsonSerializerOptions.Create(options =>
+{
+    options.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
+    options.ReferenceHandler = ReferenceHandler.Preserve;
+});
+using JsonDocument sharedMetadata = JsonDocument.Parse("\"extension\"");
+LateBoundNestedRecord sharedRecord = new()
+{
+    Value = "shared",
+    ExtensionData = new() { ["$via"] = sharedMetadata.RootElement.Clone() }
+};
+SmokeRecordList sharedRecords = [sharedRecord, sharedRecord];
+JsonTypeInfo<SmokeRecordList> sharedListInfo = (JsonTypeInfo<SmokeRecordList>)sharedReferenceOptions.GetTypeInfo(typeof(SmokeRecordList));
+string sharedListJson = JsonSerializer.Serialize(sharedRecords, sharedListInfo);
+SmokeRecordList? sharedRoundTrip = JsonSerializer.Deserialize(sharedListJson, sharedListInfo);
+if (sharedRoundTrip is null || sharedRoundTrip.Count != 2 ||
+    !ReferenceEquals(sharedRoundTrip[0], sharedRoundTrip[1]) ||
+    sharedRoundTrip[0] is not LateBoundNestedRecord { ExtensionData: not null } sharedResult ||
+    sharedResult.ExtensionData["$via"].GetString() != "extension")
+{
+    throw new InvalidOperationException("Reference-preserving collection normalization lost shared references or unknown metadata.");
+}
 JsonTypeInfo<SmokeCollectionRecordBase> collectionTypeInfo =
     (JsonTypeInfo<SmokeCollectionRecordBase>)collectionOptions.GetTypeInfo(typeof(SmokeCollectionRecordBase));
 foreach (bool outerMetadata in new[] { false, true })

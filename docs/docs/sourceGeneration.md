@@ -20,6 +20,11 @@ Unknown properties are retained, with their original names and JSON values, when
 the contract's existing fallback policy. Malformed discriminators and invalid or missing required fields still fail.
 The protocol's `$link` and `$bytes` representations are unchanged.
 
+With `ReferenceHandler.Preserve`, unknown fields are normalized across the complete object or collection root before
+the built-in serializer reads it in a single operation. `$id`, `$ref` and `$values` retain their reference semantics,
+including shared references between siblings. `ReferenceHandler.IgnoreCycles` does not reserve those names on reads;
+they are treated like other unknown fields on polymorphic contracts.
+
 The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
 trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
 converters retain control of their own wire formats and receive the SDK options for decoding nested values, including

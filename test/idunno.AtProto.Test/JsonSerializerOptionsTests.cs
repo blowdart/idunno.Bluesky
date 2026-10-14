@@ -602,7 +602,7 @@ public class JsonSerializerOptionsTests
         JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
             mutable.TypeInfoResolver = TolerantTestContext.Default);
         const string missingRequired = """{"$type":"test.aliasCollision","$via":"extension"}""";
-        const string requiredPresent = """{"$type":"test.aliasCollision","\u00000":"present","$via":"extension"}""";
+        const string requiredPresent = """{"$type":"test.aliasCollision","__idunno_metadata_0":"present","$via":"extension"}""";
 
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AliasCollisionRecordBase>(missingRequired, options));
         AliasCollisionRecord record = Assert.IsType<AliasCollisionRecord>(
@@ -624,6 +624,51 @@ public class JsonSerializerOptionsTests
             JsonSerializer.Deserialize<SortedExtensionRecordBase>(json, options));
 
         Assert.Equal("11", record.ExtensionData!["$via"].GetString());
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("__idunno_metadata_0")]
+    [InlineData("__idunno_\u0000metadata_0")]
+    [InlineData("__IDUNNO_METADATA_0")]
+    public void TemporaryAliasesPreserveOrdinaryFieldsInSortedExtensionData(string ordinaryName)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        string json = $$"""
+            {"$type":"test.sortedExtension",{{JsonSerializer.Serialize(ordinaryName)}}:"original","$via":"extension"}
+            """;
+
+        SortedExtensionRecord record = Assert.IsType<SortedExtensionRecord>(
+            JsonSerializer.Deserialize<SortedExtensionRecordBase>(json, options));
+
+        Assert.Equal(2, record.ExtensionData!.Count);
+        Assert.Equal("original", record.ExtensionData[ordinaryName].GetString());
+        Assert.Equal("extension", record.ExtensionData["$via"].GetString());
+    }
+
+    [Theory]
+    [InlineData(4000)]
+    [InlineData(8000)]
+    public void ManySiblingRecordsRestoreOnlyTheirOwnMetadataAliases(int count)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        string json = "[" + string.Join(",", Enumerable.Repeat(
+            """{"$type":"test.countedExtension","$via":"extension"}""", count)) + "]";
+
+        List<CountedExtensionRecordBase> records = Assert.IsType<List<CountedExtensionRecordBase>>(
+            JsonSerializer.Deserialize<List<CountedExtensionRecordBase>>(json, options));
+
+        Assert.Equal(count, records.Count);
+        foreach (CountedExtensionRecordBase item in records)
+        {
+            CountedExtensionRecord record = Assert.IsType<CountedExtensionRecord>(item);
+            CountedExtensionDictionary data = Assert.IsType<CountedExtensionDictionary>(record.ExtensionData);
+            Assert.Equal("extension", data["$via"].GetString());
+            Assert.Equal(1, data.RemovalCount);
+            Assert.InRange(data.LookupCount, 1, 2);
+        }
     }
 
     [Theory]
@@ -660,6 +705,10 @@ public class JsonSerializerOptionsTests
             mutable.ReferenceHandler = ReferenceHandler.Preserve;
         });
         NestedCustomRecord shared = new() { Value = "shared" };
+        shared.ExtensionData = new()
+        {
+            ["$via"] = JsonSerializer.SerializeToElement("extension")
+        };
         CollectionRecord record = new();
         record.Records.Add(shared);
         record.Records.Add(shared);
@@ -669,6 +718,42 @@ public class JsonSerializerOptionsTests
 
         Assert.Contains("\"$ref\"", json, StringComparison.Ordinal);
         Assert.Same(roundTripped.Records[0], roundTripped.Records[1]);
+        Assert.Equal("extension", Assert.IsType<NestedCustomRecord>(roundTripped.Records[0]).ExtensionData!["$via"].GetString());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReferencePreserveNormalizesRootCollectionsAndReferenceEnvelopes(bool dictionary)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+        });
+        NestedCustomRecord shared = new()
+        {
+            Value = "shared",
+            ExtensionData = new() { ["$via"] = JsonSerializer.SerializeToElement("extension") }
+        };
+        if (dictionary)
+        {
+            Dictionary<string, NestedCustomRecordBase> records = new() { ["first"] = shared, ["second"] = shared };
+            string json = JsonSerializer.Serialize(records, options);
+            Dictionary<string, NestedCustomRecordBase> result = Assert.IsType<Dictionary<string, NestedCustomRecordBase>>(
+                JsonSerializer.Deserialize<Dictionary<string, NestedCustomRecordBase>>(json, options));
+            Assert.Same(result["first"], result["second"]);
+            Assert.Equal("extension", Assert.IsType<NestedCustomRecord>(result["first"]).ExtensionData!["$via"].GetString());
+        }
+        else
+        {
+            List<NestedCustomRecordBase> records = [shared, shared];
+            string json = JsonSerializer.Serialize(records, options);
+            List<NestedCustomRecordBase> result = Assert.IsType<List<NestedCustomRecordBase>>(
+                JsonSerializer.Deserialize<List<NestedCustomRecordBase>>(json, options));
+            Assert.Same(result[0], result[1]);
+            Assert.Equal("extension", Assert.IsType<NestedCustomRecord>(result[0]).ExtensionData!["$via"].GetString());
+        }
     }
 
     [Fact]
@@ -780,7 +865,7 @@ internal abstract class AliasCollisionRecordBase;
 
 internal sealed class AliasCollisionRecord : AliasCollisionRecordBase
 {
-    [JsonPropertyName("\0" + "0")]
+    [JsonPropertyName("__idunno_metadata_0")]
     [JsonRequired]
     public string RequiredValue { get; set; } = string.Empty;
 
@@ -796,6 +881,35 @@ internal sealed class SortedExtensionRecord : SortedExtensionRecordBase
 {
     [JsonExtensionData]
     public SortedDictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(CountedExtensionRecord), "test.countedExtension")]
+internal abstract class CountedExtensionRecordBase;
+
+internal sealed class CountedExtensionRecord : CountedExtensionRecordBase
+{
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> ExtensionData { get; set; } = new CountedExtensionDictionary();
+}
+
+internal sealed class CountedExtensionDictionary : Dictionary<string, JsonElement>, IDictionary<string, JsonElement>
+{
+    public int RemovalCount { get; private set; }
+
+    public int LookupCount { get; private set; }
+
+    bool IDictionary<string, JsonElement>.Remove(string key)
+    {
+        RemovalCount++;
+        return Remove(key);
+    }
+
+    bool IDictionary<string, JsonElement>.TryGetValue(string key, out JsonElement value)
+    {
+        LookupCount++;
+        return TryGetValue(key, out value);
+    }
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
@@ -1029,6 +1143,11 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(DeepPayloadRecordBase))]
 [JsonSerializable(typeof(DeepPayloadRecord))]
 [JsonSerializable(typeof(DeepPayload))]
+[JsonSerializable(typeof(CountedExtensionRecordBase))]
+[JsonSerializable(typeof(CountedExtensionRecord))]
+[JsonSerializable(typeof(List<CountedExtensionRecordBase>))]
+[JsonSerializable(typeof(List<NestedCustomRecordBase>))]
+[JsonSerializable(typeof(Dictionary<string, NestedCustomRecordBase>))]
 [ExcludeFromCodeCoverage]
 internal sealed partial class TolerantTestContext : JsonSerializerContext
 {
