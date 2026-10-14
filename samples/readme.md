@@ -25,6 +25,7 @@ If you use a Bluesky app password you don't need to worry about authorization co
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
 * `Samples.BlazorAuthentication` - an Interactive Server Blazor Web App with circuit session validation, server-side credential refresh, and the Bluesky authentication UI for login, logout, timeline retrieval, claims and profile editing. See its [readme](Samples.BlazorAuthentication/readme.md).
 * `Samples.Bot` - a sample showing a simple bot posting on a scheduled time.
+* `Samples.BotSdk` - a sample showing how to build a durable bot with `idunno.Bluesky.BotSdk` using the in-memory provider, listening to live posts and simulating "🫘" replies when a post contains "#beans". Developer mode is enabled by default. See its [readme](Samples.BotSdk/readme.md).
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
 * `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
 * `Samples.Feed` - a sample showing how to page through a feed.

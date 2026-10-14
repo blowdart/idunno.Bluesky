@@ -124,6 +124,8 @@
     <File Path="docs/docs/includes/untrusted-data-warning.md" />
   </Folder>
   <Folder Name="/docs/docs/bots/">
+    <File Path="docs/docs/bots/customBotActions.md" />
+    <File Path="docs/docs/bots/durableBotSdk.md" />
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />
   </Folder>
@@ -213,6 +215,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Bot/Samples.Bot.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.BotSdk/Samples.BotSdk.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -333,6 +339,10 @@
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj" Id="3fc9d41e-099d-461b-92f6-30275b1d8b43" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
   <Folder Name="/samples/Jetstream/">
@@ -435,6 +445,9 @@
     <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
+    <Project Path="test/idunno.Bluesky.BotSdk.Test/idunno.Bluesky.BotSdk.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
@@ -447,6 +460,10 @@
   </Folder>
   <Folder Name="/trimming/">
     <Project Path="trimming/AuthenticationAnalysis/idunno.Trimming.AuthenticationAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/BotAnalysis/idunno.Trimming.BotAnalysis.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

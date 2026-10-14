@@ -10,19 +10,9 @@
 
 🎉 **New** ASP.NET middleware to generate and publish OAuth client metadata, including confidential client support with `private_key_jwt` and ES256 signing keys.
 
+🎉 **New** A bot SDK delivering a runtime with hosted Jetstream replay, durable action dispatch, credential recovery, rate-limit accounting, operational health checks, and metrics for applications that build Bluesky bots.
+
 ### Added
-
-#### Samples
-
-* Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
-* Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
-* Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
-* Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
-* Returning to an idle Blazor sample tab checks the session immediately. Account-bound, per-tab profile drafts survive session expiry and sign-in, retaining their original CID for conditional saves.
-* The Blazor sample navigation displays an account dropdown triggered by the authenticated user's avatar and handle, with manage-profile and sign-out options on component and authentication UI pages.
-* The Blazor timeline renders images attached to quoted posts, inline animated GIFs with alt text and hover descriptions, and video controls with a Bluesky playback fallback. Static images open in closable full-size dialogs with alt-text captions. Signed-out navigation places the sign-in link on the right.
-* Blazor sample credential writes atomically check the original session against logout and login replacement. Cookie renewal uses the handler's reference-cookie sliding renewal without re-adding identities, and authorization-failure sign-in links retain the current local route.
-* Blazor sample heartbeat recovery retains the current page, discarded drafts are removed from the editor even when profile reload fails, and image-viewer buttons have an accessible action name.
 
 #### idunno.AtProto
 
@@ -169,6 +159,32 @@
   `BlueskyJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
   `BlueskyJsonSerializerOptions.TypeInfoResolver` no longer builds a new set of options each time it is read.
 
+#### idunno.Bluesky.BotSdk
+
+* Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
+* Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
+* Added `AddInMemoryBotStorage()` for development and tests. It logs that its process-local state is not production durable.
+* Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
+* Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
+* Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
+* Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
+* Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
+* Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
+* The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
+
+#### idunno.Bluesky.BotSdk.MySQL
+
+* Added a MySQL 8.4+ storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+
+#### idunno.Bluesky.BotSdk.PostgreSQL
+
+* Added a PostgreSQL storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+* Requests exceeding an empty hourly or daily write budget report an explicit invalid-operation error instead of a null timestamp conversion failure.
+
+#### idunno.Bluesky.BotSdk.SQLite
+
+* Added a persistent local SQLite storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+
 #### idunno.Bluesky.AspNet.Authentication
 
 * Documented the minimum `app.bsky.actor.getProfile` RPC permission required by claims transformation, replacing the incorrect requirement for `transition:generic`.
@@ -190,12 +206,12 @@
 
 #### Samples
 
-* Updated `Samples.AspNetAuthentication` to request `BlueskyOAuthPermissionSets.FullApp` at login, keeping its standard authentication UI and direct profile-save flow. Added an ASP.NET progressive authorization guide covering permission planning, same-session consent and safe completion of pending operations.
+* Added `Samples.BotSdk`, a reply-only durable bot sample with developer-mode simulation, in-memory storage, and health and metrics endpoints.
+* Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
+* Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
 * Added a success indication after saving a profile in `Samples.AspNetAuthentication`.
 * Added `Samples.AspNetProgressiveAuthentication`, demonstrating read-only login, just-in-time profile-write consent and safe completion of encrypted, expiring, account/session-bound pending edits, with focused tests.
-
 * Added a packaged WinUI 3 OAuth sample (`Samples.WinUIOAuth`) with native protocol activation, in-memory login state and credentials, read-only profile display, profile refresh and token revocation on logout. The app is in the main solution and evaluates as an empty library on non-Windows hosts; callback routing tests run cross-platform.
-
 * Added `Samples.ReactBff`, a React and ASP.NET backend-for-frontend sample demonstrating OAuth, isolated server-side credentials, timeline retrieval, creating and deleting a post, and CSRF-protected logout.
 * Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
   The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
@@ -206,8 +222,6 @@
 * Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
 * Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.
 * Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
-* `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
-  cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
 * Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
   selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
   display name and declared label values, with an optional case-insensitive wildcard pattern to filter handles. `--live` narrows that list
@@ -215,13 +229,12 @@
 * Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
-* Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
-  `CallbackServer.CreateAsync()` for race-free callback server startup.
 
 ### Changed
 
 #### idunno.AtProto
 
+* DAG-CBOR readers now consistently limit nesting to 64 levels across supported runtimes and report the SDK depth-limit error before the platform reader rejects the value.
 * XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
   A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
   Raw string responses also reject invalid UTF-8 and report an `InvalidResponse` error.
@@ -257,6 +270,21 @@
 * `PostView.SelfLabels` and `ProfileViewBasic.SelfLabels` (for both actors and chat members) no longer allocate when there are no labels, and allocate less when there are.
 * Posts and `PostBuilder` now accept empty text without requiring an embed, matching the lexicon's required-string semantics. Null text without an embed remains invalid.
 * Embedded-only posts now expose and serialize empty `text` instead of omitting the required field. A builder still distinguishes unset text from explicitly empty text.
+
+#### Samples
+
+* Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
+* Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
+* Returning to an idle Blazor sample tab checks the session immediately. Account-bound, per-tab profile drafts survive session expiry and sign-in, retaining their original CID for conditional saves.
+* The Blazor sample navigation displays an account dropdown triggered by the authenticated user's avatar and handle, with manage-profile and sign-out options on component and authentication UI pages.
+* The Blazor timeline renders images attached to quoted posts, inline animated GIFs with alt text and hover descriptions, and video controls with a Bluesky playback fallback. Static images open in closable full-size dialogs with alt-text captions. Signed-out navigation places the sign-in link on the right.
+* Blazor sample credential writes atomically check the original session against logout and login replacement. Cookie renewal uses the handler's reference-cookie sliding renewal without re-adding identities, and authorization-failure sign-in links retain the current local route.
+* Blazor sample heartbeat recovery retains the current page, discarded drafts are removed from the editor even when profile reload fails, and image-viewer buttons have an accessible action name.
+* Updated `Samples.AspNetAuthentication` to request `BlueskyOAuthPermissionSets.FullApp` at login, keeping its standard authentication UI and direct profile-save flow. Added an ASP.NET progressive authorization guide covering permission planning, same-session consent and safe completion of pending operations.
+* `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
+  cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
+* Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
+  `CallbackServer.CreateAsync()` for race-free callback server startup.
 
 ### Breaking Changes
 

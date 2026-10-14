@@ -12,9 +12,9 @@ namespace idunno.AtProto.Firehose;
 internal static class FirehoseCbor
 {
     /// <summary>
-    /// Nesting deeper than this is rejected rather than risking a stack overflow on hostile input, matching <see cref="DagCbor"/>.
+    /// Nesting deeper than this is rejected rather than risking a stack overflow on hostile input, matching the CBOR reader limit.
     /// </summary>
-    internal const int MaximumDepth = 128;
+    internal const int MaximumDepth = 64;
 
     private const ulong CidTag = 42;
 
@@ -35,7 +35,7 @@ internal static class FirehoseCbor
         Wrap(() =>
         {
             CborReader reader = new(value, CborConformanceMode.Canonical);
-            ValidateValue(reader, depth: 0);
+            ValidateValue(reader);
 
             if (reader.BytesRemaining != 0)
             {
@@ -58,7 +58,7 @@ internal static class FirehoseCbor
     internal static ReadOnlyMemory<byte> ReadValidatedValue(CborReader reader, ReadOnlyMemory<byte> source) => Wrap(() =>
     {
         int start = source.Length - reader.BytesRemaining;
-        ValidateValue(reader, depth: 0);
+        ValidateValue(reader);
 
         return source[start..(source.Length - reader.BytesRemaining)];
     });
@@ -226,15 +226,16 @@ internal static class FirehoseCbor
         }
     }
 
-    private static void ValidateValue(CborReader reader, int depth)
+    private static void ValidateValue(CborReader reader)
     {
-        if (depth > MaximumDepth)
+        CborReaderState state = reader.PeekState();
+        if ((state is CborReaderState.StartMap or CborReaderState.StartArray) && reader.CurrentDepth >= MaximumDepth)
         {
             throw new InvalidDataException(
                 string.Create(CultureInfo.InvariantCulture, $"The value is nested more than {MaximumDepth} levels deep."));
         }
 
-        switch (reader.PeekState())
+        switch (state)
         {
             case CborReaderState.Tag:
                 ReadCidLink(reader);
@@ -250,7 +251,7 @@ internal static class FirehoseCbor
                     }
 
                     reader.SkipValue();
-                    ValidateValue(reader, depth + 1);
+                    ValidateValue(reader);
                 }
 
                 reader.ReadEndMap();
@@ -260,7 +261,7 @@ internal static class FirehoseCbor
                 int arrayLength = reader.ReadStartArray() ?? throw new InvalidDataException("The value contains an indefinite length array.");
                 for (int i = 0; i < arrayLength; i++)
                 {
-                    ValidateValue(reader, depth + 1);
+                    ValidateValue(reader);
                 }
 
                 reader.ReadEndArray();

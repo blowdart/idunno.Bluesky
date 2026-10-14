@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishAot>false</PublishAot>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <Configurations>Debug;Release;CodeQL</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk\idunno.Bluesky.BotSdk.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.MySQL\idunno.Bluesky.BotSdk.MySQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.PostgreSQL\idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.SQLite\idunno.Bluesky.BotSdk.SQLite.csproj" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.MySQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.PostgreSQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.SQLite" />
+  </ItemGroup>
+
+</Project>

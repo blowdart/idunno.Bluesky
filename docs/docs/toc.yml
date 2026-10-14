@@ -105,10 +105,18 @@ items:
 
   - name: Writing Bots
     items:
-      - name: Writing a scheduled post bot
-        href: bots/scheduledPostBot.md
-      - name: Writing a watcher bot
-        href: bots/watcherBot.md
+      - name: Simple bots
+        items:
+          - name: Writing a scheduled post bot
+            href: bots/scheduledPostBot.md
+          - name: Writing a watcher bot
+            href: bots/watcherBot.md
+      - name: Durable Bots
+        items:
+          - name: Writing a durable bot
+            href: bots/durableBotSdk.md
+          - name: Writing a custom bot action
+            href: bots/customBotActions.md
 
   - name: Jetstream
     items:
