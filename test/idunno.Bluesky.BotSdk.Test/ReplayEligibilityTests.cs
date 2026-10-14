@@ -14,6 +14,34 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks sample eligibility and bounded replay generation recovery.</summary>
 public sealed class ReplayEligibilityTests
 {
+    /// <summary>Requires sequence and witnessed time before accepting an event's replay position.</summary>
+    /// <param name="hasSequence">Whether the event has a sequence.</param>
+    /// <param name="hasWitnessedAt">Whether the event has a witnessed timestamp.</param>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void ReplayPositionRequiresCompleteMetadata(bool hasSequence, bool hasWitnessedAt)
+    {
+        JetstreamCommitEvent item = TestRecords.Event() with
+        {
+            Sequence = hasSequence ? 11 : null,
+            WitnessedAt = hasWitnessedAt ? TestRecords.Start : null
+        };
+        if (hasSequence && hasWitnessedAt)
+        {
+            Assert.Equal((11L, TestRecords.Start), ReaderWorker.ValidateReplayPosition(item));
+        }
+        else
+        {
+            InvalidDataException failure = Assert.Throws<InvalidDataException>(() => ReaderWorker.ValidateReplayPosition(item));
+            Assert.Equal(hasSequence
+                ? "A replay event lacks a witnessed timestamp."
+                : "A replay event lacks a sequence.", failure.Message);
+        }
+    }
+
     /// <summary>Passes malformed and null sample records to the reader's audit path instead of silently ignoring them.</summary>
     /// <param name="record">The invalid source record.</param>
     [Theory]

@@ -168,6 +168,7 @@
 * Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
 * Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
 * Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
+* Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
 * The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
 
 #### idunno.Bluesky.BotSdk.MySQL

@@ -43,6 +43,19 @@ internal sealed class ReaderWorker(
     private static readonly TimeSpan s_readSlice = TimeSpan.FromMinutes(5);
     private readonly GenerationRecovery _generationRecovery = new();
 
+    /// <summary>Requires complete replay position metadata before event effects or progress can change.</summary>
+    /// <param name="item">The replay event.</param>
+    /// <returns>The event sequence and witnessed timestamp.</returns>
+    /// <exception cref="InvalidDataException">The event lacks a sequence or witnessed timestamp.</exception>
+    internal static (long Sequence, DateTimeOffset WitnessedAt) ValidateReplayPosition(JetstreamEvent item)
+    {
+        long sequence = item.Sequence ?? throw new InvalidDataException("A replay event lacks a sequence.");
+        DateTimeOffset witnessedAt = item.WitnessedAt
+            ?? throw new InvalidDataException("A replay event lacks a witnessed timestamp.");
+
+        return (sequence, witnessedAt);
+    }
+
     /// <summary>Audits explicit JSON source-data failures without swallowing policy validation errors.</summary>
     /// <param name="policy">The application's event policy.</param>
     /// <param name="item">The replay event.</param>
@@ -346,7 +359,7 @@ internal sealed class ReaderWorker(
 
                     try
                     {
-                        long sequence = item.Sequence ?? throw new InvalidDataException("A replay event lacks a sequence.");
+                        (long sequence, DateTimeOffset witnessedAt) = ValidateReplayPosition(item);
 
                         if (sequence <= processed)
                         {
@@ -384,7 +397,7 @@ internal sealed class ReaderWorker(
 
                         processed = sequence;
                         _generationRecovery.Observe(processed);
-                        diagnostics.Processed(sequence, item.WitnessedAt);
+                        diagnostics.Processed(sequence, witnessedAt);
 
                         if (malformed is not null)
                         {
@@ -404,10 +417,7 @@ internal sealed class ReaderWorker(
                             BotLog.Enqueued(logger, sequence, inserted);
                         }
 
-                        progress.Observe(
-                            sequence,
-                            item.WitnessedAt
-                            ?? throw new InvalidDataException("A replay event lacks a witnessed timestamp."));
+                        progress.Observe(sequence, witnessedAt);
                     }
                     finally
                     {
