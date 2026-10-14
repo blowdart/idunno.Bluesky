@@ -88,7 +88,46 @@ jobs:
     - name: 'Test'
       id: test
       shell: bash
-      run: dotnet test --no-build --no-restore --results-directory ${TEST_RESULTS} --coverlet --report-xunit-junit
+      run: dotnet test --no-build --no-restore --results-directory "${TEST_RESULTS}" --coverlet --report-xunit-junit --filter-not-class '*AllocationBudgetTests'
+
+    - name: 'Allocation budgets'
+      id: allocations
+      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+      shell: bash
+      run: |
+        set -o pipefail
+        diagnostics="${TEST_RESULTS}/allocation-diagnostics"
+        mkdir -p "${diagnostics}/measurements"
+        dotnet --info > "${diagnostics}/dotnet-info.txt"
+        uname -a > "${diagnostics}/system.txt"
+        status=0
+        for project in idunno.AtProto.Test idunno.Bluesky.Test; do
+          for framework in net8.0 net9.0 net10.0; do
+            name="${project}.${framework}"
+            # Isolate the runtime counter from background GC and coverage instrumentation.
+            if env DOTNET_gcConcurrent=0 \
+              DOTNET_EnableEventPipe=1 \
+              DOTNET_EventPipeConfig=Microsoft-Windows-DotNETRuntime:0x1:5 \
+              DOTNET_EventPipeCircularMB=40 \
+              DOTNET_EventPipeOutputPath="${diagnostics}/${name}.{pid}.nettrace" \
+              IDUNNO_ALLOCATION_REPORT="${diagnostics}/measurements" \
+              dotnet "test/${project}/bin/Debug/${framework}/${project}.dll" \
+                --filter-class '*AllocationBudgetTests' --parallel none \
+                --results-directory "${TEST_RESULTS}" --report-xunit-junit \
+                2>&1 | tee "${diagnostics}/${name}.log"; then
+              echo "${name}: passed (DOTNET_gcConcurrent=0)" >> "${diagnostics}/summary.txt"
+            else
+              echo "${name}: failed (DOTNET_gcConcurrent=0)" >> "${diagnostics}/summary.txt"
+              status=1
+            fi
+            traces=("${diagnostics}/${name}".*.nettrace)
+            if [[ ! -s "${traces[0]}" ]]; then
+              echo "::error::Missing GC trace for ${name}"
+              status=1
+            fi
+          done
+        done
+        exit "${status}"
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
@@ -97,10 +136,14 @@ jobs:
         files: ${{ env.TEST_RESULTS }}/*.junit.xml
 
     - name: Upload Test Artifacts
+      if: ${{ !cancelled() && steps.build.outcome == 'success' }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: test-results
-        path: ${{ env.TEST_RESULTS }}/*.junit.xml
+        path: |
+          ${{ env.TEST_RESULTS }}/*.junit.xml
+          ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
+          ${{ env.TEST_RESULTS }}/allocation-diagnostics/
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
