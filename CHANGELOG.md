@@ -337,6 +337,11 @@
 
 ### Fixed
 
+#### Build and test
+
+* CI now runs the AT Proto and Bluesky allocation-budget tests in dedicated processes with background GC disabled,
+  without changing their thresholds. GC traces, measurements and raw test results are retained even when tests fail.
+
 #### idunno.AtProto
 
 * Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.

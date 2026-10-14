@@ -10,8 +10,9 @@ namespace idunno.AtProto.Test;
 /// </summary>
 /// <remarks>
 /// <para>Allocations are counted on the current thread only, so a path must complete synchronously for its allocations to
-/// be attributed to it, whatever other tests are running in parallel. Each measurement runs the path once first, so JIT
-/// compilation and one time static initialisation are not counted.</para>
+/// be attributed to it. CI uses dedicated processes with background GC disabled, because background GC can perturb
+/// the runtime allocation counter. Each measurement runs the path once first, so JIT compilation and one time static
+/// initialisation are not counted.</para>
 /// </remarks>
 internal static class AllocationMeasurement
 {

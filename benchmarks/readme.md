@@ -18,12 +18,30 @@ Pass `--filter "*Firehose*"` (or any other BenchmarkDotNet filter) to run a subs
 
 ## What to trust
 
-* **Allocated bytes per operation** are deterministic for a given runtime, code and corpus. The allocation budget tests gate
+* **Allocated bytes per operation** are repeatable for a given runtime, code and corpus when the runtime counter is isolated
+  from background GC. The allocation budget tests gate
   pull requests on them. `test/idunno.AtProto.Test/AllocationBudgetTests.cs` covers web socket receive, Jetstream,
   the Firehose decode pipeline and CIDs. `test/idunno.Bluesky.Test/AllocationBudgetTests.cs` covers `getTimeline` and
   `getAuthorFeed` through the XRPC client, timeline deserialization, and post and author self labels.
 * **Time per operation** depends on hardware and load. Compare it only between runs on the same machine, and never gate
   on it.
+
+## Allocation budgets in CI
+
+CI excludes both `AllocationBudgetTests` classes from its ordinary coverage run. It runs each class in a separate,
+sequential process for .NET 8, 9 and 10, without coverage instrumentation and with `DOTNET_gcConcurrent=0`.
+The existing budgets are unchanged. Background GC can charge unused allocation-context space to
+`GC.GetAllocatedBytesForCurrentThread`, producing phantom allocations even after warmup
+([dotnet/runtime#134724](https://github.com/dotnet/runtime/issues/134724)).
+
+Each allocation-test process captures a native EventPipe GC trace from startup
+(`Microsoft-Windows-DotNETRuntime:0x1:5`, GC events at verbose level, with a 64 MiB buffer).
+The `test-results` artifact retains these `.nettrace` files, per-project/framework logs, allocation measurements,
+SDK/runtime information, test reports and raw coverage reports even when tests fail. Trace filenames include the
+project, framework and process ID. Open a trace in PerfView or Visual Studio to inspect collection timing and
+sampled allocations; allocation ticks are sampled, not an exact count of every object.
+Tracing itself can affect timing, so compare the measured counters, logs and trace together rather than treating
+the trace as proof of a particular allocation.
 
 ## Refreshing the corpus
 

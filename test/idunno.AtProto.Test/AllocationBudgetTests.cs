@@ -18,9 +18,10 @@ namespace idunno.AtProto.Test;
 /// relies on, and fails if the bytes allocated per message or per CID grow past a budget.
 /// </summary>
 /// <remarks>
-/// <para>Unlike time, allocations are deterministic for a given runtime, code and corpus, so they can gate a pull request.
+/// <para>Unlike time, allocations are repeatable for a given runtime, code and corpus when background GC is disabled,
+/// so they can gate a pull request. CI runs these tests in a dedicated process without coverage instrumentation.
 /// Each path completes synchronously against the corpus, so the allocations of the current thread are exactly those of the
-/// path being measured, whatever other tests are running.</para>
+/// path being measured. Background GC can otherwise perturb the runtime allocation counter.</para>
 /// <para>Budgets are roughly ten percent above the measured baseline. When a change reduces allocations, lower the budget
 /// to lock in the gain. When the corpus is refreshed with benchmarks\capture.ps1, use the budgets it suggests.</para>
 /// </remarks>
