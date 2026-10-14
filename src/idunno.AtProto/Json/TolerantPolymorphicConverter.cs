@@ -201,14 +201,10 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             using JsonDocument document = JsonDocument.ParseValue(ref reader);
             JsonElement element = document.RootElement;
-            int prefixLength = 1;
-            string prefix = "\0";
             // A prefix absent from every input property makes renaming reversible even when the
-            // payload already contains null-prefixed names. No user-visible names are reserved.
-            while (ContainsPrefix(element, prefix))
-            {
-                prefix = new string('\0', ++prefixLength);
-            }
+            // payload already contains null-prefixed names. Find the longest run in one traversal
+            // rather than repeatedly rescanning untrusted names and allocating intermediate prefixes.
+            string prefix = new('\0', GetMaximumLeadingNulls(element) + 1);
 
             ArrayBufferWriter<byte> buffer = new();
             bool normalized;
@@ -411,13 +407,33 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
         }
 
-        private static bool ContainsPrefix(JsonElement element, string prefix) => element.ValueKind switch
+        private static int GetMaximumLeadingNulls(JsonElement element)
         {
-            JsonValueKind.Object => element.EnumerateObject().Any(property =>
-                property.Name.StartsWith(prefix, StringComparison.Ordinal) || ContainsPrefix(property.Value, prefix)),
-            JsonValueKind.Array => element.EnumerateArray().Any(item => ContainsPrefix(item, prefix)),
-            _ => false
-        };
+            int maximum = 0;
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    string name = property.Name;
+                    int leadingNulls = 0;
+                    while (leadingNulls < name.Length && name[leadingNulls] == '\0')
+                    {
+                        leadingNulls++;
+                    }
+                    maximum = Math.Max(maximum, leadingNulls);
+                    maximum = Math.Max(maximum, GetMaximumLeadingNulls(property.Value));
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    maximum = Math.Max(maximum, GetMaximumLeadingNulls(item));
+                }
+            }
+
+            return maximum;
+        }
 
         // Walk declared contracts, not arbitrary JSON: extension values and custom-converted values
         // are opaque. Renaming only the owning object's unknown metadata preserves their contents.

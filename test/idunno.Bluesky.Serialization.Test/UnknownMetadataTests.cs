@@ -178,6 +178,37 @@ public class UnknownMetadataTests
         }
     }
 
+    [Theory]
+    [InlineData(64)]
+    [InlineData(8192)]
+    [InlineData(16384)]
+    public void LongLeadingNullNamesArePreservedWithoutQuadraticAllocations(int leadingNulls)
+    {
+        string name = new string('\0', leadingNulls) + "$example";
+        JsonObject json = JsonNode.Parse(PostJson)!.AsObject();
+        json[name] = "original";
+        json["$example"] = new JsonArray(new JsonObject
+        {
+            [new string('\0', leadingNulls + 1)] = "nested"
+        });
+        string payload = json.ToJsonString();
+
+        _ = JsonSerializer.Deserialize<Post>(PostJson, BlueskyJsonSerializerOptions.Default);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(payload, BlueskyJsonSerializerOptions.Default));
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(allocated < 16 * 1024 * 1024, $"Decoding allocated {allocated} bytes for {leadingNulls} leading NULs.");
+        Assert.Equal("original", post.ExtensionData![name].GetString());
+        Assert.Equal("nested", post.ExtensionData["$example"][0].GetProperty(new string('\0', leadingNulls + 1)).GetString());
+        Assert.Equal("kazahana", post.ExtensionData["$via"].GetString());
+        string serialized = JsonSerializer.Serialize(post, BlueskyJsonSerializerOptions.Default);
+        Post roundTripped = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(serialized, BlueskyJsonSerializerOptions.Default));
+        Assert.Equal("original", roundTripped.ExtensionData![name].GetString());
+        Assert.Equal("nested", roundTripped.ExtensionData["$example"][0].GetProperty(new string('\0', leadingNulls + 1)).GetString());
+        Assert.Equal("kazahana", roundTripped.ExtensionData["$via"].GetString());
+    }
+
     [Fact]
     public void NestedFeedAndQuotedPostRecordsAreTolerant()
     {
