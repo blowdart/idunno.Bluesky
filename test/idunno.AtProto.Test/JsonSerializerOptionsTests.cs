@@ -595,6 +595,102 @@ public class JsonSerializerOptionsTests
         Assert.Equal("nested", nested.Value);
         Assert.Equal("inner", nested.ExtensionData!["$via"].GetString());
     }
+
+    [Fact]
+    public void TemporaryMetadataAliasesDoNotSatisfyMissingRequiredProperties()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        const string missingRequired = """{"$type":"test.aliasCollision","$via":"extension"}""";
+        const string requiredPresent = """{"$type":"test.aliasCollision","\u00000":"present","$via":"extension"}""";
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AliasCollisionRecordBase>(missingRequired, options));
+        AliasCollisionRecord record = Assert.IsType<AliasCollisionRecord>(
+            JsonSerializer.Deserialize<AliasCollisionRecordBase>(requiredPresent, options));
+        Assert.Equal("present", record.RequiredValue);
+        Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+    }
+
+    [Fact]
+    public void DuplicateUnknownMetadataPropertiesKeepTheLastValueWithSortedExtensionData()
+    {
+        const string json = """
+            {"$type":"test.sortedExtension","$via":"0","$via":"1","$via":"2","$via":"3","$via":"4","$via":"5","$via":"6","$via":"7","$via":"8","$via":"9","$via":"10","$via":"11"}
+            """;
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        SortedExtensionRecord record = Assert.IsType<SortedExtensionRecord>(
+            JsonSerializer.Deserialize<SortedExtensionRecordBase>(json, options));
+
+        Assert.Equal("11", record.ExtensionData!["$via"].GetString());
+    }
+
+    [Theory]
+    [InlineData("$id", false)]
+    [InlineData("$ref", false)]
+    [InlineData("$values", false)]
+    [InlineData("$ref", true)]
+    public void IgnoreCyclesDoesNotTreatReferenceMetadataNamesAsReserved(string propertyName, bool includeOtherMetadata)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        });
+        string otherMetadata = includeOtherMetadata ? ",\"$via\":\"extension\"" : string.Empty;
+        string json = $$"""{"$type":"test.nested","value":"record","{{propertyName}}":"ordinary"{{otherMetadata}}}""";
+
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+            JsonSerializer.Deserialize<NestedCustomRecordBase>(json, options));
+
+        Assert.Equal("ordinary", record.ExtensionData![propertyName].GetString());
+        if (includeOtherMetadata)
+        {
+            Assert.Equal("extension", record.ExtensionData["$via"].GetString());
+        }
+    }
+
+    [Fact]
+    public void ReferencePreserveKeepsSharedPolymorphicReferencesAcrossSiblings()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+        });
+        NestedCustomRecord shared = new() { Value = "shared" };
+        CollectionRecord record = new();
+        record.Records.Add(shared);
+        record.Records.Add(shared);
+
+        string json = JsonSerializer.Serialize(record, options);
+        CollectionRecord roundTripped = Assert.IsType<CollectionRecord>(JsonSerializer.Deserialize<CollectionRecord>(json, options));
+
+        Assert.Contains("\"$ref\"", json, StringComparison.Ordinal);
+        Assert.Same(roundTripped.Records[0], roundTripped.Records[1]);
+    }
+
+    [Fact]
+    public void CustomConverterOutputHonorsConfiguredMaximumDepth()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.MaxDepth = 128;
+            mutable.Converters.Add(new DeepPayloadConverter());
+        });
+
+        string json = JsonSerializer.Serialize<DeepPayloadRecordBase>(new DeepPayloadRecord(), options);
+
+        using JsonDocument document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 128 });
+        JsonElement value = document.RootElement.GetProperty("value");
+        for (int depth = 0; depth < 80; depth++)
+        {
+            value = value[0];
+        }
+        Assert.Equal("deep", value.GetString());
+    }
 }
 
 /// <summary>
@@ -676,6 +772,60 @@ internal sealed class OptionsConverterRecord : OptionsConverterRecordBase
 internal sealed class OptionsPayload
 {
     public NestedCustomRecordBase? Record { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(AliasCollisionRecord), "test.aliasCollision")]
+internal abstract class AliasCollisionRecordBase;
+
+internal sealed class AliasCollisionRecord : AliasCollisionRecordBase
+{
+    [JsonPropertyName("\0" + "0")]
+    [JsonRequired]
+    public string RequiredValue { get; set; } = string.Empty;
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(SortedExtensionRecord), "test.sortedExtension")]
+internal abstract class SortedExtensionRecordBase;
+
+internal sealed class SortedExtensionRecord : SortedExtensionRecordBase
+{
+    [JsonExtensionData]
+    public SortedDictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(DeepPayloadRecord), "test.deepPayload")]
+internal abstract class DeepPayloadRecordBase;
+
+internal sealed class DeepPayloadRecord : DeepPayloadRecordBase
+{
+    public DeepPayload Value { get; set; } = new();
+}
+
+internal sealed class DeepPayload;
+
+internal sealed class DeepPayloadConverter : JsonConverter<DeepPayload>
+{
+    public override DeepPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        throw new NotSupportedException();
+
+    public override void Write(Utf8JsonWriter writer, DeepPayload value, JsonSerializerOptions options)
+    {
+        for (int depth = 0; depth < 80; depth++)
+        {
+            writer.WriteStartArray();
+        }
+        writer.WriteStringValue("deep");
+        for (int depth = 0; depth < 80; depth++)
+        {
+            writer.WriteEndArray();
+        }
+    }
 }
 
 internal sealed class OptionsPayloadConverter : JsonConverter<OptionsPayload>
@@ -872,6 +1022,13 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(SentinelNullRecord))]
 [JsonSerializable(typeof(DefaultNullRecord))]
 [JsonSerializable(typeof(RejectedNullRecord))]
+[JsonSerializable(typeof(AliasCollisionRecordBase))]
+[JsonSerializable(typeof(AliasCollisionRecord))]
+[JsonSerializable(typeof(SortedExtensionRecordBase))]
+[JsonSerializable(typeof(SortedExtensionRecord))]
+[JsonSerializable(typeof(DeepPayloadRecordBase))]
+[JsonSerializable(typeof(DeepPayloadRecord))]
+[JsonSerializable(typeof(DeepPayload))]
 [ExcludeFromCodeCoverage]
 internal sealed partial class TolerantTestContext : JsonSerializerContext
 {
