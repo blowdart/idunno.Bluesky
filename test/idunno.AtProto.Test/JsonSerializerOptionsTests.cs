@@ -538,6 +538,34 @@ public class JsonSerializerOptionsTests
         Assert.Equal("late", lateBound.Value);
         Assert.Equal("extension", lateBound.ExtensionData!["$via"].GetString());
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DerivedCollectionsPreserveNestedPolymorphicMetadata(bool normalizeOuter)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        string metadata = normalizeOuter ? "\"$via\":\"outer\"," : "";
+        string json = $$$$"""
+            {"$type":"test.collections",{{{{metadata}}}}
+             "records":[{"$type":"test.nested","$via":"list","value":"first"}],
+             "dictionary":{"entry":{"$type":"test.nested","$via":"dictionary","value":"second"}}}
+            """;
+
+        foreach (string payload in new[] { json, JsonSerializer.Serialize(
+            JsonSerializer.Deserialize<CollectionRecordBase>(json, options), options) })
+        {
+            CollectionRecord record = Assert.IsType<CollectionRecord>(
+                JsonSerializer.Deserialize<CollectionRecordBase>(payload, options));
+            NestedCustomRecord first = Assert.IsType<NestedCustomRecord>(Assert.Single(record.Records));
+            NestedCustomRecord second = Assert.IsType<NestedCustomRecord>(record.Dictionary["entry"]);
+            Assert.Equal("first", first.Value);
+            Assert.Equal("list", first.ExtensionData!["$via"].GetString());
+            Assert.Equal("second", second.Value);
+            Assert.Equal("dictionary", second.ExtensionData!["$via"].GetString());
+        }
+    }
 }
 
 /// <summary>
@@ -584,6 +612,21 @@ internal sealed class NestedCustomRecord : NestedCustomRecordBase
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(CollectionRecord), "test.collections")]
+internal abstract class CollectionRecordBase;
+
+internal sealed class CollectionRecord : CollectionRecordBase
+{
+    public DerivedRecordList Records { get; set; } = [];
+
+    public DerivedRecordDictionary Dictionary { get; set; } = [];
+}
+
+internal sealed class DerivedRecordList : List<NestedCustomRecordBase>;
+
+internal sealed class DerivedRecordDictionary : Dictionary<string, NestedCustomRecordBase>;
 
 [JsonConverter(typeof(CustomStructPayloadConverter))]
 internal readonly record struct CustomStructPayload(NestedCustomRecordBase? Record);
@@ -746,6 +789,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(CustomStructPayload))]
 [JsonSerializable(typeof(NestedCustomRecordBase))]
 [JsonSerializable(typeof(NestedCustomRecord))]
+[JsonSerializable(typeof(CollectionRecordBase))]
+[JsonSerializable(typeof(CollectionRecord))]
 [JsonSerializable(typeof(PropertyRecordBase))]
 [JsonSerializable(typeof(PropertyRecord))]
 [JsonSerializable(typeof(PropertyStructPayload))]

@@ -344,12 +344,14 @@ public class JetstreamArchiveTests
     public async Task DownloadReadTimeoutResetsWhenBytesArrive()
     {
         int requests = 0;
+        FakeTimeProvider timeProvider = new();
+        DateTimeOffset started = timeProvider.GetUtcNow();
         using HttpClient client = new(new ArchiveTestHandler(_ =>
         {
             Interlocked.Increment(ref requests);
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
-                Content = new StreamContent(new SlowChunkedStream([1, 2, 3, 4]))
+                Content = new StreamContent(new TimeAdvancingChunkedStream([1, 2, 3, 4], timeProvider))
             };
             response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
             response.Content.Headers.ContentLength = 4;
@@ -357,13 +359,14 @@ public class JetstreamArchiveTests
         }));
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null),
-            readTimeout: TimeSpan.FromMilliseconds(300));
+            readTimeout: TimeSpan.FromMilliseconds(300), timeProvider: timeProvider);
 
         byte[] bytes = new byte[4];
         await download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
 
         Assert.Equal([1, 2, 3, 4], bytes);
         Assert.Equal(1, requests);
+        Assert.Equal(TimeSpan.FromMilliseconds(480), timeProvider.GetUtcNow() - started);
     }
 
     [Theory]
@@ -1833,12 +1836,13 @@ public class JetstreamArchiveTests
         }
     }
 
-    private sealed class SlowChunkedStream(byte[] bytes) : MemoryStream(bytes)
+    private sealed class TimeAdvancingChunkedStream(byte[] bytes, FakeTimeProvider timeProvider) : MemoryStream(bytes)
     {
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(120), cancellationToken);
-            return await base.ReadAsync(buffer[..1], cancellationToken);
+            // Each read stays below the timeout, but the complete download exceeds it.
+            timeProvider.Advance(TimeSpan.FromMilliseconds(120));
+            return base.ReadAsync(buffer[..1], cancellationToken);
         }
     }
 

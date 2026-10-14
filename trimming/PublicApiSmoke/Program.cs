@@ -74,6 +74,28 @@ foreach (Post? post in new[] { extensionPost, extensionRecord as Post, extension
 
 JsonOptions lateJsonOptions = new();
 lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
+JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
+    options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
+JsonTypeInfo<SmokeCollectionRecordBase> collectionTypeInfo =
+    (JsonTypeInfo<SmokeCollectionRecordBase>)collectionOptions.GetTypeInfo(typeof(SmokeCollectionRecordBase));
+foreach (bool outerMetadata in new[] { false, true })
+{
+    string metadata = outerMetadata ? "\"$via\":\"outer\"," : "";
+    string collectionJson = $$$$"""
+        {"$type":"smoke.collections",{{{{metadata}}}}
+         "records":[{"$type":"smoke.nested","$via":"list","value":"first"}],
+         "dictionary":{"entry":{"$type":"smoke.nested","$via":"dictionary","value":"second"}}}
+        """;
+    SmokeCollectionRecord collection = JsonSerializer.Deserialize(collectionJson, collectionTypeInfo) as SmokeCollectionRecord
+        ?? throw new InvalidOperationException("The derived collection container was not deserialized.");
+    if (collection.Records.Single() is not LateBoundNestedRecord { Value: "first" } first ||
+        first.ExtensionData?["$via"].GetString() != "list" ||
+        collection.Dictionary["entry"] is not LateBoundNestedRecord { Value: "second" } second ||
+        second.ExtensionData?["$via"].GetString() != "dictionary")
+    {
+        throw new InvalidOperationException("Derived collection metadata was not preserved.");
+    }
+}
 JsonTypeInfo<LateBoundRecordBase> lateRecordTypeInfo =
     (JsonTypeInfo<LateBoundRecordBase>)lateJsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(LateBoundRecordBase));
 const string latePolymorphicJson = """
@@ -472,6 +494,21 @@ internal sealed class LateBoundStructPayloadConverter : JsonConverter<LateBoundS
     }
 }
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(SmokeCollectionRecord), "smoke.collections")]
+internal abstract class SmokeCollectionRecordBase;
+
+internal sealed class SmokeCollectionRecord : SmokeCollectionRecordBase
+{
+    public SmokeRecordList Records { get; set; } = [];
+
+    public SmokeRecordDictionary Dictionary { get; set; } = [];
+}
+
+internal sealed class SmokeRecordList : List<LateBoundNestedRecordBase>;
+
+internal sealed class SmokeRecordDictionary : Dictionary<string, LateBoundNestedRecordBase>;
+
 [JsonSourceGenerationOptions(
     GenerationMode = JsonSourceGenerationMode.Metadata,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -481,6 +518,8 @@ internal sealed class LateBoundStructPayloadConverter : JsonConverter<LateBoundS
 [JsonSerializable(typeof(LateBoundStructPayload))]
 [JsonSerializable(typeof(LateBoundNestedRecordBase))]
 [JsonSerializable(typeof(LateBoundNestedRecord))]
+[JsonSerializable(typeof(SmokeCollectionRecordBase))]
+[JsonSerializable(typeof(SmokeCollectionRecord))]
 internal sealed partial class LateBoundSourceGenerationContext : JsonSerializerContext;
 
 internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler) : IHttpClientFactory

@@ -359,14 +359,32 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options) =>
             JsonSerializer.Serialize(writer, value, underlyingOptions.GetTypeInfo(type));
 
+        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Collection serialization metadata preserves the implemented generic collection interface and its element type. Only interface identities and generic arguments are inspected, not interface members.")]
         private static Type? GetElementType(JsonTypeInfo info)
         {
 #if NET10_0_OR_GREATER
             return info.ElementType;
 #else
-            return info.Type.IsArray
-                ? info.Type.GetElementType()
-                : info.Type.GenericTypeArguments.LastOrDefault();
+            if (info.Type.IsArray)
+            {
+                return info.Type.GetElementType();
+            }
+
+            Type collectionInterface = info.Kind == JsonTypeInfoKind.Dictionary
+                ? typeof(IDictionary<,>)
+                : typeof(IEnumerable<>);
+            foreach (Type implementedInterface in info.Type.GetInterfaces())
+            {
+                if (implementedInterface.IsGenericType &&
+                    (implementedInterface.GetGenericTypeDefinition() == collectionInterface ||
+                    (info.Kind == JsonTypeInfoKind.Dictionary &&
+                    implementedInterface.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))))
+                {
+                    return implementedInterface.GenericTypeArguments[^1];
+                }
+            }
+
+            return null;
 #endif
         }
 
