@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.RichText;
@@ -60,10 +62,22 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
             FacetExtractor = facetExtractor;
         }
 
-        httpJsonOptions ??= new JsonOptions();
-        httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-        AtProto.Json.TolerantPolymorphicConverter.Configure(httpJsonOptions.JsonSerializerOptions);
+        if (httpJsonOptions is null)
+        {
+            httpJsonOptions = new JsonOptions(adaptContracts: false);
+            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+            AtProto.Json.TolerantPolymorphicConverter.Configure(httpJsonOptions.JsonSerializerOptions);
+        }
         HttpJsonOptions = httpJsonOptions;
+    }
+
+    internal override JsonOptions GetHttpJsonOptions()
+    {
+        JsonOptions result = HttpJsonOptions is null
+            ? new JsonOptions(adaptContracts: false)
+            : new JsonOptions(new JsonSerializerOptions(HttpJsonOptions.JsonSerializerOptions));
+        result.JsonSerializerOptions.TypeInfoResolverChain.Add(SourceGenerationContext.Default);
+        return result;
     }
 
     /// <summary>

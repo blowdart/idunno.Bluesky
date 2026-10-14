@@ -20,6 +20,8 @@
 
 #### idunno.AtProto
 
+* Added `AtProtoJsonSerializerOptions.Create(configure)` to return read-only options with tolerant JSON handling installed after resolver customization. Agent constructors and builders now copy and finalize options after all caller configuration, preserving caller settings without freezing or mutating caller options. Legacy mutable options remain available; arbitrary resolver replacement or prepending can bypass adaptation and requires explicit chaining recovery for direct serialization.
+* Tolerant JSON forwarding preserves type-attached reference converters' null-handling policies, including null sentinels and null rejection.
 * SDK JSON options automatically tolerate unknown `$` properties on polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Resolvers appended after creating `JsonOptions` or mutable SDK options, nested values handled by custom converters (including property-level and value-type converters), and default server record listings are supported. After replacing or prepending resolvers, or customizing options copied with `new JsonSerializerOptions(...)`, use `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions` to restore SDK contract adaptation around the customized resolver. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
 * Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
@@ -139,6 +141,7 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyJsonSerializerOptions.Create(configure)` for read-only options finalized after resolver customization. Bluesky agent finalization also handles JSON options replaced or customized after constructing `BlueskyAgentOptions`, without mutating caller options.
 * Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.
 * Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
   `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.

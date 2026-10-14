@@ -91,19 +91,81 @@ JsonSerializerOptions callerCopy = new(AtProtoJsonSerializerOptions.Default)
 {
     TypeInfoResolver = LateBoundSourceGenerationContext.Default
 };
+using AtProtoAgent finalizedAtProtoAgent = AtProtoAgent.CreateBuilder()
+    .ForService(new Uri("https://offline.invalid"))
+    .ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true)
+    .Build();
+JsonOptions configuredAgentOptions = new();
+configuredAgentOptions.JsonSerializerOptions.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
+using AtProtoAgent customAtProtoAgent = new(new Uri("https://offline.invalid"), new AtProtoAgentOptions { HttpJsonOptions = configuredAgentOptions });
+BlueskyAgentOptions configuredBlueskyOptions = new();
+configuredBlueskyOptions.HttpJsonOptions!.JsonSerializerOptions.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
+using BlueskyAgent customBlueskyAgent = new(configuredBlueskyOptions);
+var finalizedBuilder = BlueskyAgent.CreateBuilder();
+finalizedBuilder.ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
+finalizedBuilder.JsonOptions!.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default);
+using BlueskyAgent customBuiltBlueskyAgent = finalizedBuilder.Build();
+if (configuredAgentOptions.JsonSerializerOptions.IsReadOnly || configuredBlueskyOptions.HttpJsonOptions.JsonSerializerOptions.IsReadOnly ||
+    !finalizedAtProtoAgent.JsonOptions.JsonSerializerOptions.IsReadOnly)
+{
+    throw new InvalidOperationException("Agent finalization froze caller options or returned mutable options.");
+}
 foreach (JsonSerializerOptions mutableOptions in new[]
 {
     AtProtoJsonSerializerOptions.Options,
     BlueskyJsonSerializerOptions.Options,
-    AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(callerCopy)
+    AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(callerCopy),
+    AtProtoJsonSerializerOptions.Create(options => options.TypeInfoResolver = LateBoundSourceGenerationContext.Default),
+    AtProtoJsonSerializerOptions.Create(options => options.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default)),
+    BlueskyJsonSerializerOptions.Create(options => options.TypeInfoResolver = LateBoundSourceGenerationContext.Default),
+    BlueskyJsonSerializerOptions.Create(options => options.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default)),
+    customAtProtoAgent.JsonOptions.JsonSerializerOptions,
+    customBlueskyAgent.JsonOptions.JsonSerializerOptions,
+    customBuiltBlueskyAgent.JsonOptions.JsonSerializerOptions
 })
 {
-    mutableOptions.TypeInfoResolverChain.Add(JsonTypeInfoResolver.Combine());
-    mutableOptions.TypeInfoResolverChain[^1] = LateBoundSourceGenerationContext.Default;
+    if (!mutableOptions.IsReadOnly)
+    {
+        mutableOptions.TypeInfoResolverChain.Add(JsonTypeInfoResolver.Combine());
+        mutableOptions.TypeInfoResolverChain[^1] = LateBoundSourceGenerationContext.Default;
+    }
     JsonTypeInfo<LateBoundRecordBase> mutableTypeInfo =
         (JsonTypeInfo<LateBoundRecordBase>)mutableOptions.GetTypeInfo(typeof(LateBoundRecordBase));
     foreach (bool outerMetadata in new[] { false, true })
     {
+        string metadata = outerMetadata ? "\"$via\":\"outer\"," : "";
+        string nullJson = $$"""{"$type":"smoke.container",{{metadata}}"sentinel":null,"defaultNull":null}""";
+        LateBoundRecord nullRecord = JsonSerializer.Deserialize(nullJson, mutableTypeInfo) as LateBoundRecord
+            ?? throw new InvalidOperationException("The null-policy container was not deserialized.");
+        if (nullRecord.Sentinel?.Value != "read-null" || nullRecord.DefaultNull is not null)
+        {
+            throw new InvalidOperationException("A type-attached reference converter's null read policy was bypassed.");
+        }
+        nullRecord.Sentinel = null;
+        using (JsonDocument nullDocument = JsonDocument.Parse(JsonSerializer.Serialize<LateBoundRecordBase>(nullRecord, mutableTypeInfo)))
+        {
+            if (nullDocument.RootElement.GetProperty("sentinel").GetString() != "write-null" ||
+                nullDocument.RootElement.GetProperty("defaultNull").ValueKind != JsonValueKind.Null)
+            {
+                throw new InvalidOperationException("A type-attached reference converter's null write policy was bypassed.");
+            }
+        }
+        try
+        {
+            _ = JsonSerializer.Deserialize($$"""{"$type":"smoke.rejectedNull",{{metadata}}"value":null}""", mutableTypeInfo);
+            throw new InvalidOperationException("The type-attached converter did not reject null on read.");
+        }
+        catch (JsonException)
+        {
+        }
+        try
+        {
+            _ = JsonSerializer.Serialize<LateBoundRecordBase>(new LateBoundRejectedNullRecord(), mutableTypeInfo);
+            throw new InvalidOperationException("The type-attached converter did not reject null on write.");
+        }
+        catch (JsonException)
+        {
+        }
         string propertyJson = $$$$"""
             {"$type":"smoke.container",{{{{(outerMetadata ? "\"$via\":\"outer\"," : "")}}}}
              "propertyPayload":{"record":{"$type":"smoke.nested","$via":"property","value":"struct"}},
@@ -287,10 +349,17 @@ Console.WriteLine("Offline trimming and Native AOT smoke test passed.");
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(LateBoundRecord), "smoke.container")]
+[JsonDerivedType(typeof(LateBoundRejectedNullRecord), "smoke.rejectedNull")]
 internal abstract class LateBoundRecordBase;
 
 internal sealed class LateBoundRecord : LateBoundRecordBase
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public SmokeSentinelNullValue? Sentinel { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public SmokeDefaultNullValue? DefaultNull { get; set; }
+
     public LateBoundStructPayload Payload { get; set; }
 
     [JsonConverter(typeof(LateBoundStructPayloadConverter))]
@@ -298,6 +367,52 @@ internal sealed class LateBoundRecord : LateBoundRecordBase
 
     [JsonConverter(typeof(LateBoundReferenceConverter))]
     public LateBoundNestedRecordBase? Reference { get; set; }
+}
+
+internal sealed class LateBoundRejectedNullRecord : LateBoundRecordBase
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public SmokeRejectedNullValue? Value { get; set; }
+}
+
+[JsonConverter(typeof(SmokeSentinelNullConverter))]
+internal sealed record SmokeSentinelNullValue(string Value);
+
+[JsonConverter(typeof(SmokeDefaultNullConverter))]
+internal sealed record SmokeDefaultNullValue(string Value);
+
+[JsonConverter(typeof(SmokeRejectedNullConverter))]
+internal sealed record SmokeRejectedNullValue(string Value);
+
+internal sealed class SmokeSentinelNullConverter : JsonConverter<SmokeSentinelNullValue>
+{
+    public override bool HandleNull => true;
+
+    public override SmokeSentinelNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? "read-null" : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, SmokeSentinelNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? "write-null");
+}
+
+internal sealed class SmokeDefaultNullConverter : JsonConverter<SmokeDefaultNullValue>
+{
+    public override SmokeDefaultNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? throw new JsonException("Unexpected null.") : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, SmokeDefaultNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? throw new JsonException("Unexpected null."));
+}
+
+internal sealed class SmokeRejectedNullConverter : JsonConverter<SmokeRejectedNullValue>
+{
+    public override bool HandleNull => true;
+
+    public override SmokeRejectedNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? throw new JsonException("Null is not permitted.") : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, SmokeRejectedNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? throw new JsonException("Null is not permitted."));
 }
 
 internal sealed class LateBoundReferenceConverter : JsonConverter<LateBoundNestedRecordBase>
@@ -362,6 +477,7 @@ internal sealed class LateBoundStructPayloadConverter : JsonConverter<LateBoundS
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(LateBoundRecordBase))]
 [JsonSerializable(typeof(LateBoundRecord))]
+[JsonSerializable(typeof(LateBoundRejectedNullRecord))]
 [JsonSerializable(typeof(LateBoundStructPayload))]
 [JsonSerializable(typeof(LateBoundNestedRecordBase))]
 [JsonSerializable(typeof(LateBoundNestedRecord))]

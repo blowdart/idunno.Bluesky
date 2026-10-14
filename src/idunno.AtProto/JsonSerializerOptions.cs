@@ -32,7 +32,7 @@ public partial class AtProtoServer
     /// Creates a new, mutable <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.
     /// </summary>
     /// <returns>A new <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.</returns>
-    internal static JsonSerializerOptions CreateAtProtoJsonSerializerOptions()
+    internal static JsonSerializerOptions CreateAtProtoJsonSerializerOptions(bool adaptContracts = true)
     {
         JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
         {
@@ -43,7 +43,10 @@ public partial class AtProtoServer
             TypeInfoResolver = SourceGenerationContext.Default,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
         };
-        Json.TolerantPolymorphicConverter.Configure(options);
+        if (adaptContracts)
+        {
+            Json.TolerantPolymorphicConverter.Configure(options);
+        }
         return options;
     }
 
@@ -78,6 +81,13 @@ public partial class AtProtoServer
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to chain type resolution with.</param>
     /// <returns>An instance of <see cref="JsonSerializerOptions" /> with the type information resolvers chained.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonSerializerOptions"/> or its TypeInfoResolver is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The result uses AtProto defaults and the supplied resolver, not the supplied settings or converters.
+    /// Call this helper after customizing a mutable options instance to restore SDK contract adaptation.</para>
+    /// <para>The result remains mutable for compatibility. Arbitrary mutations are not intercepted; replacing or prepending
+    /// resolvers can bypass adaptation again. Prefer <see cref="AtProto.AtProtoJsonSerializerOptions.Create(Action{JsonSerializerOptions})"/>
+    /// to configure options before returning a finalized, read-only result.</para>
+    /// </remarks>
     public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions jsonSerializerOptions)
     {
         ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
@@ -92,11 +102,17 @@ public partial class AtProtoServer
     /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to chain type resolution with.</param>
     /// <returns>An instance of <see cref="JsonSerializerOptions"/> with the type information resolvers chained.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonSerializerOptions"/> or any of its elements or their TypeInfoResolver is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The result uses AtProto defaults and the supplied resolvers, not the supplied settings or converters.
+    /// It remains mutable for compatibility; arbitrary resolver replacement or prepending can bypass SDK contract adaptation.
+    /// Use this helper after resolver customization, or prefer <see cref="AtProto.AtProtoJsonSerializerOptions.Create(Action{JsonSerializerOptions})"/>
+    /// for a finalized, read-only result.</para>
+    /// </remarks>
     public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(params JsonSerializerOptions[] jsonSerializerOptions)
     {
         ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-        JsonSerializerOptions result = CreateAtProtoJsonSerializerOptions();
+        JsonSerializerOptions result = CreateAtProtoJsonSerializerOptions(adaptContracts: false);
 
         foreach (JsonSerializerOptions options in jsonSerializerOptions)
         {
@@ -116,11 +132,16 @@ public partial class AtProtoServer
     /// <param name="jsonTypeInfoResolver">The type information resolver to insert into the type resolution chain.</param>
     /// <returns>An instance of <see cref="JsonSerializerOptions" /> with the type information resolvers chained.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonTypeInfoResolver"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The result remains mutable for compatibility. Arbitrary resolver mutations are not intercepted; replacing or
+    /// prepending resolvers can bypass SDK contract adaptation. Call this helper after resolver customization, or prefer
+    /// <see cref="AtProto.AtProtoJsonSerializerOptions.Create(Action{JsonSerializerOptions})"/> for a finalized, read-only result.</para>
+    /// </remarks>
     public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(IJsonTypeInfoResolver jsonTypeInfoResolver)
     {
         ArgumentNullException.ThrowIfNull(jsonTypeInfoResolver);
 
-        JsonSerializerOptions options = CreateAtProtoJsonSerializerOptions();
+        JsonSerializerOptions options = CreateAtProtoJsonSerializerOptions(adaptContracts: false);
 
         options.TypeInfoResolverChain.Insert(0, jsonTypeInfoResolver);
 

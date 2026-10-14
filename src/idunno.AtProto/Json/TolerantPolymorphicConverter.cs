@@ -32,19 +32,26 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private readonly JsonSerializerOptions _probeOptions = new() { TypeInfoResolver = resolver };
     private readonly ConcurrentDictionary<Type, bool> _polymorphicTypes = new();
 
-    internal static void Configure(JsonSerializerOptions options)
+    internal static JsonSerializerOptions FinalizeOptions(JsonSerializerOptions options)
+    {
+        JsonSerializerOptions result = new(options);
+        Configure(result, trackChanges: false);
+        result.MakeReadOnly();
+        return result;
+    }
+
+    internal static void Configure(JsonSerializerOptions options, bool trackChanges = true)
     {
         List<IJsonTypeInfoResolver> initialResolvers = [];
         foreach (IJsonTypeInfoResolver chainResolver in options.TypeInfoResolverChain)
         {
-            if (chainResolver is TolerantTypeInfoResolver configuredResolver)
+            // Copy SDK resolver state instead of freezing the caller's resolver or retaining its live chain.
+            IJsonTypeInfoResolver snapshot = chainResolver is TolerantTypeInfoResolver configuredResolver
+                ? configuredResolver.Snapshot()
+                : chainResolver;
+            if (!initialResolvers.Contains(snapshot))
             {
-                configuredResolver.Freeze();
-            }
-
-            if (!initialResolvers.Contains(chainResolver))
-            {
-                initialResolvers.Add(chainResolver);
+                initialResolvers.Add(snapshot);
             }
         }
 
@@ -56,7 +63,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
         }
 
-        IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(options, [.. initialResolvers]);
+        IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(trackChanges ? options : null, [.. initialResolvers]);
         options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver));
         options.TypeInfoResolver = resolver;
     }
@@ -187,6 +194,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     private sealed class ForwardingConverter(Type type, JsonSerializerOptions sdkOptions) : JsonConverter<object>
     {
+        public override bool HandleNull => true;
+
         public override bool CanConvert(Type typeToConvert) => typeToConvert == type;
 
         public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
@@ -199,7 +208,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     /// <summary>
     /// Resolves from the original and subsequently registered resolvers without referring back to itself.
     /// </summary>
-    private sealed class TolerantTypeInfoResolver(JsonSerializerOptions sdkOptions, IJsonTypeInfoResolver[] initialResolvers) : IJsonTypeInfoResolver
+    private sealed class TolerantTypeInfoResolver(JsonSerializerOptions? sdkOptions, IJsonTypeInfoResolver[] initialResolvers) : IJsonTypeInfoResolver
     {
         private readonly object _resolverLock = new();
         private IJsonTypeInfoResolver? _combinedResolver;
@@ -207,22 +216,21 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
-            JsonTypeInfo? info = (_frozenResolver ?? GetCombinedResolver()).GetTypeInfo(type, options);
+            JsonTypeInfo? info = GetCombinedResolver().GetTypeInfo(type, options);
             return info is null ? null : ApplyCustomConverterPolymorphismWorkaround(info);
         }
 
-        public void Freeze()
-        {
-            lock (_resolverLock)
-            {
-                _frozenResolver ??= GetCombinedResolver();
-            }
-        }
+        public TolerantTypeInfoResolver Snapshot() => new(null, [GetCombinedResolver()]);
 
         private IJsonTypeInfoResolver GetCombinedResolver()
         {
             lock (_resolverLock)
             {
+                if (sdkOptions is null)
+                {
+                    return _combinedResolver ??= JsonTypeInfoResolver.Combine(initialResolvers);
+                }
+
                 IList<IJsonTypeInfoResolver> chain = sdkOptions.TypeInfoResolverChain;
                 if (_chainSnapshot is not null && _chainSnapshot.Length == chain.Count)
                 {
@@ -262,8 +270,6 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             return info;
         }
-
-        private IJsonTypeInfoResolver? _frozenResolver;
     }
 
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>

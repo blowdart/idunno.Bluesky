@@ -5,14 +5,129 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
+using idunno.AtProto;
 using idunno.Bluesky.Feed.Gates;
 
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]
-public class BlueskyJsonSerializerOptionsTests
+public partial class BlueskyJsonSerializerOptionsTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FactoryFinalizesAfterResolverConfiguration(bool replace)
+    {
+        JsonSerializerOptions? supplied = null;
+        JsonSerializerOptions options = BlueskyJsonSerializerOptions.Create(mutable =>
+        {
+            supplied = mutable;
+            Assert.Single(mutable.Converters);
+            ConfigureResolver(mutable, replace);
+            mutable.WriteIndented = true;
+        });
+        Assert.NotNull(supplied);
+        Assert.False(supplied.IsReadOnly);
+        Assert.True(options.IsReadOnly);
+        Assert.True(options.WriteIndented);
+        supplied.TypeInfoResolverChain.Clear();
+        AssertCustomRecord(options);
+        Assert.Throws<InvalidOperationException>(() => options.TypeInfoResolverChain.Clear());
+    }
+
+    [Fact]
+    public void FactoryRejectsNullConfiguration()
+    {
+        Assert.Throws<ArgumentNullException>(() => BlueskyJsonSerializerOptions.Create(null!));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuilderFinalizesResolversInsertedOrReplacedInTheCallback(bool replace)
+    {
+        var builder = BlueskyAgent.CreateBuilder();
+        builder.ConfigureHttpJsonOptions(options => ConfigureResolver(options.JsonSerializerOptions, replace));
+        using BlueskyAgent agent = builder.Build();
+        AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void AgentFinalizesOptionsCustomizedAfterOptionsConstructionOrBuilderCallback(bool builder, bool replace)
+    {
+        BlueskyAgentOptions agentOptions = new();
+        var agentBuilder = BlueskyAgent.CreateBuilder();
+        agentBuilder.ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
+        JsonOptions supplied = builder ? Assert.IsType<JsonOptions>(agentBuilder.JsonOptions) : Assert.IsType<JsonOptions>(agentOptions.HttpJsonOptions);
+        ConfigureResolver(supplied.JsonSerializerOptions, replace);
+        IJsonTypeInfoResolver? resolver = supplied.JsonSerializerOptions.TypeInfoResolver;
+        int converterCount = supplied.JsonSerializerOptions.Converters.Count;
+        using BlueskyAgent agent = builder ? agentBuilder.Build() : new(agentOptions);
+        Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
+        Assert.Same(resolver, supplied.JsonSerializerOptions.TypeInfoResolver);
+        Assert.Equal(converterCount, supplied.JsonSerializerOptions.Converters.Count);
+        supplied.JsonSerializerOptions.TypeInfoResolverChain.Clear();
+        Assert.True(agent.JsonOptions.JsonSerializerOptions.IsReadOnly);
+        AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
+        Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(
+            """{"$type":"app.bsky.feed.post","$via":"extension","text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}""",
+            agent.JsonOptions.JsonSerializerOptions));
+    }
+
+    [Fact]
+    public void OptionsConstructorDoesNotMutateOrFreezeCallerOptions()
+    {
+        JsonOptions supplied = new();
+        IJsonTypeInfoResolver? resolver = supplied.JsonSerializerOptions.TypeInfoResolver;
+        int converterCount = supplied.JsonSerializerOptions.Converters.Count;
+        BlueskyAgentOptions options = new(loggerFactory: null, httpJsonOptions: supplied);
+        Assert.Same(supplied, options.HttpJsonOptions);
+        Assert.Same(resolver, supplied.JsonSerializerOptions.TypeInfoResolver);
+        Assert.Equal(converterCount, supplied.JsonSerializerOptions.Converters.Count);
+        ConfigureResolver(supplied.JsonSerializerOptions, replace: true);
+        using BlueskyAgent agent = new(options);
+        Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
+        AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
+    }
+
+    [Fact]
+    public void AgentFinalizesOptionsAssignedAfterOptionsConstruction()
+    {
+        BlueskyAgentOptions options = new();
+        JsonOptions supplied = new();
+        options.HttpJsonOptions = supplied;
+        ConfigureResolver(supplied.JsonSerializerOptions, replace: true);
+        using BlueskyAgent agent = new(options);
+        Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
+        AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
+    }
+
+    private static void ConfigureResolver(JsonSerializerOptions options, bool replace)
+    {
+        if (replace)
+        {
+            options.TypeInfoResolver = FinalizationTestContext.Default;
+        }
+        else
+        {
+            options.TypeInfoResolverChain.Insert(0, FinalizationTestContext.Default);
+        }
+    }
+
+    private static void AssertCustomRecord(JsonSerializerOptions options)
+    {
+        FinalizationRecord record = Assert.IsType<FinalizationRecord>(JsonSerializer.Deserialize<FinalizationRecordBase>(
+            """{"$type":"test.finalization","$via":"custom","value":"configured"}""", options));
+        Assert.Equal("configured", record.Value);
+        Assert.Equal("custom", record.ExtensionData!["$via"].GetString());
+    }
+
     [Fact]
     public void UnknownDollarPropertyIsRetainedOnPost()
     {
@@ -25,6 +140,23 @@ public class BlueskyJsonSerializerOptionsTests
         Assert.Equal("hello", post.Text);
         Assert.Equal("kazahana", post.ExtensionData!["$via"].GetString());
     }
+
+    [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+    [JsonDerivedType(typeof(FinalizationRecord), "test.finalization")]
+    internal abstract class FinalizationRecordBase;
+
+    internal sealed class FinalizationRecord : FinalizationRecordBase
+    {
+        public string Value { get; set; } = string.Empty;
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+    }
+
+    [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+    [JsonSerializable(typeof(FinalizationRecordBase))]
+    [JsonSerializable(typeof(FinalizationRecord))]
+    internal sealed partial class FinalizationTestContext : JsonSerializerContext;
 
     // A list rule whose $type discriminator trails the rest of the payload, which is how an
     // AT Protocol server is free to order it.

@@ -60,6 +60,10 @@ public class AtProtoAgentBuilder
     /// <summary>
     /// Gets or sets the <see cref="JsonOptions"/> for the client."/>
     /// </summary>
+    /// <remarks>
+    /// <para>Options remain mutable until <see cref="Build"/> creates an agent with a finalized, read-only copy.
+    /// Later changes to this instance do not change an existing agent's configuration.</para>
+    /// </remarks>
     public JsonOptions? JsonOptions { get; set; }
 
     /// <summary>
@@ -184,10 +188,9 @@ public class AtProtoAgentBuilder
     {
         ArgumentNullException.ThrowIfNull(configure);
 
-        JsonOptions configuredOptions = new();
+        JsonOptions configuredOptions = new(adaptContracts: false);
 
         configure(configuredOptions);
-        Json.TolerantPolymorphicConverter.Configure(configuredOptions.JsonSerializerOptions);
 
         JsonOptions = configuredOptions;
 

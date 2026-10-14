@@ -60,10 +60,8 @@ public abstract class Agent : IDisposable
     /// </remarks>
     protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions, ILoggerFactory? loggerFactory)
     {
-        if (jsonOptions is not null)
-        {
-            JsonOptions = jsonOptions;
-        }
+        JsonOptions = new(Json.TolerantPolymorphicConverter.FinalizeOptions(
+            (jsonOptions ?? new JsonOptions(adaptContracts: false)).JsonSerializerOptions));
 
         _loggerFactory = loggerFactory;
         _httpClientOptions = httpClientOptions;
@@ -90,10 +88,8 @@ public abstract class Agent : IDisposable
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
-        if (jsonOptions is not null)
-        {
-            JsonOptions = jsonOptions;
-        }
+        JsonOptions = new(Json.TolerantPolymorphicConverter.FinalizeOptions(
+            (jsonOptions ?? new JsonOptions(adaptContracts: false)).JsonSerializerOptions));
 
         HttpClientFactory = httpClientFactory;
     }
@@ -106,7 +102,10 @@ public abstract class Agent : IDisposable
     /// <summary>
     /// Gets the <see cref="JsonOptions"/> for the agent.
     /// </summary>
-    public JsonOptions JsonOptions { get; } = new JsonOptions();
+    /// <remarks>
+    /// <para>The JSON serializer options are a read-only snapshot of the caller configuration taken during construction.</para>
+    /// </remarks>
+    public JsonOptions JsonOptions { get; }
 
     /// <summary>
     /// Gets an <see cref="HttpClient"/> to use when making requests.

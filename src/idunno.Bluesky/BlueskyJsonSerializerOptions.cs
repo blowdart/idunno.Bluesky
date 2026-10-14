@@ -23,7 +23,27 @@ namespace idunno.Bluesky;
 [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All the AtProto Types are captured in source gen")]
 public static class BlueskyJsonSerializerOptions
 {
-    private static readonly JsonSerializerOptions s_default = CreateDefault();
+    private static readonly JsonSerializerOptions s_default = AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
+
+    /// <summary>
+    /// Creates read-only JSON options for Bluesky types after applying caller configuration.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options with SDK contract adaptation around the configured resolvers.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The callback runs before SDK contract adaptation is installed. It may replace or prepend resolvers.
+    /// The configured options are copied before finalization; the callback's instance remains mutable and is not used by the result.</para>
+    /// <para>Resolver and converter instances are shared, not cloned; do not mutate their state after finalization.
+    /// The callback's options do not have SDK contract adaptation installed and should not be used for serialization.</para>
+    /// </remarks>
+    public static JsonSerializerOptions Create(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(options);
+    }
 
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
@@ -35,8 +55,18 @@ public static class BlueskyJsonSerializerOptions
     /// contract adaptation first. Use <see cref="AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions)"/>
     /// after replacing or prepending resolvers, including on copies made with the
     /// <see cref="JsonSerializerOptions.JsonSerializerOptions(JsonSerializerOptions)"/> constructor.</para>
+    /// <para>Arbitrary mutations of returned options are not intercepted. Replacing or prepending resolvers can bypass
+    /// adaptation. Prefer <see cref="Create(Action{JsonSerializerOptions})"/> to configure options before finalization.</para>
     /// </remarks>
-    public static JsonSerializerOptions Options => Create();
+    public static JsonSerializerOptions Options
+    {
+        get
+        {
+            JsonSerializerOptions options = CreateMutableOptions();
+            AtProto.Json.TolerantPolymorphicConverter.Configure(options);
+            return options;
+        }
+    }
 
     /// <summary>
     /// Gets a shared, read only set of <see cref="JsonSerializerOptions"/> for Bluesky types.
@@ -52,22 +82,13 @@ public static class BlueskyJsonSerializerOptions
     /// </summary>
     public static IJsonTypeInfoResolver TypeInfoResolver => s_default.TypeInfoResolver!;
 
-    private static JsonSerializerOptions Create()
+    private static JsonSerializerOptions CreateMutableOptions()
     {
-        // The chaining call builds a fresh set of AtProto options and inserts the resolver it is given, so
-        // nothing else can be configured on the way in. Everything Bluesky needs beyond the AtProto defaults,
-        // converters included, has to be applied to the result.
-        JsonSerializerOptions options = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+        JsonSerializerOptions options = AtProtoServer.CreateAtProtoJsonSerializerOptions(adaptContracts: false);
+        options.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
 
         options.Converters.Add(new Json.PreferenceConverter());
 
-        return options;
-    }
-
-    private static JsonSerializerOptions CreateDefault()
-    {
-        JsonSerializerOptions options = Create();
-        options.MakeReadOnly();
         return options;
     }
 }

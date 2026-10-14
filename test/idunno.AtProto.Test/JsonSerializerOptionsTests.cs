@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto.Moderation;
 using idunno.AtProto.Repo;
@@ -167,7 +168,99 @@ public class JsonSerializerOptionsTests
             options.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
         }
 
-        AssertLateBoundRecord(AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(options));
+        JsonSerializerOptions recovered = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(options);
+        Assert.Throws<NotSupportedException>(() => AssertLateBoundRecord(options));
+        AssertLateBoundRecord(recovered);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FactoryFinalizesAfterResolverConfigurationWithoutFreezingTheCallbackOptions(bool replace)
+    {
+        JsonSerializerOptions? configured = null;
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            configured = mutable;
+            Assert.Empty(mutable.Converters);
+            if (replace)
+            {
+                mutable.TypeInfoResolver = TolerantTestContext.Default;
+            }
+            else
+            {
+                mutable.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
+            }
+            mutable.WriteIndented = true;
+            mutable.Converters.Add(new NullAwareTextConverter());
+        });
+
+        Assert.True(options.IsReadOnly);
+        Assert.True(options.WriteIndented);
+        Assert.Contains(options.Converters, converter => converter is NullAwareTextConverter);
+        Assert.Equal("read-null", JsonSerializer.Deserialize<string>("null", options));
+        Assert.Equal("\"write-null\"", JsonSerializer.Serialize<string?>(null, options));
+        Assert.NotNull(configured);
+        Assert.False(configured.IsReadOnly);
+        Assert.NotSame(configured, options);
+        configured.TypeInfoResolver = ChainedTestContext.Default;
+        AssertLateBoundRecord(options);
+        Assert.Throws<InvalidOperationException>(() => options.TypeInfoResolverChain.Clear());
+        Assert.Throws<NotSupportedException>(() => AtProtoJsonSerializerOptions.Default.GetTypeInfo(typeof(LateBoundRecordBase)));
+    }
+
+    [Fact]
+    public void FactoryRejectsNullConfiguration()
+    {
+        Assert.Throws<ArgumentNullException>(() => AtProtoJsonSerializerOptions.Create(null!));
+    }
+
+    [Fact]
+    public void FinalizingAnAgentDoesNotFreezeTheCallersLiveResolver()
+    {
+        JsonOptions supplied = new(AtProtoJsonSerializerOptions.Options);
+        using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
+        supplied.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        AssertLateBoundRecord(supplied.JsonSerializerOptions);
+        Assert.Throws<NotSupportedException>(() => agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(LateBoundRecordBase)));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void AgentsFinalizeConstructorAndBuilderOptionsAfterAllConfiguration(bool builder, bool replace)
+    {
+        JsonOptions supplied = new();
+        AtProtoAgentBuilder agentBuilder = AtProtoAgent.CreateBuilder()
+            .ForService(new Uri("https://test.invalid"))
+            .ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
+        if (builder)
+        {
+            supplied = Assert.IsType<JsonOptions>(agentBuilder.JsonOptions);
+        }
+        if (replace)
+        {
+            supplied.JsonSerializerOptions.TypeInfoResolver = TolerantTestContext.Default;
+        }
+        else
+        {
+            supplied.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
+        }
+        var resolver = supplied.JsonSerializerOptions.TypeInfoResolver;
+        int converters = supplied.JsonSerializerOptions.Converters.Count;
+        using AtProtoAgent agent = builder
+            ? agentBuilder.Build()
+            : new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
+
+        Assert.True(agent.JsonOptions.JsonSerializerOptions.IsReadOnly);
+        Assert.NotSame(supplied, agent.JsonOptions);
+        Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
+        Assert.Same(resolver, supplied.JsonSerializerOptions.TypeInfoResolver);
+        Assert.Equal(converters, supplied.JsonSerializerOptions.Converters.Count);
+        supplied.JsonSerializerOptions.TypeInfoResolver = ChainedTestContext.Default;
+        AssertLateBoundRecord(agent.JsonOptions.JsonSerializerOptions);
     }
 
     [Fact]
@@ -183,12 +276,19 @@ public class JsonSerializerOptionsTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void PropertyConvertersForwardSdkOptionsAndPreserveTheirWireFormats(bool normalizeOuter)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void PropertyConvertersForwardSdkOptionsAndPreserveTheirWireFormats(bool normalizeOuter, bool finalized)
     {
-        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Options;
-        options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        JsonSerializerOptions options = finalized
+            ? AtProtoJsonSerializerOptions.Create(mutable => mutable.TypeInfoResolver = TolerantTestContext.Default)
+            : AtProtoJsonSerializerOptions.Options;
+        if (!finalized)
+        {
+            options.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        }
         string json = $$$$"""
             {"$type":"test.properties",{{{{(normalizeOuter ? "\"$via\":\"outer\"," : "")}}}}
              "reference":{"record":{"$type":"test.nested","$via":"reference","value":"nested"}},
@@ -206,6 +306,32 @@ public class JsonSerializerOptionsTests
         Assert.IsType<PropertyRecord>(JsonSerializer.Deserialize<PropertyRecordBase>(serialized, options));
     }
 
+    [Fact]
+    public void FinalizationPreservesMetadataCallbacksAndRequiredValidation()
+    {
+        int callbackCount = 0;
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default.WithAddedModifier(info =>
+            {
+                if (info.Type == typeof(NestedCustomRecord))
+                {
+                    info.OnDeserialized = value =>
+                    {
+                        Assert.Equal("callback", ((NestedCustomRecord)value).ExtensionData!["$via"].GetString());
+                        callbackCount++;
+                    };
+                }
+            }));
+
+        Assert.IsType<NestedCustomRecord>(JsonSerializer.Deserialize<NestedCustomRecordBase>(
+            """{"$type":"test.nested","$via":"callback","value":"nested"}""", options));
+        Assert.Equal(1, callbackCount);
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NestedCustomRecordBase>(
+            """{"$type":"test.nested","$via":"callback"}""", options));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NestedCustomRecordBase>(
+            """{"$type":"invalid","$via":"callback","value":"nested"}""", options));
+    }
+
     [Theory]
     [InlineData("""{"$type":"test.properties","reference":null,"structure":{"record":null}}""")]
     [InlineData("""{"$type":"test.properties","$via":"outer","reference":null,"structure":{"record":null}}""")]
@@ -218,6 +344,43 @@ public class JsonSerializerOptionsTests
         Assert.Null(record.Structure.Record);
         using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize<PropertyRecordBase>(record, options));
         Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("reference").ValueKind);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TypeAttachedReferenceConvertersPreserveNullSentinelsAndDefaultNullPolicy(bool normalizeOuter)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        string metadata = normalizeOuter ? "\"$via\":\"outer\"," : "";
+        string sentinelJson = $$"""{"$type":"test.nullSentinel",{{metadata}}"value":null}""";
+        SentinelNullRecord sentinel = Assert.IsType<SentinelNullRecord>(
+            JsonSerializer.Deserialize<NullPolicyRecordBase>(sentinelJson, options));
+        Assert.Equal("read-null", sentinel.Value!.Value);
+        sentinel.Value = null;
+        using JsonDocument sentinelDocument = JsonDocument.Parse(JsonSerializer.Serialize<NullPolicyRecordBase>(sentinel, options));
+        Assert.Equal("write-null", sentinelDocument.RootElement.GetProperty("value").GetString());
+
+        string defaultJson = $$"""{"$type":"test.nullDefault",{{metadata}}"value":null}""";
+        DefaultNullRecord defaultRecord = Assert.IsType<DefaultNullRecord>(
+            JsonSerializer.Deserialize<NullPolicyRecordBase>(defaultJson, options));
+        Assert.Null(defaultRecord.Value);
+        using JsonDocument defaultDocument = JsonDocument.Parse(JsonSerializer.Serialize<NullPolicyRecordBase>(defaultRecord, options));
+        Assert.Equal(JsonValueKind.Null, defaultDocument.RootElement.GetProperty("value").ValueKind);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TypeAttachedReferenceConvertersPreserveNullRejection(bool normalizeOuter)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        string metadata = normalizeOuter ? "\"$via\":\"outer\"," : "";
+        string json = $$"""{"$type":"test.nullRejected",{{metadata}}"value":null}""";
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NullPolicyRecordBase>(json, options));
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize<NullPolicyRecordBase>(new RejectedNullRecord(), options));
     }
 
     [Fact]
@@ -258,13 +421,24 @@ public class JsonSerializerOptionsTests
         Assert.Throws(exceptionType, () => JsonSerializer.Deserialize<PropertyRecordBase>(json, options));
     }
 
-    [Fact]
-    public void BuilderJsonOptionsResolvesPolymorphicTypesAddedDuringConfiguration()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuilderJsonOptionsResolvesPolymorphicTypesAddedDuringConfiguration(bool replace)
     {
         using AtProtoAgent agent = AtProtoAgent.CreateBuilder()
             .ForService(new Uri("https://test.invalid"))
             .ConfigureHttpJsonOptions(options =>
-                options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default))
+            {
+                if (replace)
+                {
+                    options.JsonSerializerOptions.TypeInfoResolver = TolerantTestContext.Default;
+                }
+                else
+                {
+                    options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default);
+                }
+            })
             .Build();
 
         AssertLateBoundRecord(agent.JsonOptions.JsonSerializerOptions);
@@ -503,6 +677,67 @@ internal sealed class CustomStructPayloadConverter : JsonConverter<CustomStructP
     }
 }
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(SentinelNullRecord), "test.nullSentinel")]
+[JsonDerivedType(typeof(DefaultNullRecord), "test.nullDefault")]
+[JsonDerivedType(typeof(RejectedNullRecord), "test.nullRejected")]
+internal abstract class NullPolicyRecordBase;
+
+internal sealed class SentinelNullRecord : NullPolicyRecordBase
+{
+    public SentinelNullValue? Value { get; set; }
+}
+
+internal sealed class DefaultNullRecord : NullPolicyRecordBase
+{
+    public DefaultNullValue? Value { get; set; }
+}
+
+internal sealed class RejectedNullRecord : NullPolicyRecordBase
+{
+    public RejectedNullValue? Value { get; set; }
+}
+
+[JsonConverter(typeof(SentinelNullConverter))]
+internal sealed record SentinelNullValue(string Value);
+
+[JsonConverter(typeof(DefaultNullConverter))]
+internal sealed record DefaultNullValue(string Value);
+
+[JsonConverter(typeof(RejectedNullConverter))]
+internal sealed record RejectedNullValue(string Value);
+
+internal sealed class SentinelNullConverter : JsonConverter<SentinelNullValue>
+{
+    public override bool HandleNull => true;
+
+    public override SentinelNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? "read-null" : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, SentinelNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? "write-null");
+}
+
+internal sealed class DefaultNullConverter : JsonConverter<DefaultNullValue>
+{
+    public override DefaultNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? throw new JsonException("Unexpected null.") : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, DefaultNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? throw new JsonException("Unexpected null."));
+}
+
+internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
+{
+    public override bool HandleNull => true;
+
+    public override RejectedNullValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.TokenType == JsonTokenType.Null ? throw new JsonException("Null is not permitted.") : reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, RejectedNullValue value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value?.Value ?? throw new JsonException("Null is not permitted."));
+}
+
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(LateBoundRecordBase))]
 [JsonSerializable(typeof(LateBoundRecord))]
@@ -514,6 +749,10 @@ internal sealed class CustomStructPayloadConverter : JsonConverter<CustomStructP
 [JsonSerializable(typeof(PropertyRecordBase))]
 [JsonSerializable(typeof(PropertyRecord))]
 [JsonSerializable(typeof(PropertyStructPayload))]
+[JsonSerializable(typeof(NullPolicyRecordBase))]
+[JsonSerializable(typeof(SentinelNullRecord))]
+[JsonSerializable(typeof(DefaultNullRecord))]
+[JsonSerializable(typeof(RejectedNullRecord))]
 [ExcludeFromCodeCoverage]
 internal sealed partial class TolerantTestContext : JsonSerializerContext
 {

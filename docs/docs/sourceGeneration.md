@@ -23,9 +23,44 @@ The protocol's `$link` and `$bytes` representations are unchanged.
 The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
 trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
 converters retain control of their own wire formats and receive the SDK options for decoding nested values, including
-when a custom converter is registered for a value type. Resolvers added to the `JsonSerializerOptions` chain after
-creating `JsonOptions` are included; builder configuration is finalized after its callback runs.
+when a custom converter is registered for a value type or a property. Type-attached reference converters retain their
+null-handling policies, including null sentinels and null validation. Agent constructors copy and finalize JSON options
+after caller configuration, including builder callbacks and later changes to builder options made before `Build()`.
+The agent's serializer options are read-only; the original caller options remain unchanged and mutable.
 Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
+
+### Configuring options for direct serialization
+
+Use `AtProtoJsonSerializerOptions.Create(configure)` or `BlueskyJsonSerializerOptions.Create(configure)` to configure
+mutable options before the SDK installs tolerant converters and wraps the final resolver chain:
+
+```c#
+JsonSerializerOptions options = BlueskyJsonSerializerOptions.Create(options =>
+{
+    options.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
+    options.WriteIndented = true;
+});
+```
+
+The result is a new read-only snapshot. Configuration callbacks may prepend or replace resolvers; if replacing the
+entire resolver, include every context needed by your application. Custom settings, converters and metadata modifiers
+are preserved. Shared `Default` options remain read-only and unchanged. Do not serialize using the callback's options;
+SDK adaptation is installed only on the returned copy after the callback completes.
+Resolver and converter instances are shared rather than deep-cloned; do not mutate those objects after finalization.
+
+> [!WARNING]
+> The legacy `.Options` properties, `new JsonOptions()`, and `BuildChainedTypeInfoResolverJsonSerializerOptions(...)`
+> return mutable options for compatibility. Arbitrary mutations to already-returned `JsonSerializerOptions` are not
+> intercepted. Appending a resolver is supported, but prepending a resolver, replacing a resolver that precedes the SDK
+> wrapper, replacing `TypeInfoResolver`, or customizing a copy made with `new JsonSerializerOptions(...)` can bypass
+> SDK contract adaptation. Deserialization may throw rather than tolerate unknown metadata. Prefer the `Create`
+> callbacks or pass configured `JsonOptions` to an agent constructor, which finalizes its own copy.
+
+For legacy direct-call code, use `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(customizedOptions)`
+**after** resolver customization to restore adaptation around the customized resolver. This helper returns fresh mutable
+AtProto defaults and chains the supplied resolver; it does not copy the supplied settings or converters. Reapply those
+settings to its result if needed, or use a `Create` callback instead. Later arbitrary resolver mutations can bypass the
+wrapper again. No API promises to intercept arbitrary mutations of mutable returned options.
 
 ### Configuring the agent for source generation
 
