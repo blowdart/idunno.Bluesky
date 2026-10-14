@@ -167,6 +167,7 @@
 * Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
 * Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
 * Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
+* Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
 * The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
 
 #### idunno.Bluesky.BotSdk.MySQL

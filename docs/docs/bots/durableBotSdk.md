@@ -266,6 +266,8 @@ The in-memory provider loses its saved credentials when the process stops, so ch
 
 We configure the bot using standard .NET configuration and the fluent `BlueskyBotBuilder`.
 
+`AddBlueskyBot` registers the validated settings for both `BotOptions` and `IOptions<BotOptions>`. It supersedes earlier direct `BotOptions` registrations. Supply settings through its options instance, configuration action, or configuration binding overloads rather than registering a separate runtime options instance.
+
 Here is `Program.cs`:
 
 ```csharp

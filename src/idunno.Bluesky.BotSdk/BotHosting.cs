@@ -77,7 +77,7 @@ public static class BotHosting
         options.Validate();
 
         services.AddSingleton(Options.Create(options));
-        services.TryAddSingleton(options);
+        services.AddSingleton(options);
 
         return AddBlueskyBotCore<TPolicy>(services, httpUserAgent, lookbackCutoff);
     }
@@ -145,7 +145,7 @@ public static class BotHosting
                 return true;
             })
             .ValidateOnStart();
-        services.TryAddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
 
         return AddBlueskyBotCore<TPolicy>(services, httpUserAgent, lookbackCutoff);
     }
@@ -213,7 +213,7 @@ public static class BotHosting
                 return true;
             })
             .ValidateOnStart();
-        services.TryAddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
 
         return AddBlueskyBotCore<TPolicy>(services, httpUserAgent, lookbackCutoff);
     }
@@ -278,7 +278,7 @@ public static class BotHosting
                 return true;
             })
             .ValidateOnStart();
-        services.TryAddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
+        services.AddSingleton(provider => provider.GetRequiredService<IOptions<BotOptions>>().Value);
 
         return AddBlueskyBotCore<TPolicy>(services, httpUserAgent, lookbackCutoff);
     }

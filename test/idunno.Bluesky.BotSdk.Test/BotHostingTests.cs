@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 using Npgsql;
@@ -26,6 +27,61 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Verifies that the reusable SDK can register policies, workers, and AOT-safe probes without remote writes.</summary>
 public sealed class BotHostingTests
 {
+    /// <summary>Uses the validated settings instead of an earlier conflicting runtime options registration.</summary>
+    /// <param name="registration">The options registration path.</param>
+    [Theory]
+    [InlineData("instance")]
+    [InlineData("action")]
+    [InlineData("section")]
+    [InlineData("default")]
+    public void RegistrationReplacesConflictingRuntimeOptions(string registration)
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        BotOptions previous = new() { Did = "invalid", DeveloperMode = false };
+        services.AddSingleton(previous);
+        BotOptions expected = TestRecords.Options();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [$"{BotOptions.Bot}:Did"] = expected.Did,
+                [$"{BotOptions.Bot}:ArchiveApiKey"] = expected.ArchiveApiKey,
+                [$"{BotOptions.Bot}:CredentialEncryptionKey"] = expected.CredentialEncryptionKey
+            })
+            .Build();
+        services.AddSingleton(configuration);
+        BlueskyBotBuilder builder = registration switch
+        {
+            "instance" => services.AddBlueskyBot<NoReplyPolicy>(expected, "options-test/1.0"),
+            "action" => services.AddBlueskyBot<NoReplyPolicy>(options =>
+            {
+                options.Did = expected.Did;
+                options.ArchiveApiKey = expected.ArchiveApiKey;
+                options.CredentialEncryptionKey = expected.CredentialEncryptionKey;
+            }, "options-test/1.0"),
+            "section" => services.AddBlueskyBot<NoReplyPolicy>(configuration.GetSection(BotOptions.Bot), "options-test/1.0"),
+            "default" => services.AddBlueskyBot<NoReplyPolicy>("options-test/1.0"),
+            _ => throw new ArgumentOutOfRangeException(nameof(registration))
+        };
+        builder.WithInMemoryStorage();
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        BotOptions runtime = provider.GetRequiredService<BotOptions>();
+        Assert.NotSame(previous, runtime);
+        Assert.Same(provider.GetRequiredService<IOptions<BotOptions>>().Value, runtime);
+        Assert.Equal(expected.Did, runtime.Did);
+        Assert.Equal(expected.ArchiveApiKey, runtime.ArchiveApiKey);
+        Assert.Equal(expected.CredentialEncryptionKey, runtime.CredentialEncryptionKey);
+        Assert.True(runtime.DeveloperMode);
+        if (registration == "instance")
+        {
+            Assert.Same(expected, runtime);
+        }
+    }
+
     /// <summary>Isolates bot mutation restrictions and durable budgets from the application's SDK client.</summary>
     /// <param name="applicationFirst">Whether to register the application client first.</param>
     [Theory]
