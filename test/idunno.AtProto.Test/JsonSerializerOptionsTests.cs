@@ -98,7 +98,7 @@ public class JsonSerializerOptionsTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void TolerantPolymorphicConfigurationSnapshotsAnOptionsBoundResolverChain(bool configureTwice)
+    public void TolerantPolymorphicConfigurationRewrapsAnOptionsBoundResolverChain(bool configureTwice)
     {
         JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
         {
@@ -119,6 +119,45 @@ public class JsonSerializerOptionsTests
         Assert.Equal("snapshot", record.Value);
         Assert.IsType<StrongReference>(
             JsonSerializer.Deserialize<SubjectType>(SubjectWithTrailingTypeDiscriminator, options));
+    }
+
+    [Fact]
+    public void JsonOptionsResolvesPolymorphicTypesFromResolversAddedAfterConstruction()
+    {
+        JsonOptions jsonOptions = new();
+        jsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+
+        AssertLateBoundRecord(jsonOptions.JsonSerializerOptions);
+    }
+
+    [Fact]
+    public void BuilderJsonOptionsResolvesPolymorphicTypesAddedDuringConfiguration()
+    {
+        using AtProtoAgent agent = AtProtoAgent.CreateBuilder()
+            .ForService(new Uri("https://test.invalid"))
+            .ConfigureHttpJsonOptions(options =>
+                options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, TolerantTestContext.Default))
+            .Build();
+
+        AssertLateBoundRecord(agent.JsonOptions.JsonSerializerOptions);
+    }
+
+    [Fact]
+    public void CustomStructConverterForwardsNestedPolymorphicValuesToSdkOptions()
+    {
+        JsonOptions jsonOptions = new();
+        jsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+
+        const string json = """
+            {"$type":"test.customContainer","payload":{"record":{"$type":"test.nested","$via":"extension","value":"nested"}}}
+            """;
+
+        RecordWithCustomStruct? record = JsonSerializer.Deserialize<CustomStructRecordBase>(json, jsonOptions.JsonSerializerOptions) as RecordWithCustomStruct;
+
+        Assert.NotNull(record);
+        NestedCustomRecord nested = Assert.IsType<NestedCustomRecord>(record.Payload.Record);
+        Assert.Equal("nested", nested.Value);
+        Assert.Equal("extension", nested.ExtensionData!["$via"].GetString());
     }
 
     public static TheoryData<string> SharedOptionsSurfaces => new()
@@ -187,6 +226,16 @@ public class JsonSerializerOptionsTests
         Assert.Equal(typeof(ChainedTestRecord), first.GetTypeInfo(typeof(ChainedTestRecord)).Type);
         Assert.Throws<NotSupportedException>(() => AtProtoServer.AtProtoJsonSerializerOptions.GetTypeInfo(typeof(ChainedTestRecord)));
     }
+
+    private static void AssertLateBoundRecord(JsonSerializerOptions options)
+    {
+        const string json = """{"$type":"test.lateBound","$via":"extension","value":"late"}""";
+        LateBoundRecordBase? record = JsonSerializer.Deserialize<LateBoundRecordBase>(json, options);
+
+        LateBoundRecord lateBound = Assert.IsType<LateBoundRecord>(record);
+        Assert.Equal("late", lateBound.Value);
+        Assert.Equal("extension", lateBound.ExtensionData!["$via"].GetString());
+    }
 }
 
 /// <summary>
@@ -202,3 +251,67 @@ internal sealed partial class ChainedTestContext : JsonSerializerContext
 
 [ExcludeFromCodeCoverage]
 internal sealed record ChainedTestRecord(string Value);
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(LateBoundRecord), "test.lateBound")]
+internal abstract class LateBoundRecordBase;
+
+internal sealed class LateBoundRecord : LateBoundRecordBase
+{
+    public string Value { get; set; } = string.Empty;
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(RecordWithCustomStruct), "test.customContainer")]
+internal abstract record CustomStructRecordBase;
+
+internal sealed record RecordWithCustomStruct(CustomStructPayload Payload) : CustomStructRecordBase;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(NestedCustomRecord), "test.nested")]
+internal abstract class NestedCustomRecordBase;
+
+internal sealed class NestedCustomRecord : NestedCustomRecordBase
+{
+    public string Value { get; set; } = string.Empty;
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonConverter(typeof(CustomStructPayloadConverter))]
+internal readonly record struct CustomStructPayload(NestedCustomRecordBase? Record);
+
+internal sealed class CustomStructPayloadConverter : JsonConverter<CustomStructPayload>
+{
+    public override CustomStructPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        NestedCustomRecordBase? record = JsonSerializer.Deserialize<NestedCustomRecordBase>(document.RootElement.GetProperty("record"), options);
+        return new(record);
+    }
+
+    public override void Write(Utf8JsonWriter writer, CustomStructPayload value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonSerializer.Serialize(writer, value.Record, options);
+        writer.WriteEndObject();
+    }
+}
+
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(LateBoundRecordBase))]
+[JsonSerializable(typeof(LateBoundRecord))]
+[JsonSerializable(typeof(CustomStructRecordBase))]
+[JsonSerializable(typeof(RecordWithCustomStruct))]
+[JsonSerializable(typeof(CustomStructPayload))]
+[JsonSerializable(typeof(NestedCustomRecordBase))]
+[JsonSerializable(typeof(NestedCustomRecord))]
+[ExcludeFromCodeCoverage]
+internal sealed partial class TolerantTestContext : JsonSerializerContext
+{
+}

@@ -20,7 +20,7 @@
 
 #### idunno.AtProto
 
-* SDK JSON options automatically tolerate unknown `$` properties on polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
+* SDK JSON options automatically tolerate unknown `$` properties on polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Resolvers registered after creating `JsonOptions`, nested values handled by custom converters (including value-type converters), and default server record listings are supported. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
 * Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
   buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.

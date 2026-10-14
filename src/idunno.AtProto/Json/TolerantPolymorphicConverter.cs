@@ -33,20 +33,31 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     internal static void Configure(JsonSerializerOptions options)
     {
-        // .NET 9 exposes a live, options-bound resolver chain. Snapshot it before assigning a
-        // wrapper back to the options, or that assignment makes the chain contain its own wrapper.
-        IJsonTypeInfoResolver resolver = JsonTypeInfoResolver.Combine(options.TypeInfoResolverChain.ToArray());
-        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver));
-        options.TypeInfoResolver = resolver.WithAddedModifier(info =>
+        List<IJsonTypeInfoResolver> initialResolvers = [];
+        foreach (IJsonTypeInfoResolver chainResolver in options.TypeInfoResolverChain)
         {
-            // A custom converter cannot also expose built-in polymorphism metadata. Remove it only from
-            // our wrapper contract; the underlying contract retains it for dispatch and validation.
-            if (info.Kind == JsonTypeInfoKind.None &&
-                info.Options.Converters.OfType<TolerantPolymorphicConverter>().Any(converter => converter.CanConvert(info.Type)))
+            if (chainResolver is TolerantTypeInfoResolver configuredResolver)
             {
-                info.PolymorphismOptions = null;
+                configuredResolver.Freeze();
             }
-        });
+
+            if (!initialResolvers.Contains(chainResolver))
+            {
+                initialResolvers.Add(chainResolver);
+            }
+        }
+
+        for (int i = options.Converters.Count - 1; i >= 0; i--)
+        {
+            if (options.Converters[i] is TolerantPolymorphicConverter)
+            {
+                options.Converters.RemoveAt(i);
+            }
+        }
+
+        IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(options, [.. initialResolvers]);
+        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver));
+        options.TypeInfoResolver = resolver;
     }
 
     public override bool CanConvert(Type typeToConvert) =>
@@ -78,8 +89,10 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     {
         public override bool CanConvert(Type typeToConvert)
         {
-            if (typeToConvert.IsValueType)
+            Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
+            if (valueType.IsEnum)
             {
+                // Generated enum converters are opaque too, but JsonConverter<object> cannot bridge their value-type contracts.
                 return false;
             }
 
@@ -100,6 +113,76 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options) =>
             JsonSerializer.Serialize(writer, value, sdkOptions.GetTypeInfo(type));
+    }
+
+    /// <summary>
+    /// Resolves from the original and subsequently registered resolvers without referring back to itself.
+    /// </summary>
+    private sealed class TolerantTypeInfoResolver(JsonSerializerOptions sdkOptions, IJsonTypeInfoResolver[] initialResolvers) : IJsonTypeInfoResolver
+    {
+        private readonly object _resolverLock = new();
+        private IJsonTypeInfoResolver? _combinedResolver;
+        private IJsonTypeInfoResolver[]? _chainSnapshot;
+
+        public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
+        {
+            JsonTypeInfo? info = (_frozenResolver ?? GetCombinedResolver()).GetTypeInfo(type, options);
+            return info is null ? null : ApplyCustomConverterPolymorphismWorkaround(info);
+        }
+
+        public void Freeze()
+        {
+            lock (_resolverLock)
+            {
+                _frozenResolver ??= GetCombinedResolver();
+            }
+        }
+
+        private IJsonTypeInfoResolver GetCombinedResolver()
+        {
+            lock (_resolverLock)
+            {
+                IList<IJsonTypeInfoResolver> chain = sdkOptions.TypeInfoResolverChain;
+                if (_chainSnapshot is not null && _chainSnapshot.Length == chain.Count)
+                {
+                    int index = 0;
+                    while (index < chain.Count && ReferenceEquals(_chainSnapshot[index], chain[index]))
+                    {
+                        index++;
+                    }
+
+                    if (index == chain.Count)
+                    {
+                        return _combinedResolver!;
+                    }
+                }
+
+                IJsonTypeInfoResolver[] currentChain = chain.ToArray();
+                List<IJsonTypeInfoResolver> resolvers = [];
+                resolvers.AddRange(currentChain.Where(resolver => !ReferenceEquals(resolver, this)).Distinct());
+                resolvers.AddRange(initialResolvers.Where(resolver => !resolvers.Contains(resolver)));
+
+                _chainSnapshot = currentChain;
+                _combinedResolver = JsonTypeInfoResolver.Combine(resolvers.ToArray());
+                return _combinedResolver;
+            }
+        }
+
+        private static JsonTypeInfo ApplyCustomConverterPolymorphismWorkaround(JsonTypeInfo info)
+        {
+            // A custom converter cannot also expose built-in polymorphism metadata. Keep it on the
+            // underlying contract; the tolerant wrapper performs dispatch using that original contract.
+            if (info.Kind == JsonTypeInfoKind.None &&
+                info.PolymorphismOptions is not null &&
+                info.Converter.GetType().Assembly != typeof(JsonSerializer).Assembly)
+            {
+                info.PolymorphismOptions = null;
+            }
+
+            return info;
+        }
+
+        private IJsonTypeInfoResolver? _frozenResolver;
     }
 
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>

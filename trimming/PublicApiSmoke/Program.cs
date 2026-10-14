@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
@@ -69,6 +70,21 @@ foreach (Post? post in new[] { extensionPost, extensionRecord as Post, extension
     {
         throw new InvalidOperationException("Unknown post metadata was not preserved.");
     }
+}
+
+JsonOptions lateJsonOptions = new();
+lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
+JsonTypeInfo<LateBoundRecordBase> lateRecordTypeInfo =
+    (JsonTypeInfo<LateBoundRecordBase>)lateJsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(LateBoundRecordBase));
+const string latePolymorphicJson = """
+    {"$type":"smoke.container","payload":{"record":{"$type":"smoke.nested","$via":"aot","value":"nested"}}}
+    """;
+LateBoundRecordBase? lateRecord = JsonSerializer.Deserialize(latePolymorphicJson, lateRecordTypeInfo);
+LateBoundNestedRecord? lateNested = (lateRecord as LateBoundRecord)?.Payload.Record as LateBoundNestedRecord;
+if (lateNested is not { Value: "nested", ExtensionData: not null } ||
+    lateNested.ExtensionData["$via"].GetString() != "aot")
+{
+    throw new InvalidOperationException("Late-bound polymorphic source generation or nested custom struct conversion failed.");
 }
 
 string extensionEnvelopeJson = $$"""
@@ -230,6 +246,61 @@ if (handler.RequestCount != 3)
 }
 
 Console.WriteLine("Offline trimming and Native AOT smoke test passed.");
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(LateBoundRecord), "smoke.container")]
+internal abstract class LateBoundRecordBase;
+
+internal sealed class LateBoundRecord : LateBoundRecordBase
+{
+    public LateBoundStructPayload Payload { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(LateBoundNestedRecord), "smoke.nested")]
+internal abstract class LateBoundNestedRecordBase;
+
+internal sealed class LateBoundNestedRecord : LateBoundNestedRecordBase
+{
+    public string Value { get; set; } = string.Empty;
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonConverter(typeof(LateBoundStructPayloadConverter))]
+internal readonly record struct LateBoundStructPayload(LateBoundNestedRecordBase? Record);
+
+internal sealed class LateBoundStructPayloadConverter : JsonConverter<LateBoundStructPayload>
+{
+    public override LateBoundStructPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        JsonTypeInfo<LateBoundNestedRecordBase?> typeInfo =
+            (JsonTypeInfo<LateBoundNestedRecordBase?>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+        return new(JsonSerializer.Deserialize(document.RootElement.GetProperty("record"), typeInfo));
+    }
+
+    public override void Write(Utf8JsonWriter writer, LateBoundStructPayload value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("record");
+        JsonTypeInfo<LateBoundNestedRecordBase?> typeInfo =
+            (JsonTypeInfo<LateBoundNestedRecordBase?>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+        JsonSerializer.Serialize(writer, value.Record, typeInfo);
+        writer.WriteEndObject();
+    }
+}
+
+[JsonSourceGenerationOptions(
+    GenerationMode = JsonSourceGenerationMode.Metadata,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(LateBoundRecordBase))]
+[JsonSerializable(typeof(LateBoundRecord))]
+[JsonSerializable(typeof(LateBoundStructPayload))]
+[JsonSerializable(typeof(LateBoundNestedRecordBase))]
+[JsonSerializable(typeof(LateBoundNestedRecord))]
+internal sealed partial class LateBoundSourceGenerationContext : JsonSerializerContext;
 
 internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler) : IHttpClientFactory
 {

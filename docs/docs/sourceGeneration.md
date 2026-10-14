@@ -22,7 +22,9 @@ The protocol's `$link` and `$bytes` representations are unchanged.
 
 The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
 trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
-converters retain control of their own wire formats and receive the SDK options for decoding nested values.
+converters retain control of their own wire formats and receive the SDK options for decoding nested values, including
+when a custom converter is registered for a value type. Resolvers added to the `JsonSerializerOptions` chain after
+creating `JsonOptions` are included; builder configuration is finalized after its callback runs.
 Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
 
 ### Configuring the agent for source generation
@@ -31,7 +33,7 @@ You must configure the `AtProtoAgent` to use the source generation context eithe
 
 ```c#
 JsonOptions httpJsonOptions = new();
-httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(SourceGenerationContext.Default);
 
 using (AtProtoAgent agent = new(
     service: server,
@@ -53,7 +55,7 @@ var builder = AtProtoAgent.CreateBuilder()
     .ForService(service)
     .ConfigureHttpJsonOptions(options =>
     {
-        options.SerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
+        options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
     });
 
 using var agent = builder.Build();

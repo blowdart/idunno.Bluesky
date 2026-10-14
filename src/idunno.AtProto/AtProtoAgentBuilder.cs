@@ -187,6 +187,7 @@ public class AtProtoAgentBuilder
         JsonOptions configuredOptions = new();
 
         configure(configuredOptions);
+        Json.TolerantPolymorphicConverter.Configure(configuredOptions.JsonSerializerOptions);
 
         JsonOptions = configuredOptions;
 

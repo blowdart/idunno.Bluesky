@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 //
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -19,20 +20,13 @@ public partial class AtProtoServer
     internal static JsonSerializerOptions AtProtoJsonSerializerOptions { get; } = MakeReadOnly(CreateAtProtoJsonSerializerOptions());
 
     /// <summary>
-    /// Gets a shared <see cref="JsonSerializerOptions"/> without a type resolver.
+    /// Gets shared <see cref="JsonSerializerOptions"/> with reflection-backed type resolution when available.
     /// </summary>
     /// <remarks>
     /// <para>The instance is shared so the reflection based type metadata it builds is cached across calls, rather than rebuilt
     /// for every record. It becomes read only when it is first used.</para>
     /// </remarks>
-    internal static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution { get; } = new(JsonSerializerDefaults.Web)
-    {
-        AllowOutOfOrderMetadataProperties = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IgnoreReadOnlyProperties = false,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
-        RespectNullableAnnotations = true
-    };
+    internal static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution { get; } = CreateDefaultJsonSerializerOptionsWithNoTypeResolution();
 
     /// <summary>
     /// Creates a new, mutable <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.
@@ -48,6 +42,31 @@ public partial class AtProtoServer
             RespectNullableAnnotations = true,
             TypeInfoResolver = SourceGenerationContext.Default,
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        };
+        Json.TolerantPolymorphicConverter.Configure(options);
+        return options;
+    }
+
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "This reflection-backed fallback is used only when reflection is enabled; AOT uses the AtProto source-generation context.")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "This reflection-backed fallback is used only when reflection is enabled; AOT uses the AtProto source-generation context.")]
+    private static JsonSerializerOptions CreateDefaultJsonSerializerOptionsWithNoTypeResolution()
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
+        {
+            AllowOutOfOrderMetadataProperties = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            IgnoreReadOnlyProperties = false,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+            RespectNullableAnnotations = true,
+            TypeInfoResolver = JsonSerializer.IsReflectionEnabledByDefault
+                ? new DefaultJsonTypeInfoResolver()
+                : JsonTypeInfoResolver.Combine(SourceGenerationContext.Default)
         };
         Json.TolerantPolymorphicConverter.Configure(options);
         return options;
