@@ -81,6 +81,10 @@ jobs:
           src/**/idunno.*.xml
         retention-days: 5
 
+    - name: 'Test frontend'
+      working-directory: samples/Samples.ReactBff/ClientApp
+      run: npm test -- --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit="${TEST_RESULTS}/react-bff.junit.xml"
+
     - name: 'Test'
       id: test
       shell: bash
