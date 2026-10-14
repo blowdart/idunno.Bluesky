@@ -8,6 +8,23 @@
 If you are using your own record types with an `AtProtoAgent` Native AOT requires 
 [JSON serialization source generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation).
 
+### Unknown JSON properties
+
+The SDK's JSON options tolerate unknown properties whose names begin with `$`, such as `"$via": "kazahana"`.
+This applies to direct deserialization with `BlueskyJsonSerializerOptions.Default` or `.Options`,
+`AtProtoJsonSerializerOptions`, the server options, chained SDK options and agent HTTP JSON options, including nested
+posts, embeds, feed views and typed repository envelopes.
+
+Unknown properties are retained, with their original names and JSON values, when the selected concrete contract has
+`[JsonExtensionData]`. Otherwise they are discarded. `$type` still selects the contract; unrecognized discriminators use
+the contract's existing fallback policy. Malformed discriminators and invalid or missing required fields still fail.
+The protocol's `$link` and `$bytes` representations are unchanged.
+
+The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
+trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
+converters retain control of their own wire formats and receive the SDK options for decoding nested values.
+Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
+
 ### Configuring the agent for source generation
 
 You must configure the `AtProtoAgent` to use the source generation context either for your classes via `JsonOptions`,

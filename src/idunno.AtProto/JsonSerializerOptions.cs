@@ -38,15 +38,20 @@ public partial class AtProtoServer
     /// Creates a new, mutable <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.
     /// </summary>
     /// <returns>A new <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes.</returns>
-    internal static JsonSerializerOptions CreateAtProtoJsonSerializerOptions() => new(JsonSerializerDefaults.Web)
+    internal static JsonSerializerOptions CreateAtProtoJsonSerializerOptions()
     {
-        AllowOutOfOrderMetadataProperties = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IgnoreReadOnlyProperties = false,
-        RespectNullableAnnotations = true,
-        TypeInfoResolver = SourceGenerationContext.Default,
-        UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
-    };
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
+        {
+            AllowOutOfOrderMetadataProperties = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            IgnoreReadOnlyProperties = false,
+            RespectNullableAnnotations = true,
+            TypeInfoResolver = SourceGenerationContext.Default,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
+        };
+        Json.TolerantPolymorphicConverter.Configure(options);
+        return options;
+    }
 
     /// <summary>
     /// Gets an instance of <see cref="JsonSerializerOptions" /> with the specified <paramref name="jsonSerializerOptions"/> type resolver chained.
@@ -82,6 +87,7 @@ public partial class AtProtoServer
             result.TypeInfoResolverChain.Insert(0, options.TypeInfoResolver);
         }
 
+        Json.TolerantPolymorphicConverter.Configure(result);
         return result;
     }
 
@@ -99,6 +105,7 @@ public partial class AtProtoServer
 
         options.TypeInfoResolverChain.Insert(0, jsonTypeInfoResolver);
 
+        Json.TolerantPolymorphicConverter.Configure(options);
         return options;
     }
 

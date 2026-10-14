@@ -12,6 +12,10 @@ namespace idunno.Bluesky;
 /// <summary>
 /// Helper class to provide JsonSerializerOptions for Bluesky types.
 /// </summary>
+/// <remarks>
+/// <para>Unknown JSON properties, including names beginning with <c>$</c>, are retained in extension data when the
+/// selected contract supports it, and otherwise ignored. Type discriminator and required property validation are unchanged.</para>
+/// </remarks>
 // The trimming and AOT suppressions are applied to the type so that they cover every member which reaches the
 // chaining call, wherever the compiler emits that IL. Suppression lookup walks from the member the IL is
 // attributed to out to its declaring type, so a type level suppression is always consulted by ILLink.

@@ -14,6 +14,14 @@ namespace idunno.AtProto;
 public sealed class JsonOptions
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="JsonOptions"/> class.
+    /// </summary>
+    public JsonOptions()
+    {
+        Json.TolerantPolymorphicConverter.Configure(JsonSerializerOptions);
+    }
+
+    /// <summary>
     /// Gets the <see cref="JsonSerializerOptions"/> used by <see cref="Agent"/> 
     /// </summary>
     public JsonSerializerOptions JsonSerializerOptions { get; } = new JsonSerializerOptions(JsonSerializerDefaults.Web)

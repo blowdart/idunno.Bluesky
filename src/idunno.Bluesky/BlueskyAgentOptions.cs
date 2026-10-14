@@ -22,7 +22,7 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
     /// <summary>
     /// Creates a new instance of <see cref="BlueskyAgentOptions"/>
     /// </summary>
-    public BlueskyAgentOptions() : base()
+    public BlueskyAgentOptions() : this(loggerFactory: null)
     {
     }
 
@@ -60,16 +60,10 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
             FacetExtractor = facetExtractor;
         }
 
-        // Insert the Bluesky source generation context at the start of the type info resolver chain.
-        if (httpJsonOptions is not null)
-        {
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-        }
-        else
-        {
-            httpJsonOptions = new JsonOptions();
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-        }
+        httpJsonOptions ??= new JsonOptions();
+        httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+        AtProto.Json.TolerantPolymorphicConverter.Configure(httpJsonOptions.JsonSerializerOptions);
+        HttpJsonOptions = httpJsonOptions;
     }
 
     /// <summary>

@@ -10,6 +10,10 @@ namespace idunno.AtProto;
 /// <summary>
 /// Helper class to provide JsonSerializerOptions for AtProto types.
 /// </summary>
+/// <remarks>
+/// <para>Unknown JSON properties, including names beginning with <c>$</c>, are retained in extension data when the
+/// selected contract supports it, and otherwise ignored. Type discriminator and required property validation are unchanged.</para>
+/// </remarks>
 // The trimming and AOT suppressions must be applied to the type rather than to s_options. The initializer for a
 // static field is emitted into the generated static constructor, and suppression lookup walks from the member the
 // IL is attributed to out to its declaring type, so a suppression on the field itself is never consulted by ILLink.
@@ -48,6 +52,7 @@ public static class AtProtoJsonSerializerOptions
 
     private static JsonSerializerOptions MakeReadOnly(JsonSerializerOptions options)
     {
+        Json.TolerantPolymorphicConverter.Configure(options);
         options.MakeReadOnly();
         return options;
     }

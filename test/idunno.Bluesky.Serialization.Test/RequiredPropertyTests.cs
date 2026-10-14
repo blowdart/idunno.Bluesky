@@ -115,9 +115,9 @@ public class RequiredPropertyTests
         Assert.False(options.IgnoreReadOnlyProperties);
         Assert.Equal(JsonUnmappedMemberHandling.Skip, options.UnmappedMemberHandling);
 
-        // The converter and the resolver are the two things the Bluesky options add for themselves.
+        // The source-generated contracts are wrapped to tolerate unknown metadata properties.
         Assert.Contains(options.Converters, converter => converter is Json.PreferenceConverter);
-        Assert.Contains(SourceGenerationContext.Default, options.TypeInfoResolverChain);
+        Assert.Equal(SourceGenerationContext.Default.Post.Type, options.GetTypeInfo(typeof(Post)).Type);
     }
 
     [Fact]

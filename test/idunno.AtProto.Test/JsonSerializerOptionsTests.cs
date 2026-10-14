@@ -95,6 +95,32 @@ public class JsonSerializerOptionsTests
         Assert.IsType<StrongReference>(subject);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TolerantPolymorphicConfigurationSnapshotsAnOptionsBoundResolverChain(bool configureTwice)
+    {
+        JsonSerializerOptions options = new(JsonSerializerDefaults.Web)
+        {
+            AllowOutOfOrderMetadataProperties = true
+        };
+        options.TypeInfoResolverChain.Add(ChainedTestContext.Default);
+        options.TypeInfoResolverChain.Add(SourceGenerationContext.Default);
+
+        Json.TolerantPolymorphicConverter.Configure(options);
+        if (configureTwice)
+        {
+            Json.TolerantPolymorphicConverter.Configure(options);
+        }
+        options.MakeReadOnly();
+
+        ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
+            JsonSerializer.Deserialize<ChainedTestRecord>("""{"value":"snapshot"}""", options));
+        Assert.Equal("snapshot", record.Value);
+        Assert.IsType<StrongReference>(
+            JsonSerializer.Deserialize<SubjectType>(SubjectWithTrailingTypeDiscriminator, options));
+    }
+
     public static TheoryData<string> SharedOptionsSurfaces => new()
     {
         nameof(AtProtoJsonSerializerOptions.Default),
@@ -129,6 +155,7 @@ public class JsonSerializerOptionsTests
     public void OptionsReturnsANewMutableInstanceOnEveryCall()
     {
         JsonSerializerOptions first = AtProtoJsonSerializerOptions.Options;
+        int converterCount = AtProtoJsonSerializerOptions.Default.Converters.Count;
 
         Assert.NotSame(first, AtProtoJsonSerializerOptions.Options);
         Assert.NotSame(AtProtoJsonSerializerOptions.Default, first);
@@ -136,7 +163,7 @@ public class JsonSerializerOptionsTests
 
         first.Converters.Add(new JsonStringEnumConverter());
 
-        Assert.Empty(AtProtoJsonSerializerOptions.Default.Converters);
+        Assert.Equal(converterCount, AtProtoJsonSerializerOptions.Default.Converters.Count);
     }
 
     [Fact]
@@ -157,7 +184,8 @@ public class JsonSerializerOptionsTests
         Assert.NotSame(AtProtoServer.AtProtoJsonSerializerOptions, first);
         Assert.False(first.IsReadOnly);
         Assert.Equal(sharedResolverCount, AtProtoServer.AtProtoJsonSerializerOptions.TypeInfoResolverChain.Count);
-        Assert.Same(ChainedTestContext.Default, first.TypeInfoResolverChain[0]);
+        Assert.Equal(typeof(ChainedTestRecord), first.GetTypeInfo(typeof(ChainedTestRecord)).Type);
+        Assert.Throws<NotSupportedException>(() => AtProtoServer.AtProtoJsonSerializerOptions.GetTypeInfo(typeof(ChainedTestRecord)));
     }
 }
 

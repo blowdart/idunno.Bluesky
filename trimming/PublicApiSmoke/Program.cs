@@ -9,6 +9,9 @@ using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Embed;
+using idunno.Bluesky.Feed;
+using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
@@ -47,6 +50,81 @@ AtProtoRepositoryRecord<Post>? whitespaceEnvelope = JsonSerializer.Deserialize(w
 if (whitespaceEnvelope?.Value.Text != " " || new PostBuilder(" ").ToPost().Text != " ")
 {
     throw new InvalidOperationException("The whitespace-only repository record or post builder text was not preserved.");
+}
+
+const string extensionPostJson = """
+    {"$type":"app.bsky.feed.post","$via":"kazahana","$example":{"$":"nested"},"\u0024":[1,null,true],
+     "text":"hello","createdAt":"2026-10-13T10:24:57.970Z","langs":["ja"]}
+    """;
+Post extensionPost = JsonSerializer.Deserialize(extensionPostJson, postTypeInfo)
+    ?? throw new InvalidOperationException("The post with unknown metadata was not deserialized.");
+BlueskyRecord? extensionRecord = JsonSerializer.Deserialize(extensionPostJson, recordTypeInfo);
+Post? extensionRoundTrip = JsonSerializer.Deserialize(JsonSerializer.Serialize(extensionPost, postTypeInfo), postTypeInfo);
+foreach (Post? post in new[] { extensionPost, extensionRecord as Post, extensionRoundTrip })
+{
+    if (post?.ExtensionData?["$via"].GetString() != "kazahana" ||
+        post.ExtensionData["$example"].GetProperty("$").GetString() != "nested" ||
+        post.ExtensionData["$"].GetArrayLength() != 3 ||
+        post.Text != "hello" || post.Langs?.Single() != "ja")
+    {
+        throw new InvalidOperationException("Unknown post metadata was not preserved.");
+    }
+}
+
+string extensionEnvelopeJson = $$"""
+    {"uri":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r",
+     "cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4","value":{{extensionPostJson}}}
+    """;
+if (JsonSerializer.Deserialize(extensionEnvelopeJson, envelopeTypeInfo)?.Value.ExtensionData?["$via"].GetString() != "kazahana")
+{
+    throw new InvalidOperationException("Repository envelope metadata was not preserved.");
+}
+
+string nestedFeedJson = $$"""
+    {"post":{"uri":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r",
+     "cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+     "author":{"did":"did:plc:heztswuhu24kudwdaz7y4bi3","handle":"example.test"},
+     "record":{{extensionPostJson}},"indexedAt":"2026-10-13T10:24:57.970Z",
+     "embed":{"$type":"app.bsky.embed.record#view","$example":"embed","record":{
+       "$type":"app.bsky.embed.record#viewRecord","$via":"quote",
+       "uri":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.feed.post/3mxqswzprj42r",
+       "cid":"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+       "author":{"did":"did:plc:heztswuhu24kudwdaz7y4bi3","handle":"example.test"},
+       "value":{{extensionPostJson}},"indexedAt":"2026-10-13T10:24:57.970Z"} } } }
+    """;
+JsonTypeInfo<FeedViewPost> feedTypeInfo = (JsonTypeInfo<FeedViewPost>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(FeedViewPost));
+FeedViewPost feed = JsonSerializer.Deserialize(nestedFeedJson, feedTypeInfo)
+    ?? throw new InvalidOperationException("The nested feed was not deserialized.");
+FeedViewPost? feedRoundTrip = JsonSerializer.Deserialize(JsonSerializer.Serialize(feed, feedTypeInfo), feedTypeInfo);
+foreach (FeedViewPost? item in new[] { feed, feedRoundTrip })
+{
+    if (item?.Post.Record.ExtensionData?["$via"].GetString() != "kazahana" ||
+        item.Post.Embed is not EmbeddedRecordView embedded ||
+        embedded.ExtensionData?["$example"].GetString() != "embed" ||
+        embedded.Record is not ViewRecord quote ||
+        quote.ExtensionData?["$via"].GetString() != "quote" ||
+        quote.Value is not Post quotedPost ||
+        quotedPost.ExtensionData?["$via"].GetString() != "kazahana")
+    {
+        throw new InvalidOperationException("Nested metadata was not retained on its owning object.");
+    }
+}
+
+const string extensionRuleJson = """
+    {"$example":{"$":"discard"},"$":[1,null],"$type":"app.bsky.feed.threadgate#listRule",
+     "list":"at://did:plc:heztswuhu24kudwdaz7y4bi3/app.bsky.graph.list/test"}
+    """;
+JsonTypeInfo<ThreadGateRule> ruleTypeInfo = (JsonTypeInfo<ThreadGateRule>)BlueskyJsonSerializerOptions.Default.GetTypeInfo(typeof(ThreadGateRule));
+ThreadGateRule rule = JsonSerializer.Deserialize(extensionRuleJson, ruleTypeInfo)
+    ?? throw new InvalidOperationException("The rule with unknown metadata was not deserialized.");
+using (JsonDocument serializedRule = JsonDocument.Parse(JsonSerializer.Serialize(rule, ruleTypeInfo)))
+{
+    if (rule is not ListRule ||
+        serializedRule.RootElement.TryGetProperty("$example", out _) ||
+        serializedRule.RootElement.TryGetProperty("$", out _))
+    {
+        throw new InvalidOperationException("Unknown metadata without extension data was not discarded.");
+    }
 }
 
 const string emptyTagPostJson = """

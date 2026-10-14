@@ -20,6 +20,7 @@
 
 #### idunno.AtProto
 
+* SDK JSON options automatically tolerate unknown `$` properties on polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
 * Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
   buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
@@ -138,6 +139,7 @@
 
 #### idunno.Bluesky
 
+* Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.
 * Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
   `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
   `Add(StrongReference)` is obsolete in favor of `Quote()`, and `Label()` is obsolete in favor of `SetSelfLabels()`.

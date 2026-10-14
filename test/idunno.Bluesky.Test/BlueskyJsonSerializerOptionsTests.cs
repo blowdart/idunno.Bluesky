@@ -13,6 +13,19 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class BlueskyJsonSerializerOptionsTests
 {
+    [Fact]
+    public void UnknownDollarPropertyIsRetainedOnPost()
+    {
+        const string json = """
+            {"$type":"app.bsky.feed.post","$via":"kazahana","text":"hello","createdAt":"2026-10-13T10:24:57.970Z","langs":["ja"]}
+            """;
+
+        Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(json, BlueskyJsonSerializerOptions.Default));
+
+        Assert.Equal("hello", post.Text);
+        Assert.Equal("kazahana", post.ExtensionData!["$via"].GetString());
+    }
+
     // A list rule whose $type discriminator trails the rest of the payload, which is how an
     // AT Protocol server is free to order it.
     private const string ListRuleWithTrailingTypeDiscriminator =
