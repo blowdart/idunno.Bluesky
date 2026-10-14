@@ -210,6 +210,30 @@ public class UnknownMetadataTests
     }
 
     [Fact]
+    public void LongPropertyNamesDoNotAmplifyAllocationsAcrossDollarFields()
+    {
+        string longName = new string('\0', 16384) + "ordinary";
+        JsonObject json = JsonNode.Parse(PostJson)!.AsObject();
+        json[longName] = "preserved";
+        for (int index = 0; index < 2048; index++)
+        {
+            json[$"$field{index}"] = index;
+        }
+        string payload = json.ToJsonString();
+
+        _ = JsonSerializer.Deserialize<Post>(PostJson, BlueskyJsonSerializerOptions.Default);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(payload, BlueskyJsonSerializerOptions.Default));
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(allocated < 16 * 1024 * 1024, $"Decoding allocated {allocated} bytes for 2,048 unknown metadata fields.");
+        Assert.Equal("preserved", post.ExtensionData![longName].GetString());
+        Assert.Equal(2048, post.ExtensionData.Count - 2);
+        Assert.Equal(0, post.ExtensionData["$field0"].GetInt32());
+        Assert.Equal(2047, post.ExtensionData["$field2047"].GetInt32());
+    }
+
+    [Fact]
     public void NestedFeedAndQuotedPostRecordsAreTolerant()
     {
         string quotedRecord = $$"""

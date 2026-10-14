@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -288,16 +289,13 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             using JsonDocument document = JsonDocument.ParseValue(ref reader);
             JsonElement element = document.RootElement;
-            // A prefix absent from every input property makes renaming reversible even when the
-            // payload already contains null-prefixed names. Find the longest run in one traversal
-            // rather than repeatedly rescanning untrusted names and allocating intermediate prefixes.
-            string prefix = new('\0', GetMaximumLeadingNulls(element) + 1);
+            NormalizationState state = new(element);
 
             ArrayBufferWriter<byte> buffer = new();
             bool normalized;
             using (Utf8JsonWriter writer = new(buffer))
             {
-                normalized = WriteNormalized(writer, element, underlyingOptions.GetTypeInfo(type), prefix);
+                normalized = WriteNormalized(writer, element, underlyingOptions.GetTypeInfo(type), state);
             }
             if (!normalized)
             {
@@ -327,15 +325,15 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                         object? data = extension.Get?.Invoke(value);
                         if (data is IDictionary<string, JsonElement> elements)
                         {
-                            RestoreNames(elements, prefix);
+                            RestoreNames(elements, state.RenamedNames);
                         }
                         else if (data is IDictionary<string, object> objects)
                         {
-                            RestoreNames(objects, prefix);
+                            RestoreNames(objects, state.RenamedNames);
                         }
                         else if (data is JsonObject jsonObject)
                         {
-                            RestoreNames<JsonNode?>(jsonObject, prefix);
+                            RestoreNames<JsonNode?>(jsonObject, state.RenamedNames);
                         }
                         callback?.Invoke(value);
                     };
@@ -346,13 +344,58 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             return JsonSerializer.Deserialize(buffer.WrittenSpan, readOptions.GetTypeInfo(type));
         }
 
-        private static void RestoreNames<T>(IDictionary<string, T> data, string prefix)
+        private sealed class NormalizationState
         {
-            foreach (string name in data.Keys.Where(name => name.StartsWith(prefix, StringComparison.Ordinal)).ToArray())
+            private readonly HashSet<string> _propertyNames = new(StringComparer.Ordinal);
+            private long _nextName;
+
+            internal NormalizationState(JsonElement element)
+            {
+                CollectPropertyNames(element);
+            }
+
+            internal Dictionary<string, string> RenamedNames { get; } = new(StringComparer.Ordinal);
+
+            internal string Rename(string originalName)
+            {
+                string temporaryName;
+                do
+                {
+                    temporaryName = "\0" + _nextName++.ToString(CultureInfo.InvariantCulture);
+                }
+                while (!_propertyNames.Add(temporaryName));
+
+                RenamedNames.Add(temporaryName, originalName);
+                return temporaryName;
+            }
+
+            private void CollectPropertyNames(JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (JsonProperty property in element.EnumerateObject())
+                    {
+                        _propertyNames.Add(property.Name);
+                        CollectPropertyNames(property.Value);
+                    }
+                }
+                else if (element.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement item in element.EnumerateArray())
+                    {
+                        CollectPropertyNames(item);
+                    }
+                }
+            }
+        }
+
+        private static void RestoreNames<T>(IDictionary<string, T> data, Dictionary<string, string> renamedNames)
+        {
+            foreach (string name in data.Keys.Where(renamedNames.ContainsKey).ToArray())
             {
                 T item = data[name];
                 data.Remove(name);
-                data.Add(name[prefix.Length..], item);
+                data.Add(renamedNames[name], item);
             }
         }
 
@@ -512,37 +555,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
         }
 
-        private static int GetMaximumLeadingNulls(JsonElement element)
-        {
-            int maximum = 0;
-            if (element.ValueKind == JsonValueKind.Object)
-            {
-                foreach (JsonProperty property in element.EnumerateObject())
-                {
-                    string name = property.Name;
-                    int leadingNulls = 0;
-                    while (leadingNulls < name.Length && name[leadingNulls] == '\0')
-                    {
-                        leadingNulls++;
-                    }
-                    maximum = Math.Max(maximum, leadingNulls);
-                    maximum = Math.Max(maximum, GetMaximumLeadingNulls(property.Value));
-                }
-            }
-            else if (element.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement item in element.EnumerateArray())
-                {
-                    maximum = Math.Max(maximum, GetMaximumLeadingNulls(item));
-                }
-            }
-
-            return maximum;
-        }
-
         // Walk declared contracts, not arbitrary JSON: extension values and custom-converted values
         // are opaque. Renaming only the owning object's unknown metadata preserves their contents.
-        private bool WriteNormalized(Utf8JsonWriter writer, JsonElement element, JsonTypeInfo info, string prefix)
+        private bool WriteNormalized(Utf8JsonWriter writer, JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
             bool normalized = false;
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary && GetElementType(info) is Type valueType)
@@ -552,7 +567,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
                     writer.WritePropertyName(property.Name);
-                    normalized |= WriteNormalized(writer, property.Value, valueInfo, prefix);
+                    normalized |= WriteNormalized(writer, property.Value, valueInfo, state);
                 }
                 writer.WriteEndObject();
                 return normalized;
@@ -566,7 +581,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     writer.WriteStartArray();
                     foreach (JsonElement item in element.EnumerateArray())
                     {
-                        normalized |= WriteNormalized(writer, item, underlyingOptions.GetTypeInfo(elementType), prefix);
+                        normalized |= WriteNormalized(writer, item, underlyingOptions.GetTypeInfo(elementType), state);
                     }
                     writer.WriteEndArray();
                     return normalized;
@@ -615,10 +630,10 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     continue;
                 }
 
-                writer.WritePropertyName(unknownMetadata ? prefix + property.Name : property.Name);
+                writer.WritePropertyName(unknownMetadata && hasExtensionData ? state.Rename(property.Name) : property.Name);
                 if (contract is not null && contract.CustomConverter is null)
                 {
-                    normalized |= WriteNormalized(writer, property.Value, underlyingOptions.GetTypeInfo(contract.PropertyType), prefix);
+                    normalized |= WriteNormalized(writer, property.Value, underlyingOptions.GetTypeInfo(contract.PropertyType), state);
                 }
                 else
                 {
