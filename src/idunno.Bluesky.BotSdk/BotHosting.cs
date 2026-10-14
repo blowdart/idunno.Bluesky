@@ -306,9 +306,13 @@ public static class BotHosting
         services.AddSingleton<ActionDispatcher>();
         services.AddTransient<OutboundHandler>();
 
-        // Extend the SDK client without replacing its SSRF-protected primary transport.
-        services.AddAtProtoHttpClient(new HttpClientOptions(httpUserAgent: httpUserAgent, timeout: TimeSpan.FromSeconds(30)));
-        services.AddHttpClient("idunno.atproto").AddHttpMessageHandler<OutboundHandler>();
+        // Reuse the SDK's protected transport without changing clients used by other agents.
+        HttpClientOptions httpOptions = new(httpUserAgent: httpUserAgent, timeout: TimeSpan.FromSeconds(30));
+        services.AddHttpClient(BotHttpClientFactory.ClientName)
+            .ConfigureHttpClient(client => Agent.InternalConfigureHttpClient(client, httpOptions.HttpUserAgent, httpOptions.Timeout))
+            .ConfigurePrimaryHttpMessageHandler(provider => Agent.CreateHttpMessageHandler(httpOptions, provider.GetService<ILoggerFactory>()))
+            .AddHttpMessageHandler<OutboundHandler>();
+        services.AddSingleton<BotHttpClientFactory>();
         services.Configure<HostOptions>(host =>
         {
             host.ShutdownTimeout = TimeSpan.FromSeconds(45);

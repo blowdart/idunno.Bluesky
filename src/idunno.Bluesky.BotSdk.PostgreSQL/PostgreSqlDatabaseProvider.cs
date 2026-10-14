@@ -440,23 +440,6 @@ public sealed class PostgreSqlDatabaseProvider(
 
             int inserted = 0;
 
-            if (deletedUri is not null)
-            {
-                // Keep uncertain work for reconciliation: the action may already exist remotely.
-                // Mark both direct targets and thread roots so the sender does not start new writes.
-                NpgsqlCommand deleted = new(
-                    """
-                    UPDATE reply_work SET target_deleted = true
-                    WHERE (source_uri = @uri OR (action_kind = 'reply' AND record #>> '{reply,root,uri}' = @uri))
-                        AND status IN ('pending', 'uncertain')
-                    """,
-                    connection,
-                    transaction);
-                await using ConfiguredAsyncDisposable deletedDisposal = deleted.ConfigureAwait(false);
-                deleted.Parameters.AddWithValue("uri", deletedUri.ToString());
-                await deleted.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            }
-
             foreach (BotAction work in actions)
             {
                 ValidateAction(work);
@@ -527,6 +510,22 @@ public sealed class PostgreSqlDatabaseProvider(
                     "deleted",
                     work.TargetDeleted);
                 inserted += await enqueue.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            if (deletedUri is not null)
+            {
+                // Include this event's new actions, retaining uncertain work for reconciliation.
+                NpgsqlCommand deleted = new(
+                    """
+                    UPDATE reply_work SET target_deleted = true
+                    WHERE (source_uri = @uri OR (action_kind = 'reply' AND record #>> '{reply,root,uri}' = @uri))
+                        AND status IN ('pending', 'uncertain')
+                    """,
+                    connection,
+                    transaction);
+                await using ConfiguredAsyncDisposable deletedDisposal = deleted.ConfigureAwait(false);
+                deleted.Parameters.AddWithValue("uri", deletedUri.ToString());
+                await deleted.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
             if (malformedReason is not null)

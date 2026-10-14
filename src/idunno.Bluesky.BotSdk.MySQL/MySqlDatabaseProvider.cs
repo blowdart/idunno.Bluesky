@@ -562,15 +562,6 @@ public sealed class MySqlDatabaseProvider(
                 "SELECT processed_through FROM bot_state WHERE id = 1",
                 cancellationToken).ConfigureAwait(false));
             if (sequence <= processed) { return 0; }
-            if (deletedUri is not null)
-            {
-                await ExecuteAsync(
-                    connection,
-                    transaction,
-                    "UPDATE reply_work SET target_deleted = 1 WHERE (source_uri = @uri OR (action_kind = 'reply' AND root_uri = @uri)) AND status IN ('pending','uncertain')",
-                    cancellationToken,
-                    ("@uri", deletedUri.ToString())).ConfigureAwait(false);
-            }
             int inserted = 0;
             foreach (BotAction work in actions)
             {
@@ -631,6 +622,15 @@ public sealed class MySqlDatabaseProvider(
                         ("@attempts", work.Attempts),
                         ("@deleted", work.TargetDeleted ? 1 : 0)).ConfigureAwait(false);
                 }
+            }
+            if (deletedUri is not null)
+            {
+                await ExecuteAsync(
+                    connection,
+                    transaction,
+                    "UPDATE reply_work SET target_deleted = 1 WHERE (source_uri = @uri OR (action_kind = 'reply' AND root_uri = @uri)) AND status IN ('pending','uncertain')",
+                    cancellationToken,
+                    ("@uri", deletedUri.ToString())).ConfigureAwait(false);
             }
             if (malformedReason is not null) { await SkipAsync(connection, transaction, now, sequence, "post", malformedReason, cancellationToken).ConfigureAwait(false); }
             await ExecuteAsync(

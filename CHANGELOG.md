@@ -164,6 +164,8 @@
 * Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
 * Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
 * Added `AddInMemoryBotStorage()` for development and tests. It logs that its process-local state is not production durable.
+* Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
+* Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
 
 #### idunno.Bluesky.BotSdk.MySQL
 

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.AtProto.Jetstream;
 using idunno.Bluesky.BotSdk.DataProviders;
 
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 
 using Npgsql;
 
@@ -24,6 +26,81 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Verifies that the reusable SDK can register policies, workers, and AOT-safe probes without remote writes.</summary>
 public sealed class BotHostingTests
 {
+    /// <summary>Isolates bot mutation restrictions and durable budgets from the application's SDK client.</summary>
+    /// <param name="applicationFirst">Whether to register the application client first.</param>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task BotHttpClientDoesNotContaminateApplicationClient(bool applicationFirst)
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        FakeTimeProvider time = new(TestRecords.Start);
+        services.AddSingleton<TimeProvider>(time);
+        if (applicationFirst)
+        {
+            services.AddAtProtoHttpClient(new HttpClientOptions(httpUserAgent: "application-test/1.0"));
+        }
+        BotOptions options = TestRecords.Options();
+        options.RequestsPerFiveMinutes = 1;
+        services.AddBlueskyBot<NoReplyPolicy>(options, "bot-test/1.0").WithInMemoryStorage();
+        if (!applicationFirst)
+        {
+            services.AddAtProtoHttpClient(new HttpClientOptions(httpUserAgent: "application-test/1.0"));
+        }
+        services.AddHttpClient("idunno.atproto").ConfigurePrimaryHttpMessageHandler(() => new SuccessfulTransport());
+        services.AddHttpClient(BotHttpClientFactory.ClientName).ConfigurePrimaryHttpMessageHandler(() => new SuccessfulTransport());
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IDatabaseProvider database = provider.GetRequiredService<IDatabaseProvider>();
+        await database.InitializeAsync(TestContext.Current.CancellationToken);
+        Assert.NotNull(await database.AcquireOrRenewAsync(TestContext.Current.CancellationToken));
+        time.Advance(TimeSpan.FromSeconds(40));
+        await database.LoadStateAsync(TestContext.Current.CancellationToken);
+        using HttpClient application = provider.GetRequiredService<IHttpClientFactory>().CreateClient("idunno.atproto");
+        using HttpClient bot = provider.GetRequiredService<BotHttpClientFactory>().CreateClient("idunno.atproto");
+        Assert.Contains("application-test/1.0", application.DefaultRequestHeaders.UserAgent.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("bot-test", application.DefaultRequestHeaders.UserAgent.ToString(), StringComparison.Ordinal);
+        Assert.Contains("bot-test/1.0", bot.DefaultRequestHeaders.UserAgent.ToString(), StringComparison.Ordinal);
+        using HttpRequestMessage applicationPost = new(HttpMethod.Post, "https://example.test/xrpc/com.atproto.repo.createRecord");
+        using HttpResponseMessage applicationResult = await application.SendAsync(applicationPost, TestContext.Current.CancellationToken);
+        Assert.True(applicationResult.IsSuccessStatusCode);
+        using HttpRequestMessage botPost = new(HttpMethod.Post, applicationPost.RequestUri);
+        InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            bot.SendAsync(botPost, TestContext.Current.CancellationToken));
+        Assert.Equal("Developer mode prohibits outbound mutation requests.", failure.Message);
+        using HttpResponseMessage botRead = await bot.GetAsync("https://example.test/xrpc/com.atproto.repo.getRecord", TestContext.Current.CancellationToken);
+        Assert.True(botRead.IsSuccessStatusCode);
+        Assert.True(await database.ReserveRequestAsync(0, false, TestContext.Current.CancellationToken) > time.GetUtcNow().AddMinutes(4));
+        using HttpResponseMessage applicationRead = await application.GetAsync("https://example.test/xrpc/com.atproto.repo.getRecord", TestContext.Current.CancellationToken);
+        Assert.True(applicationRead.IsSuccessStatusCode);
+    }
+
+    /// <summary>Keeps the SDK's SSRF-protected primary transport in the isolated bot handler pipeline.</summary>
+    [Fact]
+    public void BotHttpClientPreservesProtectedTransport()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddBlueskyBot<NoReplyPolicy>(TestRecords.Options(), "protected-test/1.0").WithInMemoryStorage();
+        using ServiceProvider provider = services.BuildServiceProvider();
+        HttpMessageHandler current = provider.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(BotHttpClientFactory.ClientName);
+        bool accounted = false;
+        while (current is DelegatingHandler delegating)
+        {
+            accounted |= current is OutboundHandler;
+            current = Assert.IsAssignableFrom<HttpMessageHandler>(delegating.InnerHandler);
+        }
+        Assert.True(accounted);
+        Assert.NotNull(Assert.IsType<SocketsHttpHandler>(current).ConnectCallback);
+    }
+
+    private sealed class SuccessfulTransport : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
+    }
+
     /// <summary>Isolates the bot pool from an application's unkeyed pool in either registration order.</summary>
     /// <param name="applicationFirst">Whether to register the application pool first.</param>
     [Theory]

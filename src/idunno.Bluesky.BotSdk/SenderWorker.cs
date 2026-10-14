@@ -30,7 +30,7 @@ internal sealed class SenderWorker(
     BotOptions options,
     ActionDispatcher dispatcher,
     WorkerHealth health,
-    IHttpClientFactory httpClientFactory,
+    BotHttpClientFactory httpClientFactory,
     CredentialVault vault,
     ILoggerFactory loggerFactory,
     ILogger<SenderWorker> logger,

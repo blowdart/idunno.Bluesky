@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using idunno.AtProto.Jetstream.Archive;
 using idunno.Bluesky.BotSdk.DataProviders;
@@ -51,6 +52,58 @@ public sealed class ActionPostgresDataAttribute : DataAttribute
 /// <summary>Checks generalized action identity, atomicity, migration, and recovery across storage providers.</summary>
 public sealed class ActionStorageTests
 {
+    /// <summary>Marks existing and newly enqueued deleted targets without broadening reply-root suppression.</summary>
+    /// <param name="provider">The provider under test.</param>
+    [Theory]
+    [InlineData("Sqlite")]
+    [MySqlData]
+    [ActionPostgresData]
+    public async Task SameEventDeletionMarksNewActions(string provider)
+    {
+        await using Store store = await Store.CreateAsync(provider);
+        await VerifySameEventDeletionAsync(store.Database);
+    }
+
+    internal static async Task VerifySameEventDeletionAsync(IDatabaseProvider database)
+    {
+        BotAction original = TestRecords.Work();
+        await database.HandleAsync(11, [original], null, CancellationToken.None);
+        await database.MarkAttemptAsync(original, CancellationToken.None);
+        BotAction uncertain = original with { Status = "uncertain", Attempts = 1 };
+        string[] kinds = ["reply", "like", "repost", "bookmark", "list-item", "custom"];
+        List<BotAction> actions = [.. kinds.Select(kind => original with
+        {
+            ActionKind = kind,
+            ActionKey = "new",
+            RecordKey = kind,
+            SourceSequence = 12
+        })];
+        BotAction rootReply = original with
+        {
+            SourceUri = original.SourceUri + "-child",
+            SourceSequence = 12,
+            RecordKey = "child"
+        };
+        BotAction rootCustom = rootReply with { ActionKind = "custom", RecordKey = "custom-child" };
+        BotAction unrelated = rootReply with { ActionKind = "like", RecordKey = "unrelated" };
+        actions.AddRange([rootReply, rootCustom, unrelated]);
+        Assert.Equal(9, await database.HandleAsync(12, actions, null, CancellationToken.None, original.SourceUri));
+        Assert.Equal(12, (await database.LoadStateAsync(CancellationToken.None)).ProcessedThrough);
+
+        Dictionary<string, BotAction> remaining = actions.Append(uncertain).ToDictionary(action => action.RecordKey);
+        while (remaining.Count > 0)
+        {
+            BotAction saved = Assert.IsType<BotAction>(await database.NextWorkAsync(CancellationToken.None));
+            BotAction expected = remaining[saved.RecordKey];
+            bool deleted = expected.SourceUri == original.SourceUri || expected.ActionKind == "reply";
+            Assert.Equal(expected with { TargetDeleted = deleted, RecordJson = saved.RecordJson }, saved);
+            Assert.True(JsonNode.DeepEquals(JsonNode.Parse(expected.RecordJson), JsonNode.Parse(saved.RecordJson)));
+            Assert.True(remaining.Remove(saved.RecordKey));
+            await database.FinishAsync(saved, "not-sent", null, "test completed", CancellationToken.None);
+        }
+        Assert.Null(await database.NextWorkAsync(CancellationToken.None));
+    }
+
     /// <summary>Preserves arbitrary custom JSON and applies root deletion only to replies.</summary>
     /// <param name="provider">The provider under test.</param>
     [Theory]

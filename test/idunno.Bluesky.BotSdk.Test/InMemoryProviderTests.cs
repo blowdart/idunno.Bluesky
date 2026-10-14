@@ -20,6 +20,14 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks volatile provider registration, warning, lease fencing, replay, and action durability semantics.</summary>
 public sealed class InMemoryProviderTests
 {
+    /// <summary>Suppresses same-event deleted targets while retaining uncertain actions for reconciliation.</summary>
+    [Fact]
+    public async Task SameEventDeletionMarksNewActions()
+    {
+        (InMemoryDatabaseProvider database, _) = await CreateProvider();
+        await ActionStorageTests.VerifySameEventDeletionAsync(database);
+    }
+
     /// <summary>Does not interpret custom payload properties as reply roots, but retains source deletion.</summary>
     /// <param name="payload">The application-defined JSON payload.</param>
     [Theory]

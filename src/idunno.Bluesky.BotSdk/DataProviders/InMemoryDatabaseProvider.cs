@@ -220,6 +220,11 @@ internal sealed class InMemoryDatabaseProvider(
                 inserted++;
             }
 
+            foreach ((ActionIdentity identity, WorkState work) in newWork)
+            {
+                _work.Add(identity, work);
+            }
+
             if (deletedUri is not null)
             {
                 foreach ((ActionIdentity identity, WorkState work) in _work.ToArray())
@@ -231,11 +236,6 @@ internal sealed class InMemoryDatabaseProvider(
                         _work[identity] = work with { Action = work.Action with { TargetDeleted = true } };
                     }
                 }
-            }
-
-            foreach ((ActionIdentity identity, WorkState work) in newWork)
-            {
-                _work.Add(identity, work);
             }
 
             if (malformedReason is not null)
