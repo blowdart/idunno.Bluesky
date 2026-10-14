@@ -89,6 +89,10 @@ jobs:
     - name: 'Build'
       run: dotnet build --configuration Release --property:PublicRelease=false --property:NoWarn="S1133"
 
+    - name: 'Test frontend'
+      working-directory: samples/Samples.ReactBff/ClientApp
+      run: npm test
+
     - name: 'Test'
       run: dotnet test --no-build --no-restore --configuration Release --property:PublicRelease=false
 

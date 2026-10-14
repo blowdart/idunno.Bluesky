@@ -142,7 +142,13 @@ npm test --prefix samples\Samples.ReactBff\ClientApp
 npm run build --prefix samples\Samples.ReactBff\ClientApp
 ```
 
-The solution build also runs the Vitest suite so frontend tests are part of the same automated build gate as the backend.
+`dotnet build` installs frontend dependencies when needed and compiles the frontend, but does not run Vitest.
+`dotnet test` runs the .NET tests only. Run `npm test --prefix samples\Samples.ReactBff\ClientApp` separately
+to execute the frontend tests; if you have not built the sample yet, first run
+`npm ci --no-audit --no-fund --ignore-scripts --prefix samples\Samples.ReactBff\ClientApp`.
+GitHub Actions workflows that build the sample run the frontend tests in an explicit step.
+CodeQL excludes the sample and does not run its frontend tests. CI Build includes their JUnit results in
+the existing test-result publication alongside the .NET results, while retaining Vitest's default reporting.
 Backend tests use ASP.NET TestServer, protected synthetic cookie tickets and an injectable session client.
 They exercise endpoint authentication, CSRF, cross-browser session isolation, create/delete restrictions, token-refresh
 serialization, absolute expiry, capacity, logout and session-replacement revocation failure cleanup, and error redaction.

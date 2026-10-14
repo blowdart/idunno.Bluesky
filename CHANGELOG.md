@@ -14,6 +14,10 @@
 
 ### Added
 
+#### Samples
+
+* Separated `Samples.ReactBff` frontend tests from builds. Builds still install dependencies and compile the frontend; run `npm test` in `ClientApp` separately. GitHub Actions workflows run frontend tests explicitly, and CI Build publishes their JUnit results alongside the .NET results.
+
 #### idunno.AtProto
 
 * Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
