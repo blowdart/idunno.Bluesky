@@ -76,7 +76,7 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
         JsonOptions result = HttpJsonOptions is null
             ? new JsonOptions(adaptContracts: false)
             : new JsonOptions(new JsonSerializerOptions(HttpJsonOptions.JsonSerializerOptions));
-        result.JsonSerializerOptions.TypeInfoResolverChain.Add(SourceGenerationContext.Default);
+        result.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
         return result;
     }
 

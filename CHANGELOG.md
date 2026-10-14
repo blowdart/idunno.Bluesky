@@ -311,6 +311,7 @@
   Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.
 * `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
   To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
+* Agent JSON options are now copied and finalized as a read-only snapshot during construction. Configure serializer settings, converters, and resolvers on `AtProtoAgentOptions.HttpJsonOptions` or `BlueskyAgentOptions.HttpJsonOptions` before constructing the agent; changes to `agent.JsonOptions.JsonSerializerOptions` after construction now throw instead of changing subsequent requests.
 * `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
 * `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
   `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact

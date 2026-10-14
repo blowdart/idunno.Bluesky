@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed.Gates;
 
 namespace idunno.Bluesky.Test;
@@ -94,6 +95,21 @@ public partial class BlueskyJsonSerializerOptionsTests
         using BlueskyAgent agent = new(options);
         Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
         AssertCustomRecord(agent.JsonOptions.JsonSerializerOptions);
+    }
+
+    [Fact]
+    public void AgentPrefersBlueskySourceGeneratedContractsToCallerReflectionResolver()
+    {
+        JsonOptions supplied = new();
+        using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
+
+        ProfileViewDetailed profile = Assert.IsType<ProfileViewDetailed>(JsonSerializer.Deserialize<ProfileViewDetailed>(
+            """{"did":"did:plc:test","handle":"example.test","followersCount":"12","followsCount":"34"}""",
+            agent.JsonOptions.JsonSerializerOptions));
+
+        Assert.Equal(12, profile.FollowersCount);
+        Assert.Equal(34, profile.FollowsCount);
+        Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
     }
 
     [Fact]
