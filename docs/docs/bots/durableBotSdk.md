@@ -133,12 +133,9 @@ public sealed class SimpleReplyBotPolicy : IBotPolicy
             return [];
         }
 
-        // Deserialize the post record from the event
-        Post? post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options);
-        if (post is null)
-        {
-            return [];
-        }
+        // Let the reader audit malformed records before committing progress.
+        Post post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options)
+            ?? throw new JsonException("The post record is null.");
 
         // Check if the post contains our trigger word
         if (!post.Text.Contains("#hello", StringComparison.OrdinalIgnoreCase))

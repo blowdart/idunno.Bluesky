@@ -29,6 +29,33 @@ internal sealed record CustomNotificationPayload(string Message);
 /// <summary>Exercises built-in and application-defined action recovery without real remote effects.</summary>
 public sealed class ActionHandlerTests
 {
+    /// <summary>Classifies every internal-server-error constructor as retryable while preserving exception details.</summary>
+    /// <param name="constructor">The constructor overload under test.</param>
+    [Theory]
+    [InlineData("default")]
+    [InlineData("status")]
+    [InlineData("message")]
+    [InlineData("inner")]
+    public void InternalServerFailureConstructorsAreRetryable(string constructor)
+    {
+        Exception inner = new IOException("Lost remote response.");
+        RemoteFailureException failure = constructor switch
+        {
+            "default" => new(),
+            "status" => new(System.Net.HttpStatusCode.InternalServerError, null, "custom action"),
+            "message" => new("Custom action failed."),
+            "inner" => new("Custom action failed.", inner),
+            _ => throw new ArgumentOutOfRangeException(nameof(constructor))
+        };
+        Assert.Equal(System.Net.HttpStatusCode.InternalServerError, failure.Status);
+        Assert.True(failure.Retryable);
+        if (constructor is "message" or "inner")
+        {
+            Assert.Equal("Custom action failed.", failure.Message);
+        }
+        Assert.Same(constructor == "inner" ? inner : null, failure.InnerException);
+    }
+
     /// <summary>Rejects a null custom payload at the factory boundary rather than saving JSON null.</summary>
     [Fact]
     public void CustomActionRequiresPayload()

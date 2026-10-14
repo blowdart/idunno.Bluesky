@@ -14,6 +14,27 @@ namespace idunno.Bluesky.BotSdk.Test;
 /// <summary>Checks sample eligibility and bounded replay generation recovery.</summary>
 public sealed class ReplayEligibilityTests
 {
+    /// <summary>Passes malformed and null sample records to the reader's audit path instead of silently ignoring them.</summary>
+    /// <param name="record">The invalid source record.</param>
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("{}")]
+    [InlineData("""{"text":42,"createdAt":"2026-10-07T00:00:00Z"}""")]
+    public void SampleMalformedRecordsReachReaderAudit(string record)
+    {
+        JetstreamCommitEvent original = TestRecords.Event("#beans");
+        using JsonDocument json = JsonDocument.Parse(record);
+        JetstreamCommitEvent item = original with
+        {
+            Commit = original.Commit with { Record = json.RootElement.Clone() }
+        };
+        BeansBotPolicy policy = new();
+        Assert.ThrowsAny<JsonException>(() => policy.Evaluate(item, TestRecords.Start));
+        Assert.Empty(ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out JsonException? malformed));
+        Assert.NotNull(malformed);
+    }
+
     /// <summary>Rejects consecutive and nonconsecutive repeated cursors without rejecting distinct pages.</summary>
     /// <param name="nonconsecutive">Whether a different cursor intervenes before repetition.</param>
     [Theory]

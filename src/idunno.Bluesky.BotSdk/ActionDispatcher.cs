@@ -210,6 +210,7 @@ public sealed class RemoteFailureException : Exception
     public RemoteFailureException(string message) : base(message)
     {
         Status = HttpStatusCode.InternalServerError;
+        Retryable = true;
     }
 
     /// <summary>Initializes a new instance of the <see cref="RemoteFailureException"/> class.</summary>
@@ -218,6 +219,7 @@ public sealed class RemoteFailureException : Exception
     public RemoteFailureException(string message, Exception innerException) : base(message, innerException)
     {
         Status = HttpStatusCode.InternalServerError;
+        Retryable = true;
     }
 
     /// <summary>Gets the observed HTTP status.</summary>
