@@ -36,6 +36,9 @@ internal sealed class SenderWorker(
     ILogger<SenderWorker> logger,
     TimeProvider time) : BackgroundService
 {
+    internal static bool RequiresAuthentication(BotAction action) =>
+        !action.TargetDeleted || action.Status == "uncertain";
+
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -86,7 +89,7 @@ internal sealed class SenderWorker(
                     {
                         health.Set("sender", "authenticating / sending / reconciling", TimeSpan.FromMinutes(3));
 
-                        if (!options.DeveloperMode)
+                        if (!options.DeveloperMode && RequiresAuthentication(work))
                         {
                             await session.AuthenticateAsync(active.Token).ConfigureAwait(false);
                         }

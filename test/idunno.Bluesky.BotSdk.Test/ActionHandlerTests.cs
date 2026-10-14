@@ -56,6 +56,39 @@ public sealed class ActionHandlerTests
         Assert.Same(constructor == "inner" ? inner : null, failure.InnerException);
     }
 
+    /// <summary>Finalizes a deleted pending action locally without requiring authentication or remote service access.</summary>
+    [Fact]
+    public async Task DeletedPendingActionDoesNotRequireRemoteAuthentication()
+    {
+        await using Store store = await Store.CreateAsync();
+        BotAction action = Create("like");
+        await store.Database.HandleAsync(11, [action], null, CancellationToken.None, action.SourceUri);
+        BotAction deleted = Assert.IsType<BotAction>(await store.Database.NextWorkAsync(CancellationToken.None));
+        Assert.True(deleted.TargetDeleted);
+        Assert.False(SenderWorker.RequiresAuthentication(deleted));
+        store.Options.DeveloperMode = false;
+        ActionDispatcher dispatcher = new(
+            store.Database,
+            store.Options,
+            NullLogger<ActionDispatcher>.Instance,
+            new ActionStatistics(TestRecords.Start),
+            TestRecords.Handlers());
+
+        await dispatcher.SendAsync(deleted, new FakeRemote(), CancellationToken.None);
+
+        Assert.Null(await store.Database.NextWorkAsync(CancellationToken.None));
+    }
+
+    /// <summary>Requires authentication to reconcile a possibly accepted deleted action.</summary>
+    [Fact]
+    public void UncertainDeletedActionStillRequiresAuthentication()
+    {
+        BotAction action = Create("like") with { TargetDeleted = true, Status = "uncertain" };
+
+        Assert.True(SenderWorker.RequiresAuthentication(action));
+        Assert.True(SenderWorker.RequiresAuthentication(action with { TargetDeleted = false }));
+    }
+
     /// <summary>Rejects a null custom payload at the factory boundary rather than saving JSON null.</summary>
     [Fact]
     public void CustomActionRequiresPayload()
