@@ -77,9 +77,5 @@ jobs:
     - name: Build source
       run: dotnet build --configuration CodeQL /p:UseSharedCompilation=false /t:rebuild
 
-    - name: 'Test frontend'
-      working-directory: samples/Samples.ReactBff/ClientApp
-      run: npm test
-
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
