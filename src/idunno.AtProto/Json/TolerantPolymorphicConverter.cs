@@ -216,6 +216,13 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 foreach (JsonPropertyInfo property in info.Properties.Where(property =>
                     !property.IsExtensionData && (property.Get is not null || property.Set is not null)))
                 {
+                    // Match the factory's enum exclusion, including nullable enum properties.
+                    // These scalar values need no nested-record bridge or its JSON buffer allocations.
+                    Type valueType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                    if (valueType.IsEnum)
+                    {
+                        continue;
+                    }
                     JsonConverter converter = property.CustomConverter ??
                         underlyingOptions.GetTypeInfo(property.PropertyType).Converter;
                     if (!IsScalarConverter(converter) && converter.GetType().Assembly != typeof(JsonSerializer).Assembly)

@@ -26,6 +26,7 @@
 * Decorating SDK JSON resolvers no longer creates resolver cycles. Custom reference handlers retain preservation metadata, and dictionary-key converters retain their property-name hooks.
 * Tolerant JSON normalization leaves initialized extension data on unaffected sibling objects unchanged. Converters used for both dictionary keys and property values retain tolerant nested-record handling, and decorated reflection fallbacks preserve caller modifiers on Bluesky source-generated contracts.
 * Custom converters with dictionary-key hooks also retain tolerant nested-record handling when used for list elements and dictionary values.
+* Custom enum converters, including nullable enum properties, bypass tolerant value-forwarding buffers.
 * Tolerant JSON normalization uses bounded temporary property names to prevent allocation amplification from long input names and many unknown metadata fields.
 * Tolerant JSON normalization preserves ordinary extension fields in culture-sensitive dictionaries and restores only each object's own aliases, in input order. Reference-preserving options support unknown metadata while retaining shared references across object and collection roots.
 * Tolerant JSON handling recognizes nested polymorphic values in non-generic derived lists and dictionaries and interface-typed collections on .NET 8 and .NET 9.

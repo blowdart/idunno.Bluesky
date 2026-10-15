@@ -1348,6 +1348,31 @@ public class JsonSerializerOptionsTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EnumPropertiesAvoidValueForwardingAdapters(bool normalize)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.MaxDepth = 32;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
+        string metadata = normalize ? "\"$via\":\"extension\"," : "";
+        string json = $$"""{"$type":"test.enum",{{metadata}}"value":"first","optional":"first"}""";
+        EnumRecord record = Assert.IsType<EnumRecord>(JsonSerializer.Deserialize<EnumRecordBase>(json, options));
+        Assert.Equal(TestEnum.First, record.Value);
+        Assert.Equal(TestEnum.First, record.Optional);
+
+        string serialized = JsonSerializer.Serialize<EnumRecordBase>(record, options);
+        Assert.Contains("\"value\":\"first\"", serialized, StringComparison.Ordinal);
+        Assert.Contains("\"optional\":\"first\"", serialized, StringComparison.Ordinal);
+        record.Optional = null;
+        EnumRecord roundTrip = Assert.IsType<EnumRecord>(JsonSerializer.Deserialize<EnumRecordBase>(
+            JsonSerializer.Serialize<EnumRecordBase>(record, options), options));
+        Assert.Null(roundTrip.Optional);
+    }
+
 #if NET10_0_OR_GREATER
     [Theory]
     [InlineData(true)]
@@ -1536,6 +1561,43 @@ internal sealed class TestReferenceResolver : ReferenceResolver
         id = (_writeReferences.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
         _writeReferences.Add(value, id);
         return id;
+    }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(EnumRecord), "test.enum")]
+internal abstract class EnumRecordBase;
+
+internal sealed class EnumRecord : EnumRecordBase
+{
+    public TestEnum Value { get; set; }
+
+    public TestEnum? Optional { get; set; }
+}
+
+[JsonConverter(typeof(TestEnumConverter))]
+internal enum TestEnum
+{
+    First
+}
+
+internal sealed class TestEnumConverter : JsonConverter<TestEnum>
+{
+    public override TestEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        // A PropertyConverter bridge adds a depth level and presents a synthetic holder.
+        // Assert the original reader/writer depth and budget so both nullable and non-nullable
+        // properties prove that their converter is called directly, not merely that values round-trip.
+        Assert.Equal(32, options.MaxDepth);
+        Assert.Equal("first", reader.GetString());
+        return TestEnum.First;
+    }
+
+    public override void Write(Utf8JsonWriter writer, TestEnum value, JsonSerializerOptions options)
+    {
+        Assert.Equal(32, options.MaxDepth);
+        Assert.Equal(1, writer.CurrentDepth);
+        writer.WriteStringValue("first");
     }
 }
 
@@ -2127,6 +2189,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(DeepPayload))]
 [JsonSerializable(typeof(KeyRecordBase))]
 [JsonSerializable(typeof(KeyRecord))]
+[JsonSerializable(typeof(EnumRecordBase))]
+[JsonSerializable(typeof(EnumRecord))]
 [JsonSerializable(typeof(NullableContainerBase))]
 [JsonSerializable(typeof(NullableContainerRecord))]
 [JsonSerializable(typeof(NullablePayload))]
