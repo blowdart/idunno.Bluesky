@@ -144,6 +144,10 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 * Use `is null` / `is not null`, never `== null` / `!= null`.
 * Trust the null annotations — don't add null checks the type system says are unnecessary.
 
+## Regression and side-effect review
+
+Before considering a change complete, identify the assumptions and invariants it touches. Check whether behavior can vary with call order, state or cache lifetime, configuration, input shape, or API path. Add focused regression tests for the relevant boundary cases, then review the full diff for unintended effects on adjacent behavior. Do not stop after making only the reported case pass; choose checks that are relevant to the change rather than attempting every possible combination.
+
 ## Testing conventions
 
 * Prefer official Microsoft packages (such as `Microsoft.Extensions.Diagnostics.Testing` for metrics/logging test collectors and `Microsoft.Extensions.Time.Testing` for fake time providers) over hand-rolling custom test helpers or factories.

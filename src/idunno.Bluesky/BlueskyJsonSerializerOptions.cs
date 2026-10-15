@@ -15,6 +15,8 @@ namespace idunno.Bluesky;
 /// <remarks>
 /// <para>Unknown JSON properties, including names beginning with <c>$</c>, are retained in extension data when the
 /// selected contract supports it, and otherwise ignored. Type discriminator and required property validation are unchanged.</para>
+/// <para>When reference handling is enabled and async-enumerable values are serialized, use <see cref="CreateReadOptions"/>
+/// for deserialization and <see cref="CreateWriteOptions"/> for serialization so each direction can use its own cached contracts.</para>
 /// </remarks>
 // The trimming and AOT suppressions are applied to the type so that they cover every member which reaches the
 // chaining call, wherever the compiler emits that IL. Suppression lookup walks from the member the IL is
@@ -36,6 +38,8 @@ public static class BlueskyJsonSerializerOptions
     /// The configured options are copied before finalization; the callback's instance remains mutable and is not used by the result.</para>
     /// <para>Resolver and converter instances are shared, not cloned; do not mutate their state after finalization.
     /// The callback's options do not have SDK contract adaptation installed and should not be used for serialization.</para>
+    /// <para>For reference-handled async-enumerable serialization, prefer <see cref="CreateReadOptions"/> and
+    /// <see cref="CreateWriteOptions"/> to keep read and write contract selection independent.</para>
     /// </remarks>
     public static JsonSerializerOptions Create(Action<JsonSerializerOptions> configure)
     {
@@ -43,6 +47,44 @@ public static class BlueskyJsonSerializerOptions
         JsonSerializerOptions options = CreateMutableOptions();
         configure(options);
         return AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(options);
+    }
+
+    /// <summary>
+    /// Creates read-only JSON options for deserializing Bluesky types with tolerant handling of unknown metadata.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options with SDK contract adaptation enabled for reads.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use these options for deserialization. For serialization of async-enumerable roots or objects that contain
+    /// async-enumerable properties with reference handling enabled, use <see cref="CreateWriteOptions"/> instead.
+    /// System.Text.Json uses one cached contract for both directions, so the SDK exposes direction-specific options
+    /// for this scenario.</para>
+    /// </remarks>
+    public static JsonSerializerOptions CreateReadOptions(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(options, preserveAsyncEnumerableWritePath: false);
+    }
+
+    /// <summary>
+    /// Creates read-only JSON options for serializing Bluesky types through the built-in serializer contracts.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options without the SDK's tolerant read adapter.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use these options for serialization, especially when serializing async-enumerable values with reference
+    /// handling. Apply matching settings and resolvers to both the read and write options when using them as a pair.</para>
+    /// </remarks>
+    public static JsonSerializerOptions CreateWriteOptions(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeWriteOptions(options);
     }
 
     /// <summary>

@@ -34,7 +34,10 @@ namespace idunno.AtProto.Json;
 /// first discovers whether work is necessary, a contract-aware pass reserves collision-free aliases,
 /// and a writer pass changes only the properties that System.Text.Json would otherwise reject.</para>
 /// </remarks>
-internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions) : JsonConverterFactory
+internal sealed class TolerantPolymorphicConverter(
+    IJsonTypeInfoResolver resolver,
+    JsonSerializerOptions configuredOptions,
+    bool preserveAsyncEnumerableWritePath = true) : JsonConverterFactory
 {
     // Resolver metadata is expensive to build and is only needed after JSON conversion starts.
     private readonly Lazy<JsonSerializerOptions> _probeOptions = new(() => CreateProbeOptions(resolver, configuredOptions));
@@ -58,15 +61,28 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         return probeOptions;
     }
 
-    internal static JsonSerializerOptions FinalizeOptions(JsonSerializerOptions options)
+    internal static JsonSerializerOptions FinalizeOptions(JsonSerializerOptions options, bool preserveAsyncEnumerableWritePath = true)
     {
         JsonSerializerOptions result = new(options);
-        Configure(result, trackChanges: false);
+        Configure(
+            result,
+            trackChanges: false,
+            preserveAsyncEnumerableWritePath: preserveAsyncEnumerableWritePath);
         result.MakeReadOnly();
         return result;
     }
 
-    internal static void Configure(JsonSerializerOptions options, bool trackChanges = true)
+    internal static JsonSerializerOptions FinalizeWriteOptions(JsonSerializerOptions options)
+    {
+        JsonSerializerOptions result = new(options);
+        result.MakeReadOnly();
+        return result;
+    }
+
+    internal static void Configure(
+        JsonSerializerOptions options,
+        bool trackChanges = true,
+        bool preserveAsyncEnumerableWritePath = true)
     {
         List<IJsonTypeInfoResolver> initialResolvers = [];
         foreach (IJsonTypeInfoResolver chainResolver in options.TypeInfoResolverChain)
@@ -91,7 +107,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         // When tracking is enabled, the resolver observes later caller additions to the options chain.
         // Finalized copies instead rely on the detached resolver snapshots collected above.
         IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(trackChanges ? options : null, [.. initialResolvers]);
-        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver, options));
+        options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver, options, preserveAsyncEnumerableWritePath));
         options.TypeInfoResolver = resolver;
     }
 
@@ -244,7 +260,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             // A converter's Write callback is synchronous. Wrapping a contract containing
             // IAsyncEnumerable therefore replaces the serializer's asynchronous traversal with
             // JsonSerializer.Serialize, which cannot consume async sequences.
-            if (info is null || ContainsAsyncEnumerable(info, _probeOptions.Value, []))
+            if (info is null ||
+                (preserveAsyncEnumerableWritePath && ContainsAsyncEnumerable(info, _probeOptions.Value, [])))
             {
                 return false;
             }

@@ -309,6 +309,8 @@ public class JsonSerializerOptionsTests
     public void FactoryRejectsNullConfiguration()
     {
         Assert.Throws<ArgumentNullException>(() => AtProtoJsonSerializerOptions.Create(null!));
+        Assert.Throws<ArgumentNullException>(() => AtProtoJsonSerializerOptions.CreateReadOptions(null!));
+        Assert.Throws<ArgumentNullException>(() => AtProtoJsonSerializerOptions.CreateWriteOptions(null!));
     }
 
     [Fact]
@@ -1222,12 +1224,19 @@ public class JsonSerializerOptionsTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void AsyncEnumerableContractLookupDoesNotAffectLaterPolymorphicDeserialization(bool lookupAsyncEnumerableFirst)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void AsyncEnumerableContractLookupDoesNotAffectLaterPolymorphicDeserialization(
+        bool lookupAsyncEnumerableFirst,
+        bool ignoreCycles)
     {
-        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
-            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.CreateReadOptions(mutable =>
+        {
+            mutable.ReferenceHandler = ignoreCycles ? ReferenceHandler.IgnoreCycles : ReferenceHandler.Preserve;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
         const string json = """{"$type":"test.nested","$via":"extension","value":"payload"}""";
 
         if (!lookupAsyncEnumerableFirst)
@@ -1236,9 +1245,30 @@ public class JsonSerializerOptionsTests
         }
 
         _ = options.GetTypeInfo(typeof(IAsyncEnumerable<NestedCustomRecordBase>));
-
         NestedCustomRecord record = AssertPolymorphicRecordWasDecoded(json, options);
         Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+    }
+
+    [Fact]
+    public async Task WriteOptionsPreserveSharedReferencesAcrossAsyncEnumerableValues()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.CreateWriteOptions(mutable =>
+        {
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
+        AsyncSerializationItem shared = new() { Value = "shared" };
+        JsonTypeInfo<IAsyncEnumerable<AsyncSerializationItem>> typeInfo =
+            (JsonTypeInfo<IAsyncEnumerable<AsyncSerializationItem>>)options.GetTypeInfo(typeof(IAsyncEnumerable<AsyncSerializationItem>));
+        await using MemoryStream stream = new();
+
+        await JsonSerializer.SerializeAsync(
+            stream,
+            GetRepeatedAsyncSerializationItems(shared),
+            typeInfo,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("""[{"$id":"1","value":"shared"},{"$ref":"1"}]""", System.Text.Encoding.UTF8.GetString(stream.ToArray()));
     }
 
     private static NestedCustomRecord AssertPolymorphicRecordWasDecoded(string json, JsonSerializerOptions options)
@@ -1254,6 +1284,13 @@ public class JsonSerializerOptionsTests
         yield return new AsyncSerializationItem { Value = "first" };
         await Task.Yield();
         yield return new AsyncSerializationItem { Value = "second" };
+    }
+
+    private static async IAsyncEnumerable<AsyncSerializationItem> GetRepeatedAsyncSerializationItems(AsyncSerializationItem item)
+    {
+        yield return item;
+        await Task.Yield();
+        yield return item;
     }
 
     [Theory]

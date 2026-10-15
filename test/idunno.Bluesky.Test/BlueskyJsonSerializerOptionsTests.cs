@@ -42,6 +42,8 @@ public partial class BlueskyJsonSerializerOptionsTests
     public void FactoryRejectsNullConfiguration()
     {
         Assert.Throws<ArgumentNullException>(() => BlueskyJsonSerializerOptions.Create(null!));
+        Assert.Throws<ArgumentNullException>(() => BlueskyJsonSerializerOptions.CreateReadOptions(null!));
+        Assert.Throws<ArgumentNullException>(() => BlueskyJsonSerializerOptions.CreateWriteOptions(null!));
     }
 
     [Theory]

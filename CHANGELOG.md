@@ -31,6 +31,7 @@
 * Custom JSON resolvers also receive original contracts instead of SDK converter shells, preserving property customization and object callbacks with polymorphism and reference preservation.
 * Reference-preserving asynchronous serialization keeps async-enumerable roots and containing objects on the built-in asynchronous writer path.
 * Async-enumerable contract discovery does not suppress tolerant decoding for later standalone reads.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
 * Tolerant JSON normalization uses bounded temporary property names to prevent allocation amplification from long input names and many unknown metadata fields.
 * Tolerant JSON normalization preserves ordinary extension fields in culture-sensitive dictionaries and restores only each object's own aliases, in input order. Reference-preserving options support unknown metadata while retaining shared references across object and collection roots.
 * Tolerant JSON handling recognizes nested polymorphic values in non-generic derived lists and dictionaries and interface-typed collections on .NET 8 and .NET 9.
@@ -154,6 +155,7 @@
 #### idunno.Bluesky
 
 * Added `BlueskyJsonSerializerOptions.Create(configure)` for read-only options finalized after resolver customization. Bluesky agent finalization also handles JSON options replaced or customized after constructing `BlueskyAgentOptions`, without mutating caller options.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
 * Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.
 * Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
   `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
