@@ -64,9 +64,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         foreach (IJsonTypeInfoResolver chainResolver in options.TypeInfoResolverChain)
         {
             // Copy SDK resolver state instead of freezing the caller's resolver or retaining its live chain.
-            IJsonTypeInfoResolver snapshot = chainResolver is TolerantTypeInfoResolver configuredResolver
-                ? configuredResolver.Snapshot()
-                : chainResolver;
+            IJsonTypeInfoResolver snapshot = SnapshotResolver(chainResolver);
             if (!initialResolvers.Contains(snapshot))
             {
                 initialResolvers.Add(snapshot);
@@ -84,6 +82,72 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         IJsonTypeInfoResolver resolver = new TolerantTypeInfoResolver(trackChanges ? options : null, [.. initialResolvers]);
         options.Converters.Insert(0, new TolerantPolymorphicConverter(resolver, options));
         options.TypeInfoResolver = resolver;
+    }
+
+    [DynamicDependency(
+        DynamicallyAccessedMemberTypes.NonPublicFields,
+        "System.Text.Json.Serialization.Metadata.JsonTypeInfoResolverWithAddedModifiers",
+        "System.Text.Json")]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The System.Text.Json resolver wrapper's private fields are explicitly preserved for resolver snapshotting.")]
+    [SuppressMessage("SonarAnalyzer.CSharp", "S3011", Justification = "The private fields belong to System.Text.Json resolver wrappers and are read only to snapshot their public resolver behavior.")]
+    private static IJsonTypeInfoResolver SnapshotResolver(IJsonTypeInfoResolver resolver, IReadOnlyList<IJsonTypeInfoResolver>? followingResolvers = null)
+    {
+        if (resolver is TolerantTypeInfoResolver tolerantResolver)
+        {
+            return followingResolvers is { Count: > 0 }
+                ? tolerantResolver.Snapshot(followingResolvers)
+                : tolerantResolver.Snapshot();
+        }
+
+        Type resolverType = resolver.GetType();
+        FieldInfo[] fields = resolverType.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+        if (resolverType.FullName == "System.Text.Json.Serialization.Metadata.JsonTypeInfoResolverWithAddedModifiers")
+        {
+            // Rebuild the framework wrapper around a detached source so its modifier callbacks
+            // stay intact without retaining an SDK resolver tied to caller-owned options.
+            FieldInfo sourceField = fields.SingleOrDefault(field =>
+                typeof(IJsonTypeInfoResolver).IsAssignableFrom(field.FieldType))
+                ?? throw new InvalidOperationException($"Could not locate the wrapped resolver in '{resolverType.FullName}'.");
+            FieldInfo modifiersField = fields.SingleOrDefault(field =>
+                field.FieldType == typeof(Action<JsonTypeInfo>[]))
+                ?? throw new InvalidOperationException($"Could not locate the metadata modifiers in '{resolverType.FullName}'.");
+
+            IJsonTypeInfoResolver source = (IJsonTypeInfoResolver)sourceField.GetValue(resolver)!;
+            Action<JsonTypeInfo>[] modifiers = (Action<JsonTypeInfo>[])modifiersField.GetValue(resolver)!;
+            IJsonTypeInfoResolver snapshot = SnapshotResolver(source);
+            foreach (Action<JsonTypeInfo> modifier in modifiers)
+            {
+                snapshot = snapshot.WithAddedModifier(modifier);
+            }
+            return snapshot;
+        }
+
+        FieldInfo? resolverListField = fields.FirstOrDefault(field =>
+            typeof(IList<IJsonTypeInfoResolver>).IsAssignableFrom(field.FieldType));
+        if (resolverListField?.GetValue(resolver) is IList<IJsonTypeInfoResolver> resolverList)
+        {
+            List<IJsonTypeInfoResolver> snapshots = [];
+            for (int index = 0; index < resolverList.Count; index++)
+            {
+                if (resolverList[index] is TolerantTypeInfoResolver nestedTolerantResolver)
+                {
+                    // A tolerant resolver incorporates later chain entries before its fallback
+                    // resolvers. Fold those entries into its snapshot rather than listing them twice.
+                    IJsonTypeInfoResolver[] followingSnapshots = resolverList
+                        .Skip(index + 1)
+                        .Select(nextResolver => SnapshotResolver(nextResolver))
+                        .ToArray();
+                    snapshots.Add(nestedTolerantResolver.Snapshot(followingSnapshots));
+                    break;
+                }
+
+                IJsonTypeInfoResolver[] following = resolverList.Skip(index + 1).ToArray();
+                snapshots.Add(SnapshotResolver(resolverList[index], following));
+            }
+            return JsonTypeInfoResolver.Combine(snapshots.ToArray());
+        }
+
+        return resolver;
     }
 
     internal static bool IsTolerantResolver(IJsonTypeInfoResolver resolver) =>
@@ -380,6 +444,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                             continue;
                         }
 
+                        // Ask the decorator for its captured resolver chain, but stop its inner
+                        // SDK resolver from re-entering the same decorator.
                         JsonTypeInfo? decoratedInfo;
                         _resolvingDecorator.Value = true;
                         try
@@ -404,6 +470,13 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
 
         public TolerantTypeInfoResolver Snapshot() => new(null, [GetCombinedResolver()]);
+
+        public TolerantTypeInfoResolver Snapshot(IReadOnlyList<IJsonTypeInfoResolver> followingResolvers)
+        {
+            List<IJsonTypeInfoResolver> resolvers = [.. followingResolvers];
+            resolvers.AddRange(initialResolvers.Where(resolver => !resolvers.Contains(resolver)));
+            return new(null, [JsonTypeInfoResolver.Combine(resolvers.ToArray())]);
+        }
 
         private IJsonTypeInfoResolver GetCombinedResolver()
         {
@@ -590,6 +663,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             internal void ReserveContractNames(JsonTypeInfo info)
             {
+                // Temporary aliases must not shadow real input fields or names in the selected contract.
                 foreach (JsonPropertyInfo property in info.Properties)
                 {
                     ReserveName(property.Name);
@@ -606,6 +680,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 string temporaryName;
                 do
                 {
+                    // A payload may already contain a field using an alias-looking name.
                     temporaryName = "__idunno_metadata_" + _nextName++.ToString(CultureInfo.InvariantCulture);
                 }
                 while (!ReserveName(temporaryName));
@@ -726,10 +801,25 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
                 reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
             {
+                // Polymorphic and reference-preserving collections use an object envelope around
+                // the array. `$values` is always part of that envelope; `$id` and `$ref` depend on
+                // reference preservation being enabled.
+                JsonPolymorphismOptions? collectionPolymorphism = info.PolymorphismOptions;
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                 {
+                    bool isDiscriminator = collectionPolymorphism is not null &&
+                        reader.ValueTextEquals(collectionPolymorphism.TypeDiscriminatorPropertyName);
                     bool isValues = reader.ValueTextEquals("$values");
+                    bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
+                        ? reader.GetString()!.StartsWith('$')
+                        : reader.ValueSpan.StartsWith("$"u8);
+                    bool knownReferenceMetadata = isValues || PreservesReferences(underlyingOptions) &&
+                        (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref") || reader.ValueTextEquals("$values"));
                     reader.Read();
+                    if (dollarName && !isDiscriminator && !knownReferenceMetadata)
+                    {
+                        return true;
+                    }
                     if (isValues && NeedsNormalization(ref reader, info))
                     {
                         return true;
@@ -831,10 +921,14 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                     ? reader.GetString()!.StartsWith('$')
                     : reader.ValueSpan.StartsWith("$"u8);
-                if (polymorphism is not null && contract is null && dollarName &&
-                    !reader.ValueTextEquals(polymorphism.TypeDiscriminatorPropertyName) &&
-                    !(PreservesReferences(underlyingOptions) &&
-                        (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref") || reader.ValueTextEquals("$values"))))
+                // Preserve protocol metadata, but normalize unrecognized dollar-prefixed fields
+                // even on reference-tracked objects that do not declare polymorphism.
+                bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
+                    (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref") || reader.ValueTextEquals("$values"));
+                if ((polymorphism is not null || PreservesReferences(underlyingOptions)) &&
+                    contract is null && dollarName &&
+                    !(polymorphism is not null && reader.ValueTextEquals(polymorphism.TypeDiscriminatorPropertyName)) &&
+                    !knownReferenceMetadata)
                 {
                     return true;
                 }
@@ -943,11 +1037,25 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
+                // Normalize only unsupported envelope fields; keep the discriminator and required array payload.
+                JsonPolymorphismOptions? collectionPolymorphism = info.PolymorphismOptions;
                 writer.WriteStartObject();
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
+                    bool isDiscriminator = collectionPolymorphism is not null &&
+                        property.Name == collectionPolymorphism.TypeDiscriminatorPropertyName;
+                    bool isValues = property.NameEquals("$values");
+                    bool dollarName = property.Name.StartsWith('$');
+                    bool knownReferenceMetadata = isValues || PreservesReferences(underlyingOptions) &&
+                        property.Name is "$id" or "$ref" or "$values";
+                    if (dollarName && !isDiscriminator && !knownReferenceMetadata)
+                    {
+                        normalized = true;
+                        continue;
+                    }
+
                     writer.WritePropertyName(property.Name);
-                    if (property.NameEquals("$values"))
+                    if (isValues)
                     {
                         normalized |= WriteNormalized(writer, property.Value, info, state);
                     }
@@ -995,6 +1103,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
 
             JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
+            // Select the concrete contract before deciding which dollar-prefixed names are unknown.
             if (polymorphism is not null && element.TryGetProperty(polymorphism.TypeDiscriminatorPropertyName, out JsonElement discriminator))
             {
                 foreach (JsonDerivedType derived in polymorphism.DerivedTypes)
@@ -1018,9 +1127,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     (candidate.Get is not null || candidate.Set is not null) &&
                     string.Equals(candidate.Name, property.Name, comparison));
 
-                bool unknownMetadata = polymorphism is not null &&
+                bool unknownMetadata = (polymorphism is not null || PreservesReferences(underlyingOptions)) &&
                     property.Name.StartsWith('$') &&
-                    property.Name != polymorphism.TypeDiscriminatorPropertyName &&
+                    property.Name != polymorphism?.TypeDiscriminatorPropertyName &&
                     contract is null &&
                     !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
 

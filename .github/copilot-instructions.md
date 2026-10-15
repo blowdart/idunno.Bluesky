@@ -17,6 +17,7 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 * Linting is not a separate step: analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on, so a clean build is the lint gate.
 * **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.
 * **Never trust an incremental build as a pre-commit gate.** If you have just built an individual project, a subsequent solution build reuses that result and silently skips its analyzers. Pass `--no-incremental`.
+* **Windows toolchain discovery.** Do not assume build tools are on `PATH` or installed on `C:`. Before concluding that a toolchain is unavailable, inspect Visual Studio's registered installation locations and search other mounted drives for its environment scripts (such as `vcvars64.bat`) or required executables.
 
 ### GitHub Actions failed-test protocol
 

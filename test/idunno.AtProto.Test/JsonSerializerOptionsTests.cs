@@ -139,16 +139,24 @@ public class JsonSerializerOptionsTests
         {
             if (info.Type == typeof(ChainedTestRecord))
             {
-                Assert.Single(info.Properties).Name = "customValue";
+                JsonPropertyInfo property = Assert.Single(info.Properties);
+                property.Name = "custom" + property.Name;
             }
         });
         jsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(appendedResolver);
         jsonOptions.JsonSerializerOptions.TypeInfoResolver =
-            jsonOptions.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(_ => { });
+            jsonOptions.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
+            {
+                if (info.Type == typeof(ChainedTestRecord))
+                {
+                    JsonPropertyInfo property = Assert.Single(info.Properties);
+                    property.Name = "sdk" + property.Name;
+                }
+            });
+        using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = jsonOptions });
+        JsonTypeInfo recordInfo = agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(ChainedTestRecord));
 
-        ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
-            JsonSerializer.Deserialize<ChainedTestRecord>("""{"customValue":"appended"}""", jsonOptions.JsonSerializerOptions));
-        Assert.Equal("appended", record.Value);
+        Assert.Equal("sdkcustomvalue", Assert.Single(recordInfo.Properties).Name);
     }
 
     [Theory]
@@ -616,16 +624,43 @@ public class JsonSerializerOptionsTests
     {
         JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
             mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        foreach (string json in new[]
+        {
+            """{"$type":"test.polymorphicList","$via":"outer","$values":[]}""",
+            """{"$type":"test.polymorphicList","$via":"outer","$values":[{"$type":"test.nested","$via":"nested","value":"item"}]}"""
+        })
+        {
+            PolymorphicRecordListBase records = Assert.IsType<PolymorphicRecordList>(
+                JsonSerializer.Deserialize<PolymorphicRecordListBase>(json, options));
+
+            if (records.Count != 0)
+            {
+                NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(Assert.Single(records));
+                Assert.Equal("item", record.Value);
+                Assert.Equal("nested", record.ExtensionData!["$via"].GetString());
+            }
+        }
+    }
+
+    [Fact]
+    public void ReferencePreservingObjectEnvelopeNormalizesUnknownMetadata()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
         const string json = """
-            {"$type":"test.polymorphicList","$values":[{"$type":"test.nested","$via":"nested","value":"item"}]}
+            {"$id":"1","$via":"outer","record":{"$type":"test.nested","value":"item"}}
             """;
 
-        PolymorphicRecordListBase records = Assert.IsType<PolymorphicRecordList>(
-            JsonSerializer.Deserialize<PolymorphicRecordListBase>(json, options));
+        ReferenceEnvelopeRecord envelope = Assert.IsType<ReferenceEnvelopeRecord>(
+            JsonSerializer.Deserialize<ReferenceEnvelopeRecord>(json, options));
 
-        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(Assert.Single(records));
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(envelope.Record);
         Assert.Equal("item", record.Value);
-        Assert.Equal("nested", record.ExtensionData!["$via"].GetString());
+        Assert.Equal("outer", envelope.ExtensionData!["$via"].GetString());
     }
 
     [Theory]
@@ -1010,6 +1045,32 @@ public class JsonSerializerOptionsTests
         }
     }
 
+    [Fact]
+    public void AgentResolverSnapshotIsUnaffectedByLaterCallerResolverChanges()
+    {
+        JsonOptions supplied = new();
+        supplied.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        int callbacks = 0;
+        supplied.JsonSerializerOptions.TypeInfoResolver =
+            supplied.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
+            {
+                if (info.Type == typeof(NestedCustomRecord))
+                {
+                    info.OnDeserialized = _ => callbacks++;
+                }
+            });
+        using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
+
+        supplied.JsonSerializerOptions.TypeInfoResolver =
+            ChainedTestContext.Default.WithAddedModifier(_ => { });
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(JsonSerializer.Deserialize<NestedCustomRecordBase>(
+            """{"$type":"test.nested","$via":"extension","value":"snapshot"}""", agent.JsonOptions.JsonSerializerOptions));
+
+        Assert.Equal("snapshot", record.Value);
+        Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+        Assert.Equal(1, callbacks);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -1375,6 +1436,14 @@ internal abstract class PolymorphicRecordListBase : List<NestedCustomRecordBase>
 
 internal sealed class PolymorphicRecordList : PolymorphicRecordListBase;
 
+internal sealed class ReferenceEnvelopeRecord
+{
+    public NestedCustomRecordBase? Record { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(OptionsConverterRecord), "test.optionsConverter")]
 internal abstract class OptionsConverterRecordBase;
@@ -1732,6 +1801,7 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(CollectionRecord))]
 [JsonSerializable(typeof(PolymorphicRecordListBase))]
 [JsonSerializable(typeof(PolymorphicRecordList))]
+[JsonSerializable(typeof(ReferenceEnvelopeRecord))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
 [JsonSerializable(typeof(OptionsPayload))]
