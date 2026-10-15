@@ -563,9 +563,11 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 #if NET10_0_OR_GREATER
             if (!underlyingOptions.AllowDuplicateProperties)
             {
+                // The DOM retains duplicates even though this normalization may rewrite property names.
                 ValidateNoDuplicateProperties(element);
             }
 #endif
+            // Reserve aliases against the complete payload and every reachable contract before rewriting.
             NormalizationState state = new(element);
             ReserveContractNames(element, underlyingOptions.GetTypeInfo(type), state);
 
@@ -577,11 +579,13 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
             if (!normalized)
             {
+                // The probe can conservatively request a DOM for nested contracts; avoid reparsing its
+                // output when the writer ultimately found nothing to change.
                 return JsonSerializer.Deserialize(element, underlyingOptions.GetTypeInfo(type));
             }
 
-            // Renamed properties now look like ordinary unknown fields to System.Text.Json.
-            // Restore their original names per object, preserving the existing callback afterward.
+            // Renamed properties now look like ordinary unknown fields to System.Text.Json, allowing
+            // its normal extension-data handling to capture them. Restore aliases per object afterward.
             JsonSerializerOptions readOptions = new(underlyingOptions)
             {
                 TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>
@@ -601,6 +605,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     info.OnDeserialized = value =>
                     {
                         object? data = extension.Get?.Invoke(value);
+                        // Restore only aliases found on this instance; nested objects may reuse the
+                        // same alias for different source names.
                         if (data is IDictionary<string, JsonElement> elements)
                         {
                             RestoreNames(elements, state.RenamedNames);
@@ -649,6 +655,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         private sealed class NormalizationState
         {
+            // Check aliases against the comparer behaviors supported by extension-data dictionaries.
             private readonly HashSet<string> _propertyNames = new(StringComparer.Ordinal);
             private readonly HashSet<string> _culturePropertyNames = new(StringComparer.CurrentCultureIgnoreCase);
             private readonly HashSet<string> _invariantPropertyNames = new(StringComparer.InvariantCultureIgnoreCase);
@@ -699,6 +706,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             private void CollectPropertyNames(JsonElement element)
             {
+                // Scan all input names, not just modeled fields: even an opaque extension value can
+                // already contain a string that resembles an alias generated for another object.
                 if (element.ValueKind == JsonValueKind.Object)
                 {
                     foreach (JsonProperty property in element.EnumerateObject())
@@ -722,6 +731,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private static void RestoreNames<T>(IDictionary<string, T> data, Dictionary<string, RenamedProperty> renamedNames)
         {
             // Inspect only this object's keys; sort matching aliases by their source occurrence.
+            // This preserves last-value-wins behavior when multiple unknown fields map to one key.
             KeyValuePair<string, RenamedProperty>[] aliases = data.Keys
                 .Where(renamedNames.ContainsKey)
                 .Select(name => new KeyValuePair<string, RenamedProperty>(name, renamedNames[name]))
@@ -864,6 +874,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (reader.TokenType == JsonTokenType.StartArray && info.Kind == JsonTypeInfoKind.Enumerable &&
                 GetElementType(info) is Type elementType)
             {
+                // Array elements are inspected against their declared type so nested polymorphic
+                // objects are found without materializing the array.
                 JsonTypeInfo elementInfo = underlyingOptions.GetTypeInfo(elementType);
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 {
@@ -878,6 +890,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Dictionary &&
                 GetElementType(info) is Type valueType)
             {
+                // Dictionary keys are property names, not object members; only recurse into values.
                 JsonTypeInfo valueInfo = underlyingOptions.GetTypeInfo(valueType);
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                 {
@@ -905,6 +918,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             if (reader.TokenType != JsonTokenType.StartObject || info.Kind != JsonTypeInfoKind.Object)
             {
+                // Scalar and opaque custom-converter payloads are outside the contracts this walker
+                // can safely inspect.
                 SkipValue(ref reader);
                 return false;
             }
@@ -1001,6 +1016,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable &&
                 element.TryGetProperty("$values", out JsonElement values))
             {
+                // The envelope belongs to the selected collection contract; reserve names from its items.
                 ReserveContractNames(values, info, state);
                 return;
             }
@@ -1054,6 +1070,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 return;
             }
 
+            // Include base and selected-derived names so an alias cannot shadow either side of dispatch.
             state.ReserveContractNames(info);
             JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
             if (polymorphism is not null)
@@ -1087,6 +1104,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         private JsonTypeInfo? TryGetDerivedTypeInfo(JsonElement element, JsonTypeInfo info)
         {
+            // Unknown or malformed discriminators remain the serializer's responsibility; only known
+            // derived contracts can guide the normalizer's shape-specific traversal.
             JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
             if (polymorphism is null ||
                 !element.TryGetProperty(polymorphism.TypeDiscriminatorPropertyName, out JsonElement discriminator))
@@ -1191,6 +1210,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary && GetElementType(info) is Type valueType)
             {
+                // A polymorphic dictionary keeps the discriminator outside its entries; its selected
+                // contract can also change the value type used for recursive traversal.
                 JsonPolymorphismOptions? dictionaryPolymorphism = polymorphicContract;
                 if (dictionaryPolymorphism is not null &&
                     element.TryGetProperty(dictionaryPolymorphism.TypeDiscriminatorPropertyName, out JsonElement dictionaryDiscriminator))
@@ -1297,6 +1318,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     contract is null && !ignoredProperty &&
                     !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
 
+                // Keep ordinary fields untouched; only unknown protocol metadata needs an alias so
+                // System.Text.Json will accept and route it to extension data.
                 normalized |= unknownMetadata;
                 if (unknownMetadata && !hasExtensionData)
                 {
