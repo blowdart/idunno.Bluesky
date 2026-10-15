@@ -166,7 +166,7 @@ public class AtProtoHttpClientMetricsTest
     }
 
     [Fact]
-    public async Task HttpClientTimeoutIsNotReportedAsCallerCancellation()
+    public async Task TransportTimeoutIsNotReportedAsCallerCancellation()
     {
         using ServiceProvider services = CreateServiceProvider();
         IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
@@ -175,21 +175,19 @@ public class AtProtoHttpClientMetricsTest
             AtProtoHttpClientMetrics.MeterName,
             "idunno.atproto.atprotohttpclient.request.duration");
 
-        using TestServer testServer = TestServerBuilder.CreateServer(
-            TestServerBuilder.DefaultUri,
-            async context => await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted));
-        using HttpClient httpClient = testServer.CreateClient();
-        httpClient.Timeout = TimeSpan.FromMilliseconds(100);
+        using HttpClient httpClient = new(new TimeoutHandler());
 
         AtProtoHttpClient atProtoHttpClient = new(serviceProxy: null, loggerFactory: null, meterFactory: meterFactory);
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await atProtoHttpClient.Get(
+        TaskCanceledException exception = await Assert.ThrowsAsync<TaskCanceledException>(async () => await atProtoHttpClient.Get(
             service: TestServerBuilder.DefaultUri,
             endpoint: "/xrpc/com.atproto.server.describeServer",
             credentials: null,
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken));
 
+        Assert.IsType<TimeoutException>(exception.InnerException);
+        Assert.False(TestContext.Current.CancellationToken.IsCancellationRequested);
         CollectedMeasurement<double> requestDuration = Assert.Single(durationCollector.GetMeasurementSnapshot());
         Assert.Equal("transport_error", requestDuration.Tags["outcome"]);
     }
@@ -1636,6 +1634,13 @@ public class AtProtoHttpClientMetricsTest
         Assert.Equal(
             "GET",
             xrpcRequestMeasurements[0]!.Tags["http_method"]);
+    }
+
+    private sealed class TimeoutHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromException<HttpResponseMessage>(new TaskCanceledException(
+                "The HTTP request timed out.", new TimeoutException()));
     }
 
     private static TestServer CreateTestServer(

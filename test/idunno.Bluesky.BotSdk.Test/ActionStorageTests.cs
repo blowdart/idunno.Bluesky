@@ -649,8 +649,8 @@ public sealed class ActionStorageTests
         }
 
         public Task MakeReadyAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE bot_ownership SET ready_at = now()"
-            : "UPDATE bot_ownership SET ready_at = 0");
+            ? "UPDATE bot_ownership SET ready_at = 'epoch', lease_until = 'infinity'"
+            : $"UPDATE bot_ownership SET ready_at = 0, lease_until = {long.MaxValue}");
 
         public Task AddLegacyRecordKeyIndexAsync() =>
             SqlAsync("CREATE UNIQUE INDEX legacy_record_key ON reply_work(record_key)");

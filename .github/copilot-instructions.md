@@ -151,6 +151,11 @@ Before considering a change complete, identify the assumptions and invariants it
 ## Testing conventions
 
 * Prefer official Microsoft packages (such as `Microsoft.Extensions.Diagnostics.Testing` for metrics/logging test collectors and `Microsoft.Extensions.Time.Testing` for fake time providers) over hand-rolling custom test helpers or factories.
+* Tests whose behavior depends on time must use `FakeTimeProvider`, with the same clock used to generate timestamps and evaluate deadlines. Use a fixed initial instant rather than seeding from `UtcNow`. Timestamps used only as inert data do not require fake time.
+* Wait for explicit timer-registration or operation-phase signals before advancing fake time. Do not use sleeps, polling, elapsed-duration assertions, or short real-time deadlines to establish ordering.
+* Use explicit synchronization for concurrency tests; fake time does not control task scheduling.
+* Real-time timeouts are permitted as hang watchdogs, not as evidence of correctness. Database-clock tests must control persisted deadlines using database time rather than assuming application and database clocks agree.
+* Any new library clock or synchronization seams added solely for testing must remain internal, with no public API changes.
 * Tests use the xUnit v3 SDK (`xunit.v3`).
 * Don't emit `// Arrange` / `// Act` / `// Assert` comments. Match the method naming and casing of nearby tests.
 * Prefer a single `[Theory]` with `[InlineData]`/`[MemberData]` over many near-duplicate `[Fact]` methods.

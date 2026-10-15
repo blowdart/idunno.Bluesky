@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -385,7 +386,7 @@ public class OAuthLoginResponseTests
             state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken));
 
         Assert.Null(server.TokenClientAssertion);
-        Assert.Null(restored.State);
+        AssertLoginStateCleared(restored);
     }
 
     [Fact]
@@ -422,6 +423,7 @@ public class OAuthLoginResponseTests
             authority: s_authority,
             returnUri: s_returnUri,
             clientId: ClientId,
+            stateExtraProperties: new Dictionary<string, string> { ["retained"] = "private" },
             cancellationToken: TestContext.Current.CancellationToken);
 
         DPoPAccessCredentials? credentials = await client.ProcessOAuth2LoginResponse(
@@ -433,7 +435,7 @@ public class OAuthLoginResponseTests
 
         // The authorize state carries a single use code verifier which the server has now spent, and the proof key is a
         // private key. Neither has any further use, and both are readable through State until they are discarded.
-        Assert.Null(client.State);
+        AssertLoginStateCleared(client);
     }
 
     [Fact]
@@ -455,7 +457,187 @@ public class OAuthLoginResponseTests
                 clientId: ClientId,
                 cancellationToken: TestContext.Current.CancellationToken));
 
-        Assert.Null(client.State);
+        AssertLoginStateCleared(client);
+    }
+
+    [Theory]
+    [InlineData("success", "build")]
+    [InlineData("success", "restore")]
+    [InlineData("success", "restoreSame")]
+    [InlineData("protocolError", "build")]
+    [InlineData("protocolError", "restore")]
+    [InlineData("protocolError", "restoreSame")]
+    [InlineData("cancellation", "build")]
+    [InlineData("cancellation", "restore")]
+    [InlineData("cancellation", "restoreSame")]
+    public async Task CompletingAnOlderResponsePreservesANewerInstalledLogin(string outcome, string replacement)
+    {
+        LoginTestServer server = new() { GateTokenRequests = true, ReturnTokenError = outcome == "protocolError" };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            stateExtraProperties: new Dictionary<string, string> { ["login"] = "original" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState originalState = client.State!;
+        client.State = originalState;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(originalState.State), cancellationToken: cancellation.Token);
+
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            if (replacement == "build")
+            {
+                await client.BuildOAuth2LoginUri(
+                    s_service, s_authority, s_returnUri,
+                    stateExtraProperties: new Dictionary<string, string> { ["login"] = "new" },
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+            else if (replacement == "restore")
+            {
+                OAuthClient other = CreateClient(server);
+                await other.BuildOAuth2LoginUri(
+                    s_service, s_authority, s_returnUri,
+                    stateExtraProperties: new Dictionary<string, string> { ["login"] = "restored" },
+                    cancellationToken: TestContext.Current.CancellationToken);
+                client.State = other.State!;
+            }
+            else
+            {
+                client.State = originalState;
+            }
+
+            OAuthLoginState newerState = client.State!;
+            object? newerCache = GetPrivateField(client, "_oidcClient");
+            if (outcome == "cancellation")
+            {
+                await cancellation.CancelAsync();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => processing);
+            }
+            else
+            {
+                server.TokenRelease.TrySetResult();
+                DPoPAccessCredentials? credentials = await processing;
+                if (outcome == "success")
+                {
+                    Assert.NotNull(credentials);
+                    Assert.Equal(originalState.ProofKey, credentials.DPoPProofKey);
+                }
+                else
+                {
+                    Assert.Null(credentials);
+                }
+            }
+
+            Assert.Equal(newerState, client.State);
+            Assert.Equal(newerState.CorrelationId, GetPrivateField(client, "_correlationId"));
+            Assert.Equal(newerState.ProofKey, GetPrivateField(client, "_proofKey"));
+            Assert.Same(newerCache, GetPrivateField(client, "_oidcClient"));
+            if (newerCache is null)
+            {
+                AssertOidcClientCleared(client);
+            }
+            else
+            {
+                Assert.Equal(newerState.ProofKey, GetPrivateField(client, "_oidcClientProofKey"));
+            }
+
+            server.GateTokenRequests = false;
+            server.ReturnTokenError = false;
+            Assert.NotNull(await client.ProcessOAuth2LoginResponse(
+                CallbackData(newerState.State), cancellationToken: TestContext.Current.CancellationToken));
+            AssertLoginStateCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+            await cancellation.CancelAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("protocolError")]
+    [InlineData("cancellation")]
+    [InlineData("exchangeException")]
+    public async Task AnUnsuccessfulExchangeDiscardsAllLoginState(string outcome)
+    {
+        LoginTestServer server = new()
+        {
+            GateTokenRequests = true,
+            ReturnTokenError = outcome == "protocolError",
+            ThrowDuringTokenExchange = outcome == "exchangeException"
+        };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            stateExtraProperties: new Dictionary<string, string> { ["retained"] = "private" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(client.State!.State), cancellationToken: cancellation.Token);
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            if (outcome == "cancellation")
+            {
+                await cancellation.CancelAsync();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => processing);
+            }
+            else
+            {
+                server.TokenRelease.TrySetResult();
+                // Duende reports both protocol errors and exceptions from the HTTP exchange as an error result.
+                Assert.Null(await processing);
+            }
+
+            AssertLoginStateCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+            await cancellation.CancelAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnOlderExchangeCannotPublishItsCachedKeyAfterStateIsReplaced(bool restoreSameState)
+    {
+        LoginTestServer server = new() { GateTokenRequests = true };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState originalState = client.State!;
+        OAuthClient other = CreateClient(server);
+        await other.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState newerState = restoreSameState ? originalState : other.State!;
+
+        IEnumerable<string> ReplaceStateBeforeCreatingClient()
+        {
+            client.State = newerState;
+            yield return "atproto";
+        }
+
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(originalState.State),
+            scopes: ReplaceStateBeforeCreatingClient(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            AssertOidcClientCleared(client);
+            server.TokenRelease.TrySetResult();
+            Assert.NotNull(await processing);
+            Assert.Equal(newerState, client.State);
+            AssertOidcClientCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+        }
     }
 
     [Fact]
@@ -545,6 +727,33 @@ public class OAuthLoginResponseTests
 
     private static string CallbackData(string state) => $"?code=authorizationCode&state={state}";
 
+    private static object? GetPrivateField(OAuthClient client, string name) =>
+        typeof(OAuthClient).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client);
+
+    private static void AssertLoginStateCleared(OAuthClient client)
+    {
+        Assert.Null(client.State);
+        Assert.Equal(Guid.Empty, GetPrivateField(client, "_correlationId"));
+        foreach (string field in new[]
+        {
+            "_loginGeneration", "_authorizeState", "_expectedAuthority", "_expectedService", "_proofKey",
+            "_stateExtraProperties", "_loginClientId", "_loginRequestedScope", "_loginSigningKeyId"
+        })
+        {
+            Assert.Null(GetPrivateField(client, field));
+        }
+
+        AssertOidcClientCleared(client);
+    }
+
+    private static void AssertOidcClientCleared(OAuthClient client)
+    {
+        foreach (string field in new[] { "_oidcClient", "_oidcClientProofKey", "_oidcClientAuthority", "_oidcClientSigningKeyId" })
+        {
+            Assert.Null(GetPrivateField(client, field));
+        }
+    }
+
     private static OAuthClient CreateClient(LoginTestServer server, OAuthOptions? options = null) =>
         new(httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: server.TestServer.CreateHandler,
@@ -598,6 +807,16 @@ public class OAuthLoginResponseTests
         internal bool IssueBearerToken { get; set; }
 
         internal bool ChallengeNonce { get; set; }
+
+        internal bool GateTokenRequests { get; set; }
+
+        internal bool ReturnTokenError { get; set; }
+
+        internal bool ThrowDuringTokenExchange { get; set; }
+
+        internal TaskCompletionSource TokenEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal TaskCompletionSource TokenRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         internal List<string> AssertionJtis { get; } = [];
 
@@ -691,6 +910,25 @@ public class OAuthLoginResponseTests
                     return;
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
+                    if (GateTokenRequests)
+                    {
+                        TokenEntered.TrySetResult();
+                        await TokenRelease.Task.WaitAsync(context.RequestAborted);
+                    }
+
+                    if (ThrowDuringTokenExchange)
+                    {
+                        throw new InvalidOperationException("Token exchange failed.");
+                    }
+
+                    if (ReturnTokenError)
+                    {
+                        response.StatusCode = StatusCodes.Status400BadRequest;
+                        response.ContentType = "application/json";
+                        await response.WriteAsync("""{"error":"invalid_grant"}""", context.RequestAborted);
+                        return;
+                    }
+
                     RecordProofKey(request);
                     IFormCollection tokenForm = await request.ReadFormAsync();
                     TokenClientAssertion = tokenForm["client_assertion"].ToString();

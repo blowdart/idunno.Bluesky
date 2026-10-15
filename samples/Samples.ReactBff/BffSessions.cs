@@ -13,6 +13,10 @@ internal sealed class BffSession(ISessionClient client, DateTimeOffset expiresAt
     internal ISessionClient Client { get; } = client;
     internal DateTimeOffset ExpiresAt { get; } = expiresAt;
     internal SemaphoreSlim Gate { get; } = new(1, 1);
+    /// <summary>
+    /// Gets or sets the observer of a request's pending session gate acquisition.
+    /// </summary>
+    internal Action<Task>? GateWaiting { get; set; }
     internal bool Closed { get; set; }
     internal StrongReference? PostReference { get; set; }
     internal CreatedPost? CreatedPost { get; set; }

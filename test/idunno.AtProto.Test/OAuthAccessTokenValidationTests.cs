@@ -16,6 +16,7 @@ namespace idunno.AtProto.Test;
 public class OAuthAccessTokenValidationTests
 {
     private static readonly Uri s_authority = new("https://authority.test/");
+    private static readonly DateTimeOffset s_now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Theory]
     [InlineData("ref:scopeReference", false)]
@@ -56,7 +57,7 @@ public class OAuthAccessTokenValidationTests
             innerHandlerFactory: () => new HttpClientHandler(),
             loggerFactory: loggerFactory,
             options: options,
-            timeProvider: timeProvider);
+            timeProvider: timeProvider ?? new FakeTimeProvider(s_now));
     }
 
     private static string Base64UrlEncode(string value) =>
@@ -96,12 +97,12 @@ public class OAuthAccessTokenValidationTests
 
         if (includeNotBefore)
         {
-            payload["nbf"] = (notBefore ?? DateTimeOffset.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds();
+            payload["nbf"] = (notBefore ?? s_now.AddMinutes(-1)).ToUnixTimeSeconds();
         }
 
         if (includeExpiry)
         {
-            payload["exp"] = (expires ?? DateTimeOffset.UtcNow.AddMinutes(30)).ToUnixTimeSeconds();
+            payload["exp"] = (expires ?? s_now.AddMinutes(30)).ToUnixTimeSeconds();
         }
 
         return new JsonWebToken($"{Base64UrlEncode("{\"alg\":\"none\"}")}.{Base64UrlEncode(JsonSerializer.Serialize(payload))}.");
@@ -200,7 +201,7 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.FromMinutes(1)).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+                CreateToken(notBefore: s_now.AddMinutes(5)),
                 s_authority,
                 Guid.NewGuid()));
 
@@ -211,7 +212,7 @@ public class OAuthAccessTokenValidationTests
     public void TokenIssuedWithinTheConfiguredClockSkewPassesValidation()
     {
         CreateOAuthClient(TimeSpan.FromMinutes(10)).ValidateAccessToken(
-            CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+            CreateToken(notBefore: s_now.AddMinutes(5)),
             s_authority,
             Guid.NewGuid());
     }
@@ -221,7 +222,7 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.FromMinutes(1)).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(-30), expires: DateTimeOffset.UtcNow.AddMinutes(-5)),
+                CreateToken(notBefore: s_now.AddMinutes(-30), expires: s_now.AddMinutes(-5)),
                 s_authority,
                 Guid.NewGuid()));
 
@@ -232,7 +233,7 @@ public class OAuthAccessTokenValidationTests
     public void TokenExpiredWithinTheConfiguredClockSkewPassesValidation()
     {
         CreateOAuthClient(TimeSpan.FromMinutes(10)).ValidateAccessToken(
-            CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(-30), expires: DateTimeOffset.UtcNow.AddMinutes(-5)),
+            CreateToken(notBefore: s_now.AddMinutes(-30), expires: s_now.AddMinutes(-5)),
             s_authority,
             Guid.NewGuid());
     }
@@ -242,7 +243,7 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.Zero).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+                CreateToken(notBefore: s_now.AddMinutes(5)),
                 s_authority,
                 Guid.NewGuid()));
 

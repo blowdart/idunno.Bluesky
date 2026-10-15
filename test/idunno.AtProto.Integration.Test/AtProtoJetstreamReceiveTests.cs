@@ -179,11 +179,8 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer
-        {
-            // Holds the first connection attempt open long enough for the others to be made whilst it is in flight.
-            AcceptDelay = TimeSpan.FromSeconds(1)
-        };
+        TaskCompletionSource accept = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer { AcceptConnection = accept.Task };
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -205,14 +202,22 @@ public class AtProtoJetstreamReceiveTests
             {
                 Task[] connections =
                 [
-                    .. Enumerable.Range(0, 4).Select(_ => Task.Run(
-                        async () => await jetstream.ConnectAsync(
+                    .. Enumerable.Range(0, 4).Select(_ => jetstream.ConnectAsync(
                             uri: server.Uri,
                             cursor: null,
                             httpClient: httpClient,
-                            cancellationToken: cancellationToken),
-                        cancellationToken))
+                            cancellationToken: cancellationToken))
                 ];
+
+                try
+                {
+                    await server.AcceptRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                    Assert.All(connections, connection => Assert.False(connection.IsCompleted));
+                }
+                finally
+                {
+                    accept.TrySetResult();
+                }
 
                 await Task.WhenAll(connections).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
@@ -564,7 +569,8 @@ public class AtProtoJetstreamReceiveTests
 
         using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
         IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
-        using var allHandled = new CountdownEvent(messageCount);
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int remaining = messageCount;
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
@@ -574,7 +580,10 @@ public class AtProtoJetstreamReceiveTests
 
             jetstream.RecordReceived += (sender, e) =>
             {
-                allHandled.Signal();
+                if (Interlocked.Decrement(ref remaining) == 0)
+                {
+                    allHandled.TrySetResult();
+                }
 
                 throw new InvalidOperationException("Handler failure.");
             };
@@ -587,11 +596,8 @@ public class AtProtoJetstreamReceiveTests
                     httpClient: httpClient,
                     cancellationToken: cancellationToken);
 
-                Assert.True(allHandled.Wait(TimeSpan.FromSeconds(30), cancellationToken));
-
-                // The handler signals before it throws, so the catch which decides whether to count the failure has
-                // not necessarily run yet. Give it time to land rather than reading the counter out from under it.
-                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                await allHandled.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                await jetstream.DrainMessageParsersAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
                 // A handler is application code. An exception out of one says nothing about the message, so counting
                 // it as a parsing failure makes an application bug indistinguishable from a malformed server message.
@@ -707,9 +713,11 @@ public class AtProtoJetstreamReceiveTests
         public int ConnectionCount => _connectionCount;
 
         /// <summary>
-        /// How long to wait before accepting a connection, to keep a connection attempt in flight whilst another is made.
+        /// A gate which keeps a connection attempt in flight whilst another is made.
         /// </summary>
-        public TimeSpan AcceptDelay { get; set; } = TimeSpan.Zero;
+        public Task AcceptConnection { get; set; } = Task.CompletedTask;
+
+        public TaskCompletionSource AcceptRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
         {
@@ -723,10 +731,8 @@ public class AtProtoJetstreamReceiveTests
 
                     RequestQuery = context.Request.Url?.Query;
 
-                    if (AcceptDelay > TimeSpan.Zero)
-                    {
-                        await Task.Delay(AcceptDelay, _cancellationTokenSource.Token);
-                    }
+                    AcceptRequested.TrySetResult();
+                    await AcceptConnection.WaitAsync(_cancellationTokenSource.Token);
 
                     HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
 

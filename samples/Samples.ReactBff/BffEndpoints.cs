@@ -251,7 +251,9 @@ internal static class BffEndpoints
             return allowAnonymous ? await action(null) : Unauthorized();
         }
 
-        await session.Gate.WaitAsync(context.RequestAborted);
+        Task gateWait = session.Gate.WaitAsync(context.RequestAborted);
+        session.GateWaiting?.Invoke(gateWait);
+        await gateWait;
         try
         {
             if (!sessions.IsValid(session))

@@ -622,10 +622,13 @@ public class AuthenticationTests
 
         bool asyncHookCompleted = false;
         string? credentialHookNonce = null;
+        TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseCallback = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         agent.CredentialsUpdatedAsync = async (args, cancellationToken) =>
         {
-            await Task.Delay(50, cancellationToken);
+            callbackEntered.TrySetResult();
+            await releaseCallback.Task.WaitAsync(cancellationToken);
 
             if (args.AccessCredentials is DPoPAccessCredentials dPoPAccessCredentials)
             {
@@ -637,10 +640,23 @@ public class AuthenticationTests
 
         agent.Credentials = CreateDPoPCredentials(server);
 
-        _ = await agent.CreateRecord(
+        Task request = agent.CreateRecord(
             new TestRecord() { TestValue = "test" },
             NonceTestCollection,
             cancellationToken: TestContext.Current.CancellationToken);
+
+        try
+        {
+            await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.False(request.IsCompleted);
+            Assert.False(asyncHookCompleted);
+        }
+        finally
+        {
+            releaseCallback.TrySetResult();
+        }
+
+        await request.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         Assert.True(asyncHookCompleted);
         Assert.Equal("newNonce", credentialHookNonce);

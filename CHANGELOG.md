@@ -359,12 +359,16 @@
 
 #### Build and test
 
+* Replaced timing-sensitive streaming, authentication, callback, and concurrency test delays with controlled clocks and explicit synchronization. Database deadline and request-order assertions no longer depend on later wall-clock samples. New clock and synchronization seams are internal; public APIs are unchanged.
+* Made default post, draft-post, and notification-seen timestamp tests deterministic, and replaced remaining OAuth and Jetstream state/log polling with explicit completion signals.
+* Made OAuth access-token lifetime validation tests and the Jetstream HTTP-date retry test independent of wall-clock time, including checking the retry deadline with a controlled clock.
 * CI now runs the AT Proto and Bluesky allocation-budget tests in dedicated processes with background GC disabled,
   without changing their thresholds. GC traces, measurements and raw test results are retained even when tests fail.
 
 #### idunno.AtProto
 
 * Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.
+* OAuth login-response cleanup clears residual login context on completion, including cancellation and failure, without discarding a newer login prepared or restored on the same client.
 * `DescribeServer()` now accepts an empty required `availableUserDomains` array.
 * Tolerant JSON normalization now handles unknown metadata on polymorphic dictionary envelopes and preserves caller-defined composite resolvers when finalizing options.
 * Tolerant JSON normalization now preserves polymorphic collection `$values` envelopes selected through interface contracts and does not capture ignored properties as extension data.

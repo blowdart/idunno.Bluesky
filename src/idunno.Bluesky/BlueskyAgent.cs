@@ -22,6 +22,8 @@ public partial class BlueskyAgent : AtProtoAgent
 {
     private readonly ILogger<BlueskyAgent> _logger;
 
+    internal TimeProvider RecordTimeProvider { get; set; } = TimeProvider.System;
+
     /// <summary>
     /// Creates a new instance of <see cref="BlueskyAgent"/>.
     /// </summary>

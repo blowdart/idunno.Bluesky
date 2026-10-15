@@ -12,6 +12,11 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostTests
 {
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(2024, 1, 2, 3, 4, 5, TimeSpan.Zero);
+    }
+
     [Theory]
     [InlineData(" ")]
     [InlineData("   ")]
@@ -34,12 +39,10 @@ public class PostTests
     [Fact]
     public void EmptyConstructorSetsText()
     {
-        DateTimeOffset start = DateTimeOffset.UtcNow;
-        var post = new Post();
-        DateTimeOffset end = DateTimeOffset.UtcNow;
+        FixedTimeProvider clock = new();
+        var post = new Post(clock);
 
-        Assert.True(post.CreatedAt >= start);
-        Assert.True(post.CreatedAt <= end);
+        Assert.Equal(clock.GetUtcNow(), post.CreatedAt);
     }
 
     [Fact]
@@ -47,13 +50,11 @@ public class PostTests
     {
         const string postText = "post text";
 
-        DateTimeOffset start = DateTimeOffset.UtcNow;
-        var post = new Post(postText);
-        DateTimeOffset end = DateTimeOffset.UtcNow;
+        FixedTimeProvider clock = new();
+        var post = new Post(postText, clock);
 
         Assert.Equal(postText, post.Text);
-        Assert.True(post.CreatedAt >= start);
-        Assert.True(post.CreatedAt <= end);
+        Assert.Equal(clock.GetUtcNow(), post.CreatedAt);
     }
 
     [Fact]

@@ -368,20 +368,30 @@ public class OAuthCredentialRefreshTests
 
         await firstNotificationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
 
+        TaskCompletionSource refreshCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.CredentialNotificationQueueing = credentials =>
+        {
+            if (!ReferenceEquals(credentials, originalCredentials))
+            {
+                refreshCommitted.TrySetResult();
+            }
+        };
         using CancellationTokenSource refreshCancellation = new();
         Task<bool> refresh = agent.RefreshCredentials(refreshCancellation.Token);
 
         // Wait until the refresh has committed its credentials, then cancel the caller. The notification for
         // credentials the agent is already using must still be raised, otherwise the suspended handler would be the
         // last to write and would persist the refresh token the server has spent.
-        while (ReferenceEquals(agent.Credentials, originalCredentials))
+        try
         {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            await refreshCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotSame(originalCredentials, agent.Credentials);
+            await refreshCancellation.CancelAsync();
         }
-
-        await refreshCancellation.CancelAsync();
-
-        releaseFirstNotification.TrySetResult();
+        finally
+        {
+            releaseFirstNotification.TrySetResult();
+        }
 
         await notification;
         Assert.True(await refresh);
@@ -542,23 +552,27 @@ public class OAuthCredentialRefreshTests
 
         // The handler is held until the logout has actually cleared the credentials, which is the point an unordered
         // Unauthenticated would be raised from, so the two are not merely racing.
-        Task releaseWhenSessionEnded = Task.Run(
-            async () =>
-            {
-                while (agent.Credentials is not null)
-                {
-                    await Task.Delay(1, TestContext.Current.CancellationToken);
-                }
-
-                releaseHandler.TrySetResult();
-            },
-            TestContext.Current.CancellationToken);
+        TaskCompletionSource sessionEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            sessionEnded.TrySetResult();
+            return Task.CompletedTask;
+        };
 
         Task logout = agent.Logout(TestContext.Current.CancellationToken);
 
+        try
+        {
+            await sessionEnded.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.Null(agent.Credentials);
+        }
+        finally
+        {
+            releaseHandler.TrySetResult();
+        }
+
         await notification;
         await logout;
-        await releaseWhenSessionEnded;
 
         // A subscriber which discards its stored credentials when the session ends can only discard the write the
         // suspended handler made if the session ending reaches it afterwards.
@@ -771,14 +785,23 @@ public class OAuthCredentialRefreshTests
         // thing keeping it behind the handler which is still running.
         agent.Credentials = null;
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        while (agent.Credentials is null)
+        try
         {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
         }
-
-        releaseNotification.TrySetResult();
+        finally
+        {
+            releaseNotification.TrySetResult();
+        }
 
         Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         await notification.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
@@ -907,11 +930,23 @@ public class OAuthCredentialRefreshTests
 
         await sessionEndQueued.Task.WaitAsync(TestContext.Current.CancellationToken);
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
-
-        releaseSessionEnd.TrySetResult();
+        try
+        {
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
+        }
+        finally
+        {
+            releaseSessionEnd.TrySetResult();
+        }
 
         Assert.False(await refresh);
         Assert.True(await login);
@@ -929,10 +964,12 @@ public class OAuthCredentialRefreshTests
         using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
 
         List<AccessCredentials> persisted = [];
+        TaskCompletionSource notificationCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         agent.CredentialsUpdatedAsync = (e, _) =>
         {
             persisted.Add(e.AccessCredentials);
+            notificationCompleted.TrySetResult();
             return Task.CompletedTask;
         };
 
@@ -944,7 +981,7 @@ public class OAuthCredentialRefreshTests
         // The credentials are already live in the agent and the token they replaced has been spent, so they have to be
         // notified even though the session start handler failed, otherwise storage keeps a token the server has burnt.
         // The notification can be queued behind one which is still running, so it is waited for rather than sampled.
-        await WaitFor(() => persisted.Count == 1, TestContext.Current.CancellationToken);
+        await notificationCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         AccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
 
@@ -1016,11 +1053,23 @@ public class OAuthCredentialRefreshTests
 
         agent.CredentialsUpdatedAsync = null;
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
-
-        releaseSessionEnd.TrySetResult();
+        try
+        {
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
+        }
+        finally
+        {
+            releaseSessionEnd.TrySetResult();
+        }
 
         Assert.False(await endingRefresh!.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
@@ -1033,22 +1082,6 @@ public class OAuthCredentialRefreshTests
         }
 
         Assert.NotNull(agent.Credentials);
-    }
-
-    /// <summary>
-    /// Waits for <paramref name="condition"/> to become true, so that a test does not depend on a notification which is
-    /// queued behind another having been delivered by the time the call which caused it returns.
-    /// </summary>
-    private static async Task WaitFor(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-
-        while (!condition() && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(10, cancellationToken);
-        }
-
-        Assert.True(condition(), "The expected condition was not reached before the timeout expired.");
     }
 
     [Fact]
@@ -1086,11 +1119,7 @@ public class OAuthCredentialRefreshTests
         // continuation after the notification queue runs inline on the thread the blocked handler is holding.
         Task<bool> refresh = Task.Run(() => agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
-        Assert.Same(
-            refresh,
-            await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
-
-        Assert.False(await refresh);
+        Assert.False(await refresh.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         Assert.True(reauthenticated);
         Assert.NotNull(agent.Credentials);
     }

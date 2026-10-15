@@ -81,6 +81,8 @@ public sealed class CallbackServer : IAsyncDisposable
 #endif
 
     private CancellationTokenSource? _timeoutCancellationSource;
+    private CancellationTokenSource? _timeoutTimerSource;
+    private TimeProvider _timeProvider = TimeProvider.System;
     private CancellationTokenRegistration _timeoutRegistration;
     private CancellationToken _callerCancellationToken;
     private long _callbackWaitStartTimestamp;
@@ -549,6 +551,20 @@ public sealed class CallbackServer : IAsyncDisposable
     public Uri Uri { get; init; }
 
     /// <summary>
+    /// Gets or sets the clock used to schedule the callback timeout.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    internal TimeProvider TimeProvider
+    {
+        get => _timeProvider;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _timeProvider = value;
+        }
+    }
+
+    /// <summary>
     /// Wait for the specified <paramref name="timeoutInSeconds"/> for an oauth callback.
     /// </summary>
     /// <param name="timeoutInSeconds">The amount of time to wait for the callback to complete.</param>
@@ -598,9 +614,10 @@ public sealed class CallbackServer : IAsyncDisposable
             // cancellationToken actually completes _source. Awaiting the delay would throw instead,
             // leaving the completion source pending forever and the caller hung.
             _callerCancellationToken = cancellationToken;
-            _timeoutCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposalCancellationSource.Token);
+            _timeoutTimerSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutInSeconds), TimeProvider);
+            _timeoutCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, _disposalCancellationSource.Token, _timeoutTimerSource.Token);
             _timeoutRegistration = _timeoutCancellationSource.Token.Register(static state => ((CallbackServer)state!).CompleteAsCancelled(), this);
-            _timeoutCancellationSource.CancelAfter(TimeSpan.FromSeconds(timeoutInSeconds));
         }
 
         return _source.Task;
@@ -620,6 +637,7 @@ public sealed class CallbackServer : IAsyncDisposable
     {
         CancellationTokenRegistration registration;
         CancellationTokenSource? timeoutSource;
+        CancellationTokenSource? timeoutTimerSource;
 
         lock (_syncLock)
         {
@@ -634,10 +652,13 @@ public sealed class CallbackServer : IAsyncDisposable
 
             timeoutSource = _timeoutCancellationSource;
             _timeoutCancellationSource = null;
+            timeoutTimerSource = _timeoutTimerSource;
+            _timeoutTimerSource = null;
         }
 
         registration.Dispose();
         timeoutSource?.Dispose();
+        timeoutTimerSource?.Dispose();
     }
 
     /// <summary>
@@ -675,6 +696,8 @@ public sealed class CallbackServer : IAsyncDisposable
                 CallbackServerMetrics.RecordCallbackCompletion("timeout", Interlocked.Read(ref _callbackWaitStartTimestamp), _logger);
             }
         }
+
+        ReleaseTimeout();
     }
 
     /// <summary>
@@ -728,6 +751,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
         await _timeoutRegistration.DisposeAsync().ConfigureAwait(false);
         _timeoutCancellationSource?.Dispose();
+        _timeoutTimerSource?.Dispose();
         _disposalCancellationSource.Dispose();
     }
 
