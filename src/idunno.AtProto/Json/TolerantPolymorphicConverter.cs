@@ -5,6 +5,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -72,7 +73,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     }
 
     public override bool CanConvert(Type typeToConvert) =>
-        _supportedTypes.GetOrAdd((typeToConvert, PreservesReferences(configuredOptions)), key =>
+        _supportedTypes.GetOrAdd((typeToConvert, TracksReferenceState(configuredOptions)), key =>
         {
             JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions);
             return info?.PolymorphismOptions is not null ||
@@ -125,6 +126,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private static bool PreservesReferences(JsonSerializerOptions options) =>
         options.ReferenceHandler is not null && options.ReferenceHandler != ReferenceHandler.IgnoreCycles;
 
+    private static bool TracksReferenceState(JsonSerializerOptions options) =>
+        PreservesReferences(options) || options.ReferenceHandler == ReferenceHandler.IgnoreCycles;
+
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Resolver-provided collection metadata preserves generic interface identities and arguments. No interface members are inspected or invoked.")]
     private static void CollectDictionaryKeyTypes(JsonTypeInfo info, JsonSerializerOptions options, HashSet<Type> keyTypes, HashSet<Type> visited)
     {
@@ -145,7 +149,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         {
             foreach (JsonPropertyInfo property in info.Properties)
             {
-                if (!property.IsExtensionData && property.CustomConverter is null)
+                if (!property.IsExtensionData && (property.Get is not null || property.Set is not null) && property.CustomConverter is null)
                 {
                     CollectDictionaryKeyTypes(options.GetTypeInfo(property.PropertyType), options, keyTypes, visited);
                 }
@@ -275,7 +279,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             return !valueType.IsEnum && !dictionaryKeyTypes.Contains(typeToConvert) &&
                 GetConverter(typeToConvert) is JsonConverter converter &&
                 !IsScalarConverter(converter) &&
+                !HasCustomPropertyNameConversion(converter) &&
                 converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
+        }
+
+        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The converter is instantiated by the configured resolver or converter factory, and virtual property-name conversion overrides remain available for its runtime type.")]
+        private static bool HasCustomPropertyNameConversion(JsonConverter converter)
+        {
+            Type converterType = converter.GetType();
+            MethodInfo? read = converterType.GetMethod(nameof(JsonConverter<object>.ReadAsPropertyName));
+            MethodInfo? write = converterType.GetMethod(nameof(JsonConverter<object>.WriteAsPropertyName));
+            return (read is not null && read.DeclaringType?.Assembly != typeof(JsonSerializer).Assembly) ||
+                (write is not null && write.DeclaringType?.Assembly != typeof(JsonSerializer).Assembly);
         }
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
@@ -393,6 +408,14 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>
     {
         public override bool HandleNull => true;
+
+        private static JsonTypeInfo UnwrapNullable(JsonTypeInfo info, JsonSerializerOptions options)
+        {
+            Type? underlyingType = Nullable.GetUnderlyingType(info.Type);
+            return underlyingType is not null && info.Converter.GetType().Assembly == typeof(JsonSerializer).Assembly
+                ? options.GetTypeInfo(underlyingType)
+                : info;
+        }
 
         public override bool CanConvert(Type typeToConvert) => typeToConvert == type;
 
@@ -611,7 +634,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         // Most payloads need no rewriting. Scan a reader copy without allocating property names or a DOM.
         private bool NeedsNormalization(ref Utf8JsonReader reader, JsonTypeInfo info)
         {
-            if (PreservesReferences(underlyingOptions) &&
+            info = UnwrapNullable(info, underlyingOptions);
+
+            if (TracksReferenceState(underlyingOptions) &&
                 reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
@@ -745,7 +770,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         private void ReserveContractNames(JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
-            if (PreservesReferences(underlyingOptions) &&
+            info = UnwrapNullable(info, underlyingOptions);
+
+            if (TracksReferenceState(underlyingOptions) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 if (element.TryGetProperty("$values", out JsonElement values))
@@ -824,7 +851,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private bool WriteNormalized(Utf8JsonWriter writer, JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
             bool normalized = false;
-            if (PreservesReferences(underlyingOptions) &&
+            info = UnwrapNullable(info, underlyingOptions);
+
+            if (TracksReferenceState(underlyingOptions) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 writer.WriteStartObject();

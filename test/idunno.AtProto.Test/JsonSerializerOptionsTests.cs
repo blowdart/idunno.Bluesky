@@ -1016,7 +1016,87 @@ public class JsonSerializerOptionsTests
         KeyRecord result = Assert.IsType<KeyRecord>(JsonSerializer.Deserialize<KeyRecordBase>(serialized, options));
         Assert.Equal("value", result.Values[new TestKey("first")]);
     }
+
+    [Fact]
+    public void RuntimeDiscoveredDictionaryKeyConvertersKeepTheirPropertyNameHooks()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        KeyRecord record = new()
+        {
+            RuntimeValue = new Dictionary<TestKey, string> { [new TestKey("runtime")] = "value" }
+        };
+
+        string json = JsonSerializer.Serialize<KeyRecordBase>(record, options);
+
+        Assert.Contains("\"key:runtime\":\"value\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NullableStructContractsAreTraversedForNestedPolymorphicValues()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        const string json = """
+            {"$type":"test.nullableContainer","$via":"outer","payload":{"record":{"$type":"test.nested","$via":"inner","value":"nested"}}}
+            """;
+
+        NullableContainerRecord record = Assert.IsType<NullableContainerRecord>(
+            JsonSerializer.Deserialize<NullableContainerBase>(json, options));
+
+        Assert.Equal("outer", record.ExtensionData!["$via"].GetString());
+        Assert.Equal("nested", Assert.IsType<NestedCustomRecord>(record.Payload!.Value.Record).Value);
+        Assert.Equal("inner", Assert.IsType<NestedCustomRecord>(record.Payload.Value.Record).ExtensionData!["$via"].GetString());
+    }
+
+    [Fact]
+    public void IgnoreCyclesPreservesCycleStateAcrossPolymorphicCollectionBoundary()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        });
+        List<CycleNodeBase> nodes = [];
+        CycleNode node = new() { Value = "node", Parent = nodes };
+        node.ExtensionData = new() { ["$via"] = JsonSerializer.SerializeToElement("extension") };
+        nodes.Add(node);
+
+        string json = JsonSerializer.Serialize(nodes, options);
+        List<CycleNodeBase> result = Assert.IsType<List<CycleNodeBase>>(JsonSerializer.Deserialize<List<CycleNodeBase>>(json, options));
+        CycleNode decoded = Assert.IsType<CycleNode>(Assert.Single(result));
+
+        Assert.Null(decoded.Parent);
+        Assert.Equal("extension", decoded.ExtensionData!["$via"].GetString());
+        Assert.Contains("\"parent\":null", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IgnoredPropertiesAreNotTraversedWhenCollectingDictionaryKeyTypes()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = new RejectingTypeInfoResolver(typeof(IgnoredPayload)));
+
+        CycleNode record = Assert.IsType<CycleNode>(JsonSerializer.Deserialize<CycleNodeBase>(
+            """{"$type":"test.cycleNode","$via":"extension","value":"node"}""",
+            options));
+
+        Assert.Equal("node", record.Value);
+        Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+    }
 }
+
+internal sealed class RejectingTypeInfoResolver(Type rejectedType) : IJsonTypeInfoResolver
+{
+    private readonly DefaultJsonTypeInfoResolver _resolver = new();
+
+    public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options) =>
+        type == rejectedType
+            ? throw new InvalidOperationException($"Metadata for {type} must not be requested.")
+            : _resolver.GetTypeInfo(type, options);
+}
+
+internal sealed class IgnoredPayload;
 
 internal sealed class TestReferenceHandler : ReferenceHandler
 {
@@ -1054,6 +1134,39 @@ internal sealed class KeyRecord : KeyRecordBase
     public Dictionary<TestKey, string> Values { get; set; } = [];
 
     public TestKey Key { get; set; } = new("default");
+
+    public object? RuntimeValue { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(NullableContainerRecord), "test.nullableContainer")]
+internal abstract class NullableContainerBase;
+
+internal sealed class NullableContainerRecord : NullableContainerBase
+{
+    public NullablePayload? Payload { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+internal readonly record struct NullablePayload(NestedCustomRecordBase? Record);
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(CycleNode), "test.cycleNode")]
+internal abstract class CycleNodeBase;
+
+internal sealed class CycleNode : CycleNodeBase
+{
+    public string Value { get; set; } = string.Empty;
+
+    public object? Parent { get; set; }
+
+    [JsonIgnore]
+    public Dictionary<string, IgnoredPayload> IgnoredValues { get; set; } = [];
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 [JsonConverter(typeof(TestKeyConverter))]
@@ -1484,6 +1597,13 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(DeepPayload))]
 [JsonSerializable(typeof(KeyRecordBase))]
 [JsonSerializable(typeof(KeyRecord))]
+[JsonSerializable(typeof(NullableContainerBase))]
+[JsonSerializable(typeof(NullableContainerRecord))]
+[JsonSerializable(typeof(NullablePayload))]
+[JsonSerializable(typeof(CycleNodeBase))]
+[JsonSerializable(typeof(CycleNode))]
+[JsonSerializable(typeof(Dictionary<TestKey, string>))]
+[JsonSerializable(typeof(List<CycleNodeBase>))]
 [JsonSerializable(typeof(DeepNormalizationRecordBase))]
 [JsonSerializable(typeof(DeepNormalizationRecord))]
 [JsonSerializable(typeof(CountedExtensionRecordBase))]

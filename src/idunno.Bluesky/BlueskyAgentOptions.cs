@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -76,7 +77,16 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
         JsonOptions result = HttpJsonOptions is null
             ? new JsonOptions(adaptContracts: false)
             : new JsonOptions(new JsonSerializerOptions(HttpJsonOptions.JsonSerializerOptions));
-        result.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+        IList<IJsonTypeInfoResolver> resolvers = result.JsonSerializerOptions.TypeInfoResolverChain;
+        if (!resolvers.Contains(SourceGenerationContext.Default))
+        {
+            int insertIndex = 0;
+            while (insertIndex < resolvers.Count && resolvers[insertIndex] is not DefaultJsonTypeInfoResolver)
+            {
+                insertIndex++;
+            }
+            resolvers.Insert(insertIndex, SourceGenerationContext.Default);
+        }
         return result;
     }
 

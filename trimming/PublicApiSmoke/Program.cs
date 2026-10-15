@@ -103,10 +103,13 @@ JsonTypeInfo<SmokeKeyRecordBase> keyInfo = (JsonTypeInfo<SmokeKeyRecordBase>)key
 SmokeKeyRecord keyRecord = JsonSerializer.Deserialize(
     """{"$type":"smoke.keys","$via":"extension","values":{"key:first":"value"}}""", keyInfo) as SmokeKeyRecord
     ?? throw new InvalidOperationException("Custom-key record could not be decoded.");
+keyRecord.RuntimeValue = new Dictionary<SmokeKey, string> { [new SmokeKey("runtime")] = "value" };
 string keyJson = JsonSerializer.Serialize<SmokeKeyRecordBase>(keyRecord, keyInfo);
-if (keyRecord.Values[new SmokeKey("first")] != "value" || !keyJson.Contains("\"key:first\":\"value\"", StringComparison.Ordinal))
+if (keyRecord.Values[new SmokeKey("first")] != "value" ||
+    !keyJson.Contains("\"key:first\":\"value\"", StringComparison.Ordinal) ||
+    !keyJson.Contains("\"key:runtime\":\"value\"", StringComparison.Ordinal))
 {
-    throw new InvalidOperationException("Custom dictionary-key hooks were not retained.");
+    throw new InvalidOperationException("Custom dictionary-key hooks were not retained for declared and runtime-discovered dictionaries.");
 }
 lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
 JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
@@ -574,6 +577,8 @@ internal abstract class SmokeKeyRecordBase;
 internal sealed class SmokeKeyRecord : SmokeKeyRecordBase
 {
     public Dictionary<SmokeKey, string> Values { get; set; } = [];
+
+    public object? RuntimeValue { get; set; }
 }
 
 [JsonConverter(typeof(SmokeKeyConverter))]

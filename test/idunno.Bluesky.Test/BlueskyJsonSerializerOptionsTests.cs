@@ -113,6 +113,29 @@ public partial class BlueskyJsonSerializerOptionsTests
     }
 
     [Fact]
+    public void AgentPreservesCallerModifiersOnBlueskySourceGeneratedContracts()
+    {
+        JsonOptions supplied = new();
+        int callbacks = 0;
+        supplied.JsonSerializerOptions.TypeInfoResolver =
+            supplied.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
+            {
+                if (info.Type == typeof(Post) && info.Kind == JsonTypeInfoKind.Object)
+                {
+                    info.OnDeserialized = _ => callbacks++;
+                }
+            });
+
+        using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
+        Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(
+            """{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}""",
+            agent.JsonOptions.JsonSerializerOptions));
+
+        Assert.Equal("hello", post.Text);
+        Assert.Equal(1, callbacks);
+    }
+
+    [Fact]
     public void AgentFinalizesOptionsAssignedAfterOptionsConstruction()
     {
         BlueskyAgentOptions options = new();
