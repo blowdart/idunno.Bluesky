@@ -20,7 +20,7 @@ Unknown properties are retained, with their original names and JSON values, when
 the contract's existing fallback policy. Malformed discriminators and invalid or missing required fields still fail.
 The protocol's `$link` and `$bytes` representations are unchanged.
 
-With `ReferenceHandler.Preserve`, unknown fields are normalized across the complete object or collection root before
+With `ReferenceHandler.Preserve` or a custom reference handler, unknown fields are normalized across the complete object or collection root before
 the built-in serializer reads it in a single operation. `$id`, `$ref` and `$values` retain their reference semantics,
 including shared references between siblings. `ReferenceHandler.IgnoreCycles` does not reserve those names on reads;
 they are treated like other unknown fields on polymorphic contracts.
@@ -37,6 +37,9 @@ The agent's serializer options are read-only; the original caller options remain
 Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
 Normalization respects the configured `MaxDepth` and copies opaque extension values without reformatting their raw JSON.
 Known protocol scalar converters remain on their direct path rather than allocating forwarding buffers.
+Converters for dictionary-key types in the selected contract graph also retain their direct path, preserving both their
+value and key conversion hooks. Decorated SDK resolvers retain their underlying resolution path without incorporating
+the decorator into its own resolver chain.
 
 ### Configuring options for direct serialization
 

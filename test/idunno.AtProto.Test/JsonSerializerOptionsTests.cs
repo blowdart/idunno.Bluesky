@@ -169,7 +169,14 @@ public class JsonSerializerOptionsTests
         }
 
         JsonSerializerOptions recovered = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(options);
-        Assert.Throws<NotSupportedException>(() => AssertLateBoundRecord(options));
+        if (replace)
+        {
+            Assert.Throws<JsonException>(() => AssertLateBoundRecord(options));
+        }
+        else
+        {
+            Assert.Throws<NotSupportedException>(() => AssertLateBoundRecord(options));
+        }
         AssertLateBoundRecord(recovered);
     }
 
@@ -920,6 +927,151 @@ public class JsonSerializerOptionsTests
             return (allocatedRead, allocatedWrite);
         }
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DecoratedAgentOptionsDoNotReenterTheirLiveResolver(bool registerCustomContext)
+    {
+        JsonOptions supplied = new();
+        if (registerCustomContext)
+        {
+            supplied.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
+        }
+        int callbacks = 0;
+        supplied.JsonSerializerOptions.TypeInfoResolver = supplied.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
+        {
+            if (info.Type == typeof(StrongReference))
+            {
+                info.OnDeserialized = _ => callbacks++;
+            }
+        });
+        using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
+
+        Assert.IsType<StrongReference>(JsonSerializer.Deserialize<SubjectType>(
+            SubjectWithTrailingTypeDiscriminator, agent.JsonOptions.JsonSerializerOptions));
+        Assert.Equal(1, callbacks);
+        if (registerCustomContext)
+        {
+            NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(JsonSerializer.Deserialize<NestedCustomRecordBase>(
+                """{"$type":"test.nested","$via":"extension","value":"custom"}""", agent.JsonOptions.JsonSerializerOptions));
+            Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CustomReferenceHandlersPreserveSharedRecordsAndMetadata(bool rootCollection)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = new TestReferenceHandler();
+        });
+        NestedCustomRecord shared = new()
+        {
+            Value = "shared",
+            ExtensionData = new() { ["$via"] = JsonSerializer.SerializeToElement("extension") }
+        };
+        if (rootCollection)
+        {
+            List<NestedCustomRecordBase> records = [shared, shared];
+            string json = JsonSerializer.Serialize(records, options);
+            List<NestedCustomRecordBase> result = Assert.IsType<List<NestedCustomRecordBase>>(
+                JsonSerializer.Deserialize<List<NestedCustomRecordBase>>(json, options));
+            Assert.Same(result[0], result[1]);
+            Assert.Equal("extension", Assert.IsType<NestedCustomRecord>(result[0]).ExtensionData!["$via"].GetString());
+        }
+        else
+        {
+            CollectionRecord record = new() { Records = [shared, shared] };
+            string json = JsonSerializer.Serialize<CollectionRecordBase>(record, options);
+            CollectionRecord result = Assert.IsType<CollectionRecord>(JsonSerializer.Deserialize<CollectionRecordBase>(json, options));
+            Assert.Same(result.Records[0], result.Records[1]);
+            Assert.Equal("extension", Assert.IsType<NestedCustomRecord>(result.Records[0]).ExtensionData!["$via"].GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void CustomDictionaryKeyConvertersKeepTheirPropertyNameHooks(bool normalize, bool preserveReferences)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = preserveReferences ? new TestReferenceHandler() : null;
+        });
+        string metadata = normalize ? "\"$via\":\"extension\"," : "";
+        string json = $$"""{"$type":"test.keys",{{metadata}}"values":{"key:first":"value"},"key":"plain:first"}""";
+        KeyRecord record = Assert.IsType<KeyRecord>(JsonSerializer.Deserialize<KeyRecordBase>(json, options));
+        Assert.Equal("value", record.Values[new TestKey("first")]);
+        Assert.Equal(new TestKey("first"), record.Key);
+        string serialized = JsonSerializer.Serialize<KeyRecordBase>(record, options);
+        Assert.Contains("\"key:first\":\"value\"", serialized, StringComparison.Ordinal);
+        Assert.Contains("\"plain:first\"", serialized, StringComparison.Ordinal);
+        KeyRecord result = Assert.IsType<KeyRecord>(JsonSerializer.Deserialize<KeyRecordBase>(serialized, options));
+        Assert.Equal("value", result.Values[new TestKey("first")]);
+    }
+}
+
+internal sealed class TestReferenceHandler : ReferenceHandler
+{
+    public override ReferenceResolver CreateResolver() => new TestReferenceResolver();
+}
+
+internal sealed class TestReferenceResolver : ReferenceResolver
+{
+    private readonly Dictionary<string, object> _readReferences = new(StringComparer.Ordinal);
+    private readonly Dictionary<object, string> _writeReferences = new(ReferenceEqualityComparer.Instance);
+
+    public override void AddReference(string referenceId, object value) => _readReferences.Add(referenceId, value);
+
+    public override object ResolveReference(string referenceId) => _readReferences[referenceId];
+
+    public override string GetReference(object value, out bool alreadyExists)
+    {
+        alreadyExists = _writeReferences.TryGetValue(value, out string? id);
+        if (alreadyExists)
+        {
+            return id!;
+        }
+        id = (_writeReferences.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _writeReferences.Add(value, id);
+        return id;
+    }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(KeyRecord), "test.keys")]
+internal abstract class KeyRecordBase;
+
+internal sealed class KeyRecord : KeyRecordBase
+{
+    public Dictionary<TestKey, string> Values { get; set; } = [];
+
+    public TestKey Key { get; set; } = new("default");
+}
+
+[JsonConverter(typeof(TestKeyConverter))]
+internal sealed record TestKey(string Value);
+
+internal sealed class TestKeyConverter : JsonConverter<TestKey>
+{
+    public override TestKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.GetString()!["plain:".Length..]);
+
+    public override void Write(Utf8JsonWriter writer, TestKey value, JsonSerializerOptions options) =>
+        writer.WriteStringValue("plain:" + value.Value);
+
+    public override TestKey ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.GetString()!["key:".Length..]);
+
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, TestKey value, JsonSerializerOptions options) =>
+        writer.WritePropertyName("key:" + value.Value);
 }
 
 /// <summary>
@@ -1330,6 +1482,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(DeepPayloadRecordBase))]
 [JsonSerializable(typeof(DeepPayloadRecord))]
 [JsonSerializable(typeof(DeepPayload))]
+[JsonSerializable(typeof(KeyRecordBase))]
+[JsonSerializable(typeof(KeyRecord))]
 [JsonSerializable(typeof(DeepNormalizationRecordBase))]
 [JsonSerializable(typeof(DeepNormalizationRecord))]
 [JsonSerializable(typeof(CountedExtensionRecordBase))]

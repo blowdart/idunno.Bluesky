@@ -72,7 +72,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     }
 
     public override bool CanConvert(Type typeToConvert) =>
-        _supportedTypes.GetOrAdd((typeToConvert, configuredOptions.ReferenceHandler == ReferenceHandler.Preserve), key =>
+        _supportedTypes.GetOrAdd((typeToConvert, PreservesReferences(configuredOptions)), key =>
         {
             JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions);
             return info?.PolymorphismOptions is not null ||
@@ -93,6 +93,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
         underlyingOptions.MakeReadOnly();
 
+        HashSet<Type> dictionaryKeyTypes = [];
+        CollectDictionaryKeyTypes(underlyingOptions.GetTypeInfo(typeToConvert), underlyingOptions, dictionaryKeyTypes, []);
         JsonSerializerOptions nestedOptions = new(underlyingOptions)
         {
             TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>
@@ -109,7 +111,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
             })
         };
-        nestedOptions.Converters.Insert(0, new CustomConverterForwarder(underlyingOptions, options));
+        nestedOptions.Converters.Insert(0, new CustomConverterForwarder(underlyingOptions, options, dictionaryKeyTypes));
         nestedOptions.MakeReadOnly();
         return new Converter(typeToConvert, nestedOptions);
     }
@@ -119,6 +121,66 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             NsidConverter or RecordKeyConverter or TimestampIdentifierConverter or ByteConverter;
 
     private static int GetMaxDepth(JsonSerializerOptions options) => options.MaxDepth == 0 ? 64 : options.MaxDepth;
+
+    private static bool PreservesReferences(JsonSerializerOptions options) =>
+        options.ReferenceHandler is not null && options.ReferenceHandler != ReferenceHandler.IgnoreCycles;
+
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Resolver-provided collection metadata preserves generic interface identities and arguments. No interface members are inspected or invoked.")]
+    private static void CollectDictionaryKeyTypes(JsonTypeInfo info, JsonSerializerOptions options, HashSet<Type> keyTypes, HashSet<Type> visited)
+    {
+        if (!visited.Add(info.Type))
+        {
+            return;
+        }
+
+        if (info.PolymorphismOptions is JsonPolymorphismOptions polymorphism)
+        {
+            foreach (JsonDerivedType derived in polymorphism.DerivedTypes)
+            {
+                CollectDictionaryKeyTypes(options.GetTypeInfo(derived.DerivedType), options, keyTypes, visited);
+            }
+        }
+
+        if (info.Kind == JsonTypeInfoKind.Object)
+        {
+            foreach (JsonPropertyInfo property in info.Properties)
+            {
+                if (!property.IsExtensionData && property.CustomConverter is null)
+                {
+                    CollectDictionaryKeyTypes(options.GetTypeInfo(property.PropertyType), options, keyTypes, visited);
+                }
+            }
+        }
+        else if (info.Kind is JsonTypeInfoKind.Dictionary or JsonTypeInfoKind.Enumerable)
+        {
+            if (info.Type.IsArray)
+            {
+                CollectDictionaryKeyTypes(options.GetTypeInfo(info.Type.GetElementType()!), options, keyTypes, visited);
+                return;
+            }
+
+            foreach (Type collectionType in info.Type.GetInterfaces().Prepend(info.Type))
+            {
+                if (!collectionType.IsGenericType)
+                {
+                    continue;
+                }
+                Type definition = collectionType.GetGenericTypeDefinition();
+                if (info.Kind == JsonTypeInfoKind.Dictionary &&
+                    (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>)))
+                {
+                    keyTypes.Add(collectionType.GenericTypeArguments[0]);
+                    CollectDictionaryKeyTypes(options.GetTypeInfo(collectionType.GenericTypeArguments[1]), options, keyTypes, visited);
+                    break;
+                }
+                if (info.Kind == JsonTypeInfoKind.Enumerable && definition == typeof(IEnumerable<>))
+                {
+                    CollectDictionaryKeyTypes(options.GetTypeInfo(collectionType.GenericTypeArguments[0]), options, keyTypes, visited);
+                    break;
+                }
+            }
+        }
+    }
 
     // A property converter cannot be invoked through JsonConverter's non-generic API. A single
     // synthetic property lets the serializer invoke the original converter, including factories and
@@ -205,12 +267,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     // Opaque converters have no property contracts to traverse. Forward them to the SDK options so
     // any nested records they deserialize themselves still receive tolerant handling.
-    private sealed class CustomConverterForwarder(JsonSerializerOptions probeOptions, JsonSerializerOptions sdkOptions) : JsonConverterFactory
+    private sealed class CustomConverterForwarder(JsonSerializerOptions probeOptions, JsonSerializerOptions sdkOptions, HashSet<Type> dictionaryKeyTypes) : JsonConverterFactory
     {
         public override bool CanConvert(Type typeToConvert)
         {
             Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
-            return !valueType.IsEnum &&
+            return !valueType.IsEnum && !dictionaryKeyTypes.Contains(typeToConvert) &&
                 GetConverter(typeToConvert) is JsonConverter converter &&
                 !IsScalarConverter(converter) &&
                 converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
@@ -282,6 +344,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
 
                 IList<IJsonTypeInfoResolver> chain = sdkOptions.TypeInfoResolverChain;
+                if (!chain.Any(resolver => ReferenceEquals(resolver, this)))
+                {
+                    // A decorator may call back into this resolver. Retain the last direct-chain
+                    // snapshot rather than adding that decorator to our own resolution path.
+                    return _combinedResolver ??= JsonTypeInfoResolver.Combine(initialResolvers);
+                }
                 if (_chainSnapshot is not null && _chainSnapshot.Length == chain.Count)
                 {
                     int index = 0;
@@ -543,7 +611,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         // Most payloads need no rewriting. Scan a reader copy without allocating property names or a DOM.
         private bool NeedsNormalization(ref Utf8JsonReader reader, JsonTypeInfo info)
         {
-            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+            if (PreservesReferences(underlyingOptions) &&
                 reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
@@ -653,7 +721,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     : reader.ValueSpan.StartsWith("$"u8);
                 if (polymorphism is not null && contract is null && dollarName &&
                     !reader.ValueTextEquals(polymorphism.TypeDiscriminatorPropertyName) &&
-                    !(underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+                    !(PreservesReferences(underlyingOptions) &&
                         (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref") || reader.ValueTextEquals("$values"))))
                 {
                     return true;
@@ -677,7 +745,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         private void ReserveContractNames(JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
-            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+            if (PreservesReferences(underlyingOptions) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 if (element.TryGetProperty("$values", out JsonElement values))
@@ -756,7 +824,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private bool WriteNormalized(Utf8JsonWriter writer, JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
             bool normalized = false;
-            if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve &&
+            if (PreservesReferences(underlyingOptions) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 writer.WriteStartObject();
@@ -838,7 +906,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     property.Name.StartsWith('$') &&
                     property.Name != polymorphism.TypeDiscriminatorPropertyName &&
                     contract is null &&
-                    !(underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve && property.Name is "$id" or "$ref" or "$values");
+                    !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
 
                 normalized |= unknownMetadata;
                 if (unknownMetadata && !hasExtensionData)

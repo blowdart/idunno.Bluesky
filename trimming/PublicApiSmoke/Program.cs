@@ -91,13 +91,30 @@ if (referenceEnvelope?.Value.ExtensionData?["$via"].GetString() != "kazahana")
 }
 
 JsonOptions lateJsonOptions = new();
+JsonOptions decoratedOptions = new();
+decoratedOptions.JsonSerializerOptions.TypeInfoResolver =
+    decoratedOptions.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(_ => { });
+using AtProtoAgent decoratedAgent = new(new Uri("https://offline.invalid"), new AtProtoAgentOptions { HttpJsonOptions = decoratedOptions });
+_ = decoratedAgent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(StrongReference));
+
+JsonSerializerOptions keyOptions = AtProtoJsonSerializerOptions.Create(options =>
+    options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
+JsonTypeInfo<SmokeKeyRecordBase> keyInfo = (JsonTypeInfo<SmokeKeyRecordBase>)keyOptions.GetTypeInfo(typeof(SmokeKeyRecordBase));
+SmokeKeyRecord keyRecord = JsonSerializer.Deserialize(
+    """{"$type":"smoke.keys","$via":"extension","values":{"key:first":"value"}}""", keyInfo) as SmokeKeyRecord
+    ?? throw new InvalidOperationException("Custom-key record could not be decoded.");
+string keyJson = JsonSerializer.Serialize<SmokeKeyRecordBase>(keyRecord, keyInfo);
+if (keyRecord.Values[new SmokeKey("first")] != "value" || !keyJson.Contains("\"key:first\":\"value\"", StringComparison.Ordinal))
+{
+    throw new InvalidOperationException("Custom dictionary-key hooks were not retained.");
+}
 lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
 JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
 JsonSerializerOptions sharedReferenceOptions = AtProtoJsonSerializerOptions.Create(options =>
 {
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
-    options.ReferenceHandler = ReferenceHandler.Preserve;
+    options.ReferenceHandler = new SmokeReferenceHandler();
 });
 using JsonDocument sharedMetadata = JsonDocument.Parse("\"extension\"");
 LateBoundNestedRecord sharedRecord = new()
@@ -550,6 +567,60 @@ internal sealed class SmokeRecordList : List<LateBoundNestedRecordBase>;
 
 internal sealed class SmokeRecordDictionary : Dictionary<string, LateBoundNestedRecordBase>;
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(SmokeKeyRecord), "smoke.keys")]
+internal abstract class SmokeKeyRecordBase;
+
+internal sealed class SmokeKeyRecord : SmokeKeyRecordBase
+{
+    public Dictionary<SmokeKey, string> Values { get; set; } = [];
+}
+
+[JsonConverter(typeof(SmokeKeyConverter))]
+internal sealed record SmokeKey(string Value);
+
+internal sealed class SmokeKeyConverter : JsonConverter<SmokeKey>
+{
+    public override SmokeKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.GetString()!);
+
+    public override void Write(Utf8JsonWriter writer, SmokeKey value, JsonSerializerOptions options) =>
+        writer.WriteStringValue(value.Value);
+
+    public override SmokeKey ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        new(reader.GetString()!["key:".Length..]);
+
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, SmokeKey value, JsonSerializerOptions options) =>
+        writer.WritePropertyName("key:" + value.Value);
+}
+
+internal sealed class SmokeReferenceHandler : ReferenceHandler
+{
+    public override ReferenceResolver CreateResolver() => new SmokeReferenceResolver();
+}
+
+internal sealed class SmokeReferenceResolver : ReferenceResolver
+{
+    private readonly Dictionary<string, object> _readReferences = new(StringComparer.Ordinal);
+    private readonly Dictionary<object, string> _writeReferences = new(ReferenceEqualityComparer.Instance);
+
+    public override void AddReference(string referenceId, object value) => _readReferences.Add(referenceId, value);
+
+    public override object ResolveReference(string referenceId) => _readReferences[referenceId];
+
+    public override string GetReference(object value, out bool alreadyExists)
+    {
+        alreadyExists = _writeReferences.TryGetValue(value, out string? id);
+        if (alreadyExists)
+        {
+            return id!;
+        }
+        id = (_writeReferences.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _writeReferences.Add(value, id);
+        return id;
+    }
+}
+
 [JsonSourceGenerationOptions(
     GenerationMode = JsonSourceGenerationMode.Metadata,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -561,6 +632,8 @@ internal sealed class SmokeRecordDictionary : Dictionary<string, LateBoundNested
 [JsonSerializable(typeof(LateBoundNestedRecord))]
 [JsonSerializable(typeof(SmokeCollectionRecordBase))]
 [JsonSerializable(typeof(SmokeCollectionRecord))]
+[JsonSerializable(typeof(SmokeKeyRecordBase))]
+[JsonSerializable(typeof(SmokeKeyRecord))]
 internal sealed partial class LateBoundSourceGenerationContext : JsonSerializerContext;
 
 internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler) : IHttpClientFactory
