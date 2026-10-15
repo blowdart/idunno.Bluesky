@@ -22,4 +22,7 @@ internal sealed record GetListFeedResponse
 
     [JsonInclude]
     public string? Cursor { get; init; }
+
+    [JsonInclude]
+    public string? StartCursor { get; init; }
 }

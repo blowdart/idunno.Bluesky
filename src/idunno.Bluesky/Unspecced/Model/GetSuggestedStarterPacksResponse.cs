@@ -7,6 +7,6 @@ using idunno.Bluesky.Graph;
 
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal sealed record GetSuggestedStarterPacksResponse([property: JsonRequired] ICollection<StarterPackView> StarterPacks)
+internal sealed record GetSuggestedStarterPacksResponse([property: JsonRequired] ICollection<StarterPackView> StarterPacks, string? RecIdStr = null)
 {
 }

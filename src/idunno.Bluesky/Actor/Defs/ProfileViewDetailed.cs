@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -42,7 +43,6 @@ public sealed record ProfileViewDetailed : ProfileView
     /// <param name="followsCount">The number of actors the actor follows.</param>
     /// <param name="postsCount">The number of posts the actor has made.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are <see langword="null"/>.</exception>
-    [JsonConstructor]
     public ProfileViewDetailed(
         Did did,
         Handle handle,
@@ -63,8 +63,79 @@ public sealed record ProfileViewDetailed : ProfileView
         StrongReference? pinnedPost = null,
         int followersCount = 0,
         int followsCount = 0,
-        int postsCount = 0
-        ) : base(did, handle, displayName, description, pronouns, website, avatar, associated, viewer, labels, indexedAt, createdAt, verification, status)
+        int postsCount = 0) : this(
+            did,
+            handle,
+            displayName,
+            description,
+            pronouns,
+            website,
+            avatar,
+            banner,
+            associated,
+            viewer,
+            labels,
+            indexedAt,
+            createdAt,
+            verification,
+            status,
+            joinedViaStarterPack,
+            pinnedPost,
+            followersCount,
+            followsCount,
+            postsCount,
+            links: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProfileViewDetailed"/> class.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> of the actor.</param>
+    /// <param name="handle">The <see cref="Handle"/> of the actor.</param>
+    /// <param name="displayName">The display name for the actor.</param>
+    /// <param name="description">The actor's description from their profile.</param>
+    /// <param name="pronouns">The pronouns for the account, if any.</param>
+    /// <param name="website">The website for the account, if any.</param>
+    /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
+    /// <param name="banner">A <see cref="Uri"/> to the actor's banner image.</param>
+    /// <param name="associated">Properties associated with the actor.</param>
+    /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
+    /// <param name="labels">Labels applied to the actor.</param>
+    /// <param name="indexedAt">The date and time the actor was last indexed.</param>
+    /// <param name="createdAt">The date and time the actor was created.</param>
+    /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
+    /// <param name="status">The <see cref="StatusView"/> of the actor, if any.</param>
+    /// <param name="joinedViaStarterPack">A view over the starter pack the user joined using, if any.</param>
+    /// <param name="pinnedPost">A <see cref="StrongReference"/> to the actor's pinned post, if any.</param>
+    /// <param name="followersCount">The actor's current follower count.</param>
+    /// <param name="followsCount">The number of actors the actor follows.</param>
+    /// <param name="postsCount">The number of posts the actor has made.</param>
+    /// <param name="links">The actor's profile links, if any.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are <see langword="null"/>.</exception>
+    [JsonConstructor]
+    internal ProfileViewDetailed(
+        Did did,
+        Handle handle,
+        string? displayName,
+        string? description,
+        string? pronouns,
+        Uri? website,
+        Uri? avatar,
+        Uri? banner,
+        ProfileAssociated? associated,
+        ViewerState? viewer,
+        IReadOnlyCollection<Label>? labels,
+        DateTimeOffset? indexedAt,
+        DateTimeOffset? createdAt,
+        VerificationState? verification,
+        StatusView? status,
+        StarterPackViewBasic? joinedViaStarterPack,
+        StrongReference? pinnedPost,
+        int followersCount,
+        int followsCount,
+        int postsCount,
+        IReadOnlyCollection<ProfileLinkView>? links) : base(did, handle, displayName, description, pronouns, website, avatar, associated, viewer, labels, indexedAt, createdAt, verification, status)
     {
         Banner = banner;
         FollowersCount = followersCount;
@@ -72,6 +143,7 @@ public sealed record ProfileViewDetailed : ProfileView
         PostsCount = postsCount;
         JoinedViaStarterPack = joinedViaStarterPack;
         PinnedPost = pinnedPost;
+        Links = links;
     }
 
     /// <summary>
@@ -103,6 +175,24 @@ public sealed record ProfileViewDetailed : ProfileView
     /// A view over the starter pack the user joined using, if any.
     /// </summary>
     public StarterPackViewBasic? JoinedViaStarterPack { get; init; }
+
+    /// <summary>
+    /// Gets the actor's profile links, if any.
+    /// </summary>
+    /// <exception cref="JsonException">An entry is <see langword="null"/>.</exception>
+    public IReadOnlyCollection<ProfileLinkView>? Links
+    {
+        get;
+        init
+        {
+            if (value?.Any(link => link is null) == true)
+            {
+                throw new JsonException("Profile links cannot contain null entries.");
+            }
+
+            field = value is null ? null : Array.AsReadOnly(value.ToArray());
+        }
+    }
 
     /// <summary>
     /// Gets a string representation of the <see cref="ProfileView"/>.

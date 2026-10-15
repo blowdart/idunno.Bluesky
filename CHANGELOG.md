@@ -151,9 +151,22 @@
 * Added `Nsid.ValidationRegex`, `RecordKey.ValidationRegex` and `TimestampIdentifier.ValidationRegex`, the syntax regular expressions from the
   AT Protocol specifications, for client side validation. Like `Did.ValidationRegex` and `Handle.ValidationRegex` they check syntax only;
   use `TryParse()` to validate a value fully.
+* `Bytes` now accepts empty byte arrays and empty base64 values, as permitted by the Lexicon `bytes` format.
 
 #### idunno.Bluesky
 
+* Added authenticated contact discovery APIs for phone verification, importing contacts, reading matches and synchronization status, dismissing matches and removing contact data.
+* Added `ProfileAssociatedChat.AllowGroupInvites`, preserving known and future group invitation policy strings.
+* Malformed profile-link collections return standard `InvalidResponse` results from HTTP reads instead of escaping as argument exceptions. Assigning invalid profile-record links directly retains argument validation.
+* Malformed link-record titles and icons now use standard repository error handling: single-record reads return `InvalidResponse`, and paged reads skip and log invalid records. Public constructors and initializers retain argument validation.
+
+* Added experimental Atmosphere Explore retrieval with typed article, publication, gallery, livestream, announcement and application views.
+* Added typed projections for hydrated external article, publication, theme, gallery, gallery-image and livestream data while preserving the original JSON. Content identifiers retain AT URIs as well as HTTPS addresses.
+* Added profile-record link references, OP thread position/count on embedded records, feed start cursors and starter-pack recommendation identifiers without replacing existing API signatures.
+* Suggested starter-pack reads honor the configured public AppView for unauthenticated agents while retaining authenticated PDS routing.
+* Preserve unrecognized list-purpose strings when reading and reserializing list records and views.
+* Added the `Actor.Link` record, profile link views, and `ProfileViewDetailed.Links`, including support for link self-labels.
+* Notification preference models preserve service-defined values for open Lexicon `knownValues` when read and serialized again. Set the raw wire-value properties to retain new values; enumeration setters reject unknown sentinels without an original wire value.
 * Added `BlueskyJsonSerializerOptions.Create(configure)` for read-only options finalized after resolver customization. Bluesky agent finalization also handles JSON options replaced or customized after constructing `BlueskyAgentOptions`, without mutating caller options.
 * Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
 * Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.

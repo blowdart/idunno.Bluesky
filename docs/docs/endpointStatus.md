@@ -16,6 +16,14 @@
 | **Bookmarks** | [app.bsky.bookmark.createBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.createBookmark) | `BlueskyAgent.CreateBookmark()` | ✔ |
 | | [app.bsky.bookmark.deleteBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.deleteBookmark) | `BlueskyAgent.DeleteBookmark()` | ✔ |
 | | [app.bsky.bookmark.getBookmarks](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/GET/xrpc/app.bsky.bookmark.getBookmarks) | `BlueskyAgent.GetBookmarks()` | ✔ |
+| **Contact** | [app.bsky.contact.dismissMatch](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/dismissMatch.json) | `BlueskyAgent.DismissContactMatch()` | ✔ |
+| | [app.bsky.contact.getMatches](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/getMatches.json) | `BlueskyAgent.GetContactMatches()` | ✔ |
+| | [app.bsky.contact.getSyncStatus](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/getSyncStatus.json) | `BlueskyAgent.GetContactSyncStatus()` | ✔ |
+| | [app.bsky.contact.importContacts](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/importContacts.json) | `BlueskyAgent.ImportContacts()` | ✔ |
+| | [app.bsky.contact.removeData](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/removeData.json) | `BlueskyAgent.RemoveContactData()` | ✔ |
+| | [app.bsky.contact.sendNotification](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/sendNotification.json) | N/A - role-authenticated system endpoint | ❌ |
+| | [app.bsky.contact.startPhoneVerification](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/startPhoneVerification.json) | `BlueskyAgent.StartPhoneVerification()` | ✔ |
+| | [app.bsky.contact.verifyPhone](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/verifyPhone.json) | `BlueskyAgent.VerifyPhone()` | ✔ |
 | **Drafts** | [app.bsky.draft.createDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.createDraft) | `BlueskyAgent.CreateDraft()` | ✔ |
 | | [app.bsky.draft.deleteDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.deleteDraft) | `BlueskyAgent.DeleteDraft()` | ✔ |
 | | [app.bsky.draft.getDrafts](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/GET/xrpc/app.bsky.draft.getDrafts) | `BlueskyAgent.GetDrafts()` | ✔ |
@@ -70,13 +78,14 @@
 | | [app.bsky.notifications.putPreferencesV2](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.putPreferencesV2) | `BlueskyAgent.SetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.updateSeen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
 | **Unspecced** | app.bsky.unspecced.getAgeAssuranceState | `BlueskyAgent.GetAgeAssuranceState()` | ✔ |
+| | [app.bsky.unspecced.getAtmosphereExploreTab](https://github.com/bluesky-social/atproto/blob/main/lexicons-overrides/app/bsky/unspecced/getAtmosphereExploreTab.json) | `BlueskyAgent.GetAtmosphereExploreTab()` | ✔ |
 | | app.bsky.unspecced.getConfig | | ❌ |
 | | app.bsky.unspecced.getPopularFeedGenerators | `BlueskyAgent.GetPopularFeedGenerators()` | ✔ |
 | | app.bsky.unspecced.getPostThreadOtherV2 | `BlueskyAgent.GetPostThreadOtherV2()` | ✔ |
 | | app.bsky.unspecced.getPostThreadV2 | `BlueskyAgent.GetPostThreadV2()` | ✔ |
 | | ~~app.bsky.unspecced.getSuggestedFeeds~~<br />[Promoted to a feed API](https://docs.bsky.app/docs/api/app-bsky-feed-get-suggested-feeds) | `BlueskyAgent.GetSuggestedFeeds()` | ❌ |
 | | app.bsky.unspecced.getSuggestedFeedsSkeleton | | ❌ |
-| | app.bsky.unspecced.getSuggestedStarterPacks | `BlueskyAgent.GetSuggestedStarterPacks()` | ✔ |
+| | app.bsky.unspecced.getSuggestedStarterPacks | `BlueskyAgent.GetSuggestedStarterPacks()` / `GetSuggestedStarterPacksWithRecommendation()` | ✔ |
 | | app.bsky.unspecced.getSuggestedStarterPacksSkeleton | | ❌ |
 | | app.bsky.unspecced.getSuggestedUsers | `BlueskyAgent.GetSuggestedUsers()` | ✔ |
 | | app.bsky.unspecced.getSuggestedUsersSkeleton | | ❌ |

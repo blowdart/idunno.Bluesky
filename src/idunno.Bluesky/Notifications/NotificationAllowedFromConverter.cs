@@ -26,13 +26,7 @@ internal sealed class NotificationAllowedFromConverter : JsonConverter<Notificat
             throw new JsonException($"Expected a string when reading a {nameof(NotificationAllowedFrom)}, found {reader.TokenType}.");
         }
 
-        return reader.GetString() switch
-        {
-            "none" => NotificationAllowedFrom.None,
-            "followers" => NotificationAllowedFrom.Followers,
-            "mutuals" => NotificationAllowedFrom.Mutuals,
-            _ => NotificationAllowedFrom.Unknown
-        };
+        return NotificationWireValues.ToNotificationAllowedFrom(reader.GetString()!);
     }
 
     /// <inheritdoc/>

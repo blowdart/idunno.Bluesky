@@ -28,37 +28,30 @@ internal sealed class ListPurposeConverter : JsonConverter<ListPurpose>
             throw new JsonException($"Expected a string when reading a {nameof(ListPurpose)}, found {reader.TokenType}.");
         }
 
-        return reader.GetString() switch
-        {
-            "app.bsky.graph.defs#modlist" => ListPurpose.ModList,
-            "app.bsky.graph.defs#curatelist" => ListPurpose.CurateList,
-            "app.bsky.graph.defs#referencelist" => ListPurpose.ReferenceList,
-            _ => ListPurpose.Unknown
-        };
+        return FromWireValue(reader.GetString()!);
     }
+
+    internal static ListPurpose FromWireValue(string value) => value switch
+    {
+        "app.bsky.graph.defs#modlist" => ListPurpose.ModList,
+        "app.bsky.graph.defs#curatelist" => ListPurpose.CurateList,
+        "app.bsky.graph.defs#referencelist" => ListPurpose.ReferenceList,
+        _ => ListPurpose.Unknown
+    };
+
+    internal static string ToWireValue(ListPurpose value) => value switch
+    {
+        ListPurpose.ModList => "app.bsky.graph.defs#modlist",
+        ListPurpose.CurateList => "app.bsky.graph.defs#curatelist",
+        ListPurpose.ReferenceList => "app.bsky.graph.defs#referencelist",
+        _ => throw new JsonException("An unknown list purpose requires its original wire value.")
+    };
 
     /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, ListPurpose value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);
 
-        switch (value)
-        {
-            case ListPurpose.ModList:
-                writer.WriteStringValue("app.bsky.graph.defs#modlist");
-                break;
-
-            case ListPurpose.CurateList:
-                writer.WriteStringValue("app.bsky.graph.defs#curatelist");
-                break;
-
-            case ListPurpose.ReferenceList:
-                writer.WriteStringValue("app.bsky.graph.defs#referencelist");
-                break;
-
-            default:
-                throw new JsonException(
-                    $"{nameof(ListPurpose)}.{nameof(ListPurpose.Unknown)} cannot be serialized. It only exists to carry a list purpose this library does not recognize.");
-        }
+        writer.WriteStringValue(ToWireValue(value));
     }
 }

@@ -19,4 +19,8 @@ public class Timeline : PagedViewReadOnlyCollection<FeedViewPost>
     internal Timeline(ICollection<FeedViewPost> collection, string? cursor = null) : this([.. collection], cursor)
     {
     }
+
+    internal Timeline(ICollection<FeedViewPost> collection, string? cursor, string? startCursor) : base(collection, cursor, startCursor)
+    {
+    }
 }

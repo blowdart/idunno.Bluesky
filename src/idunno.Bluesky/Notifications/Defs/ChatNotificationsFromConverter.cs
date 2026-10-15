@@ -26,12 +26,7 @@ internal sealed class ChatNotificationsFromConverter : JsonConverter<ChatNotific
             throw new JsonException($"Expected a string when reading a {nameof(ChatNotificationsFrom)}, found {reader.TokenType}.");
         }
 
-        return reader.GetString() switch
-        {
-            "all" => ChatNotificationsFrom.All,
-            "accepted" => ChatNotificationsFrom.Accepted,
-            _ => ChatNotificationsFrom.Unknown
-        };
+        return NotificationWireValues.ToChatNotificationsFrom(reader.GetString()!);
     }
 
     /// <inheritdoc/>

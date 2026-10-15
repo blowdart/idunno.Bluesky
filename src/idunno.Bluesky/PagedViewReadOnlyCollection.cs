@@ -29,8 +29,21 @@ public class PagedViewReadOnlyCollection<T>(IList<T> list, string? cursor = null
     {
     }
 
+    internal PagedViewReadOnlyCollection(ICollection<T> collection, string? cursor, string? startCursor) : this(collection, cursor)
+    {
+        StartCursor = startCursor;
+    }
+
     /// <summary>
     /// An optional cursor returned by the underlying API pagination.
     /// </summary>
     public string? Cursor { get; } = cursor;
+
+    /// <summary>
+    /// Gets an optional cursor identifying the newest item in the page, for fetching newer content.
+    /// </summary>
+    /// <remarks>
+    /// <para>When supplied by the API, this cursor can be passed as <c>since</c> on a later request to fetch newer content.</para>
+    /// </remarks>
+    public string? StartCursor { get; }
 }
