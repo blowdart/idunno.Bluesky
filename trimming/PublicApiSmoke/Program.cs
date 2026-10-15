@@ -183,6 +183,27 @@ using AtProtoAgent customAtProtoAgent = new(new Uri("https://offline.invalid"), 
 BlueskyAgentOptions configuredBlueskyOptions = new();
 configuredBlueskyOptions.HttpJsonOptions!.JsonSerializerOptions.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
 using BlueskyAgent customBlueskyAgent = new(configuredBlueskyOptions);
+BlueskyAgentOptions modifiedBlueskyOptions = new();
+int postCallbackCount = 0;
+JsonSerializerOptions modifiedBlueskyJsonOptions = modifiedBlueskyOptions.HttpJsonOptions!.JsonSerializerOptions;
+modifiedBlueskyJsonOptions.TypeInfoResolver = modifiedBlueskyJsonOptions.TypeInfoResolver!.WithAddedModifier(info =>
+{
+    if (info.Type == typeof(Post) && info.Kind == JsonTypeInfoKind.Object)
+    {
+        info.OnDeserialized = _ => postCallbackCount++;
+    }
+});
+using BlueskyAgent modifiedBlueskyAgent = new(modifiedBlueskyOptions);
+JsonTypeInfo<Post> modifiedPostTypeInfo =
+    (JsonTypeInfo<Post>)modifiedBlueskyAgent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(Post));
+_ = JsonSerializer.Deserialize(
+    """{"$type":"app.bsky.feed.post","text":"modified","createdAt":"2026-10-13T10:24:57.970Z"}""",
+    modifiedPostTypeInfo)
+    ?? throw new InvalidOperationException("The modified Bluesky source-generated Post was not deserialized.");
+if (postCallbackCount != 1)
+{
+    throw new InvalidOperationException("The caller's modifier was not applied to the Bluesky source-generated Post.");
+}
 var finalizedBuilder = BlueskyAgent.CreateBuilder();
 finalizedBuilder.ConfigureHttpJsonOptions(options => options.JsonSerializerOptions.WriteIndented = true);
 finalizedBuilder.JsonOptions!.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default);

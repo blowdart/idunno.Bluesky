@@ -110,6 +110,12 @@ using var agent = builder.Build();
 // Your code to use the agent
 ```
 
+For `BlueskyAgent` under Native AOT, include the Bluesky source-generation resolver before attaching a
+`WithAddedModifier` wrapper so the modifier can receive Bluesky contracts as well as AT Protocol contracts.
+The default `BlueskyAgentOptions` configures the Bluesky resolver before caller customization. A modifier attached
+to an AtProto-only `new JsonOptions()` resolver cannot modify Bluesky contracts that are added later during agent
+finalization.
+
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.
 
 If you are using the generic static server methods which take an `AtProtoRecord` or `AtProtoRecordType` you must use the method overloads which take a `jsonSerializerOptions` parameter.

@@ -1032,6 +1032,48 @@ public class JsonSerializerOptionsTests
         Assert.Contains("\"key:runtime\":\"value\"", json, StringComparison.Ordinal);
     }
 
+#if NET10_0_OR_GREATER
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void NormalizationHonorsDisallowedDuplicateProperties(bool extensionData)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.AllowDuplicateProperties = false;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
+        string json = extensionData
+            ? """{"$type":"test.nested","$via":"first","$via":"second","value":"nested"}"""
+            : """{"$type":"test.keys","$via":"first","$via":"second","values":{}}""";
+
+        if (extensionData)
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NestedCustomRecordBase>(json, options));
+        }
+        else
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<KeyRecordBase>(json, options));
+        }
+    }
+#endif
+
+    [Fact]
+    public void TolerantContractProbeHonorsCallerRegisteredConverters()
+    {
+        JsonSerializerOptions options = new()
+        {
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+        };
+        options.Converters.Add(new ConflictingContractConverter());
+        Json.TolerantPolymorphicConverter.Configure(options);
+
+        ConflictingContract result = Assert.IsType<ConflictingContract>(
+            JsonSerializer.Deserialize<ConflictingContract>("""{"custom":"wire-format"}""", options));
+
+        Assert.Equal("wire-format", result.Value);
+    }
+
     [Fact]
     public void NullableStructContractsAreTraversedForNestedPolymorphicValues()
     {
@@ -1097,6 +1139,33 @@ internal sealed class RejectingTypeInfoResolver(Type rejectedType) : IJsonTypeIn
 }
 
 internal sealed class IgnoredPayload;
+
+internal sealed class ConflictingContract
+{
+    [JsonPropertyName("same")]
+    public string First { get; set; } = string.Empty;
+
+    [JsonPropertyName("same")]
+    public string Second { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
+}
+
+internal sealed class ConflictingContractConverter : JsonConverter<ConflictingContract>
+{
+    public override ConflictingContract Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        return new ConflictingContract { Value = document.RootElement.GetProperty("custom").GetString()! };
+    }
+
+    public override void Write(Utf8JsonWriter writer, ConflictingContract value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("custom", value.Value);
+        writer.WriteEndObject();
+    }
+}
 
 internal sealed class TestReferenceHandler : ReferenceHandler
 {

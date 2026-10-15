@@ -33,8 +33,22 @@ namespace idunno.AtProto.Json;
 /// </remarks>
 internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions) : JsonConverterFactory
 {
-    private readonly JsonSerializerOptions _probeOptions = new() { TypeInfoResolver = resolver };
+    private readonly JsonSerializerOptions _probeOptions = CreateProbeOptions(resolver, configuredOptions);
     private readonly ConcurrentDictionary<(Type Type, bool PreserveReferences), bool> _supportedTypes = new();
+
+    private static JsonSerializerOptions CreateProbeOptions(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions)
+    {
+        JsonSerializerOptions probeOptions = new(configuredOptions) { TypeInfoResolver = resolver };
+        for (int i = probeOptions.Converters.Count - 1; i >= 0; i--)
+        {
+            if (probeOptions.Converters[i] is TolerantPolymorphicConverter)
+            {
+                probeOptions.Converters.RemoveAt(i);
+            }
+        }
+        probeOptions.MakeReadOnly();
+        return probeOptions;
+    }
 
     internal static JsonSerializerOptions FinalizeOptions(JsonSerializerOptions options)
     {
@@ -431,6 +445,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             using JsonDocument document = JsonDocument.ParseValue(ref reader);
             JsonElement element = document.RootElement;
+#if NET10_0_OR_GREATER
+            if (!underlyingOptions.AllowDuplicateProperties)
+            {
+                ValidateNoDuplicateProperties(element);
+            }
+#endif
             NormalizationState state = new(element);
             ReserveContractNames(element, underlyingOptions.GetTypeInfo(type), state);
 
@@ -486,6 +506,31 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             return JsonSerializer.Deserialize(buffer.WrittenSpan, readOptions.GetTypeInfo(type));
         }
+
+#if NET10_0_OR_GREATER
+        private static void ValidateNoDuplicateProperties(JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                HashSet<string> propertyNames = new(StringComparer.Ordinal);
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    if (!propertyNames.Add(property.Name))
+                    {
+                        throw new JsonException($"Duplicate JSON property '{property.Name}'.");
+                    }
+                    ValidateNoDuplicateProperties(property.Value);
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement item in element.EnumerateArray())
+                {
+                    ValidateNoDuplicateProperties(item);
+                }
+            }
+        }
+#endif
 
         private sealed class NormalizationState
         {
