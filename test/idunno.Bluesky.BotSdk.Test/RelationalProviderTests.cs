@@ -635,7 +635,7 @@ public sealed partial class RelationalProviderTests
             : "UPDATE rate_state SET next_request = 0");
 
         public Task DeferRateRequestAsync() => SqlAsync(_provider == "Postgres"
-            ? "UPDATE rate_state SET next_request = (SELECT min(requested_at) FROM rate_accounting) + interval '2 days'"
+            ? "UPDATE rate_state SET next_request = (SELECT min(requested_at) FROM rate_accounting) + interval '48 hours'"
             : "UPDATE rate_state SET next_request = (SELECT min(requested_at) FROM rate_accounting) + 172800000000");
 
         public async Task SqlAsync(string sql)

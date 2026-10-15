@@ -29,7 +29,7 @@ public class TokenRefreshTests
 {
     private sealed class RefreshClock : TimeProvider
     {
-        private readonly FakeTimeProvider _clock = new(DateTimeOffset.UtcNow);
+        private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
         private readonly Channel<bool> _waits = Channel.CreateUnbounded<bool>();
 
         public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
@@ -126,15 +126,15 @@ public class TokenRefreshTests
         }
     }
 
-    private static ClaimsIdentity IdentityWithExpiredCredentials(Did did)
+    private static ClaimsIdentity IdentityWithExpiredCredentials(Did did, TimeProvider timeProvider)
     {
         // The handler decides a refresh is needed from the expiry inside the access token, so the token has to be well
         // formed and already expired.
         List<Claim> claims =
         [
             new Claim(AtProtoClaims.Did, did, ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.AccessToken, TestData.Jwt(did, TimeSpan.FromMinutes(-30)), ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.RefreshToken, TestData.Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.AccessToken, TestData.Jwt(did, TimeSpan.FromMinutes(-30), timeProvider), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.RefreshToken, TestData.Jwt(did, timeProvider: timeProvider), ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.DPoPProof, "proof-key", ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.DPoPNonce, "nonce", ClaimValueTypes.String, "https://bsky.social"),
         ];
@@ -158,9 +158,9 @@ public class TokenRefreshTests
 
         // Sign in with unexpired credentials so the cookie is written, then swap the stored identity for one whose
         // credentials have expired. That is what the store looks like once a token ages out mid-session.
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         return (host, cookie, store);
     }
@@ -268,15 +268,15 @@ public class TokenRefreshTests
         });
 
         Did did = TestData.NewDid();
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         // Let the request reach the point where it decides to wait, then complete the refresh underneath it.
         Task<HttpResponseMessage> authenticate = host.GetWithCookie("/test/authenticate", cookie);
 
         await store.Clock.WaitForNextWait();
-        await store.Add(TestData.AuthenticatedClaimsIdentity(did), TestContext.Current.CancellationToken);
+        await store.Add(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock), TestContext.Current.CancellationToken);
         store.ReportRefreshInProgress = false;
         store.Clock.Advance();
 
@@ -301,9 +301,9 @@ public class TokenRefreshTests
         });
 
         Did did = TestData.NewDid();
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         var misses = new MetricCollector<long>(
             host.MeterFactory,
