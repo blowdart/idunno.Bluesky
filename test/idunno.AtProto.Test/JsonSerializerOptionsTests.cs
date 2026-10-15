@@ -1221,6 +1221,34 @@ public class JsonSerializerOptionsTests
             System.Text.Encoding.UTF8.GetString(stream.ToArray()));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AsyncEnumerableContractLookupDoesNotAffectLaterPolymorphicDeserialization(bool lookupAsyncEnumerableFirst)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        const string json = """{"$type":"test.nested","$via":"extension","value":"payload"}""";
+
+        if (!lookupAsyncEnumerableFirst)
+        {
+            AssertPolymorphicRecordWasDecoded(json, options);
+        }
+
+        _ = options.GetTypeInfo(typeof(IAsyncEnumerable<NestedCustomRecordBase>));
+
+        NestedCustomRecord record = AssertPolymorphicRecordWasDecoded(json, options);
+        Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+    }
+
+    private static NestedCustomRecord AssertPolymorphicRecordWasDecoded(string json, JsonSerializerOptions options)
+    {
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+            JsonSerializer.Deserialize<NestedCustomRecordBase>(json, options));
+        Assert.Equal("payload", record.Value);
+        return record;
+    }
+
     private static async IAsyncEnumerable<AsyncSerializationItem> GetAsyncSerializationItems()
     {
         yield return new AsyncSerializationItem { Value = "first" };
@@ -2265,6 +2293,7 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(CustomStructPayload))]
 [JsonSerializable(typeof(NestedCustomRecordBase))]
 [JsonSerializable(typeof(NestedCustomRecord))]
+[JsonSerializable(typeof(IAsyncEnumerable<NestedCustomRecordBase>))]
 [JsonSerializable(typeof(CollectionRecordBase))]
 [JsonSerializable(typeof(CollectionRecord))]
 [JsonSerializable(typeof(PolymorphicRecordListBase))]

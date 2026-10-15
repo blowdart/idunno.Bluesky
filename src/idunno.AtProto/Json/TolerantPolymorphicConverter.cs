@@ -260,7 +260,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         if (IsAsyncEnumerableType(type))
         {
             Type? elementType = GetAsyncEnumerableElementType(type);
-            if (elementType is not null)
+            if (elementType is not null && TracksReferenceState(options))
             {
                 RegisterAsyncEnumerableValueTypes(options.GetTypeInfo(elementType), options, []);
             }
