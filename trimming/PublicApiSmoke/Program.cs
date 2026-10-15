@@ -72,6 +72,16 @@ foreach (Post? post in new[] { extensionPost, extensionRecord as Post, extension
     }
 }
 
+const string ignoredPostPropertyJson = """
+    {"$type":"app.bsky.feed.post","$via":"kazahana","length":42,"text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}
+    """;
+Post ignoredPostProperty = JsonSerializer.Deserialize(ignoredPostPropertyJson, postTypeInfo)
+    ?? throw new InvalidOperationException("The post with an ignored property was not deserialized.");
+if (ignoredPostProperty.ExtensionData?.ContainsKey("length") is true)
+{
+    throw new InvalidOperationException("An ignored post property was captured as extension data.");
+}
+
 JsonSerializerOptions referenceOptions = BlueskyJsonSerializerOptions.Create(options =>
     options.ReferenceHandler = ReferenceHandler.Preserve);
 JsonTypeInfo<AtProtoRepositoryRecord<Post>> referenceEnvelopeInfo =

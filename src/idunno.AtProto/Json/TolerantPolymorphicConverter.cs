@@ -797,18 +797,47 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private bool NeedsNormalization(ref Utf8JsonReader reader, JsonTypeInfo info)
         {
             info = UnwrapNullable(info, underlyingOptions);
+            JsonPolymorphismOptions? polymorphicContract = info.PolymorphismOptions;
+            if (reader.TokenType == JsonTokenType.StartObject && polymorphicContract is not null)
+            {
+                // Resolve the concrete contract before testing its kind; interface contracts can
+                // select a collection whose `$values` envelope needs recursive normalization.
+                Utf8JsonReader discriminatorReader = reader;
+                while (discriminatorReader.Read() && discriminatorReader.TokenType != JsonTokenType.EndObject)
+                {
+                    bool isDiscriminator = discriminatorReader.ValueTextEquals(polymorphicContract.TypeDiscriminatorPropertyName);
+                    discriminatorReader.Read();
+                    if (isDiscriminator)
+                    {
+                        foreach (JsonDerivedType derived in polymorphicContract.DerivedTypes)
+                        {
+                            if ((derived.TypeDiscriminator is string text &&
+                                    discriminatorReader.TokenType == JsonTokenType.String &&
+                                    discriminatorReader.ValueTextEquals(text)) ||
+                                (derived.TypeDiscriminator is int number &&
+                                    discriminatorReader.TokenType == JsonTokenType.Number &&
+                                    discriminatorReader.TryGetInt32(out int value) && value == number))
+                            {
+                                info = underlyingOptions.GetTypeInfo(derived.DerivedType);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    SkipValue(ref discriminatorReader);
+                }
+            }
 
-            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
+            if ((TracksReferenceState(underlyingOptions) || polymorphicContract is not null) &&
                 reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 // Polymorphic and reference-preserving collections use an object envelope around
                 // the array. `$values` is always part of that envelope; `$id` and `$ref` depend on
                 // reference preservation being enabled.
-                JsonPolymorphismOptions? collectionPolymorphism = info.PolymorphismOptions;
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                 {
-                    bool isDiscriminator = collectionPolymorphism is not null &&
-                        reader.ValueTextEquals(collectionPolymorphism.TypeDiscriminatorPropertyName);
+                    bool isDiscriminator = polymorphicContract is not null &&
+                        reader.ValueTextEquals(polymorphicContract.TypeDiscriminatorPropertyName);
                     bool isValues = reader.ValueTextEquals("$values");
                     bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                         ? reader.GetString()!.StartsWith('$')
@@ -849,48 +878,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Dictionary &&
                 GetElementType(info) is Type valueType)
             {
-                JsonPolymorphismOptions? dictionaryPolymorphism = info.PolymorphismOptions;
-                if (dictionaryPolymorphism is not null)
-                {
-                    Utf8JsonReader discriminatorReader = reader;
-                    while (discriminatorReader.Read() && discriminatorReader.TokenType != JsonTokenType.EndObject)
-                    {
-                        bool isDiscriminator = discriminatorReader.ValueTextEquals(dictionaryPolymorphism.TypeDiscriminatorPropertyName);
-                        discriminatorReader.Read();
-                        if (isDiscriminator)
-                        {
-                            foreach (JsonDerivedType derived in dictionaryPolymorphism.DerivedTypes)
-                            {
-                                if ((derived.TypeDiscriminator is string text &&
-                                        discriminatorReader.TokenType == JsonTokenType.String &&
-                                        discriminatorReader.ValueTextEquals(text)) ||
-                                    (derived.TypeDiscriminator is int number &&
-                                        discriminatorReader.TokenType == JsonTokenType.Number &&
-                                        discriminatorReader.TryGetInt32(out int value) && value == number))
-                                {
-                                    info = underlyingOptions.GetTypeInfo(derived.DerivedType);
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                        SkipValue(ref discriminatorReader);
-                    }
-                }
-
-                valueType = GetElementType(info) ?? valueType;
                 JsonTypeInfo valueInfo = underlyingOptions.GetTypeInfo(valueType);
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                 {
-                    bool isDiscriminator = dictionaryPolymorphism is not null &&
-                        reader.ValueTextEquals(dictionaryPolymorphism.TypeDiscriminatorPropertyName);
+                    bool isDiscriminator = polymorphicContract is not null &&
+                        reader.ValueTextEquals(polymorphicContract.TypeDiscriminatorPropertyName);
                     bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
                         (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref"));
                     bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
                         ? reader.GetString()!.StartsWith('$')
                         : reader.ValueSpan.StartsWith("$"u8);
                     if (dollarName && !isDiscriminator && !knownReferenceMetadata &&
-                        (dictionaryPolymorphism is not null || PreservesReferences(underlyingOptions)))
+                        (polymorphicContract is not null || PreservesReferences(underlyingOptions)))
                     {
                         return true;
                     }
@@ -910,7 +909,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 return false;
             }
 
-            JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
+            JsonPolymorphismOptions? polymorphism = polymorphicContract;
             if (polymorphism is not null)
             {
                 Utf8JsonReader discriminatorReader = reader;
@@ -940,8 +939,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 JsonPropertyInfo? contract = null;
                 foreach (JsonPropertyInfo candidate in info.Properties)
                 {
-                    if (!candidate.IsExtensionData && (candidate.Get is not null || candidate.Set is not null) &&
-                        reader.ValueTextEquals(candidate.Name))
+                    if (!candidate.IsExtensionData && reader.ValueTextEquals(candidate.Name))
                     {
                         contract = candidate;
                         break;
@@ -952,8 +950,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     string name = reader.GetString()!;
                     foreach (JsonPropertyInfo candidate in info.Properties)
                     {
-                        if (!candidate.IsExtensionData && (candidate.Get is not null || candidate.Set is not null) &&
-                            string.Equals(name, candidate.Name, StringComparison.OrdinalIgnoreCase))
+                        if (!candidate.IsExtensionData && string.Equals(name, candidate.Name, StringComparison.OrdinalIgnoreCase))
                         {
                             contract = candidate;
                             break;
@@ -977,7 +974,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
 
                 reader.Read();
-                if (contract is not null && contract.CustomConverter is null)
+                if (contract is not null && (contract.Get is not null || contract.Set is not null) && contract.CustomConverter is null)
                 {
                     if (NeedsNormalization(ref reader, underlyingOptions.GetTypeInfo(contract.PropertyType)))
                     {
@@ -995,14 +992,16 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private void ReserveContractNames(JsonElement element, JsonTypeInfo info, NormalizationState state)
         {
             info = UnwrapNullable(info, underlyingOptions);
-
-            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
-                element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
+            if (element.ValueKind == JsonValueKind.Object &&
+                TryGetDerivedTypeInfo(element, info) is JsonTypeInfo derivedInfo)
             {
-                if (element.TryGetProperty("$values", out JsonElement values))
-                {
-                    ReserveContractNames(values, info, state);
-                }
+                info = derivedInfo;
+            }
+
+            if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable &&
+                element.TryGetProperty("$values", out JsonElement values))
+            {
+                ReserveContractNames(values, info, state);
                 return;
             }
 
@@ -1019,9 +1018,33 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary &&
                 GetElementType(info) is Type valueType)
             {
+                JsonPolymorphismOptions? dictionaryPolymorphism = info.PolymorphismOptions;
+                if (dictionaryPolymorphism is not null &&
+                    element.TryGetProperty(dictionaryPolymorphism.TypeDiscriminatorPropertyName, out JsonElement dictionaryDiscriminator))
+                {
+                    foreach (JsonDerivedType derived in dictionaryPolymorphism.DerivedTypes)
+                    {
+                        if ((derived.TypeDiscriminator is string text &&
+                                dictionaryDiscriminator.ValueKind == JsonValueKind.String &&
+                                dictionaryDiscriminator.GetString() == text) ||
+                            (derived.TypeDiscriminator is int number &&
+                                dictionaryDiscriminator.ValueKind == JsonValueKind.Number &&
+                                dictionaryDiscriminator.TryGetInt32(out int value) && value == number))
+                        {
+                            info = underlyingOptions.GetTypeInfo(derived.DerivedType);
+                            valueType = GetElementType(info) ?? valueType;
+                            break;
+                        }
+                    }
+                }
+
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
-                    ReserveContractNames(property.Value, underlyingOptions.GetTypeInfo(valueType), state);
+                    if (property.Name != dictionaryPolymorphism?.TypeDiscriminatorPropertyName &&
+                        !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref"))
+                    {
+                        ReserveContractNames(property.Value, underlyingOptions.GetTypeInfo(valueType), state);
+                    }
                 }
                 return;
             }
@@ -1046,6 +1069,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                         break;
                     }
                 }
+
             }
 
             StringComparison comparison = underlyingOptions.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
@@ -1053,13 +1077,62 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             {
                 JsonPropertyInfo? contract = info.Properties.FirstOrDefault(candidate =>
                     !candidate.IsExtensionData &&
-                    (candidate.Get is not null || candidate.Set is not null) &&
                     string.Equals(candidate.Name, property.Name, comparison));
-                if (contract is not null && contract.CustomConverter is null)
+                if (contract is not null && (contract.Get is not null || contract.Set is not null) && contract.CustomConverter is null)
                 {
                     ReserveContractNames(property.Value, underlyingOptions.GetTypeInfo(contract.PropertyType), state);
                 }
             }
+        }
+
+        private JsonTypeInfo? TryGetDerivedTypeInfo(JsonElement element, JsonTypeInfo info)
+        {
+            JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
+            if (polymorphism is null ||
+                !element.TryGetProperty(polymorphism.TypeDiscriminatorPropertyName, out JsonElement discriminator))
+            {
+                return null;
+            }
+
+            foreach (JsonDerivedType derived in polymorphism.DerivedTypes)
+            {
+                if ((derived.TypeDiscriminator is string text &&
+                        discriminator.ValueKind == JsonValueKind.String &&
+                        discriminator.GetString() == text) ||
+                    (derived.TypeDiscriminator is int number &&
+                        discriminator.ValueKind == JsonValueKind.Number &&
+                        discriminator.TryGetInt32(out int value) && value == number))
+                {
+                    return underlyingOptions.GetTypeInfo(derived.DerivedType);
+                }
+            }
+
+            return null;
+        }
+
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2075",
+            Justification = "Ignored member names are queried only when normalizing a payload; source-generated public contracts preserve their declared members, including JsonIgnore attributes.")]
+        private HashSet<string> GetIgnoredPropertyNames(JsonTypeInfo info)
+        {
+            HashSet<string> names = new(StringComparer.Ordinal);
+            // Ignored members are omitted from the JSON contract, but their names must not be
+            // mistaken for extension data when normalization rewrites the containing object.
+            foreach (PropertyInfo property in info.Type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (property.GetCustomAttribute<JsonIgnoreAttribute>() is not { Condition: JsonIgnoreCondition.Always })
+                {
+                    continue;
+                }
+
+                string name = property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ??
+                    underlyingOptions.PropertyNamingPolicy?.ConvertName(property.Name) ??
+                    property.Name;
+                names.Add(name);
+            }
+
+            return names;
         }
 
         private static void SkipValue(ref Utf8JsonReader reader)
@@ -1076,17 +1149,22 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         {
             bool normalized = false;
             info = UnwrapNullable(info, underlyingOptions);
+            JsonPolymorphismOptions? polymorphicContract = info.PolymorphismOptions;
+            if (element.ValueKind == JsonValueKind.Object &&
+                TryGetDerivedTypeInfo(element, info) is JsonTypeInfo derivedInfo)
+            {
+                info = derivedInfo;
+            }
 
-            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
+            if ((TracksReferenceState(underlyingOptions) || polymorphicContract is not null) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 // Normalize only unsupported envelope fields; keep the discriminator and required array payload.
-                JsonPolymorphismOptions? collectionPolymorphism = info.PolymorphismOptions;
                 writer.WriteStartObject();
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
-                    bool isDiscriminator = collectionPolymorphism is not null &&
-                        property.Name == collectionPolymorphism.TypeDiscriminatorPropertyName;
+                    bool isDiscriminator = polymorphicContract is not null &&
+                        property.Name == polymorphicContract.TypeDiscriminatorPropertyName;
                     bool isValues = property.NameEquals("$values");
                     bool dollarName = property.Name.StartsWith('$');
                     bool knownReferenceMetadata = isValues || PreservesReferences(underlyingOptions) &&
@@ -1113,7 +1191,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary && GetElementType(info) is Type valueType)
             {
-                JsonPolymorphismOptions? dictionaryPolymorphism = info.PolymorphismOptions;
+                JsonPolymorphismOptions? dictionaryPolymorphism = polymorphicContract;
                 if (dictionaryPolymorphism is not null &&
                     element.TryGetProperty(dictionaryPolymorphism.TypeDiscriminatorPropertyName, out JsonElement dictionaryDiscriminator))
                 {
@@ -1184,7 +1262,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 return false;
             }
 
-            JsonPolymorphismOptions? polymorphism = info.PolymorphismOptions;
+            JsonPolymorphismOptions? polymorphism = polymorphicContract;
             // Select the concrete contract before deciding which dollar-prefixed names are unknown.
             if (polymorphism is not null && element.TryGetProperty(polymorphism.TypeDiscriminatorPropertyName, out JsonElement discriminator))
             {
@@ -1200,19 +1278,23 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             }
 
             StringComparison comparison = underlyingOptions.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            HashSet<string> ignoredNames = GetIgnoredPropertyNames(info);
             bool hasExtensionData = info.Properties.Any(property => property.IsExtensionData);
             writer.WriteStartObject();
             foreach (JsonProperty property in element.EnumerateObject())
             {
                 JsonPropertyInfo? contract = info.Properties.FirstOrDefault(candidate =>
                     !candidate.IsExtensionData &&
-                    (candidate.Get is not null || candidate.Set is not null) &&
                     string.Equals(candidate.Name, property.Name, comparison));
+                bool ignoredProperty = contract is null &&
+                    ignoredNames.Contains(property.Name, comparison == StringComparison.OrdinalIgnoreCase
+                        ? StringComparer.OrdinalIgnoreCase
+                        : StringComparer.Ordinal);
 
                 bool unknownMetadata = (polymorphism is not null || PreservesReferences(underlyingOptions)) &&
                     property.Name.StartsWith('$') &&
                     property.Name != polymorphism?.TypeDiscriminatorPropertyName &&
-                    contract is null &&
+                    contract is null && !ignoredProperty &&
                     !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
 
                 normalized |= unknownMetadata;
@@ -1223,10 +1305,11 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
                 bool extensionDataProperty = hasExtensionData &&
                     contract is null &&
+                    !ignoredProperty &&
                     property.Name != polymorphism?.TypeDiscriminatorPropertyName &&
                     !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
                 writer.WritePropertyName(extensionDataProperty ? state.Rename(property.Name) : property.Name);
-                if (contract is not null && contract.CustomConverter is null)
+                if (contract is not null && (contract.Get is not null || contract.Set is not null) && contract.CustomConverter is null)
                 {
                     normalized |= WriteNormalized(writer, property.Value, underlyingOptions.GetTypeInfo(contract.PropertyType), state);
                 }

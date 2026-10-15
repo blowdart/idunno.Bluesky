@@ -670,6 +670,39 @@ public class JsonSerializerOptionsTests
     }
 
     [Theory]
+    [InlineData("""{"$type":"test.interfaceList","$values":[1,2]}""")]
+    [InlineData("""{"$type":"test.interfaceList","$via":"outer","$values":[1,2]}""")]
+    public void PolymorphicInterfaceCollectionPreservesItsValuesEnvelope(string json)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        PolymorphicListContract values = Assert.IsAssignableFrom<PolymorphicListContract>(
+            JsonSerializer.Deserialize<PolymorphicListContract>(json, options));
+
+        Assert.Equal([1, 2], Assert.IsAssignableFrom<IList<int>>(values));
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"test.ignoredFields","length":42}""")]
+    [InlineData("""{"$type":"test.ignoredFields","$via":"extension","length":42}""")]
+    public void IgnoredPropertiesAreNotCapturedAsExtensionData(string json)
+    {
+        Assert.Equal(JsonIgnoreCondition.Always,
+            typeof(IgnoredPropertyRecord).GetProperty(nameof(IgnoredPropertyRecord.Length))!
+                .GetCustomAttribute<JsonIgnoreAttribute>()!.Condition);
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        IgnoredPropertyRecord record = Assert.IsType<IgnoredPropertyRecord>(
+            JsonSerializer.Deserialize<IgnoredPropertyRecordBase>(json, options));
+
+        Assert.False(record.ExtensionData?.ContainsKey("length") ?? false);
+        Assert.Equal(json.Contains("$via", StringComparison.Ordinal), record.ExtensionData?.ContainsKey("$via") ?? false);
+        Assert.DoesNotContain("\"length\"", JsonSerializer.Serialize<IgnoredPropertyRecordBase>(record, options), StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("""{"$type":"test.polymorphicDictionary","$via":"extension","entry":"value"}""")]
     [InlineData("""{"$via":"extension","entry":"value","$type":"test.polymorphicDictionary"}""")]
     public void PolymorphicDictionaryNormalizesUnknownMetadata(string json)
@@ -1514,6 +1547,27 @@ internal abstract class PolymorphicRecordDictionaryBase : Dictionary<string, str
 
 internal sealed class PolymorphicRecordDictionary : PolymorphicRecordDictionaryBase;
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(PolymorphicIntegerList), "test.interfaceList")]
+internal interface PolymorphicListContract
+{
+}
+
+internal sealed class PolymorphicIntegerList : List<int>, PolymorphicListContract;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(IgnoredPropertyRecord), "test.ignoredFields")]
+internal abstract class IgnoredPropertyRecordBase;
+
+internal sealed class IgnoredPropertyRecord : IgnoredPropertyRecordBase
+{
+    [JsonIgnore]
+    public int Length { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
 internal sealed class ReferenceEnvelopeRecord
 {
     public NestedCustomRecordBase? Record { get; set; }
@@ -1881,6 +1935,10 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(PolymorphicRecordList))]
 [JsonSerializable(typeof(PolymorphicRecordDictionaryBase))]
 [JsonSerializable(typeof(PolymorphicRecordDictionary))]
+[JsonSerializable(typeof(PolymorphicListContract))]
+[JsonSerializable(typeof(PolymorphicIntegerList))]
+[JsonSerializable(typeof(IgnoredPropertyRecordBase))]
+[JsonSerializable(typeof(IgnoredPropertyRecord))]
 [JsonSerializable(typeof(ReferenceEnvelopeRecord))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
