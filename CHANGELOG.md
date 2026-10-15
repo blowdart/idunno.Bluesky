@@ -359,6 +359,7 @@
 * `DescribeServer()` now accepts an empty required `availableUserDomains` array.
 * Tolerant JSON normalization now handles unknown metadata on polymorphic dictionary envelopes and preserves caller-defined composite resolvers when finalizing options.
 * Tolerant JSON normalization now preserves polymorphic collection `$values` envelopes selected through interface contracts and does not capture ignored properties as extension data.
+* Tolerant JSON normalization now consumes malformed dictionary envelope metadata safely and preserves preinitialized extension-data entries when inserting temporary aliases.
 
 * Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
 * Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.

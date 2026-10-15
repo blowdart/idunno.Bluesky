@@ -717,6 +717,38 @@ public class JsonSerializerOptionsTests
         Assert.Single(dictionary);
     }
 
+    [Theory]
+    [InlineData("""{"$type":[],"entry":"value"}""", false)]
+    [InlineData("""{"$id":[],"$type":"test.polymorphicDictionary","entry":"value"}""", true)]
+    public void MalformedPolymorphicDictionaryMetadataThrowsJsonException(string json, bool preserveReferences)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            if (preserveReferences)
+            {
+                mutable.ReferenceHandler = ReferenceHandler.Preserve;
+            }
+        });
+
+        Assert.Throws<JsonException>(() =>
+            JsonSerializer.Deserialize<PolymorphicRecordDictionaryBase>(json, options));
+    }
+
+    [Fact]
+    public void NormalizationPreservesPreexistingExtensionDataEntries()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        const string json = """{"$type":"test.prepopulatedExtension","$via":"payload"}""";
+
+        PrepopulatedExtensionRecord record = Assert.IsType<PrepopulatedExtensionRecord>(
+            JsonSerializer.Deserialize<PrepopulatedExtensionRecordBase>(json, options));
+
+        Assert.Equal("payload", record.ExtensionData["$via"].GetString());
+        Assert.Equal("constructor", record.ExtensionData["__idunno_metadata_0"].GetString());
+    }
+
     [Fact]
     public void ReferencePreservingObjectEnvelopeNormalizesUnknownMetadata()
     {
@@ -1568,6 +1600,19 @@ internal sealed class IgnoredPropertyRecord : IgnoredPropertyRecordBase
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(PrepopulatedExtensionRecord), "test.prepopulatedExtension")]
+internal abstract class PrepopulatedExtensionRecordBase;
+
+internal sealed class PrepopulatedExtensionRecord : PrepopulatedExtensionRecordBase
+{
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> ExtensionData { get; set; } = new(StringComparer.Ordinal)
+    {
+        ["__idunno_metadata_0"] = JsonSerializer.SerializeToElement("constructor"),
+    };
+}
+
 internal sealed class ReferenceEnvelopeRecord
 {
     public NestedCustomRecordBase? Record { get; set; }
@@ -1939,6 +1984,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(PolymorphicIntegerList))]
 [JsonSerializable(typeof(IgnoredPropertyRecordBase))]
 [JsonSerializable(typeof(IgnoredPropertyRecord))]
+[JsonSerializable(typeof(PrepopulatedExtensionRecordBase))]
+[JsonSerializable(typeof(PrepopulatedExtensionRecord))]
 [JsonSerializable(typeof(ReferenceEnvelopeRecord))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
