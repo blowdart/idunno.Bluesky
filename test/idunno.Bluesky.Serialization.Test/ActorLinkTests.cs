@@ -195,8 +195,25 @@ public class ActorLinkTests
             {"did":"did:plc:ewvi7nxzyoun6zhxrhs64oiz","handle":"example.com","links":[{{item}}]}
             """;
 
-        Assert.Throws<ArgumentNullException>(() =>
+        Assert.Throws<JsonException>(() =>
             JsonSerializer.Deserialize<ProfileViewDetailed>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(11)]
+    public void MalformedProfileRecordLinksThrowJsonExceptions(int count)
+    {
+        string item = count == 1
+            ? "null"
+            : """
+              {"uri":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.actor.link/test",
+               "cid":"bafyreihszwqbe7nxh2mv4o2wk365yanh3p3zimbunfrjdtq7gcmmzohx6i"}
+              """;
+        string json = $$"""{"$type":"app.bsky.actor.profile","links":[{{string.Join(",", Enumerable.Repeat(item, count))}}]}""";
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Profile>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<BlueskyRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions));
     }
 
     [Fact]

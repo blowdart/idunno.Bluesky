@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -241,6 +242,7 @@ public record Profile : BlueskyRecord
     /// </summary>
     /// <exception cref="ArgumentNullException">An entry is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">More than ten links are specified.</exception>
+    [JsonIgnore]
     public IReadOnlyCollection<StrongReference>? Links
     {
         get;
@@ -256,6 +258,24 @@ public record Profile : BlueskyRecord
             }
 
             field = value is null ? null : Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("links")]
+    internal IReadOnlyCollection<StrongReference>? SerializedLinks
+    {
+        get => Links;
+        set
+        {
+            try
+            {
+                Links = value;
+            }
+            catch (ArgumentException exception)
+            {
+                throw new JsonException("Profile links must contain at most ten non-null references.", exception);
+            }
         }
     }
 

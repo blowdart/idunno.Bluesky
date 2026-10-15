@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -23,6 +24,7 @@ public sealed record ProfileLinkView
     /// <param name="icon">The optional address of the destination site's icon.</param>
     /// <param name="labels">Labels applied to the link.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="cid"/> or <paramref name="url"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">An entry in <paramref name="labels"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     public ProfileLinkView(AtUri uri, Cid cid, Uri url, string? title, Uri? icon, IReadOnlyCollection<Label>? labels)
     {
@@ -69,18 +71,15 @@ public sealed record ProfileLinkView
     /// <summary>
     /// Gets labels applied to the link.
     /// </summary>
-    /// <exception cref="ArgumentNullException">An entry is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">An entry is <see langword="null"/>.</exception>
     public IReadOnlyCollection<Label>? Labels
     {
         get;
         init
         {
-            if (value is not null)
+            if (value?.Any(label => label is null) == true)
             {
-                foreach (Label label in value)
-                {
-                    ArgumentNullException.ThrowIfNull(label);
-                }
+                throw new JsonException("Profile link labels cannot contain null entries.");
             }
 
             field = value is null ? null : Array.AsReadOnly(value.ToArray());

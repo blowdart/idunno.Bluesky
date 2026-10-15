@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -178,18 +179,15 @@ public sealed record ProfileViewDetailed : ProfileView
     /// <summary>
     /// Gets the actor's profile links, if any.
     /// </summary>
-    /// <exception cref="ArgumentNullException">An entry is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">An entry is <see langword="null"/>.</exception>
     public IReadOnlyCollection<ProfileLinkView>? Links
     {
         get;
         init
         {
-            if (value is not null)
+            if (value?.Any(link => link is null) == true)
             {
-                foreach (ProfileLinkView link in value)
-                {
-                    ArgumentNullException.ThrowIfNull(link);
-                }
+                throw new JsonException("Profile links cannot contain null entries.");
             }
 
             field = value is null ? null : Array.AsReadOnly(value.ToArray());

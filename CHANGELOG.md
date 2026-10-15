@@ -157,6 +157,7 @@
 
 * Added authenticated contact discovery APIs for phone verification, importing contacts, reading matches and synchronization status, dismissing matches and removing contact data.
 * Added `ProfileAssociatedChat.AllowGroupInvites`, preserving known and future group invitation policy strings.
+* Malformed profile-link collections return standard `InvalidResponse` results from HTTP reads instead of escaping as argument exceptions. Assigning invalid profile-record links directly retains argument validation.
 
 * Added experimental Atmosphere Explore retrieval with typed article, publication, gallery, livestream, announcement and application views.
 * Added typed projections for hydrated external article, publication, theme, gallery, gallery-image and livestream data while preserving the original JSON. Content identifiers retain AT URIs as well as HTTPS addresses.
