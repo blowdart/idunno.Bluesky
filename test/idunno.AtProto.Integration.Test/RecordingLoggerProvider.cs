@@ -15,6 +15,8 @@ namespace idunno.AtProto.Integration.Test;
 internal sealed class RecordingLoggerProvider : ILoggerProvider
 {
     private readonly ConcurrentQueue<RecordedLogEntry> _entries = new();
+    private readonly object _waitLock = new();
+    private TaskCompletionSource _entryAdded = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// Gets the entries recorded so far.
@@ -23,14 +25,46 @@ internal sealed class RecordingLoggerProvider : ILoggerProvider
 
     public ILogger CreateLogger(string categoryName)
     {
-        return new RecordingLogger(_entries);
+        return new RecordingLogger(this);
+    }
+
+    internal async Task<RecordedLogEntry> WaitForEntryAsync(Func<RecordedLogEntry, bool> predicate, CancellationToken cancellationToken)
+    {
+        using CancellationTokenSource watchdog = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(30));
+        while (true)
+        {
+            Task added;
+            lock (_waitLock)
+            {
+                RecordedLogEntry? entry = _entries.FirstOrDefault(predicate);
+                if (entry is not null)
+                {
+                    return entry;
+                }
+
+                added = _entryAdded.Task;
+            }
+
+            await added.WaitAsync(watchdog.Token);
+        }
+    }
+
+    private void Record(RecordedLogEntry entry)
+    {
+        lock (_waitLock)
+        {
+            _entries.Enqueue(entry);
+            _entryAdded.TrySetResult();
+            _entryAdded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
     }
 
     public void Dispose()
     {
     }
 
-    private sealed class RecordingLogger(ConcurrentQueue<RecordedLogEntry> entries) : ILogger
+    private sealed class RecordingLogger(RecordingLoggerProvider provider) : ILogger
     {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -45,7 +79,7 @@ internal sealed class RecordingLoggerProvider : ILoggerProvider
         {
             ArgumentNullException.ThrowIfNull(formatter);
 
-            entries.Enqueue(new RecordedLogEntry(logLevel, eventId.Id, formatter(state, exception), exception));
+            provider.Record(new RecordedLogEntry(logLevel, eventId.Id, formatter(state, exception), exception));
         }
     }
 }

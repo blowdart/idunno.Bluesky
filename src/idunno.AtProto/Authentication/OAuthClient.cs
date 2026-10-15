@@ -77,6 +77,8 @@ public class OAuthClient
 
     // Internal state parameters
     private Guid _correlationId = Guid.NewGuid();
+    // Each install gets a fresh identity, even when the same saved state is restored again.
+    private object? _loginGeneration;
     private AuthorizeState? _authorizeState;
     private Uri? _expectedAuthority;
     private Uri? _expectedService;
@@ -174,6 +176,8 @@ public class OAuthClient
 
             lock (_stateLock)
             {
+                ClearOidcClient();
+                _loginGeneration = new object();
                 _authorizeState = value;
                 _expectedAuthority = expectedAuthority;
                 _expectedService = expectedService;
@@ -296,6 +300,7 @@ public class OAuthClient
 
             lock (_stateLock)
             {
+                _loginGeneration = new object();
                 _oidcClient = oidcClient;
                 _oidcClientProofKey = proofKey;
                 _oidcClientAuthority = authority;
@@ -346,6 +351,7 @@ public class OAuthClient
         Uri expectedService;
         Uri expectedAuthority;
         Guid correlationId;
+        object? loginGeneration;
         string? savedScope;
         string? signingKeyId;
 
@@ -366,12 +372,14 @@ public class OAuthClient
             expectedService = _expectedService;
             expectedAuthority = _expectedAuthority;
             correlationId = _correlationId;
+            loginGeneration = _loginGeneration;
             clientId ??= _loginClientId;
             savedScope = _loginRequestedScope;
             signingKeyId = _loginSigningKeyId;
         }
 
-        // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
+        // This login's state is discarded however this call ends, without discarding a login installed since the snapshot.
+        // The authorize state carries a single use PKCE code verifier
         // which the authorization server has spent by the time a response is processed, and the proof key is a private key,
         // so neither has any further use to this instance and both remain readable through State until they are cleared.
         try
@@ -397,7 +405,8 @@ public class OAuthClient
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
-            OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes, signingKeyId: signingKeyId);
+            OidcClient oidcClient = GetOrCreateOidcClient(
+                proofKey, expectedAuthority, clientId, scopes: requestedScopes, signingKeyId: signingKeyId, loginGeneration: loginGeneration);
 
             LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -456,23 +465,31 @@ public class OAuthClient
         }
         finally
         {
-            ClearLoginState();
+            ClearLoginState(loginGeneration);
         }
     }
 
     /// <summary>
-    /// Discards the state of the login in progress.
+    /// Discards the state of the processed login if it is still installed.
     /// </summary>
+    /// <param name="loginGeneration">The identity of the installed login being processed.</param>
     /// <remarks>
     /// <para>
     ///   The state is discarded as a set. Clearing only the proof key would leave the authorize state, and its single use
     ///   PKCE code verifier, available to a subsequent call which has no proof key to bind a token to.
     /// </para>
     /// </remarks>
-    private void ClearLoginState()
+    private void ClearLoginState(object? loginGeneration)
     {
         lock (_stateLock)
         {
+            if (!ReferenceEquals(_loginGeneration, loginGeneration))
+            {
+                return;
+            }
+
+            _loginGeneration = null;
+            _correlationId = Guid.Empty;
             _proofKey = null;
             _authorizeState = null;
             _expectedAuthority = null;
@@ -482,11 +499,16 @@ public class OAuthClient
             _loginRequestedScope = null;
             _loginSigningKeyId = null;
 
-            _oidcClient = null;
-            _oidcClientProofKey = null;
-            _oidcClientSigningKeyId = null;
-            _oidcClientAuthority = null;
+            ClearOidcClient();
         }
+    }
+
+    private void ClearOidcClient()
+    {
+        _oidcClient = null;
+        _oidcClientProofKey = null;
+        _oidcClientSigningKeyId = null;
+        _oidcClientAuthority = null;
     }
 
     internal void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
@@ -973,6 +995,7 @@ public class OAuthClient
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
     /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
+    /// <param name="loginGeneration">The identity of the installed login being processed, if any.</param>
     /// <returns>An <see cref="OidcClient"/> configured for the specified <paramref name="proofKey"/> and <paramref name="authority"/>.</returns>
     /// <remarks>
     /// <para>
@@ -987,7 +1010,8 @@ public class OAuthClient
         string? clientId = null,
         Uri? returnUri = null,
         IEnumerable<string>? scopes = null,
-        string? signingKeyId = null)
+        string? signingKeyId = null,
+        object? loginGeneration = null)
     {
         lock (_stateLock)
         {
@@ -1001,10 +1025,15 @@ public class OAuthClient
 
             OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes, signingKeyId));
 
-            _oidcClient = oidcClient;
-            _oidcClientProofKey = proofKey;
-            _oidcClientAuthority = authority;
-            _oidcClientSigningKeyId = signingKeyId;
+            // An older exchange can reach this point after another login has replaced it. It can use its own client,
+            // but must not leave that client's private key cached on the instance.
+            if (ReferenceEquals(_loginGeneration, loginGeneration))
+            {
+                _oidcClient = oidcClient;
+                _oidcClientProofKey = proofKey;
+                _oidcClientAuthority = authority;
+                _oidcClientSigningKeyId = signingKeyId;
+            }
 
             return oidcClient;
         }

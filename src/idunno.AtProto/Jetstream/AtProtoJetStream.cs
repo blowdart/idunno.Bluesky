@@ -2152,6 +2152,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 receiveLoops = Task.WhenAll(_receiveLoopTasks);
             }
 
+            ReceiveLoopsDraining?.Invoke(receiveLoops);
             await receiveLoops.ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -2293,7 +2294,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                     try
                     {
-                        await _sendSemaphore.WaitAsync(sendCancellationTokenSource.Token).ConfigureAwait(false);
+                        Task sendWait = _sendSemaphore.WaitAsync(sendCancellationTokenSource.Token);
+                        CloseReplyWaiting?.Invoke(sendWait);
+                        await sendWait.ConfigureAwait(false);
                         bool replied = false;
 
                         try
@@ -2707,6 +2710,12 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         }
     }
 
+    internal Action? ParserDrainSlotAcquired { get; set; }
+
+    internal Action<Task>? ReceiveLoopsDraining { get; set; }
+
+    internal Action<Task>? CloseReplyWaiting { get; set; }
+
     /// <summary>
     /// Waits until every message parser which is running has finished.
     /// </summary>
@@ -2725,9 +2734,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
         try
         {
-            for (; taken < slots; taken++)
+            while (taken < slots)
             {
                 await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                taken++;
+                ParserDrainSlotAcquired?.Invoke();
             }
         }
         finally

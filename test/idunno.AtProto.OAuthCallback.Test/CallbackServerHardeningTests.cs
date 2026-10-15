@@ -266,7 +266,8 @@ public class CallbackServerHardeningTests
     [Fact]
     public async Task RepeatedWaitsDoNotRearmTheTimeoutWhenTheCallersTokenIsAlreadyCancelled()
     {
-        await using CallbackServer server = await CallbackServerFactory.CreateAsync();
+        CallbackServerTests.CallbackClock clock = new();
+        await using CallbackServer server = await CallbackServerFactory.CreateAsync(configure: server => server.TimeProvider = clock);
 
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
@@ -275,13 +276,20 @@ public class CallbackServerHardeningTests
         // so a registration based "already armed" check does not trip and the second call replaces the
         // timeout source created by the first without disposing it.
         Task<string> first = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: cts.Token);
-        CancellationTokenSource? armed = GetTimeoutSource(server);
+        Assert.True(first.IsCanceled);
+        Assert.True(clock.TimerDisposed);
+        Assert.Null(GetTimeoutSource(server));
+        Assert.Equal(1, clock.TimerCreationCount);
 
-        Task<string> second = server.WaitForCallbackAsync(timeoutInSeconds: 300, cancellationToken: cts.Token);
+        Task<string> second = server.WaitForCallbackAsync(timeoutInSeconds: 1, cancellationToken: CancellationToken.None);
 
-        Assert.NotNull(armed);
         Assert.Same(first, second);
-        Assert.Same(armed, GetTimeoutSource(server));
+        Assert.True(second.IsCanceled);
+        Assert.Null(GetTimeoutSource(server));
+        Assert.Equal(1, clock.TimerCreationCount);
+        OperationCanceledException exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            async () => await second.WaitAsync(s_completionBudget, TestContext.Current.CancellationToken));
+        Assert.Equal(cts.Token, exception.CancellationToken);
     }
 
     [Fact]

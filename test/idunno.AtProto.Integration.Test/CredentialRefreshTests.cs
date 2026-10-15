@@ -290,15 +290,21 @@ public class CredentialRefreshTests
 
             await refreshTestServer.RefreshEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
 
-            Task logout = Task.Run(() => agent.Logout(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+            TaskCompletionSource<Task> logoutWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            agent.LogoutCredentialRefreshWaiting = wait => logoutWaiting.TrySetResult(wait);
+            Task logout = agent.Logout(TestContext.Current.CancellationToken);
 
-            Task firstToComplete = await Task.WhenAny(logout, Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken));
-
-            // A logout which revoked the tokens whilst a refresh was mid exchange could have the refreshed credentials
-            // published over the cleared ones, leaving the agent authenticated against a session the logout ended.
-            Assert.NotSame(logout, firstToComplete);
-
-            refreshTestServer.ReleaseRefresh.TrySetResult();
+            try
+            {
+                Task semaphoreWait = await logoutWaiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+                Assert.False(semaphoreWait.IsCompleted);
+                Assert.False(logout.IsCompleted);
+            }
+            finally
+            {
+                refreshTestServer.ReleaseRefresh.TrySetResult();
+                await Task.WhenAll(refresh, logout).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            }
 
             Assert.True(await refresh);
 
@@ -1234,21 +1240,10 @@ public class CredentialRefreshTests
         using (AtProtoAgent agent = CreateAgent(refreshTestServer))
         {
             Task<AtProtoHttpResult<bool>>? concurrentGoodLogin = null;
+            bool concurrentLoginWasBlocked = false;
 
-            // Set before the concurrent login is even started. SessionEventQueueing fires for its Authenticated raise
-            // strictly after that login has committed its credentials, but before it needs to enter the notification
-            // turn queue, so waiting on it here cannot deadlock against the turn this failed login's clear already
-            // holds: it either fires quickly, because the concurrent login was free to commit, or it never fires,
-            // because the fix is holding the semaphore the concurrent login needs to commit, and the wait below times
-            // out instead.
-            TaskCompletionSource concurrentLoginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            agent.SessionEventQueueing = () =>
-            {
-                agent.SessionEventQueueing = null;
-                concurrentLoginCommitted.TrySetResult();
-
-                return Task.CompletedTask;
-            };
+            TaskCompletionSource<Task> concurrentLoginWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            agent.LoginCredentialRefreshWaiting = wait => concurrentLoginWaiting.TrySetResult(wait);
 
             // Fired once the failed login's clear has taken its notification turn and still holds the refresh
             // semaphore. Starting the concurrent login here, rather than after the failed login returns, is what puts
@@ -1265,10 +1260,8 @@ public class CredentialRefreshTests
                     service: new Uri($"https://{DomainName}"),
                     cancellationToken: TestContext.Current.CancellationToken);
 
-                // Bounded rather than unconditional: without the fix this resolves almost immediately, and with the
-                // fix it never resolves at all, since the concurrent login cannot commit until the semaphore this
-                // clear holds is released.
-                await Task.WhenAny(concurrentLoginCommitted.Task, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false);
+                Task semaphoreWait = await concurrentLoginWaiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+                concurrentLoginWasBlocked = !semaphoreWait.IsCompleted && !concurrentGoodLogin.IsCompleted;
             };
 
             AtProtoHttpResult<bool> failedLogin = await agent.Login(
@@ -1284,6 +1277,7 @@ public class CredentialRefreshTests
             AtProtoHttpResult<bool> goodLogin = await concurrentGoodLogin.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
             Assert.True(goodLogin.Succeeded);
+            Assert.True(concurrentLoginWasBlocked);
 
             // Without holding the refresh semaphore across taking the turn and clearing, the failed login could read
             // and discard the session the concurrent login had, by then, already committed, leaving the agent

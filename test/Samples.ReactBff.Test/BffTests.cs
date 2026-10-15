@@ -218,15 +218,39 @@ public class BffTests
     public async Task ConcurrentRequestsCannotExchangeTheSameRefreshToken()
     {
         await using var factory = new BffFactory();
-        var client = new FakeClient(factory.Clock) { TokenExpiresAt = factory.Clock.GetUtcNow() };
+        var client = new FakeClient(factory.Clock) { TokenExpiresAt = factory.Clock.GetUtcNow(), GateRefresh = true };
         using var browser = new Browser(factory, client);
-        HttpResponseMessage[] responses = await Task.WhenAll(
-            browser.Send(HttpMethod.Get, "/api/timeline"),
-            browser.Send(HttpMethod.Get, "/api/timeline"));
+        Task<HttpResponseMessage> first = browser.Send(HttpMethod.Get, "/api/timeline");
+        Task<HttpResponseMessage>? second = null;
+        HttpResponseMessage[] responses = [];
+        var session = factory.Services.GetRequiredService<BffSessions>().Find(browser.SessionId)!;
+        TaskCompletionSource<Task> contenderWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        try
+        {
+            await client.RefreshEntered.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            session.GateWaiting = wait => contenderWaiting.TrySetResult(wait);
+            second = browser.Send(HttpMethod.Get, "/api/timeline");
+            Task gateWait = await contenderWaiting.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.False(gateWait.IsCompleted);
+            Assert.False(first.IsCompleted);
+            Assert.False(second.IsCompleted);
+        }
+        finally
+        {
+            session.GateWaiting = null;
+            client.ReleaseRefresh.TrySetResult();
+            Task<HttpResponseMessage>[] requests = second is null ? [first] : [first, second];
+            responses = await Task.WhenAll(requests)
+                .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            foreach (HttpResponseMessage response in responses)
+            {
+                response.Dispose();
+            }
+        }
+
         foreach (HttpResponseMessage response in responses)
         {
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            response.Dispose();
         }
 
         Assert.Equal(1, client.RefreshCount);
@@ -457,6 +481,9 @@ internal sealed class FakeClient(FakeTimeProvider clock) : ISessionClient
     internal bool FailLogout { get; set; }
     internal bool FailDelete { get; set; }
     internal int RefreshCount { get; private set; }
+    internal bool GateRefresh { get; init; }
+    internal TaskCompletionSource RefreshEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal TaskCompletionSource ReleaseRefresh { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
     internal int CreateCount { get; private set; }
     internal int LogoutCount { get; private set; }
     internal StrongReference? DeletedReference { get; private set; }
@@ -467,7 +494,11 @@ internal sealed class FakeClient(FakeTimeProvider clock) : ISessionClient
     public async Task<bool> RefreshAsync(CancellationToken cancellationToken)
     {
         RefreshCount++;
-        await Task.Delay(20, cancellationToken);
+        if (GateRefresh)
+        {
+            RefreshEntered.TrySetResult();
+            await ReleaseRefresh.Task.WaitAsync(cancellationToken);
+        }
         TokenExpiresAt = clock.GetUtcNow().AddMinutes(10);
         return RefreshSucceeds;
     }

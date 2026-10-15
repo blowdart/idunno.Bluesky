@@ -372,6 +372,16 @@ public partial class AtProtoAgent
     internal Func<Task>? LogoutHoldingCredentialRefreshSemaphore { get; set; }
 
     /// <summary>
+    /// Gets or sets the observer of a logout's pending credential semaphore acquisition.
+    /// </summary>
+    internal Action<Task>? LogoutCredentialRefreshWaiting { get; set; }
+
+    /// <summary>
+    /// Gets or sets the observer of a login's pending credential semaphore acquisition.
+    /// </summary>
+    internal Action<Task>? LoginCredentialRefreshWaiting { get; set; }
+
+    /// <summary>
     /// Called by a refresh once it has decided to proceed but before it waits for
     /// <see cref="_credentialRefreshSemaphore"/>, so that a test can commit a change whilst the refresh is queued for
     /// it and check what the refresh does when it is finally granted.
@@ -2856,7 +2866,9 @@ public partial class AtProtoAgent
 
         try
         {
-            await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            Task credentialWait = _credentialRefreshSemaphore.WaitAsync(cancellationToken);
+            LogoutCredentialRefreshWaiting?.Invoke(credentialWait);
+            await credentialWait.ConfigureAwait(false);
 
             try
             {
@@ -3359,7 +3371,9 @@ public partial class AtProtoAgent
 
         UnauthenticatedEventArgs? replacedSession;
 
-        await _credentialRefreshSemaphore.WaitAsync().ConfigureAwait(false);
+        Task credentialWait = _credentialRefreshSemaphore.WaitAsync();
+        LoginCredentialRefreshWaiting?.Invoke(credentialWait);
+        await credentialWait.ConfigureAwait(false);
 
         // Taken before the credentials are published, and without waiting, so the refresh semaphore is not held across
         // a wait for a turn. A login which published first and queued afterwards could be overtaken by a refresh which

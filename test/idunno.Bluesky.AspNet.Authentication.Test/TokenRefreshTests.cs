@@ -3,12 +3,14 @@
 
 using System.Collections.Concurrent;
 using System.Security.Claims;
+using System.Threading.Channels;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -25,6 +27,40 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 /// </remarks>
 public class TokenRefreshTests
 {
+    private sealed class RefreshClock : TimeProvider
+    {
+        private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        private readonly Channel<bool> _waits = Channel.CreateUnbounded<bool>();
+
+        public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
+
+        public override long GetTimestamp() => _clock.GetTimestamp();
+
+        public override long TimestampFrequency => _clock.TimestampFrequency;
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            ITimer timer = _clock.CreateTimer(callback, state, dueTime, period);
+            if (dueTime == TimeSpan.FromSeconds(1))
+            {
+                _waits.Writer.TryWrite(true);
+            }
+
+            return timer;
+        }
+
+        internal async Task AdvanceNextWait()
+        {
+            await WaitForNextWait();
+            Advance();
+        }
+
+        internal Task WaitForNextWait() =>
+            _waits.Reader.ReadAsync(TestContext.Current.CancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        internal void Advance() => _clock.Advance(TimeSpan.FromSeconds(1));
+    }
+
     /// <summary>
     /// An identity store which reports that a refresh is permanently in progress, so a request which needs a refresh
     /// takes the wait path rather than performing one.
@@ -33,26 +69,13 @@ public class TokenRefreshTests
     {
         private readonly ConcurrentDictionary<string, ClaimsIdentity> _identities = new(StringComparer.Ordinal);
 
-        private readonly TaskCompletionSource _refreshDecisionReached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal RefreshClock Clock { get; } = new();
 
         /// <summary>
         /// Whether <see cref="IsRefreshing"/> reports a refresh is under way. When <see langword="false"/> the handler
         /// will try to take the refresh lock, which <see cref="StartRefresh"/> then denies.
         /// </summary>
         internal bool ReportRefreshInProgress { get; set; } = true;
-
-        /// <summary>
-        /// Completes once the handler has asked whether a refresh is under way.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        ///   The handler only asks after it has read the identity out of the store and found its credentials expired,
-        ///   so a test which waits for this before changing the store cannot race that first lookup. Sleeping instead
-        ///   leaves the change landing first on a loaded machine, which turns a refresh the request never reached into
-        ///   an authentication phase miss.
-        /// </para>
-        /// </remarks>
-        internal Task RefreshDecisionReached => _refreshDecisionReached.Task;
 
         internal int StartRefreshCallCount => _startRefreshCallCount;
 
@@ -83,6 +106,7 @@ public class TokenRefreshTests
         public Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref _startRefreshCallCount);
+            ReportRefreshInProgress = true;
             return Task.FromResult<string?>(null);
         }
 
@@ -90,25 +114,27 @@ public class TokenRefreshTests
 
         public Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
         {
-            // Read the flag before releasing anyone waiting on it, so a test which flips it the moment it is released
-            // cannot change the answer this call is in the middle of giving.
-            bool isRefreshing = ReportRefreshInProgress;
+            return Task.FromResult(ReportRefreshInProgress);
+        }
 
-            _refreshDecisionReached.TrySetResult();
+        internal async Task<HttpResponseMessage> ExhaustRefreshWaits(Task<HttpResponseMessage> request)
+        {
+            await Clock.AdvanceNextWait();
+            await Clock.AdvanceNextWait();
 
-            return Task.FromResult(isRefreshing);
+            return await request.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         }
     }
 
-    private static ClaimsIdentity IdentityWithExpiredCredentials(Did did)
+    private static ClaimsIdentity IdentityWithExpiredCredentials(Did did, TimeProvider timeProvider)
     {
         // The handler decides a refresh is needed from the expiry inside the access token, so the token has to be well
         // formed and already expired.
         List<Claim> claims =
         [
             new Claim(AtProtoClaims.Did, did, ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.AccessToken, TestData.Jwt(did, TimeSpan.FromMinutes(-30)), ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.RefreshToken, TestData.Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.AccessToken, TestData.Jwt(did, TimeSpan.FromMinutes(-30), timeProvider), ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(AtProtoClaims.RefreshToken, TestData.Jwt(did, timeProvider: timeProvider), ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.DPoPProof, "proof-key", ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.DPoPNonce, "nonce", ClaimValueTypes.String, "https://bsky.social"),
         ];
@@ -123,19 +149,18 @@ public class TokenRefreshTests
 
         AuthenticationTestHost host = await AuthenticationTestHost.Create(store, options =>
         {
-            // Keep the wait loop short. The point of these tests is which path is taken, not how long the handler is
-            // prepared to wait for a refresh which is never going to finish.
+            options.TimeProvider = store.Clock;
             options.MaxRefreshChecks = 2;
-            options.RefreshCheckWait = TimeSpan.FromMilliseconds(10);
+            options.RefreshCheckWait = TimeSpan.FromSeconds(1);
         });
 
         Did did = TestData.NewDid();
 
         // Sign in with unexpired credentials so the cookie is written, then swap the stored identity for one whose
         // credentials have expired. That is what the store looks like once a token ages out mid-session.
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         return (host, cookie, store);
     }
@@ -152,7 +177,7 @@ public class TokenRefreshTests
                 BlueskyAuthenticationMetrics.MeterName,
                 "idunno.bluesky.aspnet.authentication.tokenrefreshwaits.total");
 
-            using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+            using HttpResponseMessage response = await store.ExhaustRefreshWaits(host.GetWithCookie("/test/authenticate", cookie));
 
             Assert.Equal(
                 BlueskyAuthenticationMetrics.TokenRefreshWaitReasonRefreshInProgress,
@@ -177,7 +202,7 @@ public class TokenRefreshTests
                 BlueskyAuthenticationMetrics.MeterName,
                 "idunno.bluesky.aspnet.authentication.tokenrefreshwaits.total");
 
-            using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+            using HttpResponseMessage response = await store.ExhaustRefreshWaits(host.GetWithCookie("/test/authenticate", cookie));
 
             Assert.Equal(
                 BlueskyAuthenticationMetrics.TokenRefreshWaitReasonLockDenied,
@@ -190,7 +215,7 @@ public class TokenRefreshTests
     [Fact]
     public async Task AWaitForARefreshWhichNeverFinishesFailsAuthenticationRatherThanHangingTheRequest()
     {
-        (AuthenticationTestHost host, string cookie, _) = await HostNeedingARefresh(reportRefreshInProgress: true);
+        (AuthenticationTestHost host, string cookie, RefreshingIdentityStore store) = await HostNeedingARefresh(reportRefreshInProgress: true);
 
         await using (host)
         {
@@ -199,7 +224,7 @@ public class TokenRefreshTests
                 BlueskyAuthenticationMetrics.MeterName,
                 "idunno.bluesky.aspnet.authentication.authentications.total");
 
-            using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+            using HttpResponseMessage response = await store.ExhaustRefreshWaits(host.GetWithCookie("/test/authenticate", cookie));
 
             Assert.Contains("succeeded=False", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
 
@@ -212,7 +237,7 @@ public class TokenRefreshTests
     [Fact]
     public async Task TheTimeARequestSpendsWaitingForARefreshIsRecorded()
     {
-        (AuthenticationTestHost host, string cookie, _) = await HostNeedingARefresh(reportRefreshInProgress: true);
+        (AuthenticationTestHost host, string cookie, RefreshingIdentityStore store) = await HostNeedingARefresh(reportRefreshInProgress: true);
 
         await using (host)
         {
@@ -221,10 +246,9 @@ public class TokenRefreshTests
                 BlueskyAuthenticationMetrics.MeterName,
                 "idunno.bluesky.aspnet.authentication.tokenrefreshwaits.duration");
 
-            using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+            using HttpResponseMessage response = await store.ExhaustRefreshWaits(host.GetWithCookie("/test/authenticate", cookie));
 
-            // Two checks ten milliseconds apart, so the wait is real but small. Asserting it is positive is enough to
-            // show the histogram is measuring the wait rather than being recorded with a constant.
+            // The histogram uses elapsed execution time, independently of the clock scheduling the checks.
             Assert.True(Assert.Single(duration.GetMeasurementSnapshot()).Value > 0);
         }
     }
@@ -238,24 +262,25 @@ public class TokenRefreshTests
 
         await using AuthenticationTestHost host = await AuthenticationTestHost.Create(store, options =>
         {
-            options.MaxRefreshChecks = 10;
-            options.RefreshCheckWait = TimeSpan.FromMilliseconds(20);
+            options.TimeProvider = store.Clock;
+            options.MaxRefreshChecks = 2;
+            options.RefreshCheckWait = TimeSpan.FromSeconds(1);
         });
 
         Did did = TestData.NewDid();
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         // Let the request reach the point where it decides to wait, then complete the refresh underneath it.
         Task<HttpResponseMessage> authenticate = host.GetWithCookie("/test/authenticate", cookie);
 
-        await store.RefreshDecisionReached.WaitAsync(TestContext.Current.CancellationToken);
-
-        await store.Add(TestData.AuthenticatedClaimsIdentity(did), TestContext.Current.CancellationToken);
+        await store.Clock.WaitForNextWait();
+        await store.Add(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock), TestContext.Current.CancellationToken);
         store.ReportRefreshInProgress = false;
+        store.Clock.Advance();
 
-        using HttpResponseMessage response = await authenticate;
+        using HttpResponseMessage response = await authenticate.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         Assert.Contains(
             "succeeded=True",
@@ -270,14 +295,15 @@ public class TokenRefreshTests
 
         await using AuthenticationTestHost host = await AuthenticationTestHost.Create(store, options =>
         {
-            options.MaxRefreshChecks = 10;
-            options.RefreshCheckWait = TimeSpan.FromMilliseconds(20);
+            options.TimeProvider = store.Clock;
+            options.MaxRefreshChecks = 2;
+            options.RefreshCheckWait = TimeSpan.FromSeconds(1);
         });
 
         Did did = TestData.NewDid();
-        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did, timeProvider: store.Clock));
 
-        await store.Add(IdentityWithExpiredCredentials(did), TestContext.Current.CancellationToken);
+        await store.Add(IdentityWithExpiredCredentials(did, store.Clock), TestContext.Current.CancellationToken);
 
         var misses = new MetricCollector<long>(
             host.MeterFactory,
@@ -286,13 +312,13 @@ public class TokenRefreshTests
 
         Task<HttpResponseMessage> authenticate = host.GetWithCookie("/test/authenticate", cookie);
 
-        await store.RefreshDecisionReached.WaitAsync(TestContext.Current.CancellationToken);
-
+        await store.Clock.WaitForNextWait();
         // The refresh finishes, but the identity it should have stored is gone.
         await store.Remove(did, TestContext.Current.CancellationToken);
         store.ReportRefreshInProgress = false;
+        store.Clock.Advance();
 
-        using HttpResponseMessage response = await authenticate;
+        using HttpResponseMessage response = await authenticate.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         Assert.Equal(
             BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTokenRefresh,

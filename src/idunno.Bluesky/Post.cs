@@ -25,7 +25,11 @@ public record class Post : BlueskyTimestampedRecord
     /// <summary>
     /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecord.CreatedAt"/> to the current date and time.
     /// </summary>
-    public Post() : base()
+    public Post() : this(TimeProvider.System)
+    {
+    }
+
+    internal Post(TimeProvider timeProvider) : base(timeProvider.GetUtcNow())
     {
     }
 
@@ -189,7 +193,19 @@ public record class Post : BlueskyTimestampedRecord
         EmbeddedBase? embeddedRecord = null,
         ReplyReferences? reply = null,
         SelfLabels? labels = null,
-        ICollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embeddedRecord, reply, labels, tags)
+        ICollection<string>? tags = null) : this(text, TimeProvider.System, facets, langs, embeddedRecord, reply, labels, tags)
+    {
+    }
+
+    internal Post(
+        string? text,
+        TimeProvider timeProvider,
+        ICollection<Facet>? facets = null,
+        ICollection<string>? langs = null,
+        EmbeddedBase? embeddedRecord = null,
+        ReplyReferences? reply = null,
+        SelfLabels? labels = null,
+        ICollection<string>? tags = null) : this(text, timeProvider.GetLocalNow(), facets, langs, embeddedRecord, reply, labels, tags)
     {
     }
 

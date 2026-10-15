@@ -151,7 +151,7 @@ public partial class BlueskyAgent
                     continue;
                 }
 
-                PostBuilder postBuilder = new()
+                PostBuilder postBuilder = new(text: null, createdAt: RecordTimeProvider.GetUtcNow())
                 {
                     Text = draftPost.Text,
                     Langs = draftWithId.Draft.Langs,

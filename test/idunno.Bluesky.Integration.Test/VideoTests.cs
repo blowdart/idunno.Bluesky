@@ -41,8 +41,9 @@ public class VideoTests
 
         string? sentMimeType = null;
 
-        DateTimeOffset? serviceAuthTimeStamp = null;
-        DateTimeOffset? uploadVideoTimeStamp = null;
+        int requestSequence = 0;
+        int serviceAuthSequence = 0;
+        int uploadVideoSequence = 0;
 
         int jobStatusCallCount = 0;
 
@@ -86,7 +87,7 @@ public class VideoTests
                     }
                     else
                     {
-                        serviceAuthTimeStamp = DateTimeOffset.UtcNow;
+                        serviceAuthSequence = Interlocked.Increment(ref requestSequence);
 
                         response.StatusCode = 200;
                         response.ContentType = "application/json";
@@ -109,7 +110,7 @@ public class VideoTests
                     request.Query["did"].ToString() == expectedDid &&
                     request.ContentType is not null)
                 {
-                    uploadVideoTimeStamp = DateTimeOffset.UtcNow;
+                    uploadVideoSequence = Interlocked.Increment(ref requestSequence);
                     sentMimeType = request.ContentType;
 
                     if (request.Headers.Authorization.Count != 1)
@@ -301,10 +302,8 @@ public class VideoTests
             Assert.Equal("video/mp4", uploadResult.Result.Blob.MimeType);
         }
 
-        Assert.NotNull(serviceAuthTimeStamp);
-        Assert.NotNull(uploadVideoTimeStamp);
-
-        Assert.True(serviceAuthTimeStamp < uploadVideoTimeStamp);
+        Assert.Equal(1, serviceAuthSequence);
+        Assert.Equal(2, uploadVideoSequence);
     }
 
     [Theory]

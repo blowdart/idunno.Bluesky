@@ -271,7 +271,10 @@ public sealed partial class RelationalProviderTests
         Assert.Null(await other.AcquireOrRenewAsync(CancellationToken.None));
         await store.ExpireLeaseAsync();
         DateTimeOffset? ready = await other.AcquireOrRenewAsync(CancellationToken.None);
-        Assert.True(ready > DateTimeOffset.UtcNow.AddSeconds(35));
+        Assert.NotNull(ready);
+        Assert.Equal(ready, await store.TimestampAsync("ready_at", "bot_ownership"));
+        Assert.Equal(TimeSpan.FromSeconds(50), await store.TimestampAsync("lease_until", "bot_ownership") - ready.Value);
+        await store.HoldReadinessAsync();
         await Assert.ThrowsAsync<OwnershipLostException>(() => other.LoadStateAsync(CancellationToken.None));
         await store.SetReadyAsync();
         await Assert.ThrowsAsync<OwnershipLostException>(() =>
@@ -465,18 +468,24 @@ public sealed partial class RelationalProviderTests
         }
         bool session = budget.StartsWith("sessions", StringComparison.Ordinal);
         Assert.Null(await store.Database.ReserveRequestAsync(3, session, CancellationToken.None));
-        Assert.True(await store.Database.ReserveRequestAsync(0, false, CancellationToken.None) > DateTimeOffset.UtcNow);
+        DateTimeOffset requestedAt = await store.TimestampAsync("requested_at", "rate_accounting");
+        TimeSpan window = budget switch
+        {
+            "hour" => TimeSpan.FromHours(1),
+            "requests" or "sessions-five-minutes" => TimeSpan.FromMinutes(5),
+            _ => TimeSpan.FromDays(1)
+        };
+        DateTimeOffset pacing = await store.TimestampAsync("next_request", "rate_state");
+        Assert.Equal(requestedAt.AddSeconds(store.Options.MinimumRequestIntervalSeconds), pacing);
+        await store.DeferRateRequestAsync();
+        Assert.Equal(
+            requestedAt.AddDays(2),
+            await store.Database.ReserveRequestAsync(0, false, CancellationToken.None));
         await store.SetRateRequestReadyAsync();
         DateTimeOffset? wait = await store.Database.ReserveRequestAsync(3, session, CancellationToken.None);
-        double minimumMinutes = budget switch
-        {
-            "hour" => 55,
-            "requests" or "sessions-five-minutes" => 4,
-            _ => 1400
-        };
-        Assert.True(wait > DateTimeOffset.UtcNow.AddMinutes(minimumMinutes));
+        Assert.Equal(requestedAt + window + TimeSpan.FromSeconds(1), wait);
         Assert.Equal(1, await store.CountAsync("rate_accounting"));
-        DateTimeOffset until = DateTimeOffset.UtcNow.AddDays(2);
+        DateTimeOffset until = requestedAt.AddDays(2);
         await store.Database.CooldownAsync(until, CancellationToken.None);
         await store.Database.CooldownAsync(until.AddMinutes(-1), CancellationToken.None);
         Assert.True(await store.Database.ReserveRequestAsync(0, false, CancellationToken.None) >= until.AddMilliseconds(-1));
@@ -601,6 +610,10 @@ public sealed partial class RelationalProviderTests
             ? "UPDATE bot_ownership SET ready_at = 'epoch'"
             : "UPDATE bot_ownership SET ready_at = 0");
 
+        public Task HoldReadinessAsync() => SqlAsync(_provider == "Postgres"
+            ? "UPDATE bot_ownership SET ready_at = 'infinity'"
+            : $"UPDATE bot_ownership SET ready_at = {long.MaxValue}");
+
         public Task SetReadyNowAsync() => SqlAsync(_provider == "Postgres"
             ? "UPDATE bot_ownership SET ready_at = now()"
             : "UPDATE bot_ownership SET ready_at = 0");
@@ -621,6 +634,10 @@ public sealed partial class RelationalProviderTests
             ? "UPDATE rate_state SET next_request = '-infinity'"
             : "UPDATE rate_state SET next_request = 0");
 
+        public Task DeferRateRequestAsync() => SqlAsync(_provider == "Postgres"
+            ? "UPDATE rate_state SET next_request = (SELECT min(requested_at) FROM rate_accounting) + interval '48 hours'"
+            : "UPDATE rate_state SET next_request = (SELECT min(requested_at) FROM rate_accounting) + 172800000000");
+
         public async Task SqlAsync(string sql)
         {
             await using DbConnection connection = Connection();
@@ -638,6 +655,19 @@ public sealed partial class RelationalProviderTests
             command.CommandText = $"SELECT count(*) FROM {table}";
 
             return Convert.ToInt64(await command.ExecuteScalarAsync());
+        }
+
+        public async Task<DateTimeOffset> TimestampAsync(string column, string table)
+        {
+            await using DbConnection connection = Connection();
+            await connection.OpenAsync();
+            await using DbCommand command = connection.CreateCommand();
+            command.CommandText = $"SELECT {column} FROM {table}";
+            object value = (await command.ExecuteScalarAsync())!;
+
+            return _provider == "Postgres"
+                ? new DateTimeOffset(Assert.IsType<DateTime>(value))
+                : DateTimeOffset.UnixEpoch.AddTicks(Convert.ToInt64(value) * 10);
         }
 
         public async ValueTask DisposeAsync()

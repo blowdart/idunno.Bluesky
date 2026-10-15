@@ -212,14 +212,11 @@ public class NotificationRequestTests
 
         using TestServer testServer = CreateBodyCapturingServer((_, body) => requestBody = body);
 
-        BlueskyAgent agent = CreateAgent(testServer);
-
-        DateTimeOffset before = DateTimeOffset.UtcNow;
+        using BlueskyAgent agent = CreateAgent(testServer);
+        agent.RecordTimeProvider = new FixedTimeProvider();
 
         AtProtoHttpResult<EmptyResponse> result = await agent.UpdateNotificationSeenAt(
             cancellationToken: TestContext.Current.CancellationToken);
-
-        DateTimeOffset after = DateTimeOffset.UtcNow;
 
         Assert.True(result.Succeeded);
 
@@ -227,6 +224,6 @@ public class NotificationRequestTests
 
         DateTimeOffset seenAt = document.RootElement.GetProperty("seenAt").GetDateTimeOffset();
 
-        Assert.InRange(seenAt, before, after);
+        Assert.Equal(agent.RecordTimeProvider.GetUtcNow(), seenAt);
     }
 }

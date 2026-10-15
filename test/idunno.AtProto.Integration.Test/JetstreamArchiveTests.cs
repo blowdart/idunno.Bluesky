@@ -214,6 +214,8 @@ public class JetstreamArchiveTests
     [Fact]
     public async Task DownloadReadWaitsForQuotaBeforeRequestingMoreBytes()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TimerTrackingTimeProvider timeProvider = new(TimeSpan.FromSeconds(1));
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             context.Response.Headers.ETag = $"\"{Checksum}:0\"";
@@ -226,14 +228,16 @@ public class JetstreamArchiveTests
         using HttpClient client = server.CreateClient();
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null),
-            readTimeout: TimeSpan.FromMilliseconds(100));
+            readTimeout: TimeSpan.FromMilliseconds(100), timeProvider: timeProvider);
         byte[] bytes = new byte[3];
-        System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
-        await download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+        Task read = download.ReadExactlyAsync(bytes, cancellationToken);
 
+        await timeProvider.WaitForTimerAsync(cancellationToken);
+        Assert.Equal(2, download.Position);
+        Assert.False(read.IsCompleted);
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await read.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
         Assert.Equal([1, 2, 3], bytes);
-        Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(850),
-            $"Quota was bypassed: the download completed in {elapsed.Elapsed}.");
     }
 
     [Fact]
@@ -305,6 +309,9 @@ public class JetstreamArchiveTests
     [Fact]
     public async Task DownloadResumesAfterAStalledBody()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
+        TaskCompletionSource stalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int requests = 0;
         using HttpClient client = new(new ArchiveTestHandler(request =>
         {
@@ -318,7 +325,7 @@ public class JetstreamArchiveTests
             HttpResponseMessage response = new(attempt == 1 ? HttpStatusCode.OK : HttpStatusCode.PartialContent)
             {
                 Content = new StreamContent(attempt == 1
-                    ? new StallingStream([1, 2]) : new ChunkedStream([3, 4]))
+                    ? new StallingStream([1, 2], () => stalled.TrySetResult()) : new ChunkedStream([3, 4]))
             };
             response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
             response.Content.Headers.ContentLength = attempt == 1 ? 4 : 2;
@@ -331,10 +338,14 @@ public class JetstreamArchiveTests
         }));
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null),
-            readTimeout: TimeSpan.FromMilliseconds(80));
+            readTimeout: TimeSpan.FromMilliseconds(80), timeProvider: timeProvider);
 
         byte[] bytes = new byte[4];
-        await download.ReadExactlyAsync(bytes, TestContext.Current.CancellationToken);
+        Task read = download.ReadExactlyAsync(bytes, cancellationToken);
+        await stalled.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.False(read.IsCompleted);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(80));
+        await read.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
         Assert.Equal([1, 2, 3, 4], bytes);
         Assert.Equal(2, requests);
@@ -419,13 +430,16 @@ public class JetstreamArchiveTests
     [Fact]
     public async Task DownloadStopsAfterRepeatedStalledBodies()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeTimeProvider timeProvider = new();
+        System.Threading.Channels.Channel<bool> stalled = System.Threading.Channels.Channel.CreateUnbounded<bool>();
         int requests = 0;
         using HttpClient client = new(new ArchiveTestHandler(_ =>
         {
             Interlocked.Increment(ref requests);
             HttpResponseMessage response = new(HttpStatusCode.OK)
             {
-                Content = new StreamContent(new StallingStream([]))
+                Content = new StreamContent(new StallingStream([], () => Assert.True(stalled.Writer.TryWrite(true))))
             };
             response.Headers.ETag = new EntityTagHeaderValue($"\"{Checksum}:0\"");
             response.Content.Headers.ContentLength = 1;
@@ -433,10 +447,17 @@ public class JetstreamArchiveTests
         }));
         await using ArchiveDownload download = new(Segment, 0, Checksum, "test-key",
             TestServerBuilder.DefaultUri, client, 0, new JetstreamMetrics(null),
-            readTimeout: TimeSpan.FromMilliseconds(40));
+            readTimeout: TimeSpan.FromMilliseconds(40), timeProvider: timeProvider);
 
-        IOException error = await Assert.ThrowsAsync<IOException>(() =>
-            download.ReadExactlyAsync(new byte[1], TestContext.Current.CancellationToken));
+        Task read = download.ReadExactlyAsync(new byte[1], cancellationToken);
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            _ = await stalled.Reader.ReadAsync(cancellationToken).AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            Assert.False(read.IsCompleted);
+            timeProvider.Advance(TimeSpan.FromMilliseconds(40));
+        }
+
+        IOException error = await Assert.ThrowsAsync<IOException>(() => read.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Contains("stalled", error.Message, StringComparison.Ordinal);
         Assert.Equal(4, requests);
     }
@@ -548,13 +569,15 @@ public class JetstreamArchiveTests
     [Fact]
     public async Task PlannerRetriesAnHttpDateRetryAfter()
     {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TimerTrackingTimeProvider timeProvider = new(TimeSpan.FromSeconds(5));
         int plans = 0;
         using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
             if (Interlocked.Increment(ref plans) == 1)
             {
                 context.Response.StatusCode = 429;
-                context.Response.Headers.RetryAfter = DateTimeOffset.UtcNow.AddSeconds(1).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                context.Response.Headers.RetryAfter = timeProvider.GetUtcNow().AddSeconds(5).ToString("R", System.Globalization.CultureInfo.InvariantCulture);
                 return;
             }
 
@@ -564,11 +587,18 @@ public class JetstreamArchiveTests
         });
         using AtProtoJetstream jetstream = new(
             httpClientFactory: new TestHttpClientFactory(server), uri: s_server,
-            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false });
-        await foreach (JetstreamEvent _ in jetstream.SnapshotAsync(
-            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: TestContext.Current.CancellationToken))
-        {
-        }
+            options: new JetstreamOptions { ApiKey = "test-key", UseCompression = false, TimeProvider = timeProvider });
+        await using IAsyncEnumerator<JetstreamEvent> enumerator = jetstream.SnapshotAsync(
+            new SnapshotRequest { AfterSeq = 0 }, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Task<bool> moveNext = enumerator.MoveNextAsync().AsTask();
+
+        await timeProvider.WaitForTimerAsync(cancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(4999));
+        Assert.False(moveNext.IsCompleted);
+        Assert.Equal(1, Volatile.Read(ref plans));
+
+        timeProvider.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.False(await moveNext.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
 
         Assert.Equal(2, plans);
     }
