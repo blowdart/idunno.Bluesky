@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -52,7 +53,6 @@ public record Link : BlueskyTimestampedRecord
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="url"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">The icon is not a PNG, JPEG or WebP image.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The title exceeds 40 graphemes or 320 UTF-8 bytes, or the icon exceeds 100,000 bytes.</exception>
-    [JsonConstructor]
     public Link(Uri url, string? title, Blob? icon, SelfLabels? labels, DateTimeOffset createdAt)
         : base(createdAt)
     {
@@ -61,6 +61,14 @@ public record Link : BlueskyTimestampedRecord
         Url = url;
         Title = title;
         Icon = icon;
+        Labels = labels;
+    }
+
+    [JsonConstructor]
+    internal Link(Uri url, SelfLabels? labels, DateTimeOffset createdAt)
+        : base(createdAt)
+    {
+        Url = url ?? throw new JsonException("A profile link requires a destination URI.");
         Labels = labels;
     }
 
@@ -74,6 +82,9 @@ public record Link : BlueskyTimestampedRecord
     /// Gets the optional title for the link.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">The title exceeds 40 graphemes or 320 UTF-8 bytes.</exception>
+    [JsonIgnore]
+    // .NET 8/9 source generation binds ignored init-only members as constructor parameters.
+    [JsonPropertyName("titleProjection")]
     public string? Title
     {
         get;
@@ -94,6 +105,8 @@ public record Link : BlueskyTimestampedRecord
     /// </summary>
     /// <exception cref="ArgumentException">The icon is not a PNG, JPEG or WebP image.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The icon exceeds 100,000 bytes.</exception>
+    [JsonIgnore]
+    [JsonPropertyName("iconProjection")]
     public Blob? Icon
     {
         get;
@@ -116,4 +129,40 @@ public record Link : BlueskyTimestampedRecord
     /// Gets optional self-labels for the link.
     /// </summary>
     public SelfLabels? Labels { get; init; }
+
+    [JsonInclude]
+    [JsonPropertyName("title")]
+    internal string? SerializedTitle
+    {
+        get => Title;
+        init
+        {
+            try
+            {
+                Title = value;
+            }
+            catch (ArgumentOutOfRangeException exception)
+            {
+                throw new JsonException("A profile link title exceeds its length limits.", exception);
+            }
+        }
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("icon")]
+    internal Blob? SerializedIcon
+    {
+        get => Icon;
+        init
+        {
+            try
+            {
+                Icon = value;
+            }
+            catch (ArgumentException exception)
+            {
+                throw new JsonException("A profile link icon must be a PNG, JPEG or WebP image of at most 100,000 bytes.", exception);
+            }
+        }
+    }
 }

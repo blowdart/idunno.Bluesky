@@ -30,6 +30,11 @@ public class ActorLinkTests
         Assert.Equal("app.bsky.actor.link", document.RootElement.GetProperty("$type").GetString());
         Assert.Equal("https://example.com", document.RootElement.GetProperty("url").GetString());
         Assert.Equal("test", document.RootElement.GetProperty("labels").GetProperty("values")[0].GetProperty("val").GetString());
+        Assert.Equal("Example", document.RootElement.GetProperty("title").GetString());
+        Assert.False(document.RootElement.TryGetProperty("titleProjection", out _));
+        Assert.False(document.RootElement.TryGetProperty("iconProjection", out _));
+        Link actual = JsonSerializer.Deserialize<Link>(json, BlueskyServer.BlueskyJsonSerializerOptions)!;
+        Assert.Equal(link.Title, actual.Title);
     }
 
     [Fact]
@@ -103,6 +108,8 @@ public class ActorLinkTests
         if (valid)
         {
             Assert.Equal(title, (link with { Title = title }).Title);
+            string json = JsonSerializer.Serialize(link with { Title = title }, BlueskyServer.BlueskyJsonSerializerOptions);
+            Assert.Equal(title, JsonSerializer.Deserialize<Link>(json, BlueskyServer.BlueskyJsonSerializerOptions)!.Title);
         }
         else
         {
@@ -132,15 +139,32 @@ public class ActorLinkTests
         if (valid)
         {
             Assert.Same(blob, new Link(new Uri("https://example.com")) { Icon = blob }.Icon);
+            Link link = new(new Uri("https://example.com")) { Icon = blob };
+            string json = JsonSerializer.Serialize(link, BlueskyServer.BlueskyJsonSerializerOptions);
+            Link actual = JsonSerializer.Deserialize<Link>(json, BlueskyServer.BlueskyJsonSerializerOptions)!;
+            Assert.Equal(blob.MimeType, actual.Icon?.MimeType);
+            Assert.Equal(blob.Size, actual.Icon?.Size);
         }
         else if (size > 100000)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new Link(new Uri("https://example.com")) { Icon = blob });
+            Assert.Throws<ArgumentOutOfRangeException>(() => new Link(new Uri("https://example.com"), null, blob, null));
         }
         else
         {
             Assert.Throws<ArgumentException>(() => new Link(new Uri("https://example.com")) { Icon = blob });
+            Assert.Throws<ArgumentException>(() => new Link(new Uri("https://example.com"), null, blob, null));
         }
+    }
+
+    [Fact]
+    public void LinkConstructorsRetainTitleArgumentValidation()
+    {
+        string title = new('a', 41);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Link(new Uri("https://example.com"), title, null, null));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Link(new Uri("https://example.com"), title, null, null, DateTimeOffset.MinValue));
+        Assert.Throws<ArgumentNullException>(() => new Link(null!));
     }
 
     [Theory]
