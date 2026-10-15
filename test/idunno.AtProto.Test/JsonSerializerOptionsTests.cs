@@ -276,14 +276,20 @@ public class JsonSerializerOptionsTests
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public void PropertyConvertersForwardSdkOptionsAndPreserveTheirWireFormats(bool normalizeOuter, bool finalized)
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
+    public void PropertyConvertersForwardSdkOptionsAndPreserveTheirWireFormats(bool normalizeOuter, bool finalized, bool preserveReferences)
     {
         JsonSerializerOptions options = finalized
-            ? AtProtoJsonSerializerOptions.Create(mutable => mutable.TypeInfoResolver = TolerantTestContext.Default)
+            ? AtProtoJsonSerializerOptions.Create(mutable =>
+            {
+                mutable.TypeInfoResolver = TolerantTestContext.Default;
+                mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+            })
             : AtProtoJsonSerializerOptions.Options;
         if (!finalized)
         {
@@ -444,10 +450,13 @@ public class JsonSerializerOptionsTests
         AssertLateBoundRecord(agent.JsonOptions.JsonSerializerOptions);
     }
 
-    [Fact]
-    public void CustomStructConverterForwardsNestedPolymorphicValuesToSdkOptions()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CustomStructConverterForwardsNestedPolymorphicValuesToSdkOptions(bool preserveReferences)
     {
         JsonOptions jsonOptions = new();
+        jsonOptions.JsonSerializerOptions.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
         jsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(TolerantTestContext.Default);
 
         const string json = """
@@ -575,12 +584,15 @@ public class JsonSerializerOptionsTests
         }
     }
 
-    [Fact]
-    public void OptionsRegisteredConvertersForwardSdkOptionsForNestedPolymorphicValues()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OptionsRegisteredConvertersForwardSdkOptionsForNestedPolymorphicValues(bool preserveReferences)
     {
         JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
         {
             mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
             mutable.Converters.Add(new OptionsPayloadConverter());
         });
         const string json = """
@@ -776,6 +788,138 @@ public class JsonSerializerOptionsTests
         }
         Assert.Equal("deep", value.GetString());
     }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void PolymorphicRootConvertersRetainNullHandling(bool rejectNull, bool preserveReferences)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+            mutable.Converters.Add(new RootNullConverter(rejectNull));
+        });
+
+        if (rejectNull)
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<NestedCustomRecordBase>("null", options));
+            Assert.Throws<JsonException>(() => JsonSerializer.Serialize<NestedCustomRecordBase>(null!, options));
+        }
+        else
+        {
+            NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+                JsonSerializer.Deserialize<NestedCustomRecordBase>("null", options));
+            Assert.Equal("read-null", record.Value);
+            Assert.Equal("\"write-null\"", JsonSerializer.Serialize<NestedCustomRecordBase>(null!, options));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NormalizationRetainsRawOpaqueExtensionValues(bool preserveReferences)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+        });
+        const string raw = """{ "x": 1, "escaped": "\u0061", "items": [ 1, 2 ] }""";
+        string json = $$"""{"$type":"test.nested","value":"nested","ordinary":{{raw}},"$via":{{raw}}}""";
+
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+            JsonSerializer.Deserialize<NestedCustomRecordBase>(json, options));
+
+        Assert.Equal(raw, record.ExtensionData!["ordinary"].GetRawText());
+        Assert.Equal(raw, record.ExtensionData["$via"].GetRawText());
+    }
+
+    [Theory]
+    [InlineData(1100, false)]
+    [InlineData(1100, true)]
+    [InlineData(1200, true)]
+    public void NormalizationAndPropertyBridgeHonorDeepReadBudgets(int maxDepth, bool customConverter)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.MaxDepth = maxDepth;
+        });
+        int depth = maxDepth - 1;
+        string value = new string('[', depth) + "\"deep\"" + new string(']', depth);
+        string discriminator = customConverter ? "test.deepPayload" : "test.deepNormalization";
+        string json = $$"""{"$type":"{{discriminator}}","$via":"extension","value":{{value}}}""";
+
+        if (customConverter)
+        {
+            DeepPayloadRecord record = Assert.IsType<DeepPayloadRecord>(
+                JsonSerializer.Deserialize<DeepPayloadRecordBase>(json, options));
+            Assert.Equal(depth, record.Value.Depth);
+        }
+        else
+        {
+            DeepNormalizationRecord record = Assert.IsType<DeepNormalizationRecord>(
+                JsonSerializer.Deserialize<DeepNormalizationRecordBase>(json, options));
+            JsonElement leaf = record.Value;
+            for (int index = 0; index < depth; index++)
+            {
+                leaf = leaf[0];
+            }
+            Assert.Equal("deep", leaf.GetString());
+            Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+        }
+
+        string tooDeep = $$"""{"$type":"{{discriminator}}","$via":"extension","value":[{{value}}]}""";
+        if (customConverter)
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<DeepPayloadRecordBase>(tooDeep, options));
+        }
+        else
+        {
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<DeepNormalizationRecordBase>(tooDeep, options));
+        }
+    }
+
+    [Fact]
+    public void MetadataFreeStrongReferencesAvoidScalarForwardingAllocations()
+    {
+        (long readBytes, long writeBytes) = MeasureAllocations(AtProtoJsonSerializerOptions.Default);
+        (long directReadBytes, long directWriteBytes) = MeasureAllocations(AtProtoJsonSerializerOptions.CreateMutableOptions());
+
+        Assert.True(readBytes <= directReadBytes + 512,
+            $"Strong-reference decoding allocated {readBytes} bytes per call versus {directReadBytes} on the direct path.");
+        Assert.True(writeBytes <= directWriteBytes + 256,
+            $"Strong-reference encoding allocated {writeBytes} bytes per call versus {directWriteBytes} on the direct path.");
+
+        static (long ReadBytes, long WriteBytes) MeasureAllocations(JsonSerializerOptions options)
+        {
+            StrongReference record = Assert.IsType<StrongReference>(
+                JsonSerializer.Deserialize<SubjectType>(SubjectWithTrailingTypeDiscriminator, options));
+            for (int iteration = 0; iteration < 10; iteration++)
+            {
+                _ = JsonSerializer.Deserialize<SubjectType>(SubjectWithTrailingTypeDiscriminator, options);
+                _ = JsonSerializer.Serialize<SubjectType>(record, options);
+            }
+
+            long beforeRead = GC.GetAllocatedBytesForCurrentThread();
+            for (int iteration = 0; iteration < 100; iteration++)
+            {
+                _ = JsonSerializer.Deserialize<SubjectType>(SubjectWithTrailingTypeDiscriminator, options);
+            }
+            long allocatedRead = (GC.GetAllocatedBytesForCurrentThread() - beforeRead) / 100;
+            long beforeWrite = GC.GetAllocatedBytesForCurrentThread();
+            for (int iteration = 0; iteration < 100; iteration++)
+            {
+                _ = JsonSerializer.Serialize<SubjectType>(record, options);
+            }
+            long allocatedWrite = (GC.GetAllocatedBytesForCurrentThread() - beforeWrite) / 100;
+
+            return (allocatedRead, allocatedWrite);
+        }
+    }
 }
 
 /// <summary>
@@ -918,15 +1062,29 @@ internal abstract class DeepPayloadRecordBase;
 
 internal sealed class DeepPayloadRecord : DeepPayloadRecordBase
 {
+    [JsonConverter(typeof(DeepPayloadConverter))]
     public DeepPayload Value { get; set; } = new();
 }
 
-internal sealed class DeepPayload;
+internal sealed class DeepPayload
+{
+    public int Depth { get; set; } = 80;
+}
 
 internal sealed class DeepPayloadConverter : JsonConverter<DeepPayload>
 {
-    public override DeepPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        throw new NotSupportedException();
+    public override DeepPayload Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        using JsonDocument document = JsonDocument.ParseValue(ref reader);
+        JsonElement value = document.RootElement;
+        int depth = 0;
+        while (value.ValueKind == JsonValueKind.Array)
+        {
+            depth++;
+            value = value[0];
+        }
+        return new() { Depth = depth };
+    }
 
     public override void Write(Utf8JsonWriter writer, DeepPayload value, JsonSerializerOptions options)
     {
@@ -939,6 +1097,35 @@ internal sealed class DeepPayloadConverter : JsonConverter<DeepPayload>
         {
             writer.WriteEndArray();
         }
+    }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(DeepNormalizationRecord), "test.deepNormalization")]
+internal abstract class DeepNormalizationRecordBase;
+
+internal sealed class DeepNormalizationRecord : DeepNormalizationRecordBase
+{
+    public JsonElement Value { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+internal sealed class RootNullConverter(bool rejectNull) : JsonConverter<NestedCustomRecordBase>
+{
+    public override bool HandleNull => true;
+
+    public override NestedCustomRecordBase Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        rejectNull ? throw new JsonException("Null is not permitted.") : new NestedCustomRecord { Value = "read-null" };
+
+    public override void Write(Utf8JsonWriter writer, NestedCustomRecordBase value, JsonSerializerOptions options)
+    {
+        if (rejectNull)
+        {
+            throw new JsonException("Null is not permitted.");
+        }
+        writer.WriteStringValue("write-null");
     }
 }
 
@@ -1143,6 +1330,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(DeepPayloadRecordBase))]
 [JsonSerializable(typeof(DeepPayloadRecord))]
 [JsonSerializable(typeof(DeepPayload))]
+[JsonSerializable(typeof(DeepNormalizationRecordBase))]
+[JsonSerializable(typeof(DeepNormalizationRecord))]
 [JsonSerializable(typeof(CountedExtensionRecordBase))]
 [JsonSerializable(typeof(CountedExtensionRecord))]
 [JsonSerializable(typeof(List<CountedExtensionRecordBase>))]

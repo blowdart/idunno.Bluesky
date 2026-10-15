@@ -24,6 +24,8 @@ With `ReferenceHandler.Preserve`, unknown fields are normalized across the compl
 the built-in serializer reads it in a single operation. `$id`, `$ref` and `$values` retain their reference semantics,
 including shared references between siblings. `ReferenceHandler.IgnoreCycles` does not reserve those names on reads;
 they are treated like other unknown fields on polymorphic contracts.
+Custom converters also receive tolerant options in Preserve mode; their explicit nested serializer calls retain the
+normal System.Text.Json boundary for reference resolution, while ordinary sibling references share the root operation.
 
 The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
 trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
@@ -33,6 +35,8 @@ null-handling policies, including null sentinels and null validation. Agent cons
 after caller configuration, including builder callbacks and later changes to builder options made before `Build()`.
 The agent's serializer options are read-only; the original caller options remain unchanged and mutable.
 Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
+Normalization respects the configured `MaxDepth` and copies opaque extension values without reformatting their raw JSON.
+Known protocol scalar converters remain on their direct path rather than allocating forwarding buffers.
 
 ### Configuring options for direct serialization
 

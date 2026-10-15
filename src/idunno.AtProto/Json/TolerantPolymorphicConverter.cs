@@ -93,12 +93,6 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
         underlyingOptions.MakeReadOnly();
 
-        if (underlyingOptions.ReferenceHandler == ReferenceHandler.Preserve)
-        {
-            // Normalize the complete root, then let one built-in operation resolve all references.
-            return new Converter(typeToConvert, underlyingOptions);
-        }
-
         JsonSerializerOptions nestedOptions = new(underlyingOptions)
         {
             TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>
@@ -108,7 +102,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     return;
                 }
 
-                foreach (JsonPropertyInfo property in info.Properties.Where(property => property.CustomConverter is not null))
+                foreach (JsonPropertyInfo property in info.Properties.Where(property =>
+                    property.CustomConverter is not null && !IsScalarConverter(property.CustomConverter)))
                 {
                     property.CustomConverter = new PropertyConverter(property, underlyingOptions);
                 }
@@ -118,6 +113,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         nestedOptions.MakeReadOnly();
         return new Converter(typeToConvert, nestedOptions);
     }
+
+    private static bool IsScalarConverter(JsonConverter converter) =>
+        converter is CidConverter or AtUriConverter or AtIdentifierConverter or DidConverter or HandleConverter or
+            NsidConverter or RecordKeyConverter or TimestampIdentifierConverter or ByteConverter;
+
+    private static int GetMaxDepth(JsonSerializerOptions options) => options.MaxDepth == 0 ? 64 : options.MaxDepth;
 
     // A property converter cannot be invoked through JsonConverter's non-generic API. A single
     // synthetic property lets the serializer invoke the original converter, including factories and
@@ -144,7 +145,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private PropertyConverter(Type type, JsonConverter converter, JsonNumberHandling? numberHandling, JsonSerializerOptions underlyingOptions)
         {
             _type = type;
-            JsonSerializerOptions bridgeOptions = new(underlyingOptions);
+            // The synthetic holder adds one level without changing the converter's depth budget.
+            int maxDepth = GetMaxDepth(underlyingOptions);
+            JsonSerializerOptions bridgeOptions = new(underlyingOptions)
+            {
+                MaxDepth = maxDepth < int.MaxValue ? maxDepth + 1 : maxDepth
+            };
             Configure(bridgeOptions);
             bridgeOptions.MakeReadOnly();
             // CreateJsonPropertyInfo delegates to cached typed metadata only on read-only options.
@@ -173,11 +179,11 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         {
             using JsonDocument document = JsonDocument.ParseValue(ref reader);
             ArrayBufferWriter<byte> buffer = new();
-            using (Utf8JsonWriter writer = new(buffer))
+            using (Utf8JsonWriter writer = new(buffer, new JsonWriterOptions { MaxDepth = _typeInfo.Options.MaxDepth }))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("value");
-                document.RootElement.WriteTo(writer);
+                writer.WriteRawValue(document.RootElement.GetRawText(), skipInputValidation: true);
                 writer.WriteEndObject();
             }
 
@@ -206,6 +212,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
             return !valueType.IsEnum &&
                 GetConverter(typeToConvert) is JsonConverter converter &&
+                !IsScalarConverter(converter) &&
                 converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
         }
 
@@ -317,6 +324,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     private sealed class Converter(Type type, JsonSerializerOptions underlyingOptions) : JsonConverter<object>
     {
+        public override bool HandleNull => true;
+
         public override bool CanConvert(Type typeToConvert) => typeToConvert == type;
 
         public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -336,7 +345,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             ArrayBufferWriter<byte> buffer = new();
             bool normalized;
-            using (Utf8JsonWriter writer = new(buffer))
+            using (Utf8JsonWriter writer = new(buffer, new JsonWriterOptions { MaxDepth = GetMaxDepth(underlyingOptions) }))
             {
                 normalized = WriteNormalized(writer, element, underlyingOptions.GetTypeInfo(type), state);
             }
@@ -760,7 +769,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     }
                     else
                     {
-                        property.Value.WriteTo(writer);
+                        writer.WriteRawValue(property.Value.GetRawText(), skipInputValidation: true);
                     }
                 }
                 writer.WriteEndObject();
@@ -797,7 +806,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             if (element.ValueKind != JsonValueKind.Object || info.Kind != JsonTypeInfoKind.Object)
             {
-                element.WriteTo(writer);
+                writer.WriteRawValue(element.GetRawText(), skipInputValidation: true);
                 return false;
             }
 
@@ -844,7 +853,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
                 else
                 {
-                    property.Value.WriteTo(writer);
+                    writer.WriteRawValue(property.Value.GetRawText(), skipInputValidation: true);
                 }
             }
             writer.WriteEndObject();

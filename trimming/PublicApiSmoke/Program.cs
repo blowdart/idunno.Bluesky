@@ -183,7 +183,8 @@ foreach (JsonSerializerOptions mutableOptions in new[]
     BlueskyJsonSerializerOptions.Create(options => options.TypeInfoResolverChain.Insert(0, LateBoundSourceGenerationContext.Default)),
     customAtProtoAgent.JsonOptions.JsonSerializerOptions,
     customBlueskyAgent.JsonOptions.JsonSerializerOptions,
-    customBuiltBlueskyAgent.JsonOptions.JsonSerializerOptions
+    customBuiltBlueskyAgent.JsonOptions.JsonSerializerOptions,
+    sharedReferenceOptions
 })
 {
     if (!mutableOptions.IsReadOnly)
