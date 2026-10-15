@@ -1061,15 +1061,13 @@ public class JsonSerializerOptionsTests
     [Fact]
     public void TolerantContractProbeHonorsCallerRegisteredConverters()
     {
-        JsonSerializerOptions options = new()
-        {
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-        };
-        options.Converters.Add(new ConflictingContractConverter());
-        Json.TolerantPolymorphicConverter.Configure(options);
+        JsonOptions jsonOptions = new();
+        jsonOptions.JsonSerializerOptions.Converters.Add(new ConflictingContractConverter());
 
         ConflictingContract result = Assert.IsType<ConflictingContract>(
-            JsonSerializer.Deserialize<ConflictingContract>("""{"custom":"wire-format"}""", options));
+            JsonSerializer.Deserialize<ConflictingContract>(
+                """{"custom":"wire-format"}""",
+                jsonOptions.JsonSerializerOptions));
 
         Assert.Equal("wire-format", result.Value);
     }

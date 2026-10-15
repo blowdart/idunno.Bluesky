@@ -33,7 +33,7 @@ namespace idunno.AtProto.Json;
 /// </remarks>
 internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions) : JsonConverterFactory
 {
-    private readonly JsonSerializerOptions _probeOptions = CreateProbeOptions(resolver, configuredOptions);
+    private readonly Lazy<JsonSerializerOptions> _probeOptions = new(() => CreateProbeOptions(resolver, configuredOptions));
     private readonly ConcurrentDictionary<(Type Type, bool PreserveReferences), bool> _supportedTypes = new();
 
     private static JsonSerializerOptions CreateProbeOptions(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions)
@@ -89,7 +89,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     public override bool CanConvert(Type typeToConvert) =>
         _supportedTypes.GetOrAdd((typeToConvert, TracksReferenceState(configuredOptions)), key =>
         {
-            JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions);
+            JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions.Value);
             return info?.PolymorphismOptions is not null ||
                 (key.PreserveReferences && info?.Kind is JsonTypeInfoKind.Object or JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary);
         });
