@@ -122,6 +122,23 @@ if (keyRecord.Values[new SmokeKey("first")] != "value" ||
     throw new InvalidOperationException("Custom dictionary-key hooks were not retained for declared and runtime-discovered dictionaries.");
 }
 lateJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(LateBoundSourceGenerationContext.Default);
+JsonSerializerOptions keyValueOptions = AtProtoJsonSerializerOptions.Create(options =>
+{
+    options.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
+    options.ReferenceHandler = ReferenceHandler.Preserve;
+});
+JsonTypeInfo<Dictionary<SmokeKey, SmokeKey>> keyValueInfo =
+    (JsonTypeInfo<Dictionary<SmokeKey, SmokeKey>>)keyValueOptions.GetTypeInfo(typeof(Dictionary<SmokeKey, SmokeKey>));
+Dictionary<SmokeKey, SmokeKey> keyValues = JsonSerializer.Deserialize(
+    """{"key:first":{"$type":"smoke.nested","$via":"extension","value":"first"}}""", keyValueInfo)
+    ?? throw new InvalidOperationException("Custom-key dictionary values could not be decoded.");
+string keyValuesJson = JsonSerializer.Serialize(keyValues, keyValueInfo);
+Dictionary<SmokeKey, SmokeKey>? keyValuesRoundTrip = JsonSerializer.Deserialize(keyValuesJson, keyValueInfo);
+if (keyValues[new SmokeKey("first")].Record?.ExtensionData?["$via"].GetString() != "extension" ||
+    keyValuesRoundTrip?[new SmokeKey("first")].Record?.ExtensionData?["$via"].GetString() != "extension")
+{
+    throw new InvalidOperationException("Custom-key dictionary value forwarding lost nested metadata.");
+}
 JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
 JsonSerializerOptions sharedReferenceOptions = AtProtoJsonSerializerOptions.Create(options =>
@@ -613,15 +630,39 @@ internal sealed class SmokeKeyRecord : SmokeKeyRecordBase
 }
 
 [JsonConverter(typeof(SmokeKeyConverter))]
-internal sealed record SmokeKey(string Value);
+internal sealed record SmokeKey(string Value)
+{
+    public LateBoundNestedRecord? Record { get; init; }
+}
 
 internal sealed class SmokeKeyConverter : JsonConverter<SmokeKey>
 {
-    public override SmokeKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        new(reader.GetString()!);
+    public override SmokeKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            JsonTypeInfo<LateBoundNestedRecordBase> info =
+                (JsonTypeInfo<LateBoundNestedRecordBase>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+            LateBoundNestedRecord record = JsonSerializer.Deserialize(ref reader, info) as LateBoundNestedRecord
+                ?? throw new InvalidOperationException("The nested key value could not be decoded.");
+            return new(record.Value) { Record = record };
+        }
+        return new(reader.GetString()!);
+    }
 
-    public override void Write(Utf8JsonWriter writer, SmokeKey value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
+    public override void Write(Utf8JsonWriter writer, SmokeKey value, JsonSerializerOptions options)
+    {
+        if (value.Record is not null)
+        {
+            JsonTypeInfo<LateBoundNestedRecordBase> info =
+                (JsonTypeInfo<LateBoundNestedRecordBase>)options.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+            JsonSerializer.Serialize<LateBoundNestedRecordBase>(writer, value.Record, info);
+        }
+        else
+        {
+            writer.WriteStringValue(value.Value);
+        }
+    }
 
     public override SmokeKey ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         new(reader.GetString()!["key:".Length..]);
@@ -670,6 +711,7 @@ internal sealed class SmokeReferenceResolver : ReferenceResolver
 [JsonSerializable(typeof(SmokeCollectionRecord))]
 [JsonSerializable(typeof(SmokeKeyRecordBase))]
 [JsonSerializable(typeof(SmokeKeyRecord))]
+[JsonSerializable(typeof(Dictionary<SmokeKey, SmokeKey>))]
 internal sealed partial class LateBoundSourceGenerationContext : JsonSerializerContext;
 
 internal sealed class OfflineHttpClientFactory(OfflineHttpMessageHandler handler) : IHttpClientFactory

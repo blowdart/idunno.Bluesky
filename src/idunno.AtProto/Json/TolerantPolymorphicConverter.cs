@@ -202,10 +202,6 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         }
         underlyingOptions.MakeReadOnly();
 
-        // Find dictionary key types before installing the forwarding converter: dictionary keys use
-        // ReadAsPropertyName/WriteAsPropertyName, which the value-forwarding bridge must not intercept.
-        HashSet<Type> dictionaryKeyTypes = [];
-        CollectDictionaryKeyTypes(underlyingOptions.GetTypeInfo(typeToConvert), underlyingOptions, dictionaryKeyTypes, []);
         JsonSerializerOptions nestedOptions = new(underlyingOptions)
         {
             TypeInfoResolver = underlyingOptions.TypeInfoResolver!.WithAddedModifier(info =>
@@ -233,7 +229,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
             })
         };
-        nestedOptions.Converters.Insert(0, new CustomConverterForwarder(underlyingOptions, options, dictionaryKeyTypes));
+        nestedOptions.Converters.Insert(0, new CustomConverterForwarder(underlyingOptions, options));
         nestedOptions.MakeReadOnly();
         // The root converter uses nestedOptions to deserialize after normalization; the forwarder
         // keeps opaque custom converters connected to the caller's tolerant serializer options.
@@ -251,68 +247,6 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     private static bool TracksReferenceState(JsonSerializerOptions options) =>
         PreservesReferences(options) || options.ReferenceHandler == ReferenceHandler.IgnoreCycles;
-
-    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Resolver-provided collection metadata preserves generic interface identities and arguments. No interface members are inspected or invoked.")]
-    private static void CollectDictionaryKeyTypes(JsonTypeInfo info, JsonSerializerOptions options, HashSet<Type> keyTypes, HashSet<Type> visited)
-    {
-        // Contracts can refer to themselves; visit each CLR type only once to keep this graph walk finite.
-        if (!visited.Add(info.Type))
-        {
-            return;
-        }
-
-        if (info.PolymorphismOptions is JsonPolymorphismOptions polymorphism)
-        {
-            // Derived contracts may introduce dictionaries that are not visible on the base contract.
-            foreach (JsonDerivedType derived in polymorphism.DerivedTypes)
-            {
-                CollectDictionaryKeyTypes(options.GetTypeInfo(derived.DerivedType), options, keyTypes, visited);
-            }
-        }
-
-        if (info.Kind == JsonTypeInfoKind.Object)
-        {
-            foreach (JsonPropertyInfo property in info.Properties)
-            {
-                if (!property.IsExtensionData && (property.Get is not null || property.Set is not null) && property.CustomConverter is null)
-                {
-                    // Extension data and custom converters own their contents, so their apparent
-                    // properties cannot be safely walked using this contract.
-                    CollectDictionaryKeyTypes(options.GetTypeInfo(property.PropertyType), options, keyTypes, visited);
-                }
-            }
-        }
-        else if (info.Kind is JsonTypeInfoKind.Dictionary or JsonTypeInfoKind.Enumerable)
-        {
-            if (info.Type.IsArray)
-            {
-                CollectDictionaryKeyTypes(options.GetTypeInfo(info.Type.GetElementType()!), options, keyTypes, visited);
-                return;
-            }
-
-            foreach (Type collectionType in info.Type.GetInterfaces().Prepend(info.Type))
-            {
-                if (!collectionType.IsGenericType)
-                {
-                    continue;
-                }
-                Type definition = collectionType.GetGenericTypeDefinition();
-                if (info.Kind == JsonTypeInfoKind.Dictionary &&
-                    (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>)))
-                {
-                    // Record the key type for converter exclusion, then continue through values only.
-                    keyTypes.Add(collectionType.GenericTypeArguments[0]);
-                    CollectDictionaryKeyTypes(options.GetTypeInfo(collectionType.GenericTypeArguments[1]), options, keyTypes, visited);
-                    break;
-                }
-                if (info.Kind == JsonTypeInfoKind.Enumerable && definition == typeof(IEnumerable<>))
-                {
-                    CollectDictionaryKeyTypes(options.GetTypeInfo(collectionType.GenericTypeArguments[0]), options, keyTypes, visited);
-                    break;
-                }
-            }
-        }
-    }
 
     // A property converter cannot be invoked through JsonConverter's non-generic API. A single
     // synthetic property lets the serializer invoke the original converter, including factories and
@@ -392,26 +326,15 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
     // Opaque converters have no property contracts to traverse. Forward them to the SDK options so
     // any nested records they deserialize themselves still receive tolerant handling.
-    private sealed class CustomConverterForwarder(JsonSerializerOptions probeOptions, JsonSerializerOptions sdkOptions, HashSet<Type> dictionaryKeyTypes) : JsonConverterFactory
+    private sealed class CustomConverterForwarder(JsonSerializerOptions probeOptions, JsonSerializerOptions sdkOptions) : JsonConverterFactory
     {
         public override bool CanConvert(Type typeToConvert)
         {
             Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
-            return !valueType.IsEnum && !dictionaryKeyTypes.Contains(typeToConvert) &&
+            return !valueType.IsEnum &&
                 GetConverter(typeToConvert) is JsonConverter converter &&
                 !IsScalarConverter(converter) &&
-                !HasCustomPropertyNameConversion(converter) &&
                 converter.GetType().Assembly != typeof(JsonSerializer).Assembly;
-        }
-
-        [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The converter is instantiated by the configured resolver or converter factory, and virtual property-name conversion overrides remain available for its runtime type.")]
-        private static bool HasCustomPropertyNameConversion(JsonConverter converter)
-        {
-            Type converterType = converter.GetType();
-            MethodInfo? read = converterType.GetMethod(nameof(JsonConverter<>.ReadAsPropertyName));
-            MethodInfo? write = converterType.GetMethod(nameof(JsonConverter<>.WriteAsPropertyName));
-            return (read is not null && read.DeclaringType?.Assembly != typeof(JsonSerializer).Assembly) ||
-                (write is not null && write.DeclaringType?.Assembly != typeof(JsonSerializer).Assembly);
         }
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
@@ -441,6 +364,31 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private sealed class ForwardingConverter(Type type, JsonConverter converter, JsonSerializerOptions sdkOptions) : JsonConverter<object>
     {
         private readonly PropertyConverter _converter = new(type, converter, sdkOptions);
+        private readonly ReadPropertyName _readPropertyName = BindPropertyNameReader(converter);
+        private readonly WritePropertyName _writePropertyName = BindPropertyNameWriter(converter);
+
+        private delegate object ReadPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options);
+
+        private delegate void WritePropertyName(Utf8JsonWriter writer, object value, JsonSerializerOptions options);
+
+        // The public hooks live on JsonConverter<T>, but T is known only from runtime metadata here.
+        // Bind the framework's non-generic virtual bridges instead of constructing JsonConverter<T>
+        // at runtime, which would not be safe for Native AOT. Virtual dispatch still reaches the
+        // original converter's typed key hooks. Explicit dependencies keep the bridges when trimmed.
+        // Delegates also avoid reflection invocation, which cannot box a ref Utf8JsonReader.
+        [DynamicDependency("ReadAsPropertyNameAsObject", typeof(JsonConverter))]
+        [SuppressMessage("SonarAnalyzer.CSharp", "S3011", Justification = "The framework's non-generic converter bridge is required to delegate typed property-name hooks without runtime generic construction.")]
+        private static ReadPropertyName BindPropertyNameReader(JsonConverter source) =>
+            (typeof(JsonConverter).GetMethod("ReadAsPropertyNameAsObject", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Could not locate the JSON converter property-name reader bridge."))
+                .CreateDelegate<ReadPropertyName>(source);
+
+        [DynamicDependency("WriteAsPropertyNameAsObject", typeof(JsonConverter))]
+        [SuppressMessage("SonarAnalyzer.CSharp", "S3011", Justification = "The framework's non-generic converter bridge is required to delegate typed property-name hooks without runtime generic construction.")]
+        private static WritePropertyName BindPropertyNameWriter(JsonConverter source) =>
+            (typeof(JsonConverter).GetMethod("WriteAsPropertyNameAsObject", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Could not locate the JSON converter property-name writer bridge."))
+                .CreateDelegate<WritePropertyName>(source);
 
         public override bool HandleNull => true;
 
@@ -451,6 +399,14 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options) =>
             _converter.Write(writer, value, options);
+
+        // Key and value occurrences now use the same adapter. Keys bypass the synthetic value
+        // holder entirely and retain the original converter's property-name representation.
+        public override object ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            _readPropertyName(ref reader, typeToConvert, sdkOptions);
+
+        public override void WriteAsPropertyName(Utf8JsonWriter writer, object value, JsonSerializerOptions options) =>
+            _writePropertyName(writer, value, sdkOptions);
     }
 
     /// <summary>

@@ -1309,6 +1309,45 @@ public class JsonSerializerOptionsTests
         Assert.Equal("extension", roundTrip.Key!.Record!.ExtensionData!["$via"].GetString());
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void KeyCapableConvertersForwardCollectionValues(bool dictionary, bool normalizeRoot)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+        });
+        const string item = """{"$type":"test.nested","$via":"extension","value":"first"}""";
+        string metadata = normalizeRoot ? "\"$via\":\"outer\"," : "";
+        if (dictionary)
+        {
+            string json = $$$"""{ {{{metadata}}}"key:first":{{{item}}} }""";
+            Dictionary<TestKey, TestKey> values = Assert.IsType<Dictionary<TestKey, TestKey>>(
+                JsonSerializer.Deserialize<Dictionary<TestKey, TestKey>>(json, options));
+            Assert.Equal("extension", values[new TestKey("first")].Record!.ExtensionData!["$via"].GetString());
+            string serialized = JsonSerializer.Serialize(values, options);
+            Assert.Contains("\"key:first\":", serialized, StringComparison.Ordinal);
+            Dictionary<TestKey, TestKey> roundTrip = Assert.IsType<Dictionary<TestKey, TestKey>>(
+                JsonSerializer.Deserialize<Dictionary<TestKey, TestKey>>(serialized, options));
+            Assert.Equal("extension", roundTrip[new TestKey("first")].Record!.ExtensionData!["$via"].GetString());
+        }
+        else
+        {
+            string json = normalizeRoot
+                ? $$$"""{"$id":"1","$via":"outer","$values":[{{{item}}}]}"""
+                : $"[{item}]";
+            List<TestKey> values = Assert.IsType<List<TestKey>>(JsonSerializer.Deserialize<List<TestKey>>(json, options));
+            Assert.Equal("extension", Assert.Single(values).Record!.ExtensionData!["$via"].GetString());
+            string serialized = JsonSerializer.Serialize(values, options);
+            List<TestKey> roundTrip = Assert.IsType<List<TestKey>>(JsonSerializer.Deserialize<List<TestKey>>(serialized, options));
+            Assert.Equal("extension", Assert.Single(roundTrip).Record!.ExtensionData!["$via"].GetString());
+        }
+    }
+
 #if NET10_0_OR_GREATER
     [Theory]
     [InlineData(true)]
@@ -2094,6 +2133,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(CycleNodeBase))]
 [JsonSerializable(typeof(CycleNode))]
 [JsonSerializable(typeof(Dictionary<TestKey, string>))]
+[JsonSerializable(typeof(Dictionary<TestKey, TestKey>))]
+[JsonSerializable(typeof(List<TestKey>))]
 [JsonSerializable(typeof(List<CycleNodeBase>))]
 [JsonSerializable(typeof(DeepNormalizationRecordBase))]
 [JsonSerializable(typeof(DeepNormalizationRecord))]
