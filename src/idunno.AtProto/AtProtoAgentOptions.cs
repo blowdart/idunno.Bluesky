@@ -110,7 +110,13 @@ public class AtProtoAgentOptions
     /// <summary>
     /// Gets or sets any <see cref="JsonOptions"/> to use during serialization and deserialization."/>
     /// </summary>
+    /// <remarks>
+    /// <para>The agent copies and finalizes these options during construction, after caller configuration.
+    /// The agent's serializer options are read-only; the supplied options remain unchanged.</para>
+    /// </remarks>
     public JsonOptions? HttpJsonOptions { get; set; }
+
+    internal virtual JsonOptions? GetHttpJsonOptions() => HttpJsonOptions;
 
     /// <summary>
     /// Gets or sets any OAuth options for the agent.

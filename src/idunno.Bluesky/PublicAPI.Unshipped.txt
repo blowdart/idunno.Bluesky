@@ -1,4 +1,7 @@
 #nullable enable
+static idunno.Bluesky.BlueskyJsonSerializerOptions.Create(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
+static idunno.Bluesky.BlueskyJsonSerializerOptions.CreateReadOptions(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
+static idunno.Bluesky.BlueskyJsonSerializerOptions.CreateWriteOptions(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
 idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod
 idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod.Device = 1 -> idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod
 idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod.Unknown = 0 -> idunno.Bluesky.AgeAssurance.AdditionalVerificationMethod

@@ -32,7 +32,9 @@ public class RepoMigrationRequestTests
     public void RepositoryEndpointSerializerPreservesEveryReachableType()
     {
         JsonSerializerOptions options = AtProtoServer.AtProtoJsonSerializerOptions;
-        Assert.All(options.TypeInfoResolverChain, resolver => Assert.IsAssignableFrom<JsonSerializerContext>(resolver));
+        Assert.IsAssignableFrom<JsonSerializerContext>(TypeResolver.JsonTypeInfoResolver);
+        JsonSerializerOptions contracts = new(options) { TypeInfoResolver = TypeResolver.JsonTypeInfoResolver };
+        contracts.Converters.Clear();
         HashSet<Type> visited = [];
         foreach (Type root in new[] { typeof(ListMissingBlobsResponse), typeof(MissingBlob), typeof(EmptyResponse), typeof(AtErrorDetail) })
         {
@@ -46,7 +48,8 @@ public class RepoMigrationRequestTests
                 return;
             }
 
-            JsonTypeInfo metadata = options.GetTypeInfo(type);
+            Assert.Equal(type, options.GetTypeInfo(type).Type);
+            JsonTypeInfo metadata = contracts.GetTypeInfo(type);
             Assert.Equal(type, metadata.Type);
             foreach (JsonPropertyInfo property in metadata.Properties)
             {

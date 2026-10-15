@@ -20,6 +20,22 @@
 
 #### idunno.AtProto
 
+* Added `AtProtoJsonSerializerOptions.Create(configure)` to return read-only options with tolerant JSON handling installed after resolver customization. Agent constructors and builders now copy and finalize options after all caller configuration, preserving caller settings without freezing or mutating caller options. Legacy mutable options remain available; arbitrary resolver replacement or prepending can bypass adaptation and requires explicit chaining recovery for direct serialization.
+* Tolerant JSON forwarding preserves type-attached reference converters' null-handling policies, including null sentinels and null rejection.
+* Tolerant JSON forwarding also preserves custom converters with reference-preserving options and null handling on polymorphic roots. Built-in protocol scalar converters avoid forwarding allocations; normalization honors configured depth limits and preserves raw opaque extension JSON.
+* Decorating SDK JSON resolvers no longer creates resolver cycles. Custom reference handlers retain preservation metadata, and dictionary-key converters retain their property-name hooks.
+* Tolerant JSON normalization leaves initialized extension data on unaffected sibling objects unchanged. Converters used for both dictionary keys and property values retain tolerant nested-record handling, and decorated reflection fallbacks preserve caller modifiers on Bluesky source-generated contracts.
+* Custom converters with dictionary-key hooks also retain tolerant nested-record handling when used for list elements and dictionary values.
+* Custom enum converters, including nullable enum properties, bypass tolerant value-forwarding buffers.
+* Caller JSON modifiers customize original contracts rather than SDK converter shells, allowing type-only object callbacks and property changes. Reflection resolver modifiers also apply when Bluesky source-generated fallback contracts are selected.
+* Custom JSON resolvers also receive original contracts instead of SDK converter shells, preserving property customization and object callbacks with polymorphism and reference preservation.
+* Reference-preserving asynchronous serialization keeps async-enumerable roots and containing objects on the built-in asynchronous writer path.
+* Async-enumerable contract discovery does not suppress tolerant decoding for later standalone reads.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
+* Tolerant JSON normalization uses bounded temporary property names to prevent allocation amplification from long input names and many unknown metadata fields.
+* Tolerant JSON normalization preserves ordinary extension fields in culture-sensitive dictionaries and restores only each object's own aliases, in input order. Reference-preserving options support unknown metadata while retaining shared references across object and collection roots.
+* Tolerant JSON handling recognizes nested polymorphic values in non-generic derived lists and dictionaries and interface-typed collections on .NET 8 and .NET 9.
+* SDK JSON options automatically tolerate unknown `$` properties in polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Duplicate unknown metadata properties preserve the last value unless .NET 10 `AllowDuplicateProperties` is disabled, in which case normalization preserves duplicate-property rejection. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Resolvers appended after creating `JsonOptions` or mutable SDK options, nested values handled by custom converters (including property-level, options-registered and value-type converters), and default server record listings are supported. After replacing or prepending resolvers, or customizing options copied with `new JsonSerializerOptions(...)`, use `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions` to restore SDK contract adaptation around the customized resolver. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
 * Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
 * Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
   buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
@@ -138,6 +154,9 @@
 
 #### idunno.Bluesky
 
+* Added `BlueskyJsonSerializerOptions.Create(configure)` for read-only options finalized after resolver customization. Bluesky agent finalization also handles JSON options replaced or customized after constructing `BlueskyAgentOptions`, without mutating caller options.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
+* Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.
 * Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
   `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
   `Add(StrongReference)` is obsolete in favor of `Quote()`, and `Label()` is obsolete in favor of `SetSelfLabels()`.
@@ -306,6 +325,7 @@
   Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.
 * `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
   To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
+* Agent JSON options are now copied and finalized as a read-only snapshot during construction. Configure serializer settings, converters, and resolvers on `AtProtoAgentOptions.HttpJsonOptions` or `BlueskyAgentOptions.HttpJsonOptions` before constructing the agent; changes to `agent.JsonOptions.JsonSerializerOptions` after construction now throw instead of changing subsequent requests.
 * `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
 * `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
   `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact
@@ -346,6 +366,9 @@
 
 * Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.
 * `DescribeServer()` now accepts an empty required `availableUserDomains` array.
+* Tolerant JSON normalization now handles unknown metadata on polymorphic dictionary envelopes and preserves caller-defined composite resolvers when finalizing options.
+* Tolerant JSON normalization now preserves polymorphic collection `$values` envelopes selected through interface contracts and does not capture ignored properties as extension data.
+* Tolerant JSON normalization now consumes malformed dictionary envelope metadata safely and preserves preinitialized extension-data entries when inserting temporary aliases.
 
 * Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
 * Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.

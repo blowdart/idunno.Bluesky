@@ -17,6 +17,7 @@ DTOs are built from the AtProto and Bluesky [lexicon]https://github.com/bluesky-
 * Linting is not a separate step: analyzers (SonarAnalyzer, PublicApiAnalyzers, documentation analyzers) run during `dotnet build`, and `<TreatWarningsAsErrors>` is on, so a clean build is the lint gate.
 * **CI builds `Debug`, not `Release`.** Some analyzers, notably the documentation analyzers (`CSENSE*`), only run in `Debug`, so a clean `Release` build proves nothing about CI.
 * **Never trust an incremental build as a pre-commit gate.** If you have just built an individual project, a subsequent solution build reuses that result and silently skips its analyzers. Pass `--no-incremental`.
+* **Windows toolchain discovery.** Do not assume build tools are on `PATH` or installed on `C:`. Before concluding that a toolchain is unavailable, inspect Visual Studio's registered installation locations and search other mounted drives for its environment scripts (such as `vcvars64.bat`) or required executables.
 
 ### GitHub Actions failed-test protocol
 
@@ -142,6 +143,10 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 * Nullable is enabled repo-wide. Declare variables non-nullable and validate `null` at entry points.
 * Use `is null` / `is not null`, never `== null` / `!= null`.
 * Trust the null annotations — don't add null checks the type system says are unnecessary.
+
+## Regression and side-effect review
+
+Before considering a change complete, identify the assumptions and invariants it touches. Check whether behavior can vary with call order, state or cache lifetime, configuration, input shape, or API path. Add focused regression tests for the relevant boundary cases, then review the full diff for unintended effects on adjacent behavior. Do not stop after making only the reported case pass; choose checks that are relevant to the change rather than attempting every possible combination.
 
 ## Testing conventions
 

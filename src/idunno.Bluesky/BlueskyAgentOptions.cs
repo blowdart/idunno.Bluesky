@@ -1,6 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.RichText;
@@ -22,7 +25,7 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
     /// <summary>
     /// Creates a new instance of <see cref="BlueskyAgentOptions"/>
     /// </summary>
-    public BlueskyAgentOptions() : base()
+    public BlueskyAgentOptions() : this(loggerFactory: null)
     {
     }
 
@@ -60,16 +63,42 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
             FacetExtractor = facetExtractor;
         }
 
-        // Insert the Bluesky source generation context at the start of the type info resolver chain.
-        if (httpJsonOptions is not null)
+        if (httpJsonOptions is null)
         {
+            httpJsonOptions = new JsonOptions(adaptContracts: false);
             httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+            AtProto.Json.TolerantPolymorphicConverter.Configure(httpJsonOptions.JsonSerializerOptions);
         }
-        else
+        HttpJsonOptions = httpJsonOptions;
+    }
+
+    internal override JsonOptions GetHttpJsonOptions()
+    {
+        JsonOptions result = HttpJsonOptions is null
+            ? new JsonOptions(adaptContracts: false)
+            : new JsonOptions(new JsonSerializerOptions(HttpJsonOptions.JsonSerializerOptions));
+        IList<IJsonTypeInfoResolver> resolvers = result.JsonSerializerOptions.TypeInfoResolverChain;
+        for (int index = 0; index < resolvers.Count; index++)
         {
-            httpJsonOptions = new JsonOptions();
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+            IJsonTypeInfoResolver prioritized = AtProto.Json.TolerantPolymorphicConverter.PrioritizeFallback(
+                resolvers[index], SourceGenerationContext.Default);
+            if (!ReferenceEquals(prioritized, resolvers[index]))
+            {
+                resolvers[index] = prioritized;
+            }
         }
+        if (!resolvers.Contains(SourceGenerationContext.Default))
+        {
+            int insertIndex = 0;
+            while (insertIndex < resolvers.Count &&
+                resolvers[insertIndex] is not DefaultJsonTypeInfoResolver &&
+                !AtProto.Json.TolerantPolymorphicConverter.IsTolerantResolver(resolvers[insertIndex]))
+            {
+                insertIndex++;
+            }
+            resolvers.Insert(insertIndex, SourceGenerationContext.Default);
+        }
+        return result;
     }
 
     /// <summary>

@@ -41,7 +41,12 @@ public class LexiconEndpointMetadataTests
     public void EndpointSerializerPreservesEveryReachableType(Type root)
     {
         JsonSerializerOptions options = BlueskyServer.BlueskyJsonSerializerOptions;
-        Assert.All(options.TypeInfoResolverChain, resolver => Assert.IsAssignableFrom<JsonSerializerContext>(resolver));
+        Assert.All(TypeResolver.JsonTypeInfoResolvers, resolver => Assert.IsAssignableFrom<JsonSerializerContext>(resolver));
+        JsonSerializerOptions contracts = new(options)
+        {
+            TypeInfoResolver = JsonTypeInfoResolver.Combine(TypeResolver.JsonTypeInfoResolvers.ToArray())
+        };
+        contracts.Converters.Clear();
         HashSet<Type> visited = [];
         Verify(root);
 
@@ -52,7 +57,8 @@ public class LexiconEndpointMetadataTests
                 return;
             }
 
-            JsonTypeInfo metadata = options.GetTypeInfo(type);
+            Assert.Equal(type, options.GetTypeInfo(type).Type);
+            JsonTypeInfo metadata = contracts.GetTypeInfo(type);
             Assert.Equal(type, metadata.Type);
             foreach (JsonPropertyInfo property in metadata.Properties)
             {

@@ -8,13 +8,79 @@
 If you are using your own record types with an `AtProtoAgent` Native AOT requires 
 [JSON serialization source generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation).
 
+### Unknown JSON properties
+
+The SDK's JSON options tolerate unknown properties whose names begin with `$`, such as `"$via": "kazahana"`.
+This applies to direct deserialization with `BlueskyJsonSerializerOptions.Default` or `.Options`,
+`AtProtoJsonSerializerOptions`, the server options, chained SDK options and agent HTTP JSON options, including nested
+posts, embeds, feed views and typed repository envelopes.
+
+Unknown properties are retained, with their original names and JSON values, when the selected concrete contract has
+`[JsonExtensionData]`. Otherwise they are discarded. `$type` still selects the contract; unrecognized discriminators use
+the contract's existing fallback policy. Malformed discriminators and invalid or missing required fields still fail.
+The protocol's `$link` and `$bytes` representations are unchanged.
+
+With `ReferenceHandler.Preserve` or a custom reference handler, unknown fields are normalized across the complete object or collection root before
+the built-in serializer reads it in a single operation. `$id`, `$ref` and `$values` retain their reference semantics,
+including shared references between siblings. `ReferenceHandler.IgnoreCycles` does not reserve those names on reads;
+they are treated like other unknown fields on polymorphic contracts.
+Custom converters also receive tolerant options in Preserve mode; their explicit nested serializer calls retain the
+normal System.Text.Json boundary for reference resolution, while ordinary sibling references share the root operation.
+
+The tolerant decoder uses source-generated type metadata, without reflection-based type construction, and supports
+trimmed and Native AOT applications on .NET 9 and .NET 10. Custom JSON
+converters retain control of their own wire formats and receive the SDK options for decoding nested values, including
+when a custom converter is registered for a value type or a property. Type-attached reference converters retain their
+null-handling policies, including null sentinels and null validation. Agent constructors copy and finalize JSON options
+after caller configuration, including builder callbacks and later changes to builder options made before `Build()`.
+The agent's serializer options are read-only; the original caller options remain unchanged and mutable.
+Using a source-generation context directly, rather than the SDK options, does not enable tolerant decoding.
+Normalization respects the configured `MaxDepth` and copies opaque extension values without reformatting their raw JSON.
+Known protocol scalar converters remain on their direct path rather than allocating forwarding buffers.
+Converters for dictionary-key types in the selected contract graph also retain their direct path, preserving both their
+value and key conversion hooks. Decorated SDK resolvers retain their underlying resolution path without incorporating
+the decorator into its own resolver chain.
+
+### Configuring options for direct serialization
+
+Use `AtProtoJsonSerializerOptions.Create(configure)` or `BlueskyJsonSerializerOptions.Create(configure)` to configure
+mutable options before the SDK installs tolerant converters and wraps the final resolver chain:
+
+```c#
+JsonSerializerOptions options = BlueskyJsonSerializerOptions.Create(options =>
+{
+    options.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
+    options.WriteIndented = true;
+});
+```
+
+The result is a new read-only snapshot. Configuration callbacks may prepend or replace resolvers; if replacing the
+entire resolver, include every context needed by your application. Custom settings, converters and metadata modifiers
+are preserved. Shared `Default` options remain read-only and unchanged. Do not serialize using the callback's options;
+SDK adaptation is installed only on the returned copy after the callback completes.
+Resolver and converter instances are shared rather than deep-cloned; do not mutate those objects after finalization.
+
+> [!WARNING]
+> The legacy `.Options` properties, `new JsonOptions()`, and `BuildChainedTypeInfoResolverJsonSerializerOptions(...)`
+> return mutable options for compatibility. Arbitrary mutations to already-returned `JsonSerializerOptions` are not
+> intercepted. Appending a resolver is supported, but prepending a resolver, replacing a resolver that precedes the SDK
+> wrapper, replacing `TypeInfoResolver`, or customizing a copy made with `new JsonSerializerOptions(...)` can bypass
+> SDK contract adaptation. Deserialization may throw rather than tolerate unknown metadata. Prefer the `Create`
+> callbacks or pass configured `JsonOptions` to an agent constructor, which finalizes its own copy.
+
+For legacy direct-call code, use `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(customizedOptions)`
+**after** resolver customization to restore adaptation around the customized resolver. This helper returns fresh mutable
+AtProto defaults and chains the supplied resolver; it does not copy the supplied settings or converters. Reapply those
+settings to its result if needed, or use a `Create` callback instead. Later arbitrary resolver mutations can bypass the
+wrapper again. No API promises to intercept arbitrary mutations of mutable returned options.
+
 ### Configuring the agent for source generation
 
 You must configure the `AtProtoAgent` to use the source generation context either for your classes via `JsonOptions`,
 
 ```c#
 JsonOptions httpJsonOptions = new();
-httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(SourceGenerationContext.Default);
 
 using (AtProtoAgent agent = new(
     service: server,
@@ -36,13 +102,19 @@ var builder = AtProtoAgent.CreateBuilder()
     .ForService(service)
     .ConfigureHttpJsonOptions(options =>
     {
-        options.SerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
+        options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, YourAppJsonSerializerContext.Default);
     });
 
 using var agent = builder.Build();
 
 // Your code to use the agent
 ```
+
+For `BlueskyAgent` under Native AOT, include the Bluesky source-generation resolver before attaching a
+`WithAddedModifier` wrapper so the modifier can receive Bluesky contracts as well as AT Protocol contracts.
+The default `BlueskyAgentOptions` configures the Bluesky resolver before caller customization. A modifier attached
+to an AtProto-only `new JsonOptions()` resolver cannot modify Bluesky contracts that are added later during agent
+finalization.
 
 ### Calling `AtProtoServer` and `AtProtoHttpClient` methods directly.
 

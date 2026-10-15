@@ -1,4 +1,7 @@
 #nullable enable
+static idunno.AtProto.AtProtoJsonSerializerOptions.Create(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
+static idunno.AtProto.AtProtoJsonSerializerOptions.CreateReadOptions(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
+static idunno.AtProto.AtProtoJsonSerializerOptions.CreateWriteOptions(System.Action<System.Text.Json.JsonSerializerOptions!>! configure) -> System.Text.Json.JsonSerializerOptions!
 idunno.AtProto.Jetstream.JetstreamOptions.ReplayLiveBufferCapacity.get -> int
 idunno.AtProto.Jetstream.JetstreamOptions.ReplayLiveBufferCapacity.init -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ReplayLiveBufferCapacity.get -> int
