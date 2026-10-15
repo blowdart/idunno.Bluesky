@@ -122,9 +122,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             return snapshot;
         }
 
-        FieldInfo? resolverListField = fields.FirstOrDefault(field =>
-            typeof(IList<IJsonTypeInfoResolver>).IsAssignableFrom(field.FieldType));
-        if (resolverListField?.GetValue(resolver) is IList<IJsonTypeInfoResolver> resolverList)
+        if (resolverType.Assembly == typeof(JsonTypeInfoResolver).Assembly &&
+            fields.FirstOrDefault(field => typeof(IList<IJsonTypeInfoResolver>).IsAssignableFrom(field.FieldType))
+                ?.GetValue(resolver) is IList<IJsonTypeInfoResolver> resolverList)
         {
             List<IJsonTypeInfoResolver> snapshots = [];
             for (int index = 0; index < resolverList.Count; index++)
@@ -849,11 +849,54 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             if (reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Dictionary &&
                 GetElementType(info) is Type valueType)
             {
+                JsonPolymorphismOptions? dictionaryPolymorphism = info.PolymorphismOptions;
+                if (dictionaryPolymorphism is not null)
+                {
+                    Utf8JsonReader discriminatorReader = reader;
+                    while (discriminatorReader.Read() && discriminatorReader.TokenType != JsonTokenType.EndObject)
+                    {
+                        bool isDiscriminator = discriminatorReader.ValueTextEquals(dictionaryPolymorphism.TypeDiscriminatorPropertyName);
+                        discriminatorReader.Read();
+                        if (isDiscriminator)
+                        {
+                            foreach (JsonDerivedType derived in dictionaryPolymorphism.DerivedTypes)
+                            {
+                                if ((derived.TypeDiscriminator is string text &&
+                                        discriminatorReader.TokenType == JsonTokenType.String &&
+                                        discriminatorReader.ValueTextEquals(text)) ||
+                                    (derived.TypeDiscriminator is int number &&
+                                        discriminatorReader.TokenType == JsonTokenType.Number &&
+                                        discriminatorReader.TryGetInt32(out int value) && value == number))
+                                {
+                                    info = underlyingOptions.GetTypeInfo(derived.DerivedType);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        SkipValue(ref discriminatorReader);
+                    }
+                }
+
+                valueType = GetElementType(info) ?? valueType;
                 JsonTypeInfo valueInfo = underlyingOptions.GetTypeInfo(valueType);
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                 {
+                    bool isDiscriminator = dictionaryPolymorphism is not null &&
+                        reader.ValueTextEquals(dictionaryPolymorphism.TypeDiscriminatorPropertyName);
+                    bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
+                        (reader.ValueTextEquals("$id") || reader.ValueTextEquals("$ref"));
+                    bool dollarName = reader.HasValueSequence || reader.ValueIsEscaped
+                        ? reader.GetString()!.StartsWith('$')
+                        : reader.ValueSpan.StartsWith("$"u8);
+                    if (dollarName && !isDiscriminator && !knownReferenceMetadata &&
+                        (dictionaryPolymorphism is not null || PreservesReferences(underlyingOptions)))
+                    {
+                        return true;
+                    }
+
                     reader.Read();
-                    if (NeedsNormalization(ref reader, valueInfo))
+                    if (!isDiscriminator && !knownReferenceMetadata && NeedsNormalization(ref reader, valueInfo))
                     {
                         return true;
                     }
@@ -1070,12 +1113,51 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             if (element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Dictionary && GetElementType(info) is Type valueType)
             {
+                JsonPolymorphismOptions? dictionaryPolymorphism = info.PolymorphismOptions;
+                if (dictionaryPolymorphism is not null &&
+                    element.TryGetProperty(dictionaryPolymorphism.TypeDiscriminatorPropertyName, out JsonElement dictionaryDiscriminator))
+                {
+                    foreach (JsonDerivedType derived in dictionaryPolymorphism.DerivedTypes)
+                    {
+                        if ((derived.TypeDiscriminator is string text &&
+                                dictionaryDiscriminator.ValueKind == JsonValueKind.String &&
+                                dictionaryDiscriminator.GetString() == text) ||
+                            (derived.TypeDiscriminator is int number &&
+                                dictionaryDiscriminator.ValueKind == JsonValueKind.Number &&
+                                dictionaryDiscriminator.TryGetInt32(out int value) && value == number))
+                        {
+                            info = underlyingOptions.GetTypeInfo(derived.DerivedType);
+                            break;
+                        }
+                    }
+                }
+
+                valueType = GetElementType(info) ?? valueType;
                 JsonTypeInfo valueInfo = underlyingOptions.GetTypeInfo(valueType);
                 writer.WriteStartObject();
                 foreach (JsonProperty property in element.EnumerateObject())
                 {
+                    bool isDiscriminator = dictionaryPolymorphism is not null &&
+                        property.Name == dictionaryPolymorphism.TypeDiscriminatorPropertyName;
+                    bool knownReferenceMetadata = PreservesReferences(underlyingOptions) &&
+                        property.Name is "$id" or "$ref";
+                    bool unknownMetadata = (dictionaryPolymorphism is not null || PreservesReferences(underlyingOptions)) &&
+                        property.Name.StartsWith('$') && !isDiscriminator && !knownReferenceMetadata;
+                    if (unknownMetadata)
+                    {
+                        normalized = true;
+                        continue;
+                    }
+
                     writer.WritePropertyName(property.Name);
-                    normalized |= WriteNormalized(writer, property.Value, valueInfo, state);
+                    if (!isDiscriminator && !knownReferenceMetadata)
+                    {
+                        normalized |= WriteNormalized(writer, property.Value, valueInfo, state);
+                    }
+                    else
+                    {
+                        writer.WriteRawValue(property.Value.GetRawText(), skipInputValidation: true);
+                    }
                 }
                 writer.WriteEndObject();
                 return normalized;

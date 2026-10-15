@@ -357,6 +357,7 @@
 
 * Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.
 * `DescribeServer()` now accepts an empty required `availableUserDomains` array.
+* Tolerant JSON normalization now handles unknown metadata on polymorphic dictionary envelopes and preserves caller-defined composite resolvers when finalizing options.
 
 * Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
 * Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.

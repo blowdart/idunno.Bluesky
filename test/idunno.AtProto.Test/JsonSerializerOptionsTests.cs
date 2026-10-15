@@ -159,6 +159,32 @@ public class JsonSerializerOptionsTests
         Assert.Equal("sdkcustomvalue", Assert.Single(recordInfo.Properties).Name);
     }
 
+    [Fact]
+    public void FactoryFinalizationPreservesCallerCompositeResolverBehavior()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = new CustomCompositeTypeInfoResolver(ChainedTestContext.Default));
+
+        ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
+            JsonSerializer.Deserialize<ChainedTestRecord>("""{"customValue":"factory"}""", options));
+
+        Assert.Equal("factory", record.Value);
+    }
+
+    [Fact]
+    public void AgentFinalizationPreservesCallerCompositeResolverBehavior()
+    {
+        JsonOptions supplied = new();
+        supplied.JsonSerializerOptions.TypeInfoResolver =
+            new CustomCompositeTypeInfoResolver(ChainedTestContext.Default);
+        using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
+
+        ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
+            JsonSerializer.Deserialize<ChainedTestRecord>("""{"customValue":"agent"}""", agent.JsonOptions.JsonSerializerOptions));
+
+        Assert.Equal("agent", record.Value);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -641,6 +667,21 @@ public class JsonSerializerOptionsTests
                 Assert.Equal("nested", record.ExtensionData!["$via"].GetString());
             }
         }
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"test.polymorphicDictionary","$via":"extension","entry":"value"}""")]
+    [InlineData("""{"$via":"extension","entry":"value","$type":"test.polymorphicDictionary"}""")]
+    public void PolymorphicDictionaryNormalizesUnknownMetadata(string json)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        PolymorphicRecordDictionaryBase dictionary = Assert.IsType<PolymorphicRecordDictionary>(
+            JsonSerializer.Deserialize<PolymorphicRecordDictionaryBase>(json, options));
+
+        Assert.Equal("value", dictionary["entry"]);
+        Assert.Single(dictionary);
     }
 
     [Fact]
@@ -1248,6 +1289,37 @@ internal sealed class RejectingTypeInfoResolver(Type rejectedType) : IJsonTypeIn
             : _resolver.GetTypeInfo(type, options);
 }
 
+internal sealed class CustomCompositeTypeInfoResolver : IJsonTypeInfoResolver
+{
+    private readonly List<IJsonTypeInfoResolver> _resolvers;
+
+    internal CustomCompositeTypeInfoResolver(IJsonTypeInfoResolver resolver)
+    {
+        _resolvers = [resolver];
+    }
+
+    public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
+    {
+        foreach (IJsonTypeInfoResolver resolver in _resolvers)
+        {
+            JsonTypeInfo? typeInfo = resolver.GetTypeInfo(type, options);
+            if (typeInfo is null)
+            {
+                continue;
+            }
+
+            if (type == typeof(ChainedTestRecord))
+            {
+                Assert.Single(typeInfo.Properties).Name = "customValue";
+            }
+
+            return typeInfo;
+        }
+
+        return null;
+    }
+}
+
 internal sealed class IgnoredPayload;
 
 internal sealed class ConflictingContract
@@ -1435,6 +1507,12 @@ internal sealed class DerivedRecordDictionary : Dictionary<string, NestedCustomR
 internal abstract class PolymorphicRecordListBase : List<NestedCustomRecordBase>;
 
 internal sealed class PolymorphicRecordList : PolymorphicRecordListBase;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(PolymorphicRecordDictionary), "test.polymorphicDictionary")]
+internal abstract class PolymorphicRecordDictionaryBase : Dictionary<string, string>;
+
+internal sealed class PolymorphicRecordDictionary : PolymorphicRecordDictionaryBase;
 
 internal sealed class ReferenceEnvelopeRecord
 {
@@ -1801,6 +1879,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(CollectionRecord))]
 [JsonSerializable(typeof(PolymorphicRecordListBase))]
 [JsonSerializable(typeof(PolymorphicRecordList))]
+[JsonSerializable(typeof(PolymorphicRecordDictionaryBase))]
+[JsonSerializable(typeof(PolymorphicRecordDictionary))]
 [JsonSerializable(typeof(ReferenceEnvelopeRecord))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
