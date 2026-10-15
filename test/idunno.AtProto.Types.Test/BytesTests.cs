@@ -120,9 +120,16 @@ public class BytesTests
     }
 
     [Fact]
-    public void EmptyByteArrayShouldThrowArgumentOutOfRangeException()
+    public void EmptyBytesShouldConstructAndRoundTrip()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new Bytes([]));
+        Bytes fromArray = new([]);
+        Bytes fromBase64 = new(string.Empty);
+
+        Assert.Empty(fromArray.Value);
+        Assert.Empty(fromBase64.Value);
+        Assert.Equal(fromArray, fromBase64);
+        Assert.Equal("""{"$bytes":""}""", JsonSerializer.Serialize(fromArray));
+        Assert.Equal(fromArray, JsonSerializer.Deserialize<Bytes>(JsonSerializer.Serialize(fromArray)));
     }
 
     [Fact]
@@ -138,9 +145,9 @@ public class BytesTests
     }
 
     [Fact]
-    public void EmptyBase64StringShouldThrowArgumentException()
+    public void EmptyBase64StringShouldConstruct()
     {
-        Assert.Throws<ArgumentException>(() => new Bytes(string.Empty));
+        Assert.Empty(new Bytes(string.Empty).Value);
     }
 
     [Fact]
@@ -177,10 +184,10 @@ public class BytesTests
     }
 
     [Fact]
-    public void EmptyValueShouldThrowDuringDeserialization()
+    public void EmptyValueShouldDeserialize()
     {
         var json = """{"$bytes":""}""";
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Bytes>(json));
+        Assert.Empty(JsonSerializer.Deserialize<Bytes>(json)!.Value);
     }
 
     [Fact]

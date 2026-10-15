@@ -23,8 +23,10 @@ public sealed record ChatPreference
     /// <summary>
     /// Creates a new instance of <see cref="ChatPreference"/>.
     /// </summary>
+    [JsonConstructor]
     public ChatPreference()
     {
+        IncludeValue = "all";
     }
 
     /// <summary>
@@ -32,17 +34,39 @@ public sealed record ChatPreference
     /// </summary>
     /// <param name="include">The type of chats to be notified for.</param>
     /// <param name="push">A flag indicating whether chat notifications should be pushed.</param>
-    [JsonConstructor]
+    /// <exception cref="ArgumentOutOfRangeException">The include value is not a recognized enumeration value.</exception>
     public ChatPreference(ChatNotificationsFrom include, bool push)
     {
-        Include = include;
+        IncludeValue = NotificationWireValues.FromChatNotificationsFrom(include, nameof(include));
         Push = push;
     }
 
     /// <summary>
     /// Gets or sets the type of chats to be notified for.
     /// </summary>
-    public ChatNotificationsFrom Include { get; set; }
+    /// <exception cref="ArgumentOutOfRangeException">The value is not recognized. Set <see cref="IncludeValue"/> to retain a service-defined value.</exception>
+    [JsonIgnore]
+    public ChatNotificationsFrom Include
+    {
+        get => NotificationWireValues.ToChatNotificationsFrom(IncludeValue);
+        set => IncludeValue = NotificationWireValues.FromChatNotificationsFrom(value, nameof(value));
+    }
+
+    /// <summary>
+    /// Gets or sets the service-defined wire value for the type of chats to be notified for.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    [JsonRequired]
+    [JsonPropertyName("include")]
+    public string IncludeValue
+    {
+        get;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets a flag indicating whether chat notifications should be pushed.

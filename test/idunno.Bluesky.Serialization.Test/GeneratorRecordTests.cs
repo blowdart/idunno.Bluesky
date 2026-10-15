@@ -34,7 +34,8 @@ public class GeneratorRecordTests
         """{"$type":"app.bsky.actor.status","status":"app.bsky.actor.status#live","createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.graph.referencelistoptout","subject":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
         """{"$type":"app.bsky.graph.listblock","subject":"at://did:plc:ewvi7nxzyoun6zhxrhs64oiz/app.bsky.graph.list/test","createdAt":"2025-04-21T10:49:31.969Z"}""",
-        """{"$type":"app.bsky.actor.contentVisibilityDeclaration","hideFromAlgorithmicRecommendations":false}"""
+        """{"$type":"app.bsky.actor.contentVisibilityDeclaration","hideFromAlgorithmicRecommendations":false}""",
+        """{"$type":"app.bsky.actor.link","url":"https://example.com","createdAt":"2025-04-21T10:49:31.969Z"}"""
     ];
 
     [Fact]

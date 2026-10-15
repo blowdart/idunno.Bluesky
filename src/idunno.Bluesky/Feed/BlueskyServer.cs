@@ -837,7 +837,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor, response.Result.StartCursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -1455,7 +1455,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
+                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor, response.Result.StartCursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

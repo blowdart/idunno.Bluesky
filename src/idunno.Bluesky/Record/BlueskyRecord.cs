@@ -26,6 +26,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Feed.Like), RecordType.Like)]
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(Profile), RecordType.Profile)]
+[JsonDerivedType(typeof(Actor.Link), RecordType.ActorLink)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
 [JsonDerivedType(typeof(Service), RecordType.LabelerDeclaration)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]

@@ -237,6 +237,29 @@ public record Profile : BlueskyRecord
     public StrongReference? PinnedPost { get; set; }
 
     /// <summary>
+    /// Gets or sets the profile's links, in display order.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">An entry is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">More than ten links are specified.</exception>
+    public IReadOnlyCollection<StrongReference>? Links
+    {
+        get;
+        set
+        {
+            if (value is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Count, 10);
+                foreach (StrongReference link in value)
+                {
+                    ArgumentNullException.ThrowIfNull(link);
+                }
+            }
+
+            field = value is null ? null : Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    /// <summary>
     /// Gets any <see cref="SelfLabels"/> applied to the profile.
     /// </summary>
     /// <remarks>

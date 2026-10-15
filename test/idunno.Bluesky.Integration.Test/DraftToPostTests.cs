@@ -1566,7 +1566,7 @@ public class DraftToPostTests
                     response.StatusCode = 200;
                     var serverDescription = new ServerDescription(
                         did: $"{s_user}",
-                        contact: new Contact($"test@{request.Host.Host}"),
+                        contact: new idunno.AtProto.Server.Contact($"test@{request.Host.Host}"),
                         links: new Links
                         {
                             PrivacyPolicy = new Uri($"https://{request.Host.Host}/privacy"),

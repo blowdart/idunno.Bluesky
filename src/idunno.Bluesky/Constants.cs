@@ -657,6 +657,11 @@ public static class CollectionNsid
     public static Nsid Profile => new("app.bsky.actor.profile");
 
     /// <summary>
+    /// The NSID for an actor's profile link collection.
+    /// </summary>
+    public static Nsid Link => new("app.bsky.actor.link");
+
+    /// <summary>
     /// The NSID for a user's verification collection.
     /// </summary>
     public static Nsid Verification => new("app.bsky.graph.verification");
@@ -771,6 +776,11 @@ public static class RecordType
     /// Indicates a profile record.
     /// </summary>
     public const string Profile = "app.bsky.actor.profile";
+
+    /// <summary>
+    /// Indicates a link record shown on an actor's profile.
+    /// </summary>
+    public const string ActorLink = "app.bsky.actor.link";
 
     /// <summary>
     /// Indicates a starter pack record.

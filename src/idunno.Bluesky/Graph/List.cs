@@ -28,6 +28,7 @@ public record List : BlueskyTimestampedRecord
     internal List(
         string name,
         ListPurpose purpose,
+        string? purposeValue,
         DateTimeOffset createdAt,
         string? description = null,
         IEnumerable<Facet>? descriptionFacets = null,
@@ -44,7 +45,7 @@ public record List : BlueskyTimestampedRecord
         }
 
         _name = name;
-        Purpose = purpose;
+        PurposeValue = purposeValue ?? ListPurposeConverter.ToWireValue(purpose);
         _description = description;
         Avatar = avatar;
         Labels = labels;
@@ -68,6 +69,7 @@ public record List : BlueskyTimestampedRecord
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="purpose"/> is <see cref="ListPurpose.Unknown"/>, or <paramref name="name"/> is &gt; 64 UTF-8 bytes, or <paramref name="description"/> is &gt; 300 graphemes or &gt; 3000 UTF-8 bytes.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The purpose is not a defined enumeration value.</exception>
     public List(
         string name,
         ListPurpose purpose,
@@ -92,7 +94,7 @@ public record List : BlueskyTimestampedRecord
         }
 
         _name = name;
-        Purpose = purpose;
+        PurposeValue = ListPurposeConverter.ToWireValue(purpose);
         _description = description;
 
         if (descriptionFacets is not null)
@@ -107,9 +109,31 @@ public record List : BlueskyTimestampedRecord
     /// <summary>
     /// Gets the purpose for the list.
     /// </summary>
-    [JsonInclude]
+    /// <exception cref="System.Text.Json.JsonException">The value is not recognized. Set <see cref="PurposeValue"/> to retain a service-defined value.</exception>
+    [JsonIgnore]
+    // .NET 8/9 source generation still binds ignored init-only members as constructor parameters.
+    [JsonPropertyName("purposeProjection")]
+    public ListPurpose Purpose
+    {
+        get => ListPurposeConverter.FromWireValue(PurposeValue);
+        init => PurposeValue = ListPurposeConverter.ToWireValue(value);
+    }
+
+    /// <summary>
+    /// Gets the service-defined list purpose, retaining unrecognized values.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     [JsonRequired]
-    public ListPurpose Purpose { get; init; }
+    [JsonPropertyName("purpose")]
+    public string PurposeValue
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the display name for the list.

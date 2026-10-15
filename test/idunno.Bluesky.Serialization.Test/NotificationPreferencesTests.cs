@@ -33,6 +33,21 @@ public class NotificationPreferencesTests
     private static Preferences Deserialize() =>
         JsonSerializer.Deserialize<Preferences>(PreferencesJson, BlueskyServer.BlueskyJsonSerializerOptions)!;
 
+    [Theory]
+    [InlineData("future")]
+    [InlineData("")]
+    public void LegacyChatUnknownValuesSurvivePreferenceRoundTrips(string value)
+    {
+        string json = PreferencesJson.Replace(
+            "\"chat\": { \"include\": \"all\"",
+            $"\"chat\": {{ \"include\": \"{value}\"",
+            StringComparison.Ordinal);
+        Preferences preferences = JsonSerializer.Deserialize<Preferences>(json, BlueskyServer.BlueskyJsonSerializerOptions)!;
+
+        using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(preferences, BlueskyServer.BlueskyJsonSerializerOptions));
+        Assert.Equal(value, document.RootElement.GetProperty("chat").GetProperty("include").GetString());
+    }
+
     [Fact]
     public void LikePreferenceIsDeserializedRatherThanFallingIntoExtensionData()
     {

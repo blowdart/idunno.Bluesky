@@ -34,7 +34,8 @@ public sealed record ListView : ListViewBasic
     /// <param name="labels">Labels applied to the list</param>
     /// <param name="viewer">A view of the relationship between the view and the current user.</param>
     /// <param name="indexedAt">The date and time the list was last indexed at.</param>
-    [JsonConstructor]
+    /// <exception cref="ArgumentNullException">The list address, content identifier or name is <see langword="null"/>.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The purpose is not recognized. Set <see cref="ListViewBasic.PurposeValue"/> to retain a service-defined value.</exception>
     public ListView(
         AtUri uri,
         Cid cid,
@@ -47,7 +48,25 @@ public sealed record ListView : ListViewBasic
         int? listItemCount,
         IReadOnlyCollection<Label>? labels,
         ListViewerState? viewer,
-        DateTimeOffset? indexedAt) : base(uri, cid, name, purpose, avatar, listItemCount, labels, viewer, indexedAt)
+        DateTimeOffset? indexedAt) : this(uri, cid, creator, name, purpose, null, description, descriptionFacets, avatar, listItemCount, labels, viewer, indexedAt)
+    {
+    }
+
+    [JsonConstructor]
+    internal ListView(
+        AtUri uri,
+        Cid cid,
+        ProfileView creator,
+        string name,
+        ListPurpose purpose,
+        string? purposeValue,
+        string? description,
+        IReadOnlyCollection<Facet>? descriptionFacets,
+        Uri? avatar,
+        int? listItemCount,
+        IReadOnlyCollection<Label>? labels,
+        ListViewerState? viewer,
+        DateTimeOffset? indexedAt) : base(uri, cid, name, purpose, purposeValue, avatar, listItemCount, labels, viewer, indexedAt)
     {
         Creator = creator;
         Description = description;

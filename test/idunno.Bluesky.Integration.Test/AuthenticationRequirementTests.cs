@@ -227,7 +227,7 @@ public class AuthenticationRequirementTests
                     await response.WriteAsJsonAsync(
                         new ServerDescription(
                             did: "did:web:pds.test.internal",
-                            contact: new Contact($"test@{request.Host.Host}"),
+                            contact: new idunno.AtProto.Server.Contact($"test@{request.Host.Host}"),
                             links: new Links(),
                             availableUserDomains: [request.Host.Host],
                             inviteCodeRequired: false,

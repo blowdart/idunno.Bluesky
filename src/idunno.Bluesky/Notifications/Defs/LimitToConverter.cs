@@ -26,12 +26,7 @@ internal sealed class LimitToConverter : JsonConverter<LimitTo>
             throw new JsonException($"Expected a string when reading a {nameof(LimitTo)}, found {reader.TokenType}.");
         }
 
-        return reader.GetString() switch
-        {
-            "all" => LimitTo.All,
-            "follows" => LimitTo.Follows,
-            _ => LimitTo.Unknown
-        };
+        return NotificationWireValues.ToLimitTo(reader.GetString()!);
     }
 
     /// <inheritdoc/>

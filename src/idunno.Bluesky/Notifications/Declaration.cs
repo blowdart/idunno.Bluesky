@@ -18,6 +18,7 @@ public record Declaration : BlueskyRecord
     /// <summary>
     /// Creates a new instance of <see cref="Declaration"/> with <see cref="AllowSubscriptions"/> set to <see cref="NotificationAllowedFrom.Followers"/>.
     /// </summary>
+    [JsonConstructor]
     public Declaration() : this(declaration: NotificationAllowedFrom.Followers)
     {
     }
@@ -26,6 +27,7 @@ public record Declaration : BlueskyRecord
     /// Creates a new instance of <see cref="Declaration"/> with the specified <paramref name="declaration"/>.
     /// </summary>
     /// <param name="declaration">The declaration of the user's choices for notification subscriptions from other actors.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The declaration is not a recognized enumeration value. Set <see cref="AllowSubscriptionsValue"/> to retain a service-defined value.</exception>
     /// <remarks>
     /// <para>Specifying a <see langword="null"/> value for <paramref name="declaration"/> will result in the default value of <see cref="NotificationAllowedFrom.Followers"/> being used.</para>
     /// </remarks>
@@ -37,10 +39,23 @@ public record Declaration : BlueskyRecord
     /// <summary>
     /// Gets or sets the declaration of the user's choices for notification subscriptions from other actors.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The value is not a recognized enumeration value. Set <see cref="AllowSubscriptionsValue"/> to retain a service-defined value.</exception>
     /// <remarks>
     /// <para>Specifying a <see langword="null"/> value will result in the default value of <see cref="NotificationAllowedFrom.Followers"/> being used.</para>
+    /// <para>Unrecognized wire values are available through <see cref="AllowSubscriptionsValue"/> and are retained when serialized.</para>
     /// </remarks>
-    public NotificationAllowedFrom? AllowSubscriptions { get; set; }
+    [JsonIgnore]
+    public NotificationAllowedFrom? AllowSubscriptions
+    {
+        get => AllowSubscriptionsValue is null ? null : NotificationWireValues.ToNotificationAllowedFrom(AllowSubscriptionsValue);
+        set => AllowSubscriptionsValue = value is null ? null : NotificationWireValues.FromNotificationAllowedFrom(value.Value, nameof(value));
+    }
+
+    /// <summary>
+    /// Gets or sets the service-defined wire value for notification subscriptions.
+    /// </summary>
+    [JsonPropertyName("allowSubscriptions")]
+    public string? AllowSubscriptionsValue { get; set; }
 
 }
 

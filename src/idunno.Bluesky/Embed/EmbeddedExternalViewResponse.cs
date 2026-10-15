@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto.Repo;
 
@@ -22,4 +23,26 @@ public sealed record EmbeddedExternalViewResponse(
     IReadOnlyList<StrongReference>? AssociatedRefs,
     IReadOnlyList<JsonElement>? AssociatedRecords,
     IReadOnlyList<StrongReference>? UnverifiedAssociatedRefs,
-    IReadOnlyList<JsonElement>? UnverifiedAssociatedRecords);
+    IReadOnlyList<JsonElement>? UnverifiedAssociatedRecords)
+{
+    /// <summary>
+    /// Deserializes the preferred embed data using caller-provided JSON type metadata.
+    /// </summary>
+    /// <typeparam name="T">The type to which the embed data is projected.</typeparam>
+    /// <param name="jsonTypeInfo">The source-generated JSON type metadata for <typeparamref name="T"/>.</param>
+    /// <returns>The typed embed data, or <see langword="default"/> when the response has no data.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="jsonTypeInfo"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">The embed data cannot be deserialized as <typeparamref name="T"/>.</exception>
+    /// <remarks>
+    /// <para>The original <see cref="Data"/> remains available unchanged, so callers can retain data with an unknown
+    /// discriminator or project it more than once. Passing generated metadata keeps the projection compatible with
+    /// applications that disable reflection-based JSON serialization.</para>
+    /// </remarks>
+    public T? DeserializeData<T>(JsonTypeInfo<T> jsonTypeInfo)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(jsonTypeInfo);
+
+        return Data is JsonElement data ? data.Deserialize(jsonTypeInfo) : default;
+    }
+}

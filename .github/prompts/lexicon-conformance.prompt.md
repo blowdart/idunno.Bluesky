@@ -1,11 +1,52 @@
 ---
-description: 'Audit SDK endpoint and model conformance against published AT Protocol and Bluesky lexicons.'
+description: 'Audit missing SDK endpoints, records and types as well as conformance against published AT Protocol and Bluesky lexicons.'
 ---
 
 # Lexicon conformance audit
 
-Audit this repository against the published lexicons at
-https://github.com/bluesky-social/atproto/tree/main/lexicons.
+Audit this repository against the published lexicons at:
+
+* https://github.com/bluesky-social/atproto/tree/main/lexicons
+  for canonical AT Protocol (`com.atproto`) schemas.
+* https://github.com/bluesky-social/atproto/tree/main/packages/api/lexicons
+  for the installed Bluesky (`app.bsky`) and chat (`chat.bsky`) schemas.
+* https://github.com/bluesky-social/atproto/tree/main/packages/bsky/lexicons
+  for the AppView's installed schemas, including external-content dependencies.
+* https://github.com/bluesky-social/atproto/tree/main/lexicons-overrides
+  for local schema overrides.
+
+Resolve these locations at the pinned upstream revision rather than mixing moving
+`main` content with pinned schemas. Verify schema authority and resolver precedence
+using `lexicons/README.md`, `packages/api/lexicons.json` and
+`packages/bsky/lexicons.json`; installed package copies may differ from other
+consumers' snapshots. Reconcile both packages by NSID, report conflicting copies,
+and inventory imported third-party schemas separately without automatically
+expanding SDK scope.
+
+### Selecting the current schema
+
+Before using a lexicon to audit or generate SDK code, establish which copy is the
+most up-to-date authoritative definition for that NSID. Do not assume either
+`packages/api/lexicons` or `packages/bsky/lexicons` is always newer.
+
+* Compare all copies at the pinned revision semantically, ignoring formatting and
+  object-property order. Consult each consumer's resolver manifest and any available
+  source, revision or integrity metadata, then inspect the relevant schema history
+  to establish provenance and whether one copy supersedes another.
+* A newer enclosing commit or file modification date alone does not establish a newer
+  schema: files may have been copied, reformatted, reverted or intentionally overridden.
+  Distinguish a stale installed snapshot from an intentional consumer-specific override.
+* Follow the documented canonical source when installed copies disagree. If resolving
+  freshness requires another upstream repository or network-published lexicon, pin and
+  record that source revision or immutable content identifier as well. Do not silently
+  substitute moving upstream content into the original pinned snapshot.
+* Record the selected schema path and revision, competing copies, semantic differences,
+  and the evidence for the selection. Use that selection consistently for implementation,
+  associated types, source-generation metadata and tests; do not combine incompatible
+  definitions from different versions into an invented schema.
+* If authority or freshness cannot be established, report the conflict as unverified
+  and obtain a user decision before generating or changing code for the affected schema.
+
 Do not modify SDK code, tests, documentation or configuration unless explicitly asked.
 
 ## Normative grounding
@@ -26,7 +67,10 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
 ## Scope and evidence
 
 * Cover AT Protocol, Bluesky and chat endpoints and all reachable request, response,
-  definition and repository-record types. Respect any narrower scope supplied by the user.
+  definition and repository-record types, plus standalone records and definitions not
+  reachable from implemented endpoints. Respect any narrower scope supplied by the user.
+  Exclude Ozone APIs, records and definitions unless explicitly requested; retain excluded
+  entries in the coverage inventory rather than silently omitting them.
 * Pin the upstream lexicon commit SHA and record the SDK commit and relevant uncommitted
   changes. Use one upstream snapshot throughout the audit and link findings to that snapshot.
 * Inventory lexicons and SDK implementations in both directions. Distinguish missing
@@ -34,6 +78,69 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   SDK methods with no current published lexicon. Endpoint presence is not conformance.
 * Trace each endpoint through its public agent method, server method, request construction,
   DTOs, converters, result mapping and source-generated JSON registrations.
+
+## Mandatory coverage discovery
+
+Complete upstream-first coverage discovery before checking implementation conformance.
+Do not use existing SDK methods, endpoint-status documentation or SDK-referenced lexicons
+as the starting universe: these cannot reveal capabilities with no SDK counterpart.
+
+* Discover all authoritative lexicon roots, package copies and overrides at the pinned
+  upstream revision. Record precedence and reconcile duplicate NSIDs. Do not assume all
+  schemas live under the root `lexicons` directory. Resolve conflicting copies from
+  upstream build or generation configuration; report unresolved authority as unverified.
+* Enumerate every scoped lexicon NSID and every named definition, including queries,
+  procedures, subscriptions, repository records and reusable definitions. Inventory
+  standalone records and definitions independently, even when no implemented endpoint
+  references them.
+* For each item, record its NSID and definition name, kind, authoritative pinned schema
+  link, corresponding SDK files and members, and implementation status. Use exactly one
+  status per item: implemented, partial, missing, deprecated, explicitly excluded or
+  unverified. Record the reason and authority for exclusions and deprecations; distinguish
+  upstream deprecation from an SDK-only obsolete API.
+* Map each endpoint to its agent and server surfaces, or document why a surface does not
+  apply. For existing endpoints, enumerate missing input parameters, output fields, named
+  errors and union members rather than marking an endpoint implemented solely because
+  a method exists.
+* Resolve local-fragment and cross-lexicon references transitively, tracking visited
+  definitions so cycles do not prevent completion. Account for associated request and
+  response models, nested definitions, repository records, record envelopes, converters,
+  discriminator registrations and source-generated metadata.
+* Distinguish missing wire support from missing typed convenience APIs. A generic
+  raw-JSON escape hatch is not typed support; report the supported raw path and any
+  missing typed capability separately. Do not require a dedicated CLR class for every
+  definition when an existing shared type faithfully represents its shape.
+* Reconcile inventory totals by kind and status, counting each authoritative
+  NSID/definition pair once. Every scoped item must be accounted for, including unmatched
+  upstream items and SDK APIs with no current published schema. Endpoint-status
+  documentation, passing tests and representative samples are supporting evidence,
+  not proof that this inventory is complete.
+
+## Historical additions and changes
+
+Audit both the current pinned snapshot and upstream history; neither replaces the other.
+The snapshot discovers older omissions, while history identifies additions to existing
+capabilities that a presence-only inventory could miss.
+
+* Review the user-requested date range. If none is supplied, review the preceding two
+  calendar months ending at the pinned upstream commit timestamp. State exact start and
+  end timestamps, boundary semantics, and the upstream revisions used for comparison.
+* Enumerate all lexicon-changing commits in that range across the discovered schema roots,
+  including overrides and package copies. Follow renames, moves and root migrations;
+  retrieve complete paginated commit/file listings and do not treat truncated API output
+  as a complete change set.
+* Compare schema content semantically, not just filenames or textual diff size. Classify
+  new endpoints, records and definitions; added parameters, fields and union members;
+  changed constraints, defaults and errors; deprecations; removals; and layout-only moves.
+  Account for imported third-party schemas without automatically expanding SDK scope.
+* Reconcile every semantic change with the current-snapshot inventory and SDK evidence.
+  Separate already supported changes, missing capabilities, conformance defects,
+  explicit exclusions and changes superseded or reverted before the pinned revision.
+  Do not propose implementing a historical addition that is absent from the final
+  snapshot without explaining its current status.
+* Record unavailable history, unresolved references and uncertain schema authority as
+  coverage gaps. Do not claim a complete lookback based only on selected example commits
+  or the most recent upstream changes.
 
 ## Static conformance
 
@@ -116,9 +223,20 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
 
 * Present a coverage summary and a findings table with endpoint or type, SDK file and
   member, pinned lexicon link, expected versus actual behavior, impact and evidence.
-* Separate confirmed variances, missing optional capabilities, intentional differences,
-  deprecated API support and unverified areas. Do not claim exhaustive coverage unless
-  every scoped endpoint and reachable model has been accounted for.
+* Report inventory totals by kind and status, the exact historical window and revisions,
+  discovered schema roots and precedence, and any incomplete pagination or reference
+  resolution. Include missing endpoints, standalone records and definitions with no SDK
+  counterpart; use "no implementation" rather than inventing an SDK member location.
+* Separate missing capabilities, confirmed nonconforming implementations, intentional
+  differences, deprecated API support and unverified coverage. Within missing capabilities,
+  distinguish unsupported endpoints and records, partially implemented shapes, and missing
+  optional typed conveniences.
+* For each missing or partial capability, list the associated records, request/response
+  types, nested definitions and serialization wiring needed to support it. Identify shared
+  dependencies without counting them as separate endpoint omissions.
+* Do not claim exhaustive coverage unless every scoped endpoint, record and named
+  definition has been accounted for and inventory totals reconcile. Distinguish complete
+  discovery from completed static, local-test and live validation.
 * Include read-call outcomes and exact test commands and results when tests are run.
   Keep private response content and credentials out of reports and artifacts.
 * Report relevant existing analyzer suppressions and their justification. If a subsequent
@@ -131,6 +249,13 @@ Do not modify SDK code, tests, documentation or configuration unless explicitly 
   changes; a count without precise locations is insufficient.
 
 ## If fixes are subsequently requested
+
+Before implementing newly discovered capabilities, present the proposed endpoints,
+repository records and associated types, including additions to existing APIs and models.
+Identify experimental status, exclusions and shared dependencies. Obtain explicit approval
+for that scope; approval to fix conformance defects does not implicitly authorize new APIs
+or records. If the user has already approved an enumerated scope, implement that scope
+without asking again, but obtain approval before adding newly discovered capabilities.
 
 Follow repository instructions, preserve existing public signatures with overloads,
 keep cancellation tokens last, update public API tracking and source-generation metadata,

@@ -23,11 +23,9 @@ public sealed class Bytes : IEquatable<Bytes>
     /// </summary>
     /// <param name="bytes">The byte array to convert.</param>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="bytes"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="bytes"/> length is 0.</exception>
     public Bytes(byte[] bytes)
     {
         ArgumentNullException.ThrowIfNull(bytes);
-        ArgumentOutOfRangeException.ThrowIfZero(bytes.Length);
 
         _bytes = (byte[])bytes.Clone();
         Base64EncodedValue = Convert.ToBase64String(_bytes);
@@ -37,7 +35,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// Creates a new instance of the <see cref="Bytes"/> class from a base64 encoded string.
     /// </summary>
     /// <param name="s">The Base64 string to convert.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="s"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="s"/> is <see langword="null"/>.</exception>
     /// <exception cref="FormatException">Thrown when the <paramref name="s"/> is not a valid Base64 format.</exception>
     /// <remarks>
     /// <para>The AT Protocol data model specifies base64 as defined in
@@ -47,7 +45,7 @@ public sealed class Bytes : IEquatable<Bytes>
     [JsonConstructor]
     public Bytes(string s)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(s);
+        ArgumentNullException.ThrowIfNull(s);
 
         _bytes = FromBase64String(s);
 

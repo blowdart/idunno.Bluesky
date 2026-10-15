@@ -20,6 +20,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]
+[JsonDerivedType(typeof(Actor.Link), RecordType.ActorLink)]
 [JsonDerivedType(typeof(List), RecordType.List)]
 [JsonDerivedType(typeof(ListItem), RecordType.ListItem)]
 [JsonDerivedType(typeof(ReferenceListOptOut), RecordType.ReferenceListOptOut)]
