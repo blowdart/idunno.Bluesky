@@ -130,6 +130,8 @@ public partial class BlueskyJsonSerializerOptionsTests
             });
 
         using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
+        JsonTypeInfo profileInfo = agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(ProfileViewDetailed));
+        Assert.Same(SourceGenerationContext.Default, profileInfo.OriginatingResolver);
         Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(
             """{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}""",
             agent.JsonOptions.JsonSerializerOptions));

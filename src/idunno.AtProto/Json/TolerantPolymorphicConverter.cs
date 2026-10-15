@@ -99,11 +99,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         "System.Text.Json")]
     [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The System.Text.Json resolver wrapper's private fields are explicitly preserved for resolver snapshotting.")]
     [SuppressMessage("SonarAnalyzer.CSharp", "S3011", Justification = "The private fields belong to System.Text.Json resolver wrappers and are read only to snapshot their public resolver behavior.")]
-    private static IJsonTypeInfoResolver SnapshotResolver(IJsonTypeInfoResolver resolver, IReadOnlyList<IJsonTypeInfoResolver>? followingResolvers = null)
+    private static IJsonTypeInfoResolver SnapshotResolver(
+        IJsonTypeInfoResolver resolver,
+        IReadOnlyList<IJsonTypeInfoResolver>? followingResolvers = null,
+        IJsonTypeInfoResolver? preferredFallback = null)
     {
         // A snapshot of our own resolver must include its fallbacks, not a reference back to this wrapper.
         if (resolver is TolerantTypeInfoResolver tolerantResolver)
         {
+            if (preferredFallback is not null)
+            {
+                return tolerantResolver.SnapshotWithFallback(preferredFallback, followingResolvers);
+            }
             return followingResolvers is { Count: > 0 }
                 ? tolerantResolver.Snapshot(followingResolvers)
                 : tolerantResolver.Snapshot();
@@ -124,7 +131,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
             IJsonTypeInfoResolver source = (IJsonTypeInfoResolver)sourceField.GetValue(resolver)!;
             Action<JsonTypeInfo>[] modifiers = (Action<JsonTypeInfo>[])modifiersField.GetValue(resolver)!;
-            IJsonTypeInfoResolver snapshot = SnapshotResolver(source);
+            IJsonTypeInfoResolver snapshot = SnapshotResolver(source, preferredFallback: preferredFallback);
             foreach (Action<JsonTypeInfo> modifier in modifiers)
             {
                 snapshot = snapshot.WithAddedModifier(modifier);
@@ -146,18 +153,27 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     IJsonTypeInfoResolver[] followingSnapshots = [.. resolverList
                         .Skip(index + 1)
                         .Select(nextResolver => SnapshotResolver(nextResolver))];
-                    snapshots.Add(nestedTolerantResolver.Snapshot(followingSnapshots));
+                    snapshots.Add(preferredFallback is null
+                        ? nestedTolerantResolver.Snapshot(followingSnapshots)
+                        : nestedTolerantResolver.SnapshotWithFallback(preferredFallback, followingSnapshots));
                     break;
                 }
 
                 IJsonTypeInfoResolver[] following = [.. resolverList.Skip(index + 1)];
-                snapshots.Add(SnapshotResolver(resolverList[index], following));
+                snapshots.Add(SnapshotResolver(resolverList[index], following, preferredFallback));
             }
             return JsonTypeInfoResolver.Combine(snapshots.ToArray());
         }
 
-        return resolver;
+        // Insert the SDK fallback inside modifier decorators, not after them. This preserves the
+        // caller's modifiers while ensuring they see generated contracts rather than reflection ones.
+        return resolver is DefaultJsonTypeInfoResolver && preferredFallback is not null
+            ? JsonTypeInfoResolver.Combine(preferredFallback, resolver)
+            : resolver;
     }
+
+    internal static IJsonTypeInfoResolver PrioritizeFallback(IJsonTypeInfoResolver resolver, IJsonTypeInfoResolver fallback) =>
+        SnapshotResolver(resolver, preferredFallback: fallback);
 
     internal static bool IsTolerantResolver(IJsonTypeInfoResolver resolver) =>
         resolver is TolerantTypeInfoResolver;
@@ -202,9 +218,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                 }
 
                 foreach (JsonPropertyInfo property in info.Properties.Where(property =>
-                    property.CustomConverter is not null && !IsScalarConverter(property.CustomConverter)))
+                    !property.IsExtensionData && (property.Get is not null || property.Set is not null)))
                 {
-                    property.CustomConverter = new PropertyConverter(property, underlyingOptions);
+                    JsonConverter converter = property.CustomConverter ??
+                        underlyingOptions.GetTypeInfo(property.PropertyType).Converter;
+                    if (!IsScalarConverter(converter) && converter.GetType().Assembly != typeof(JsonSerializer).Assembly)
+                    {
+                        // A converter may serve both dictionary keys and ordinary property values.
+                        // Leave its global registration intact for key hooks, but adapt this value
+                        // occurrence even when the converter was registered on the type or options.
+                        property.CustomConverter = new PropertyConverter(
+                            property.PropertyType, converter, property.NumberHandling, underlyingOptions);
+                    }
                 }
             })
         };
@@ -297,13 +322,6 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         private readonly Type _type;
         private readonly JsonTypeInfo<PropertyValue> _typeInfo;
 
-        [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, which uses the cached metadata instead of reflection.")]
-        [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "The property type's resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, avoiding its runtime generic reflection fallback.")]
-        public PropertyConverter(JsonPropertyInfo property, JsonSerializerOptions underlyingOptions)
-            : this(property.PropertyType, property.CustomConverter!, property.NumberHandling, underlyingOptions)
-        {
-        }
-
         public PropertyConverter(Type type, JsonConverter converter, JsonSerializerOptions underlyingOptions)
             : this(type, converter, null, underlyingOptions)
         {
@@ -311,7 +329,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, which uses the cached metadata instead of reflection.")]
         [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Resolver-provided metadata is cached on read-only options before CreateJsonPropertyInfo, avoiding its runtime generic reflection fallback.")]
-        private PropertyConverter(Type type, JsonConverter converter, JsonNumberHandling? numberHandling, JsonSerializerOptions underlyingOptions)
+        internal PropertyConverter(Type type, JsonConverter converter, JsonNumberHandling? numberHandling, JsonSerializerOptions underlyingOptions)
         {
             _type = type;
             // The synthetic holder adds one level without changing the converter's depth budget.
@@ -505,6 +523,18 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             return new(null, [JsonTypeInfoResolver.Combine(resolvers.ToArray())]);
         }
 
+        public IJsonTypeInfoResolver SnapshotWithFallback(
+            IJsonTypeInfoResolver fallback,
+            IReadOnlyList<IJsonTypeInfoResolver>? followingResolvers)
+        {
+            // Resolve the live SDK wrapper to its actual sources before rebuilding decorators.
+            // Calling SnapshotResolver on another tolerant wrapper would otherwise recurse forever.
+            IJsonTypeInfoResolver source = followingResolvers is { Count: > 0 }
+                ? JsonTypeInfoResolver.Combine([.. followingResolvers, .. initialResolvers])
+                : GetCombinedResolver();
+            return SnapshotResolver(source, preferredFallback: fallback);
+        }
+
         private IJsonTypeInfoResolver GetCombinedResolver()
         {
             lock (_resolverLock)
@@ -641,9 +671,12 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                         extension.Get = value =>
                         {
                             object? data = getExtensionData(value);
+                            // A getter call during reading identifies an instance that actually
+                            // receives extension fields, even if its dictionary starts out null.
+                            ExtensionDataSnapshot snapshot = extensionSnapshots.GetValue(value, static _ => new());
                             if (data is not null)
                             {
-                                extensionSnapshots.GetValue(value, static _ => new()).CaptureAndClear(data);
+                                snapshot.CaptureAndClear(data);
                             }
                             return data;
                         };
@@ -654,7 +687,14 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     {
                         // Stop capturing before reading the finished property: if the constructor
                         // supplied no dictionary, the serializer may have created one for this payload.
-                        ExtensionDataSnapshot snapshot = extensionSnapshots.GetValue(value, static _ => new());
+                        if (!extensionSnapshots.TryGetValue(value, out ExtensionDataSnapshot? snapshot))
+                        {
+                            // This sibling received no extension fields. Its constructor defaults
+                            // cannot contain inserted aliases, even if their names resemble aliases
+                            // generated for another object in the same normalized payload.
+                            callback?.Invoke(value);
+                            return;
+                        }
                         snapshot.IsComplete = true;
                         object? data = getExtensionData?.Invoke(value);
                         // Restore only aliases found on this instance; nested objects may reuse the

@@ -78,6 +78,15 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
             ? new JsonOptions(adaptContracts: false)
             : new JsonOptions(new JsonSerializerOptions(HttpJsonOptions.JsonSerializerOptions));
         IList<IJsonTypeInfoResolver> resolvers = result.JsonSerializerOptions.TypeInfoResolverChain;
+        for (int index = 0; index < resolvers.Count; index++)
+        {
+            IJsonTypeInfoResolver prioritized = AtProto.Json.TolerantPolymorphicConverter.PrioritizeFallback(
+                resolvers[index], SourceGenerationContext.Default);
+            if (!ReferenceEquals(prioritized, resolvers[index]))
+            {
+                resolvers[index] = prioritized;
+            }
+        }
         if (!resolvers.Contains(SourceGenerationContext.Default))
         {
             int insertIndex = 0;

@@ -749,6 +749,32 @@ public class JsonSerializerOptionsTests
         Assert.Equal("constructor", record.ExtensionData["__idunno_metadata_0"].GetString());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void NormalizationDoesNotRenameUnmodifiedSiblingExtensionDefaults(bool reverse)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+        });
+        const string withExtension = """{"$type":"test.prepopulatedExtension","$via":"payload"}""";
+        const string withoutExtension = """{"$type":"test.prepopulatedExtension"}""";
+        string json = reverse
+            ? $"[{withoutExtension},{withExtension}]"
+            : $"[{withExtension},{withoutExtension}]";
+        List<PrepopulatedExtensionRecordBase> records = Assert.IsType<List<PrepopulatedExtensionRecordBase>>(
+            JsonSerializer.Deserialize<List<PrepopulatedExtensionRecordBase>>(json, options));
+
+        PrepopulatedExtensionRecord modified = Assert.IsType<PrepopulatedExtensionRecord>(records[reverse ? 1 : 0]);
+        PrepopulatedExtensionRecord unmodified = Assert.IsType<PrepopulatedExtensionRecord>(records[reverse ? 0 : 1]);
+        Assert.Equal("payload", modified.ExtensionData["$via"].GetString());
+        Assert.Equal("constructor", modified.ExtensionData["__idunno_metadata_0"].GetString());
+        Assert.Single(unmodified.ExtensionData);
+        Assert.Equal("constructor", unmodified.ExtensionData["__idunno_metadata_0"].GetString());
+    }
+
     [Fact]
     public void ReferencePreservingObjectEnvelopeNormalizesUnknownMetadata()
     {
@@ -1250,6 +1276,39 @@ public class JsonSerializerOptionsTests
         Assert.Contains("\"key:runtime\":\"value\"", json, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void DictionaryKeyConvertersForwardOrdinaryNestedRecordValues(bool preserveReferences, bool includeDictionary)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+        });
+        string values = includeDictionary ? "\"values\":{\"key:first\":\"value\"}," : "";
+        string json = $$$"""
+            {"$type":"test.keys",{{{values}}}
+             "key":{"$type":"test.nested","$via":"extension","value":"first"}}
+            """;
+        KeyRecord record = Assert.IsType<KeyRecord>(JsonSerializer.Deserialize<KeyRecordBase>(json, options));
+        Assert.Equal("extension", record.Key!.Record!.ExtensionData!["$via"].GetString());
+        if (includeDictionary)
+        {
+            Assert.Equal("value", record.Values[new TestKey("first")]);
+        }
+
+        string serialized = JsonSerializer.Serialize<KeyRecordBase>(record, options);
+        if (includeDictionary)
+        {
+            Assert.Contains("\"key:first\":\"value\"", serialized, StringComparison.Ordinal);
+        }
+        KeyRecord roundTrip = Assert.IsType<KeyRecord>(JsonSerializer.Deserialize<KeyRecordBase>(serialized, options));
+        Assert.Equal("extension", roundTrip.Key!.Record!.ExtensionData!["$via"].GetString());
+    }
+
 #if NET10_0_OR_GREATER
     [Theory]
     [InlineData(true)]
@@ -1486,15 +1545,35 @@ internal sealed class CycleNode : CycleNodeBase
 }
 
 [JsonConverter(typeof(TestKeyConverter))]
-internal sealed record TestKey(string Value);
+internal sealed record TestKey(string Value)
+{
+    public NestedCustomRecord? Record { get; init; }
+}
 
 internal sealed class TestKeyConverter : JsonConverter<TestKey>
 {
-    public override TestKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        new(reader.GetString()!["plain:".Length..]);
+    public override TestKey Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+                JsonSerializer.Deserialize<NestedCustomRecordBase>(ref reader, options));
+            return new(record.Value) { Record = record };
+        }
+        return new(reader.GetString()!["plain:".Length..]);
+    }
 
-    public override void Write(Utf8JsonWriter writer, TestKey value, JsonSerializerOptions options) =>
-        writer.WriteStringValue("plain:" + value.Value);
+    public override void Write(Utf8JsonWriter writer, TestKey value, JsonSerializerOptions options)
+    {
+        if (value.Record is not null)
+        {
+            JsonSerializer.Serialize<NestedCustomRecordBase>(writer, value.Record, options);
+        }
+        else
+        {
+            writer.WriteStringValue("plain:" + value.Value);
+        }
+    }
 
     public override TestKey ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         new(reader.GetString()!["key:".Length..]);
@@ -1986,6 +2065,7 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(IgnoredPropertyRecord))]
 [JsonSerializable(typeof(PrepopulatedExtensionRecordBase))]
 [JsonSerializable(typeof(PrepopulatedExtensionRecord))]
+[JsonSerializable(typeof(List<PrepopulatedExtensionRecordBase>))]
 [JsonSerializable(typeof(ReferenceEnvelopeRecord))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
