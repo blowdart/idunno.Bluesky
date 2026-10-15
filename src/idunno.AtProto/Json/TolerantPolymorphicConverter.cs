@@ -40,6 +40,8 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private readonly Lazy<JsonSerializerOptions> _probeOptions = new(() => CreateProbeOptions(resolver, configuredOptions));
     // The same type can need wrapping only when reference state is enabled; cache that option-sensitive decision.
     private readonly ConcurrentDictionary<(Type Type, bool PreserveReferences), bool> _supportedTypes = new();
+    // Values reached from async enumerables must stay on System.Text.Json's original async stack.
+    private readonly ConcurrentDictionary<Type, byte> _asyncEnumerableValueTypes = new();
 
     private static JsonSerializerOptions CreateProbeOptions(IJsonTypeInfoResolver resolver, JsonSerializerOptions configuredOptions)
     {
@@ -234,12 +236,148 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     public override bool CanConvert(Type typeToConvert) =>
         _supportedTypes.GetOrAdd((typeToConvert, TracksReferenceState(configuredOptions)), key =>
         {
+            if (_asyncEnumerableValueTypes.ContainsKey(key.Type))
+            {
+                return false;
+            }
             JsonTypeInfo? info = resolver.GetTypeInfo(key.Type, _probeOptions.Value);
+            // A converter's Write callback is synchronous. Wrapping a contract containing
+            // IAsyncEnumerable therefore replaces the serializer's asynchronous traversal with
+            // JsonSerializer.Serialize, which cannot consume async sequences.
+            if (info is null || ContainsAsyncEnumerable(info, _probeOptions.Value, []))
+            {
+                return false;
+            }
             // Ordinary contracts need no wrapper. Polymorphic contracts can reject unknown metadata;
             // reference-aware object and collection contracts also need a root wrapper to preserve IDs.
-            return info?.PolymorphismOptions is not null ||
-                (key.PreserveReferences && info?.Kind is JsonTypeInfoKind.Object or JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary);
+            return info.PolymorphismOptions is not null ||
+                (key.PreserveReferences && info.Kind is JsonTypeInfoKind.Object or JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary);
         });
+
+    private bool ContainsAsyncEnumerable(JsonTypeInfo info, JsonSerializerOptions options, HashSet<Type> visited)
+    {
+        Type type = info.Type;
+        if (IsAsyncEnumerableType(type))
+        {
+            Type? elementType = GetAsyncEnumerableElementType(type);
+            if (elementType is not null)
+            {
+                RegisterAsyncEnumerableValueTypes(options.GetTypeInfo(elementType), options, []);
+            }
+            return true;
+        }
+        if (!visited.Add(type))
+        {
+            return false;
+        }
+
+        if (info.PolymorphismOptions is JsonPolymorphismOptions polymorphism &&
+            polymorphism.DerivedTypes.Any(derivedType =>
+                ContainsAsyncEnumerable(options.GetTypeInfo(derivedType.DerivedType), options, visited)))
+        {
+            return true;
+        }
+
+        if (info.Kind == JsonTypeInfoKind.Object)
+        {
+            if (info.Properties.Where(property =>
+                    !property.IsExtensionData && property.CustomConverter is null &&
+                    (property.Get is not null || property.Set is not null))
+                .Any(property => IsAsyncEnumerableType(property.PropertyType) ||
+                    ContainsAsyncEnumerable(options.GetTypeInfo(property.PropertyType), options, visited)))
+            {
+                return true;
+            }
+        }
+        else if (info.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary)
+        {
+            Type? valueType = GetCollectionValueType(type, info.Kind == JsonTypeInfoKind.Dictionary);
+            if (valueType is not null && ContainsAsyncEnumerable(options.GetTypeInfo(valueType), options, visited))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void RegisterAsyncEnumerableValueTypes(JsonTypeInfo info, JsonSerializerOptions options, HashSet<Type> visited)
+    {
+        if (!visited.Add(info.Type))
+        {
+            return;
+        }
+        _asyncEnumerableValueTypes.TryAdd(info.Type, 0);
+
+        if (info.PolymorphismOptions is JsonPolymorphismOptions polymorphism)
+        {
+            foreach (JsonDerivedType derivedType in polymorphism.DerivedTypes)
+            {
+                RegisterAsyncEnumerableValueTypes(options.GetTypeInfo(derivedType.DerivedType), options, visited);
+            }
+        }
+        if (info.Kind == JsonTypeInfoKind.Object)
+        {
+            foreach (JsonPropertyInfo property in info.Properties.Where(property =>
+                !property.IsExtensionData && property.CustomConverter is null &&
+                (property.Get is not null || property.Set is not null)))
+            {
+                RegisterAsyncEnumerableValueTypes(options.GetTypeInfo(property.PropertyType), options, visited);
+            }
+        }
+        else if (info.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary &&
+            GetCollectionValueType(info.Type, info.Kind == JsonTypeInfoKind.Dictionary) is Type valueType)
+        {
+            RegisterAsyncEnumerableValueTypes(options.GetTypeInfo(valueType), options, visited);
+        }
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "The inspected type comes from resolver-provided JsonTypeInfo metadata, whose collection interfaces are preserved by source generation or the configured reflection resolver.")]
+    private static bool IsAsyncEnumerableType(Type type)
+    {
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+        {
+            return true;
+        }
+        return type.GetInterfaces().Any(implementedInterface =>
+            implementedInterface.IsGenericType &&
+            implementedInterface.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "The inspected type comes from resolver-provided JsonTypeInfo metadata, whose implemented interfaces are preserved by source generation or the configured reflection resolver.")]
+    private static Type? GetAsyncEnumerableElementType(Type type)
+    {
+        Type? asyncEnumerableType = type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)
+            ? type
+            : type.GetInterfaces().FirstOrDefault(implementedInterface =>
+                implementedInterface.IsGenericType &&
+                implementedInterface.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
+        return asyncEnumerableType?.GenericTypeArguments[0];
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2070", Justification = "The inspected type comes from resolver-provided JsonTypeInfo metadata, whose collection interfaces are preserved by source generation or the configured reflection resolver.")]
+    private static Type? GetCollectionValueType(Type type, bool dictionary)
+    {
+        if (type.IsArray)
+        {
+            return type.GetElementType();
+        }
+
+        foreach (Type collectionType in type.GetInterfaces().Prepend(type).Where(collectionType => collectionType.IsGenericType))
+        {
+            Type definition = collectionType.GetGenericTypeDefinition();
+            if (dictionary &&
+                (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>)))
+            {
+                return collectionType.GenericTypeArguments[1];
+            }
+            if (!dictionary && definition == typeof(IEnumerable<>))
+            {
+                return collectionType.GenericTypeArguments[0];
+            }
+        }
+        return null;
+    }
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {

@@ -1181,6 +1181,53 @@ public class JsonSerializerOptionsTests
         }
     }
 
+    [Fact]
+    public async Task ReferencePreservingSerializeAsyncUsesBuiltInAsyncEnumerableRootPath()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
+        JsonTypeInfo<IAsyncEnumerable<AsyncSerializationItem>> typeInfo =
+            (JsonTypeInfo<IAsyncEnumerable<AsyncSerializationItem>>)options.GetTypeInfo(typeof(IAsyncEnumerable<AsyncSerializationItem>));
+        await using MemoryStream stream = new();
+
+        await JsonSerializer.SerializeAsync(stream, GetAsyncSerializationItems(), typeInfo, TestContext.Current.CancellationToken);
+
+        Assert.Equal("""[{"$id":"1","value":"first"},{"$id":"2","value":"second"}]""", System.Text.Encoding.UTF8.GetString(stream.ToArray()));
+    }
+
+    [Fact]
+    public async Task ReferencePreservingSerializeAsyncUsesBuiltInAsyncEnumerablePropertyPath()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.ReferenceHandler = ReferenceHandler.Preserve;
+            mutable.TypeInfoResolver = TolerantTestContext.Default;
+        });
+        JsonTypeInfo<AsyncSerializationContainer> typeInfo =
+            (JsonTypeInfo<AsyncSerializationContainer>)options.GetTypeInfo(typeof(AsyncSerializationContainer));
+        await using MemoryStream stream = new();
+
+        await JsonSerializer.SerializeAsync(
+            stream,
+            new AsyncSerializationContainer(GetAsyncSerializationItems()),
+            typeInfo,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            """{"$id":"1","items":[{"$id":"2","value":"first"},{"$id":"3","value":"second"}]}""",
+            System.Text.Encoding.UTF8.GetString(stream.ToArray()));
+    }
+
+    private static async IAsyncEnumerable<AsyncSerializationItem> GetAsyncSerializationItems()
+    {
+        yield return new AsyncSerializationItem { Value = "first" };
+        await Task.Yield();
+        yield return new AsyncSerializationItem { Value = "second" };
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -1563,6 +1610,16 @@ internal sealed class CustomCompositeTypeInfoResolver : IJsonTypeInfoResolver
 }
 
 internal sealed class IgnoredPayload;
+
+internal sealed class AsyncSerializationItem
+{
+    public string Value { get; set; } = string.Empty;
+}
+
+internal sealed class AsyncSerializationContainer(IAsyncEnumerable<AsyncSerializationItem> items)
+{
+    public IAsyncEnumerable<AsyncSerializationItem> Items { get; set; } = items;
+}
 
 internal sealed class ConflictingContract
 {
@@ -2253,6 +2310,9 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(Dictionary<TestKey, string>))]
 [JsonSerializable(typeof(Dictionary<TestKey, TestKey>))]
 [JsonSerializable(typeof(List<TestKey>))]
+[JsonSerializable(typeof(IAsyncEnumerable<AsyncSerializationItem>))]
+[JsonSerializable(typeof(AsyncSerializationContainer))]
+[JsonSerializable(typeof(AsyncSerializationItem))]
 [JsonSerializable(typeof(List<CycleNodeBase>))]
 [JsonSerializable(typeof(DeepNormalizationRecordBase))]
 [JsonSerializable(typeof(DeepNormalizationRecord))]

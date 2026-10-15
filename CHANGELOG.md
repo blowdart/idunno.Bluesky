@@ -29,6 +29,7 @@
 * Custom enum converters, including nullable enum properties, bypass tolerant value-forwarding buffers.
 * Caller JSON modifiers customize original contracts rather than SDK converter shells, allowing type-only object callbacks and property changes. Reflection resolver modifiers also apply when Bluesky source-generated fallback contracts are selected.
 * Custom JSON resolvers also receive original contracts instead of SDK converter shells, preserving property customization and object callbacks with polymorphism and reference preservation.
+* Reference-preserving asynchronous serialization keeps async-enumerable roots and containing objects on the built-in asynchronous writer path.
 * Tolerant JSON normalization uses bounded temporary property names to prevent allocation amplification from long input names and many unknown metadata fields.
 * Tolerant JSON normalization preserves ordinary extension fields in culture-sensitive dictionaries and restores only each object's own aliases, in input order. Reference-preserving options support unknown metadata while retaining shared references across object and collection roots.
 * Tolerant JSON handling recognizes nested polymorphic values in non-generic derived lists and dictionaries and interface-typed collections on .NET 8 and .NET 9.
