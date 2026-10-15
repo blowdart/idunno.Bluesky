@@ -209,6 +209,28 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     internal static bool IsTolerantResolver(IJsonTypeInfoResolver resolver) =>
         resolver is TolerantTypeInfoResolver;
 
+    [DynamicDependency(DynamicallyAccessedMemberTypes.NonPublicConstructors, typeof(JsonTypeInfo<>))]
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "The runtime type is an existing resolver-provided JsonTypeInfo<T>; its non-public constructor is explicitly preserved. No closed generic type is constructed.")]
+    [SuppressMessage("SonarAnalyzer.CSharp", "S3011", Justification = "The existing typed metadata constructor creates an internal converter shell without exposing it to caller resolvers or constructing runtime generic types.")]
+    private static JsonTypeInfo CreateConverterShell(JsonTypeInfo original, JsonConverter converter, JsonSerializerOptions options)
+    {
+        // A caller resolver may inspect properties or set object callbacks unconditionally for a
+        // known type. It must therefore resolve the original contract with SDK converters removed.
+        // Only after that contract exists do we create the converter-only contract used by STJ.
+        //
+        // Reuse the already instantiated JsonTypeInfo<T> runtime type from the caller's metadata.
+        // Its constructor creates the framework's typed casting adapter for our untyped converter.
+        // This avoids MakeGenericType/MakeGenericMethod and keeps generated contracts AOT-safe.
+        ConstructorInfo constructor = original.GetType().GetConstructor(
+            BindingFlags.Instance | BindingFlags.NonPublic,
+            binder: null,
+            [typeof(JsonConverter), typeof(JsonSerializerOptions)],
+            modifiers: null)
+            ?? throw new InvalidOperationException($"Could not locate the converter metadata constructor for '{original.Type}'.");
+        return (JsonTypeInfo)constructor.Invoke(
+            BindingFlags.DoNotWrapExceptions, binder: null, [converter, options], culture: null);
+    }
+
     public override bool CanConvert(Type typeToConvert) =>
         _supportedTypes.GetOrAdd((typeToConvert, TracksReferenceState(configuredOptions)), key =>
         {
@@ -366,6 +388,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     // any nested records they deserialize themselves still receive tolerant handling.
     private sealed class CustomConverterForwarder(JsonSerializerOptions probeOptions, JsonSerializerOptions sdkOptions) : JsonConverterFactory
     {
+        internal JsonTypeInfo CreateTypeInfo(Type type, JsonSerializerOptions options) =>
+            CreateConverterShell(probeOptions.GetTypeInfo(type), CreateConverter(type, options), options);
+
         public override bool CanConvert(Type typeToConvert)
         {
             Type valueType = Nullable.GetUnderlyingType(typeToConvert) ?? typeToConvert;
@@ -464,6 +489,19 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
+            foreach (JsonConverter converter in options.Converters)
+            {
+                if (converter is TolerantPolymorphicConverter tolerant && tolerant.CanConvert(type))
+                {
+                    JsonTypeInfo original = tolerant._probeOptions.Value.GetTypeInfo(type);
+                    return CreateConverterShell(original, tolerant.CreateConverter(type, options), options);
+                }
+                if (converter is CustomConverterForwarder forwarder && forwarder.CanConvert(type))
+                {
+                    return forwarder.CreateTypeInfo(type, options);
+                }
+            }
+
             if (_resolvingDecorator.Value)
             {
                 return null;

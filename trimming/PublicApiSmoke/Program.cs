@@ -141,6 +141,24 @@ if (keyValues[new SmokeKey("first")].Record?.ExtensionData?["$via"].GetString() 
 }
 JsonSerializerOptions collectionOptions = AtProtoJsonSerializerOptions.Create(options =>
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default);
+SmokeCustomResolver customResolver = new();
+JsonSerializerOptions customResolverOptions = AtProtoJsonSerializerOptions.Create(options =>
+{
+    options.TypeInfoResolver = customResolver;
+    options.ReferenceHandler = ReferenceHandler.Preserve;
+});
+JsonTypeInfo<LateBoundNestedRecordBase> customResolverInfo =
+    (JsonTypeInfo<LateBoundNestedRecordBase>)customResolverOptions.GetTypeInfo(typeof(LateBoundNestedRecordBase));
+LateBoundNestedRecord customResolvedRecord = JsonSerializer.Deserialize(
+    """{"$type":"smoke.nested","$via":"extension","customValue":"custom"}""", customResolverInfo) as LateBoundNestedRecord
+    ?? throw new InvalidOperationException("The custom-resolved record could not be decoded.");
+if (customResolvedRecord.Value != "custom" || customResolver.Callbacks != 1 ||
+    customResolvedRecord.ExtensionData?["$via"].GetString() != "extension" ||
+    !JsonSerializer.Serialize<LateBoundNestedRecordBase>(customResolvedRecord, customResolverInfo)
+        .Contains("\"customValue\":\"custom\"", StringComparison.Ordinal))
+{
+    throw new InvalidOperationException("Custom resolver contract customization was not preserved.");
+}
 JsonSerializerOptions sharedReferenceOptions = AtProtoJsonSerializerOptions.Create(options =>
 {
     options.TypeInfoResolver = LateBoundSourceGenerationContext.Default;
@@ -669,6 +687,25 @@ internal sealed class SmokeKeyConverter : JsonConverter<SmokeKey>
 
     public override void WriteAsPropertyName(Utf8JsonWriter writer, SmokeKey value, JsonSerializerOptions options) =>
         writer.WritePropertyName("key:" + value.Value);
+}
+
+internal sealed class SmokeCustomResolver : IJsonTypeInfoResolver
+{
+    internal int Callbacks { get; private set; }
+
+    public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
+    {
+        JsonTypeInfo? info = ((IJsonTypeInfoResolver)LateBoundSourceGenerationContext.Default).GetTypeInfo(type, options);
+        if (info is not null && (type == typeof(LateBoundNestedRecordBase) || type == typeof(LateBoundNestedRecord)))
+        {
+            info.OnDeserialized = _ => Callbacks++;
+            if (type == typeof(LateBoundNestedRecord))
+            {
+                info.Properties.Single(property => property.Name == "value").Name = "customValue";
+            }
+        }
+        return info;
+    }
 }
 
 internal sealed class SmokeReferenceHandler : ReferenceHandler

@@ -159,11 +159,16 @@ public class JsonSerializerOptionsTests
         Assert.Equal("sdkcustomvalue", Assert.Single(recordInfo.Properties).Name);
     }
 
-    [Fact]
-    public void FactoryFinalizationPreservesCallerCompositeResolverBehavior()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FactoryFinalizationPreservesCallerCompositeResolverBehavior(bool preserveReferences)
     {
         JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
-            mutable.TypeInfoResolver = new CustomCompositeTypeInfoResolver(ChainedTestContext.Default));
+        {
+            mutable.TypeInfoResolver = new CustomCompositeTypeInfoResolver(ChainedTestContext.Default);
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+        });
 
         ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
             JsonSerializer.Deserialize<ChainedTestRecord>("""{"customValue":"factory"}""", options));
@@ -171,12 +176,42 @@ public class JsonSerializerOptionsTests
         Assert.Equal("factory", record.Value);
     }
 
-    [Fact]
-    public void AgentFinalizationPreservesCallerCompositeResolverBehavior()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void CustomResolverCallbacksReceiveOriginalPolymorphicContracts(bool preserveReferences, bool normalize)
+    {
+        CustomCallbackTypeInfoResolver resolver = new();
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+        {
+            mutable.TypeInfoResolver = resolver;
+            mutable.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
+        });
+        string metadata = normalize ? "\"$via\":\"extension\"," : "";
+        string json = $$"""{"$type":"test.nested",{{metadata}}"customValue":"payload"}""";
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(
+            JsonSerializer.Deserialize<NestedCustomRecordBase>(json, options));
+        Assert.Equal("payload", record.Value);
+        Assert.Equal(1, resolver.Callbacks);
+        if (normalize)
+        {
+            Assert.Equal("extension", record.ExtensionData!["$via"].GetString());
+        }
+        string serialized = JsonSerializer.Serialize<NestedCustomRecordBase>(record, options);
+        Assert.Contains("\"customValue\":\"payload\"", serialized, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AgentFinalizationPreservesCallerCompositeResolverBehavior(bool preserveReferences)
     {
         JsonOptions supplied = new();
         supplied.JsonSerializerOptions.TypeInfoResolver =
             new CustomCompositeTypeInfoResolver(ChainedTestContext.Default);
+        supplied.JsonSerializerOptions.ReferenceHandler = preserveReferences ? ReferenceHandler.Preserve : null;
         using AtProtoAgent agent = new(new Uri("https://test.invalid"), new AtProtoAgentOptions { HttpJsonOptions = supplied });
 
         ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
@@ -1475,6 +1510,25 @@ internal sealed class RejectingTypeInfoResolver(Type rejectedType) : IJsonTypeIn
         type == rejectedType
             ? throw new InvalidOperationException($"Metadata for {type} must not be requested.")
             : _resolver.GetTypeInfo(type, options);
+}
+
+internal sealed class CustomCallbackTypeInfoResolver : IJsonTypeInfoResolver
+{
+    internal int Callbacks { get; private set; }
+
+    public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
+    {
+        JsonTypeInfo? info = ((IJsonTypeInfoResolver)TolerantTestContext.Default).GetTypeInfo(type, options);
+        if (info is not null && (type == typeof(NestedCustomRecordBase) || type == typeof(NestedCustomRecord)))
+        {
+            info.OnDeserialized = _ => Callbacks++;
+            if (type == typeof(NestedCustomRecord))
+            {
+                info.Properties.Single(property => property.Name == "value").Name = "customValue";
+            }
+        }
+        return info;
+    }
 }
 
 internal sealed class CustomCompositeTypeInfoResolver : IJsonTypeInfoResolver
