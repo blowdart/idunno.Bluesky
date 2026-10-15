@@ -81,7 +81,9 @@ public class BlueskyAgentOptions : AtProtoAgentOptions
         if (!resolvers.Contains(SourceGenerationContext.Default))
         {
             int insertIndex = 0;
-            while (insertIndex < resolvers.Count && resolvers[insertIndex] is not DefaultJsonTypeInfoResolver)
+            while (insertIndex < resolvers.Count &&
+                resolvers[insertIndex] is not DefaultJsonTypeInfoResolver &&
+                !AtProto.Json.TolerantPolymorphicConverter.IsTolerantResolver(resolvers[insertIndex]))
             {
                 insertIndex++;
             }

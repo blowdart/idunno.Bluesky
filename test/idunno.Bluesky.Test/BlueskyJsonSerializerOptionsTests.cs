@@ -103,6 +103,9 @@ public partial class BlueskyJsonSerializerOptionsTests
         JsonOptions supplied = new();
         using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
 
+        JsonTypeInfo profileInfo = agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(ProfileViewDetailed));
+        Assert.Same(SourceGenerationContext.Default, profileInfo.OriginatingResolver);
+
         ProfileViewDetailed profile = Assert.IsType<ProfileViewDetailed>(JsonSerializer.Deserialize<ProfileViewDetailed>(
             """{"did":"did:plc:test","handle":"example.test","followersCount":"12","followsCount":"34"}""",
             agent.JsonOptions.JsonSerializerOptions));

@@ -86,6 +86,9 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         options.TypeInfoResolver = resolver;
     }
 
+    internal static bool IsTolerantResolver(IJsonTypeInfoResolver resolver) =>
+        resolver is TolerantTypeInfoResolver;
+
     public override bool CanConvert(Type typeToConvert) =>
         _supportedTypes.GetOrAdd((typeToConvert, TracksReferenceState(configuredOptions)), key =>
         {
@@ -352,11 +355,50 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
     private sealed class TolerantTypeInfoResolver(JsonSerializerOptions? sdkOptions, IJsonTypeInfoResolver[] initialResolvers) : IJsonTypeInfoResolver
     {
         private readonly object _resolverLock = new();
+        private readonly AsyncLocal<bool> _resolvingDecorator = new();
         private IJsonTypeInfoResolver? _combinedResolver;
         private IJsonTypeInfoResolver[]? _chainSnapshot;
 
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
+            if (_resolvingDecorator.Value)
+            {
+                return null;
+            }
+
+            if (sdkOptions is not null)
+            {
+                IList<IJsonTypeInfoResolver> chain = sdkOptions.TypeInfoResolverChain;
+                if (!chain.Any(resolver => ReferenceEquals(resolver, this)))
+                {
+                    foreach (IJsonTypeInfoResolver decorator in chain)
+                    {
+                        // The built-in modifier wrapper can retain the resolver chain that this
+                        // options instance replaced, including resolvers appended before wrapping.
+                        if (decorator.GetType().FullName != "System.Text.Json.Serialization.Metadata.JsonTypeInfoResolverWithAddedModifiers")
+                        {
+                            continue;
+                        }
+
+                        JsonTypeInfo? decoratedInfo;
+                        _resolvingDecorator.Value = true;
+                        try
+                        {
+                            decoratedInfo = decorator.GetTypeInfo(type, options);
+                        }
+                        finally
+                        {
+                            _resolvingDecorator.Value = false;
+                        }
+
+                        if (decoratedInfo is not null)
+                        {
+                            return ApplyCustomConverterPolymorphismWorkaround(decoratedInfo);
+                        }
+                    }
+                }
+            }
+
             JsonTypeInfo? info = GetCombinedResolver().GetTypeInfo(type, options);
             return info is null ? null : ApplyCustomConverterPolymorphismWorkaround(info);
         }
@@ -681,7 +723,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         {
             info = UnwrapNullable(info, underlyingOptions);
 
-            if (TracksReferenceState(underlyingOptions) &&
+            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
                 reader.TokenType == JsonTokenType.StartObject && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
@@ -817,7 +859,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
         {
             info = UnwrapNullable(info, underlyingOptions);
 
-            if (TracksReferenceState(underlyingOptions) &&
+            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 if (element.TryGetProperty("$values", out JsonElement values))
@@ -898,7 +940,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             bool normalized = false;
             info = UnwrapNullable(info, underlyingOptions);
 
-            if (TracksReferenceState(underlyingOptions) &&
+            if ((TracksReferenceState(underlyingOptions) || info.PolymorphismOptions is not null) &&
                 element.ValueKind == JsonValueKind.Object && info.Kind == JsonTypeInfoKind.Enumerable)
             {
                 writer.WriteStartObject();
@@ -988,7 +1030,11 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
                     continue;
                 }
 
-                writer.WritePropertyName(unknownMetadata && hasExtensionData ? state.Rename(property.Name) : property.Name);
+                bool extensionDataProperty = hasExtensionData &&
+                    contract is null &&
+                    property.Name != polymorphism?.TypeDiscriminatorPropertyName &&
+                    !(PreservesReferences(underlyingOptions) && property.Name is "$id" or "$ref" or "$values");
+                writer.WritePropertyName(extensionDataProperty ? state.Rename(property.Name) : property.Name);
                 if (contract is not null && contract.CustomConverter is null)
                 {
                     normalized |= WriteNormalized(writer, property.Value, underlyingOptions.GetTypeInfo(contract.PropertyType), state);

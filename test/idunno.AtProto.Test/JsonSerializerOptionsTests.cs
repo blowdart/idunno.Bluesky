@@ -131,6 +131,26 @@ public class JsonSerializerOptionsTests
         AssertLateBoundRecord(jsonOptions.JsonSerializerOptions);
     }
 
+    [Fact]
+    public void DecoratedResolverRetainsContractsAppendedBeforeDecoration()
+    {
+        JsonOptions jsonOptions = new();
+        IJsonTypeInfoResolver appendedResolver = ChainedTestContext.Default.WithAddedModifier(info =>
+        {
+            if (info.Type == typeof(ChainedTestRecord))
+            {
+                Assert.Single(info.Properties).Name = "customValue";
+            }
+        });
+        jsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Add(appendedResolver);
+        jsonOptions.JsonSerializerOptions.TypeInfoResolver =
+            jsonOptions.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(_ => { });
+
+        ChainedTestRecord record = Assert.IsType<ChainedTestRecord>(
+            JsonSerializer.Deserialize<ChainedTestRecord>("""{"customValue":"appended"}""", jsonOptions.JsonSerializerOptions));
+        Assert.Equal("appended", record.Value);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -591,6 +611,23 @@ public class JsonSerializerOptionsTests
         }
     }
 
+    [Fact]
+    public void PolymorphicCollectionEnvelopeNormalizesNestedMetadataWithoutReferenceHandling()
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+        const string json = """
+            {"$type":"test.polymorphicList","$values":[{"$type":"test.nested","$via":"nested","value":"item"}]}
+            """;
+
+        PolymorphicRecordListBase records = Assert.IsType<PolymorphicRecordList>(
+            JsonSerializer.Deserialize<PolymorphicRecordListBase>(json, options));
+
+        NestedCustomRecord record = Assert.IsType<NestedCustomRecord>(Assert.Single(records));
+        Assert.Equal("item", record.Value);
+        Assert.Equal("nested", record.ExtensionData!["$via"].GetString());
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -664,6 +701,20 @@ public class JsonSerializerOptionsTests
         Assert.Equal(2, record.ExtensionData!.Count);
         Assert.Equal("original", record.ExtensionData[ordinaryName].GetString());
         Assert.Equal("extension", record.ExtensionData["$via"].GetString());
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"test.aliasComparer","$via":"metadata","\u0000$via":"ordinary"}""", "ordinary")]
+    [InlineData("""{"$type":"test.aliasComparer","\u0000$via":"ordinary","$via":"metadata"}""", "metadata")]
+    public void TemporaryAliasesPreserveComparerEquivalentExtensionDataInSourceOrder(string json, string expected)
+    {
+        JsonSerializerOptions options = AtProtoJsonSerializerOptions.Create(mutable =>
+            mutable.TypeInfoResolver = TolerantTestContext.Default);
+
+        AliasComparerRecord record = Assert.IsType<AliasComparerRecord>(
+            JsonSerializer.Deserialize<AliasComparerRecordBase>(json, options));
+
+        Assert.Equal(expected, record.ExtensionData["$via"].GetString());
     }
 
     [Theory]
@@ -1319,6 +1370,12 @@ internal sealed class DerivedRecordList : List<NestedCustomRecordBase>;
 internal sealed class DerivedRecordDictionary : Dictionary<string, NestedCustomRecordBase>;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(PolymorphicRecordList), "test.polymorphicList")]
+internal abstract class PolymorphicRecordListBase : List<NestedCustomRecordBase>;
+
+internal sealed class PolymorphicRecordList : PolymorphicRecordListBase;
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(OptionsConverterRecord), "test.optionsConverter")]
 internal abstract class OptionsConverterRecordBase;
 
@@ -1357,6 +1414,34 @@ internal sealed class SortedExtensionRecord : SortedExtensionRecordBase
 {
     [JsonExtensionData]
     public SortedDictionary<string, JsonElement>? ExtensionData { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
+[JsonDerivedType(typeof(AliasComparerRecord), "test.aliasComparer")]
+internal abstract class AliasComparerRecordBase;
+
+internal sealed class AliasComparerRecord : AliasComparerRecordBase
+{
+    [JsonExtensionData]
+    public AliasComparerExtensionData ExtensionData { get; set; } = new();
+}
+
+internal sealed class AliasComparerExtensionData : Dictionary<string, JsonElement>
+{
+    public AliasComparerExtensionData() : base(new AliasComparer())
+    {
+    }
+}
+
+internal sealed class AliasComparer : IEqualityComparer<string>
+{
+    public bool Equals(string? x, string? y) =>
+        string.Equals(Normalize(x), Normalize(y), StringComparison.Ordinal);
+
+    public int GetHashCode(string obj) => StringComparer.Ordinal.GetHashCode(Normalize(obj)!);
+
+    private static string? Normalize(string? value) =>
+        value?.StartsWith('\0') is true ? value[1..] : value;
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
@@ -1645,6 +1730,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(NestedCustomRecord))]
 [JsonSerializable(typeof(CollectionRecordBase))]
 [JsonSerializable(typeof(CollectionRecord))]
+[JsonSerializable(typeof(PolymorphicRecordListBase))]
+[JsonSerializable(typeof(PolymorphicRecordList))]
 [JsonSerializable(typeof(OptionsConverterRecordBase))]
 [JsonSerializable(typeof(OptionsConverterRecord))]
 [JsonSerializable(typeof(OptionsPayload))]
@@ -1659,6 +1746,8 @@ internal sealed class RejectedNullConverter : JsonConverter<RejectedNullValue>
 [JsonSerializable(typeof(AliasCollisionRecord))]
 [JsonSerializable(typeof(SortedExtensionRecordBase))]
 [JsonSerializable(typeof(SortedExtensionRecord))]
+[JsonSerializable(typeof(AliasComparerRecordBase))]
+[JsonSerializable(typeof(AliasComparerRecord))]
 [JsonSerializable(typeof(DeepPayloadRecordBase))]
 [JsonSerializable(typeof(DeepPayloadRecord))]
 [JsonSerializable(typeof(DeepPayload))]
