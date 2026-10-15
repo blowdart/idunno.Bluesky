@@ -134,7 +134,7 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             IJsonTypeInfoResolver snapshot = SnapshotResolver(source, preferredFallback: preferredFallback);
             foreach (Action<JsonTypeInfo> modifier in modifiers)
             {
-                snapshot = snapshot.WithAddedModifier(modifier);
+                snapshot = snapshot.WithAddedModifier(info => ApplyCallerModifier(info, modifier));
             }
             return snapshot;
         }
@@ -167,9 +167,40 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
 
         // Insert the SDK fallback inside modifier decorators, not after them. This preserves the
         // caller's modifiers while ensuring they see generated contracts rather than reflection ones.
-        return resolver is DefaultJsonTypeInfoResolver && preferredFallback is not null
-            ? JsonTypeInfoResolver.Combine(preferredFallback, resolver)
-            : resolver;
+        if (JsonSerializer.IsReflectionEnabledByDefault &&
+            resolverType == typeof(DefaultJsonTypeInfoResolver) && resolver is DefaultJsonTypeInfoResolver reflectionResolver)
+        {
+            // Move modifiers outside the generated/reflection choice so a generated contract
+            // receives the same customization. A fresh reflection resolver has no callbacks of
+            // its own, avoiding duplicate invocation on contracts that require reflection.
+            IJsonTypeInfoResolver snapshot = preferredFallback is null
+                ? CreateReflectionResolverSnapshot()
+                : JsonTypeInfoResolver.Combine(preferredFallback, CreateReflectionResolverSnapshot());
+            foreach (Action<JsonTypeInfo> modifier in reflectionResolver.Modifiers)
+            {
+                snapshot = snapshot.WithAddedModifier(info => ApplyCallerModifier(info, modifier));
+            }
+            return snapshot;
+        }
+
+        return resolver;
+    }
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Called only with reflection enabled and a caller-supplied DefaultJsonTypeInfoResolver. This copies the caller's existing reflection fallback without expanding its supported contracts.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050", Justification = "Called only with reflection enabled and a caller-supplied DefaultJsonTypeInfoResolver. Native AOT uses generated resolver snapshots instead.")]
+    private static DefaultJsonTypeInfoResolver CreateReflectionResolverSnapshot() => new();
+
+    private static void ApplyCallerModifier(JsonTypeInfo info, Action<JsonTypeInfo> modifier)
+    {
+        // The serializer asks for two contracts: the original contract used inside our adapter,
+        // and the converter-backed shell used to select that adapter. Only the original has
+        // properties and object callbacks. Customizing the shell cannot affect the real object
+        // and can throw for perfectly valid type-only modifiers, so do not expose SDK shells.
+        // Caller-owned custom converters are not shells and still receive their modifiers.
+        if (info.Converter is not Converter and not ForwardingConverter and not PropertyConverter)
+        {
+            modifier(info);
+        }
     }
 
     internal static IJsonTypeInfoResolver PrioritizeFallback(IJsonTypeInfoResolver resolver, IJsonTypeInfoResolver fallback) =>
@@ -477,13 +508,13 @@ internal sealed class TolerantPolymorphicConverter(IJsonTypeInfoResolver resolve
             return info is null ? null : ApplyCustomConverterPolymorphismWorkaround(info);
         }
 
-        public TolerantTypeInfoResolver Snapshot() => new(null, [GetCombinedResolver()]);
+        public TolerantTypeInfoResolver Snapshot() => new(null, [SnapshotResolver(GetCombinedResolver())]);
 
         public TolerantTypeInfoResolver Snapshot(IReadOnlyList<IJsonTypeInfoResolver> followingResolvers)
         {
             List<IJsonTypeInfoResolver> resolvers = [.. followingResolvers];
             resolvers.AddRange(initialResolvers.Where(resolver => !resolvers.Contains(resolver)));
-            return new(null, [JsonTypeInfoResolver.Combine(resolvers.ToArray())]);
+            return new(null, [SnapshotResolver(JsonTypeInfoResolver.Combine(resolvers.ToArray()))]);
         }
 
         public IJsonTypeInfoResolver SnapshotWithFallback(

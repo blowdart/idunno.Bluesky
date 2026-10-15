@@ -215,7 +215,7 @@ int postCallbackCount = 0;
 JsonSerializerOptions modifiedBlueskyJsonOptions = modifiedBlueskyOptions.HttpJsonOptions!.JsonSerializerOptions;
 modifiedBlueskyJsonOptions.TypeInfoResolver = modifiedBlueskyJsonOptions.TypeInfoResolver!.WithAddedModifier(info =>
 {
-    if (info.Type == typeof(Post) && info.Kind == JsonTypeInfoKind.Object)
+    if (info.Type == typeof(Post))
     {
         info.OnDeserialized = _ => postCallbackCount++;
     }

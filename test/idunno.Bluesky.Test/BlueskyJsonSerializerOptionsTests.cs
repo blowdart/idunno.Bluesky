@@ -115,28 +115,61 @@ public partial class BlueskyJsonSerializerOptionsTests
         Assert.False(supplied.JsonSerializerOptions.IsReadOnly);
     }
 
-    [Fact]
-    public void AgentPreservesCallerModifiersOnBlueskySourceGeneratedContracts()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AgentPreservesCallerModifiersOnBlueskySourceGeneratedContracts(bool normalize)
     {
         JsonOptions supplied = new();
         int callbacks = 0;
         supplied.JsonSerializerOptions.TypeInfoResolver =
             supplied.JsonSerializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
             {
-                if (info.Type == typeof(Post) && info.Kind == JsonTypeInfoKind.Object)
+                if (info.Type == typeof(Post))
                 {
                     info.OnDeserialized = _ => callbacks++;
+                    info.Properties.Single(property => property.Name == "text").Name = "customText";
                 }
             });
 
         using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
         JsonTypeInfo profileInfo = agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(ProfileViewDetailed));
         Assert.Same(SourceGenerationContext.Default, profileInfo.OriginatingResolver);
+        string metadata = normalize ? "\"$via\":\"extension\"," : "";
         Post post = Assert.IsType<Post>(JsonSerializer.Deserialize<Post>(
-            """{"$type":"app.bsky.feed.post","text":"hello","createdAt":"2026-10-13T10:24:57.970Z"}""",
+            $$"""{"$type":"app.bsky.feed.post",{{metadata}}"customText":"hello","createdAt":"2026-10-13T10:24:57.970Z"}""",
             agent.JsonOptions.JsonSerializerOptions));
 
         Assert.Equal("hello", post.Text);
+        Assert.Equal(1, callbacks);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AgentAppliesReflectionResolverModifiersToGeneratedFallbackContracts(bool decorate)
+    {
+        int callbacks = 0;
+        DefaultJsonTypeInfoResolver resolver = new();
+        resolver.Modifiers.Add(info =>
+        {
+            if (info.Type == typeof(ProfileViewDetailed))
+            {
+                info.OnDeserialized = _ => callbacks++;
+                info.Properties.Single(property => property.Name == "followersCount").Name = "customFollowers";
+            }
+        });
+        JsonOptions supplied = new();
+        supplied.JsonSerializerOptions.TypeInfoResolver = decorate
+            ? resolver.WithAddedModifier(_ => { })
+            : resolver;
+        using BlueskyAgent agent = new(new BlueskyAgentOptions(loggerFactory: null, httpJsonOptions: supplied));
+        JsonTypeInfo profileInfo = agent.JsonOptions.JsonSerializerOptions.GetTypeInfo(typeof(ProfileViewDetailed));
+        Assert.Same(SourceGenerationContext.Default, profileInfo.OriginatingResolver);
+        ProfileViewDetailed profile = Assert.IsType<ProfileViewDetailed>(JsonSerializer.Deserialize<ProfileViewDetailed>(
+            """{"did":"did:plc:test","handle":"example.test","customFollowers":"12"}""",
+            agent.JsonOptions.JsonSerializerOptions));
+        Assert.Equal(12, profile.FollowersCount);
         Assert.Equal(1, callbacks);
     }
 
@@ -148,7 +181,7 @@ public partial class BlueskyJsonSerializerOptionsTests
         JsonSerializerOptions serializerOptions = supplied.HttpJsonOptions!.JsonSerializerOptions;
         serializerOptions.TypeInfoResolver = serializerOptions.TypeInfoResolver!.WithAddedModifier(info =>
         {
-            if (info.Type == typeof(Post) && info.Kind == JsonTypeInfoKind.Object)
+            if (info.Type == typeof(Post))
             {
                 info.OnDeserialized = _ => callbacks++;
             }
