@@ -58,9 +58,11 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 * Creating, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
 * Multipart uploads for videos
-* Jetstream support for simple firehose consumption
 * Automatic session management with background token refreshes
 * ASP.NET authentication, including a default Razor Pages UI and MySQL, PostgreSQL, Redis and SQLite implementations of the identity store and correlation state cache.
+* Firehose support for reading and reacting to real-time updates about changes to repository state, DID documents and handles, and account hosting status.
+* Jetstream support for simple firehose consumption
+* A durable bot SDK for writing bots that can monitor and react to the Jetstream and run for long periods of time without losing state, with built-in support for SQLite, MySQL, PostgreSQL and Redis.
 
 Trimming is supported for applications targeting .NET 9.0 or later.
 
