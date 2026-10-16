@@ -120,8 +120,16 @@ idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.Cache.get -
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.Cache.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.CacheTimeout.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.CacheTimeout.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.get -> System.TimeProvider!
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.TimeProvider.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.VerifyHandle.get -> bool
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.VerifyHandle.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.AdditionalScopes.get -> System.Collections.Generic.IList<string!>!
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.BlueskyOAuthClientMetadataOptions() -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.GenerateJson(idunno.AtProto.Authentication.OAuthOptions! oAuthOptions) -> string!
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.LogoUri.get -> System.Uri?
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.LogoUri.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.AuthenticationScheme.get -> string!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.AuthenticationScheme.set -> void
@@ -331,6 +339,7 @@ idunno.Bluesky.AspNet.Authentication.SignInResult.SignInResult(bool Succeeded, b
 idunno.Bluesky.AspNet.Authentication.SignInResult.SignInResult(idunno.Bluesky.AspNet.Authentication.SignInResult! original) -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult.Succeeded.get -> bool
 idunno.Bluesky.AspNet.Authentication.SignInResult.Succeeded.init -> void
+Microsoft.AspNetCore.Builder.BlueskyOAuthClientMetadataExtensions
 Microsoft.Extensions.DependencyInjection.BlueskyExtensions
 OpenTelemetry.Metrics.BlueskyAuthenticationMetricsExtensions
 override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.CreateEventsAsync() -> System.Threading.Tasks.Task<object!>!
@@ -367,6 +376,7 @@ static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator !=(idunno
 static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator ==(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? left, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? right) -> bool
 static idunno.Bluesky.AspNet.Authentication.SignInResult.operator !=(idunno.Bluesky.AspNet.Authentication.SignInResult? left, idunno.Bluesky.AspNet.Authentication.SignInResult? right) -> bool
 static idunno.Bluesky.AspNet.Authentication.SignInResult.operator ==(idunno.Bluesky.AspNet.Authentication.SignInResult? left, idunno.Bluesky.AspNet.Authentication.SignInResult? right) -> bool
+static Microsoft.AspNetCore.Builder.BlueskyOAuthClientMetadataExtensions.UseBlueskyOAuthClientMetadata(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme, string? displayName, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! configureOptions) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
@@ -375,6 +385,7 @@ static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(thi
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyAgentFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyAgentFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authenticationScheme) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyClaimsTransformer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyOAuthClientMetadata(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions!>? configureOptions = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static OpenTelemetry.Metrics.BlueskyAuthenticationMetricsExtensions.AddBlueskyAuthenticationMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.AccessDeniedPath -> Microsoft.AspNetCore.Http.PathString
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.AuthenticationScheme -> string!

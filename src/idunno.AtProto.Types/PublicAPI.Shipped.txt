@@ -2,6 +2,9 @@
 abstract idunno.AtProto.AtIdentifier.Value.get -> string!
 const idunno.AtProto.Did.ValidationRegex = "^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$" -> string!
 const idunno.AtProto.Handle.ValidationRegex = "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$" -> string!
+const idunno.AtProto.Nsid.ValidationRegex = "^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$" -> string!
+const idunno.AtProto.RecordKey.ValidationRegex = "^[a-zA-Z0-9_~.:-]{1,512}$" -> string!
+const idunno.AtProto.TimestampIdentifier.ValidationRegex = "^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$" -> string!
 idunno.AtProto.AtIdentifier
 idunno.AtProto.AtIdentifier.AtIdentifier() -> void
 idunno.AtProto.AtIdentifierException
@@ -176,6 +179,7 @@ static idunno.AtProto.Blob.operator !=(idunno.AtProto.Blob? left, idunno.AtProto
 static idunno.AtProto.Blob.operator ==(idunno.AtProto.Blob? left, idunno.AtProto.Blob? right) -> bool
 static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(byte[]! bytes) -> idunno.AtProto.Bytes!
 static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(string! s) -> idunno.AtProto.Bytes!
+static idunno.AtProto.Cid.FromDagCbor(System.ReadOnlySpan<byte> content) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.FromString(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.implicit operator idunno.AtProto.Cid!(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.operator !=(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool

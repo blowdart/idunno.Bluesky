@@ -19,4 +19,10 @@ idunno.AtProto.OAuthCallback.CallbackServer.SuccessTitle.set -> void
 idunno.AtProto.OAuthCallback.CallbackServer.Uri.get -> System.Uri!
 idunno.AtProto.OAuthCallback.CallbackServer.Uri.init -> void
 idunno.AtProto.OAuthCallback.CallbackServer.WaitForCallbackAsync(int timeoutInSeconds = 300, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+idunno.AtProto.OAuthCallback.CallbackServerMetrics
+OpenTelemetry.Metrics.CallbackServerMetricsExtensions
+static idunno.AtProto.OAuthCallback.CallbackServer.CreateAsync(string? path = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Action<idunno.AtProto.OAuthCallback.CallbackServer!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.OAuthCallback.CallbackServer!>!
 static idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort() -> int
+static idunno.AtProto.OAuthCallback.CallbackServerMetrics.MeterName.get -> string!
+static idunno.AtProto.OAuthCallback.CallbackServerMetrics.MeterVersion.get -> string!
+static OpenTelemetry.Metrics.CallbackServerMetricsExtensions.AddAtProtoOAuthCallbackMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!

@@ -1,6 +1,6 @@
 # Version History
 
-## 8.0.0 - **unreleased**
+## 8.0.0 - 2026-10-16
 
 🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
 
@@ -13,10 +13,6 @@
 🎉 **New** A bot SDK delivering a runtime with hosted Jetstream replay, durable action dispatch, credential recovery, rate-limit accounting, operational health checks, and metrics for applications that build Bluesky bots.
 
 ### Added
-
-#### Samples
-
-* Separated `Samples.ReactBff` frontend tests from builds. Builds still install dependencies and compile the frontend; run `npm test` in `ClientApp` separately. GitHub Actions workflows run frontend tests explicitly, and CI Build publishes their JUnit results alongside the .NET results.
 
 #### idunno.AtProto
 
@@ -198,17 +194,8 @@
 #### idunno.Bluesky.BotSdk
 
 * Added DI-resolvable `BotReplayProgress` with an atomic, read-only handled-event snapshot containing sequence, service witnessed time, and local observation time, independently of logs, durable checkpoints, and liveness.
-* Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
-* Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
-* Added `AddInMemoryBotStorage()` for development and tests. It logs that its process-local state is not production durable.
-* Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
-* Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
-* Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
-* Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
-* Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
-* Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
-* The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
-* Added `MalformedEventException` for bot policies to signal invalid source events that fail validation with exceptions other than `JsonException`; the reader audits and skips those events while other policy failures remain fail-fast.
+  * Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
+  * Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
 
 #### idunno.Bluesky.BotSdk.MySQL
 
