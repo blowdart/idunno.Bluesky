@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 
@@ -13,6 +15,8 @@ public sealed class JetstreamMetrics
 {
     // For non-DI scenarios, see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices
     private static readonly Meter s_meter = new(MeterName, MeterVersion);
+    private readonly ConcurrentDictionary<object, long> _connectionStartTimestamps = new();
+    private readonly ConcurrentDictionary<object, long> _lastMessageTimestamps = new();
 
     /// <summary>
     /// Creates a new instance of <see cref="JetstreamMetrics"/>.
@@ -50,6 +54,22 @@ public sealed class JetstreamMetrics
 
     internal Counter<long> MessageDecompressionFailures { get; private set; }
 
+    internal Counter<long> ArchivePlans { get; private set; }
+
+    internal Counter<long> ArchiveBlocks { get; private set; }
+
+    internal Counter<long> ArchiveSegments { get; private set; }
+
+    internal Counter<long> ArchiveBytes { get; private set; }
+
+    internal Counter<long> ArchiveRateLimits { get; private set; }
+
+    internal Counter<long> ArchiveEvents { get; private set; }
+
+    internal Counter<long> ArchiveFilteredEvents { get; private set; }
+
+    internal Counter<long> ReplayHandoffs { get; private set; }
+
     /// <summary>
     /// Gets the meter name publishing metrics.
     /// </summary>
@@ -69,7 +89,18 @@ public sealed class JetstreamMetrics
         nameof(ConnectionFailures),
         nameof(MessageParsingFailures),
         nameof(Faults),
-        nameof(MessageDecompressionFailures)
+        nameof(MessageDecompressionFailures),
+        nameof(ArchivePlans),
+        nameof(ArchiveBlocks),
+        nameof(ArchiveSegments),
+        nameof(ArchiveBytes),
+        nameof(ArchiveRateLimits),
+        nameof(ArchiveEvents),
+        nameof(ArchiveFilteredEvents),
+        nameof(ReplayHandoffs),
+        nameof(ActiveConnections),
+        nameof(ConnectionDuration),
+        nameof(MessageInterarrivalDuration)
         )]
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
     private void Initialize(Meter meter)
@@ -118,5 +149,99 @@ public sealed class JetstreamMetrics
             name: $"{MeterName.ToLowerInvariant()}.total.message_decompression_failures",
             description: "Number of message decompression failures.",
             unit: "{messages}");
+
+        ArchivePlans = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_plans",
+            description: "Number of successful archive plan pages.",
+            unit: "{plans}");
+
+        ArchiveBlocks = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_blocks",
+            description: "Number of successfully decoded archive blocks.",
+            unit: "{blocks}");
+
+        ArchiveSegments = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_segments",
+            description: "Number of completed archive segments.",
+            unit: "{segments}");
+
+        ArchiveBytes = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_bytes",
+            description: "Number of archive response body bytes downloaded, including resumed reads.",
+            unit: "By");
+
+        ArchiveRateLimits = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_rate_limits",
+            description: "Number of archive requests answered with HTTP 429.",
+            unit: "{requests}");
+
+        ArchiveEvents = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_events",
+            description: "Number of decoded archive events delivered after exact filtering.",
+            unit: "{events}");
+
+        ArchiveFilteredEvents = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.archive_filtered_events",
+            description: "Number of decoded archive rows rejected by exact filters.",
+            unit: "{events}");
+
+        ReplayHandoffs = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.replay_handoffs",
+            description: "Number of archive-to-live replay handoffs attempted.",
+            unit: "{handoffs}");
+
+        ActiveConnections = meter.CreateUpDownCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.connections.active",
+            description: "Current number of open Jetstream connections.",
+            unit: "{connections}");
+
+        ConnectionDuration = meter.CreateHistogram<double>(
+            name: $"{MeterName.ToLowerInvariant()}.connection.duration",
+            description: "Duration of Jetstream connections.",
+            unit: "s");
+
+        MessageInterarrivalDuration = meter.CreateHistogram<double>(
+            name: $"{MeterName.ToLowerInvariant()}.message.interarrival.duration",
+            description: "Time between messages received from Jetstream.",
+            unit: "s");
+    }
+
+    internal UpDownCounter<long> ActiveConnections { get; private set; }
+
+    internal Histogram<double> ConnectionDuration { get; private set; }
+
+    internal Histogram<double> MessageInterarrivalDuration { get; private set; }
+
+    internal void RecordConnectionOpened(object connection, KeyValuePair<string, object?> serverTag)
+    {
+        ConnectionsOpened.Add(1, serverTag);
+        ActiveConnections.Add(1, serverTag);
+        _connectionStartTimestamps[connection] = Stopwatch.GetTimestamp();
+        _lastMessageTimestamps.TryRemove(connection, out _);
+    }
+
+    internal void RecordConnectionClosed(object connection, KeyValuePair<string, object?> serverTag)
+    {
+        if (_connectionStartTimestamps.TryRemove(connection, out long startTimestamp))
+        {
+            ConnectionsClosed.Add(1, serverTag);
+            ActiveConnections.Add(-1, serverTag);
+            ConnectionDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, serverTag);
+        }
+
+        _lastMessageTimestamps.TryRemove(connection, out _);
+    }
+
+    internal void RecordMessageReceived(object connection, KeyValuePair<string, object?> serverTag)
+    {
+        MessagesReceived.Add(1, serverTag);
+
+        long now = Stopwatch.GetTimestamp();
+        if (_lastMessageTimestamps.TryGetValue(connection, out long previousTimestamp))
+        {
+            MessageInterarrivalDuration.Record(Stopwatch.GetElapsedTime(previousTimestamp, now).TotalSeconds, serverTag);
+        }
+
+        _lastMessageTimestamps[connection] = now;
     }
 }

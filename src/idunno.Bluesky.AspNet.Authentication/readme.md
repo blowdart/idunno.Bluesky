@@ -27,6 +27,33 @@ builder.Services
     .AddBlueskyAgentFactory();
 ```
 
+## OAuth client metadata
+
+Configure `BlueskyAgentOptions.OAuthOptions` with the site's public HTTPS metadata URL as `ClientId` and its HTTPS callback as
+`ReturnUri`. Register `builder.Services.AddBlueskyOAuthClientMetadata()` and call `app.UseBlueskyOAuthClientMetadata()` before
+authentication, authorization and static files to publish a generated web-client metadata document at that URL.
+Optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` configure the client name, homepage, terms and privacy URLs through the existing agent configuration section.
+An optional registration delegate configures the logo URL and `AdditionalScopes` to advertise scopes the application might request later,
+without changing its initial login scopes. Configured scopes and permission sets are included automatically.
+
+The metadata is validated at pipeline configuration time. Localhost development IDs use authorization-server-generated virtual
+metadata instead; leave publication disabled for those IDs. Existing static metadata hosting remains unchanged.
+See the [ASP.NET documentation](https://bluesky.idunno.dev/docs/asp.net.html) for configuration examples and URL requirements.
+To generate JSON without serving it, use `BlueskyOAuthClientMetadataOptions.GenerateJson(oAuthOptions)`.
+
+To act as a confidential client, set `OAuthOptions.ClientSigningKeyPath` (for example `BlueskyAgent:OAuthOptions:ClientSigningKeyPath` in configuration) to the path of an ES256 private key file. The key is loaded into `OAuthOptions.ClientSigningKey` when the agent options are built.
+The metadata then publishes the public key in `jwks` with `private_key_jwt` client authentication, and OAuth requests carry signed ES256 client assertions.
+To rotate the key, move the previous key's path to `OAuthOptions.AdditionalClientSigningKeyPaths`; previous keys are published and used only for sessions that started with them.
+
+## Related Packages
+
+* [idunno.Bluesky.AspNet.Authentication.UI](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.UI) which provides a UI for the Bluesky authentication flow.
+* [idunno.Bluesky.AspNet.Authentication.MySQL](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.MySQL) which provides a MySQL database implementation for storing Bluesky authentication tokens with this package.
+* [idunno.Bluesky.AspNet.Authentication.PostgreSQL](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.PostgreSQL) which provides a PostgreSQL database implementation for storing Bluesky authentication tokens with this package.
+* [idunno.Bluesky.AspNet.Authentication.SQLite](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.SQLite) which provides a SQLite database implementation for storing Bluesky authentication tokens with this package.
+* [idunno.Bluesky.AspNet.Authentication.Redis](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication.Redis) which provides a Redis cache implementation for storing Bluesky authentication tokens with this package.
+* [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).
+
+
 ## Documentation
 [Documentation](https://bluesky.idunno.dev/) is available, including API references.
-

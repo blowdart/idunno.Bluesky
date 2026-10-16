@@ -112,7 +112,7 @@ public class GraphViewTests
             value: "spam",
             isNegationLabel: false,
             creationTimestamp: DateTimeOffset.UtcNow,
-            signature: []));
+            signature: null));
 
         Assert.Empty(view.Labels);
     }

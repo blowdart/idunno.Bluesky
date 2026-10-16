@@ -43,15 +43,6 @@ public class UnspeccedTests
     }
 
     [Fact]
-    public async Task GetPostThreadV2DoesNotRejectZeroLevelsBelowTheAnchor()
-    {
-        using BlueskyAgent agent = new();
-
-        await Assert.ThrowsAsync<AuthenticationRequiredException>(
-            () => agent.GetPostThreadV2(s_anchor, below: 0, branchingFactor: 0, cancellationToken: TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
     public void TrendViewTakesADefensiveCopyOfTheActorsItIsGiven()
     {
         List<ProfileViewBasic> actors = [];

@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Chat.Actor;
@@ -31,6 +30,14 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// <summary>
     /// Gets Profiles referred to in the system message.
     /// </summary>
+    /// <exception cref="ArgumentNullException">The collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     [JsonRequired]
-    public IReadOnlyCollection<ProfileViewBasic> RelatedProfiles { get; init; }
+    public IReadOnlyCollection<ProfileViewBasic> RelatedProfiles
+    {
+        get => _relatedProfiles;
+        init => _relatedProfiles = ChatCollection.Copy(value);
+    }
+
+    private readonly IReadOnlyCollection<ProfileViewBasic> _relatedProfiles = null!;
 }

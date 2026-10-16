@@ -22,12 +22,13 @@ public record DraftEmbedCaption
     /// </summary>
     /// <param name="content">The caption content.</param>
     /// <param name="lang">The caption language.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="content"/> or <paramref name="lang"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="content"/> or <paramref name="lang"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="lang"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the UTF-8 byte length of <paramref name="content"/> is greater than <see cref="Maximum.DraftEmbedCaptionContentLengthInBytes"/>.</exception>
     [JsonConstructor]
     public DraftEmbedCaption(string content, string lang)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        ArgumentNullException.ThrowIfNull(content);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(content.GetUtf8Length(), Maximum.DraftEmbedCaptionContentLengthInBytes);
         ArgumentException.ThrowIfNullOrWhiteSpace(lang);
 
@@ -55,8 +56,8 @@ public record DraftEmbedCaption
     /// <summary>
     /// Gets or sets the caption content.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than <see cref="Maximum.DraftEmbedCaptionContentLengthInBytes"/> UTF-8 bytes.</exception>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The value length is greater than <see cref="Maximum.DraftEmbedCaptionContentLengthInBytes"/> UTF-8 bytes.</exception>
     [JsonRequired]
     public string Content
     {
@@ -64,7 +65,7 @@ public record DraftEmbedCaption
 
         set
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            ArgumentNullException.ThrowIfNull(value);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DraftEmbedCaptionContentLengthInBytes);
 
             field = value;

@@ -383,8 +383,8 @@ internal static partial class Logger
     [LoggerMessage(604, LogLevel.Information, "DPoP header added to request to {host}/{path}")]
     internal static partial void DPoPHeaderAddedToTokenRequest(ILogger logger, string? host, string? path);
 
-    [LoggerMessage(605, LogLevel.Error, "OAuth login access token did not contain AtProto in scope, correlation {correlation}")]
-    internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
+    [LoggerMessage(605, LogLevel.Error, "OAuth login access token scope did not contain atproto or begin with ref:, correlation {correlation}")]
+    internal static partial void OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(ILogger logger, Guid correlation);
 
     [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
     internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri actual, Uri expected, Guid correlation);
@@ -400,6 +400,9 @@ internal static partial class Logger
 
     [LoggerMessage(612, LogLevel.Debug, "OAuthClient refresh succeeded, token issued by authority {authority}")]
     internal static partial void OAuthClientRefreshSucceeded(ILogger logger, Uri authority);
+
+    [LoggerMessage(613, LogLevel.Warning, "OAuth session client signing key {keyId} is not configured, using the active client signing key {activeKeyId}")]
+    internal static partial void OAuthClientSigningKeyNotFound(ILogger logger, string keyId, string activeKeyId);
 
     // Agent flow logging
     [LoggerMessage(750, LogLevel.Debug, "Agent disposing")]

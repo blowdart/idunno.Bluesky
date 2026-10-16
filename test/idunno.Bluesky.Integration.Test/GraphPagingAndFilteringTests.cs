@@ -16,11 +16,6 @@ namespace idunno.Bluesky.Integration.Test;
 /// <summary>
 /// Covers the paging and null entry filtering behaviour of the graph APIs.
 /// </summary>
-/// <remarks>
-/// <para><see cref="BlueskyAgent.DeleteFromList(AtUri, Did, CancellationToken)"/> and its handle overload search a list
-/// for their subject a page at a time. The loop which did so never carried the cursor of the previous page forward and
-/// never re-read, so a list whose first page did not contain the subject and which reported a cursor span forever.</para>
-/// </remarks>
 [ExcludeFromCodeCoverage]
 public class GraphPagingAndFilteringTests
 {
@@ -184,6 +179,79 @@ public class GraphPagingAndFilteringTests
         Assert.False(result.Succeeded);
         Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
         Assert.Equal([null, "page2"], cursorsSeen);
+        Assert.Empty(deleteBodies);
+    }
+
+    [Fact(Timeout = 60000)]
+    public async Task DeleteFromListStopsWhenTheServerCyclesBetweenCursors()
+    {
+        List<string?> cursorsSeen = [];
+        List<string> deleteBodies = [];
+
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/json";
+
+            string? cursor = context.Request.Query["cursor"];
+            cursorsSeen.Add(string.IsNullOrEmpty(cursor) ? null : cursor);
+
+            string nextCursor = cursor switch
+            {
+                null or "" => "cursor-a",
+                "cursor-a" => "cursor-b",
+                _ => "cursor-a"
+            };
+
+            await context.Response.WriteAsync($$"""{"list":{{ListView}},"items":[],"cursor":"{{nextCursor}}"}""");
+        });
+
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
+            s_list,
+            new Did("did:plc:absent"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
+        Assert.NotNull(result.AtErrorDetail);
+        Assert.Equal("PaginationCursorLoop", result.AtErrorDetail.Error);
+        Assert.Equal([null, "cursor-a", "cursor-b"], cursorsSeen);
+        Assert.Empty(deleteBodies);
+    }
+
+    [Fact(Timeout = 60000)]
+    public async Task DeleteFromListStopsAfterTheMaximumNumberOfPages()
+    {
+        List<string?> cursorsSeen = [];
+        List<string> deleteBodies = [];
+
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "application/json";
+
+            string? cursor = context.Request.Query["cursor"];
+            cursorsSeen.Add(string.IsNullOrEmpty(cursor) ? null : cursor);
+
+            string nextCursor = $"page{cursorsSeen.Count + 1}";
+
+            await context.Response.WriteAsync($$"""{"list":{{ListView}},"items":[],"cursor":"{{nextCursor}}"}""");
+        });
+
+        using BlueskyAgent agent = CreateAgent(testServer);
+
+        AtProtoHttpResult<DeleteResult> result = await agent.DeleteFromList(
+            s_list,
+            new Did("did:plc:absent"),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
+        Assert.NotNull(result.AtErrorDetail);
+        Assert.Equal("PaginationPageLimitExceeded", result.AtErrorDetail.Error);
+        Assert.Equal(1_000, cursorsSeen.Count);
         Assert.Empty(deleteBodies);
     }
 

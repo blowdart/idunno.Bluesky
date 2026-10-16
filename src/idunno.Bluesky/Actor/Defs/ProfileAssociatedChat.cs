@@ -20,6 +20,14 @@ public record ProfileAssociatedChat
     /// Gets a flag indicating the rules for incoming chats.
     /// </summary>
     public AllowIncomingChat AllowIncoming { get; init; }
+
+    /// <summary>
+    /// Gets the optional group invitation policy.
+    /// </summary>
+    /// <remarks>
+    /// <para>Known values are <c>all</c>, <c>none</c> and <c>following</c>. Unrecognized values are preserved unchanged.</para>
+    /// </remarks>
+    public string? AllowGroupInvites { get; init; }
 }
 
 /// <summary>

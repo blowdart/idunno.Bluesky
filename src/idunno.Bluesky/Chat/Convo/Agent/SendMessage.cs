@@ -20,8 +20,7 @@ public partial class BlueskyAgent
     /// <param name="replyTo">A <see cref="ReplyReference"/> to a message in the same conversation that this message is replying to.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is <see langword="null"/> or white space.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is <see langword="null"/>, or if <paramref name="embeddedPost"/> is specified but its collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> is <see langword="null"/>. Thrown when <paramref name="message"/> is <see langword="null"/>, or if <paramref name="embeddedPost"/> is specified but its collection is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="message"/> is longer than the maximum allowed length, or when <paramref name="embeddedPost"/> is specified but it is not in the <see cref="CollectionNsid.Post"/> collection.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<MessageView>> SendMessage(
@@ -32,7 +31,7 @@ public partial class BlueskyAgent
         ReplyReference? replyTo = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         ArgumentNullException.ThrowIfNull(message);
 

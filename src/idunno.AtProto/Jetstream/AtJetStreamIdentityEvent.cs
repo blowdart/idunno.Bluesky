@@ -8,7 +8,9 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates the properties of a Jetstream identity event.
 /// </summary>
-public sealed record AtJetstreamIdentityEvent : AtJetstreamEvent
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamIdentityEvent for Jetstream v2 events.")]
+public record AtJetstreamIdentityEvent : JetstreamEvent
 {
     /// <summary>
     /// Gets the details of the identity change that triggered this event.

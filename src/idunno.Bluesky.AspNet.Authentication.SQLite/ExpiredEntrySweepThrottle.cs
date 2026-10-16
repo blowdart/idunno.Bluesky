@@ -20,24 +20,28 @@ namespace idunno.Bluesky.AspNet.Authentication.SQLite;
 /// </remarks>
 internal sealed class ExpiredEntrySweepThrottle
 {
-    private readonly long _intervalMilliseconds;
-    private long _nextSweepAt;
+    private readonly TimeSpan _interval;
+    private readonly TimeProvider _timeProvider;
+    private long _lastSweepAt;
+    private int _dueImmediately;
 
     /// <summary>
     /// Creates a new instance of <see cref="ExpiredEntrySweepThrottle"/>.
     /// </summary>
     /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
     /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
+    /// <param name="timeProvider">A provider for monotonic timestamps, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
-    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName)
+    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, TimeProvider? timeProvider = null)
     {
         if (interval < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(paramName, interval, "The sweep interval cannot be negative.");
         }
 
-        _intervalMilliseconds = (long)interval.TotalMilliseconds;
-        _nextSweepAt = Environment.TickCount64 + _intervalMilliseconds;
+        _interval = interval;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _lastSweepAt = _timeProvider.GetTimestamp();
     }
 
     /// <summary>
@@ -47,20 +51,18 @@ internal sealed class ExpiredEntrySweepThrottle
     /// <param name="interval">How long to wait between sweeps. <see cref="TimeSpan.Zero"/> disables sweeping.</param>
     /// <param name="paramName">The name of the parameter <paramref name="interval"/> was supplied as.</param>
     /// <param name="dueImmediately">When <see langword="true"/>, the first sweep is claimable immediately rather than one interval after construction.</param>
+    /// <param name="timeProvider">A provider for monotonic timestamps, or <see langword="null"/> to use <see cref="TimeProvider.System"/>.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="interval"/> is negative.</exception>
-    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately)
-        : this(interval, paramName)
+    internal ExpiredEntrySweepThrottle(TimeSpan interval, string paramName, bool dueImmediately, TimeProvider? timeProvider = null)
+        : this(interval, paramName, timeProvider)
     {
-        if (dueImmediately)
-        {
-            _nextSweepAt = Environment.TickCount64;
-        }
+        _dueImmediately = dueImmediately ? 1 : 0;
     }
 
     /// <summary>
     /// Gets a value indicating whether sweeping is enabled.
     /// </summary>
-    internal bool IsEnabled => _intervalMilliseconds > 0;
+    internal bool IsEnabled => _interval > TimeSpan.Zero;
 
     /// <summary>
     /// Gets a value indicating whether the caller should sweep, claiming the current interval when it should.
@@ -81,14 +83,20 @@ internal sealed class ExpiredEntrySweepThrottle
             return false;
         }
 
-        long now = Environment.TickCount64;
-        long nextSweepAt = Interlocked.Read(ref _nextSweepAt);
+        long lastSweepAt = Interlocked.Read(ref _lastSweepAt);
+        long now = _timeProvider.GetTimestamp();
 
-        if (now < nextSweepAt)
+        if (Interlocked.CompareExchange(ref _dueImmediately, 0, 1) == 1)
+        {
+            return Interlocked.CompareExchange(ref _lastSweepAt, now, lastSweepAt) == lastSweepAt;
+        }
+
+        // Comparing elapsed time, rather than adding the interval to a timestamp, cannot overflow however large the interval is.
+        if (_timeProvider.GetElapsedTime(lastSweepAt, now) < _interval)
         {
             return false;
         }
 
-        return Interlocked.CompareExchange(ref _nextSweepAt, now + _intervalMilliseconds, nextSweepAt) == nextSweepAt;
+        return Interlocked.CompareExchange(ref _lastSweepAt, now, lastSweepAt) == lastSweepAt;
     }
 }

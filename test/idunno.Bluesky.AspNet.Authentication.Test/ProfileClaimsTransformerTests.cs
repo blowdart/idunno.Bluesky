@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -212,6 +213,37 @@ public class ProfileClaimsTransformerTests
         // unchanged. What matters here is which client the attempt was made with.
         Assert.Same(principal, await transformer.TransformAsync(principal));
         Assert.True(httpClientFactory.ClientsCreated > 0);
+    }
+
+    [Fact]
+    public async Task AProfileLookupUsesTheTransformersTimeProviderForTheAgent()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        CountingHttpClientFactory httpClientFactory = new();
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.Configure<BlueskyClaimsTransformerOptions>(options =>
+        {
+            options.TimeProvider = timeProvider;
+            options.Cache = new EmptyProfileCache();
+        });
+        services.AddOptions<BlueskyAgentOptions>();
+        services.AddOptions<BlueskyAuthenticationOptions>();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IOptionsMonitor<BlueskyAgentOptions> agentOptions = provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>();
+        BlueskyClaimsTransformer transformer = new(
+            NullLoggerFactory.Instance,
+            provider.GetRequiredService<IOptionsMonitor<BlueskyClaimsTransformerOptions>>(),
+            agentOptions,
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
+            httpClientFactory: httpClientFactory);
+
+        ClaimsPrincipal principal = new(TestData.AuthenticatedClaimsIdentity(
+            TestData.NewDid(), signableProofKey: true, timeProvider: timeProvider));
+        Assert.Same(principal, await transformer.TransformAsync(principal));
+        Assert.True(httpClientFactory.ClientsCreated > 0);
+        Assert.Same(TimeProvider.System, agentOptions.CurrentValue.TimeProvider);
     }
 
     private sealed class CountingHttpClientFactory : IHttpClientFactory

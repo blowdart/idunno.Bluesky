@@ -17,7 +17,6 @@ namespace Samples.Video;
 
 public sealed class Program
 {
-    [Obsolete]
     static async Task<int> Main(string[] args)
     {
         // Necessary to render emojis.

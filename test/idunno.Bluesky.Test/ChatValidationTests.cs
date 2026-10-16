@@ -11,6 +11,13 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class ChatValidationTests
 {
+    [Fact]
+    public void MessageInputRejectsNullFacetsDuringConstructionAndInitialization()
+    {
+        Assert.Throws<ArgumentException>(() => new MessageInput("", [null!]));
+        Assert.Throws<ArgumentException>(() => new MessageInput("") { Facets = new List<Facet> { null! } });
+    }
+
     private static readonly Uri s_service = new("https://test.internal");
 
     private static AccessCredentials CreateCredentials()
@@ -20,6 +27,34 @@ public class ChatValidationTests
             authenticationType: AuthenticationType.UsernamePassword,
             accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:test"), s_service.ToString()),
             refreshToken: "refreshToken");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetJoinGroupLinkPreviewsRejectsInvalidCountsInAgentAndServer(bool aboveMaximum)
+    {
+        string[] codes = Enumerable.Repeat(string.Empty, aboveMaximum ? Maximum.JoinLinkPreviewCodes + 1 : 0).ToArray();
+        using BlueskyAgent agent = new();
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => agent.GetJoinGroupLinkPreviews(codes, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => BlueskyServer.GetJoinGroupLinkPreviews(codes, CreateCredentials(), s_service, httpClient, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsRejectsNullEntriesInAgentAndServer()
+    {
+        string[] codes = [string.Empty, null!];
+        using BlueskyAgent agent = new();
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => agent.GetJoinGroupLinkPreviews(codes, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => BlueskyServer.GetJoinGroupLinkPreviews(codes, CreateCredentials(), s_service, httpClient, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -184,11 +219,11 @@ public class ChatValidationTests
     [InlineData("status")]
     [InlineData("kind")]
     [InlineData("lockStatus")]
-    public async Task ListConversationsThrowsWhenAFilterIsWhitespace(string filter)
+    public async Task ListConversationsAcceptsWhitespaceFilters(string filter)
     {
         using HttpClient httpClient = new();
 
-        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => BlueskyServer.ListConversations(
+        await Assert.ThrowsAsync<HttpRequestException>(() => BlueskyServer.ListConversations(
             limit: null,
             cursor: null,
             readState: filter == "readState" ? " " : null,
@@ -200,7 +235,6 @@ public class ChatValidationTests
             httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken));
 
-        Assert.Equal(filter, exception.ParamName);
     }
 
     [Fact]

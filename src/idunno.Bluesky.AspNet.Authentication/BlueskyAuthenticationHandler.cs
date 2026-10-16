@@ -24,6 +24,8 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyAuthenticationOptions>
 {
+    private TimeProvider ConfiguredTimeProvider => Options.TimeProvider ?? System.TimeProvider.System;
+
     private const string HeaderValueNoCache = "no-cache";
     private const string HeaderValueNoCacheNoStore = "no-cache,no-store";
     private const string HeaderValueEpochDate = "Thu, 01 Jan 1970 00:00:00 GMT";
@@ -136,6 +138,9 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// Gets the current <see cref="BlueskyAgentOptions"/>.
     /// </summary>
     protected BlueskyAgentOptions BlueskyAgentOptions => BlueskyAgentOptionsMonitor.CurrentValue;
+
+    private BlueskyAgentOptions CreateAgentOptions() =>
+        BlueskyAgentOptionsWithTimeProvider.Create(BlueskyAgentOptions, ConfiguredTimeProvider);
 
     /// <summary>
     /// Gets or sets the <see cref="Did"/> for the current user.
@@ -277,7 +282,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         }
         else
         {
-            issuedUtc = TimeProvider.GetUtcNow();
+            issuedUtc = ConfiguredTimeProvider.GetUtcNow();
             signInContext.Properties.IssuedUtc = issuedUtc;
         }
 
@@ -493,7 +498,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
     private async Task CheckForRefreshAsync(AuthenticationTicket ticket)
     {
-        DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+        DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
         DateTimeOffset? issuedUtc = ticket.Properties.IssuedUtc;
         DateTimeOffset? expiresUtc = ticket.Properties.ExpiresUtc;
         bool allowRefresh = ticket.Properties.AllowRefresh ?? true;
@@ -653,7 +658,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         try
         {
-            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), HttpClientFactory, BlueskyAgentOptions);
+            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), HttpClientFactory, CreateAgentOptions());
 
             if (!agent.IsAuthenticated)
             {
@@ -735,7 +740,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return AuthenticateResults.s_missingIdentityInStore;
         }
 
-        DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+        DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
         DateTimeOffset? expiresUtc = ticket.Properties.ExpiresUtc;
 
         if (expiresUtc != null && expiresUtc.Value < currentUtc)
@@ -753,7 +758,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         var hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(storedIdentity), ticket.Properties, ticket.AuthenticationScheme);
 
         // Now check the actual token from the store, and spin up an agent to check if the token is still valid
-        using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, BlueskyAgentOptions))
+        using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, CreateAgentOptions()))
         {
             if (!agent.HasCredentials)
             {
@@ -903,7 +908,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                         try
                         {
-                            await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+                            await Task.Delay(Options.RefreshCheckWait, ConfiguredTimeProvider, Context.RequestAborted).ConfigureAwait(false);
                         }
                         catch (OperationCanceledException)
                         {
@@ -946,7 +951,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             }
 
             _shouldRefresh = true;
-            DateTimeOffset currentUtc = TimeProvider.GetUtcNow();
+            DateTimeOffset currentUtc = ConfiguredTimeProvider.GetUtcNow();
             _refreshIssuedUtc = currentUtc;
             TimeSpan timeSpan = expiresUtc.Value.Subtract(issuedUtc.Value);
             _refreshExpiresUtc = currentUtc.Add(timeSpan);

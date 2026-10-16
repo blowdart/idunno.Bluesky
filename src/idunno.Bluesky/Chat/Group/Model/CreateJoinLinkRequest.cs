@@ -9,8 +9,8 @@ internal sealed record CreateJoinLinkRequest
 {
     internal CreateJoinLinkRequest(string conversationId, bool requireApproval, string joinRule)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(joinRule);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(joinRule);
 
         ConversationId = conversationId;
         RequireApproval = requireApproval;

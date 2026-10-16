@@ -20,15 +20,20 @@ public static partial class BlueskyServer
     /// <param name="dids">A collection of <see cref="Did"/>s for the labellers whose service views should be returned</param>
     /// <param name="getDetailedViews">Flag indicating whether a detailed view for each service should be returned.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">Optional <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="dids"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="dids"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is empty.</exception>
+    /// <remarks>
+    /// <para>The underlying endpoint does not require authentication. Calls to an appview, such as
+    /// <see cref="DefaultServiceUris.PublicAppViewUri"/>, succeed when <paramref name="accessCredentials"/> is
+    /// <see langword="null"/>, whereas a personal data server requires credentials before it will proxy the request.</para>
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -40,7 +45,7 @@ public static partial class BlueskyServer
         IEnumerable<Did> dids,
         bool getDetailedViews,
         Uri service,
-        AccessCredentials accessCredentials,
+        AccessCredentials? accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -59,7 +64,6 @@ public static partial class BlueskyServer
         }
 
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         string queryString = string.Join("&", didList.Select(did => $"dids={Uri.EscapeDataString(did.ToString())}"));

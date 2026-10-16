@@ -8,8 +8,15 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates the properties of a Jetstream commit event.
 /// </summary>
-public sealed record AtJetstreamCommitEvent : AtJetstreamEvent
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamCommitEvent for Jetstream v2 events.")]
+public record AtJetstreamCommitEvent : JetstreamEvent
 {
+    /// <summary>
+    /// Gets a value that indicates whether this record is a sync backfill assertion rather than a live create.
+    /// </summary>
+    public bool IsSyncBackfill { get; init; }
+
     /// <summary>
     /// Gets the commit that triggered the event.
     /// </summary>

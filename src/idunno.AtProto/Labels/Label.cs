@@ -32,7 +32,6 @@ public sealed record Label : AtProtoObject
     /// <param name="isNegationLabel">Flag indicating whether the <see cref="Label"/> is a negation label, overwriting a previous label.</param>
     /// <param name="creationTimestamp">Timestamp when the label was created.</param>
     /// <param name="signature">Signature of dag-cbor encoded label.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="source"/>, <paramref name="uri"/> or <paramref name="value"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 UTF-8 bytes.</exception>
     public Label(
@@ -43,11 +42,11 @@ public sealed record Label : AtProtoObject
         string value,
         bool isNegationLabel,
         DateTimeOffset creationTimestamp,
-        IEnumerable<byte> signature)
+        Bytes? signature)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(uri);
-        ArgumentException.ThrowIfNullOrEmpty(value);
+        ArgumentNullException.ThrowIfNull(value);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 128);
 
         Version = version;
@@ -110,14 +109,23 @@ public sealed record Label : AtProtoObject
     public DateTimeOffset CreationTimestamp { get; init; }
 
     /// <summary>
+    /// Gets the timestamp at which this label expires and no longer applies, if any.
+    /// </summary>
+    /// <value>The expiry time of the label, or <see langword="null"/> if the label does not expire.</value>
+    [JsonPropertyName("exp")]
+    public DateTimeOffset? ExpiresAt { get; init; }
+
+    /// <summary>
     /// Signature of dag-cbor encoded label, if the label was signed.
     /// </summary>
     /// <remarks>
     /// <para>The <c>sig</c> property is optional in <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/defs.json">com.atproto.label.defs</see>,
     /// so this will be <see langword="null" /> for labels which carry no signature.</para>
+    /// <para>Over JSON a signature is encoded as a <c>$bytes</c> object, as the AT Protocol data model specifies, and over
+    /// DAG-CBOR it is raw bytes. <see cref="Bytes"/> represents both.</para>
     /// </remarks>
     [JsonPropertyName("sig")]
-    public IEnumerable<byte>? Signature { get; init; }
+    public Bytes? Signature { get; init; }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => '{' + Value + '}';

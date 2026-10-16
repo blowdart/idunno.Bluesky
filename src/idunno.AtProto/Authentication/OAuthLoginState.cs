@@ -15,6 +15,21 @@ namespace idunno.AtProto.Authentication;
 public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
 {
     /// <summary>
+    /// Gets the effective OAuth client identifier used to prepare this login, or <see langword="null"/> for older saved state.
+    /// </summary>
+    public string? OAuthClientId { get; init; }
+
+    /// <summary>
+    /// Gets the space-separated scopes requested for this login, or <see langword="null"/> for older saved state.
+    /// </summary>
+    public string? RequestedScope { get; init; }
+
+    /// <summary>
+    /// Gets the client signing key ID used to prepare this login, or <see langword="null"/> for public clients or older saved state.
+    /// </summary>
+    public string? ClientSigningKeyId { get; init; }
+
+    /// <summary>
     /// Creates a new instance of <see cref="OAuthLoginState"/>.
     /// </summary>
     /// <param name="state">The state the needs to be hold between starting the authorize request and the response.</param>
@@ -257,6 +272,9 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
         hash.Add(ProofKey, StringComparer.Ordinal);
         hash.Add(StartUrl, StringComparer.Ordinal);
         hash.Add(State, StringComparer.Ordinal);
+        hash.Add(OAuthClientId, StringComparer.Ordinal);
+        hash.Add(RequestedScope, StringComparer.Ordinal);
+        hash.Add(ClientSigningKeyId, StringComparer.Ordinal);
 
         // Equals() compares ExtraProperties by its contents, so the hash code must be calculated from
         // its contents too, rather than from the dictionary's reference based hash code.
@@ -349,7 +367,10 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
               string.Equals(ExpectedService, other.ExpectedService, StringComparison.Ordinal) &&
               string.Equals(ProofKey, other.ProofKey, StringComparison.Ordinal) &&
               string.Equals(StartUrl, other.StartUrl, StringComparison.Ordinal) &&
-              string.Equals(State, other.State, StringComparison.Ordinal);
+              string.Equals(State, other.State, StringComparison.Ordinal) &&
+              string.Equals(OAuthClientId, other.OAuthClientId, StringComparison.Ordinal) &&
+              string.Equals(RequestedScope, other.RequestedScope, StringComparison.Ordinal) &&
+              string.Equals(ClientSigningKeyId, other.ClientSigningKeyId, StringComparison.Ordinal);
     }
 
     /// <summary>

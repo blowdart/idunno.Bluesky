@@ -15,8 +15,8 @@ public record ConversationReference
     [JsonConstructor]
     internal ConversationReference(string conversationId, string revision)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(revision);
 
         ConversationId = conversationId;
         Revision = revision;

@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
-using idunno.Bluesky.Graph;
 using idunno.Bluesky.Unspecced;
 
 namespace idunno.Bluesky;

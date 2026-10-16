@@ -1,9 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace idunno.AtProto;
 
@@ -13,15 +13,27 @@ namespace idunno.AtProto;
 [JsonConverter(typeof(Json.RecordKeyConverter))]
 public sealed partial class RecordKey : IEquatable<RecordKey>
 {
-    [GeneratedRegex(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.CultureInvariant, 5000)]
-    private static partial Regex s_recordKeyValidationRegex();
+    private const int MaximumLength = 512;
+
+    private static readonly SearchValues<char> s_validCharacters =
+        SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_~.:-");
+
+    /// <summary>
+    /// A regular expression which checks the syntax of a record key.
+    /// </summary>
+    /// <remarks>
+    /// <para>The expression is suitable for client side validation, for example with a <c>RegularExpressionAttribute</c>.
+    /// It checks syntax only, and does not reject the reserved record keys <c>.</c> and <c>..</c>. Use
+    /// <see cref="TryParse(string, out RecordKey?)"/> to validate a record key fully.</para>
+    /// </remarks>
+    public const string ValidationRegex = @"^[a-zA-Z0-9_~.:-]{1,512}$";
 
     private RecordKey(string s, bool validate)
     {
         if (validate)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(s);
-            if (Parse(s, true, out _))
+            if (Validate(s, true))
             {
                 Value = s;
             }
@@ -184,48 +196,56 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
 
     internal static bool Parse(string s, bool throwOnError, out RecordKey? result)
     {
-        result = null;
-
-        if (s.Length > 512 || s.Length < 1)
+        if (!Validate(s, throwOnError))
         {
-            if (throwOnError)
-            {
-                throw new RecordKeyFormatException("Record key length must be between 1 and 512 characters");
-            }
-            else
-            {
-                result = null;
-                return false;
-            }
-        }
-
-        if (!s_recordKeyValidationRegex().IsMatch(s))
-        {
-            if (throwOnError)
-            {
-                throw new RecordKeyFormatException("Record key syntax is invalid.");
-            }
-            else
-            {
-                result = null;
-                return false;
-            }
-        }
-
-        if (s == "." || s == "..")
-        {
-            if (throwOnError)
-            {
-                throw new RecordKeyFormatException("Record key cannot be \".\" or \"..\".");
-            }
-            else
-            {
-                result = null;
-                return false;
-            }
+            result = null;
+            return false;
         }
 
         result = new RecordKey(s, false);
         return true;
     }
+
+    private static bool Validate(string s, bool throwOnError)
+    {
+        if (s.Length > MaximumLength || s.Length < 1)
+        {
+            if (throwOnError)
+            {
+                throw new RecordKeyFormatException("Record key length must be between 1 and 512 characters");
+            }
+
+            return false;
+        }
+
+        if (!IsValidSyntax(s))
+        {
+            if (throwOnError)
+            {
+                throw new RecordKeyFormatException("Record key syntax is invalid.");
+            }
+
+            return false;
+        }
+
+        if (s is "." or "..")
+        {
+            if (throwOnError)
+            {
+                throw new RecordKeyFormatException("Record key cannot be \".\" or \"..\".");
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // This is a hand written equivalent of ValidationRegex,
+    //   ^[a-zA-Z0-9_~.:-]{1,512}$
+    // from https://atproto.com/specs/record-key, except that it does not accept a trailing new line, which $ matches
+    // before. Searching for a character outside the allowed set is several times faster than the regex, even a source
+    // generated one. CanonicalRegexEquivalenceTests checks it accepts exactly what the regex does.
+    internal static bool IsValidSyntax(ReadOnlySpan<char> s) =>
+        s.Length is >= 1 and <= MaximumLength && !s.ContainsAnyExcept(s_validCharacters);
 }

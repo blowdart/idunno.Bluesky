@@ -63,7 +63,7 @@ public sealed class TemporarySqliteDatabase : IDisposable
 
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = $"UPDATE \"{table}\" SET \"ExpiresAtUtcTicks\" = @expiresAtUtcTicks;";
-        command.Parameters.AddWithValue("@expiresAtUtcTicks", DateTime.UtcNow.AddMinutes(-1).Ticks);
+        command.Parameters.AddWithValue("@expiresAtUtcTicks", DateTime.MinValue.Ticks);
         command.ExecuteNonQuery();
     }
 

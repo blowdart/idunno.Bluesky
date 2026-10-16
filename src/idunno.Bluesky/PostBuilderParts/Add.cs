@@ -19,11 +19,13 @@ public sealed partial class PostBuilder
     /// <param name="s">The string to append</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use Append(string?) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(string s)
     {
         ArgumentNullException.ThrowIfNull(s);
 
-        return this + s;
+        return Append(s);
     }
 
     /// <summary>
@@ -33,11 +35,13 @@ public sealed partial class PostBuilder
     /// <param name="s">The string to append</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(string?) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, string s)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
 
-        return postBuilder + s;
+        return postBuilder.Append(s);
     }
 
     /// <summary>
@@ -45,6 +49,8 @@ public sealed partial class PostBuilder
     /// </summary>
     /// <param name="c">The character to append</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
+    [Obsolete("Use Append(char) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(char c)
     {
         return Append(c, 1);
@@ -57,6 +63,8 @@ public sealed partial class PostBuilder
     /// <param name="c">The character to append</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(char) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, char c)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -70,6 +78,8 @@ public sealed partial class PostBuilder
     /// <param name="c">The character to append</param>
     /// <param name="repeatCount">The number of times to repeat the <paramref name="c" />.</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
+    [Obsolete("Use Append(char, int) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(char c, int repeatCount)
     {
         return Append(c, repeatCount);
@@ -83,6 +93,8 @@ public sealed partial class PostBuilder
     /// <param name="repeatCount">The number of times to repeat the <paramref name="c" />.</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(char, int) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, char c, int repeatCount)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -96,6 +108,8 @@ public sealed partial class PostBuilder
     /// <param name="link">The <see cref="Link"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="link"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use Append(Link) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(Link link)
     {
         ArgumentNullException.ThrowIfNull(link);
@@ -110,6 +124,8 @@ public sealed partial class PostBuilder
     /// <param name="link">The <see cref="Link"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(Link) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, Link link)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -124,6 +140,8 @@ public sealed partial class PostBuilder
     /// <param name="mention">The <see cref="Mention"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="mention"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use Append(Mention) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(Mention mention)
     {
         ArgumentNullException.ThrowIfNull(mention);
@@ -138,6 +156,8 @@ public sealed partial class PostBuilder
     /// <param name="mention">The <see cref="Mention"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(Mention) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, Mention mention)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -152,6 +172,8 @@ public sealed partial class PostBuilder
     /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="hashTag"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use Append(HashTag) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(HashTag hashTag)
     {
         ArgumentNullException.ThrowIfNull(hashTag);
@@ -166,6 +188,8 @@ public sealed partial class PostBuilder
     /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is <see langword="null"/>.</exception>
+    [Obsolete("Use postBuilder.Append(HashTag) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, HashTag hashTag)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -419,6 +443,8 @@ public sealed partial class PostBuilder
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">Thrown when this instance already has a quote post.</exception>
+    [Obsolete("Use Quote(StrongReference) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Add(StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
@@ -441,6 +467,11 @@ public sealed partial class PostBuilder
     /// <param name="strongReference">The <see cref="StrongReference"/> to embed.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>This obsolete overload retains its original behavior of replacing an existing quote. Use <see cref="PostBuilder.Quote(StrongReference)"/> for the current behavior, which rejects a second quote.</para>
+    /// </remarks>
+    [Obsolete("Use postBuilder.Quote(StrongReference) instead.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public static PostBuilder Add(PostBuilder postBuilder, StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -733,11 +764,16 @@ public sealed partial class PostBuilder
     /// <param name="strongReference">The <see cref="StrongReference"/> to embed.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not reference a Bluesky post.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="postBuilder"/> already has a quote.</exception>
+    /// <remarks>
+    /// <para>This operator follows <see cref="PostBuilder.Quote(StrongReference)"/> behavior and rejects adding a second quote. Unlike the obsolete static <see cref="Add(PostBuilder, StrongReference)"/> overload, it does not replace an existing quote.</para>
+    /// </remarks>
     public static PostBuilder operator +(PostBuilder postBuilder, StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(strongReference);
-        return Add(postBuilder, strongReference);
+        return postBuilder.Quote(strongReference);
     }
 
     /// <summary>

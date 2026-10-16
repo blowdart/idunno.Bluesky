@@ -1,0 +1,13 @@
+:root { font-family: system-ui, sans-serif; color: #182433; background: #f4f7fa; }
+main { max-width: 52rem; margin: 2rem auto; padding: 1.5rem; background: white; border-radius: .5rem; }
+section { margin-top: 2rem; }
+label { display: block; margin: .75rem 0 .25rem; }
+input, textarea { box-sizing: border-box; width: 100%; padding: .5rem; font: inherit; }
+textarea { min-height: 6rem; }
+button { margin: .5rem .5rem .5rem 0; padding: .5rem .75rem; font: inherit; cursor: pointer; }
+button:disabled { cursor: wait; }
+code { overflow-wrap: anywhere; }
+article, li { padding: .75rem; border-bottom: 1px solid #ccd5df; }
+ul { list-style: none; padding: 0; }
+p { white-space: pre-wrap; overflow-wrap: anywhere; }
+[role="alert"] { color: #a01818; border: 1px solid; padding: .75rem; }

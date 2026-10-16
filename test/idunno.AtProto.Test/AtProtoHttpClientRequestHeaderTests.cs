@@ -95,6 +95,45 @@ public class AtProtoHttpClientRequestHeaderTests
     }
 
     [Fact]
+    public async Task DuplicateHeadersConfiguredOnTheClientAreSentOnlyOnce()
+    {
+        AtProtoHttpClient<string> client = new(
+            serviceProxy: "did:web:configured#bsky_appview",
+            requestHeaders:
+            [
+                new NameValueHeaderValue("atproto-proxy", "did:web:duplicate#bsky_appview"),
+                new NameValueHeaderValue("x-configured", "first"),
+                new NameValueHeaderValue("X-Configured", "second")
+            ]);
+
+        CapturingHandler handler = await Send(client, [new NameValueHeaderValue("x-per-call", "value")]);
+
+        Assert.Equal(["did:web:configured#bsky_appview"], ValuesOf(handler, "atproto-proxy"));
+        Assert.Equal(["first"], ValuesOf(handler, "x-configured"));
+    }
+
+    [Fact]
+    public async Task DuplicateHeadersConfiguredOnTheClientAreSentOnlyOnceWhenTheCallSuppliesNoHeaders()
+    {
+        AtProtoHttpClient<string> client = new(
+            serviceProxy: "did:web:configured#bsky_appview",
+            requestHeaders:
+            [
+                new NameValueHeaderValue("atproto-proxy", "did:web:duplicate#bsky_appview"),
+                new NameValueHeaderValue("x-configured", "first"),
+                new NameValueHeaderValue("X-Configured", "second")
+            ]);
+
+        CapturingHandler withoutHeaders = await Send(client, null);
+        CapturingHandler withEmptyHeaders = await Send(client, []);
+
+        Assert.Equal(["did:web:configured#bsky_appview"], ValuesOf(withoutHeaders, "atproto-proxy"));
+        Assert.Equal(["first"], ValuesOf(withoutHeaders, "x-configured"));
+        Assert.Equal(["did:web:configured#bsky_appview"], ValuesOf(withEmptyHeaders, "atproto-proxy"));
+        Assert.Equal(["first"], ValuesOf(withEmptyHeaders, "x-configured"));
+    }
+
+    [Fact]
     public async Task TheHeaderCollectionSuppliedByACallerIsNotModified()
     {
         AtProtoHttpClient<string> client = new(serviceProxy: "did:web:configured#bsky_appview");

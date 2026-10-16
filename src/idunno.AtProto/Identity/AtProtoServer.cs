@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 
 using DnsClient;
-using DnsClient.Protocol;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

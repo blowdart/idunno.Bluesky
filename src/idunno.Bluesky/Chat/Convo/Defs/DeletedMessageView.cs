@@ -19,20 +19,15 @@ public sealed record DeletedMessageView : MessageViewBase
     /// <param name="revision">The message revision.</param>
     /// <param name="sender">A view over the message author.</param>
     /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
-    /// </exception>
-    /// <exception cref="ArgumentNullException">
-    ///   Thrown when <paramref name="sender"/> is <see langword="null"/>.
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/>, <paramref name="revision"/> or <paramref name="sender"/> is <see langword="null"/>.</exception>
     public DeletedMessageView(
         string id,
         string revision,
         MessageViewSender sender,
         DateTimeOffset sentAt) : base()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(revision);
 
         ArgumentNullException.ThrowIfNull(sender);
 

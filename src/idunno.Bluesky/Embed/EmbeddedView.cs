@@ -15,6 +15,7 @@ namespace idunno.Bluesky.Embed;
 [JsonDerivedType(typeof(EmbeddedRecordView), typeDiscriminator: EmbeddedViewTypeDiscriminators.EmbedView)]
 [JsonDerivedType(typeof(EmbeddedRecordWithMediaView), typeDiscriminator: EmbeddedViewTypeDiscriminators.RecordWithMediaView)]
 [JsonDerivedType(typeof(Gallery.View), typeDiscriminator: EmbeddedViewTypeDiscriminators.GalleryView)]
+[JsonDerivedType(typeof(Chat.Embed.JoinLinkView), typeDiscriminator: "chat.bsky.embed.joinLink#view")]
 public record EmbeddedView : View
 {
 }

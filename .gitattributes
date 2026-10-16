@@ -3,6 +3,20 @@
 ###############################################################################
 * text=auto
 
+# These newly added files must retain CRLF in the repository as well as the working tree.
+/test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactory.cs -text
+/test/idunno.AtProto.OAuthCallback.Test/CallbackServerFactoryTests.cs -text
+/docs/docs/reactBff.md -text
+/samples/Samples.ReactBff/** -text
+/test/Samples.ReactBff.Test/** -text
+/devnotes/windows-oauth-sample-testing.md -text
+/docs/docs/windowsOAuth.md -text
+/docs/windows-oauth-client.json -text
+/samples/Samples.WinUIOAuth/** -text
+/test/Samples.WinUIOAuth.Test/** -text
+/samples/Samples.BlazorAuthentication/** -text
+/test/Samples.BlazorAuthentication.Test/** -text
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

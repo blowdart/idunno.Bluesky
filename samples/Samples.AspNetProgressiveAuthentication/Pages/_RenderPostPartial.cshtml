@@ -1,0 +1,27 @@
+@using idunno.Bluesky.Feed
+@model PostView
+@if (!string.IsNullOrEmpty(Model.Author.DisplayName))
+{
+    <b>@Model.Author.DisplayName</b>
+}
+@Model.Author.Handle.Value @@ @Model.Record.CreatedAt.ToLocalTime().ToString("g")
+<br />
+@Model.Record.Text
+<br />
+@if (Model.Embed is idunno.Bluesky.Embed.EmbeddedImagesView images)
+{
+    <img src="@images.Images[0].ThumbnailUri" alt="@images.Images[0].AltText" class="img-fluid rounded" loading="lazy" fetchpriority="auto" />
+    <br />
+}
+@if (Model.ReplyCount > 0)
+{
+    <text>🗫 @Model.ReplyCount </text>
+}
+@if (Model.LikeCount > 0)
+{
+    <text>♡ @Model.LikeCount </text>
+}
+@if (Model.RepostCount > 0)
+{
+    <text>⮔ @Model.RepostCount</text>
+}

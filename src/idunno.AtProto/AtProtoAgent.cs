@@ -34,6 +34,7 @@ public partial class AtProtoAgent : Agent
     private volatile bool _atProtoAgentDisposed;
 
     private readonly ILogger<AtProtoAgent> _logger;
+    private readonly TimeProvider _timeProvider;
     internal readonly DirectoryAgent _directoryAgent;
 
     /// <summary>
@@ -44,9 +45,10 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>.</exception>
     public AtProtoAgent(
         Uri service,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.GetHttpJsonOptions(), options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(service);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -88,10 +90,11 @@ public partial class AtProtoAgent : Agent
     public AtProtoAgent(
         Uri service,
         IHttpClientFactory httpClientFactory,
-        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.GetHttpJsonOptions())
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -132,9 +135,10 @@ public partial class AtProtoAgent : Agent
     public AtProtoAgent(
         ClaimsPrincipal? principal,
         Uri service,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.GetHttpJsonOptions(), options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(principal);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -189,10 +193,11 @@ public partial class AtProtoAgent : Agent
         ClaimsPrincipal? principal,
         Uri service,
         IHttpClientFactory httpClientFactory,
-        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.GetHttpJsonOptions())
     {
         ArgumentNullException.ThrowIfNull(principal);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -240,9 +245,10 @@ public partial class AtProtoAgent : Agent
     public AtProtoAgent(
         ClaimsIdentity? identity,
         Uri service,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.GetHttpJsonOptions(), options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -295,9 +301,10 @@ public partial class AtProtoAgent : Agent
         ClaimsIdentity? identity,
         Uri service,
         IHttpClientFactory httpClientFactory,
-        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.GetHttpJsonOptions())
     {
         ArgumentNullException.ThrowIfNull(identity);
+        _timeProvider = options?.TimeProvider ?? System.TimeProvider.System;
 
         OriginalService = service;
         Service = service;
@@ -345,6 +352,8 @@ public partial class AtProtoAgent : Agent
     /// Gets the configuration options for the agent.
     /// </summary>
     protected internal AtProtoAgentOptions? Options { get; init; }
+
+    private TimeProvider Clock => _timeProvider;
 
     /// <summary>
     /// Gets the maximum number of bytes to read from an XRPC response body, as configured by
@@ -501,7 +510,7 @@ public partial class AtProtoAgent : Agent
             {
                 pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
 
-                if (pds is not null && !Resolution.IsSupportedServiceEndpoint(pds))
+                if (pds is not null && !IdentityResolution.IsSupportedServiceEndpoint(pds))
                 {
                     Logger.UnsupportedPdsUri(_logger, did, pds);
                     pds = null;

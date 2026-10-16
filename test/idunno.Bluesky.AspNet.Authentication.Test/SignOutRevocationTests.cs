@@ -9,6 +9,7 @@ using idunno.AtProto;
 using Microsoft.AspNetCore.Http;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -39,6 +40,27 @@ public class SignOutRevocationTests
         using HttpResponseMessage response = await host.GetWithCookie("/test/signout", cookie);
 
         Assert.Equal(["refresh_token", "access_token"], pds.RevokedTokenTypeHints);
+    }
+
+    [Fact]
+    public async Task SigningOutUsesTheHandlerClockWhenCheckingStoredCredentialsForRevocation()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        await using FakePds pds = await FakePds.Create();
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
+            configureOptions: options => options.TimeProvider = timeProvider,
+            httpClientFactory: pds.HttpClientFactory);
+
+        Did did = TestData.NewDid();
+        string cookie = await host.SignInAndCaptureCookie(
+            TestData.AuthenticatedClaimsIdentity(did, signableProofKey: true, timeProvider: timeProvider));
+
+        Assert.Same(TimeProvider.System, host.AgentOptions.TimeProvider);
+
+        using HttpResponseMessage response = await host.GetWithCookie("/test/signout", cookie);
+
+        Assert.Equal(["refresh_token", "access_token"], pds.RevokedTokenTypeHints);
+        Assert.Same(TimeProvider.System, host.AgentOptions.TimeProvider);
     }
 
     [Fact]

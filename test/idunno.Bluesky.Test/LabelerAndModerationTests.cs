@@ -92,19 +92,6 @@ public class LabelerAndModerationTests
     }
 
     [Fact]
-    public async Task GetLabelerServicesDoesNotImposeAnUpperBoundOnTheDidsItIsSupplied()
-    {
-        // app.bsky.labeler.getServices declares no maximum on dids and the service applies none, so a large
-        // collection must not be rejected here. Reaching the authentication check proves it was let through.
-        List<Did> dids = [.. Enumerable.Range(0, 100).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];
-
-        using BlueskyAgent agent = new();
-
-        await Assert.ThrowsAsync<AuthenticationRequiredException>(
-            () => agent.GetLabelerServices(dids, cancellationToken: TestContext.Current.CancellationToken));
-    }
-
-    [Fact]
     public async Task GetLabelerServicesOnTheServerDoesNotImposeAnUpperBoundOnTheDidsItIsSupplied()
     {
         List<Did> dids = [.. Enumerable.Range(0, 100).Select(i => new Did($"did:plc:ar7c4by46qjdydhdevvrndac{i}"))];

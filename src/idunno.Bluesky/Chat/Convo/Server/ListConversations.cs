@@ -33,8 +33,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when any of <paramref name="readState"/>, <paramref name="status"/>, <paramref name="kind"/> or <paramref name="lockStatus"/> is specified and is whitespace.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -118,11 +117,6 @@ public static partial class BlueskyServer
             if (value is null)
             {
                 return;
-            }
-
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                throw new ArgumentException($"'{name}' cannot be empty or whitespace.", name);
             }
 
             if (queryStringBuilder.Length != 0)

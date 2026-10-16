@@ -22,6 +22,25 @@ public partial class BlueskyAgent
         AtUri listUri,
         CancellationToken cancellationToken = default)
     {
+        return await BlockModList(rKey: null, listUri, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a block record for the specified moderation list using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the list block record.</param>
+    /// <param name="listUri">The <see cref="AtUri"/> of the moderation list of actors to block.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="listUri"/> does not point to a list record.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> BlockModList(
+        RecordKey? rKey,
+        AtUri listUri,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(listUri);
 
         if (!IsAuthenticated)
@@ -39,6 +58,7 @@ public partial class BlueskyAgent
         return await CreateBlueskyRecord(
             listBlock,
             collection: CollectionNsid.ListBlock,
+            rKey: rKey,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }

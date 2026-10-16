@@ -19,13 +19,12 @@ public record Facet
     /// <param name="index">The byte slice the facet refers to.</param>
     /// <param name="features">A list of <see cref="FacetFeature"/>s for the facet.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="index"/> or <paramref name="features"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="features"/> has no <see cref="FacetFeature"/>s.</exception>
+    /// <exception cref="ArgumentException"><paramref name="features"/> contains a <see langword="null"/> entry.</exception>
     [JsonConstructor]
     public Facet(ByteSlice index, IList<FacetFeature> features)
     {
         ArgumentNullException.ThrowIfNull(index);
         ArgumentNullException.ThrowIfNull(features);
-        ArgumentOutOfRangeException.ThrowIfZero(features.Count);
 
         Index = index;
         Features = features;
@@ -34,6 +33,8 @@ public record Facet
     /// <summary>
     /// A list of <see cref="FacetFeature"/>s for the facet.
     /// </summary>
+    /// <exception cref="ArgumentNullException">The collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     /// <para>The collection is copied when it is set, so later changes to the collection the caller supplied do
     /// not alter the facet, and the returned collection is read only.</para>
@@ -42,9 +43,21 @@ public record Facet
     [JsonRequired]
     public IList<FacetFeature> Features
     {
-        get;
-        init => field = new List<FacetFeature>(value).AsReadOnly();
+        get => _features;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            List<FacetFeature> features = [.. value];
+            if (features.Any(feature => feature is null))
+            {
+                throw new ArgumentException("Facet features cannot contain null entries.", nameof(value));
+            }
+
+            _features = features.AsReadOnly();
+        }
     }
+
+    private readonly IList<FacetFeature> _features = null!;
 
     /// <summary>
     /// The byte slice the facet refers to.

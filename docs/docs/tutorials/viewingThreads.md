@@ -1,5 +1,7 @@
 # Viewing threads 
 
+[!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
+
 A *thread* refers to a post, its replies (descendants), and its parents (ancestors). Fetching a thread is done with `agent.GetPostThread()` , which accepts the following key parameters:
 
 `GetPostThread(uri, depth?, parentHeight?)`

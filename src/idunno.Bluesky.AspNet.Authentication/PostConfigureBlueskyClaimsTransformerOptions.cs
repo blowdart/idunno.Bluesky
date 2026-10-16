@@ -22,6 +22,6 @@ public class PostConfigureBlueskyClaimsTransformerOptions(ILoggerFactory loggerF
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        options.Cache ??= new EphemeralProfileCache(loggerFactory, options.CacheTimeout);
+        options.Cache ??= new EphemeralProfileCache(loggerFactory, options.CacheTimeout, sizeLimit: null, timeProvider: options.TimeProvider);
     }
 }

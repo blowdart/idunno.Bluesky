@@ -287,4 +287,19 @@ public class AtUriTests
 
         Assert.Contains("is too long", actual.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType")]
+    [InlineData("at://did:plc:identifier")]
+    [InlineData("at://example.bsky.social/app.bsky.feed.post/3koaf5bu5kq27")]
+    public void ToStringRoundTripsAndIsCached(string value)
+    {
+        AtUri atUri = new(value);
+
+        string first = atUri.ToString();
+
+        Assert.Equal(value, first);
+        Assert.Same(first, atUri.ToString());
+    }
 }

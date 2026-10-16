@@ -23,14 +23,14 @@ public static partial class BlueskyServer
     /// <param name="limit">The maximum number of results to return.</param>
     /// <param name="cursor">The cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to search starter packs from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">Optional <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="q"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="q"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null" />.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -44,7 +44,7 @@ public static partial class BlueskyServer
         int? limit,
         string? cursor,
         Uri service,
-        AccessCredentials accessCredentials,
+        AccessCredentials? accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -58,7 +58,6 @@ public static partial class BlueskyServer
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
         }
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         StringBuilder queryStringBuilder = new();

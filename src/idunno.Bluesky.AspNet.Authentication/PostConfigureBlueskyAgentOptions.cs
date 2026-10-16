@@ -3,10 +3,10 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

@@ -8,10 +8,10 @@ using System.Text.Json;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
-using MySqlConnector;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using MySqlConnector;
 
 namespace idunno.Bluesky.AspNet.Authentication.MySQL;
 

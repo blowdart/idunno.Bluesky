@@ -2,9 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Net;
 
 using idunno.AtProto.Jetstream;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
 
@@ -20,16 +26,73 @@ namespace idunno.AtProto.Test;
 [ExcludeFromCodeCoverage]
 public class AtProtoJetstreamBuilderTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void BuildCapturesReplayLiveBufferCapacity(bool withHttpClientFactory, bool fluent)
+    {
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        if (fluent)
+        {
+            Assert.Same(builder, builder.SetReplayLiveBufferCapacity(8192));
+        }
+        else
+        {
+            builder.ReplayLiveBufferCapacity = 8192;
+        }
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+        builder.ReplayLiveBufferCapacity = 1;
+        using AtProtoJetstream later = builder.Build();
+
+        Assert.Equal(8192, jetstream.Options.ReplayLiveBufferCapacity);
+        Assert.Equal(1, later.Options.ReplayLiveBufferCapacity);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildPassesTheTimeProviderToTheJetstream(bool withHttpClientFactory)
+    {
+        FakeTimeProvider timeProvider = new();
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create()
+            .WithTimeProvider(timeProvider);
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+
+        Assert.Same(timeProvider, jetstream.Options.TimeProvider);
+    }
+
+    [Fact]
+    public void WithTimeProviderRejectsNull() =>
+        Assert.Throws<ArgumentNullException>(
+            "timeProvider",
+            () => AtProtoJetstreamBuilder.Create().WithTimeProvider(null!));
+
     [Fact]
     public void BuildPassesTheMeterFactoryToTheJetstream()
     {
-        using RecordingMeterFactory meterFactory = new();
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> collector = new(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.connections_opened");
 
         using AtProtoJetstream jetstream = AtProtoJetstreamBuilder.Create()
             .WithMeterFactory(meterFactory)
             .Build();
 
-        Assert.Equal(JetstreamMetrics.MeterName, Assert.Single(meterFactory.CreatedMeterNames));
+        Assert.NotNull(collector.Instrument);
     }
 
     [Fact]
@@ -105,10 +168,8 @@ public class AtProtoJetstreamBuilderTests
     [InlineData(false)]
     public void BuildPassesTheWebSocketOptionsToTheJetstream(bool withHttpClientFactory)
     {
-        WebProxy proxy = new("http://localhost:8866");
         WebSocketOptions webSocketOptions = new()
         {
-            Proxy = proxy,
             KeepAliveInterval = TimeSpan.FromSeconds(42),
         };
 
@@ -121,8 +182,25 @@ public class AtProtoJetstreamBuilderTests
 
         using AtProtoJetstream jetstream = builder.Build();
 
-        Assert.Same(proxy, jetstream.WebSocketOptions.Proxy);
+        Assert.Same(webSocketOptions, jetstream.WebSocketOptions);
         Assert.Equal(TimeSpan.FromSeconds(42), jetstream.WebSocketOptions.KeepAliveInterval);
+    }
+
+    [Fact]
+    public void WebSocketProxiesAreRejected()
+    {
+#pragma warning disable CS0618 // Proxy is obsolete because it is rejected.
+        WebSocketOptions webSocketOptions = new() { Proxy = new WebProxy("http://localhost:8866") };
+#pragma warning restore CS0618
+
+        Assert.Throws<ArgumentException>("webSocketOptions", () => AtProtoJetstreamBuilder.Create().WithWebSocketOptions(webSocketOptions));
+        Assert.Throws<ArgumentException>("webSocketOptions", () => new AtProtoJetstream(webSocketOptions: webSocketOptions));
+        Assert.Throws<ArgumentException>("webSocketOptions", () => new AtProtoJetstream(new RecordingHttpClientFactory(), webSocketOptions: webSocketOptions));
+
+        // The builder's property can be set directly, bypassing WithWebSocketOptions, so Build is rejected by the constructor instead.
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        builder.WebSocketOptions = webSocketOptions;
+        Assert.Throws<ArgumentException>("webSocketOptions", () => builder.Build());
     }
 
     [Fact]

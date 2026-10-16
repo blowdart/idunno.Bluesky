@@ -66,7 +66,7 @@ public static partial class BlueskyServer
 
         if (query is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"q={Uri.EscapeDataString(query)}&");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"query={Uri.EscapeDataString(query)}&");
         }
 
         if (limit is not null)

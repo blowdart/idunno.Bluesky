@@ -6,6 +6,7 @@
   </Configurations>
   <Folder Name="/.artifacts/">
     <File Path=".artifacts/Start-MySqlContainer.ps1" />
+    <File Path=".artifacts/Start-PostgreSqlContainer.ps1" />
     <File Path=".artifacts/Start-RedisContainer.ps1" />
   </Folder>
   <Folder Name="/.assets/">
@@ -30,11 +31,18 @@
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
     <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
   </Folder>
+  <Folder Name="/.github/instructions/">
+    <File Path=".github/instructions/docs.instructions.md" />
+  </Folder>
   <Folder Name="/.github/prompts/">
     <File Path=".github/prompts/docs.prompt.md" />
+    <File Path=".github/prompts/lexicon-conformance.prompt.md" />
+    <File Path=".github/prompts/obsolete-api-audit.prompt.md" />
+    <File Path=".github/prompts/security-audit.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />
+    <File Path=".github/workflows/benchmarks.yml" />
     <File Path=".github/workflows/ci-build.yml" />
     <File Path=".github/workflows/close-inactive-issues.yml" />
     <File Path=".github/workflows/codeql-analysis.yml" />
@@ -47,8 +55,19 @@
   <Folder Name="/.vscode/">
     <File Path=".vscode/settings.json" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <File Path="benchmarks/capture.ps1" />
+    <File Path="benchmarks/Directory.Build.props" />
+    <File Path="benchmarks/readme.md" />
+    <Project Path="benchmarks/idunno.AtProto.Benchmarks/idunno.AtProto.Benchmarks.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/devnotes/">
     <File Path="devnotes/credential-lifecycle-and-locking.md" />
+    <File Path="devnotes/prototyping-performance-improvements.md" />
+    <File Path="devnotes/windows-oauth-sample-testing.md" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
@@ -59,6 +78,7 @@
     <File Path="docs/filter.yml" />
     <File Path="docs/index.md" />
     <File Path="docs/toc.yml" />
+    <File Path="docs/windows-oauth-client.json" />
   </Folder>
   <Folder Name="/docs/docs/">
     <File Path="docs/docs/asp.net.md" />
@@ -68,18 +88,26 @@
     <File Path="docs/docs/conversationsAndMessages.md" />
     <File Path="docs/docs/cursorsAndPagination.md" />
     <File Path="docs/docs/customLexiconsAndRecords.md" />
+    <File Path="docs/docs/didHandleCache.md" />
     <File Path="docs/docs/drafts.md" />
     <File Path="docs/docs/endpointStatus.md" />
+    <File Path="docs/docs/firehose.md" />
+    <File Path="docs/docs/httpConfiguration.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />
+    <File Path="docs/docs/jetstreamMigration.md" />
+    <File Path="docs/docs/jetstreamReplay.md" />
     <File Path="docs/docs/labels.md" />
     <File Path="docs/docs/logging.md" />
     <File Path="docs/docs/metrics.md" />
     <File Path="docs/docs/notifications.md" />
     <File Path="docs/docs/posting.md" />
+    <File Path="docs/docs/productionConfiguration.md" />
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
     <File Path="docs/docs/rawClient.md" />
+    <File Path="docs/docs/recordKeys.md" />
+    <File Path="docs/docs/reactBff.md" />
     <File Path="docs/docs/requestsAndResponses.md" />
     <File Path="docs/docs/savingAndRestoringAuthentication.md" />
     <File Path="docs/docs/sourceGeneration.md" />
@@ -89,8 +117,15 @@
     <File Path="docs/docs/unspecced.md" />
     <File Path="docs/docs/userPreferences.md" />
     <File Path="docs/docs/video.md" />
+    <File Path="docs/docs/windowsOAuth.md" />
+  </Folder>
+  <Folder Name="/docs/docs/includes/">
+    <File Path="docs/docs/includes/production-configuration.md" />
+    <File Path="docs/docs/includes/untrusted-data-warning.md" />
   </Folder>
   <Folder Name="/docs/docs/bots/">
+    <File Path="docs/docs/bots/customBotActions.md" />
+    <File Path="docs/docs/bots/durableBotSdk.md" />
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />
   </Folder>
@@ -136,6 +171,12 @@
     <File Path="docs/docs/media/vs-AdditionalInformation.png" />
     <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
   </Folder>
+  <Folder Name="/docs/docs/oauth/">
+    <File Path="docs/docs/oauth/localOAuthDevelopment.md" />
+    <File Path="docs/docs/oauth/oauthPermissions.md" />
+    <File Path="docs/docs/oauth/progressiveAuthorization.md" />
+    <File Path="docs/docs/oauth/progressiveAuthorizationAspNet.md" />
+  </Folder>
   <Folder Name="/docs/docs/tutorials/">
     <File Path="docs/docs/tutorials/blockingUsers.md" />
     <File Path="docs/docs/tutorials/creatingAPost.md" />
@@ -165,10 +206,6 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
     <Project Path="samples/Samples.AtProto/Samples.AtProto.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -178,6 +215,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Bot/Samples.Bot.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.BotSdk/Samples.BotSdk.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -197,10 +238,6 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.ConsoleShellOAuth/Samples.ConsoleShellOAuth.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
     <Project Path="samples/Samples.CustomRecords/Samples.CustomRecords.csproj" Id="234c567a-c96f-436e-9622-404f99f2fbf4">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -217,7 +254,7 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
+    <Project Path="samples/Samples.Firehose/Samples.Firehose.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -229,15 +266,11 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.ModerationLabels/Samples.ModerationLabels.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Notifications/Samples.Notifications.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.OAuth/Samples.OAuth.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
-    </Project>
-    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -246,6 +279,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.RepoCar/Samples.RepoCar.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
@@ -297,15 +334,96 @@
     <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.MySQL/idunno.Bluesky.AspNet.Authentication.MySQL.csproj" Id="2fe1e43a-b4ac-4aff-851e-83fc5d7c6b35" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication.PostgreSQL/idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj" Id="3fc9d41e-099d-461b-92f6-30275b1d8b43" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
+    <Project Path="src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
+  </Folder>
+  <Folder Name="/samples/Jetstream/">
+    <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.JetstreamReplay/Samples.JetstreamReplay.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/OAuth/">
+    <Project Path="samples/Samples.ConsoleShellOAuth/Samples.ConsoleShellOAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuth/Samples.OAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuthPermissionSets/Samples.OAuthPermissionSets.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ProgressiveOAuth/Samples.ProgressiveOAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Web/">
+    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetClientMetadata/Samples.AspNetClientMetadata.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AspNetProgressiveAuthentication/Samples.AspNetProgressiveAuthentication.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
+    </Project>
+    <Project Path="samples/Samples.AspNetTunnelAuthentication/Samples.AspNetTunnelAuthentication.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.BlazorAuthentication/Samples.BlazorAuthentication.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
+    </Project>
+    <Project Path="samples/Samples.ReactBff/Samples.ReactBff.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="true" />
+    </Project>
+  </Folder>
+  <Folder Name="/samples/Windows/">
+    <Project Path="samples/Samples.WinUIOAuth/Samples.WinUIOAuth.csproj">
+      <Platform Project="x64" />
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
   </Folder>
   <Folder Name="/test/">
     <File Path="test/.editorconfig" />
     <File Path="test/Directory.Build.props" />
+    <Project Path="test/Samples.AspNetProgressiveAuthentication.Test/Samples.AspNetProgressiveAuthentication.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/Samples.BlazorAuthentication.Test/Samples.BlazorAuthentication.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/Samples.ReactBff.Test/Samples.ReactBff.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/Samples.WinUIOAuth.Test/Samples.WinUIOAuth.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
@@ -327,6 +445,9 @@
     <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
+    <Project Path="test/idunno.Bluesky.BotSdk.Test/idunno.Bluesky.BotSdk.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
@@ -339,6 +460,10 @@
   </Folder>
   <Folder Name="/trimming/">
     <Project Path="trimming/AuthenticationAnalysis/idunno.Trimming.AuthenticationAnalysis.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="trimming/BotAnalysis/idunno.Trimming.BotAnalysis.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

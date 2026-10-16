@@ -12,15 +12,37 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostTests
 {
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(2024, 1, 2, 3, 4, 5, TimeSpan.Zero);
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n\n")]
+    [InlineData(" \t\r\n ")]
+    public void TextConstructorsPreserveNonemptyWhitespace(string text)
+    {
+        EmbeddedExternal embed = new("https://example.com", "Example", "An example card");
+        DateTimeOffset createdAt = DateTimeOffset.UtcNow;
+
+        Assert.Equal(text, new Post(text).Text);
+        Assert.Equal(text, new Post(text, createdAt).Text);
+        Assert.Equal(text, new Post(text, "en").Text);
+        Assert.Equal(text, new Post(text, new[] { "en" }).Text);
+        Assert.Equal(text, new Post(text, embeddedRecord: embed).Text);
+        Assert.Equal(text, new Post(text, createdAt, embeddedRecord: embed).Text);
+    }
+
     [Fact]
     public void EmptyConstructorSetsText()
     {
-        DateTimeOffset start = DateTimeOffset.UtcNow;
-        var post = new Post();
-        DateTimeOffset end = DateTimeOffset.UtcNow;
+        FixedTimeProvider clock = new();
+        var post = new Post(clock);
 
-        Assert.True(post.CreatedAt >= start);
-        Assert.True(post.CreatedAt <= end);
+        Assert.Equal(clock.GetUtcNow(), post.CreatedAt);
     }
 
     [Fact]
@@ -28,13 +50,11 @@ public class PostTests
     {
         const string postText = "post text";
 
-        DateTimeOffset start = DateTimeOffset.UtcNow;
-        var post = new Post(postText);
-        DateTimeOffset end = DateTimeOffset.UtcNow;
+        FixedTimeProvider clock = new();
+        var post = new Post(postText, clock);
 
         Assert.Equal(postText, post.Text);
-        Assert.True(post.CreatedAt >= start);
-        Assert.True(post.CreatedAt <= end);
+        Assert.Equal(clock.GetUtcNow(), post.CreatedAt);
     }
 
     [Fact]
@@ -180,11 +200,11 @@ public class PostTests
     }
 
     [Fact]
-    public void TextLangConstructorThrowsIfTextIsEmpty()
+    public void TextLangConstructorAllowsEmptyText()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty));
-
-        Assert.Equal("text", caughtException.ParamName);
+        Assert.Equal(string.Empty, new Post(string.Empty).Text);
+        Assert.Equal(string.Empty, new Post(string.Empty, DateTimeOffset.UtcNow).Text);
+        Assert.Equal(string.Empty, new Post(string.Empty, "en").Text);
     }
 
     [Fact]
@@ -196,11 +216,9 @@ public class PostTests
     }
 
     [Fact]
-    public void TextLangsConstructorThrowsIfTextIsEmpty()
+    public void TextLangsConstructorAllowsEmptyText()
     {
-        ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty, ["en-gb"]));
-
-        Assert.Equal("text", caughtException.ParamName);
+        Assert.Equal(string.Empty, new Post(string.Empty, ["en-gb"]).Text);
     }
 
     [Fact]
@@ -235,7 +253,7 @@ public class PostTests
 
         var post = new Post(null, embeddedRecord: expectedEmbedded);
 
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
         Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
     }
 
@@ -249,6 +267,15 @@ public class PostTests
 
         Assert.Equal(string.Empty, post.Text);
         Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void ConstructorAllowsEmptyTextWithoutAnEmbed()
+    {
+        Post post = new(string.Empty);
+
+        Assert.Equal(string.Empty, post.Text);
+        Assert.Null(post.EmbeddedRecord);
     }
 
     [Fact]
@@ -297,13 +324,12 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnEmptyTagIsPassed()
+    public void ConstructorAllowsAnEmptyTag()
     {
         List<string> tags = [string.Empty];
 
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
-
-        Assert.Equal("tags", caughtException.ParamName);
+        Post post = new("text", tags: tags);
+        Assert.Equal(string.Empty, Assert.Single(post.Tags!));
     }
 
     [Fact]
@@ -649,13 +675,12 @@ public class PostTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenTagsContainEmptyTag()
+    public void ConstructorAllowsEmptyTagAlongsideOtherTags()
     {
         List<string> tags = ["1", "2", "3", "4", "5", "6", "7", string.Empty];
 
-        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
-
-        Assert.Equal("tags", caughtException.ParamName);
+        var actual = new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags);
+        Assert.Equal(tags, actual.Tags);
     }
 
     [Fact]
@@ -746,7 +771,7 @@ public class PostTests
         Post post = new(text: null, images: images);
 
         Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
     }
 
     [Fact]
@@ -762,6 +787,6 @@ public class PostTests
         Post post = new(text: null, images: images);
 
         Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
-        Assert.Null(post.Text);
+        Assert.Equal(string.Empty, post.Text);
     }
 }

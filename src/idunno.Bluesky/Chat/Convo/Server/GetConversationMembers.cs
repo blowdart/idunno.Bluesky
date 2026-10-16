@@ -8,7 +8,6 @@ using System.Text;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
-using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Convo.Model;
 
 using Microsoft.Extensions.Logging;
@@ -31,12 +30,8 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
-    /// </exception>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
-    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is outside the permitted range.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -56,7 +51,7 @@ public static partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(id);
+        ArgumentNullException.ThrowIfNull(id);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);

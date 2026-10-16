@@ -23,6 +23,21 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Handle handle, CancellationToken cancellationToken = default)
     {
+        return await Follow(rKey: null, handle, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a follow record in the authenticated user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the follow record.</param>
+    /// <param name="handle">The <see cref="Handle"/> of the actor to follow.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(RecordKey? rKey, Handle handle, CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(handle);
 
         if (!IsAuthenticated)
@@ -46,12 +61,26 @@ public partial class BlueskyAgent
                 null);
         }
 
-        return await Follow(didResolutionResult, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await Follow(rKey, didResolutionResult, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Creates a follow record in the authenticated user's repo for the specified <paramref name="did"/>.
     /// </summary>
+    /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Did did, CancellationToken cancellationToken = default)
+    {
+        return await Follow(rKey: null, did, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Creates a follow record in the authenticated user's repo using the specified <paramref name="rKey"/>.
+    /// </summary>
+    /// <param name="rKey">The record key to use for the follow record.</param>
     /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -64,7 +93,8 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Did did, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "The caller-supplied-key overload preserves the existing signature and cancellation-token call patterns.")]
+    public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(RecordKey? rKey, Did did, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
 
@@ -80,6 +110,7 @@ public partial class BlueskyAgent
             record: follow,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             collection: CollectionNsid.Follow,
+            rKey: rKey,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)

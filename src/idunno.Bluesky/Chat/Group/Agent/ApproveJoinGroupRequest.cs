@@ -16,14 +16,13 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The result of the approve join operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    /// <exception cref="ArgumentException">Thrown when the conversation ID is <see langword="null" /> or whitespace.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when the member is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> or <paramref name="member"/> is <see langword="null"/>.</exception>
     public async Task<AtProtoHttpResult<ApproveJoinResponse>> ApproveJoinGroupRequest(
         string conversationId,
         Did member,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(member);
 
         if (!IsAuthenticated)

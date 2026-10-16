@@ -105,7 +105,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)) { RecordTimeProvider = new FixedTimeProvider() })
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -136,7 +136,7 @@ public class DraftToPostTests
 
             Assert.Equal(expectedDraftPost.Text, actualPost!.Text);
             Assert.Equivalent(expectedLanguages, actualPost!.Langs);
-            Assert.Equal(DateTimeOffset.Now, actualPost.CreatedAt, new TimeSpan(0, 0, 30));
+            Assert.Equal(agent.RecordTimeProvider.GetUtcNow(), actualPost.CreatedAt);
             Assert.Null(actualPost.Facets);
             Assert.Null(actualPost.Tags);
             Assert.Null(actualPost.Reply);
@@ -377,7 +377,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }) { RecordTimeProvider = new FixedTimeProvider() })
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -406,7 +406,7 @@ public class DraftToPostTests
 
             Assert.Equal(expectedDraftPost.Text, actualPost!.Text);
             Assert.Null(actualPost!.Langs);
-            Assert.Equal(DateTimeOffset.Now, actualPost.CreatedAt, new TimeSpan(0, 0, 30));
+            Assert.Equal(agent.RecordTimeProvider.GetUtcNow(), actualPost.CreatedAt);
             Assert.Null(actualPost.Facets);
             Assert.Null(actualPost.Tags);
             Assert.Null(actualPost.Reply);
@@ -577,7 +577,7 @@ public class DraftToPostTests
         TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }))
+        using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer), new BlueskyAgentOptions { DraftMediaRoots = { Directory.GetCurrentDirectory() } }) { RecordTimeProvider = new FixedTimeProvider() })
         {
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
@@ -606,7 +606,7 @@ public class DraftToPostTests
 
             Assert.Equal(expectedDraftPost.Text, actualPost!.Text);
             Assert.Null(actualPost!.Langs);
-            Assert.Equal(DateTimeOffset.Now, actualPost.CreatedAt, new TimeSpan(0, 0, 30));
+            Assert.Equal(agent.RecordTimeProvider.GetUtcNow(), actualPost.CreatedAt);
             Assert.Null(actualPost.Facets);
             Assert.Null(actualPost.Tags);
             Assert.Null(actualPost.Reply);
@@ -1566,7 +1566,7 @@ public class DraftToPostTests
                     response.StatusCode = 200;
                     var serverDescription = new ServerDescription(
                         did: $"{s_user}",
-                        contact: new Contact($"test@{request.Host.Host}"),
+                        contact: new idunno.AtProto.Server.Contact($"test@{request.Host.Host}"),
                         links: new Links
                         {
                             PrivacyPolicy = new Uri($"https://{request.Host.Host}/privacy"),

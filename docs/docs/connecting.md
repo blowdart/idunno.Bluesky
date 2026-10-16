@@ -64,18 +64,29 @@ you can also use the `ResolveHandle` method in the `AtProtoAgent` class to resol
 `ResolveDidDocument` method in the `DirectoryServer` to discover the location of their PDS. Once you have a user's PDS all write, update and delete operations
 should be performed against that PDS. The `AtProtoAgent` `Login` method does this behind the scenes so you don't have to.
 
+## Logging out
+
+To log the authenticated user off Bluesky call the `Logout()` method. This revokes the refresh token (and,
+if the agent was authenticated via OAuth, the access token), and clears the now revoked credentials from the agent.
+
+
 ## <a name="oauth">Authenticating with OAuth</a>
 
 A more secure alternative to handles and passwords is OAuth. OAuth is a standard that allows users to grant access to their resources without having to share
 their credentials with an application. To use OAuth your application prepares a login URI and redirects the user to it, or in the case of desktop apps,
 opens a browser window to it. The user logs into Bluesky if needed then authorizes your application to access their resources. 
 
-[Bluesky's OAuth implementation](https://docs.bsky.app/docs/advanced-guides/oauth-client) is, at the time of writing, very much under development.
-Currently Bluesky has three different resources, or "[scopes](https://atproto.com/specs/oauth#authorization-scopes)",
+[Bluesky's OAuth implementation](https://docs.bsky.app/docs/advanced-guides/oauth-client) supports
+[granular permissions and published permission sets](https://atproto.com/guides/permission-requests).
+The `atproto` identity scope is the minimum scope needed for AT Protocol OAuth and must always be requested.
+On its own, it supports a simple "Login with Bluesky" or "Login with your Atmosphere Account" function:
+after the user authorizes your application, the authenticated session identifies the account by its DID.
+Your application can use that stable identifier to sign the user in without requesting permission to post,
+modify their profile, read private preferences, or access their direct messages.
 
-* `atproto`: which gives your application the unique identifier for the user. This could be used for "Login with Bluesky" type functionality. This scope must always be requested.
-* `transition:generic`: which gives your application access to all permissions except for direct message access.
-* `transition:chat.bsky`: which gives your application direct message access.
+For an application that only needs account authentication, the default `OAuthOptions.Scopes` value of `["atproto"]`
+is sufficient; leave `PermissionSets` empty. Request additional permissions only when the application needs to act
+on the user's behalf beyond identifying their account.
 
 Your application must have a client id and publish a metadata document in the format required by the [ATProto OAuth specification](https://atproto.com/specs/oauth#clients).
 For development a client ID of `http://localhost` is special cased by the specification, allowing you to develop your application without the need to have
@@ -86,16 +97,21 @@ and the `ReturnUri` from which your application will process OAuth logins. For w
 this is typically a custom uri scheme you have registered with the OS.
 
 ```c#
+using idunno.AtProto.Authentication;
+using idunno.Bluesky;
+
 var agent = new BlueskyAgent(new BlueskyAgentOptions()
     {
-        OAuth = new BlueskyOAuthOptions()
+        OAuthOptions = new OAuthOptions()
         {
-            ClientId = "https://example.com",
-            Scopes = new[] { "atproto", "transition:generic" },
+            ClientId = "https://example.com/oauth-client-metadata.json",
+            Scopes = ["atproto"],
             ReturnUri = new Uri("https://example.com/oauth/callback")
         }
     });
 ```
+
+To act on the user's behalf, choose only the permissions required for your features. See [OAuth permissions](oauth/oauthPermissions.md) for granular scopes and typed permission sets.
 
 To start an OAuth login process you must first create an instance of `OAuthClient` build a URI to send the user to, save the state from the
 OAuthClient and then send the user to the URI. The user will log into Bluesky and authorize your application, and then be redirected back to your application
@@ -113,25 +129,8 @@ OAuthLoginState oAuthLoginState = oAuthClient.State;
 ```
 
 > [!WARNING]
-> `AtProtoAgent.BuildOAuth2LoginUri` uses discovery mechanisms to resolve the PDS `Uri` and the Authorization Server `Uri`
-> for the specified handle. A malicious user could supply a handle which returns URIs that point to internal
-> host names or malicious authorization servers. A malicious PDS resolution would cause your application to issue
-> requests to the `.well-known/oauth-protected-resource` path against a host name they control.
-> A malicious authorization server would redirect the user to login on an authorization server under attacker control,
-> but at that point the malicious user is redirecting themselves. Neither of these feel particularly concerning,
-> but you should be aware of the possibility if you are writing an application that could be hosted with a
-> corporate environment.
->
-> `AtProtoAgent.BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
-> are both callback methods which you can use to validate the URIs discovered during the building of an OAuth2
-> login URI. You can use these methods to mitigate against
-> [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
-> the authorization server is one you expect.
->
-> A default implementation of discovery validation (`SecurityHelpers.DefaultDiscoveryUriValidator`)
-> which rejects any PDS or authorization server that doesn't resolve to a public and safe IP address when
-> `BuildOAuth2LoginUri` is called without a `validatePds` or `validateAuthorizationServer` callback,
-> or with either of those parameters set to null and the `validateDiscoveredEndpoints` option set to `true`.
+> OAuth discovery follows endpoints associated with a user-supplied handle. Keep discovery validation enabled and review the
+> [discovery validation guidance](productionConfiguration.md#discovery-validation) before deploying.
 
 When the user returns to your application you take the callback data returned from the OAuth server and process it
 
@@ -148,10 +147,22 @@ Please consult the documentation for your application architecture. The `Uri` re
 contain a `state` query parameter, which can use as a primary key as needed for persisting the client state. You can extract this using
 `string stateKey = QueryHelpers.ParseQuery(startUri.Query)["state"]!;`.
 
+For ASP.NET applications, the [ASP.NET authentication package](asp.net.md) manages the login flow and can
+generate and serve the client metadata document.
+
+### Typed permission sets
+
+See [OAuth permissions](oauth/oauthPermissions.md#typed-permission-sets) for built-in sets, custom audiences and scope overrides.
+
+### Progressive authorization
+
+See [Progressive authorization](oauth/progressiveAuthorization.md) to request more permissions when a user enables a feature.
+
 ### Windows native OAuth metadata
 
-The [Windows client metadata](../windows-oauth-client.json) is reserved for the upcoming Windows OAuth sample;
-the Windows application is not included yet. Its fixed client contract is:
+The [Windows client metadata](../windows-oauth-client.json) is used by `Samples.WinUIOAuth`.
+See [Adding Bluesky authentication to a Windows desktop app](windowsOAuth.md) for metadata,
+protocol registration and activation guidance. The sample's fixed client contract is:
 
 * Client ID: `https://bluesky.idunno.dev/windows-oauth-client.json`
 * Redirect URI: `dev.idunno.bluesky:/callback`
@@ -164,8 +175,8 @@ timeline access, private account data, or the broad legacy `transition:generic` 
 Public profile reads do not require authorization; this permission is for the authenticated request and its viewer-specific data.
 
 The metadata declares a public native client (`token_endpoint_auth_method: none`) using the authorization-code
-and refresh-token grants with DPoP-bound access tokens. The future application must register the
-`dev.idunno.bluesky` URI scheme with Windows and use the exact single-slash callback above, as required by the
+and refresh-token grants with DPoP-bound access tokens. The application registers the
+`dev.idunno.bluesky` URI scheme with Windows and uses the exact single-slash callback above, as required by the
 [AT Protocol native-client rules](https://atproto.com/specs/oauth#request-fields). Its authorization request must
 use these scope strings (or the identity-only subset `atproto`) and the same client ID and redirect URI.
 
@@ -177,127 +188,28 @@ workflow before using it for login. Verify that the canonical client ID returns 
 
 ### Testing OAuth locally with localhost
 
-The `idunno.AtProto.OAuthCallback` NuGet package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
-to the package, set the  ClientId in options to "`http://localhost`" but do not set the ReturnUri, then create an instance of the callback server
-before you build the login URI, use the callback server uri when creating the login URI, and finally await the callback,
-which will return the callback data as a string
+See [Local OAuth development](oauth/localOAuthDevelopment.md) for the callback server and a complete local-login example.
 
-```c#
+## Production Configuration
 
-var agent = new BlueskyAgent(new BlueskyAgentOptions()
-    {
-        OAuth = new BlueskyOAuthOptions()
-        {
-            ClientId = "http://localhost",
-            Scopes = new[] { "atproto", "transition:generic" },
-        }
-    });
-
-string callbackData;
-OAuthClient oAuthClient = agent.CreateOAuthClient();
-
-await using var callbackServer = new CallbackServer(
-    CallbackServer.GetRandomUnusedPort(),
-    loggerFactory: loggerFactory);
-{
-    // We dynamically set the return URI as the callback server will listen on a random free port.
-    Uri startUri = await agent.BuildOAuth2LoginUri(
-        oAuthClient,
-        handle,
-        returnUri: callbackServer.Uri,
-        cancellationToken: cancellationToken);
-
-    // Start the browser. If you are running Linux you need XDG installed.
-    OAuthClient.OpenBrowser(startUri);
-
-    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-}
-
-if (!string.IsNullOrEmpty(callbackData))
-{
-    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
-}
-else
-{
-    // The process timed out, or another error occurred.
-}
-```
-
-The [OAuth Sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.OAuth) shows how to use the callback server and login,
-and logout with OAuth.
-
-## Logging out
-
-To log the authenticated user off Bluesky call the `Logout()` method. This revokes the refresh token (and,
-if the agent was authenticated via OAuth, the access token), and clears the now revoked credentials from the agent.
+See [Production configuration](productionConfiguration.md) for deployment URLs, persistent stores, trusted proxies, signing keys and operational checks.
 
 ## Configuring the agent's HTTP settings
 
-The constructor for the Bluesky agents takes an instance of `BlueskyAgentOptions` which allows for configuration of the agents. The `BlueskyAgentOptions` class
-contains an `HttpClientOptions` property which allows you to specify options for the underlying
-[HttpClient](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient)s used to make requests and receive responses.
+See [Agent HTTP configuration](httpConfiguration.md) for outgoing request settings.
 
 ### <a name="configuringTimeouts">Configuring HTTP timeouts</a>
 
-Use the `Timeout` options on `HttpClientOptions` when creating an instance of the agent and provide a [TimeSpan](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)
-to set the amount of time to wait before the request times out. For example, the following code will configure the agent to wait one minute for any server
-it makes requests against to respond.
-
-```c#
-using (var agent = new BlueskyAgent(new BlueskyAgentOptions()
-  {
-      HttpClientOptions = new HttpClientOptions()
-      {
-          Timeout = TimeSpan.FromMinutes(1)
-      }
-  }))
-{
-}
-```
+See [Configuring HTTP timeouts](httpConfiguration.md#configuringTimeouts).
 
 ### <a name="settingUserAgent">Setting the user agent</a>
 
-Each request the agent makes is stamped with a string indicating the identity of the software making the request. By default this value is set to
-`idunno.AtProto/x.x.x`, where x.x.x is the version of the library being used. This is sent as the
-[UserAgent HTTP header](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.3) in every request.
-You should set the `HttpClientOptions` `HttpUserAgent` property to be a value indicating your own software's identity.
+See [Setting the user agent](httpConfiguration.md#settingUserAgent).
 
 ### <a name="usingAProxy">Using a proxy server</a>
 
-The `HttpClientOptions` `ProxyUri` property allows you to set a proxy to be used by the agent when making outgoing HTTP requests.
-If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
-likely you may also need to set the `CheckCertificateRevocationList` property to `false`.
-
-> [!CAUTION]
-> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous,
-> as the client will no longer check if the HTTPS certificate on any server it connects to has been revoked.
-
-```c#
-// Disabling certification revocation list checks can introduce security vulnerabilities.
-// Only use this setting when using a debugging proxy such as Fiddler or Burp Suite.
-
-using (var agent = new BlueskyAgent(new BlueskyAgentOptions()
-    {
-        HttpClientOptions = new HttpClientOptions()
-        {
-            ProxyUri = new Uri("http://localhost:8866"),
-            CheckCertificateRevocationList = false
-        }
-    }))
-{
-}
-```
+See [Using a proxy server](httpConfiguration.md#usingAProxy), including certificate-revocation cautions.
 
 ### <a name="disablingTokenRefresh">Disabling token refresh</a>
 
-If you want to disable automatic authentication token refresh in an agent you can do that by setting the `EnableBackgroundTokenRefresh` property in options to `false`.
-Eventually the access token will expire and APIs will start returning errors. You can call `RefreshCredentials()` to refresh the access token manually.
-
-```c#
-var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false };
-
-using (BlueskyAgent agent = new (options))
-{   
-    // No token refresh will occur, so eventually API calls will fail.
-}
-```
+See [Automatic and manual token refresh](savingAndRestoringAuthentication.md#disablingTokenRefresh).

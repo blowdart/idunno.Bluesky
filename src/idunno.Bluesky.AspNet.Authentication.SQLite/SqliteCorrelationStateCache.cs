@@ -28,6 +28,7 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
     private readonly TimeSpan _entryTimeToLive;
     private readonly ExpiredEntrySweepThrottle _sweepThrottle;
     private readonly ILogger _logger;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Creates a new instance of <see cref="SqliteCorrelationStateCache"/>.
@@ -54,10 +55,53 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
         TimeSpan? entryTimeToLive = null,
         TimeSpan? expiredEntrySweepInterval = null,
         ILoggerFactory? loggerFactory = null)
+        : this(connectionString, TimeProvider.System, entryTimeToLive, expiredEntrySweepInterval, loggerFactory)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="SqliteCorrelationStateCache"/> using the specified time provider.
+    /// </summary>
+    /// <param name="connectionString">The connection string for the SQLite database.</param>
+    /// <param name="timeProvider">The provider used to determine the current time and schedule entry sweeps.</param>
+    /// <param name="entryTimeToLive">The time to live for stored correlation state.</param>
+    /// <param name="expiredEntrySweepInterval">
+    /// How often expired correlation state is deleted, or <see cref="TimeSpan.Zero"/> to never delete it. Defaults to five minutes.
+    /// </param>
+    /// <param name="loggerFactory">An optional logger factory used to report sweep activity and failures.</param>
+    /// <returns>A new cache using <paramref name="timeProvider"/>.</returns>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is empty or invalid.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="entryTimeToLive"/> is not positive, or <paramref name="expiredEntrySweepInterval"/> is negative.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   Expired correlation state is unreadable as soon as it expires, as every read filters on expiry. Sweeping only
+    ///   reclaims the storage it occupies, so disabling it changes no behaviour beyond letting the table grow. Disable it
+    ///   when an operator reclaims the rows themselves.
+    /// </para>
+    /// </remarks>
+    public static SqliteCorrelationStateCache CreateWithTimeProvider(
+        string connectionString,
+        TimeProvider timeProvider,
+        TimeSpan? entryTimeToLive = null,
+        TimeSpan? expiredEntrySweepInterval = null,
+        ILoggerFactory? loggerFactory = null) =>
+        new(connectionString, timeProvider, entryTimeToLive, expiredEntrySweepInterval, loggerFactory);
+
+    internal SqliteCorrelationStateCache(
+        string connectionString,
+        TimeProvider timeProvider,
+        TimeSpan? entryTimeToLive,
+        TimeSpan? expiredEntrySweepInterval,
+        ILoggerFactory? loggerFactory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
         _connectionString = new SqliteConnectionStringBuilder(connectionString).ConnectionString;
+        _timeProvider = timeProvider;
         _entryTimeToLive = entryTimeToLive ?? s_defaultEntryTimeToLive;
 
         if (_entryTimeToLive <= TimeSpan.Zero)
@@ -67,7 +111,8 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
 
         _sweepThrottle = new ExpiredEntrySweepThrottle(
             expiredEntrySweepInterval ?? s_defaultExpiredEntrySweepInterval,
-            nameof(expiredEntrySweepInterval));
+            nameof(expiredEntrySweepInterval),
+            _timeProvider);
         _logger = loggerFactory?.CreateLogger<SqliteCorrelationStateCache>() ?? NullLogger<SqliteCorrelationStateCache>.Instance;
     }
 
@@ -102,7 +147,7 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
             """;
         command.Parameters.Add("@correlationId", SqliteType.Blob).Value = correlationId.ToByteArray();
         command.Parameters.Add("@state", SqliteType.Text).Value = context.State;
-        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = DateTime.UtcNow.Add(_entryTimeToLive).Ticks;
+        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Add(_entryTimeToLive).Ticks;
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
         await SweepExpiredEntries(cancellationToken).ConfigureAwait(false);
@@ -131,7 +176,7 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
                 AND "ExpiresAtUtcTicks" > @now;
             """;
         command.Parameters.Add("@correlationId", SqliteType.Blob).Value = correlationId.ToByteArray();
-        command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+        command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
         string? encodedState = (string?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return await Decode(encodedState).ConfigureAwait(false);
@@ -156,7 +201,7 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
             END;
             """;
         command.Parameters.Add("@correlationId", SqliteType.Blob).Value = correlationId.ToByteArray();
-        command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+        command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
         object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return await Decode(result as string).ConfigureAwait(false);
@@ -236,7 +281,7 @@ public class SqliteCorrelationStateCache : ICorrelationStateCache
                 DELETE FROM "idunno_bluesky_correlation_states"
                 WHERE "ExpiresAtUtcTicks" <= @now;
                 """;
-            command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+            command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
             int rowsDeleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             _logger.ExpiredEntriesSwept(rowsDeleted, CorrelationStatesTable);

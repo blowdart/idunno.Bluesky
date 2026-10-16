@@ -14,13 +14,13 @@ public partial class BlueskyAgent
     /// <param name="conversationId">The ID of the conversation to lock.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<ConversationView>> LockConversation(
         string conversationId,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         if (!IsAuthenticated)
         {

@@ -89,7 +89,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag,</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> tag.</exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images,
     ///   or if there are too many <paramref name="images"/> without an <see cref="EmbeddedImage.AspectRatio"/>,
@@ -164,21 +164,19 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             foreach (string tag in tags)
             {
 #pragma warning disable S3236 // Caller information arguments should not be provided explicitly
-                ArgumentException.ThrowIfNullOrEmpty(tag, nameof(tags));
+                ArgumentNullException.ThrowIfNull(tag, nameof(tags));
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes, nameof(tags));
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes, nameof(tags));
 #pragma warning restore S3236 // Caller information arguments should not be provided explicitly
             }
         }
 
-        if (!string.IsNullOrEmpty(text))
+        if (text is not null)
         {
             _post = new Post(text, createdAt: postDate);
         }
         else
         {
-            // We need to create a Post instance with text, then blank it out again due to Post's validation/
-            // The setter for Text is internal.
             _post = new Post("__NULL__", createdAt: postDate)
             {
                 Text = text
@@ -219,8 +217,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> or a tag is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
@@ -249,8 +246,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> or a tag is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
@@ -377,7 +373,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             lock (_syncLock)
             {
-                return _post.Text;
+                return _post.UnnormalizedText;
             }
         }
 
@@ -1008,8 +1004,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
     /// </summary>
     /// <param name="embeddedRecord">The record to embed.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
-    public void EmbedRecord(EmbeddedBase embeddedRecord)
+    public PostBuilder WithEmbed(EmbeddedBase embeddedRecord)
     {
         ArgumentNullException.ThrowIfNull(embeddedRecord);
 
@@ -1017,18 +1014,36 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             _post.EmbeddedRecord = embeddedRecord;
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
+    /// </summary>
+    /// <param name="embeddedRecord">The record to embed.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="WithEmbed(EmbeddedBase)"/> to configure the embed fluently.</para>
+    /// </remarks>
+    [Obsolete("Use WithEmbed instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public void EmbedRecord(EmbeddedBase embeddedRecord)
+    {
+        WithEmbed(embeddedRecord);
     }
 
     /// <summary>
     /// Extracts facets from the post text, if any.
     /// </summary>
-    /// <param name="facetExtractor">The facet extractor to use</param>
+    /// <param name="facetExtractor">The facet extractor to use.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>This instance after facet extraction has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
     /// </remarks>
-    public async Task ExtractFacets(IFacetExtractor facetExtractor, CancellationToken cancellationToken)
+    public async Task<PostBuilder> ExtractFacetsAsync(IFacetExtractor facetExtractor, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(facetExtractor);
 
@@ -1038,7 +1053,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             if (string.IsNullOrEmpty(_post.Text) || _post.Facets is { Count: > 0 })
             {
-                return;
+                return this;
             }
 
             text = _post.Text;
@@ -1059,6 +1074,25 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 }
             }
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Extracts facets from the post text, if any.
+    /// </summary>
+    /// <param name="facetExtractor">The facet extractor to use.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="ExtractFacetsAsync(IFacetExtractor, CancellationToken)"/> to extract facets fluently.</para>
+    /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
+    /// </remarks>
+    [Obsolete("Use ExtractFacetsAsync instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public Task ExtractFacets(IFacetExtractor facetExtractor, CancellationToken cancellationToken)
+    {
+        return ExtractFacetsAsync(facetExtractor, cancellationToken);
     }
 
     /// <summary>
@@ -1066,11 +1100,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="text">The text to set for the post.</param>
     /// <returns>A reference to this instance after the operation has completed.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text exceeds the maximum allowed length.</exception>
     public PostBuilder WithText(string text)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         if (text.GetUtf8Length() > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
@@ -1107,6 +1141,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns>A reference to this instance after the operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postReference"/> or <paramref name="agent"/> is <see langword="null"/>.</exception>
     /// <exception cref="BlueskyException">Thrown when the reply references for <paramref name="postReference"/> could not be retrieved.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This method makes a network request through <paramref name="agent"/> to retrieve the reply references.
+    ///   Prefer calling <see cref="BlueskyAgent.GetReplyReferences(StrongReference, CancellationToken)"/> explicitly
+    ///   and checking the returned <see cref="AtProtoHttpResult{T}.Succeeded"/> before passing its
+    ///   <see cref="AtProtoHttpResult{T}.Result"/> to <see cref="ReplyTo(ReplyReferences)"/>.
+    /// </para>
+    /// </remarks>
+    [Obsolete("This method makes a network request. Call BlueskyAgent.GetReplyReferences(postReference, cancellationToken), check Succeeded, and pass its Result to ReplyTo(ReplyReferences) instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(postReference);
@@ -1130,8 +1174,9 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Applies the user's interaction preferences to this instance.
     /// </summary>
     /// <param name="interactionPreferences">The user's interaction preferences.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
-    public void ApplyInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
+    public PostBuilder WithInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
     {
         ArgumentNullException.ThrowIfNull(interactionPreferences);
         lock (_syncLock)
@@ -1146,6 +1191,23 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 _postGateRules = [.. interactionPreferences.PostGateEmbeddingRules];
             }
         }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Applies the user's interaction preferences to this instance.
+    /// </summary>
+    /// <param name="interactionPreferences">The user's interaction preferences.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="WithInteractionPreferences(PostInteractionSettingsPreferences)"/> to configure interaction preferences fluently.</para>
+    /// </remarks>
+    [Obsolete("Use WithInteractionPreferences instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
+    public void ApplyInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
+    {
+        WithInteractionPreferences(interactionPreferences);
     }
 
     /// <summary>
@@ -1155,6 +1217,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not point to a valid Bluesky Post record.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when this instance already contains a quote post.</exception>
     public PostBuilder Quote(StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
@@ -1164,7 +1227,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             throw new ArgumentException(Properties.Resources.PostBuilderAddQuoteToNonPostError, nameof(strongReference));
         }
 
-        Add(strongReference);
+        lock (_syncLock)
+        {
+            if (QuotePost is not null)
+            {
+                throw new InvalidOperationException("Cannot add a quote post that already has a quote post.");
+            }
+
+            QuotePost = strongReference;
+        }
+
         return this;
     }
 
@@ -1210,6 +1282,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="labels">The self label values to set.</param>
     /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use <see cref="SetSelfLabels(PostSelfLabels)"/> instead.</para>
+    /// </remarks>
+    [Obsolete("Use SetSelfLabels instead.")]
+    [SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility.")]
     public PostBuilder Label(PostSelfLabels labels)
     {
         ArgumentNullException.ThrowIfNull(labels);
@@ -1285,7 +1362,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
     /// <exception cref="PostBuilderException">
-    ///  Thrown when <see cref="Text"/> is <see langword="null"/> or empty and this instance has no images, embedded records or video, or
+    ///  Thrown when <see cref="Text"/> is <see langword="null"/> and this instance has no images, embedded records or video, or
     ///  this instance is both a reply and a quote, or this instance has both images and video.
     /// </exception>
     /// <remarks>
@@ -1295,7 +1372,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     {
         lock (_syncLock)
         {
-            if (!HasText && !HasImages && !HasEmbed && !HasVideo)
+            if (_post.UnnormalizedText is null && !HasImages && !HasEmbed && !HasVideo)
             {
                 throw new PostBuilderException(Properties.Resources.EmptyPostTextValidationError);
             }

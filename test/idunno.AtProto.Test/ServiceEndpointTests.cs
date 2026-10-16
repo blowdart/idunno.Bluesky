@@ -25,7 +25,7 @@ public class ServiceEndpointTests
     [InlineData("http://[::1]:1234/")]
     public void SupportedServiceEndpointsAreAccepted(string serviceEndpoint)
     {
-        Assert.True(Resolution.IsSupportedServiceEndpoint(new Uri(serviceEndpoint)));
+        Assert.True(IdentityResolution.IsSupportedServiceEndpoint(new Uri(serviceEndpoint)));
     }
 
     [Theory]
@@ -39,6 +39,6 @@ public class ServiceEndpointTests
     [InlineData("ws://example.com/")]
     public void UnsupportedServiceEndpointsAreRejected(string serviceEndpoint)
     {
-        Assert.False(Resolution.IsSupportedServiceEndpoint(new Uri(serviceEndpoint)));
+        Assert.False(IdentityResolution.IsSupportedServiceEndpoint(new Uri(serviceEndpoint)));
     }
 }

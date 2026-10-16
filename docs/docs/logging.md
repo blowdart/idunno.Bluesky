@@ -33,3 +33,9 @@ await agent.Logout();
 > [!IMPORTANT]
 > Depending on the regulatory environment you are working under logs may contain personal information such as a user's DID.
 > Make sure your logs are secured appropriately.
+
+> [!WARNING]
+> Some log messages include values received from remote services or request-controlled input. If a logger writes these values verbatim to simple,
+> line-oriented text logs, control characters such as newlines can make entries confusing or appear to add forged log lines. This is a limitation
+> of that text-logging approach, not a defect in the library. For production, choose a production-quality logger that safely handles untrusted
+> values, preferably using structured logging rather than plain text.

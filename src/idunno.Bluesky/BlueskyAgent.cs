@@ -22,6 +22,8 @@ public partial class BlueskyAgent : AtProtoAgent
 {
     private readonly ILogger<BlueskyAgent> _logger;
 
+    internal TimeProvider RecordTimeProvider { get; set; } = TimeProvider.System;
+
     /// <summary>
     /// Creates a new instance of <see cref="BlueskyAgent"/>.
     /// </summary>
@@ -34,7 +36,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// </remarks>
     public BlueskyAgent(BlueskyAgentOptions? options = null) : base(
         service: DefaultServiceUris.BlueskyApiUri,
-        options: options)
+        options: options ?? new BlueskyAgentOptions())
     {
         if (options is not null && options.PublicAppViewUri is not null)
         {
@@ -81,7 +83,7 @@ public partial class BlueskyAgent : AtProtoAgent
     public BlueskyAgent(ClaimsPrincipal? principal, BlueskyAgentOptions? options = null) : base(
         principal: principal,
         service: DefaultServiceUris.BlueskyApiUri,
-        options: options)
+        options: options ?? new BlueskyAgentOptions())
     {
         ArgumentNullException.ThrowIfNull(principal);
 
@@ -130,7 +132,7 @@ public partial class BlueskyAgent : AtProtoAgent
     public BlueskyAgent(ClaimsIdentity identity, BlueskyAgentOptions? options = null) : base(
         identity: identity,
         service: DefaultServiceUris.BlueskyApiUri,
-        options: options)
+        options: options ?? new BlueskyAgentOptions())
     {
         ArgumentNullException.ThrowIfNull(identity);
 
@@ -171,7 +173,7 @@ public partial class BlueskyAgent : AtProtoAgent
     public BlueskyAgent(IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
         service: DefaultServiceUris.BlueskyApiUri,
         httpClientFactory: httpClientFactory,
-        options: options)
+        options: options ?? new BlueskyAgentOptions())
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
@@ -215,7 +217,7 @@ public partial class BlueskyAgent : AtProtoAgent
             principal: principal,
             service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
-            options: options)
+            options: options ?? new BlueskyAgentOptions())
     {
         ArgumentNullException.ThrowIfNull(principal);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
@@ -260,7 +262,7 @@ public partial class BlueskyAgent : AtProtoAgent
             identity: identity,
             service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
-            options: options)
+            options: options ?? new BlueskyAgentOptions())
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(httpClientFactory);

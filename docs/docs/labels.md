@@ -2,6 +2,8 @@
 Labelers and [labels](https://docs.bsky.app/docs/advanced-guides/moderation) are how Bluesky allows for composable moderation.
 A label is published by a moderation service, which a user or an application can choose to subscribe to.
 
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
+
 Once subscribed to a labeler requests to a Bluesky API can request the labeler's labels to be applied to posts or actors,
 and the labels will be applied to records underneath the labels key. When an application encounters a label it should act on it based on
 the user's preferences for that labeler.

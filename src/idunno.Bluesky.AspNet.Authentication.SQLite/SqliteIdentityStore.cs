@@ -35,6 +35,7 @@ public class SqliteIdentityStore : IIdentityStore
     private readonly ExpiredEntrySweepThrottle _sweepThrottle;
     private readonly BlueskyAuthenticationMetrics _metrics;
     private readonly ILogger _logger;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Creates a new instance of <see cref="SqliteIdentityStore"/>.
@@ -66,15 +67,66 @@ public class SqliteIdentityStore : IIdentityStore
         IMeterFactory? meterFactory = null,
         ILoggerFactory? loggerFactory = null,
         TimeSpan? expiredEntrySweepInterval = null)
+        : this(connectionString, TimeProvider.System, entryTimeToLive, refreshLockLength, meterFactory, loggerFactory, expiredEntrySweepInterval)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="SqliteIdentityStore"/> using the specified time provider.
+    /// </summary>
+    /// <param name="connectionString">The connection string for the SQLite database.</param>
+    /// <param name="timeProvider">The provider used to determine the current time and schedule entry sweeps.</param>
+    /// <param name="entryTimeToLive">The sliding time to live for stored identities.</param>
+    /// <param name="refreshLockLength">The time to live for refresh locks.</param>
+    /// <param name="meterFactory">An optional meter factory used to record identity store metrics.</param>
+    /// <param name="loggerFactory">An optional logger factory used to report refresh lock contention.</param>
+    /// <param name="expiredEntrySweepInterval">
+    /// How often expired identities and abandoned refresh locks are deleted, or <see cref="TimeSpan.Zero"/> to never
+    /// delete them. Defaults to five minutes.
+    /// </param>
+    /// <returns>A new store using <paramref name="timeProvider"/>.</returns>
+    /// <exception cref="ArgumentException"><paramref name="connectionString"/> is empty or invalid.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="entryTimeToLive"/> or <paramref name="refreshLockLength"/> is not positive, or
+    /// <paramref name="expiredEntrySweepInterval"/> is negative.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   An expired identity or refresh lock is already unreadable, as every read filters on expiry, so sweeping only
+    ///   reclaims the storage it occupies and changes no behaviour. Disable it when an operator reclaims the rows themselves.
+    /// </para>
+    /// </remarks>
+    public static SqliteIdentityStore CreateWithTimeProvider(
+        string connectionString,
+        TimeProvider timeProvider,
+        TimeSpan? entryTimeToLive = null,
+        TimeSpan? refreshLockLength = null,
+        IMeterFactory? meterFactory = null,
+        ILoggerFactory? loggerFactory = null,
+        TimeSpan? expiredEntrySweepInterval = null) =>
+        new(connectionString, timeProvider, entryTimeToLive, refreshLockLength, meterFactory, loggerFactory, expiredEntrySweepInterval);
+
+    internal SqliteIdentityStore(
+        string connectionString,
+        TimeProvider timeProvider,
+        TimeSpan? entryTimeToLive,
+        TimeSpan? refreshLockLength,
+        IMeterFactory? meterFactory,
+        ILoggerFactory? loggerFactory,
+        TimeSpan? expiredEntrySweepInterval)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(timeProvider);
 
         _connectionString = new SqliteConnectionStringBuilder(connectionString).ConnectionString;
+        _timeProvider = timeProvider;
         _entryTimeToLive = ValidateTimeToLive(entryTimeToLive ?? s_defaultEntryTimeToLive, nameof(entryTimeToLive));
         _refreshLockLength = ValidateTimeToLive(refreshLockLength ?? s_defaultRefreshLockLength, nameof(refreshLockLength));
         _sweepThrottle = new ExpiredEntrySweepThrottle(
             expiredEntrySweepInterval ?? s_defaultExpiredEntrySweepInterval,
-            nameof(expiredEntrySweepInterval));
+            nameof(expiredEntrySweepInterval),
+            _timeProvider);
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
         _logger = loggerFactory?.CreateLogger<SqliteIdentityStore>() ?? NullLogger<SqliteIdentityStore>.Instance;
     }
@@ -177,7 +229,7 @@ public class SqliteIdentityStore : IIdentityStore
         ArgumentNullException.ThrowIfNull(did);
 
         string refreshLockToken = Guid.NewGuid().ToString("N");
-        long now = DateTime.UtcNow.Ticks;
+        long now = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
         using SqliteConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
         using SqliteCommand command = connection.CreateCommand();
@@ -191,7 +243,7 @@ public class SqliteIdentityStore : IIdentityStore
             """;
         command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
         command.Parameters.Add("@lockToken", SqliteType.Text).Value = refreshLockToken;
-        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = DateTime.UtcNow.Add(_refreshLockLength).Ticks;
+        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Add(_refreshLockLength).Ticks;
         command.Parameters.Add("@now", SqliteType.Integer).Value = now;
 
         int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -279,7 +331,7 @@ public class SqliteIdentityStore : IIdentityStore
             );
             """;
         command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
-        command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+        command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
         object? result = await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         return Convert.ToBoolean(result, System.Globalization.CultureInfo.InvariantCulture);
@@ -333,7 +385,7 @@ public class SqliteIdentityStore : IIdentityStore
             """;
         command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
         command.Parameters.Add("@identity", SqliteType.Blob).Value = context.Identity.ToArray();
-        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = DateTime.UtcNow.Add(_entryTimeToLive).Ticks;
+        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Add(_entryTimeToLive).Ticks;
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
         await SweepExpiredEntries(cancellationToken).ConfigureAwait(false);
@@ -356,7 +408,7 @@ public class SqliteIdentityStore : IIdentityStore
                     AND "ExpiresAtUtcTicks" > @now;
                 """;
             command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
-            command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+            command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
             serializedIdentity = (byte[]?)await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
         }
 
@@ -449,7 +501,7 @@ public class SqliteIdentityStore : IIdentityStore
         {
             using SqliteConnection connection = await OpenConnection(cancellationToken).ConfigureAwait(false);
 
-            long now = DateTime.UtcNow.Ticks;
+            long now = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
 
             using (SqliteCommand command = connection.CreateCommand())
             {
@@ -497,9 +549,9 @@ public class SqliteIdentityStore : IIdentityStore
             WHERE "Did" = @did
                 AND "ExpiresAtUtcTicks" > @now;
             """;
-        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = DateTime.UtcNow.Add(_entryTimeToLive).Ticks;
+        command.Parameters.Add("@expiresAtUtcTicks", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Add(_entryTimeToLive).Ticks;
         command.Parameters.Add("@did", SqliteType.Text).Value = did.ToString();
-        command.Parameters.Add("@now", SqliteType.Integer).Value = DateTime.UtcNow.Ticks;
+        command.Parameters.Add("@now", SqliteType.Integer).Value = _timeProvider.GetUtcNow().UtcDateTime.Ticks;
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 

@@ -53,6 +53,8 @@ public class IndexModel(BlueskyAgent agent) : PageModel
 
     public async Task<IActionResult> OnPost(Cid cid)
     {
+        Cid = cid;
+
         if (User is not null && User.Identity?.IsAuthenticated == true && User.Identity is ClaimsIdentity && User.Did is not null)
         {
             if (!ModelState.IsValid)
@@ -63,6 +65,15 @@ public class IndexModel(BlueskyAgent agent) : PageModel
             if (cid is null)
             {
                 return BadRequest("Missing cid.");
+            }
+
+            if (!string.IsNullOrEmpty(Pronouns) &&
+                (Pronouns.GetGraphemeLength() > Maximum.PronounLengthInGraphemes ||
+                 Pronouns.GetUtf8Length() > Maximum.PronounLengthInBytes))
+            {
+                ModelState.AddModelError(nameof(Pronouns),
+                    $"Pronouns must not exceed {Maximum.PronounLengthInGraphemes} graphemes or {Maximum.PronounLengthInBytes} UTF-8 bytes.");
+                return Page();
             }
 
             var getProfileResult = await agent.GetProfile(cancellationToken: HttpContext.RequestAborted);
@@ -76,6 +87,7 @@ public class IndexModel(BlueskyAgent agent) : PageModel
             var updateProfileResult = await agent.UpdateProfile(profile, cid: cid, cancellationToken: HttpContext.RequestAborted);
 
             updateProfileResult.EnsureSucceeded();
+            TempData["ProfileSaved"] = true;
             return RedirectToPage();
         }
 

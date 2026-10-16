@@ -1,0 +1,34 @@
+@page
+@model Samples.AspNetTunnelAuthentication.Pages.IndexModel
+@{
+    ViewData["Title"] = "Bluesky session";
+}
+
+<h1 class="display-4">Bluesky session</h1>
+<p class="lead">Refresh your credentials or sign out to exercise confidential-client authentication.</p>
+@if (Model.StatusMessage is not null)
+{
+    <div class="alert alert-success" role="status">@Model.StatusMessage</div>
+}
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h5 card-title">Session details</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-4">Authenticated DID</dt>
+            <dd class="col-sm-8 text-break">@Model.Did</dd>
+            <dt class="col-sm-4">Access token expires (UTC)</dt>
+            <dd class="col-sm-8">@Model.ExpiresOn?.ToString("u")</dd>
+            <dt class="col-sm-4">Client signing key ID</dt>
+            <dd class="col-sm-8 text-break">@(Model.ClientSigningKeyId ?? "Not recorded")</dd>
+        </dl>
+    </div>
+</div>
+<div class="d-flex flex-wrap gap-2">
+    <form method="post" asp-page-handler="Refresh">
+        <button type="submit" class="btn btn-primary">Refresh credentials</button>
+    </form>
+    <form asp-area="Bluesky" asp-page="/Logout" method="post">
+        <button type="submit" class="btn btn-outline-secondary">Log out</button>
+    </form>
+</div>

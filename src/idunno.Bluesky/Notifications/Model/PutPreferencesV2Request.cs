@@ -1,9 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.Bluesky.Notifications.PreferenceTypes;
-
 using System.Text.Json.Serialization;
+
+using idunno.Bluesky.Notifications.PreferenceTypes;
 
 namespace idunno.Bluesky.Notifications.Model;
 

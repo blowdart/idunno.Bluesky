@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 
 using idunno.AtProto.Authentication;
 
@@ -15,6 +17,38 @@ namespace idunno.AtProto.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class OAuthCredentialRefreshTests
 {
+    private sealed class TrackingFactoryContent(Action onDispose) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            byte[] content = Encoding.UTF8.GetBytes("token=token&token_type_hint=refresh_token");
+
+            return stream.WriteAsync(content).AsTask();
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = "token=token&token_type_hint=refresh_token".Length;
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                onDispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        internal TrackingFactoryContent SetFormContentType()
+        {
+            Headers.ContentType = new("application/x-www-form-urlencoded");
+            return this;
+        }
+    }
+
     private const string DomainName = "oauth.test.internal";
     private const string ServerDid = $"did:web:{DomainName}";
     private const string Authority = $"https://{DomainName}/";
@@ -52,6 +86,148 @@ public class OAuthCredentialRefreshTests
         Assert.NotNull(agent.Credentials);
         Assert.Equal(new Did(AccountDid), agent.Credentials.Did);
         Assert.Equal(server.LastIssuedRefreshToken, agent.Credentials.RefreshToken);
+    }
+
+    [Theory]
+    [InlineData("http://localhost?scope=atproto%20include%3Acom.example.authBasic")]
+    [InlineData("https://original.test/clientMetadata.json")]
+    public async Task AgentRefreshPreservesTheOriginalOAuthRequestContext(string clientId)
+    {
+        OAuthTestServer server = new();
+        using AtProtoAgent agent = CreateAgent(server);
+        const string requestedScope = "atproto include:com.example.authBasic";
+        DPoPAccessCredentials credentials = new(
+            new Uri($"https://{DomainName}"),
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            OAuthClientId = clientId,
+            RequestedScope = requestedScope
+        };
+
+        Assert.True(await agent.Login(credentials, TestContext.Current.CancellationToken));
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.Equal(clientId, server.RefreshRequestedClientId);
+        Assert.Equal(requestedScope, server.RefreshRequestedScope);
+        DPoPAccessCredentials refreshed = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal(clientId, refreshed.OAuthClientId);
+        Assert.Equal(requestedScope, refreshed.RequestedScope);
+
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+        Assert.Equal(clientId, server.RefreshRequestedClientId);
+        Assert.Equal(requestedScope, server.RefreshRequestedScope);
+    }
+
+    [Theory]
+    [InlineData("previous", "previous")]
+    [InlineData("active", "active")]
+    [InlineData(null, "active")]
+    [InlineData("unknown", "active")]
+    public async Task RefreshAndLogoutSignWithTheKeyTheSessionStartedWith(string? sessionKeyId, string expectedKeyId)
+    {
+        OAuthTestServer server = new();
+        OAuthOptions oAuthOptions = new("https://client.test/clientMetadata.json")
+        {
+            ClientSigningKey = CreateClientSigningKey("active")
+        };
+        oAuthOptions.AdditionalClientSigningKeys.Add(CreateClientSigningKey("previous"));
+        using AtProtoAgent agent = CreateAgent(server, oAuthOptions);
+
+        DPoPAccessCredentials credentials = new(
+            new Uri($"https://{DomainName}"),
+            CreateAccessJwt(new Did(AccountDid)),
+            "initialRefreshToken",
+            JwtBuilder.CreateProofKey(),
+            "nonce")
+        {
+            ClientSigningKeyId = sessionKeyId
+        };
+
+        Assert.True(await agent.Login(credentials, TestContext.Current.CancellationToken));
+        Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+
+        Assert.Equal(expectedKeyId, GetAssertionKeyId(server.RefreshClientAssertion));
+        DPoPAccessCredentials refreshed = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+        Assert.Equal(expectedKeyId, refreshed.ClientSigningKeyId);
+
+        await agent.Logout(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, server.RevocationClientAssertions.Count);
+        Assert.All(server.RevocationClientAssertions, assertion => Assert.Equal(expectedKeyId, GetAssertionKeyId(assertion)));
+    }
+
+    private static OAuthClientSigningKey CreateClientSigningKey(string keyId)
+    {
+        using ECDsa ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+        return OAuthClientSigningKey.FromPem(ecdsa.ExportPkcs8PrivateKeyPem(), keyId);
+    }
+
+    private static string? GetAssertionKeyId(string? assertion)
+    {
+        Assert.False(string.IsNullOrEmpty(assertion));
+
+        using System.Text.Json.JsonDocument header = System.Text.Json.JsonDocument.Parse(Base64UrlEncoder.Decode(assertion.Split('.')[0]));
+
+        return header.RootElement.GetProperty("kid").GetString();
+    }
+
+    private static string GetAssertionJti(string? assertion)
+    {
+        Assert.False(string.IsNullOrEmpty(assertion));
+
+        using System.Text.Json.JsonDocument payload = System.Text.Json.JsonDocument.Parse(Base64UrlEncoder.Decode(assertion.Split('.')[1]));
+
+        return payload.RootElement.GetProperty("jti").GetString()!;
+    }
+
+    [Fact]
+    public async Task RevocationNonceRetriesCreateFreshClientAssertions()
+    {
+        OAuthTestServer server = new() { ChallengeRevocationNonce = true };
+        OAuthOptions oAuthOptions = new("https://client.test/clientMetadata.json")
+        {
+            ClientSigningKey = CreateClientSigningKey("active")
+        };
+        using AtProtoAgent agent = CreateAgent(server, oAuthOptions);
+
+        await Login(agent);
+        await agent.Logout(TestContext.Current.CancellationToken);
+
+        Assert.Equal(4, server.RevocationClientAssertions.Count);
+        Assert.Equal(4, server.RevocationClientAssertionJtis.Count);
+        Assert.Equal(4, server.RevocationClientAssertionJtis.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(["refresh_token", "refresh_token", "access_token", "access_token"], server.RevocationTokenTypeHints);
+    }
+
+    [Fact]
+    public async Task FactoryCreatedRequestContentIsDisposedAfterEachNonceAttempt()
+    {
+        OAuthTestServer server = new() { ChallengeRevocationNonce = true };
+        using HttpClient httpClient = server.TestServer.CreateClient();
+        AtProtoHttpClient<string> client = new();
+        int factoryCalls = 0;
+        int disposeCalls = 0;
+
+        AtProtoHttpResult<string> result = await client.Post(
+            service: new Uri(Authority),
+            endpoint: "/revoke",
+            contentFactory: () =>
+            {
+                Interlocked.Increment(ref factoryCalls);
+                return new TrackingFactoryContent(() => Interlocked.Increment(ref disposeCalls)).SetFormContentType();
+            },
+            requestHeaders: null,
+            credentials: CreateCredentials(),
+            httpClient: httpClient,
+            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, factoryCalls);
+        Assert.Equal(2, disposeCalls);
     }
 
     [Fact]
@@ -192,20 +368,30 @@ public class OAuthCredentialRefreshTests
 
         await firstNotificationEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
 
+        TaskCompletionSource refreshCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.CredentialNotificationQueueing = credentials =>
+        {
+            if (!ReferenceEquals(credentials, originalCredentials))
+            {
+                refreshCommitted.TrySetResult();
+            }
+        };
         using CancellationTokenSource refreshCancellation = new();
         Task<bool> refresh = agent.RefreshCredentials(refreshCancellation.Token);
 
         // Wait until the refresh has committed its credentials, then cancel the caller. The notification for
         // credentials the agent is already using must still be raised, otherwise the suspended handler would be the
         // last to write and would persist the refresh token the server has spent.
-        while (ReferenceEquals(agent.Credentials, originalCredentials))
+        try
         {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            await refreshCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotSame(originalCredentials, agent.Credentials);
+            await refreshCancellation.CancelAsync();
         }
-
-        await refreshCancellation.CancelAsync();
-
-        releaseFirstNotification.TrySetResult();
+        finally
+        {
+            releaseFirstNotification.TrySetResult();
+        }
 
         await notification;
         Assert.True(await refresh);
@@ -366,23 +552,27 @@ public class OAuthCredentialRefreshTests
 
         // The handler is held until the logout has actually cleared the credentials, which is the point an unordered
         // Unauthenticated would be raised from, so the two are not merely racing.
-        Task releaseWhenSessionEnded = Task.Run(
-            async () =>
-            {
-                while (agent.Credentials is not null)
-                {
-                    await Task.Delay(1, TestContext.Current.CancellationToken);
-                }
-
-                releaseHandler.TrySetResult();
-            },
-            TestContext.Current.CancellationToken);
+        TaskCompletionSource sessionEnded = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            sessionEnded.TrySetResult();
+            return Task.CompletedTask;
+        };
 
         Task logout = agent.Logout(TestContext.Current.CancellationToken);
 
+        try
+        {
+            await sessionEnded.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.Null(agent.Credentials);
+        }
+        finally
+        {
+            releaseHandler.TrySetResult();
+        }
+
         await notification;
         await logout;
-        await releaseWhenSessionEnded;
 
         // A subscriber which discards its stored credentials when the session ends can only discard the write the
         // suspended handler made if the session ending reaches it afterwards.
@@ -595,14 +785,23 @@ public class OAuthCredentialRefreshTests
         // thing keeping it behind the handler which is still running.
         agent.Credentials = null;
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        while (agent.Credentials is null)
+        try
         {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
         }
-
-        releaseNotification.TrySetResult();
+        finally
+        {
+            releaseNotification.TrySetResult();
+        }
 
         Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         await notification.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
@@ -731,11 +930,23 @@ public class OAuthCredentialRefreshTests
 
         await sessionEndQueued.Task.WaitAsync(TestContext.Current.CancellationToken);
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
-
-        releaseSessionEnd.TrySetResult();
+        try
+        {
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
+        }
+        finally
+        {
+            releaseSessionEnd.TrySetResult();
+        }
 
         Assert.False(await refresh);
         Assert.True(await login);
@@ -753,10 +964,12 @@ public class OAuthCredentialRefreshTests
         using OAuthTestAgent agent = (OAuthTestAgent)CreateAgent(server);
 
         List<AccessCredentials> persisted = [];
+        TaskCompletionSource notificationCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         agent.CredentialsUpdatedAsync = (e, _) =>
         {
             persisted.Add(e.AccessCredentials);
+            notificationCompleted.TrySetResult();
             return Task.CompletedTask;
         };
 
@@ -768,7 +981,7 @@ public class OAuthCredentialRefreshTests
         // The credentials are already live in the agent and the token they replaced has been spent, so they have to be
         // notified even though the session start handler failed, otherwise storage keeps a token the server has burnt.
         // The notification can be queued behind one which is still running, so it is waited for rather than sampled.
-        await WaitFor(() => persisted.Count == 1, TestContext.Current.CancellationToken);
+        await notificationCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
         AccessCredentials refreshedCredentials = Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
 
@@ -840,11 +1053,23 @@ public class OAuthCredentialRefreshTests
 
         agent.CredentialsUpdatedAsync = null;
 
+        TaskCompletionSource loginCommitted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        agent.SessionEventQueueing = () =>
+        {
+            loginCommitted.TrySetResult();
+            return Task.CompletedTask;
+        };
         Task<bool> login = agent.Login(CreateCredentials(), TestContext.Current.CancellationToken);
 
-        await WaitFor(() => agent.Credentials is not null, TestContext.Current.CancellationToken);
-
-        releaseSessionEnd.TrySetResult();
+        try
+        {
+            await loginCommitted.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            Assert.NotNull(agent.Credentials);
+        }
+        finally
+        {
+            releaseSessionEnd.TrySetResult();
+        }
 
         Assert.False(await endingRefresh!.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         Assert.True(await login.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
@@ -857,22 +1082,6 @@ public class OAuthCredentialRefreshTests
         }
 
         Assert.NotNull(agent.Credentials);
-    }
-
-    /// <summary>
-    /// Waits for <paramref name="condition"/> to become true, so that a test does not depend on a notification which is
-    /// queued behind another having been delivered by the time the call which caused it returns.
-    /// </summary>
-    private static async Task WaitFor(Func<bool> condition, CancellationToken cancellationToken)
-    {
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(10);
-
-        while (!condition() && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(10, cancellationToken);
-        }
-
-        Assert.True(condition(), "The expected condition was not reached before the timeout expired.");
     }
 
     [Fact]
@@ -910,11 +1119,7 @@ public class OAuthCredentialRefreshTests
         // continuation after the notification queue runs inline on the thread the blocked handler is holding.
         Task<bool> refresh = Task.Run(() => agent.RefreshCredentials(TestContext.Current.CancellationToken));
 
-        Assert.Same(
-            refresh,
-            await Task.WhenAny(refresh, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken)));
-
-        Assert.False(await refresh);
+        Assert.False(await refresh.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
         Assert.True(reauthenticated);
         Assert.NotNull(agent.Credentials);
     }
@@ -991,12 +1196,12 @@ public class OAuthCredentialRefreshTests
         Assert.True(agent.IsAuthenticated);
     }
 
-    private static AtProtoAgent CreateAgent(OAuthTestServer server) =>
+    private static AtProtoAgent CreateAgent(OAuthTestServer server, OAuthOptions? oAuthOptions = null) =>
         new OAuthTestAgent(server)
         {
             Options = new AtProtoAgentOptions
             {
-                OAuthOptions = new OAuthOptions("https://client.test/clientMetadata.json")
+                OAuthOptions = oAuthOptions ?? new OAuthOptions("https://client.test/clientMetadata.json")
             }
         };
 
@@ -1040,7 +1245,21 @@ public class OAuthCredentialRefreshTests
     {
         private int _tokenSerialNumber;
 
+        internal string? RefreshRequestedClientId { get; private set; }
+
+        internal string? RefreshRequestedScope { get; private set; }
+
+        internal string? RefreshClientAssertion { get; private set; }
+
+        internal List<string> RevocationClientAssertions { get; } = [];
+
+        internal List<string> RevocationClientAssertionJtis { get; } = [];
+
+        internal List<string> RevocationTokenTypeHints { get; } = [];
+
         internal bool GateRefresh { get; set; }
+
+        internal bool ChallengeRevocationNonce { get; set; }
 
         internal OAuthTestServer()
         {
@@ -1075,6 +1294,10 @@ public class OAuthCredentialRefreshTests
 
         private int _refreshCount;
 
+        private readonly HashSet<string> _consumedRevocationAssertionJtis = new(StringComparer.Ordinal);
+
+        private readonly HashSet<string> _challengedRevocationTokenHints = new(StringComparer.Ordinal);
+
         private async Task Handle(HttpContext context)
         {
             HttpRequest request = context.Request;
@@ -1103,6 +1326,36 @@ public class OAuthCredentialRefreshTests
                     return;
 
                 case "/revoke" when request.Method == HttpMethod.Post.Method:
+                    IFormCollection revocationForm = await request.ReadFormAsync();
+                    string clientAssertion = revocationForm["client_assertion"].ToString();
+
+                    RevocationClientAssertions.Add(clientAssertion);
+                    RevocationTokenTypeHints.Add(revocationForm["token_type_hint"].ToString());
+
+                    if (!string.IsNullOrEmpty(clientAssertion))
+                    {
+                        string assertionJti = GetAssertionJti(clientAssertion);
+                        RevocationClientAssertionJtis.Add(assertionJti);
+
+                        if (!_consumedRevocationAssertionJtis.Add(assertionJti))
+                        {
+                            response.StatusCode = StatusCodes.Status400BadRequest;
+                            response.ContentType = "application/json";
+                            await response.WriteAsync("""{"error":"invalid_client","error_description":"Client assertion jti has already been used"}""");
+                            return;
+                        }
+                    }
+
+                    string tokenTypeHint = revocationForm["token_type_hint"].ToString();
+                    if (ChallengeRevocationNonce && _challengedRevocationTokenHints.Add(tokenTypeHint))
+                    {
+                        response.StatusCode = StatusCodes.Status400BadRequest;
+                        response.Headers["DPoP-Nonce"] = $"revocationNonce-{tokenTypeHint}";
+                        response.ContentType = "application/json";
+                        await response.WriteAsync("""{"error":"use_dpop_nonce","error_description":"Authorization server requires nonce in DPoP proof"}""");
+                        return;
+                    }
+
                     if (!RevocationSucceeds)
                     {
                         response.StatusCode = StatusCodes.Status400BadRequest;
@@ -1120,6 +1373,10 @@ public class OAuthCredentialRefreshTests
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
                     Interlocked.Increment(ref _refreshCount);
+                    IFormCollection form = await request.ReadFormAsync();
+                    RefreshRequestedClientId = form["client_id"].ToString();
+                    RefreshRequestedScope = form["scope"].ToString();
+                    RefreshClientAssertion = form["client_assertion"].ToString();
 
                     if (GateRefresh)
                     {

@@ -14,7 +14,7 @@ public partial class BlueskyAgent
     /// <param name="status">The status of the conversations to mark as read. Known values are held in <see cref="ConversationStatus"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="status"/> is <see langword="null"/> or white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="status"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>
     /// <para>The result is <see langword="null"/> if the API call failed, which is distinct from a successful call which marked no conversations as read.</para>
@@ -23,7 +23,7 @@ public partial class BlueskyAgent
         string status,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(status);
+        ArgumentNullException.ThrowIfNull(status);
 
         if (!IsAuthenticated)
         {

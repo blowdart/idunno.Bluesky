@@ -8,6 +8,8 @@ namespace idunno.AtProto.Jetstream;
 /// <summary>
 /// Encapsulates the properties of an account operation in a Jetstream event.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S1133", Justification = "Retained for source compatibility with v1 consumers.")]
+[Obsolete("Use JetstreamAccount for Jetstream v2 events.")]
 public record AtJetstreamAccount
 {
     /// <summary>

@@ -13,11 +13,13 @@
     <ProjectReference Include="..\..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.MySQL\idunno.Bluesky.AspNet.Authentication.MySQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.PostgreSQL\idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.Redis\idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.MySQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.Redis" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.SQLite" />
   </ItemGroup>

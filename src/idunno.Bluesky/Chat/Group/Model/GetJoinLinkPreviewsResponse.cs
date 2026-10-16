@@ -20,6 +20,14 @@ public sealed record GetJoinLinkPreviewsResponse
     /// <summary>
     /// Gets the requested join link previews.
     /// </summary>
+    /// <exception cref="ArgumentNullException">The collection is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     [JsonRequired]
-    public IReadOnlyCollection<JoinLinkPreviewViewBase> JoinLinkPreviews { get; init; }
+    public IReadOnlyCollection<JoinLinkPreviewViewBase> JoinLinkPreviews
+    {
+        get => _joinLinkPreviews;
+        init => _joinLinkPreviews = ChatCollection.Copy(value);
+    }
+
+    private readonly IReadOnlyCollection<JoinLinkPreviewViewBase> _joinLinkPreviews = null!;
 }

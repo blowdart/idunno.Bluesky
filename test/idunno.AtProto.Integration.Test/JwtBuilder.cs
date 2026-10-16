@@ -11,7 +11,14 @@ namespace idunno.AtProto.Integration.Test;
 
 internal class JwtBuilder
 {
-    public static string CreateJwt(Did? did, string? issuer = null, string? audience = null, string? lxm = null, TimeSpan? expiresIn = null, string? scope = null)
+    public static string CreateJwt(
+        Did? did,
+        string? issuer = null,
+        string? audience = null,
+        string? lxm = null,
+        TimeSpan? expiresIn = null,
+        string? scope = null,
+        TimeProvider? timeProvider = null)
     {
         if (did is null && issuer is null)
         {
@@ -42,14 +49,15 @@ internal class JwtBuilder
         }
 
         SecurityKey key = new RsaSecurityKey(RSA.Create(2048));
+        DateTime now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
 
         SecurityTokenDescriptor descriptor = new()
         {
             Issuer = issuer,
             Audience = audience,
             Claims = claims,
-            IssuedAt = DateTime.UtcNow,
-            Expires = DateTime.UtcNow + expiresIn,
+            IssuedAt = now,
+            Expires = now + expiresIn,
             SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.RsaSha256Signature)
         };
 

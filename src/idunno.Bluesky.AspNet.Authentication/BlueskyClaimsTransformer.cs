@@ -2,17 +2,17 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
-
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using Microsoft.Extensions.Logging.Abstractions;
 using idunno.Bluesky.Actor;
-using System.Diagnostics.Metrics;
+
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -21,7 +21,17 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// with claims derived from the user's Bluesky profile.
 /// </summary>
 /// <remarks>
-/// <para>This transformer requires the an access token issued with transition:generic scope.</para>
+/// <para>
+///   This transformer makes an authenticated <c>app.bsky.actor.getProfile</c> request. In addition to <c>atproto</c>,
+///   the minimum permission for Bluesky's default app view is
+///   <c>rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview</c>.
+///   Request it at initial login; for another app view, use that service's DID and service fragment as the audience.
+/// </para>
+/// <para>
+///   <see cref="idunno.Bluesky.Authentication.BlueskyOAuthPermissionSets.ViewAll"/> also includes this permission but grants broader read access.
+///   No profile-write permission or transition scope is required. Without a suitable grant, profile retrieval can fail and the
+///   additional profile claims will not be populated.
+/// </para>
 /// </remarks>
 public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 {
@@ -141,7 +151,8 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
         // Matches the agent's own IsAuthenticated check, made here so that a principal whose credentials have expired
         // costs nothing, and so the cache can be consulted before an agent is built.
-        if (dPoPAccessCredentials.ExpiresOn <= DateTimeOffset.UtcNow)
+        TimeProvider timeProvider = Options.CurrentValue.TimeProvider;
+        if (dPoPAccessCredentials.ExpiresOn <= timeProvider.GetUtcNow())
         {
             return principal;
         }
@@ -161,7 +172,7 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
         _metrics.ProfileCacheMisses.Add(1);
 
-        using (BlueskyAgent agent = CreateAgent(principal))
+        using (BlueskyAgent agent = CreateAgent(principal, timeProvider))
         {
             // The agent makes authenticated calls, so its credentials can be updated underneath us, most commonly
             // by a DPoP nonce rotation. Without this any updated credentials would be discarded when the agent is
@@ -187,7 +198,7 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
                     // returned for is dropped rather than presented as though the directory agreed with it.
                     if (Options.CurrentValue.VerifyHandle &&
                         cachedProfile.Handle is not null &&
-                        !await Resolution.VerifyHandle(
+                        !await IdentityResolution.VerifyHandleAsync(
                             cachedProfile.Handle,
                             agent.Did,
                             loggerFactory: _loggerFactory,
@@ -218,16 +229,21 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
     /// Creates the <see cref="BlueskyAgent"/> the profile is retrieved with.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> whose credentials the agent should use.</param>
+    /// <param name="timeProvider">The provider used to check the principal's credential expiry.</param>
     /// <remarks>
     /// <para>
     ///   An agent created without an <see cref="IHttpClientFactory"/> builds a service provider, and so a connection
     ///   pool, of its own. Claims transformation runs per request, so one is used when the application registered one.
     /// </para>
     /// </remarks>
-    private BlueskyAgent CreateAgent(ClaimsPrincipal principal) =>
-        _httpClientFactory is null
-            ? new BlueskyAgent(principal, BlueskyAgentOptions?.CurrentValue)
-            : new BlueskyAgent(principal, _httpClientFactory, BlueskyAgentOptions?.CurrentValue);
+    private BlueskyAgent CreateAgent(ClaimsPrincipal principal, TimeProvider timeProvider)
+    {
+        BlueskyAgentOptions options = BlueskyAgentOptionsWithTimeProvider.Create(BlueskyAgentOptions.CurrentValue, timeProvider);
+
+        return _httpClientFactory is null
+            ? new BlueskyAgent(principal, options)
+            : new BlueskyAgent(principal, _httpClientFactory, options);
+    }
 
     /// <summary>
     /// Resolves the <see cref="IIdentityStore"/> configured for the authentication scheme the principal was issued by.

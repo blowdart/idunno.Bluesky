@@ -143,6 +143,18 @@ public sealed record ViewRecord : View
     public int? QuoteCount { get; init; }
 
     /// <summary>
+    /// Gets the 1-indexed position of this post within the contiguous OP thread, when it belongs to that thread.
+    /// </summary>
+    [JsonInclude]
+    public int? OpThreadPostIndex { get; init; }
+
+    /// <summary>
+    /// Gets the total number of posts in the contiguous OP thread, when this post belongs to that thread.
+    /// </summary>
+    [JsonInclude]
+    public int? OpThreadPostCount { get; init; }
+
+    /// <summary>
     /// Gets views over any embeds the record has.
     /// </summary>
     [NotNull]

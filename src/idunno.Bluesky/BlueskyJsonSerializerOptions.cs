@@ -12,6 +12,12 @@ namespace idunno.Bluesky;
 /// <summary>
 /// Helper class to provide JsonSerializerOptions for Bluesky types.
 /// </summary>
+/// <remarks>
+/// <para>Unknown JSON properties, including names beginning with <c>$</c>, are retained in extension data when the
+/// selected contract supports it, and otherwise ignored. Type discriminator and required property validation are unchanged.</para>
+/// <para>When reference handling is enabled and async-enumerable values are serialized, use <see cref="CreateReadOptions"/>
+/// for deserialization and <see cref="CreateWriteOptions"/> for serialization so each direction can use its own cached contracts.</para>
+/// </remarks>
 // The trimming and AOT suppressions are applied to the type so that they cover every member which reaches the
 // chaining call, wherever the compiler emits that IL. Suppression lookup walks from the member the IL is
 // attributed to out to its declaring type, so a type level suppression is always consulted by ILLink.
@@ -19,26 +25,112 @@ namespace idunno.Bluesky;
 [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All the AtProto Types are captured in source gen")]
 public static class BlueskyJsonSerializerOptions
 {
+    private static readonly JsonSerializerOptions s_default = AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(CreateMutableOptions());
+
+    /// <summary>
+    /// Creates read-only JSON options for Bluesky types after applying caller configuration.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options with SDK contract adaptation around the configured resolvers.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>The callback runs before SDK contract adaptation is installed. It may replace or prepend resolvers.
+    /// The configured options are copied before finalization; the callback's instance remains mutable and is not used by the result.</para>
+    /// <para>Resolver and converter instances are shared, not cloned; do not mutate their state after finalization.
+    /// The callback's options do not have SDK contract adaptation installed and should not be used for serialization.</para>
+    /// <para>For reference-handled async-enumerable serialization, prefer <see cref="CreateReadOptions"/> and
+    /// <see cref="CreateWriteOptions"/> to keep read and write contract selection independent.</para>
+    /// </remarks>
+    public static JsonSerializerOptions Create(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(options);
+    }
+
+    /// <summary>
+    /// Creates read-only JSON options for deserializing Bluesky types with tolerant handling of unknown metadata.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options with SDK contract adaptation enabled for reads.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use these options for deserialization. For serialization of async-enumerable roots or objects that contain
+    /// async-enumerable properties with reference handling enabled, use <see cref="CreateWriteOptions"/> instead.
+    /// System.Text.Json uses one cached contract for both directions, so the SDK exposes direction-specific options
+    /// for this scenario.</para>
+    /// </remarks>
+    public static JsonSerializerOptions CreateReadOptions(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeOptions(options, preserveAsyncEnumerableWritePath: false);
+    }
+
+    /// <summary>
+    /// Creates read-only JSON options for serializing Bluesky types through the built-in serializer contracts.
+    /// </summary>
+    /// <param name="configure">The configuration callback for the mutable options.</param>
+    /// <returns>A new, read-only set of options without the SDK's tolerant read adapter.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>Use these options for serialization, especially when serializing async-enumerable values with reference
+    /// handling. Apply matching settings and resolvers to both the read and write options when using them as a pair.</para>
+    /// </remarks>
+    public static JsonSerializerOptions CreateWriteOptions(Action<JsonSerializerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        JsonSerializerOptions options = CreateMutableOptions();
+        configure(options);
+        return AtProto.Json.TolerantPolymorphicConverter.FinalizeWriteOptions(options);
+    }
+
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
     /// </summary>
+    /// <remarks>
+    /// <para>Each call returns a new, mutable instance, which must resolve its type metadata again the first time it is used.
+    /// Use <see cref="Default"/> unless you need to change the options.</para>
+    /// <para>Append custom resolvers to <see cref="JsonSerializerOptions.TypeInfoResolverChain"/> to keep the SDK's
+    /// contract adaptation first. Use <see cref="AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions)"/>
+    /// after replacing or prepending resolvers, including on copies made with the
+    /// <see cref="JsonSerializerOptions.JsonSerializerOptions(JsonSerializerOptions)"/> constructor.</para>
+    /// <para>Arbitrary mutations of returned options are not intercepted. Replacing or prepending resolvers can bypass
+    /// adaptation. Prefer <see cref="Create(Action{JsonSerializerOptions})"/> to configure options before finalization.</para>
+    /// </remarks>
     public static JsonSerializerOptions Options
     {
         get
         {
-            // The chaining call builds a fresh set of AtProto options and inserts the resolver it is given, so
-            // nothing else can be configured on the way in. Everything Bluesky needs beyond the AtProto defaults,
-            // converters included, has to be applied to the result.
-            JsonSerializerOptions options = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
-
-            options.Converters.Add(new Json.PreferenceConverter());
-
+            JsonSerializerOptions options = CreateMutableOptions();
+            AtProto.Json.TolerantPolymorphicConverter.Configure(options);
             return options;
         }
     }
 
     /// <summary>
+    /// Gets a shared, read only set of <see cref="JsonSerializerOptions"/> for Bluesky types.
+    /// </summary>
+    /// <remarks>
+    /// <para>The instance caches the type metadata it resolves, so it is cheaper than <see cref="Options"/> when serializing
+    /// or deserializing repeatedly. It cannot be changed; use <see cref="Options"/> to get a copy which can.</para>
+    /// </remarks>
+    public static JsonSerializerOptions Default => s_default;
+
+    /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.
     /// </summary>
-    public static IJsonTypeInfoResolver TypeInfoResolver => Options.TypeInfoResolver!;
+    public static IJsonTypeInfoResolver TypeInfoResolver => s_default.TypeInfoResolver!;
+
+    private static JsonSerializerOptions CreateMutableOptions()
+    {
+        JsonSerializerOptions options = AtProtoServer.CreateAtProtoJsonSerializerOptions(adaptContracts: false);
+        options.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+
+        options.Converters.Add(new Json.PreferenceConverter());
+
+        return options;
+    }
 }

@@ -2,6 +2,8 @@
 
 A profile is typically made up of a user's biographical information, and their posts.
 
+[!include[Untrusted data warning](../includes/untrusted-data-warning.md)]
+
 > [!TIP]
 > To learn how to fetch a user's posts, see the [Author feeds](viewingFeeds.md#authorFeeds) in the [Viewing feeds](viewingFeeds.md) tutorial.
 

@@ -35,6 +35,11 @@ public class BlueskySignInManager
 
     private string? _dataProtectorScheme;
 
+    private System.TimeProvider TimeProvider => BlueskyAuthenticationOptions.TimeProvider ?? System.TimeProvider.System;
+
+    internal BlueskyAgentOptions CreateAgentOptions() =>
+        BlueskyAgentOptionsWithTimeProvider.Create(BlueskyAgentOptions, TimeProvider);
+
     [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Too much validation going on.")]
     private IDataProtector? _dataProtector;
 
@@ -265,7 +270,7 @@ public class BlueskySignInManager
     {
         returnUri ??= CreateReturnUri();
 
-        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: CreateAgentOptions());
         OAuthClient oAuthClient = agent.CreateOAuthClient();
 
         Uri redirectUri = await agent.BuildOAuth2LoginUri(
@@ -405,7 +410,7 @@ public class BlueskySignInManager
                         Logger.MalformedCorrelationCookie();
                         rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionMalformedCookie;
                     }
-                    else if (expiration < DateTimeOffset.UtcNow)
+                    else if (expiration < TimeProvider.GetUtcNow())
                     {
                         Logger.ExpiredCorrelationCookie();
                         rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie;
@@ -493,11 +498,11 @@ public class BlueskySignInManager
 
         correlationId = await SaveState(state, correlationId).ConfigureAwait(false);
 
-        DateTimeOffset correlationExpiry = DateTimeOffset.UtcNow.Add(correlationValidityPeriod);
+        DateTimeOffset correlationExpiry = TimeProvider.GetUtcNow().Add(correlationValidityPeriod);
 
         string cookieValue = DataProtector.Protect(FormatCorrelationCookiePayload(correlationId.Value, correlationExpiry));
 
-        CookieOptions cookieOptions = BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow);
+        CookieOptions cookieOptions = BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, TimeProvider.GetUtcNow());
 
         // CookieBuilder only sets an expiry when the application configured one, and the correlation cookie has no
         // value once the state it points at has aged out of the correlation cache.
@@ -540,7 +545,7 @@ public class BlueskySignInManager
     {
         HttpContext.Response.Cookies.Delete(
             cookieName,
-            BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
+            BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, TimeProvider.GetUtcNow()));
     }
 
     private static string FormatCorrelationCookiePayload(Guid correlationId, DateTimeOffset expiration) =>
@@ -624,7 +629,7 @@ public class BlueskySignInManager
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
-        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: CreateAgentOptions());
         OAuthClient oAuthClient = agent.CreateOAuthClient();
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(
             correlationState,
@@ -648,7 +653,7 @@ public class BlueskySignInManager
             {
                 AllowRefresh = true,
                 IsPersistent = true,
-                IssuedUtc = DateTimeOffset.UtcNow
+                IssuedUtc = TimeProvider.GetUtcNow()
             }).ConfigureAwait(false);
 
         // HttpContext.SignInAsync above dispatches to BlueskyAuthenticationHandler.HandleSignInAsync, which counts the

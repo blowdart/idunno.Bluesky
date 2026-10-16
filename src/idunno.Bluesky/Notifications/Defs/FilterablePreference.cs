@@ -13,8 +13,10 @@ public sealed record FilterablePreference
     /// <summary>
     /// Creates a new instance of <see cref="FilterablePreference"/>.
     /// </summary>
+    [JsonConstructor]
     public FilterablePreference()
     {
+        IncludeValue = "all";
     }
 
     /// <summary>
@@ -23,10 +25,10 @@ public sealed record FilterablePreference
     /// <param name="include">The type of users that notifications should be sent for.</param>
     /// <param name="list">Flag indicating whether the notification type should be shown in the user's notifications list.</param>
     /// <param name="push">Flag indicating whether the notification type should be pushed.</param>
-    [JsonConstructor]
+    /// <exception cref="ArgumentOutOfRangeException">The include value is not a recognized enumeration value.</exception>
     public FilterablePreference(LimitTo include, bool list, bool push)
     {
-        Include = include;
+        IncludeValue = NotificationWireValues.FromLimitTo(include, nameof(include));
         List = list;
         Push = push;
     }
@@ -34,16 +36,40 @@ public sealed record FilterablePreference
     /// <summary>
     /// Gets or sets the type of users that notifications should be sent for.
     /// </summary>
-    public LimitTo Include { get; set; }
+    /// <exception cref="ArgumentOutOfRangeException">The value is not recognized. Set <see cref="IncludeValue"/> to retain a service-defined value.</exception>
+    [JsonIgnore]
+    public LimitTo Include
+    {
+        get => NotificationWireValues.ToLimitTo(IncludeValue);
+        set => IncludeValue = NotificationWireValues.FromLimitTo(value, nameof(value));
+    }
+
+    /// <summary>
+    /// Gets or sets the service-defined wire value for the type of users that notifications should be sent for.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    [JsonRequired]
+    [JsonPropertyName("include")]
+    public string IncludeValue
+    {
+        get;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets a flag indicating whether the notification type should be shown in the user's notifications list.
     /// </summary>
+    [JsonRequired]
     public bool List { get; set; }
 
     /// <summary>
     /// Gets or sets a flag indicating whether the notification type should be pushed.
     /// </summary>
+    [JsonRequired]
     public bool Push { get; set; }
 }
 

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Samples are marked as not publishable in samples\Directory.Build.props, which stops the publish pipeline creating
+      the publish directory. The web SDK's web.config transform runs after
+      publish without checking whether the project is publishable, and so fails with an unhandled
+      DirectoryNotFoundException rather than the silent no-op every other sample gives.
+    -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+
+  <!--
+    Both steps are incremental against real files rather than stamps, so deleting node_modules or wwwroot/lib is enough
+    to make the next build recreate them. npm ci is used rather than npm install so the committed lock file is the only
+    thing which decides the versions, and install scripts are not run because none of these packages need them.
+  -->
+  <Target Name="NpmInstall" Inputs="package.json;package-lock.json" Outputs="node_modules\.package-lock.json">
+    <Exec Command="npm ci --no-audit --no-fund --ignore-scripts" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="NpmBuild" DependsOnTargets="NpmInstall" BeforeTargets="Build" Inputs="package.json;package-lock.json;scripts\copy-client-libraries.js" Outputs="wwwroot\lib\jquery\dist\jquery.min.js">
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.UI\idunno.Bluesky.AspNet.Authentication.UI.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\" />
+    <InternalsVisibleTo Include="Samples.AspNetProgressiveAuthentication.Test" Key="0024000004800000940000000602000000240000525341310004000001000100b55ee04d2e74aa85252df54b0fdd9a8bc5068a5cadf4c380dcfb1bca7ec39d090a04c8731e299ec690d44080073e7725ac766a5620e2b81e72b834bea2bcf0bb5f9ceb36dd35319eaa9e0a4ec1144aac1fcb6bec2bc08ae0b7317e899f4f9663eb358ed41cc8b912a4261d172ec1f631e1de09ed00604b21ead6b8a5ae64a3e9" />
+  </ItemGroup>
+
+</Project>

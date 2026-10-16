@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // The event argument preserves its original public property type.
+
 namespace idunno.AtProto.Jetstream.Events;
 
 /// <summary>
@@ -14,3 +16,5 @@ public sealed class RecordReceivedEventArgs(AtJetstreamEvent parsedEvent) : Even
     /// </summary>
     public AtJetstreamEvent ParsedEvent { get; } = parsedEvent;
 }
+
+#pragma warning restore CS0618

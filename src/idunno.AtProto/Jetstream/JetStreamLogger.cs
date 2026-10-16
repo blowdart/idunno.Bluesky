@@ -47,8 +47,8 @@ internal static partial class JetStreamLogger
     [LoggerMessage(14, LogLevel.Debug, "Sent OptionsUpdate message")]
     internal static partial void OptionsUpdateMessageSent(ILogger logger);
 
-    [LoggerMessage(15, LogLevel.Warning, "WSS: Unexpected close message received")]
-    internal static partial void CloseMessageReceived(ILogger logger);
+    [LoggerMessage(15, LogLevel.Warning, "WSS: Close message received with status {status} and description {description}")]
+    internal static partial void CloseMessageReceived(ILogger logger, WebSocketCloseStatus? status, string description);
 
     [LoggerMessage(16, LogLevel.Warning, "WSS: Unexpected message type {webSocketMessageType}")]
     internal static partial void UnexpectedMessageType(ILogger logger, WebSocketMessageType webSocketMessageType);
@@ -82,4 +82,46 @@ internal static partial class JetStreamLogger
 
     [LoggerMessage(31, LogLevel.Warning, "Connecting to {uri} without transport security. The dids and collections being subscribed to will be sent in plain text.")]
     internal static partial void ConnectingWithoutTransportSecurity(ILogger logger, Uri uri);
+
+    [LoggerMessage(32, LogLevel.Information, "Reconnecting to apply updated filters")]
+    internal static partial void ReconnectingForUpdatedFilters(ILogger logger);
+
+    [LoggerMessage(33, LogLevel.Error, "Reconnecting to apply updated filters failed")]
+    internal static partial void ReconnectForUpdatedFiltersFailed(ILogger logger, Exception ex);
+
+    [LoggerMessage(34, LogLevel.Error, "The jetstream refused the connection with status code {statusCode} and error {error}")]
+    internal static partial void ConnectionRefused(ILogger logger, int statusCode, string? error);
+
+    [LoggerMessage(35, LogLevel.Debug, "Loaded compression dictionary {dictionaryId}")]
+    internal static partial void DictionaryLoaded(ILogger logger, uint dictionaryId);
+
+    [LoggerMessage(36, LogLevel.Warning, "The reason the jetstream refused the connection could not be read")]
+    internal static partial void CouldNotReadConnectionError(ILogger logger, Exception ex);
+
+    [LoggerMessage(37, LogLevel.Error, "The jetstream sent error {error}")]
+    internal static partial void ErrorReceived(ILogger logger, string error);
+
+    [LoggerMessage(38, LogLevel.Information, "The jetstream sent notice {name}")]
+    internal static partial void InfoReceived(ILogger logger, string name);
+
+    [LoggerMessage(39, LogLevel.Trace, "Skipped event {sequence}, which was delivered before reconnecting")]
+    internal static partial void DuplicateEventSkipped(ILogger logger, long sequence);
+
+    [LoggerMessage(40, LogLevel.Information, "Applying filters which changed whilst the connection was being opened")]
+    internal static partial void ApplyingFiltersChangedWhilstConnecting(ILogger logger);
+
+    [LoggerMessage(41, LogLevel.Information, "Connecting to {uri}, which is a different server, so the sequence number and compression dictionary have been reset")]
+    internal static partial void ServerChanged(ILogger logger, Uri uri);
+
+    [LoggerMessage(42, LogLevel.Warning, "Replay live connection ended: {reason}; starting cursor {cursor}, last received sequence {sequence}, buffered events {bufferedEvents}, capacity {capacity}")]
+    internal static partial void ReplayLiveEnded(ILogger logger, string reason, long cursor, long? sequence, int bufferedEvents, int capacity, Exception? exception);
+
+    [LoggerMessage(43, LogLevel.Debug, "Receive loop stopped for {reason}")]
+    internal static partial void ReceiveLoopStopped(ILogger logger, string reason);
+
+    [LoggerMessage(44, LogLevel.Warning, "Replay recovering from {reason} at delivered sequence {sequence}")]
+    internal static partial void ReplayRecovering(ILogger logger, string reason, long sequence, Exception exception);
+
+    [LoggerMessage(45, LogLevel.Debug, "Replay live cleanup: {reason}; starting cursor {cursor}")]
+    internal static partial void ReplayLiveCleanup(ILogger logger, string reason, long cursor);
 }

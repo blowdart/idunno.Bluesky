@@ -13,22 +13,25 @@ namespace idunno.Bluesky.RichText;
 public sealed record TagFacetFeature : FacetFeature
 {
     /// <summary>
-    /// Creates a new instance of <see cref="TagFacetFeature"/>.
+    /// Initializes a new instance of the <see cref="TagFacetFeature"/> class.
     /// </summary>
     /// <param name="tag">The hashtag referred to.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tag"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="tag"/> is white space.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="tag"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tag"/> is longer than 640 UTF-8 bytes or 64 graphemes.</exception>
+    /// <remarks>
+    /// <para>The lexicon permits empty and whitespace-only tags. The value is preserved unchanged.
+    /// Use <see cref="HashTag"/> for authoring hashtags with nonempty, non-whitespace values.</para>
+    /// </remarks>
     public TagFacetFeature(string tag)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(tag);
+        ArgumentNullException.ThrowIfNull(tag);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
         Tag = tag;
     }
 
     /// <summary>
-    /// The hashtag referred to.
+    /// Gets the hashtag referred to, which may be empty or whitespace-only.
     /// </summary>
     [JsonInclude]
     [JsonRequired]

@@ -19,17 +19,15 @@ public sealed record SystemMessageView : MessageViewBase
     /// <param name="id">The message ID.</param>
     /// <param name="revision">The message revision.</param>
     /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="id"/>, <paramref name="revision"/> or <paramref name="data"/> is <see langword="null"/>.</exception>
     public SystemMessageView(
         SystemMessage data,
         string id,
         string revision,
         DateTimeOffset sentAt) : base()
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentNullException.ThrowIfNull(id);
+        ArgumentNullException.ThrowIfNull(revision);
         ArgumentNullException.ThrowIfNull(data);
 
         Id = id;

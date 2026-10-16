@@ -1,15 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
-using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
 
@@ -23,7 +18,8 @@ public partial class BlueskyAgent
     /// <param name="value">The reaction to add.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when any of <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> are <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="value"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1, or is longer than <see cref="Maximum.ReactionLengthInBytes"/> UTF-8 bytes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<MessageView>> AddReaction(
@@ -32,8 +28,8 @@ public partial class BlueskyAgent
         string value,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
 

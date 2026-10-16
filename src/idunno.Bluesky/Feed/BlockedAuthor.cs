@@ -4,7 +4,6 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
-using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Feed;
 

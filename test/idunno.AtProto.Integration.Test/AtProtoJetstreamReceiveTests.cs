@@ -1,17 +1,21 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable CS0618 // These tests verify the legacy event callback contract.
+
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Jetstream.Events;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 using ZstdSharp;
 
@@ -134,7 +138,6 @@ public class AtProtoJetstreamReceiveTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using var server = new TestJetstreamServer();
-
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
             await SendText(webSocket, IdentityEvent(), serverCancellationToken);
@@ -145,7 +148,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.ConnectionStateChanged += (sender, e) =>
             {
@@ -176,11 +179,8 @@ public class AtProtoJetstreamReceiveTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
-        using var server = new TestJetstreamServer
-        {
-            // Holds the first connection attempt open long enough for the others to be made whilst it is in flight.
-            AcceptDelay = TimeSpan.FromSeconds(1)
-        };
+        TaskCompletionSource accept = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer { AcceptConnection = accept.Task };
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
@@ -191,7 +191,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false }))
         {
             jetstream.MessageReceived += (sender, e) => messages.Enqueue(e.Message);
 
@@ -202,14 +202,22 @@ public class AtProtoJetstreamReceiveTests
             {
                 Task[] connections =
                 [
-                    .. Enumerable.Range(0, 4).Select(_ => Task.Run(
-                        async () => await jetstream.ConnectAsync(
+                    .. Enumerable.Range(0, 4).Select(_ => jetstream.ConnectAsync(
                             uri: server.Uri,
                             cursor: null,
                             httpClient: httpClient,
-                            cancellationToken: cancellationToken),
-                        cancellationToken))
+                            cancellationToken: cancellationToken))
                 ];
+
+                try
+                {
+                    await server.AcceptRequested.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                    Assert.All(connections, connection => Assert.False(connection.IsCompleted));
+                }
+                finally
+                {
+                    accept.TrySetResult();
+                }
 
                 await Task.WhenAll(connections).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
@@ -263,6 +271,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
 
                 // This server never reads, so it never answers the close the jetstream sends. Without a shorter deadline
@@ -335,7 +344,7 @@ public class AtProtoJetstreamReceiveTests
 
         using var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1) });
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, CloseTimeout = TimeSpan.FromSeconds(1) });
 
         jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult();
 
@@ -370,6 +379,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = useCompression,
                 MaxMessageSize = maximumMessageSize
             }))
@@ -420,6 +430,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 MaxMessageSize = 2048,
 
@@ -467,13 +478,23 @@ public class AtProtoJetstreamReceiveTests
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
         using var server = new TestJetstreamServer();
+        TaskCompletionSource firstParserEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource allMessagesSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ManualResetEventSlim releaseParsers = new();
 
         await server.Start(async (webSocket, serverCancellationToken) =>
         {
             for (int sequence = 1; sequence <= messageCount; sequence++)
             {
                 await SendText(webSocket, IdentityEvent(sequence), serverCancellationToken);
+
+                if (sequence == 1)
+                {
+                    await firstParserEntered.Task.WaitAsync(serverCancellationToken);
+                }
             }
+
+            allMessagesSent.TrySetResult();
         });
 
         int inFlight = 0;
@@ -484,7 +505,7 @@ public class AtProtoJetstreamReceiveTests
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, MaximumConcurrentMessageParsers = 1 }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MaximumConcurrentMessageParsers = 1 }))
         {
             jetstream.RecordReceived += (sender, e) =>
             {
@@ -495,11 +516,16 @@ public class AtProtoJetstreamReceiveTests
                     maximumInFlight = Math.Max(maximumInFlight, current);
                 }
 
-                // Held long enough that anything dispatched alongside this one overlaps it.
-                Thread.Sleep(50);
-
-                Interlocked.Decrement(ref inFlight);
-                allParsed.Signal();
+                firstParserEntered.TrySetResult();
+                try
+                {
+                    releaseParsers.Wait(cancellationToken);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref inFlight);
+                    allParsed.Signal();
+                }
             };
 
             using (var httpClient = new HttpClient())
@@ -510,6 +536,8 @@ public class AtProtoJetstreamReceiveTests
                     httpClient: httpClient,
                     cancellationToken: cancellationToken);
 
+                await allMessagesSent.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                releaseParsers.Set();
                 Assert.True(allParsed.Wait(TimeSpan.FromSeconds(30), cancellationToken));
 
                 // Without a limit every message read is handed straight to the task factory, so a server which sends
@@ -539,18 +567,23 @@ public class AtProtoJetstreamReceiveTests
             }
         });
 
-        using var meterFactory = new TestMeterFactory();
-        using var allHandled = new CountdownEvent(messageCount);
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        TaskCompletionSource allHandled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int remaining = messageCount;
 
         using (var jetstream = new AtProtoJetstream(
             uri: server.Uri,
-            options: new JetstreamOptions { UseCompression = false, MeterFactory = meterFactory }))
+            options: new JetstreamOptions { ProtocolVersion = JetstreamProtocolVersion.V1, UseCompression = false, MeterFactory = meterFactory }))
         {
-            using var collector = new MetricCollector<long>(meterFactory, "idunno.AtProto.Jetstream", "idunno.atproto.jetstream.total.message_parsing_failures");
+            using var collector = new MetricCollector<long>(meterFactory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.message_parsing_failures");
 
             jetstream.RecordReceived += (sender, e) =>
             {
-                allHandled.Signal();
+                if (Interlocked.Decrement(ref remaining) == 0)
+                {
+                    allHandled.TrySetResult();
+                }
 
                 throw new InvalidOperationException("Handler failure.");
             };
@@ -563,11 +596,8 @@ public class AtProtoJetstreamReceiveTests
                     httpClient: httpClient,
                     cancellationToken: cancellationToken);
 
-                Assert.True(allHandled.Wait(TimeSpan.FromSeconds(30), cancellationToken));
-
-                // The handler signals before it throws, so the catch which decides whether to count the failure has
-                // not necessarily run yet. Give it time to land rather than reading the counter out from under it.
-                await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                await allHandled.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                await jetstream.DrainMessageParsersAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
                 // A handler is application code. An exception out of one says nothing about the message, so counting
                 // it as a parsing failure makes an application bug indistinguishable from a malformed server message.
@@ -604,6 +634,7 @@ public class AtProtoJetstreamReceiveTests
             uri: server.Uri,
             options: new JetstreamOptions
             {
+                ProtocolVersion = JetstreamProtocolVersion.V1,
                 UseCompression = false,
                 MaximumConcurrentMessageParsers = 2,
                 TaskFactory = new TaskFactory(new RefusingTaskScheduler())
@@ -668,19 +699,11 @@ public class AtProtoJetstreamReceiveTests
 
     private sealed class TestJetstreamServer : IDisposable
     {
-        private readonly HttpListener _listener = new();
+        private HttpListener _listener = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private int _connectionCount;
 
-        public TestJetstreamServer()
-        {
-            int port = FreePort();
-
-            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
-            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
-        }
-
-        public Uri Uri { get; }
+        public Uri Uri { get; private set; } = new("ws://localhost");
 
         public string? RequestQuery { get; private set; }
 
@@ -690,13 +713,15 @@ public class AtProtoJetstreamReceiveTests
         public int ConnectionCount => _connectionCount;
 
         /// <summary>
-        /// How long to wait before accepting a connection, to keep a connection attempt in flight whilst another is made.
+        /// A gate which keeps a connection attempt in flight whilst another is made.
         /// </summary>
-        public TimeSpan AcceptDelay { get; set; } = TimeSpan.Zero;
+        public Task AcceptConnection { get; set; } = Task.CompletedTask;
+
+        public TaskCompletionSource AcceptRequested { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
         {
-            _listener.Start();
+            StartListener();
 
             _ = Task.Run(async () =>
             {
@@ -706,10 +731,8 @@ public class AtProtoJetstreamReceiveTests
 
                     RequestQuery = context.Request.Url?.Query;
 
-                    if (AcceptDelay > TimeSpan.Zero)
-                    {
-                        await Task.Delay(AcceptDelay, _cancellationTokenSource.Token);
-                    }
+                    AcceptRequested.TrySetResult();
+                    await AcceptConnection.WaitAsync(_cancellationTokenSource.Token);
 
                     HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
 
@@ -740,6 +763,43 @@ public class AtProtoJetstreamReceiveTests
             }, _cancellationTokenSource.Token);
 
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Binds the listener to a free port, retrying when another listener takes the port between it being found
+        /// and the listener binding it. <see cref="HttpListener"/> has no equivalent of binding port zero, so the
+        /// window cannot be closed, only retried out of.
+        /// </summary>
+        private void StartListener()
+        {
+            const int maximumAttempts = 20;
+
+            for (int attempt = 1; ; attempt++)
+            {
+                int port = FreePort();
+
+                // A listener that fails to start disposes itself, so each attempt needs a new one.
+                if (attempt > 1)
+                {
+                    _listener.Close();
+                    _listener = new HttpListener();
+                }
+
+                _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+
+                try
+                {
+                    _listener.Start();
+                }
+                catch (HttpListenerException) when (attempt < maximumAttempts)
+                {
+                    continue;
+                }
+
+                Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+
+                return;
+            }
         }
 
         public void Dispose()

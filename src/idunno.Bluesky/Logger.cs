@@ -245,6 +245,9 @@ internal static partial class Logger
     [LoggerMessage(150, LogLevel.Error, "GetUploadLimits getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
     internal static partial void GetUploadLimitsServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
+    [LoggerMessage(160, LogLevel.Error, "GetUploadStatus getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void GetUploadStatusServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
     // ListNotifications
     [LoggerMessage(154, LogLevel.Warning, "ListNotifications skipped a null notification returned by {service}")]
     internal static partial void ListNotificationsSkippedNullNotification(ILogger logger, Uri service);

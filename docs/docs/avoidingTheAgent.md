@@ -18,14 +18,14 @@ To discover the PDS endpoint for a user you first resolve the DID from the user 
 ```c#
 string userHandle = "example.bsky.social";
 
-var did = await idunno.AtProto.Resolution.ResolveHandle(userHandle, cancellationToken: cancellationToken);
+var did = await idunno.AtProto.IdentityResolution.ResolveHandleAsync(userHandle, cancellationToken: cancellationToken);
 if (did is null)
 {
     // Handle is invalid, error appropriately.
 }
 
 // Get the PDS for the DID.
-var pds = await idunno.AtProto.Resolution.ResolvePds(did, cancellationToken: cancellationToken);
+var pds = await idunno.AtProto.IdentityResolution.ResolvePdsAsync(did, cancellationToken: cancellationToken);
 if (pds is null)
 {
     // PDS could not be resolved, error appropriately.

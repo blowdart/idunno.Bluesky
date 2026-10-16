@@ -17,6 +17,7 @@ namespace idunno.Bluesky.Embed;
 [JsonDerivedType(typeof(EmbeddedRecord), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Record)]
 [JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.RecordWithMedia)]
 [JsonDerivedType(typeof(EmbeddedGallery), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Gallery)]
+[JsonDerivedType(typeof(Chat.Embed.JoinLink), typeDiscriminator: "chat.bsky.embed.joinLink")]
 public record EmbeddedBase : AtProtoRecord
 {
 }

@@ -16,7 +16,7 @@ public partial class BlueskyAgent
     /// <param name="allowIncoming">Specifies whether incoming messages are allowed. Known values are specified in <see cref="Chat.Actor.AllowIncoming"/></param>
     /// <param name="allowGroupInvites">Specifies whether group invites are allowed, or <see langword="null" /> to leave the preference unspecified. Known values are specified in <see cref="Chat.Actor.AllowGroupInvites"/></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="allowIncoming"/> is <see langword="null"/> or whitespace, or when <paramref name="allowGroupInvites"/> is whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="allowIncoming"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -27,12 +27,7 @@ public partial class BlueskyAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetConversationDeclaration(string allowIncoming, string? allowGroupInvites)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(allowIncoming);
-
-        if (allowGroupInvites is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(allowGroupInvites);
-        }
+        ArgumentNullException.ThrowIfNull(allowIncoming);
 
         if (!IsAuthenticated)
         {
@@ -49,7 +44,7 @@ public partial class BlueskyAgent
     /// <param name="allowGroupInvites">Specifies whether group invites are allowed, or <see langword="null" /> to leave the preference unspecified. Known values are specified in <see cref="Chat.Actor.AllowGroupInvites"/></param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="allowIncoming"/> is <see langword="null"/> or whitespace, or when <paramref name="allowGroupInvites"/> is whitespace.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="allowIncoming"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -60,12 +55,7 @@ public partial class BlueskyAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetConversationDeclaration(string allowIncoming, string? allowGroupInvites, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(allowIncoming);
-
-        if (allowGroupInvites is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(allowGroupInvites);
-        }
+        ArgumentNullException.ThrowIfNull(allowIncoming);
 
         if (!IsAuthenticated)
         {
@@ -91,7 +81,7 @@ public partial class BlueskyAgent
     /// <param name="declaration">The declaration record to update.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="declaration"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",

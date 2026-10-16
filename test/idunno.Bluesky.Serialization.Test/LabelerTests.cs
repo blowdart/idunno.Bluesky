@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto.Labels;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -440,5 +441,80 @@ public class LabelerTests
 
         Assert.NotNull(labelerView);
         Assert.Empty(labelerView.Labels);
+    }
+
+    // Neither JsonRequired nor RespectNullableAnnotations applies to a collection's element type, so a service can
+    // return a null inside an otherwise well formed collection. Both routes to LabelerPolicies are covered, because
+    // the declaration arrives through the generic repository record APIs rather than through a server wrapper.
+    [Fact]
+    public void LabelerViewDetailedDropsNullPolicyEntries()
+    {
+        string json = """
+            {
+                "$type": "app.bsky.labeler.defs#labelerViewDetailed",
+                "uri": "at://did:plc:ar7c4by46qjdydhdevvrndac/app.bsky.labeler.service/self",
+                "cid": "bafyreigu3v6uxtmx3rv7emh4yvuvz2tom7ib7a4yl3x2eimard2brqeaei",
+                "creator": {
+                    "did": "did:plc:ar7c4by46qjdydhdevvrndac",
+                    "handle": "moderation.bsky.app"
+                },
+                "likeCount": 8,
+                "indexedAt": "2024-03-13T15:52:53.522Z",
+                "policies": {
+                    "labelValues": ["spam", null, "scam"],
+                    "labelValueDefinitions": [
+                        null,
+                        {
+                            "identifier": "spam",
+                            "severity": "inform",
+                            "blurs": "content",
+                            "defaultSetting": "hide",
+                            "adultOnly": false,
+                            "locales": []
+                        }
+                    ]
+                }
+            }
+            """;
+
+        LabelerViewDetailed? labelerView =
+            Assert.IsType<LabelerViewDetailed>(JsonSerializer.Deserialize<LabelerView>(json, BlueskyServer.BlueskyJsonSerializerOptions));
+
+        Assert.Equal(["spam", "scam"], labelerView.Policies.LabelValues);
+
+        LabelValueDefinition labelValueDefinition = Assert.Single(labelerView.Policies.LabelValueDefinitions);
+        Assert.Equal("spam", labelValueDefinition.Identifier);
+    }
+
+    [Fact]
+    public void LabelerDeclarationRecordDropsNullPolicyEntries()
+    {
+        string json = """
+            {
+                "uri": "at://did:plc:ar7c4by46qjdydhdevvrndac/app.bsky.labeler.service/self",
+                "cid": "bafyreigu3v6uxtmx3rv7emh4yvuvz2tom7ib7a4yl3x2eimard2brqeaei",
+                "value": {
+                    "$type": "app.bsky.labeler.service",
+                    "createdAt": "2024-03-13T15:52:53.522Z",
+                    "policies": {
+                        "labelValues": [null, "spam"]
+                    }
+                }
+            }
+            """;
+
+        AtProtoRepositoryRecord<Service>? record =
+            JsonSerializer.Deserialize<AtProtoRepositoryRecord<Service>>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(record);
+        Assert.Equal(["spam"], record.Value.Policies.LabelValues);
+    }
+
+    [Fact]
+    public void LabelerPoliciesDropsNullLabelValuesWhenConstructed()
+    {
+        LabelerPolicies policies = new() { LabelValues = ["spam", null!, "scam"] };
+
+        Assert.Equal(["spam", "scam"], policies.LabelValues);
     }
 }

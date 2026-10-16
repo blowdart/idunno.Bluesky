@@ -52,6 +52,8 @@ $coreAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'CoreAnalysis' |
     Join-Path -ChildPath 'idunno.Trimming.CoreAnalysis.csproj'
 $authenticationAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'AuthenticationAnalysis' |
     Join-Path -ChildPath 'idunno.Trimming.AuthenticationAnalysis.csproj'
+$botAnalysisProject = Join-Path -Path $trimmingPath -ChildPath 'BotAnalysis' |
+    Join-Path -ChildPath 'idunno.Trimming.BotAnalysis.csproj'
 $publicApiSmokeProject = Join-Path -Path $trimmingPath -ChildPath 'PublicApiSmoke' |
     Join-Path -ChildPath 'idunno.Trimming.PublicApiSmoke.csproj'
 $packageConsumerSmokeProject = Join-Path -Path $trimmingPath -ChildPath 'PackageConsumerSmoke' |
@@ -67,6 +69,10 @@ $analysisProjects = @(
     @{
         Name = 'authentication'
         Path = $authenticationAnalysisProject
+    },
+    @{
+        Name = 'bot'
+        Path = $botAnalysisProject
     }
 )
 
@@ -77,8 +83,13 @@ $supportedProjects = @(
     'src/idunno.Bluesky/idunno.Bluesky.csproj',
     'src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj',
     'src/idunno.Bluesky.AspNet.Authentication.MySQL/idunno.Bluesky.AspNet.Authentication.MySQL.csproj',
+    'src/idunno.Bluesky.AspNet.Authentication.PostgreSQL/idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj',
     'src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj',
-    'src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj'
+    'src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj',
+    'src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj',
+    'src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj',
+    'src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj',
+    'src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj'
 )
 
 $excludedProjects = @{
@@ -130,8 +141,13 @@ $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($packageFeed
       <package pattern="idunno.Bluesky" />
       <package pattern="idunno.Bluesky.AspNet.Authentication" />
       <package pattern="idunno.Bluesky.AspNet.Authentication.MySQL" />
+      <package pattern="idunno.Bluesky.AspNet.Authentication.PostgreSQL" />
       <package pattern="idunno.Bluesky.AspNet.Authentication.Redis" />
       <package pattern="idunno.Bluesky.AspNet.Authentication.SQLite" />
+      <package pattern="idunno.Bluesky.BotSdk" />
+      <package pattern="idunno.Bluesky.BotSdk.MySQL" />
+      <package pattern="idunno.Bluesky.BotSdk.PostgreSQL" />
+      <package pattern="idunno.Bluesky.BotSdk.SQLite" />
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />

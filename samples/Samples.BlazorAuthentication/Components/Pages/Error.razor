@@ -1,0 +1,15 @@
+@page "/Error"
+@attribute [AllowAnonymous]
+
+<PageTitle>Error</PageTitle>
+<h1>Something went wrong</h1>
+<p role="alert">The request could not be completed. Check the server logs for details.</p>
+@if (HttpContext is not null)
+{
+    <p>Request ID: <code>@HttpContext.TraceIdentifier</code></p>
+}
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+}

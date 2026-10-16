@@ -1,0 +1,10 @@
+@*
+    This file shadows the _ViewStart.cshtml shipped in idunno.Bluesky.AspNet.Authentication.UI.
+
+    Files in an application take precedence over identically pathed files in a Razor Class
+    Library, so adding this file makes the login, logout, callback and error pages from the UI
+    package render inside this application's layout rather than the plain one the package ships.
+*@
+@{
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}

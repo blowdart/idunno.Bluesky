@@ -12,6 +12,55 @@ public class OAuthLoginStateTests
 {
     private static readonly Guid s_correlationId = Guid.NewGuid();
 
+    [Theory]
+    [InlineData(null, null, null)]
+    [InlineData("http://localhost?scope=atproto", "atproto include:com.example.authBasic", null)]
+    [InlineData("https://client.test/metadata.json", "atproto", "original-key")]
+    public void LoginRequestContextSurvivesSerialization(string? clientId, string? requestedScope, string? signingKeyId)
+    {
+        OAuthLoginState state = new(
+            new AuthorizeState { State = "state", CodeVerifier = "verifier", RedirectUri = "http://localhost/callback" },
+            "https://authority.test/",
+            "https://pds.test/",
+            "proofKey",
+            s_correlationId)
+        {
+            OAuthClientId = clientId,
+            RequestedScope = requestedScope,
+            ClientSigningKeyId = signingKeyId
+        };
+
+        OAuthLoginState restored = Assert.IsType<OAuthLoginState>(OAuthLoginState.FromJson(state.ToJson()));
+
+        Assert.Equal(clientId, restored.OAuthClientId);
+        Assert.Equal(requestedScope, restored.RequestedScope);
+        Assert.Equal(signingKeyId, restored.ClientSigningKeyId);
+        Assert.Equal(state, restored);
+        Assert.Equal(state.GetHashCode(), restored.GetHashCode());
+    }
+
+    [Theory]
+    [InlineData("http://localhost?scope=atproto", null, null)]
+    [InlineData(null, "atproto", null)]
+    [InlineData(null, null, "original-key")]
+    public void StatesDifferingOnlyByRequestContextAreNotEqual(string? clientId, string? requestedScope, string? signingKeyId)
+    {
+        OAuthLoginState state = CreateState();
+        OAuthLoginState changed = new(
+            state.ToAuthorizeState(),
+            state.ExpectedAuthority,
+            state.ExpectedService,
+            state.ProofKey,
+            state.CorrelationId)
+        {
+            OAuthClientId = clientId,
+            RequestedScope = requestedScope,
+            ClientSigningKeyId = signingKeyId
+        };
+
+        Assert.NotEqual(state, changed);
+    }
+
     private static OAuthLoginState CreateState(
         IDictionary<string, string>? extraProperties = null,
         string redirectUri = "https://client.test/callback") =>

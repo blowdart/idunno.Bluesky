@@ -1,10 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-
-using System.Net;
 
 namespace idunno.AtProto.OAuthCallback;
 
@@ -48,4 +48,7 @@ internal static partial class Logger
 
     [LoggerMessage(15, LogLevel.Error, "Rejected callback request which was not a navigation, Sec-Fetch-Dest was {fetchDestination}")]
     internal static partial void NonNavigationRequestRejected(ILogger logger, string fetchDestination);
+
+    [LoggerMessage(16, LogLevel.Warning, "Failed to record callback server metrics")]
+    internal static partial void MetricRecordingFailed(ILogger logger, Exception exception);
 }

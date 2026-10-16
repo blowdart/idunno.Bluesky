@@ -1,12 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
 
@@ -23,7 +19,6 @@ public partial class BlueskyAgent
     /// <param name="lockStatus">An optional filter limiting the results to conversations with the specified lock status. Known values are defined in <see cref="ConversationLockStatus"/>.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when any of <paramref name="readState"/>, <paramref name="status"/>, <paramref name="kind"/> or <paramref name="lockStatus"/> is specified and is whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <remarks>

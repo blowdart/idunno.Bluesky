@@ -54,6 +54,7 @@ public class OAuthClient
     private const string DPoPTokenType = "DPoP";
 
     private readonly OAuthOptions? _options;
+    private readonly TimeProvider _timeProvider;
 
 #if NET9_0_OR_GREATER
     private readonly Lock _stateLock = new();
@@ -67,6 +68,7 @@ public class OAuthClient
     private OidcClient? _oidcClient;
     private string? _oidcClientProofKey;
     private Uri? _oidcClientAuthority;
+    private string? _oidcClientSigningKeyId;
 
     private readonly Func<HttpClient, HttpClient> _clientConfigurationHandler = (httpClient) => { return httpClient; };
     private readonly Func<HttpMessageHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
@@ -75,26 +77,33 @@ public class OAuthClient
 
     // Internal state parameters
     private Guid _correlationId = Guid.NewGuid();
+    // Each install gets a fresh identity, even when the same saved state is restored again.
+    private object? _loginGeneration;
     private AuthorizeState? _authorizeState;
     private Uri? _expectedAuthority;
     private Uri? _expectedService;
     private string? _proofKey;
     private IDictionary<string, string>? _stateExtraProperties;
+    private string? _loginClientId;
+    private string? _loginRequestedScope;
+    private string? _loginSigningKeyId;
 
-    private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null)
+    private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null, TimeProvider? timeProvider = null)
     {
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<OAuthClient>();
 
         options?.Validate();
         _options = options;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     internal OAuthClient(
         Func<HttpClient, HttpClient> httpClientConfigurator,
         Func<HttpMessageHandler> innerHandlerFactory,
         ILoggerFactory? loggerFactory = null,
-        OAuthOptions? options = null) : this(loggerFactory, options)
+        OAuthOptions? options = null,
+        TimeProvider? timeProvider = null) : this(loggerFactory, options, timeProvider)
     {
         ArgumentNullException.ThrowIfNull(httpClientConfigurator);
         ArgumentNullException.ThrowIfNull(innerHandlerFactory);
@@ -148,7 +157,12 @@ public class OAuthClient
                         _expectedService.ToString(),
                         _proofKey,
                         _correlationId,
-                        _stateExtraProperties);
+                        _stateExtraProperties)
+                    {
+                        OAuthClientId = _loginClientId,
+                        RequestedScope = _loginRequestedScope,
+                        ClientSigningKeyId = _loginSigningKeyId
+                    };
                 }
             }
         }
@@ -162,12 +176,17 @@ public class OAuthClient
 
             lock (_stateLock)
             {
+                ClearOidcClient();
+                _loginGeneration = new object();
                 _authorizeState = value;
                 _expectedAuthority = expectedAuthority;
                 _expectedService = expectedService;
                 _proofKey = value.ProofKey;
                 _correlationId = value.CorrelationId;
                 _stateExtraProperties = value.ExtraProperties;
+                _loginClientId = value.OAuthClientId;
+                _loginRequestedScope = value.RequestedScope;
+                _loginSigningKeyId = value.ClientSigningKeyId;
             }
         }
     }
@@ -225,7 +244,7 @@ public class OAuthClient
             ArgumentOutOfRangeException.ThrowIfZero(requestedScopes.Length);
         }
 
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
@@ -239,7 +258,8 @@ public class OAuthClient
             clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
         }
 
-        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes);
+        string? signingKeyId = clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+        OidcClientOptions oidcClientOptions = BuildOidcClientOptions(proofKey, authority, clientId, returnUri, requestedScopes, signingKeyId);
 
         OidcClient oidcClient = new(oidcClientOptions);
 
@@ -280,14 +300,19 @@ public class OAuthClient
 
             lock (_stateLock)
             {
+                _loginGeneration = new object();
                 _oidcClient = oidcClient;
                 _oidcClientProofKey = proofKey;
                 _oidcClientAuthority = authority;
+                _oidcClientSigningKeyId = signingKeyId;
 
                 _proofKey = proofKey;
                 _expectedAuthority = authority;
                 _expectedService = service;
                 _authorizeState = authorizeState;
+                _loginClientId = clientId;
+                _loginRequestedScope = scopeString;
+                _loginSigningKeyId = signingKeyId;
                 _correlationId = correlationId;
 
                 // Replaced rather than merged, and copied rather than aliased, so a second login on this instance neither
@@ -321,27 +346,14 @@ public class OAuthClient
         IEnumerable<string>? scopes = null,
         CancellationToken cancellationToken = default)
     {
-        clientId ??= _options?.ClientId;
-        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
-
-        string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
-        requestedScopes ??= [.. DefaultScopes];
-
-        string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
-
-        // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
-        // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
-        if (clientId == "http://localhost")
-        {
-            clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
-        }
-
         string proofKey;
         AuthorizeState authorizeState;
         Uri expectedService;
         Uri expectedAuthority;
         Guid correlationId;
+        object? loginGeneration;
+        string? savedScope;
+        string? signingKeyId;
 
         // Snapshot the login state as a set, so the rest of the exchange works against one consistent login even if
         // another thread starts a new one part way through.
@@ -360,14 +372,41 @@ public class OAuthClient
             expectedService = _expectedService;
             expectedAuthority = _expectedAuthority;
             correlationId = _correlationId;
+            loginGeneration = _loginGeneration;
+            clientId ??= _loginClientId;
+            savedScope = _loginRequestedScope;
+            signingKeyId = _loginSigningKeyId;
         }
 
-        // The login state is discarded however this call ends. The authorize state carries a single use PKCE code verifier
+        // This login's state is discarded however this call ends, without discarding a login installed since the snapshot.
+        // The authorize state carries a single use PKCE code verifier
         // which the authorization server has spent by the time a response is processed, and the proof key is a private key,
         // so neither has any further use to this instance and both remain readable through State until they are cleared.
         try
         {
-            OidcClient oidcClient = GetOrCreateOidcClient(proofKey, expectedAuthority, clientId, scopes: requestedScopes);
+            clientId ??= _options?.ClientId;
+            ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+            signingKeyId ??= clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ? null : _options?.ClientSigningKey?.KeyId;
+            if (signingKeyId is not null &&
+                (_options is null || _options.GetClientSigningKey(signingKeyId, out bool found) is null || !found))
+            {
+                throw new OAuthException("The signing key used to start this login is no longer configured.");
+            }
+
+            string[]? requestedScopes = scopes is null ? null : [.. scopes];
+            requestedScopes ??= savedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
+            requestedScopes ??= [.. DefaultScopes];
+            string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
+
+            if (clientId == "http://localhost")
+            {
+                clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
+            }
+
+            OidcClient oidcClient = GetOrCreateOidcClient(
+                proofKey, expectedAuthority, clientId, scopes: requestedScopes, signingKeyId: signingKeyId, loginGeneration: loginGeneration);
 
             LoginResult loginResult = await oidcClient.ProcessResponseAsync(callbackData, authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -417,49 +456,75 @@ public class OAuthClient
                 loginResult.AccessToken,
                 loginResult.RefreshToken,
                 proofKey,
-                loginResult.TokenResponse.DPoPNonce);
+                loginResult.TokenResponse.DPoPNonce)
+            {
+                OAuthClientId = clientId,
+                RequestedScope = scopeString,
+                ClientSigningKeyId = signingKeyId
+            };
         }
         finally
         {
-            ClearLoginState();
+            ClearLoginState(loginGeneration);
         }
     }
 
     /// <summary>
-    /// Discards the state of the login in progress.
+    /// Discards the state of the processed login if it is still installed.
     /// </summary>
+    /// <param name="loginGeneration">The identity of the installed login being processed.</param>
     /// <remarks>
     /// <para>
     ///   The state is discarded as a set. Clearing only the proof key would leave the authorize state, and its single use
     ///   PKCE code verifier, available to a subsequent call which has no proof key to bind a token to.
     /// </para>
     /// </remarks>
-    private void ClearLoginState()
+    private void ClearLoginState(object? loginGeneration)
     {
         lock (_stateLock)
         {
+            if (!ReferenceEquals(_loginGeneration, loginGeneration))
+            {
+                return;
+            }
+
+            _loginGeneration = null;
+            _correlationId = Guid.Empty;
             _proofKey = null;
             _authorizeState = null;
             _expectedAuthority = null;
             _expectedService = null;
             _stateExtraProperties = null;
+            _loginClientId = null;
+            _loginRequestedScope = null;
+            _loginSigningKeyId = null;
 
-            _oidcClient = null;
-            _oidcClientProofKey = null;
-            _oidcClientAuthority = null;
+            ClearOidcClient();
         }
     }
 
-    private void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
+    private void ClearOidcClient()
     {
-        if (grantedScopes is null)
+        _oidcClient = null;
+        _oidcClientProofKey = null;
+        _oidcClientSigningKeyId = null;
+        _oidcClientAuthority = null;
+    }
+
+    internal void WarnOnScopesNotGranted(IEnumerable<string> requestedScopes, string? grantedScopes, Guid correlationId)
+    {
+        if (grantedScopes is null || grantedScopes.StartsWith("ref:", StringComparison.Ordinal))
         {
             return;
         }
 
         string[] granted = grantedScopes.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        foreach (string requestedScope in requestedScopes.Where(s => !string.IsNullOrEmpty(s) && !granted.Contains(s, StringComparer.Ordinal)))
+        // Permission sets can be expanded into granular grants, so their include: strings cannot be compared literally.
+        foreach (string requestedScope in requestedScopes.Where(s =>
+            !string.IsNullOrEmpty(s) &&
+            !s.StartsWith("include:", StringComparison.Ordinal) &&
+            !granted.Contains(s, StringComparer.Ordinal)))
         {
             Logger.OAuthScopeNotGranted(_logger, correlationId, requestedScope, grantedScopes);
         }
@@ -558,12 +623,13 @@ public class OAuthClient
         ArgumentNullException.ThrowIfNull(authority);
 
         string[]? requestedScopes = scopes is null ? null : [.. scopes];
-        requestedScopes ??= _options?.Scopes is null ? null : [.. _options.Scopes];
+        requestedScopes ??= refreshCredential.RequestedScope?.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        requestedScopes ??= _options is null ? null : [.. _options.GetRequestedScopes()];
         requestedScopes ??= [.. DefaultScopes];
 
         string scopeString = string.Join(" ", requestedScopes.Where(s => !string.IsNullOrEmpty(s)));
 
-        clientId ??= _options?.ClientId;
+        clientId ??= refreshCredential.OAuthClientId ?? _options?.ClientId;
 
         ArgumentNullException.ThrowIfNull(clientId);
 
@@ -595,6 +661,7 @@ public class OAuthClient
 
         oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
         oidcOptions.ConfigureDPoP(refreshCredential.DPoPProofKey);
+        string? signingKeyId = ConfigureClientAssertion(oidcOptions, clientId, authority, refreshCredential.ClientSigningKeyId);
 
         OidcClient client = new(oidcOptions);
 
@@ -657,7 +724,12 @@ public class OAuthClient
                     refreshResult.AccessToken,
                     refreshResult.RefreshToken,
                     refreshCredential.DPoPProofKey,
-                    refreshCredential.DPoPNonce);
+                    refreshCredential.DPoPNonce)
+                {
+                    OAuthClientId = clientId,
+                    RequestedScope = scopeString,
+                    ClientSigningKeyId = signingKeyId
+                };
             }
         }
     }
@@ -748,7 +820,7 @@ public class OAuthClient
     internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId)
     {
         TimeSpan clockSkew = _options?.ClockSkew ?? OAuthOptions.DefaultClockSkew;
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         DateTimeOffset? validFrom = ToUtcDateTimeOffset(accessToken.ValidFrom);
         DateTimeOffset? validTo = ToUtcDateTimeOffset(accessToken.ValidTo);
@@ -783,11 +855,13 @@ public class OAuthClient
 
         // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
         // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
+        // A case-sensitive "ref:" prefix references scopes and permission sets resolved by the server.
         if (!accessToken.TryGetClaim("scope", out Claim? scopeClaim) ||
-            !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal))
+            (!scopeClaim.Value.StartsWith("ref:", StringComparison.Ordinal) &&
+             !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal)))
         {
-            Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, correlationId);
-            throw new OAuthException("Issued token does not contain atproto in scope.");
+            Logger.OAuthTokenScopeDoesNotContainAtProtoOrBeginWithReference(_logger, correlationId);
+            throw new OAuthException("Issued token scope does not contain atproto or begin with ref:.");
         }
 
         if (!Uri.TryCreate(accessToken.Issuer, UriKind.Absolute, out Uri? issuer))
@@ -810,6 +884,7 @@ public class OAuthClient
     /// <param name="clientId">The client ID.</param>
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
+    /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
     /// <returns>The <see cref="OidcClientOptions"/> to build an <see cref="OidcClient"/> from.</returns>
     /// <remarks>
     /// <para>
@@ -824,7 +899,8 @@ public class OAuthClient
         Uri authority,
         string? clientId = null,
         Uri? returnUri = null,
-        IEnumerable<string>? scopes = null)
+        IEnumerable<string>? scopes = null,
+        string? signingKeyId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(proofKey);
         ArgumentNullException.ThrowIfNull(authority);
@@ -845,6 +921,7 @@ public class OAuthClient
         if (clientId is not null)
         {
             oidcOptions.ClientId = clientId;
+            ConfigureClientAssertion(oidcOptions, clientId, authority, signingKeyId);
         }
 
         if (returnUri is not null)
@@ -865,6 +942,50 @@ public class OAuthClient
     }
 
     /// <summary>
+    /// Configures <paramref name="oidcOptions"/> to authenticate with a JWT client assertion when a client signing key is configured.
+    /// </summary>
+    /// <param name="oidcOptions">The options to configure.</param>
+    /// <param name="clientId">The client ID the assertion is issued for.</param>
+    /// <param name="authority">The authorization server the assertion is for.</param>
+    /// <param name="signingKeyId">
+    /// The identifier of the key the session started with, or <see langword="null"/> to use the active client signing key.
+    /// </param>
+    /// <returns>The identifier of the key the assertion is signed with, or <see langword="null"/> if no assertion is configured.</returns>
+    /// <remarks>
+    /// <para>
+    ///   The assertion is created by a callback rather than once, so each pushed authorization, token and refresh request,
+    ///   including a retry after a DPoP nonce challenge, carries a fresh <c>jti</c>. Localhost development client IDs are
+    ///   always public clients, so they never carry an assertion.
+    /// </para>
+    /// <para>
+    ///   A <paramref name="signingKeyId"/> which matches no configured key falls back to the active key. The authorization
+    ///   server rejects the request if the session is bound to the missing key, which ends the session.
+    /// </para>
+    /// </remarks>
+    internal string? ConfigureClientAssertion(OidcClientOptions oidcOptions, string clientId, Uri authority, string? signingKeyId = null)
+    {
+        if (_options is null ||
+            clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase) ||
+            _options.GetClientSigningKey(signingKeyId, out bool found) is not OAuthClientSigningKey signingKey)
+        {
+            return null;
+        }
+
+        if (!found)
+        {
+            Logger.OAuthClientSigningKeyNotFound(_logger, signingKeyId!, signingKey.KeyId);
+        }
+
+        oidcOptions.GetClientAssertionAsync = () => Task.FromResult(new ClientAssertion
+        {
+            Type = OAuthClientSigningKey.JwtBearerClientAssertionType,
+            Value = signingKey.CreateClientAssertion(clientId, authority, _timeProvider.GetUtcNow(), _options.ClientAssertionClockSkew)
+        });
+
+        return signingKey.KeyId;
+    }
+
+    /// <summary>
     /// Gets the cached <see cref="OidcClient"/> if it was built for the specified <paramref name="proofKey"/> and
     /// <paramref name="authority"/>, otherwise builds a new one and caches it.
     /// </summary>
@@ -873,6 +994,8 @@ public class OAuthClient
     /// <param name="clientId">The client ID.</param>
     /// <param name="returnUri">The redirect uri, if the flow needs one.</param>
     /// <param name="scopes">The scopes to request, if any.</param>
+    /// <param name="signingKeyId">The signing key ID retained for this login, if any.</param>
+    /// <param name="loginGeneration">The identity of the installed login being processed, if any.</param>
     /// <returns>An <see cref="OidcClient"/> configured for the specified <paramref name="proofKey"/> and <paramref name="authority"/>.</returns>
     /// <remarks>
     /// <para>
@@ -886,22 +1009,31 @@ public class OAuthClient
         Uri authority,
         string? clientId = null,
         Uri? returnUri = null,
-        IEnumerable<string>? scopes = null)
+        IEnumerable<string>? scopes = null,
+        string? signingKeyId = null,
+        object? loginGeneration = null)
     {
         lock (_stateLock)
         {
             if (_oidcClient is not null &&
                 string.Equals(_oidcClientProofKey, proofKey, StringComparison.Ordinal) &&
-                _oidcClientAuthority == authority)
+                _oidcClientAuthority == authority &&
+                string.Equals(_oidcClientSigningKeyId, signingKeyId, StringComparison.Ordinal))
             {
                 return _oidcClient;
             }
 
-            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes));
+            OidcClient oidcClient = new(BuildOidcClientOptions(proofKey, authority, clientId, returnUri, scopes, signingKeyId));
 
-            _oidcClient = oidcClient;
-            _oidcClientProofKey = proofKey;
-            _oidcClientAuthority = authority;
+            // An older exchange can reach this point after another login has replaced it. It can use its own client,
+            // but must not leave that client's private key cached on the instance.
+            if (ReferenceEquals(_loginGeneration, loginGeneration))
+            {
+                _oidcClient = oidcClient;
+                _oidcClientProofKey = proofKey;
+                _oidcClientAuthority = authority;
+                _oidcClientSigningKeyId = signingKeyId;
+            }
 
             return oidcClient;
         }

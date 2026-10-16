@@ -15,7 +15,7 @@ namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
-    private static readonly TimeSpan VideoUploadPollingInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan s_videoUploadPollingInterval = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/>.
@@ -151,7 +151,7 @@ public partial class BlueskyAgent
                     continue;
                 }
 
-                PostBuilder postBuilder = new()
+                PostBuilder postBuilder = new(text: null, createdAt: RecordTimeProvider.GetUtcNow())
                 {
                     Text = draftPost.Text,
                     Langs = draftWithId.Draft.Langs,
@@ -159,7 +159,7 @@ public partial class BlueskyAgent
 
                 if (extractFacets)
                 {
-                    await postBuilder.ExtractFacets(FacetExtractor, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await postBuilder.ExtractFacetsAsync(FacetExtractor, cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
 
                 if (draftPost.Labels is not null)
@@ -211,7 +211,7 @@ public partial class BlueskyAgent
                 if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords.Count != 0)
                 {
                     EmbeddedRecord embeddedRecord = new(draftPost.EmbedRecords[0].Record);
-                    postBuilder.EmbedRecord(embeddedRecord);
+                    postBuilder.WithEmbed(embeddedRecord);
                 }
 
                 // Upload the images for the post, then attach.
@@ -300,7 +300,7 @@ public partial class BlueskyAgent
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            await Task.Delay(VideoUploadPollingInterval, cancellationToken: cancellationToken).ConfigureAwait(false);
+                            await Task.Delay(s_videoUploadPollingInterval, cancellationToken: cancellationToken).ConfigureAwait(false);
                             uploadResult = await GetJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 

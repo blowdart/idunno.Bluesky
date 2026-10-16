@@ -7,6 +7,7 @@ using System.Security.Claims;
 using idunno.AtProto;
 
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -245,9 +246,11 @@ public class BlueskyAuthenticationHandlerTests
         // ExpireTimeSpan is the lifetime of the ticket inside the protected cookie, which is what makes a stolen
         // cookie stop working. Nothing else writes ExpiresUtc, so without the handler defaulting it the cookie is
         // honoured for as long as it is presented, however long ago it was issued.
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
         await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
             configureOptions: options =>
             {
+                options.TimeProvider = timeProvider;
                 options.ExpireTimeSpan = TimeSpan.FromSeconds(1);
 
                 // The identity store TTL follows ExpireTimeSpan by default, so without this the identity would age out
@@ -255,12 +258,14 @@ public class BlueskyAuthenticationHandlerTests
                 options.IdentityStoreEntryTimeToLive = TimeSpan.FromDays(1);
             });
 
+        Assert.Same(timeProvider, host.Options.TimeProvider);
+
         Did did = TestData.NewDid();
 
         // No expiresUtc, so the handler has to supply one from ExpireTimeSpan.
         string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
 
-        await Task.Delay(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         MetricCollector<long> collector = AuthenticationOutcomeCollector(host);
 
@@ -299,19 +304,33 @@ public class BlueskyAuthenticationHandlerTests
     [Fact]
     public async Task SlidingExpirationReissuesTheCookieOnceTheTicketIsPastItsHalfwayPoint()
     {
-        await using AuthenticationTestHost host = await AuthenticationTestHost.Create();
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        bool shouldRenew = false;
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
+            configureOptions: options =>
+            {
+                options.TimeProvider = timeProvider;
+                options.Events.OnCheckSlidingExpiration = context =>
+                {
+                    shouldRenew = context.ShouldRenew;
+                    return Task.CompletedTask;
+                };
+            });
 
-        // Issued now and expiring in four seconds, so after a wait of more than two the ticket is past halfway and
+        Assert.Same(timeProvider, host.Options.TimeProvider);
+
+        // Issued now and expiring in four seconds, so after advancing past two the ticket is past halfway and
         // should be renewed, while still being well inside its lifetime.
         string cookie = await host.SignInAndCaptureCookie(
             TestData.AuthenticatedClaimsIdentity(TestData.NewDid()),
-            expiresUtc: DateTimeOffset.UtcNow.AddSeconds(4));
+            expiresUtc: timeProvider.GetUtcNow().AddSeconds(4));
 
-        await Task.Delay(TimeSpan.FromMilliseconds(2500), TestContext.Current.CancellationToken);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(2500));
 
         using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
 
         Assert.Contains("succeeded=True", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.True(shouldRenew);
         Assert.NotNull(AuthenticationTestHost.SetCookieHeader(response, AuthenticationTestHost.CookieName));
     }
 

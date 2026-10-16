@@ -297,7 +297,39 @@ public static partial class AtProtoServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
+    public static Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
+        Did audience,
+        TimeSpan? expiry,
+        Nsid lxm,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default) =>
+        GetServiceAuthWithTimeProvider(
+            TimeProvider.System,
+            audience,
+            expiry,
+            lxm,
+            service,
+            accessCredentials,
+            httpClient,
+            credentialsUpdated,
+            loggerFactory,
+            maximumResponseSize,
+            cancellationToken);
+
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    internal static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuthWithTimeProvider(
+        TimeProvider timeProvider,
         Did audience,
         TimeSpan? expiry,
         Nsid lxm,
@@ -309,6 +341,7 @@ public static partial class AtProtoServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(audience);
         ArgumentNullException.ThrowIfNull(lxm);
         ArgumentNullException.ThrowIfNull(accessCredentials);
@@ -327,7 +360,7 @@ public static partial class AtProtoServer
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"aud={Uri.EscapeDataString(audience)}");
         if (expiry is not null)
         {
-            DateTimeOffset expiresOn = DateTimeOffset.UtcNow + expiry.Value;
+            DateTimeOffset expiresOn = timeProvider.GetUtcNow() + expiry.Value;
 
             endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
         }

@@ -1,7 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\JetstreamArchiveLikes.json" />
+  </ItemGroup>
+
+  <!-- The allocation budget tests replay the benchmark corpora through the benchmark helpers. -->
+  <ItemGroup>
+    <Compile Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Shared\*.cs" LinkBase="Benchmarks" />
+    <None Include="..\..\benchmarks\idunno.AtProto.Benchmarks\Corpus\*.bin.gz" LinkBase="Corpus" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

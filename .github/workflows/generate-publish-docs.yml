@@ -55,6 +55,10 @@ jobs:
     - name: 'Build projects'
       run: dotnet build --configuration Release --property:PublicRelease=true
 
+    - name: 'Test frontend'
+      working-directory: samples/Samples.ReactBff/ClientApp
+      run: npm test
+
     - name: 'Generate docs'
       run: dotnet dnx docfx ./docs/docfx.json -y
 

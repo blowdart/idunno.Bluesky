@@ -23,13 +23,31 @@ public class IndexModel(BlueskyAgent agent) : PageModel
 
 If you use the `idunno.Bluesky.AspNet.Authentication` to authenticate against Bluesky the injected factory will be authenticated if the current request is authenticated.
 
+## Production Configuration
+
+See [Production configuration](productionConfiguration.md) for deployment URLs, persistent stores, trusted proxies,
+signing keys and operational checks.
+
 ## Authenticating with Bluesky
 
 `idunno.Bluesky.AspNet.Authentication` provides an ASP.NET Core authentication handler for Bluesky, which is based on OAuth. Accompanying this is a Razor Pages default
 UI package, `idunno.Bluesky.AspNet.Authentication.UI`, which provides login and logout pages, as well as code to process the OAuth callback.
 
 `Samples.AspNetAuthentication` is a Razor Pages sample application that demonstrates how to use the authentication handler, and how an injected agent can be used to
-perform authenticated operations.
+perform authenticated operations. It requests `atproto` and `BlueskyOAuthPermissionSets.FullApp` at login, allowing
+timeline reads and profile edits without a second consent flow. `FullApp` is intentionally broad to keep this sample simple;
+production applications should choose permissions appropriate to their features.
+
+For a React frontend with server-side OAuth credentials, see the [React BFF sample](reactBff.md).
+
+`Samples.BlazorAuthentication` provides the same timeline, claims and profile-editing functionality in a Blazor Web App
+using Interactive Server, with the library's Razor Pages UI for login, logout and callbacks.
+See its [setup and rendering notes](../../samples/Samples.BlazorAuthentication/readme.md).
+Its circuit client uses current server-side credentials and coordinates refresh through the identity store, while a
+revalidating authentication state provider checks session removal and cookie expiry. Cookie renewal still requires an
+HTTP request; the sample sends antiforgery-protected, activity-based renewal requests without reloading the page and
+passes a server-protected expiry receipt back to the circuit. Idle tabs still expire. Login and logout use full-page
+navigation rather than circuit events.
 
 ### Adding Bluesky Authentication to your ASP.NET Razor Pages application
 
@@ -71,15 +89,27 @@ Next, in your `appsettings.json` or `appsettings.Development.json` add configura
         "EnableBackgroundTokenRefresh": false,
 
         "OAuthOptions": {
-            "ClientId": "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20transition:generic",
+            "ClientId": "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20include%3Aapp.bsky.authFullApp%3Faud%3Ddid%253Aweb%253Aapi.bsky.app%2523bsky_appview",
             "ReturnUri": "http://127.0.0.1/Bluesky/Callback",
-            "Scopes": [ "atproto", "transition:generic" ]
+            "Scopes": [ "atproto" ],
+            "PermissionSets": [
+                {
+                    "Nsid": "app.bsky.authFullApp",
+                    "Audience": "did:web:api.bsky.app#bsky_appview"
+                }
+            ]
         }
     }
 ```
 
 Note that the client ID and return URI are both http. When you run the application you should use the http profile, or edit the URIs to match your HTTPS configuration.
 In production these will be configured with your production values.
+The structured permission set above is equivalent to `BlueskyOAuthPermissionSets.FullApp`, which the sample sets
+in `Program.cs`. When the localhost client ID includes a query, explicitly declare the same permissions in its `scope`
+parameter: the SDK adds scopes automatically only for the exact ID `http://localhost`. The encoded permission-set
+audience is encoded again inside that query parameter, hence the `%25` sequences above. Do not omit the declaration
+or retain a query advertising only the old `transition:generic` scope. Hosted clients must publish metadata declaring
+the same permissions.
 
 Now add login and logout links. In the standard ASP.NET Razor Pages templates these are defined in `_LoginPartial.cshtml`. For example,
 
@@ -128,6 +158,232 @@ sent to the login page, where you enter your handle, bounced through the Bluesky
 
 If you have injected a Bluesky agent using the [BlueskyAgentFactory](#agentFactory) you will see that it is now authenticated.
 
+### Progressive authorization
+
+Applications can start with read permissions and request additional permissions when a user enables a feature.
+See [ASP.NET progressive authorization](oauth/progressiveAuthorizationAspNet.md) for implementation choices and a
+concrete pattern for account/session-bound consent, credential replacement and safe completion of pending operations.
+The authentication sample deliberately uses `FullApp` at initial login instead of implementing this application-specific workflow.
+
+### Publishing OAuth client metadata
+
+Production OAuth clients must publish a [client metadata document](https://atproto.com/specs/oauth#client-id-metadata-document)
+at the exact URL configured as their `OAuthOptions.ClientId`. You can generate and serve this document without maintaining a JSON file.
+
+Configure the agent's production OAuth settings and optionally configure metadata branding:
+
+```c#
+builder.Services.Configure<BlueskyAgentOptions>(options =>
+{
+    options.OAuthOptions = new OAuthOptions(
+        "https://app.example.com/oauth-client-metadata.json",
+        new Uri("https://app.example.com/Bluesky/Callback"),
+        ["atproto", "transition:generic"])
+    {
+        ClientName = "My Bluesky application",
+        ClientUri = new Uri("https://app.example.com/"),
+        TosUri = new Uri("https://app.example.com/terms"),
+        PolicyUri = new Uri("https://app.example.com/privacy")
+    };
+});
+
+builder.Services.AddBlueskyOAuthClientMetadata();
+```
+
+`OAuthOptions` is in `idunno.AtProto.Authentication`; `BlueskyAgentOptions` is in `idunno.Bluesky`.
+Keep your existing `AddBluesky()` authentication registration.
+
+The optional `ClientName`, `ClientUri`, `TosUri` and `PolicyUri` properties belong to `OAuthOptions`, alongside `ClientId` and `ReturnUri`.
+They can also be bound from the existing agent configuration:
+
+```c#
+builder.Services.AddBlueskyOAuthClientMetadata();
+builder.Services.Configure<BlueskyAgentOptions>(
+    builder.Configuration.GetSection("BlueskyAgent"),
+    options => options.ErrorOnUnknownConfiguration = true);
+```
+
+For example, in `appsettings.json`:
+
+```json
+{
+  "BlueskyAgent": {
+    "OAuthOptions": {
+      "ClientId": "https://app.example.com/oauth-client-metadata.json",
+      "ReturnUri": "https://app.example.com/Bluesky/Callback",
+      "Scopes": [ "atproto", "transition:generic" ],
+      "ClientName": "My Bluesky application",
+      "ClientUri": "https://app.example.com/",
+      "TosUri": "https://app.example.com/terms",
+      "PolicyUri": "https://app.example.com/privacy"
+    }
+  }
+}
+```
+
+After building the app, add the publishing middleware **before** authentication, authorization, static files and anything else that
+could intercept the metadata URL:
+
+```c#
+app.UseBlueskyOAuthClientMetadata();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+The middleware serves anonymous GET requests with HTTP 200 and `application/json`, supports HEAD, and rejects other methods
+at the metadata URL with HTTP 405. Other URLs continue through the existing pipeline. It uses the path and query of the configured
+client ID, not the request host, to select requests; the document's URLs never come from untrusted request headers.
+If you use `UsePathBase()`, call it before the metadata middleware and include the public path base in the client ID.
+Ensure that the configured HTTPS URL is publicly reachable and is not redirected by your proxy or other middleware.
+
+By default the generated document describes a **public web client** (`token_endpoint_auth_method: none`) with DPoP, authorization code
+and refresh token support. Set `OAuthOptions.ClientSigningKey` to describe a [confidential client](#confidential-clients) instead.
+Native-client metadata is not supported.
+The client ID must use HTTPS with no explicit port, credentials or fragment. The callback must use HTTPS with no credentials,
+fragment or explicit default port. The homepage must share the client ID's hostname; logo, terms and privacy URLs must use HTTPS.
+
+Scopes include `OAuthOptions.Scopes` and its typed `PermissionSets`, deduplicated with ordinal comparison.
+Permission sets can be configured in either of two equivalent ways. For example, to request `atproto` and Bluesky's
+read-only `ViewAll` permission set, put this under `BlueskyAgent:OAuthOptions`:
+
+**Structured permission sets** keep the NSID and audience readable:
+
+```json
+"Scopes": [ "atproto" ],
+"PermissionSets": [
+  {
+    "Nsid": "app.bsky.authViewAll",
+    "Audience": "did:web:api.bsky.app#bsky_appview"
+  }
+]
+```
+
+`Audience` is optional when the permission set does not need an inherited RPC audience. If provided, it must be a DID with
+a service fragment, or `*`. The NSID is validated during binding, and the audience is validated by the permission-set constructor.
+Use `ErrorOnUnknownConfiguration = true` as shown above so invalid or incomplete collection entries fail configuration
+instead of being skipped by the configuration binder. Strings are converted to validated `Nsid` values by a type converter;
+the resulting `OAuthPermissionSet` objects remain immutable.
+
+**Raw scopes** encode the same permission-set reference directly:
+
+```json
+"Scopes": [
+  "atproto",
+  "include:app.bsky.authViewAll?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview"
+]
+```
+
+Both approaches produce the same OAuth requests and generated metadata. Structured permission sets percent-encode the audience
+automatically; raw scopes must already contain the encoded audience. You can combine raw scopes and structured sets, and identical
+scope strings are included only once. Code-based configuration still supports
+`options.OAuthOptions.PermissionSets = [BlueskyOAuthPermissionSets.ViewAll]`.
+
+If the app may request additional scopes later, add each to `BlueskyOAuthClientMetadataOptions.AdditionalScopes` so the document
+advertises every scope the app might request. This does not change initial login scopes. Scope tokens must be valid OAuth scope
+tokens and the advertised set must include `atproto`.
+
+Metadata is validated and generated once when the pipeline is configured; invalid settings fail app startup. Restart the app after changing
+OAuth or metadata settings. Publication is opt-in and does not affect apps which already host a static metadata file.
+For local development, continue using the special `http://localhost` client ID: the authorization server supplies its virtual metadata,
+so do not enable this publishing middleware with that ID.
+
+#### Confidential clients
+
+A confidential client authenticates to the authorization server with a signed client assertion (`private_key_jwt`),
+which gives longer-lived sessions than a public client. Create an ES256 (ECDSA P-256) key pair, keep the private key out of source control,
+and set its path in the `OAuthOptions` configuration:
+
+```json
+"BlueskyAgent": {
+  "OAuthOptions": {
+    "ClientId": "https://example.com/oauth-client-metadata.json",
+    "ClientSigningKeyPath": "~/.blueskyDotnet/client-signing-key.pem"
+  }
+}
+```
+
+The key file must contain an unencrypted PKCS#8 or SEC 1 P-256 private key. Environment variables in the path are expanded,
+a leading `~` is replaced with the user's profile directory, and a relative path is resolved against the application's content root.
+The key ID defaults to the RFC 7638 thumbprint of the public key; set an optional `ClientSigningKeyId` to publish your own.
+You can also set `options.OAuthOptions.ClientSigningKeyPath` in code.
+
+`AddBluesky()`, `AddBlueskyOAuthClientMetadata()`, `AddBlueskyAgentFactory()` and `AddBlueskyClaimsTransformer()` load the key,
+and set it as `OAuthOptions.ClientSigningKey`, when the agent options are first resolved. If `ClientSigningKey` is already set, the path is ignored.
+`UseBlueskyOAuthClientMetadata()` does this at startup, so a missing or invalid key file stops the application from starting.
+Outside ASP.NET, create the key with `OAuthClientSigningKey.FromPemFile()` or `OAuthClientSigningKey.FromPem()` and set
+`OAuthOptions.ClientSigningKey` yourself.
+
+With a signing key set:
+
+* The generated metadata publishes the public key in `jwks` and declares `token_endpoint_auth_method: private_key_jwt`
+  and `token_endpoint_auth_signing_alg: ES256`. The private key is never published.
+* Pushed authorization, token, refresh and revocation requests carry a fresh client assertion, with the client ID as issuer and subject
+  and the authorization server's issuer as audience.
+
+`OAuthOptions.ClientAssertionClockSkew` backdates the `iat` timestamp of client assertions by 30 seconds by default, to accommodate
+small clock differences with the authorization server. It applies to pushed authorization, token, refresh and revocation requests;
+assertions still expire one minute after creation. Configure it in code with `TimeSpan.FromSeconds(...)`, or in configuration as
+`"ClientAssertionClockSkew": "00:00:30"` under `BlueskyAgent:OAuthOptions`. Zero disables backdating; negative values are rejected.
+This is separate from `OAuthOptions.ClockSkew`, which controls token validation. Keep the system clock synchronized rather than
+using a large allowance, as authorization servers may reject assertions backdated too far.
+
+Localhost development client IDs are always public clients, and setting a signing key, or additional signing keys, with one fails validation.
+
+##### Rotating the signing key
+
+Sessions are bound to the key they started with. Pending logins retain the PAR signing key ID in `OAuthLoginState.ClientSigningKeyId`
+so a callback after rotation uses the same key. Each session records the key ID in its credentials (`ClientSigningKeyId`),
+and the ASP.NET identity stores persist it as the `urn:atproto:oauth:signingkey` claim. Refresh and revocation requests sign with the
+session's key, so an older key must stay available until the sessions that use it have expired.
+
+`OAuthOptions.AdditionalClientSigningKeyPaths` (or `AdditionalClientSigningKeys` in code) holds those older keys. They are published
+in `jwks` alongside the active key and used only for sessions that started with them; new sign-ins always use the active key.
+Additional keys loaded from a path use the key thumbprint as their key ID, and every key ID must be unique.
+
+To rotate a key:
+
+1. Create a new key and add its path to `AdditionalClientSigningKeyPaths`, so it is published before it is used.
+2. Make the new key the active `ClientSigningKeyPath`, and move the old key's path to `AdditionalClientSigningKeyPaths`.
+3. Remove the old key once the refresh tokens issued with it have expired.
+
+```json
+"BlueskyAgent": {
+  "OAuthOptions": {
+    "ClientSigningKeyPath": "~/.blueskyDotnet/client-signing-key-2.pem",
+    "AdditionalClientSigningKeyPaths": [ "~/.blueskyDotnet/client-signing-key.pem" ]
+  }
+}
+```
+
+> [!NOTE]
+> Signing keys are loaded into memory and cached; changes to key files are not watched. Each rotation step that changes the configured keys
+> requires an application restart to take effect.
+>
+> If key files and configuration are managed separately from the deployment, place the new key on the server, update `ClientSigningKeyPath`
+> and `AdditionalClientSigningKeyPaths`, then restart the application. No rebuild or redeployment is needed.
+>
+> If key files or configuration are packaged with the application, deploy the updated package and restart the application as part of the deployment.
+> In either approach, keep the previous key available for existing sessions, and apply the changes to every application instance.
+
+A session with no recorded key ID, or with the ID of a key that is no longer configured, uses the active key. A warning is logged
+for an unknown key ID, and the authorization server may reject the request, in which case the user must sign in again.
+
+`Samples.AspNetTunnelAuthentication` is a confidential-client sample. Its `New-ClientSigningKey.ps1` script creates a key pair
+in a `.blueskyDotnet` folder in your user profile, which the sample loads at startup.
+
+To generate the JSON yourself, without the publishing middleware, call
+`new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions)`. This uses the same validation and source-generated serialization.
+
+`Samples.AspNetClientMetadata` is a minimal metadata-only sample. Run it with
+`dotnet run --project samples\Samples.AspNetClientMetadata` and browse to `http://127.0.0.1:5252/`.
+The home page redirects to `/oauth-client-metadata.json`, showing a document configured for `https://example.org`
+with the `atproto` scope and `BlueskyOAuthPermissionSets.ViewAll` permission set.
+Its client name and homepage URL are bound from `BlueskyAgent:OAuthOptions` in `appsettings.json`.
+It also binds the structured `PermissionSets` array from that section, with no permission-set construction in the sample code.
+The local address is only a preview: the document advertises the example.org URLs, not localhost.
+The sample does not implement login or the advertised callback; replace the example URLs and implement the callback before using it for OAuth.
+
 ### Changing the appearance of the UI pages
 
 The pages in `idunno.Bluesky.AspNet.Authentication.UI` render inside a plain, self contained layout that the package ships, styled by a small stylesheet the package
@@ -158,8 +414,8 @@ By default two ephemeral, in memory, stores are used, so you can develop your ap
 suitable for production use as they store a limited number of identities and are not persistent, so when your application restarts any authenticated users will
 be logged out.
 
-Persistent store implementations are provided for SQLite, MySQL and Redis, in the `idunno.Bluesky.AspNet.Authentication.SQLite`,
-`idunno.Bluesky.AspNet.Authentication.MySQL` and `idunno.Bluesky.AspNet.Authentication.Redis` packages. If none of those suit your deployment you can implement
+Persistent store implementations are provided for SQLite, MySQL, PostgreSQL and Redis, in the `idunno.Bluesky.AspNet.Authentication.SQLite`,
+`idunno.Bluesky.AspNet.Authentication.MySQL`, `idunno.Bluesky.AspNet.Authentication.PostgreSQL` and `idunno.Bluesky.AspNet.Authentication.Redis` packages. If none of those suit your deployment you can implement
 your own using the `IIdentityStore` and `ICorrelationStateCache` interfaces.
 
 > [!IMPORTANT]
@@ -173,7 +429,7 @@ your own using the `IIdentityStore` and `ICorrelationStateCache` interfaces.
 > ./New-AuthenticationDatabase.ps1 -OutputDirectory ./App_Data
 > ```
 >
-> The `idunno.Bluesky.AspNet.Authentication.MySQL` package includes `schema.sql`, which you apply to an existing database with the MySQL client of your choice.
+> The `idunno.Bluesky.AspNet.Authentication.MySQL` and `idunno.Bluesky.AspNet.Authentication.PostgreSQL` packages include `schema.sql`, which you apply to an existing database with the database client of your choice.
 >
 > Both files are added to your project as content when you install the package. Redis needs no schema.
 
@@ -194,8 +450,9 @@ builder.Services
     });
 ```
 
-MySQL and Redis are configured the same way, using `MySqlIdentityStore` and `MySqlCorrelationStateCache` from the
-`idunno.Bluesky.AspNet.Authentication.MySQL` namespace, or `RedisIdentityStore` and `RedisCorrelationStateCache` from the
+MySQL, PostgreSQL and Redis are configured the same way, using `MySqlIdentityStore` and `MySqlCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.MySQL` namespace, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache` from the
+`idunno.Bluesky.AspNet.Authentication.PostgreSQL` namespace, or `RedisIdentityStore` and `RedisCorrelationStateCache` from the
 `idunno.Bluesky.AspNet.Authentication.Redis` namespace.
 
 #### Expiry and housekeeping
@@ -208,7 +465,7 @@ expired rows so the tables do not grow without limit. Each store constructor tak
 | `entryTimeToLive` | Identity stores | 7 days | How long a stored identity lives before it is treated as expired. |
 | `refreshLockLength` | Identity stores | 90 seconds | How long a token refresh lock is held before another instance may take it over. |
 | `entryTimeToLive` | Correlation state caches | 15 minutes | How long a login in flight may take before its state is discarded. |
-| `expiredEntrySweepInterval` | SQLite and MySQL stores | 5 minutes | How often expired rows are deleted. |
+| `expiredEntrySweepInterval` | SQLite, MySQL and PostgreSQL stores | 5 minutes | How often expired rows are deleted. |
 
 For example,
 
@@ -225,7 +482,7 @@ becomes your responsibility. The Redis stores have no sweep setting, as Redis ex
 
 > [!NOTE]
 > The `IdentityStoreEntryTimeToLive` and `RefreshLockLength` properties on `BlueskyAuthenticationOptions` apply to the default in memory store and to
-> `DistributedCacheIdentityStore`. The SQLite, MySQL and Redis stores take their lifetimes from their own constructors, so if you supply one of those these
+> `DistributedCacheIdentityStore`. The SQLite, MySQL, PostgreSQL and Redis stores take their lifetimes from their own constructors, so if you supply one of those these
 > properties are ignored and you should set the lifetimes on the constructor instead.
 >
 > `IdentityStoreEntryTimeToLive` defaults to the authentication cookie's `ExpireTimeSpan`. If you shorten a lifetime so that stored credentials expire before
@@ -270,8 +527,7 @@ claims from the profile to the identity. The potential claims are defined in `id
 * `idunno.Bluesky.ClaimTypes.Avatar` - a URI to the user's uploaded avatar and
 * `idunno.Bluesky.ClaimTypes.Banner` - a URI to the user's profile banner.
 
-> [!WARNING]
-> You should validate, and protect against XSS when rendering these values on a web page, as they are freeform text (except for avatar and banner).
+[!include[Untrusted data warning](includes/untrusted-data-warning.md)]
 
 To use the transformer configure it in your application in `Program.cs` like so;
 
@@ -281,6 +537,13 @@ builder.Services
 ```
 
 `AddBlueskyClaimsTransformer()` registers the transformer as an `IClaimsTransformation` for you, so you do not need to register it yourself.
+
+> [!IMPORTANT]
+> Claims transformation makes an authenticated `app.bsky.actor.getProfile` request. In addition to the required `atproto` scope,
+> the minimum permission is `rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview` for Bluesky's default app view.
+> Request it at initial login, even if the application's own pages do not read profiles. For another app view, use that service's DID
+> and service fragment as the audience. `BlueskyOAuthPermissionSets.ViewAll` also includes this permission but grants broader read access;
+> profile-write permission is not needed. Without a suitable grant, profile retrieval can fail and the additional profile claims will not be populated.
 
 ### OAuth and DPoP
 
@@ -308,7 +571,7 @@ reach, and configure data protection with a shared key store, otherwise a login 
 
 > [!TIP]
 > If your application already has an `IDistributedCache` you can use it for either store, with `DistributedCacheIdentityStore` and
-> `DistributedCacheCorrelationStateCache`, rather than adding SQLite, MySQL or Redis specifically for authentication.
+> `DistributedCacheCorrelationStateCache`, rather than adding SQLite, MySQL, PostgreSQL or Redis specifically for authentication.
 
 > [!TIP]
 > Bluesky special cases the `http://localhost` ClientId, to allow for local development of client applications, including

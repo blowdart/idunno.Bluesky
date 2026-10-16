@@ -33,18 +33,33 @@ public record ListViewBasic : View
     /// <param name="viewer">A view of the relationship between the view and the current user.</param>
     /// <param name="indexedAt">The date and time the list was last indexed at.</param>
     /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/>, <paramref name="cid"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="System.Text.Json.JsonException">The purpose is not recognized. Set <see cref="PurposeValue"/> to retain a service-defined value.</exception>
     /// <remarks>
     /// <para>The <paramref name="name"/> is not validated against the length limits the lexicon places on
     /// <see cref="List.Name"/>. A view is a projection of whatever the service returned, so validating it here would
     /// turn an unexpected value from the service into an exception which fails the whole response rather than the
     /// single list it came from. Limits are enforced on <see cref="List"/>, the record which is actually written.</para>
     /// </remarks>
-    [JsonConstructor]
     public ListViewBasic(
         AtUri uri,
         Cid cid,
         string name,
         ListPurpose purpose,
+        Uri? avatar,
+        int? listItemCount,
+        IReadOnlyCollection<Label>? labels,
+        ListViewerState? viewer,
+        DateTimeOffset? indexedAt) : this(uri, cid, name, purpose, null, avatar, listItemCount, labels, viewer, indexedAt)
+    {
+    }
+
+    [JsonConstructor]
+    internal ListViewBasic(
+        AtUri uri,
+        Cid cid,
+        string name,
+        ListPurpose purpose,
+        string? purposeValue,
         Uri? avatar,
         int? listItemCount,
         IReadOnlyCollection<Label>? labels,
@@ -59,7 +74,7 @@ public record ListViewBasic : View
         Cid = cid;
 
         Name = name;
-        Purpose = purpose;
+        PurposeValue = purposeValue ?? ListPurposeConverter.ToWireValue(purpose);
         Avatar = avatar;
 
         if (listItemCount is not null)
@@ -113,8 +128,31 @@ public record ListViewBasic : View
     /// <summary>
     /// Gets the list's purpose.
     /// </summary>
+    /// <exception cref="System.Text.Json.JsonException">The value is not recognized. Set <see cref="PurposeValue"/> to retain a service-defined value.</exception>
+    [JsonIgnore]
+    // .NET 8/9 source generation still binds ignored init-only members as constructor parameters.
+    [JsonPropertyName("purposeProjection")]
+    public ListPurpose Purpose
+    {
+        get => ListPurposeConverter.FromWireValue(PurposeValue);
+        init => PurposeValue = ListPurposeConverter.ToWireValue(value);
+    }
+
+    /// <summary>
+    /// Gets the service-defined list purpose, retaining unrecognized values.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
     [JsonRequired]
-    public ListPurpose Purpose { get; init; }
+    [JsonPropertyName("purpose")]
+    public string PurposeValue
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// A <see cref="Uri"/> to the list's avatar, if any.

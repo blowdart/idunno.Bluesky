@@ -4,6 +4,8 @@
 
 | Group | Endpoint | Class / Method | Status |
 | ----- | -------- | -------------- | ------ |
+| **Age Assurance** | [app.bsky.ageassurance.getConfig](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/ageassurance/getConfig.json) | `BlueskyAgent.GetAgeAssuranceConfig()` | ✔ |
+| | [app.bsky.ageassurance.getState](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/ageassurance/getState.json) | `BlueskyAgent.GetAgeAssuranceStateForRegion()` | ✔ |
 | **Actor** | [app.bsky.actor.getProfile](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfile) | `BlueskyAgent.GetProfile()` | ✔ |
 | | [app.bsky.actor.getProfiles](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfiles) | `BlueskyAgent.GetProfiles()` | ✔ |
 | | [app.bsky.actor.getPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getPreferences) | `BlueskyAgent.GetPreferences()` | ✔ |
@@ -14,6 +16,14 @@
 | **Bookmarks** | [app.bsky.bookmark.createBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.createBookmark) | `BlueskyAgent.CreateBookmark()` | ✔ |
 | | [app.bsky.bookmark.deleteBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.deleteBookmark) | `BlueskyAgent.DeleteBookmark()` | ✔ |
 | | [app.bsky.bookmark.getBookmarks](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/GET/xrpc/app.bsky.bookmark.getBookmarks) | `BlueskyAgent.GetBookmarks()` | ✔ |
+| **Contact** | [app.bsky.contact.dismissMatch](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/dismissMatch.json) | `BlueskyAgent.DismissContactMatch()` | ✔ |
+| | [app.bsky.contact.getMatches](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/getMatches.json) | `BlueskyAgent.GetContactMatches()` | ✔ |
+| | [app.bsky.contact.getSyncStatus](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/getSyncStatus.json) | `BlueskyAgent.GetContactSyncStatus()` | ✔ |
+| | [app.bsky.contact.importContacts](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/importContacts.json) | `BlueskyAgent.ImportContacts()` | ✔ |
+| | [app.bsky.contact.removeData](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/removeData.json) | `BlueskyAgent.RemoveContactData()` | ✔ |
+| | [app.bsky.contact.sendNotification](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/sendNotification.json) | N/A - role-authenticated system endpoint | ❌ |
+| | [app.bsky.contact.startPhoneVerification](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/startPhoneVerification.json) | `BlueskyAgent.StartPhoneVerification()` | ✔ |
+| | [app.bsky.contact.verifyPhone](https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/contact/verifyPhone.json) | `BlueskyAgent.VerifyPhone()` | ✔ |
 | **Drafts** | [app.bsky.draft.createDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.createDraft) | `BlueskyAgent.CreateDraft()` | ✔ |
 | | [app.bsky.draft.deleteDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.deleteDraft) | `BlueskyAgent.DeleteDraft()` | ✔ |
 | | [app.bsky.draft.getDrafts](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/GET/xrpc/app.bsky.draft.getDrafts) | `BlueskyAgent.GetDrafts()` | ✔ |
@@ -68,13 +78,14 @@
 | | [app.bsky.notifications.putPreferencesV2](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.putPreferencesV2) | `BlueskyAgent.SetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/POST/xrpc/app.bsky.notification.updateSeen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
 | **Unspecced** | app.bsky.unspecced.getAgeAssuranceState | `BlueskyAgent.GetAgeAssuranceState()` | ✔ |
+| | [app.bsky.unspecced.getAtmosphereExploreTab](https://github.com/bluesky-social/atproto/blob/main/lexicons-overrides/app/bsky/unspecced/getAtmosphereExploreTab.json) | `BlueskyAgent.GetAtmosphereExploreTab()` | ✔ |
 | | app.bsky.unspecced.getConfig | | ❌ |
 | | app.bsky.unspecced.getPopularFeedGenerators | `BlueskyAgent.GetPopularFeedGenerators()` | ✔ |
 | | app.bsky.unspecced.getPostThreadOtherV2 | `BlueskyAgent.GetPostThreadOtherV2()` | ✔ |
 | | app.bsky.unspecced.getPostThreadV2 | `BlueskyAgent.GetPostThreadV2()` | ✔ |
 | | ~~app.bsky.unspecced.getSuggestedFeeds~~<br />[Promoted to a feed API](https://docs.bsky.app/docs/api/app-bsky-feed-get-suggested-feeds) | `BlueskyAgent.GetSuggestedFeeds()` | ❌ |
 | | app.bsky.unspecced.getSuggestedFeedsSkeleton | | ❌ |
-| | app.bsky.unspecced.getSuggestedStarterPacks | `BlueskyAgent.GetSuggestedStarterPacks()` | ✔ |
+| | app.bsky.unspecced.getSuggestedStarterPacks | `BlueskyAgent.GetSuggestedStarterPacks()` / `GetSuggestedStarterPacksWithRecommendation()` | ✔ |
 | | app.bsky.unspecced.getSuggestedStarterPacksSkeleton | | ❌ |
 | | app.bsky.unspecced.getSuggestedUsers | `BlueskyAgent.GetSuggestedUsers()` | ✔ |
 | | app.bsky.unspecced.getSuggestedUsersSkeleton | | ❌ |
@@ -99,7 +110,9 @@
 ## Chat Endpoints
 | Group | Endpoint | Class / Method | Status |
 | ----- | -------- | -------------- | ------ |
-| **Actor** | [chat.bsky.actor.getStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/getStatus.json) | `BlueskyAgent.GetActorChatStatus()` | ✔ |
+| **Actor** | [chat.bsky.actor.deleteAccount](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/deleteAccount.json) | `BlueskyAgent.DeleteChatAccount()` | ✔ |
+| | [chat.bsky.actor.exportAccountData](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/exportAccountData.json) | `BlueskyAgent.ExportChatAccountData()` | ✔ |
+| | [chat.bsky.actor.getStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/getStatus.json) | `BlueskyAgent.GetActorChatStatus()` | ✔ |
 | **Convo** | [chat.bsky.convo.acceptConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/acceptConvo.json) | `BlueskyAgent.AcceptConversation()` | ✔ |
 | | [chat.bsky.convo.addReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
 | | [chat.bsky.convo.deleteMessageForSelf](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/deleteMessageForSelf.json) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
@@ -146,12 +159,15 @@
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
 | **Identity** | * _Uses DNS and `.well-known/` endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
 | **Labels**   | [com.atproto.label.queryLabels](https://endpoints.bsky.app/#bluesky-app/tag/comatprotolabel/GET/xrpc/com.atproto.label.queryLabels) | `AtProtoAgent.QueryLabels()` | ✔ |
+| | [com.atproto.label.subscribeLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/subscribeLabels.json) | `AtProtoFirehose.SubscribeLabelsAsync()` | ✔ |
 | **Moderation**   | [com.atproto.moderation.createReport](https://endpoints.bsky.app/#bluesky-app/tag/comatprotomoderation/POST/xrpc/com.atproto.moderation.createReport) | `AtProtoAgent.CreateModerationReport()` | ✔ |
 | **Repo**     | [com.atproto.repo.applyWrites](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.applyWrites) | `AtProtoAgent.ApplyWrites()` | ✔ |
 | | [com.atproto.repo.createRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.createRecord) | `AtProtoAgent.CreateRecord()` | ✔ |
 | | [com.atproto.repo.deleteRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.deleteRecord) | `AtProtoAgent.DeleteRecord()` | ✔ |
 | | [com.atproto.repo.describeRepo](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.describeRepo) | `AtProtoAgent.DescribeRepo()` | ✔ |
 | | [com.atproto.repo.getRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.getRecord) | `AtProtoAgent.GetRecord()` | ✔ |
+| | [com.atproto.repo.importRepo](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/repo/importRepo.json) | `AtProtoAgent.ImportRepo()` | ✔ |
+| | [com.atproto.repo.listMissingBlobs](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/repo/listMissingBlobs.json) | `AtProtoAgent.ListMissingBlobs()` | ✔ |
 | | [com.atproto.repo.listRecords](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/GET/xrpc/com.atproto.repo.listRecords) | `AtProtoAgent.ListRecords()` | ✔ |
 | | [com.atproto.repo.putRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.putRecord) | `AtProtoAgent.PutRecord()` | ✔ |
 | | [com.atproto.repo.uploadBlob](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.uploadBlob) | `AtProtoAgent.UploadBlob()` | ✔ |
@@ -161,3 +177,25 @@
 | | [com.atproto.server.getServiceAuth](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getServiceAuth) | `AtProtoAgent.GetServiceAuth()` | ✔ |
 | | [com.atproto.server.getSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getSession) | `AtProtoAgent.GetSession()` | ✔ |
 | | [com.atproto.server.refreshSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.refreshSession) | `AtProtoAgent.RefreshSession()` | ✔ |
+| **Sync** | [com.atproto.sync.getBlob](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlob.json) | `AtProtoAgent.GetBlob()` | ✔ |
+| | [com.atproto.sync.getBlocks](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlocks.json) | `AtProtoAgent.GetBlocks()` | ✔ |
+| | [com.atproto.sync.getHostStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getHostStatus.json) | `AtProtoAgent.GetHostStatus()` | ✔ |
+| | [com.atproto.sync.getLatestCommit](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getLatestCommit.json) | `AtProtoAgent.GetLatestCommit()` | ✔ |
+| | [com.atproto.sync.getRecord](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRecord.json) | `AtProtoAgent.GetSyncRecord()` | ✔ |
+| | [com.atproto.sync.getRepo](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRepo.json) | `AtProtoAgent.GetRepo()` | ✔ |
+| | [com.atproto.sync.getRepoStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getRepoStatus.json) | `AtProtoAgent.GetRepoStatus()` | ✔ |
+| | [com.atproto.sync.listBlobs](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listBlobs.json) | `AtProtoAgent.ListBlobs()` | ✔ |
+| | [com.atproto.sync.listHosts](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listHosts.json) | `AtProtoAgent.ListHosts()` | ✔ |
+| | [com.atproto.sync.listRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listRepos.json) | `AtProtoAgent.ListRepos()` | ✔ |
+| | [com.atproto.sync.listReposByCollection](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/listReposByCollection.json) | `AtProtoAgent.ListReposByCollection()` | ✔ |
+| | [com.atproto.sync.requestCrawl](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/requestCrawl.json) | `AtProtoAgent.RequestCrawl()` | ✔ |
+| | [com.atproto.sync.subscribeRepos](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/subscribeRepos.json) | `AtProtoFirehose.SubscribeReposAsync()` | ✔ |
+
+## Jetstream v2 Archive Endpoints
+
+| Group | Endpoint | Class / Method | Status |
+| ----- | -------- | -------------- | ------ |
+| **Archive** | [network.bsky.jetstream.getBlock](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/getBlock.json) | `AtProtoServer.GetBlock()` | ✔ |
+| | [network.bsky.jetstream.getSegment](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/getSegment.json) | `AtProtoServer.GetSegment()` | ✔ |
+| | [network.bsky.jetstream.listSegments](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/listSegments.json) | `AtProtoServer.ListSegments()` | ✔ |
+| | [network.bsky.jetstream.planSnapshot](https://github.com/bluesky-social/jetstream/blob/main/lexicons/network/bsky/jetstream/planSnapshot.json) | `AtProtoServer.PlanSnapshot()`; `AtProtoJetstream.SnapshotAsync()` / `ReplayAsync()` | ✔ |

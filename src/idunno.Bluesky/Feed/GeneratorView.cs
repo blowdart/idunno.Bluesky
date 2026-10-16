@@ -42,7 +42,7 @@ public sealed record GeneratorView : View
         ArgumentNullException.ThrowIfNull(cid);
         ArgumentNullException.ThrowIfNull(did);
         ArgumentNullException.ThrowIfNull(creator);
-        ArgumentException.ThrowIfNullOrEmpty(displayName);
+        ArgumentNullException.ThrowIfNull(displayName);
 
         Uri = uri;
         Cid = cid;
@@ -147,6 +147,7 @@ public sealed record GeneratorView : View
     /// </summary>
     [JsonInclude]
     [NotNull]
+    [JsonPropertyName("descriptionFacets")]
     public IReadOnlyList<Facet>? Facets { get; init; }
 
     /// <summary>

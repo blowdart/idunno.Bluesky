@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -235,6 +236,48 @@ public record Profile : BlueskyRecord
     /// </summary>
     [JsonInclude]
     public StrongReference? PinnedPost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profile's links, in display order.
+    /// </summary>
+    /// <exception cref="ArgumentNullException">An entry is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">More than ten links are specified.</exception>
+    [JsonIgnore]
+    public IReadOnlyCollection<StrongReference>? Links
+    {
+        get;
+        set
+        {
+            if (value is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Count, 10);
+                foreach (StrongReference link in value)
+                {
+                    ArgumentNullException.ThrowIfNull(link);
+                }
+            }
+
+            field = value is null ? null : Array.AsReadOnly(value.ToArray());
+        }
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("links")]
+    internal IReadOnlyCollection<StrongReference>? SerializedLinks
+    {
+        get => Links;
+        set
+        {
+            try
+            {
+                Links = value;
+            }
+            catch (ArgumentException exception)
+            {
+                throw new JsonException("Profile links must contain at most ten non-null references.", exception);
+            }
+        }
+    }
 
     /// <summary>
     /// Gets any <see cref="SelfLabels"/> applied to the profile.

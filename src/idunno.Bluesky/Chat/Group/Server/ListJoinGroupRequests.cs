@@ -30,8 +30,7 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="conversationId"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is out of range.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -52,7 +51,7 @@ public partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(conversationId);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);

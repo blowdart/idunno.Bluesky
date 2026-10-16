@@ -30,11 +30,8 @@ public record DraftPost
     /// <param name="embedVideos">The videos to embed in the post. (Maximum <see cref="Maximum.DraftEmbedVideos"/>)</param>
     /// <param name="embedExternals">The external content to embed in the post. (Maximum <see cref="Maximum.DraftEmbedExternals"/>)</param>
     /// <param name="embedRecords">The records to embed in the post. (Maximum <see cref="Maximum.DraftEmbedRecords"/>)</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or
-    /// when the number of embedded media or records exceeds the specified limits.
-    /// </exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"> Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or when the number of embedded media or records exceeds the specified limits. </exception>
     [JsonConstructor]
     public DraftPost(
         string text,
@@ -45,7 +42,7 @@ public record DraftPost
         IReadOnlyList<DraftEmbedExternal>? embedExternals,
         IReadOnlyList<DraftEmbedRecord>? embedRecords)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -79,7 +76,7 @@ public record DraftPost
     /// Creates a new instance of <see cref="DraftPost"/> with the specified content.
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     public DraftPost(string text) : this(
         text: text,
@@ -90,7 +87,7 @@ public record DraftPost
         embedExternals: null,
         embedRecords: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -104,7 +101,7 @@ public record DraftPost
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="embedImages">The images to embed in the post. (Maximum <see cref="Maximum.DraftEmbedImages"/>)</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or when the number of embedded images exceeds <see cref="Maximum.DraftEmbedImages"/>.</exception>
     public DraftPost(string text, IReadOnlyList<DraftEmbedImage> embedImages) : this(
         text: text,
@@ -115,7 +112,7 @@ public record DraftPost
         embedExternals: null,
         embedRecords: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -133,7 +130,7 @@ public record DraftPost
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="embedImage">The image to embed in the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     public DraftPost(string text, DraftEmbedImage embedImage) : this(
         text: text,
@@ -144,7 +141,7 @@ public record DraftPost
         embedExternals: null,
         embedRecords: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -158,7 +155,7 @@ public record DraftPost
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="labels">The labels to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     public DraftPost(string text, SelfLabels labels) : this(
         text: text,
@@ -169,7 +166,7 @@ public record DraftPost
         embedExternals: null,
         embedRecords: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -183,7 +180,7 @@ public record DraftPost
     /// </summary>
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="embedVideo">The video to embed in the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     public DraftPost(string text, DraftEmbedVideo embedVideo) : this(
         text: text,
@@ -194,7 +191,7 @@ public record DraftPost
         embedExternals: null,
         embedRecords: null)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
             Maximum.DraftTextLengthInBytes);
@@ -213,8 +210,8 @@ public record DraftPost
     /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
     /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
     /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
-    /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>.
+    /// <exception cref="ArgumentNullException"><paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     public DraftPost(
         string text,
         PostSelfLabels? postSelfLabels,
@@ -231,7 +228,7 @@ public record DraftPost
             embedExternals: embedExternals,
             embedRecords: embedRecords)
     {
-        ArgumentException.ThrowIfNullOrEmpty(text);
+        ArgumentNullException.ThrowIfNull(text);
 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(
             text.GetUtf8Length(),
@@ -248,10 +245,10 @@ public record DraftPost
 
     /// <summary>
     /// Gets or sets the the primary post content.  It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.
-    /// Cannot be <see langword="null"/> or empty, cannot be larger than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.
+    /// Cannot be <see langword="null"/>, cannot be larger than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>.
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than <see cref="Maximum.DraftTextLengthInBytes"/> UTF-8 bytes or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
     [JsonRequired]
     public string Text
     {
@@ -259,7 +256,7 @@ public record DraftPost
 
         set
         {
-            ArgumentException.ThrowIfNullOrEmpty(value);
+            ArgumentNullException.ThrowIfNull(value);
 
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 value.GetUtf8Length(),

@@ -18,7 +18,6 @@ namespace idunno.Bluesky;
 [JsonDerivedType(typeof(Embed.ViewRecord), typeDiscriminator: EmbeddedViewTypeDiscriminators.ViewRecord)]
 [JsonDerivedType(typeof(Embed.EmbeddedView), typeDiscriminator: EmbeddedViewTypeDiscriminators.EmbedView)]
 [JsonDerivedType(typeof(Chat.Group.JoinLinkView), typeDiscriminator: "chat.bsky.group.defs#joinLinkView")]
-[JsonDerivedType(typeof(Chat.Group.JoinLinkView), typeDiscriminator: "chat.bsky.group.defs#joinLinkView")]
 
 public record View
 {

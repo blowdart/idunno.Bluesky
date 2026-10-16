@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -21,6 +22,21 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 /// </remarks>
 public class BlueskySignInManagerTests
 {
+    [Fact]
+    public async Task TemporaryOAuthAgentsUseTheHandlerClockWithoutChangingSharedOptions()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
+            configureOptions: options => options.TimeProvider = timeProvider);
+
+        using HttpResponseMessage response = await host.Client.GetAsync(
+            new Uri("/test/signin/clock", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("clock=True;unchanged=True", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Same(TimeProvider.System, host.AgentOptions.TimeProvider);
+    }
+
     private static MetricCollector<long> RejectionCollector(AuthenticationTestHost host) =>
         new(host.MeterFactory, BlueskyAuthenticationMetrics.MeterName, "idunno.bluesky.aspnet.authentication.correlationstate.rejections.total");
 

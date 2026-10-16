@@ -25,6 +25,33 @@ public abstract class IdentityStoreTests
     protected abstract IIdentityStore CreateStore(IMeterFactory meterFactory);
 
     [Fact]
+    public async Task StoredOAuthCredentialsPreserveTheOriginalClientRequestedScopeAndSigningKey()
+    {
+        IIdentityStore store = CreateStore();
+        DPoPAccessCredentials credentials = new(
+            new Uri("https://service.test/"),
+            TestData.Jwt(TestData.NewDid()),
+            "refreshToken",
+            "proofKey",
+            "nonce")
+        {
+            OAuthClientId = "http://localhost?scope=atproto",
+            RequestedScope = "atproto",
+            ClientSigningKeyId = "signing-key"
+        };
+
+        await store.Add(IIdentityStore.BuildClaimsIdentity(credentials), TestContext.Current.CancellationToken);
+        ClaimsIdentity? identity = await store.GetIdentity(credentials.Did, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(identity);
+        Assert.True(AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? restored));
+        Assert.NotNull(restored);
+        Assert.Equal(credentials.OAuthClientId, restored.OAuthClientId);
+        Assert.Equal(credentials.RequestedScope, restored.RequestedScope);
+        Assert.Equal(credentials.ClientSigningKeyId, restored.ClientSigningKeyId);
+    }
+
+    [Fact]
     public async Task IdentityStoreOperationsAreTimedAndTaggedWithTheOperationTheyMeasure()
     {
         // Every authenticated request reads the store, so its latency is added to the application's. A single

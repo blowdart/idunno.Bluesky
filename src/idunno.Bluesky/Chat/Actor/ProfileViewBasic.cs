@@ -77,13 +77,20 @@ public sealed record ProfileViewBasic : View
     /// <summary>
     /// Gets any labels applied to the actor.
     /// </summary>
+    /// <exception cref="ArgumentException">The collection contains a <see langword="null"/> entry.</exception>
     /// <remarks>
     ///<para>
     /// Labels will only be populated if a list of subscribed labelers from a user's <see cref="Preferences"/>
     /// is passed into an API which returns this class.
     ///</para>
     /// </remarks>
-    public IReadOnlyCollection<Label> Labels { get; init; }
+    public IReadOnlyCollection<Label> Labels
+    {
+        get => _labels;
+        init => _labels = value is null ? [] : ChatCollection.Copy(value);
+    }
+
+    private readonly IReadOnlyCollection<Label> _labels = [];
 
     /// <summary>
     /// Gets the date and time the actor was created at, if any
@@ -116,11 +123,7 @@ public sealed record ProfileViewBasic : View
     {
         get
         {
-            field ??= Labels
-                .Where(l => (l.Source == Did &&
-                             l.Uri == $"at://{Did}/app.bsky.actor.profile/self"))
-                .Select(v => v.Value)
-                .Distinct().ToList().AsReadOnly();
+            field ??= Labels.Count == 0 ? [] : SelfLabelReader.Read(Labels, Did, $"at://{Did}/app.bsky.actor.profile/self");
 
             return field;
         }

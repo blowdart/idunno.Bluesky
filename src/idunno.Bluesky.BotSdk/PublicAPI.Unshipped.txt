@@ -1,0 +1,276 @@
+#nullable enable
+idunno.Bluesky.BotSdk.BotReplayProgress
+idunno.Bluesky.BotSdk.BotReplayProgress.Snapshot.get -> idunno.Bluesky.BotSdk.ReplayProgressSnapshot
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Equals(idunno.Bluesky.BotSdk.ReplayProgressSnapshot other) -> bool
+~override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Equals(object obj) -> bool
+override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.GetHashCode() -> int
+~override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ToString() -> string
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ReplayProgressSnapshot() -> void
+static idunno.Bluesky.BotSdk.ReplayProgressSnapshot.operator !=(idunno.Bluesky.BotSdk.ReplayProgressSnapshot left, idunno.Bluesky.BotSdk.ReplayProgressSnapshot right) -> bool
+static idunno.Bluesky.BotSdk.ReplayProgressSnapshot.operator ==(idunno.Bluesky.BotSdk.ReplayProgressSnapshot left, idunno.Bluesky.BotSdk.ReplayProgressSnapshot right) -> bool
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ObservedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Sequence.get -> long?
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.WitnessedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.BotSdk.ActionStatistics
+idunno.Bluesky.BotSdk.ActionStatistics.ActionStatistics(System.DateTimeOffset startedAt) -> void
+idunno.Bluesky.BotSdk.ActionStatistics.RecordCompletion() -> void
+idunno.Bluesky.BotSdk.ActionStatistics.Summary.get -> string!
+idunno.Bluesky.BotSdk.BlueskyBotBuilder
+idunno.Bluesky.BotSdk.BlueskyBotBuilder.AddActionHandler<THandler>() -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+idunno.Bluesky.BotSdk.BlueskyBotBuilder.AddActionHandler(idunno.Bluesky.BotSdk.IBotActionHandler! handler) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+idunno.Bluesky.BotSdk.BlueskyBotBuilder.BlueskyBotBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> void
+idunno.Bluesky.BotSdk.BlueskyBotBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+idunno.Bluesky.BotSdk.BookmarkActionHandler
+idunno.Bluesky.BotSdk.BookmarkActionHandler.BookmarkActionHandler() -> void
+idunno.Bluesky.BotSdk.BookmarkActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.BookmarkActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.BookmarkActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.BookmarkActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.BookmarkActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.BotAction
+idunno.Bluesky.BotSdk.BotAction.<Clone>$() -> idunno.Bluesky.BotSdk.BotAction!
+idunno.Bluesky.BotSdk.BotAction.ActionKey.get -> string!
+idunno.Bluesky.BotSdk.BotAction.ActionKey.init -> void
+idunno.Bluesky.BotSdk.BotAction.ActionKind.get -> string!
+idunno.Bluesky.BotSdk.BotAction.ActionKind.init -> void
+idunno.Bluesky.BotSdk.BotAction.Attempts.get -> int
+idunno.Bluesky.BotSdk.BotAction.Attempts.init -> void
+idunno.Bluesky.BotSdk.BotAction.BotAction(idunno.AtProto.AtUri! SourceUri, long SourceSequence, string! SourceDid, string! RecordKey, string! RecordJson, string! Status, int Attempts, bool TargetDeleted = false, string! ActionKind = "reply", string! ActionKey = "default", int PayloadVersion = 1) -> void
+idunno.Bluesky.BotSdk.BotAction.Deconstruct(out idunno.AtProto.AtUri! SourceUri, out long SourceSequence, out string! SourceDid, out string! RecordKey, out string! RecordJson, out string! Status, out int Attempts, out bool TargetDeleted, out string! ActionKind, out string! ActionKey, out int PayloadVersion) -> void
+idunno.Bluesky.BotSdk.BotAction.Equals(idunno.Bluesky.BotSdk.BotAction? other) -> bool
+idunno.Bluesky.BotSdk.BotAction.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.BotAction.PayloadVersion.init -> void
+idunno.Bluesky.BotSdk.BotAction.RecordJson.get -> string!
+idunno.Bluesky.BotSdk.BotAction.RecordJson.init -> void
+idunno.Bluesky.BotSdk.BotAction.RecordKey.get -> string!
+idunno.Bluesky.BotSdk.BotAction.RecordKey.init -> void
+idunno.Bluesky.BotSdk.BotAction.SourceDid.get -> string!
+idunno.Bluesky.BotSdk.BotAction.SourceDid.init -> void
+idunno.Bluesky.BotSdk.BotAction.SourceSequence.get -> long
+idunno.Bluesky.BotSdk.BotAction.SourceSequence.init -> void
+idunno.Bluesky.BotSdk.BotAction.SourceUri.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.BotSdk.BotAction.SourceUri.init -> void
+idunno.Bluesky.BotSdk.BotAction.Status.get -> string!
+idunno.Bluesky.BotSdk.BotAction.Status.init -> void
+idunno.Bluesky.BotSdk.BotAction.TargetDeleted.get -> bool
+idunno.Bluesky.BotSdk.BotAction.TargetDeleted.init -> void
+idunno.Bluesky.BotSdk.BotActionResult
+idunno.Bluesky.BotSdk.BotActionResult.<Clone>$() -> idunno.Bluesky.BotSdk.BotActionResult!
+idunno.Bluesky.BotSdk.BotActionResult.BotActionResult(bool Succeeded, string? RemoteReference, string! Reason) -> void
+idunno.Bluesky.BotSdk.BotActionResult.Deconstruct(out bool Succeeded, out string? RemoteReference, out string! Reason) -> void
+idunno.Bluesky.BotSdk.BotActionResult.Equals(idunno.Bluesky.BotSdk.BotActionResult? other) -> bool
+idunno.Bluesky.BotSdk.BotActionResult.Reason.get -> string!
+idunno.Bluesky.BotSdk.BotActionResult.Reason.init -> void
+idunno.Bluesky.BotSdk.BotActionResult.RemoteReference.get -> string?
+idunno.Bluesky.BotSdk.BotActionResult.RemoteReference.init -> void
+idunno.Bluesky.BotSdk.BotActionResult.Succeeded.get -> bool
+idunno.Bluesky.BotSdk.BotActionResult.Succeeded.init -> void
+idunno.Bluesky.BotSdk.BotActions
+idunno.Bluesky.BotSdk.BotHosting
+idunno.Bluesky.BotSdk.BotOptions
+idunno.Bluesky.BotSdk.BotOptions.AppPassword.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.AppPassword.set -> void
+idunno.Bluesky.BotSdk.BotOptions.ArchiveApiKey.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.ArchiveApiKey.set -> void
+const idunno.Bluesky.BotSdk.BotOptions.Bot = "Bot" -> string!
+idunno.Bluesky.BotSdk.BotOptions.BotOptions() -> void
+idunno.Bluesky.BotSdk.BotOptions.CompletedRetentionDays.get -> int
+idunno.Bluesky.BotSdk.BotOptions.CompletedRetentionDays.set -> void
+idunno.Bluesky.BotSdk.BotOptions.CredentialEncryptionKey.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.CredentialEncryptionKey.set -> void
+idunno.Bluesky.BotSdk.BotOptions.DailyWritePoints.get -> int
+idunno.Bluesky.BotSdk.BotOptions.DailyWritePoints.set -> void
+idunno.Bluesky.BotSdk.BotOptions.DeveloperMode.get -> bool
+idunno.Bluesky.BotSdk.BotOptions.DeveloperMode.set -> void
+idunno.Bluesky.BotSdk.BotOptions.Did.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.Did.set -> void
+idunno.Bluesky.BotSdk.BotOptions.Handle.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.Handle.set -> void
+idunno.Bluesky.BotSdk.BotOptions.HourlyWritePoints.get -> int
+idunno.Bluesky.BotSdk.BotOptions.HourlyWritePoints.set -> void
+idunno.Bluesky.BotSdk.BotOptions.JetstreamService.get -> string!
+idunno.Bluesky.BotSdk.BotOptions.JetstreamService.set -> void
+idunno.Bluesky.BotSdk.BotOptions.MinimumRequestIntervalSeconds.get -> int
+idunno.Bluesky.BotSdk.BotOptions.MinimumRequestIntervalSeconds.set -> void
+idunno.Bluesky.BotSdk.BotOptions.ReplayLiveBufferCapacity.get -> int
+idunno.Bluesky.BotSdk.BotOptions.ReplayLiveBufferCapacity.set -> void
+idunno.Bluesky.BotSdk.BotOptions.RequestsPerFiveMinutes.get -> int
+idunno.Bluesky.BotSdk.BotOptions.RequestsPerFiveMinutes.set -> void
+idunno.Bluesky.BotSdk.BotOptions.SessionsPerDay.get -> int
+idunno.Bluesky.BotSdk.BotOptions.SessionsPerDay.set -> void
+idunno.Bluesky.BotSdk.BotOptions.SessionsPerFiveMinutes.get -> int
+idunno.Bluesky.BotSdk.BotOptions.SessionsPerFiveMinutes.set -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.<Clone>$() -> idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot!
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.BotOperationalSnapshot(long ProcessedThrough, long PendingActions, long UncertainActions, long RetryDueActions, long SentActions, long RejectedActions, long SimulatedActions) -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.Deconstruct(out long ProcessedThrough, out long PendingActions, out long UncertainActions, out long RetryDueActions, out long SentActions, out long RejectedActions, out long SimulatedActions) -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.Equals(idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot? other) -> bool
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.PendingActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.PendingActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.ProcessedThrough.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.ProcessedThrough.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.RejectedActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.RejectedActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.RetryDueActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.RetryDueActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.SentActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.SentActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.SimulatedActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.SimulatedActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.UncertainActions.get -> long
+idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.UncertainActions.init -> void
+idunno.Bluesky.BotSdk.DataProviders.IBotDatabaseDiagnostics
+idunno.Bluesky.BotSdk.DataProviders.IBotDatabaseDiagnostics.CheckConnectionAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.BotSdk.DataProviders.IBotDatabaseDiagnostics.GetOperationalSnapshotAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot!>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.AcquireOrRenewAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.DateTimeOffset?>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.ArchiveCooldownAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.DateTimeOffset>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.CooldownAsync(System.DateTimeOffset until, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.FinishAsync(idunno.Bluesky.BotSdk.BotAction! work, string! status, string? remoteReference, string! reason, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.HandleAsync(long sequence, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.BotSdk.BotAction!>! actions, string? malformedReason, System.Threading.CancellationToken cancellationToken, idunno.AtProto.AtUri? deletedUri = null) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.InitializeAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.IsDatabaseException(System.Exception! exception) -> bool
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.IsTransientDatabaseException(System.Exception! exception) -> bool
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.LoadCredentialsAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<byte[]?>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.LoadStateAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.ReplayState!>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.MarkAttemptAsync(idunno.Bluesky.BotSdk.BotAction! work, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.NextWorkAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotAction?>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.OverrideLookbackAsync(System.DateTimeOffset cutoff, idunno.AtProto.Jetstream.Archive.SnapshotRequest! replacement, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.Owner.get -> System.Guid
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.PruneAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.RecordSkip(long? sequence, string! scope, string! reason) -> void
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.ReleaseAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.ReserveRequestAsync(int points, bool session, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.DateTimeOffset?>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.RetryAsync(idunno.Bluesky.BotSdk.BotAction! work, System.DateTimeOffset retryAt, string! reason, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.SaveArchiveCooldownAsync(System.DateTimeOffset until, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.SaveCheckpoint(idunno.AtProto.Jetstream.Archive.SnapshotCheckpoint! checkpoint, System.Threading.CancellationToken cancellationToken, long? consumedThrough = null) -> void
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.SaveCredentialsAsync(byte[]? encrypted, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.IDatabaseProvider.SaveRequestAsync(idunno.AtProto.Jetstream.Archive.SnapshotRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<int>!
+idunno.Bluesky.BotSdk.DataProviders.InMemoryBotStorageExtensions
+idunno.Bluesky.BotSdk.IBotActionHandler
+idunno.Bluesky.BotSdk.IBotActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.IBotActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.IBotActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.IBotActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.IBotActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.IBotActionRemote
+idunno.Bluesky.BotSdk.IBotActionRemote.Agent.get -> idunno.Bluesky.BlueskyAgent!
+idunno.Bluesky.BotSdk.IBotActionRemote.BotDid.get -> string!
+idunno.Bluesky.BotSdk.IBotActionRemote.CreateBookmarkAsync(idunno.AtProto.Repo.StrongReference! subject, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.BotSdk.IBotActionRemote.CreateRecordAsync(idunno.Bluesky.BotSdk.BotAction! action, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.IBotActionRemote.FindListMemberAsync(idunno.AtProto.AtUri! listUri, idunno.AtProto.Did! author, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string?>!
+idunno.Bluesky.BotSdk.IBotActionRemote.FindRecordAsync(idunno.Bluesky.BotSdk.BotAction! action, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<string?>!
+idunno.Bluesky.BotSdk.IBotActionRemote.HasBookmarkAsync(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+idunno.Bluesky.BotSdk.IBotActionRemote.TargetAsync(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.Feed.PostView!>!
+idunno.Bluesky.BotSdk.IBotPolicy
+idunno.Bluesky.BotSdk.IBotPolicy.Evaluate(idunno.AtProto.Jetstream.JetstreamEvent! item, System.DateTimeOffset startedAt) -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.BotSdk.BotAction!>!
+idunno.Bluesky.BotSdk.LikeActionHandler
+idunno.Bluesky.BotSdk.LikeActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.LikeActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.LikeActionHandler.LikeActionHandler() -> void
+idunno.Bluesky.BotSdk.LikeActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.LikeActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.LikeActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.ListItemActionHandler
+idunno.Bluesky.BotSdk.ListItemActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.ListItemActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.ListItemActionHandler.ListItemActionHandler() -> void
+idunno.Bluesky.BotSdk.ListItemActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.ListItemActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.ListItemActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.MalformedEventException
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException() -> void
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException(string! message) -> void
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException(string! message, System.Exception! innerException) -> void
+idunno.Bluesky.BotSdk.OwnershipLostException
+idunno.Bluesky.BotSdk.OwnershipLostException.OwnershipLostException() -> void
+idunno.Bluesky.BotSdk.OwnershipLostException.OwnershipLostException(string! message) -> void
+idunno.Bluesky.BotSdk.OwnershipLostException.OwnershipLostException(string! message, System.Exception! innerException) -> void
+idunno.Bluesky.BotSdk.RateWaitException
+idunno.Bluesky.BotSdk.RateWaitException.RateWaitException() -> void
+idunno.Bluesky.BotSdk.RateWaitException.RateWaitException(System.DateTimeOffset until) -> void
+idunno.Bluesky.BotSdk.RateWaitException.RateWaitException(string! message) -> void
+idunno.Bluesky.BotSdk.RateWaitException.RateWaitException(string! message, System.Exception! innerException) -> void
+idunno.Bluesky.BotSdk.RateWaitException.Until.get -> System.DateTimeOffset
+idunno.Bluesky.BotSdk.RemoteFailureException
+idunno.Bluesky.BotSdk.RemoteFailureException.RemoteFailureException() -> void
+idunno.Bluesky.BotSdk.RemoteFailureException.RemoteFailureException(System.Net.HttpStatusCode status, string? error, string! operation, bool retryMissing = false) -> void
+idunno.Bluesky.BotSdk.RemoteFailureException.RemoteFailureException(string! message) -> void
+idunno.Bluesky.BotSdk.RemoteFailureException.RemoteFailureException(string! message, System.Exception! innerException) -> void
+idunno.Bluesky.BotSdk.RemoteFailureException.Retryable.get -> bool
+idunno.Bluesky.BotSdk.RemoteFailureException.Status.get -> System.Net.HttpStatusCode
+idunno.Bluesky.BotSdk.ReplayState
+idunno.Bluesky.BotSdk.ReplayState.<Clone>$() -> idunno.Bluesky.BotSdk.ReplayState!
+idunno.Bluesky.BotSdk.ReplayState.BotDid.get -> string!
+idunno.Bluesky.BotSdk.ReplayState.BotDid.init -> void
+idunno.Bluesky.BotSdk.ReplayState.CheckpointJson.get -> string?
+idunno.Bluesky.BotSdk.ReplayState.CheckpointJson.init -> void
+idunno.Bluesky.BotSdk.ReplayState.Deconstruct(out System.DateTimeOffset StartedAt, out string! Service, out string! BotDid, out bool DeveloperMode, out string? RequestJson, out string? CheckpointJson, out long ProcessedThrough) -> void
+idunno.Bluesky.BotSdk.ReplayState.DeveloperMode.get -> bool
+idunno.Bluesky.BotSdk.ReplayState.DeveloperMode.init -> void
+idunno.Bluesky.BotSdk.ReplayState.Equals(idunno.Bluesky.BotSdk.ReplayState? other) -> bool
+idunno.Bluesky.BotSdk.ReplayState.ProcessedThrough.get -> long
+idunno.Bluesky.BotSdk.ReplayState.ProcessedThrough.init -> void
+idunno.Bluesky.BotSdk.ReplayState.ReplayState(System.DateTimeOffset StartedAt, string! Service, string! BotDid, bool DeveloperMode, string? RequestJson, string? CheckpointJson, long ProcessedThrough) -> void
+idunno.Bluesky.BotSdk.ReplayState.RequestJson.get -> string?
+idunno.Bluesky.BotSdk.ReplayState.RequestJson.init -> void
+idunno.Bluesky.BotSdk.ReplayState.Service.get -> string!
+idunno.Bluesky.BotSdk.ReplayState.Service.init -> void
+idunno.Bluesky.BotSdk.ReplayState.StartedAt.get -> System.DateTimeOffset
+idunno.Bluesky.BotSdk.ReplayState.StartedAt.init -> void
+idunno.Bluesky.BotSdk.ReplyActionHandler
+idunno.Bluesky.BotSdk.ReplyActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.ReplyActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.ReplyActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.ReplyActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.ReplyActionHandler.ReplyActionHandler() -> void
+idunno.Bluesky.BotSdk.ReplyActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.RepostActionHandler
+idunno.Bluesky.BotSdk.RepostActionHandler.ExecuteAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult!>!
+idunno.Bluesky.BotSdk.RepostActionHandler.Kind.get -> string!
+idunno.Bluesky.BotSdk.RepostActionHandler.PayloadVersion.get -> int
+idunno.Bluesky.BotSdk.RepostActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
+idunno.Bluesky.BotSdk.RepostActionHandler.RepostActionHandler() -> void
+idunno.Bluesky.BotSdk.RepostActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+override idunno.Bluesky.BotSdk.BotAction.Equals(object? obj) -> bool
+override idunno.Bluesky.BotSdk.BotAction.GetHashCode() -> int
+override idunno.Bluesky.BotSdk.BotAction.ToString() -> string!
+override idunno.Bluesky.BotSdk.BotActionResult.Equals(object? obj) -> bool
+override idunno.Bluesky.BotSdk.BotActionResult.GetHashCode() -> int
+override idunno.Bluesky.BotSdk.BotActionResult.ToString() -> string!
+override idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.Equals(object? obj) -> bool
+override idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.GetHashCode() -> int
+override idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.ToString() -> string!
+override idunno.Bluesky.BotSdk.ReplayState.Equals(object? obj) -> bool
+override idunno.Bluesky.BotSdk.ReplayState.GetHashCode() -> int
+override idunno.Bluesky.BotSdk.ReplayState.ToString() -> string!
+static idunno.Bluesky.BotSdk.BotAction.operator !=(idunno.Bluesky.BotSdk.BotAction? left, idunno.Bluesky.BotSdk.BotAction? right) -> bool
+static idunno.Bluesky.BotSdk.BotAction.operator ==(idunno.Bluesky.BotSdk.BotAction? left, idunno.Bluesky.BotSdk.BotAction? right) -> bool
+static idunno.Bluesky.BotSdk.BotActionResult.operator !=(idunno.Bluesky.BotSdk.BotActionResult? left, idunno.Bluesky.BotSdk.BotActionResult? right) -> bool
+static idunno.Bluesky.BotSdk.BotActionResult.operator ==(idunno.Bluesky.BotSdk.BotActionResult? left, idunno.Bluesky.BotSdk.BotActionResult? right) -> bool
+static idunno.Bluesky.BotSdk.BotActions.AddAuthorToList(idunno.AtProto.Repo.StrongReference! source, long sequence, idunno.AtProto.AtUri! listUri, System.DateTimeOffset? createdAt = null) -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotActions.Bookmark(idunno.AtProto.Repo.StrongReference! source, long sequence) -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotActions.Create<TPayload>(string! kind, idunno.AtProto.Repo.StrongReference! source, long sequence, TPayload payload, System.Text.Json.Serialization.Metadata.JsonTypeInfo<TPayload>! metadata, string! actionKey = "default", int payloadVersion = 1) -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotActions.Like(idunno.AtProto.Repo.StrongReference! source, long sequence, System.DateTimeOffset? createdAt = null, string! actionKey = "default") -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotActions.Reply(idunno.AtProto.Repo.StrongReference! source, long sequence, idunno.Bluesky.Post! reply, string! actionKey = "default") -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotActions.Repost(idunno.AtProto.Repo.StrongReference! source, long sequence, System.DateTimeOffset? createdAt = null, string! actionKey = "default") -> idunno.Bluesky.BotSdk.BotAction!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.Bluesky.BotSdk.BotOptions! options, string! httpUserAgent) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.Bluesky.BotSdk.BotOptions! options, string! httpUserAgent, System.DateTimeOffset? lookbackCutoff) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! httpUserAgent) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration, string! httpUserAgent, System.DateTimeOffset? lookbackCutoff) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! httpUserAgent) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! httpUserAgent, System.DateTimeOffset? lookbackCutoff) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.Bluesky.BotSdk.BotOptions!>! configureOptions, string! httpUserAgent) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.AddBlueskyBot<TPolicy>(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.Bluesky.BotSdk.BotOptions!>! configureOptions, string! httpUserAgent, System.DateTimeOffset? lookbackCutoff) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.ConfigureConsoleLogging(Microsoft.Extensions.Logging.ILoggingBuilder! logging) -> void
+static idunno.Bluesky.BotSdk.BotHosting.MapBlueskyBotHealthEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.MapBlueskyBotMetricsEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static idunno.Bluesky.BotSdk.BotHosting.ParseLookback(string! value) -> System.TimeSpan
+static idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.operator !=(idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot? left, idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot? right) -> bool
+static idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot.operator ==(idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot? left, idunno.Bluesky.BotSdk.DataProviders.BotOperationalSnapshot? right) -> bool
+static idunno.Bluesky.BotSdk.DataProviders.InMemoryBotStorageExtensions.AddInMemoryBotStorage(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.Bluesky.BotSdk.DataProviders.InMemoryBotStorageExtensions.WithInMemoryStorage(this idunno.Bluesky.BotSdk.BlueskyBotBuilder! builder) -> idunno.Bluesky.BotSdk.BlueskyBotBuilder!
+static idunno.Bluesky.BotSdk.ReplayState.operator !=(idunno.Bluesky.BotSdk.ReplayState? left, idunno.Bluesky.BotSdk.ReplayState? right) -> bool
+static idunno.Bluesky.BotSdk.ReplayState.operator ==(idunno.Bluesky.BotSdk.ReplayState? left, idunno.Bluesky.BotSdk.ReplayState? right) -> bool
+virtual idunno.Bluesky.BotSdk.BotOptions.Validate() -> void

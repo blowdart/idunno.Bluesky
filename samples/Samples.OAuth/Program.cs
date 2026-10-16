@@ -92,9 +92,9 @@ public sealed class Program
             OAuthLoginState? oAuthLoginState = null;
             string callbackData;
 
-            await using var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
-                idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
-                loggerFactory: loggerFactory);
+            await using var callbackServer = await idunno.AtProto.OAuthCallback.CallbackServer.CreateAsync(
+                loggerFactory: loggerFactory,
+                cancellationToken: cancellationToken);
             {
                 OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
 

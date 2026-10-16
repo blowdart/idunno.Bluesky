@@ -1,0 +1,21 @@
+@page "/privacy"
+@{
+    ViewData["Title"] = "Privacy";
+}
+
+<h1 class="display-4">Privacy</h1>
+<div class="alert alert-warning" role="note">
+    This is a development sample, not a production privacy policy. Replace this page with your application's policy before deployment.
+</div>
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5 card-title">Information used by the sample</h2>
+        <p>The sample requests only the <code>atproto</code> identity scope. It displays your DID, access token expiration and client signing key ID.
+            It does not request profile or timeline permissions.</p>
+        <p>Authentication credentials and login correlation state are held in memory. Authentication and correlation cookies support login,
+            and additional cookies protect forms against forgery and carry the refresh status message.</p>
+        <p>Logging out removes the local session and attempts to revoke its tokens. Restarting the sample clears its in-memory sessions.</p>
+        <p class="mb-0">The hosting environment, tunnel provider and authorization server may process request and diagnostic information.
+            Review their settings and policies when configuring your own deployment.</p>
+    </div>
+</div>

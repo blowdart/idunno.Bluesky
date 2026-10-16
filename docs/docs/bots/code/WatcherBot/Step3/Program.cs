@@ -1,6 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
+
 using idunno.AtProto.Jetstream;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -9,38 +11,29 @@ Console.OutputEncoding = Encoding.UTF8;
 HostApplicationBuilder builder = new(args);
 builder.Services.AddHostedService<Worker>();
 
-IHost host = builder.Build();
-host.Run();
-
-return 0;
+using IHost host = builder.Build();
+await host.RunAsync();
 
 internal sealed class Worker : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var jetStream = new AtProtoJetstream();
+        await using var jetStream = new AtProtoJetstream();
 
-        jetStream.RecordReceived += (sender, e) =>
+        try
         {
-            string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-            switch (e.ParsedEvent)
+            await foreach (JetstreamEvent evt in jetStream.StreamAsync(cancellationToken: stoppingToken))
             {
-                case AtJetstreamCommitEvent commitEvent:
+                if (evt is JetstreamCommitEvent commitEvent)
+                {
+                    string timeStamp = evt.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.CurrentCulture);
                     Console.WriteLine($"{commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-                    break;
-
-                default:
-                    break;
+                }
             }
-        };
-
-        await jetStream.ConnectAsync(cancellationToken: stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
         }
-
-        await jetStream.CloseAsync();
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Host shutdown stops the live stream.
+        }
     }
 }

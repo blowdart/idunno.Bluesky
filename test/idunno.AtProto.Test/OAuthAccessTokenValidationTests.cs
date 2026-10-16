@@ -8,6 +8,7 @@ using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.AtProto.Test;
 
@@ -15,8 +16,34 @@ namespace idunno.AtProto.Test;
 public class OAuthAccessTokenValidationTests
 {
     private static readonly Uri s_authority = new("https://authority.test/");
+    private static readonly DateTimeOffset s_now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-    private static OAuthClient CreateOAuthClient(TimeSpan? clockSkew = null, ILoggerFactory? loggerFactory = null)
+    [Theory]
+    [InlineData("ref:scopeReference", false)]
+    [InlineData("atproto repo:com.example.post?action=create", true)]
+    [InlineData("atproto blob:image/* repo:com.example.post?action=create", false)]
+    public void MissingScopeWarningsOnlyCompareDirectlyComparableScopes(string grantedScopes, bool expectBlobWarning)
+    {
+        using CapturingLoggerFactory loggerFactory = new();
+        OAuthClient client = CreateOAuthClient(loggerFactory: loggerFactory);
+
+        client.WarnOnScopesNotGranted(
+            ["atproto", "include:com.example.authBasic", "blob:image/*"],
+            grantedScopes,
+            Guid.NewGuid());
+
+        Assert.Equal(expectBlobWarning ? 1 : 0, loggerFactory.Messages.Count);
+        Assert.DoesNotContain(loggerFactory.Messages, message => message.Contains("include:", StringComparison.Ordinal));
+        if (expectBlobWarning)
+        {
+            Assert.Contains("blob:image/*", Assert.Single(loggerFactory.Messages), StringComparison.Ordinal);
+        }
+    }
+
+    private static OAuthClient CreateOAuthClient(
+        TimeSpan? clockSkew = null,
+        ILoggerFactory? loggerFactory = null,
+        TimeProvider? timeProvider = null)
     {
         OAuthOptions options = new("https://client.test/clientMetadata.json");
 
@@ -29,7 +56,8 @@ public class OAuthAccessTokenValidationTests
             httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: () => new HttpClientHandler(),
             loggerFactory: loggerFactory,
-            options: options);
+            options: options,
+            timeProvider: timeProvider ?? new FakeTimeProvider(s_now));
     }
 
     private static string Base64UrlEncode(string value) =>
@@ -69,12 +97,12 @@ public class OAuthAccessTokenValidationTests
 
         if (includeNotBefore)
         {
-            payload["nbf"] = (notBefore ?? DateTimeOffset.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds();
+            payload["nbf"] = (notBefore ?? s_now.AddMinutes(-1)).ToUnixTimeSeconds();
         }
 
         if (includeExpiry)
         {
-            payload["exp"] = (expires ?? DateTimeOffset.UtcNow.AddMinutes(30)).ToUnixTimeSeconds();
+            payload["exp"] = (expires ?? s_now.AddMinutes(30)).ToUnixTimeSeconds();
         }
 
         return new JsonWebToken($"{Base64UrlEncode("{\"alg\":\"none\"}")}.{Base64UrlEncode(JsonSerializer.Serialize(payload))}.");
@@ -96,18 +124,31 @@ public class OAuthAccessTokenValidationTests
     }
 
     [Theory]
+    [InlineData("ref:scopeReference")]
+    [InlineData("ref:bafyScopeReference")]
+    public void ScopeBeginningWithAReferencePassesValidation(string scope)
+    {
+        CreateOAuthClient().ValidateAccessToken(CreateToken(scope: scope), s_authority, Guid.NewGuid());
+    }
+
+    [Theory]
     [InlineData("notatproto")]
     [InlineData("atproto-lite")]
     [InlineData("xatprotox")]
     [InlineData("transition:atprotogeneric")]
     [InlineData("ATPROTO")]
     [InlineData("transition:generic")]
+    [InlineData("REF:scopeReference")]
+    [InlineData("Ref:scopeReference")]
+    [InlineData("xref:scopeReference")]
+    [InlineData("transition:generic ref:scopeReference")]
+    [InlineData(" ref:scopeReference")]
     public void ScopeMerelyContainingAtProtoAsASubstringFailsValidation(string scope)
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: scope), s_authority, Guid.NewGuid()));
 
-        Assert.Equal("Issued token does not contain atproto in scope.", exception.Message);
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
     [Fact]
@@ -116,7 +157,7 @@ public class OAuthAccessTokenValidationTests
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient().ValidateAccessToken(CreateToken(scope: null), s_authority, Guid.NewGuid()));
 
-        Assert.Equal("Issued token does not contain atproto in scope.", exception.Message);
+        Assert.Equal("Issued token scope does not contain atproto or begin with ref:.", exception.Message);
     }
 
     [Fact]
@@ -160,7 +201,7 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.FromMinutes(1)).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+                CreateToken(notBefore: s_now.AddMinutes(5)),
                 s_authority,
                 Guid.NewGuid()));
 
@@ -171,7 +212,7 @@ public class OAuthAccessTokenValidationTests
     public void TokenIssuedWithinTheConfiguredClockSkewPassesValidation()
     {
         CreateOAuthClient(TimeSpan.FromMinutes(10)).ValidateAccessToken(
-            CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+            CreateToken(notBefore: s_now.AddMinutes(5)),
             s_authority,
             Guid.NewGuid());
     }
@@ -181,7 +222,7 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.FromMinutes(1)).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(-30), expires: DateTimeOffset.UtcNow.AddMinutes(-5)),
+                CreateToken(notBefore: s_now.AddMinutes(-30), expires: s_now.AddMinutes(-5)),
                 s_authority,
                 Guid.NewGuid()));
 
@@ -192,7 +233,7 @@ public class OAuthAccessTokenValidationTests
     public void TokenExpiredWithinTheConfiguredClockSkewPassesValidation()
     {
         CreateOAuthClient(TimeSpan.FromMinutes(10)).ValidateAccessToken(
-            CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(-30), expires: DateTimeOffset.UtcNow.AddMinutes(-5)),
+            CreateToken(notBefore: s_now.AddMinutes(-30), expires: s_now.AddMinutes(-5)),
             s_authority,
             Guid.NewGuid());
     }
@@ -202,11 +243,30 @@ public class OAuthAccessTokenValidationTests
     {
         OAuthException exception = Assert.Throws<OAuthException>(
             () => CreateOAuthClient(TimeSpan.Zero).ValidateAccessToken(
-                CreateToken(notBefore: DateTimeOffset.UtcNow.AddMinutes(5)),
+                CreateToken(notBefore: s_now.AddMinutes(5)),
                 s_authority,
                 Guid.NewGuid()));
 
         Assert.Equal("Issued token is not yet valid.", exception.Message);
+    }
+
+    [Fact]
+    public void TokenLifetimeValidationUsesTheInjectedTimeProvider()
+    {
+        FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        OAuthClient client = CreateOAuthClient(TimeSpan.Zero, timeProvider: timeProvider);
+        JsonWebToken token = CreateToken(
+            notBefore: timeProvider.GetUtcNow().AddMinutes(-1),
+            expires: timeProvider.GetUtcNow().AddMinutes(1));
+
+        client.ValidateAccessToken(token, s_authority, Guid.NewGuid());
+
+        timeProvider.Advance(TimeSpan.FromMinutes(2));
+
+        OAuthException exception = Assert.Throws<OAuthException>(
+            () => client.ValidateAccessToken(token, s_authority, Guid.NewGuid()));
+
+        Assert.Equal("Issued token has already expired.", exception.Message);
     }
 
     [Fact]
@@ -284,6 +344,26 @@ public class OAuthAccessTokenValidationTests
             "issuer https://attacker.test/ did not match the expected https://authority.test/",
             message,
             StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("transition:generic")]
+    [InlineData("REF:scopeReference")]
+    public void InvalidScopeIsLoggedWithBothAcceptedScopeForms(string? scope)
+    {
+        CapturingLoggerFactory loggerFactory = new();
+        Guid correlationId = Guid.NewGuid();
+
+        Assert.Throws<OAuthException>(
+            () => CreateOAuthClient(loggerFactory: loggerFactory).ValidateAccessToken(
+                CreateToken(scope: scope),
+                s_authority,
+                correlationId));
+
+        Assert.Equal(
+            $"OAuth login access token scope did not contain atproto or begin with ref:, correlation {correlationId}",
+            Assert.Single(loggerFactory.Messages));
     }
 
     private sealed class CapturingLoggerFactory : ILoggerFactory

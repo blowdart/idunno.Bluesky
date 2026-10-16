@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto;
@@ -19,6 +20,21 @@ public sealed class Cid : IEquatable<Cid>
 {
     // The multiformats unsigned-varint specification limits values to 9 bytes / 63 bits.
     private const int MaximumVarIntLength = 9;
+
+    // The multicodec identifier for DAG-CBOR encoded content.
+    private const ulong DagCborCodec = 0x71;
+
+    // The multihash identifier for SHA-256.
+    private const byte Sha256MultihashCode = 0x12;
+
+    // The hash is never handed out directly, so a Cid cannot be changed after it is created and the values derived
+    // from it below can be cached.
+    private readonly byte[] _hash;
+
+    private IReadOnlyList<byte>? _hashView;
+    private string? _value;
+    private int _hashCode;
+    private bool _hashCodeCalculated;
 
     /// <summary>
     /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
@@ -42,7 +58,7 @@ public sealed class Cid : IEquatable<Cid>
 
                 Version = 0;
                 Codec = 0x70;
-                Hash = bytes;
+                _hash = bytes;
             }
             else
             {
@@ -50,11 +66,11 @@ public sealed class Cid : IEquatable<Cid>
 
                 byte[] bytes = SimpleBase.Multibase.Decode(value);
 
-                (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
+                (byte Version, ulong Codec, byte[] Hash) result = ParseBytes(bytes);
 
                 Version = result.Version;
                 Codec = result.Codec;
-                Hash = result.Hash;
+                _hash = result.Hash;
             }
         }
         catch (Exception ex)
@@ -76,10 +92,10 @@ public sealed class Cid : IEquatable<Cid>
 
         try
         {
-            (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
+            (byte Version, ulong Codec, byte[] Hash) result = ParseBytes(bytes);
             Version = result.Version;
             Codec = result.Codec;
-            Hash = result.Hash;
+            _hash = result.Hash;
         }
         catch (Exception ex)
         {
@@ -99,10 +115,10 @@ public sealed class Cid : IEquatable<Cid>
 
         try
         {
-            (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes.ToArray());
+            (byte Version, ulong Codec, byte[] Hash) result = ParseBytes(bytes);
             Version = result.Version;
             Codec = result.Codec;
-            Hash = result.Hash;
+            _hash = result.Hash;
         }
         catch (Exception ex)
         {
@@ -134,7 +150,43 @@ public sealed class Cid : IEquatable<Cid>
 
         Version = version;
         Codec = codec;
-        Hash = (byte[])hash.Clone();
+        _hash = (byte[])hash.Clone();
+    }
+
+    /// <summary>
+    /// Creates a new instance of a version 1 <see cref="Cid"/> which takes ownership of <paramref name="hash"/>, rather than copying it.
+    /// </summary>
+    /// <param name="codec">The codec used to encode the hash.</param>
+    /// <param name="hash">The multihash, which must not be changed, or used elsewhere, afterwards.</param>
+    private Cid(ulong codec, byte[] hash)
+    {
+        Version = 1;
+        Codec = codec;
+        _hash = hash;
+    }
+
+    /// <summary>
+    /// Creates the <see cref="Cid"/> which identifies the specified DAG-CBOR encoded <paramref name="content"/>.
+    /// </summary>
+    /// <param name="content">The DAG-CBOR encoded block to create a content identifier for.</param>
+    /// <returns>A version 1 <see cref="Cid"/> over the SHA-256 hash of <paramref name="content"/>, using the DAG-CBOR codec.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="content"/> is empty.</exception>
+    /// <remarks>
+    /// <para>The content identifier is calculated over the bytes exactly as supplied. As DAG-CBOR is a deterministic encoding
+    /// re-encoding a decoded block before calling this method may produce a different, and incorrect, identifier.</para>
+    /// </remarks>
+    public static Cid FromDagCbor(ReadOnlySpan<byte> content)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(content.Length);
+
+        // A multihash is the hash function identifier, the digest length, then the digest itself.
+        byte[] multihash = new byte[2 + SHA256.HashSizeInBytes];
+        multihash[0] = Sha256MultihashCode;
+        multihash[1] = SHA256.HashSizeInBytes;
+        SHA256.HashData(content, multihash.AsSpan(2));
+
+        // The multihash was created here, so the Cid can own it rather than copy it.
+        return new Cid(DagCborCodec, multihash);
     }
 
     /// <summary>
@@ -153,7 +205,7 @@ public sealed class Cid : IEquatable<Cid>
     /// Gets the hash(es).
     /// </summary>
     [JsonIgnore]
-    public IReadOnlyList<byte> Hash { get; }
+    public IReadOnlyList<byte> Hash => _hashView ??= Array.AsReadOnly(_hash);
 
     /// <summary>
     /// Gets the value of the Content Identifier.
@@ -165,14 +217,16 @@ public sealed class Cid : IEquatable<Cid>
     /// Returns a string that represents the current <see cref="Cid"/> object.
     /// </summary>
     /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
+    public override string ToString() => _value ??= Format();
+
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes the base32 used by CIDv1 to lower case.")]
-    public override string ToString()
+    private string Format()
     {
         if (Version == 0)
         {
             // CIDv0 is base58btc, whose alphabet is case sensitive, so unlike the base32 used by CIDv1
             // the result cannot be case normalized without producing a different, unparsable identifier.
-            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray());
+            return SimpleBase.Base58.Bitcoin.Encode(_hash);
         }
         else if (Version == 1)
         {
@@ -192,17 +246,19 @@ public sealed class Cid : IEquatable<Cid>
     /// <returns>The CID as bytes.</returns>
     public byte[] ToBytes()
     {
-        var result = new List<byte>();
-
         if (Version != 1)
         {
             return [];
         }
 
-        result.Add(Version);
-        result.AddRange(EncodeVarInt(Codec));
-        result.AddRange(Hash);
-        return [.. result];
+        int codecLength = VarIntLength(Codec);
+        byte[] result = new byte[1 + codecLength + _hash.Length];
+
+        result[0] = Version;
+        EncodeVarInt(Codec, result.AsSpan(1, codecLength));
+        _hash.CopyTo(result, 1 + codecLength);
+
+        return result;
     }
 
     /// <summary>
@@ -225,15 +281,22 @@ public sealed class Cid : IEquatable<Cid>
     /// Gets a hash code for the current object.
     /// </summary>
     /// <returns>A hash code for the current object.</returns>
+    [SuppressMessage("Major Bug", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "The cached hash code is computed solely from readonly state, so it never changes once calculated.")]
     public override int GetHashCode()
     {
-        HashCode hashAlgorithm = default;
+        if (!Volatile.Read(ref _hashCodeCalculated))
+        {
+            HashCode hashAlgorithm = default;
 
-        hashAlgorithm.Add(Version);
-        hashAlgorithm.Add(Codec);
-        hashAlgorithm.AddBytes(Hash.ToArray());
+            hashAlgorithm.Add(Version);
+            hashAlgorithm.Add(Codec);
+            hashAlgorithm.AddBytes(_hash);
 
-        return hashAlgorithm.ToHashCode();
+            _hashCode = hashAlgorithm.ToHashCode();
+            Volatile.Write(ref _hashCodeCalculated, true);
+        }
+
+        return _hashCode;
     }
 
     /// <summary>
@@ -270,7 +333,7 @@ public sealed class Cid : IEquatable<Cid>
         // Return true if the fields match.
         return Version == other.Version &&
             Codec == other.Codec &&
-            Hash.SequenceEqual(other.Hash);
+            _hash.AsSpan().SequenceEqual(other._hash);
     }
 
     /// <summary>
@@ -303,24 +366,22 @@ public sealed class Cid : IEquatable<Cid>
     /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different from the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Cid? lhs, Cid? rhs) => !(lhs == rhs);
 
-    private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
+    private static (byte Version, ulong Codec, byte[] Hash) ParseBytes(ReadOnlySpan<byte> span)
     {
-        Span<byte> span = new(bytes);
-
         if (span.IsEmpty)
         {
-            throw new ArgumentException("Value contains no data.", nameof(bytes));
+            throw new ArgumentException("Value contains no data.", nameof(span));
         }
 
         byte version = span[0];
 
         if (version == 0)
         {
-            Span<byte> multihash = span[1..];
+            ReadOnlySpan<byte> multihash = span[1..];
 
             if (multihash.IsEmpty)
             {
-                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+                throw new ArgumentException("Value contains no multihash.", nameof(span));
             }
 
             return (version, 0x70, multihash.ToArray());
@@ -329,11 +390,11 @@ public sealed class Cid : IEquatable<Cid>
         {
             (ulong codec, int codecLength) = DecodeVarInt(span[1..]);
 
-            Span<byte> multihash = span[(1 + codecLength)..];
+            ReadOnlySpan<byte> multihash = span[(1 + codecLength)..];
 
             if (multihash.IsEmpty)
             {
-                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+                throw new ArgumentException("Value contains no multihash.", nameof(span));
             }
 
             return new(version, codec, multihash.ToArray());
@@ -341,22 +402,34 @@ public sealed class Cid : IEquatable<Cid>
         else
         {
             throw new ArgumentException(
-                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."), nameof(bytes));
+                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."), nameof(span));
         }
     }
 
-    private static byte[] EncodeVarInt(ulong value)
+    private static int VarIntLength(ulong value)
     {
-        var bytes = new List<byte>();
+        int length = 1;
 
         while (value >= 0x80)
         {
-            bytes.Add((byte)(value | 0x80));
+            value >>= 7;
+            length++;
+        }
+
+        return length;
+    }
+
+    private static void EncodeVarInt(ulong value, Span<byte> destination)
+    {
+        int i = 0;
+
+        while (value >= 0x80)
+        {
+            destination[i++] = (byte)(value | 0x80);
             value >>= 7;
         }
 
-        bytes.Add((byte)value);
-        return [.. bytes];
+        destination[i] = (byte)value;
     }
 
     private static (ulong Value, int Length) DecodeVarInt(ReadOnlySpan<byte> bytes)

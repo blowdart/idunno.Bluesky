@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Samples.WinUIOAuth (Package)": {
+      "commandName": "MsixPackage"
+    }
+  }
+}

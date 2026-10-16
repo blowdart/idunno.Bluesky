@@ -39,11 +39,11 @@ public class JetstreamBuilderTests
     }
 
     [Fact]
-    public void FilterToThrowsOnANullNsidArray()
+    public void FilterToThrowsOnANullCollectionArray()
     {
         AtProtoJetstreamBuilder builder = AtProtoJetstream.CreateBuilder();
 
-        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => builder.FilterTo((Nsid[])null!));
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => builder.FilterTo((CollectionSelector[])null!));
 
         Assert.Equal("collections", exception.ParamName);
     }

@@ -15,6 +15,7 @@ public class AtProtoAgentBuilder
 {
     private const string DefaultService = "https://public.api.bsky.app";
     private const string DefaultDirectoryService = "https://plc.directory";
+    private TimeProvider _timeProvider = System.TimeProvider.System;
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoAgentBuilder"/>.
@@ -59,6 +60,10 @@ public class AtProtoAgentBuilder
     /// <summary>
     /// Gets or sets the <see cref="JsonOptions"/> for the client."/>
     /// </summary>
+    /// <remarks>
+    /// <para>Options remain mutable until <see cref="Build"/> creates an agent with a finalized, read-only copy.
+    /// Later changes to this instance do not change an existing agent's configuration.</para>
+    /// </remarks>
     public JsonOptions? JsonOptions { get; set; }
 
     /// <summary>
@@ -141,6 +146,20 @@ public class AtProtoAgentBuilder
     }
 
     /// <summary>
+    /// Sets the <see cref="TimeProvider"/> used by the agent for time-sensitive operations.
+    /// </summary>
+    /// <param name="timeProvider">A time provider.</param>
+    /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    public virtual AtProtoAgentBuilder WithTimeProvider(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        _timeProvider = timeProvider;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the <see cref="OAuthOptions"/> to use using OAuth for authentication.
     /// </summary>
     /// <param name="configure">The <see cref="OAuthOptions"/> to use using OAuth for authentication.</param>
@@ -169,7 +188,7 @@ public class AtProtoAgentBuilder
     {
         ArgumentNullException.ThrowIfNull(configure);
 
-        JsonOptions configuredOptions = new();
+        JsonOptions configuredOptions = new(adaptContracts: false);
 
         configure(configuredOptions);
 
@@ -259,6 +278,7 @@ public class AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
         else
@@ -270,6 +290,7 @@ public class AtProtoAgentBuilder
                 OAuthOptions = OAuthOptions,
                 HttpJsonOptions = JsonOptions,
                 EnableBackgroundTokenRefresh = BackgroundTokenRefreshEnabled,
+                TimeProvider = _timeProvider,
             });
         }
     }

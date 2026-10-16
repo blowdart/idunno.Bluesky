@@ -1,12 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.SQLite.Test;
 
 public class ExpiredEntrySweepThrottleTests
 {
     private static readonly TimeSpan s_shortInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan s_afterShortIntervalElapses = TimeSpan.FromMilliseconds(250);
 
     [Fact]
     public void ASweepIsNotClaimableUntilAnIntervalHasElapsed()
@@ -17,21 +18,23 @@ public class ExpiredEntrySweepThrottleTests
     }
 
     [Fact]
-    public async Task ASweepIsClaimableOnceAnIntervalHasElapsed()
+    public void ASweepIsClaimableOnceAnIntervalHasElapsed()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", timeProvider);
 
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        timeProvider.Advance(s_shortInterval);
 
         Assert.True(throttle.TryClaimSweep());
     }
 
     [Fact]
-    public async Task ClaimingASweepConsumesTheInterval()
+    public void ClaimingASweepConsumesTheInterval()
     {
-        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval");
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", timeProvider);
 
-        await Task.Delay(s_afterShortIntervalElapses, TestContext.Current.CancellationToken);
+        timeProvider.Advance(s_shortInterval);
 
         Assert.True(throttle.TryClaimSweep());
         Assert.False(throttle.TryClaimSweep());
@@ -40,7 +43,9 @@ public class ExpiredEntrySweepThrottleTests
     [Fact]
     public async Task OnlyOneOfManyConcurrentCallersClaimsTheSameInterval()
     {
-        ExpiredEntrySweepThrottle throttle = new(TimeSpan.FromMinutes(5), "interval", dueImmediately: true);
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", dueImmediately: true, timeProvider);
+        timeProvider.Advance(s_shortInterval);
 
         using Barrier barrier = new(32);
         bool[] claims = new bool[32];
@@ -54,6 +59,44 @@ public class ExpiredEntrySweepThrottleTests
             TestContext.Current.CancellationToken)));
 
         Assert.Equal(1, claims.Count(claimed => claimed));
+    }
+
+    [Fact]
+    public void AMaximumIntervalDoesNotOverflow()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(TimeSpan.MaxValue, "interval", timeProvider);
+
+        Assert.False(throttle.TryClaimSweep());
+
+        timeProvider.Advance(TimeSpan.FromDays(365 * 100));
+
+        Assert.False(throttle.TryClaimSweep());
+    }
+
+    [Fact]
+    public void AMaximumIntervalThatIsDueImmediatelyIsClaimableOnce()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(TimeSpan.MaxValue, "interval", dueImmediately: true, timeProvider);
+
+        Assert.True(throttle.TryClaimSweep());
+        Assert.False(throttle.TryClaimSweep());
+    }
+
+    [Fact]
+    public void ASweepDueImmediatelyStartsANewInterval()
+    {
+        FakeTimeProvider timeProvider = new();
+        ExpiredEntrySweepThrottle throttle = new(s_shortInterval, "interval", dueImmediately: true, timeProvider);
+
+        Assert.True(throttle.TryClaimSweep());
+
+        timeProvider.Advance(s_shortInterval - TimeSpan.FromTicks(1));
+        Assert.False(throttle.TryClaimSweep());
+
+        timeProvider.Advance(TimeSpan.FromTicks(1));
+        Assert.True(throttle.TryClaimSweep());
     }
 
     [Fact]

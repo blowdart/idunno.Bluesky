@@ -3,7 +3,6 @@
 
 using idunno.AtProto;
 using idunno.Bluesky.Embed;
-using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;
 

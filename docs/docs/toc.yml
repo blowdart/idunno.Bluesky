@@ -55,19 +55,39 @@ items:
     items:
       - name: ASP.NET Authentication
         href: asp.net.md
+      - name: React BFF sample
+        href: reactBff.md
+      - name: Production Configuration
+        href: productionConfiguration.md
 
   - name: Advanced Topics
     items:
-      - name: Configuring logging
-        href: logging.md
-      - name: Built-in Metrics
-        href: metrics.md
-      - name: Labels
+      - name: Configuration
+        items:
+          - name: Production Configuration
+            href: productionConfiguration.md
+          - name: Agent HTTP configuration
+            href: httpConfiguration.md
+          - name: Logging Configuration
+            href: logging.md
+      - name: Advanced Authentication
+        items:
+          - name: Saving & restoring authentication state
+            href: savingAndRestoringAuthentication.md
+          - name: OAuth permissions
+            href: oauth/oauthPermissions.md
+          - name: Progressive authorization
+            href: oauth/progressiveAuthorization.md
+          - name: ASP.NET progressive authorization
+            href: oauth/progressiveAuthorizationAspNet.md
+          - name: Local OAuth development
+            href: oauth/localOAuthDevelopment.md
+          - name: Desktop authentication with Windows OAuth
+            href: windowsOAuth.md
+      - name: Resolving and caching handles for DIDs
+        href: didHandleCache.md
+      - name: atproto Labels
         href: labels.md
-      - name: Saving & restoring authentication state
-        href: savingAndRestoringAuthentication.md
-      - name: Using the Jetstream
-        href: jetstream.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
       - name: Sending "raw" requests
@@ -76,15 +96,41 @@ items:
         href: avoidingTheAgent.md
       - name: Custom Lexicons and Records
         href: customLexiconsAndRecords.md
+      - name: Reliable repository-record creation with fixed keys
+        href: recordKeys.md
       - name: Unspecced APIS
         href: unspecced.md
+      - name: Built-in Metrics
+        href: metrics.md
 
   - name: Writing Bots
     items:
-      - name: Writing a scheduled post bot
-        href: bots/scheduledPostBot.md
-      - name: Writing a watcher bot
-        href: bots/watcherBot.md
+      - name: Simple bots
+        items:
+          - name: Writing a scheduled post bot
+            href: bots/scheduledPostBot.md
+          - name: Writing a watcher bot
+            href: bots/watcherBot.md
+      - name: Durable Bots
+        items:
+          - name: Writing a durable bot
+            href: bots/durableBotSdk.md
+          - name: Writing a custom bot action
+            href: bots/customBotActions.md
+
+  - name: Jetstream
+    items:
+      - name: Jetstream Quickstart
+        href: jetstream.md
+      - name: Network replay and snapshots
+        href: jetstreamReplay.md
+      - name: Migrating from v1 to v2
+        href: jetstreamMigration.md
+
+  - name: Firehose
+    items:
+      - name: Reading the firehose and labels
+        href: firehose.md
 
   - name: Reference
     items:

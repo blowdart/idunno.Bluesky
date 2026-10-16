@@ -15,8 +15,8 @@ namespace idunno.AtProto.Integration.Test;
 [ExcludeFromCodeCoverage]
 public class RepoHardeningTests
 {
-    private static readonly Did TestDid = "did:plc:test";
-    private static readonly Nsid TestCollection = "blue.idunno.test";
+    private static readonly Did s_testDid = "did:plc:test";
+    private static readonly Nsid s_testCollection = "blue.idunno.test";
 
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
@@ -30,7 +30,7 @@ public class RepoHardeningTests
     private static AccessCredentials CreateCredentials() => new(
         service: TestServerBuilder.DefaultUri,
         authenticationType: AuthenticationType.UsernamePassword,
-        accessJwt: JwtBuilder.CreateJwt(TestDid, TestServerBuilder.DefaultUri.ToString()),
+        accessJwt: JwtBuilder.CreateJwt(s_testDid, TestServerBuilder.DefaultUri.ToString()),
         refreshToken: "refreshToken");
 
     [Fact]
@@ -44,11 +44,11 @@ public class RepoHardeningTests
 
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        ICollection<WriteOperation> operations = [new UnsupportedOperation(TestCollection)];
+        ICollection<WriteOperation> operations = [new UnsupportedOperation(s_testCollection)];
 
         ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => AtProtoServer.ApplyWrites(
             operations: operations,
-            repo: TestDid,
+            repo: s_testDid,
             validate: true,
             cid: null,
             service: TestServerBuilder.DefaultUri,
@@ -70,12 +70,12 @@ public class RepoHardeningTests
 
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-        ICollection<WriteOperation> operations = [new UnsupportedOperation(TestCollection)];
+        ICollection<WriteOperation> operations = [new UnsupportedOperation(s_testCollection)];
 
         ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => AtProtoServer.ApplyWrites(
             operations: operations,
             jsonSerializerOptions: _jsonSerializerOptions,
-            repo: TestDid,
+            repo: s_testDid,
             validate: true,
             cid: null,
             service: TestServerBuilder.DefaultUri,
@@ -145,8 +145,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(CreateListRecordsServer(MalformedPageJson)).CreateClient();
 
         AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             limit: 10,
             cursor: null,
             reverse: false,
@@ -168,8 +168,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(CreateListRecordsServer(MalformedPageJson)).CreateClient();
 
         AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             limit: 10,
             cursor: null,
             reverse: false,
@@ -193,8 +193,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(CreateListRecordsServer(jsonReturnValue)).CreateClient();
 
         AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             limit: 10,
             cursor: null,
             reverse: false,
@@ -325,7 +325,7 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoRepositoryRecord<TestRecord> repositoryRecord = new(
-            uri: new AtUri($"at://{TestDid}/{TestCollection}/rkey1"),
+            uri: new AtUri($"at://{s_testDid}/{s_testCollection}/rkey1"),
             cid: expectedCid,
             value: new TestRecord() { TestValue = "testValue" });
 
@@ -370,8 +370,8 @@ public class RepoHardeningTests
 
         AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
             record: new TestRecord() { TestValue = "testValue" },
-            collection: TestCollection,
-            creator: TestDid,
+            collection: s_testCollection,
+            creator: s_testDid,
             rKey: null,
             validate: true,
             swapCommit: "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya",
@@ -397,8 +397,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             rKey: "rkey1",
             swapRecord: "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
             swapCommit: null,
@@ -425,8 +425,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         ArgumentOutOfRangeException exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => AtProtoServer.ListRecords<TestRecord>(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             limit: limit,
             cursor: null,
             reverse: false,
@@ -455,8 +455,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<ApplyWritesResults> response = await AtProtoServer.ApplyWrites(
-            operations: [new DeleteOperation(TestCollection, "rkey1")],
-            repo: TestDid,
+            operations: [new DeleteOperation(s_testCollection, "rkey1")],
+            repo: s_testDid,
             validate: true,
             cid: null,
             service: TestServerBuilder.DefaultUri,
@@ -481,8 +481,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<ApplyWritesResults> response = await AtProtoServer.ApplyWrites(
-            operations: [new DeleteOperation(TestCollection, "rkey1")],
-            repo: TestDid,
+            operations: [new DeleteOperation(s_testCollection, "rkey1")],
+            repo: s_testDid,
             validate: true,
             cid: null,
             service: TestServerBuilder.DefaultUri,
@@ -509,8 +509,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             rKey: "rkey1",
             swapRecord: null,
             swapCommit: null,
@@ -535,8 +535,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             rKey: "rkey1",
             swapRecord: null,
             swapCommit: null,
@@ -562,8 +562,8 @@ public class RepoHardeningTests
         HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
         AtProtoHttpResult<DeleteResult> response = await AtProtoServer.DeleteRecord(
-            repo: TestDid,
-            collection: TestCollection,
+            repo: s_testDid,
+            collection: s_testCollection,
             rKey: "rkey1",
             swapRecord: null,
             swapCommit: null,

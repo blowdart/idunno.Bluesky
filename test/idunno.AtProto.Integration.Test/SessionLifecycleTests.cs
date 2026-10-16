@@ -64,7 +64,7 @@ public class SessionLifecycleTests
             // The failure never reached the server, so the session the agent was already holding is untouched and still
             // needs refreshing.
             Assert.Same(originalCredentials, agent.Credentials);
-            Assert.True(GetRefreshTimer(agent)!.Enabled);
+            Assert.True(agent.CredentialRefreshTimerEnabled);
         }
     }
 
@@ -90,7 +90,7 @@ public class SessionLifecycleTests
                     cancellationToken: TestContext.Current.CancellationToken));
 
             Assert.Same(originalCredentials, agent.Credentials);
-            Assert.True(GetRefreshTimer(agent)!.Enabled);
+            Assert.True(agent.CredentialRefreshTimerEnabled);
         }
     }
 
@@ -117,7 +117,7 @@ public class SessionLifecycleTests
             // This failure discards the credentials, so there is nothing left to refresh and the timer must stay stopped
             // rather than ticking against an agent which is no longer authenticated.
             Assert.Null(agent.Credentials);
-            Assert.False(GetRefreshTimer(agent)!.Enabled);
+            Assert.False(agent.CredentialRefreshTimerEnabled);
         }
     }
 
@@ -136,7 +136,7 @@ public class SessionLifecycleTests
 
             // The session was never deleted, so the agent is still authenticated and still needs to refresh.
             Assert.Same(originalCredentials, agent.Credentials);
-            Assert.True(GetRefreshTimer(agent)!.Enabled);
+            Assert.True(agent.CredentialRefreshTimerEnabled);
         }
     }
 
@@ -155,7 +155,7 @@ public class SessionLifecycleTests
             // on refreshing a session the caller asked it to end.
             Assert.Null(agent.Credentials);
             Assert.False(agent.IsAuthenticated);
-            Assert.False(GetRefreshTimer(agent)!.Enabled);
+            Assert.False(agent.CredentialRefreshTimerEnabled);
         }
     }
 
@@ -208,7 +208,7 @@ public class SessionLifecycleTests
 
         StartRefreshTimer(agent);
 
-        Assert.True(GetRefreshTimer(agent)!.Enabled);
+        Assert.True(agent.CredentialRefreshTimerEnabled);
     }
 
     private static void StartRefreshTimer(AtProtoAgent agent)
@@ -216,13 +216,6 @@ public class SessionLifecycleTests
         typeof(AtProtoAgent)
             .GetMethod("StartTokenRefreshTimer", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(agent, null);
-    }
-
-    private static System.Timers.Timer? GetRefreshTimer(AtProtoAgent agent)
-    {
-        return (System.Timers.Timer?)typeof(AtProtoAgent)
-            .GetField("_credentialRefreshTimer", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?.GetValue(agent);
     }
 
     private static AccessCredentials? GetCredentialsField(AtProtoAgent agent)
@@ -255,7 +248,7 @@ public class SessionLifecycleTests
 
         Assert.True(loginResult.Succeeded);
         Assert.True(agent.IsAuthenticated);
-        Assert.True(GetRefreshTimer(agent)!.Enabled);
+        Assert.True(agent.CredentialRefreshTimerEnabled);
     }
 
     /// <summary>

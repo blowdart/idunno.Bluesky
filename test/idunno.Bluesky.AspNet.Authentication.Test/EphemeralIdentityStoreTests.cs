@@ -10,6 +10,9 @@ using idunno.AtProto.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Microsoft.Extensions.Time.Testing;
+
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 public class EphemeralIdentityStoreTests : IdentityStoreTests
@@ -149,16 +152,22 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
 
+        FakeTimeProvider timeProvider = new();
+
         EphemeralIdentityStore store = new(
             NullLoggerFactory.Instance,
-            refreshLockExpiration: TimeSpan.FromMilliseconds(50));
+            entryTimeToLive: null,
+            refreshLockExpiration: TimeSpan.FromSeconds(1),
+            sizeLimit: null,
+            meterFactory: null,
+            timeProvider: timeProvider);
 
         Did did = TestData.NewDid();
 
         string? expiredToken = await store.StartRefresh(did, cancellationToken);
         Assert.NotNull(expiredToken);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         string? newOwnersToken = await store.StartRefresh(did, cancellationToken);
         Assert.NotNull(newOwnersToken);
@@ -305,4 +314,5 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
         Assert.Equal(2, heldByLimited);
         Assert.Equal(3, heldByUnlimited);
     }
+
 }

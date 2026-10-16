@@ -17,7 +17,7 @@ public class ActorViewTests
     private static readonly Handle s_handle = new("test.invalid");
 
     private static Label CreateSelfLabel(string value) =>
-        new(null, s_did, $"at://{s_did}/app.bsky.actor.profile/self", null, value, false, DateTimeOffset.UtcNow, []);
+        new(null, s_did, $"at://{s_did}/app.bsky.actor.profile/self", null, value, false, DateTimeOffset.UtcNow, null);
 
     private static ProfileViewBasic CreateProfileViewBasic(IReadOnlyCollection<Label>? labels) =>
         new(s_did, s_handle, null, null, null, null, null, null, labels, null, null, null);

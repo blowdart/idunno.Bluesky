@@ -1,5 +1,476 @@
 # Version History
 
+## 8.0.0 - **unreleased**
+
+🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
+
+🎉 **New** [Firehose](https://atproto.com/blog/introducing-bluesky-protocol-services) support, including commit, sync, identity, account, info and label events.
+
+🎉 **New** Bluesky OAuth Permission Set support, including typed permission sets, progressive scope requests, and missing-scope errors.
+
+🎉 **New** ASP.NET middleware to generate and publish OAuth client metadata, including confidential client support with `private_key_jwt` and ES256 signing keys.
+
+🎉 **New** A bot SDK delivering a runtime with hosted Jetstream replay, durable action dispatch, credential recovery, rate-limit accounting, operational health checks, and metrics for applications that build Bluesky bots.
+
+### Added
+
+#### Samples
+
+* Separated `Samples.ReactBff` frontend tests from builds. Builds still install dependencies and compile the frontend; run `npm test` in `ClientApp` separately. GitHub Actions workflows run frontend tests explicitly, and CI Build publishes their JUnit results alongside the .NET results.
+
+#### idunno.AtProto
+
+* Added `AtProtoJsonSerializerOptions.Create(configure)` to return read-only options with tolerant JSON handling installed after resolver customization. Agent constructors and builders now copy and finalize options after all caller configuration, preserving caller settings without freezing or mutating caller options. Legacy mutable options remain available; arbitrary resolver replacement or prepending can bypass adaptation and requires explicit chaining recovery for direct serialization.
+* Tolerant JSON forwarding preserves type-attached reference converters' null-handling policies, including null sentinels and null rejection.
+* Tolerant JSON forwarding also preserves custom converters with reference-preserving options and null handling on polymorphic roots. Built-in protocol scalar converters avoid forwarding allocations; normalization honors configured depth limits and preserves raw opaque extension JSON.
+* Decorating SDK JSON resolvers no longer creates resolver cycles. Custom reference handlers retain preservation metadata, and dictionary-key converters retain their property-name hooks.
+* Tolerant JSON normalization leaves initialized extension data on unaffected sibling objects unchanged. Converters used for both dictionary keys and property values retain tolerant nested-record handling, and decorated reflection fallbacks preserve caller modifiers on Bluesky source-generated contracts.
+* Custom converters with dictionary-key hooks also retain tolerant nested-record handling when used for list elements and dictionary values.
+* Custom enum converters, including nullable enum properties, bypass tolerant value-forwarding buffers.
+* Caller JSON modifiers customize original contracts rather than SDK converter shells, allowing type-only object callbacks and property changes. Reflection resolver modifiers also apply when Bluesky source-generated fallback contracts are selected.
+* Custom JSON resolvers also receive original contracts instead of SDK converter shells, preserving property customization and object callbacks with polymorphism and reference preservation.
+* Reference-preserving asynchronous serialization keeps async-enumerable roots and containing objects on the built-in asynchronous writer path.
+* Async-enumerable contract discovery does not suppress tolerant decoding for later standalone reads.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
+* Tolerant JSON normalization uses bounded temporary property names to prevent allocation amplification from long input names and many unknown metadata fields.
+* Tolerant JSON normalization preserves ordinary extension fields in culture-sensitive dictionaries and restores only each object's own aliases, in input order. Reference-preserving options support unknown metadata while retaining shared references across object and collection roots.
+* Tolerant JSON handling recognizes nested polymorphic values in non-generic derived lists and dictionaries and interface-typed collections on .NET 8 and .NET 9.
+* SDK JSON options automatically tolerate unknown `$` properties in polymorphic contracts, retaining their original names and values in extension data when supported and otherwise ignoring them. Duplicate unknown metadata properties preserve the last value unless .NET 10 `AllowDuplicateProperties` is disabled, in which case normalization preserves duplicate-property rejection. Existing discriminator, required-property and protocol `$link`/`$bytes` handling is preserved. Resolvers appended after creating `JsonOptions` or mutable SDK options, nested values handled by custom converters (including property-level, options-registered and value-type converters), and default server record listings are supported. After replacing or prepending resolvers, or customizing options copied with `new JsonSerializerOptions(...)`, use `AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions` to restore SDK contract adaptation around the customized resolver. Chained resolvers support .NET 9 and .NET 10 Native AOT without recursive type resolution.
+* Repository imports use the configured logger factory, and missing-blob responses exclude null collection entries.
+* Added `JetstreamOptions.ReplayLiveBufferCapacity` and builder support to configure the bounded decoded-event
+  buffer during live replay and live-cursor catch-up (default 1,024 events), independently of WebSocket byte buffers.
+  Overflow diagnostics now include the configured capacity alongside occupancy; draining and recovery remain unchanged.
+* Added `AddAtProtoFirehoseMetrics()` to register firehose instrumentation with OpenTelemetry.
+* Added HTTP request outcome tags, declared request and response `Content-Length` counters, DID handle cache lookup duration and pending lookup metrics,
+  and active connection, connection duration and message inter-arrival metrics for the firehose and Jetstream.
+* Added optional `OAuthOptions.ClientName`, `ClientUri`, `TosUri` and `PolicyUri` for client metadata branding and policy links, configurable through agent settings.
+* Added confidential OAuth client support. Set `OAuthOptions.ClientSigningKey` to an `OAuthClientSigningKey`, created from an ES256 (ECDSA P-256) private key with `OAuthClientSigningKey.FromPem()` or `FromPemFile()`, and pushed authorization, token, refresh and revocation requests authenticate with `private_key_jwt` client assertions. `OAuthOptions.ClientSigningKeyPath` and `ClientSigningKeyId` hold the key file location for hosts that load it from configuration.
+  `OAuthOptions.ClientAssertionClockSkew` controls how far client assertions backdate `iat` to tolerate small clock differences with authorization servers. It defaults to 30 seconds, while expiration remains one minute after creation.
+* Added client signing key rotation. `OAuthOptions.AdditionalClientSigningKeys` and `AdditionalClientSigningKeyPaths` hold previous keys, which are used only for sessions that started with them. `DPoPAccessCredentials.ClientSigningKeyId` and `DPoPRefreshCredential.ClientSigningKeyId` record the key a session started with, and `AtProtoClaims.OAuthClientSigningKeyId` names the claim it is stored in.
+  Pending logins retain their PAR signing key in `OAuthLoginState.ClientSigningKeyId`, including across serialization and rotation before the callback. Revocation retries generate fresh client assertions after DPoP nonce challenges.
+  Metadata generation rejects duplicate signing key identifiers at pipeline startup rather than silently dropping a key.
+  Generated callback URLs use the same URI representation as OAuth requests for exact redirect URI matching.
+* Enabled structured configuration binding for `OAuthOptions.PermissionSets` using validated `Nsid` and optional `Audience` fields.
+* Added an `AtProtoAgent.ProcessOAuth2LoginResponse()` overload accepting `expectedDid`, which rejects an account mismatch before replacing the session, including during progressive scope requests.
+* Added typed `ScopeMissingError` and `InsufficientScope` errors, mapped from missing-scope responses by `AtProtoError.Map()`.
+* Added `OAuthPermissionSet` for referencing published AT Protocol permission-set lexicons, including inherited RPC audiences.
+* Added `OAuthOptions.PermissionSets` and `GetRequestedScopes()` to combine typed permission sets with existing raw scopes for OAuth requests.
+* Added AOT- and trimming-safe CARv1 `CarReader` and `CarWriter` implementations using `System.Formats.Cbor`. `CarReader` can validate repository root commit signatures using a resolved DID document and supports secp256k1 and P-256 signing keys; `CarWriter` provides asynchronous creation, block writes and disposal.
+* Added streaming `AtProtoServer.GetRepo()` and `AtProtoAgent.GetRepo()` methods to download repository CAR files.
+  Overloads accept a `since` revision to download a CAR diff, retaining the original signatures and keeping cancellation tokens last.
+* Added streaming `AtProtoServer.GetBlob()` and `AtProtoAgent.GetBlob()` methods to download blobs from a repository's personal data server.
+  They return a disposable `BlobContent` containing the blob stream and the server-reported, untrusted, content type and length.
+* Added streaming `AtProtoServer.GetBlocks()` and `AtProtoAgent.GetBlocks()` methods to download specific repository blocks as a CAR file.
+* Added streaming `AtProtoServer.GetSyncRecord()` and `AtProtoAgent.GetSyncRecord()` methods for `com.atproto.sync.getRecord`, to download the blocks proving a record's existence or non-existence as a CAR file.
+* Added `AtProtoServer.GetRepoStatus()` and `AtProtoAgent.GetRepoStatus()` methods, and the `RepoHostingStatus` and `RepoStatus` types, to get the hosting status of a repository.
+* Added `AtProtoServer.ListBlobs()` and `AtProtoAgent.ListBlobs()` methods, and the `PagedCidCollection` type, to list the blob CIDs in a repository.
+* Added `AtProtoServer.ListHosts()` and `AtProtoAgent.ListHosts()` methods to enumerate the upstream hosts a relay consumes from.
+* Added `AtProtoServer.ListRepos()` and `AtProtoAgent.ListRepos()` methods, and the `HostedRepository` type, to enumerate the repositories hosted by a PDS or relay.
+* Added `AtProtoServer.ListReposByCollection()` and `AtProtoAgent.ListReposByCollection()` methods, and the `PagedDidCollection` type, to enumerate the DIDs of repositories with records in a collection.
+* Added `AtProtoServer.RequestCrawl()` and `AtProtoAgent.RequestCrawl()` methods to ask a relay to crawl a host.
+* The relay-only sync methods (`GetHostStatus()`, `ListHosts()`, `ListReposByCollection()` and `RequestCrawl()`) on `AtProtoServer` accept optional access credentials, and the `AtProtoAgent` versions send the agent's credentials when authenticated and calling the service the agent is authenticated to.
+* Added `AtProtoServer.GetHostStatus()` and `AtProtoAgent.GetHostStatus()`, which query a relay for the status of an upstream host, returning a `HostDescription` and `HostStatus`.
+* Added `AtProtoServer.GetLatestCommit()` and `AtProtoAgent.GetLatestCommit()`, which get the current commit CID and revision of a repository.
+* Added Jetstream v2 support to `AtProtoJetstream`, selected with `JetstreamOptions.ProtocolVersion` or `AtProtoJetstreamBuilder.UseProtocolVersion()`.
+  * Added `KindFilter`, and `AtProtoJetstreamBuilder.FilterTo(JetStreamEventKind[])`, to filter events by kind.
+  * Added `AtJetstreamSyncEvent`, `AtJetstreamSync` and `JetStreamEventKind.Sync` for sync events.
+  * Added `AtJetstreamEvent.Sequence` and `AtJetstreamEvent.WitnessedAt`, and `AtProtoJetstream.LastSequence` to resume from the last event received.
+  * Added the `InfoReceived` event for informational notices, and `FaultRaisedEventArgs.Error` for errors sent by the server.
+  * Added `JetstreamConnectionException`, thrown when a server refuses a connection, carrying the status code and error the server returned.
+  * Compressed v2 connections download the server's current zstd dictionary.
+  * Changing a filter on an open v2 connection reconnects, resuming from the last sequence received.
+  * Live and archive events expose the preferred account, identity and sync payload types. `AtJetstreamCommit`
+    converts implicitly to `JetstreamCommit`, preserving record fields and deferred archive CIDs.
+* Added decoded Jetstream archive snapshots and live replay with bounded planning, resumable block and segment downloads,
+  byte-quota pacing, durable checkpoints, cancellation and lazy record CIDs. `JetstreamCommitEvent.IsSyncBackfill`
+  distinguishes records asserted during sync from live creates. Added `JetstreamOptions.ApiKey` and
+  `AtProtoJetstreamBuilder.WithApiKey()` for archive HTTP calls only. The Jetstream meter now reports archive
+  plans, blocks, segments, downloaded bytes, rate limits, delivered and filtered events, and live handoffs.
+  Archive downloads now use a configurable per-read inactivity timeout (`JetstreamOptions.ArchiveReadTimeout`,
+  default 30 seconds), and only SDK-created HTTP clients follow cross-origin signed download redirects.
+  Snapshot resume rejects unrelated above-tip checkpoints, and archive plans reject null segment entries and
+  non-nullable fields before processing.
+  `SnapshotAsync()` and `ReplayAsync()` accept an optional archive-error callback to stop on invalid records or blocks
+  (the default), skip one record, or skip the remainder of a block and continue. The callback receives payload decode,
+  row-validation, and block decode exceptions. Block checkpoints advance only after the selected recovery action completes.
+* Added `AtProtoJetstream.StreamAsync()` for single-consumer live v2 async enumeration, with reconnect and inclusive
+  cursor handling and an optional consecutive-retry limit; event subscriptions and event-driven connections are
+  exclusive with enumeration. The `Samples.Jetstream` live-tail sample now uses this API with five retries.
+* Added `AtProtoFirehose`, an AOT- and trimming-safe AT Protocol event stream reader for `com.atproto.sync.subscribeRepos`
+  (`SubscribeReposAsync()`) and `com.atproto.label.subscribeLabels` (`SubscribeLabelsAsync()`), returning `IAsyncEnumerable<FirehoseEvent>`.
+  * Commit, sync, identity, account, info, labels, unknown and invalid events are surfaced as `FirehoseEvent` subtypes. Unknown events
+    with a valid `seq` are sequenced and advance the cursor.
+    Commit operations expose their record CID, previous CID and lazily decoded record.
+  * Frames, CAR blocks, operations and label batches are size and count limited, block CIDs are recomputed, the commit must be
+    the first CAR root, and the commit's DID and revision must match the event. Timestamps must be strict AT Protocol datetimes.
+    Unknown map fields are skipped without being allocated, and nothing is sized from a server-declared length.
+    Sequence numbers must be strictly increasing, apart from the cursor event and a single identical repeated event, of the same type and payload,
+    a relay sends on each connection opened with a cursor, which are dropped.
+    Server-supplied error and info text, and identity handles, are stripped of control and bidirectional formatting characters and truncated, but remain untrusted.
+  * Optional commit and label signature verification with `FirehoseOptions.VerifySignatures`. Verification resolves signing keys inline and
+    cannot keep up with the full relay; it suits labelers, a single PDS, or other low-volume streams.
+    A labels message with labels from more than `MaximumLabelSourcesPerMessage` distinct sources is rejected before any are resolved.
+    Resolved signing keys are cached by default, bounded by `SigningKeyCacheSize` and `SigningKeyCacheDuration`, invalidated by `#identity` events,
+    and refreshed at most once every five minutes when a signature fails against a cached key, keeping the cached key if the refresh fails. Set `CacheSigningKeys` to `false` to turn it off.
+  * Resumes from the last sequence after transport failures, idle timeouts, `ConsumerTooSlow` and retryable HTTP statuses,
+    with jittered backoff and `Retry-After` support. `FirehoseConnectionException` reports refused connections and server errors.
+    Only events with a sequence number reset the reconnection attempt count.
+  * Redirected connections are refused, not retried, including when a supplied client has already followed the redirect.
+  * Connects through its own SSRF-protected client by default, or through a supplied `IHttpClientFactory` or `HttpClient`.
+* Added `Label.ExpiresAt`, the optional label expiry time.
+* Added `DagCbor`, which converts DAG-CBOR encoded data, such as the blocks in a repository CAR, to a `JsonElement` or `JsonDocument`,
+  representing byte strings as `$bytes` and CID links as `$link`, as the AT Protocol data model specifies.
+* Added `AtProtoJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `AtProtoJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+* The JSON serializer options used internally for every XRPC request and response are now cached, rather than rebuilt for each call,
+  so their type metadata is resolved once rather than on every request.
+* Added `DidHandleCache`, an `IDidHandleResolver` which resolves the handle for a DID, bidirectionally verifying it, and caches the result.
+  Handles which cannot be resolved or verified return `Handle.Invalid`, which is cached for a shorter time. The cache is bounded by
+  `DidHandleCacheOptions.Size` and `Duration`, concurrent lookups for the same DID share a single resolution, at most `MaximumConcurrentResolutions`
+  resolutions run at once, at most `Size` lookups can be pending, and each resolution, including any wait to start, is bounded by `ResolutionTimeout`.
+  A lookup rejected because too many are pending, or which times out waiting to start, returns `Handle.Invalid` without caching it. Set `FirehoseOptions.DidHandleResolver`, `JetstreamOptions.DidHandleResolver` or call
+  `AtProtoJetstreamBuilder.WithDidHandleResolver()` to invalidate cached handles when an identity event is received.
+  Added `AddAtProtoDidHandleCacheMetrics()` and the `idunno.AtProto.DidHandleCache` meter.
+* Added `IdentityResolution`, which replaces `Resolution`. Its methods take the `Async` suffix, for example `IdentityResolution.ResolveHandleAsync()`.
+* Added `TimeProvider` properties to `AtProtoAgentOptions`, `FirehoseOptions` and `JetstreamOptions`, defaulting to `TimeProvider.System`.
+  The agent uses it for token expiry and refresh scheduling, the firehose for its signing key cache, reconnection delays, and idle and close
+  timeouts, and the jetstream for its reconnection, receive failure and archive retry delays, archive read timeouts, and close and send timeouts.
+* Added `AtProtoAgentBuilder.WithTimeProvider()` and `AtProtoJetstreamBuilder.WithTimeProvider()` to configure these clocks through their builders.
+* Added `IAccessCredential.IsExpiredAt(TimeProvider)`, a default interface method which checks access token expiry against a supplied time provider.
+* Added `AtProtoServer.ListMissingBlobs()` and `AtProtoAgent.ListMissingBlobs()` to find blobs missing from the authenticated repository, and `AtProtoServer.ImportRepo()` and `AtProtoAgent.ImportRepo()` to import a repository from a CAR file.
+
+#### idunno.AtProto.OAuthCallback
+
+* Added `CallbackServer.CreateAsync()`, which reserves loopback sockets and waits until the callback listener is ready before returning.
+* Added `AddAtProtoOAuthCallbackMetrics()` and the `idunno.AtProto.OAuthCallback` meter, reporting callback outcomes, wait duration and rejected requests.
+  The package now depends on `OpenTelemetry.Extensions.Hosting`.
+
+#### idunno.AtProto.Types
+
+* Added `Cid.FromDagCbor()`, which calculates the version 1, SHA-256, DAG-CBOR content identifier for a block of encoded data.
+* Added `Nsid.ValidationRegex`, `RecordKey.ValidationRegex` and `TimestampIdentifier.ValidationRegex`, the syntax regular expressions from the
+  AT Protocol specifications, for client side validation. Like `Did.ValidationRegex` and `Handle.ValidationRegex` they check syntax only;
+  use `TryParse()` to validate a value fully.
+* `Bytes` now accepts empty byte arrays and empty base64 values, as permitted by the Lexicon `bytes` format.
+
+#### idunno.Bluesky
+
+* Added authenticated contact discovery APIs for phone verification, importing contacts, reading matches and synchronization status, dismissing matches and removing contact data.
+* Added `ProfileAssociatedChat.AllowGroupInvites`, preserving known and future group invitation policy strings.
+* Malformed profile-link collections return standard `InvalidResponse` results from HTTP reads instead of escaping as argument exceptions. Assigning invalid profile-record links directly retains argument validation.
+* Malformed link-record titles and icons now use standard repository error handling: single-record reads return `InvalidResponse`, and paged reads skip and log invalid records. Public constructors and initializers retain argument validation.
+
+* Added experimental Atmosphere Explore retrieval with typed article, publication, gallery, livestream, announcement and application views.
+* Added typed projections for hydrated external article, publication, theme, gallery, gallery-image and livestream data while preserving the original JSON. Content identifiers retain AT URIs as well as HTTPS addresses.
+* Added profile-record link references, OP thread position/count on embedded records, feed start cursors and starter-pack recommendation identifiers without replacing existing API signatures.
+* Suggested starter-pack reads honor the configured public AppView for unauthenticated agents while retaining authenticated PDS routing.
+* Preserve unrecognized list-purpose strings when reading and reserializing list records and views.
+* Added the `Actor.Link` record, profile link views, and `ProfileViewDetailed.Links`, including support for link self-labels.
+* Notification preference models preserve service-defined values for open Lexicon `knownValues` when read and serialized again. Set the raw wire-value properties to retain new values; enumeration setters reject unknown sentinels without an original wire value.
+* Added `BlueskyJsonSerializerOptions.Create(configure)` for read-only options finalized after resolver customization. Bluesky agent finalization also handles JSON options replaced or customized after constructing `BlueskyAgentOptions`, without mutating caller options.
+* Added direction-specific `CreateReadOptions` and `CreateWriteOptions` helpers for tolerant deserialization and reference-preserving async-enumerable serialization.
+* Posts containing additional `$` properties such as `"$via": "kazahana"` now decode automatically through SDK options, including nested embeds, feed views and repository records. Bluesky agent HTTP JSON options now use the supplied configuration and include the Bluesky source-generated contracts.
+* Added fluent `PostBuilder.WithEmbed()` and `WithInteractionPreferences()` methods. The corresponding void methods are obsolete.
+  `Append()` is now the preferred API for post text and rich-text facets; the equivalent `Add()` overloads are obsolete.
+  `Add(StrongReference)` is obsolete in favor of `Quote()`, and `Label()` is obsolete in favor of `SetSelfLabels()`.
+  The network-backed `ReplyTo(StrongReference, BlueskyAgent, CancellationToken)` overload is obsolete; retrieve references explicitly and use `ReplyTo(ReplyReferences)`.
+  Added chainable `PostBuilder.ExtractFacetsAsync()`; the original `ExtractFacets()` method is obsolete.
+* Chat account exports return a response-owned JSON Lines stream instead of buffering the export; callers must dispose the stream.
+* Chat account export requests advertise the lexicon's `application/jsonl` response media type.
+* Age-assurance configuration reads use the configured public AppView, and unknown regional rules retain their discriminator and fields.
+* Age-assurance configuration responses exclude null regions and rules, and complete external-embed responses exclude null verified and unverified strong references.
+* Corrected author-feed filter wire values, added the video filter, corrected the popular-feed-generator query parameter name, and corrected unread-count group-chat query parameters.
+* Added list-feed and timeline `since` options, quote sorting, suggested-feed pagination, and list-purpose filtering through compatibility overloads.
+* Added `GetEmbedExternalViewResponse()` and `EmbeddedExternalViewResponse` for complete external-embed data and associated references/records, including the `canonicalUri` query option.
+* Added `BlueskyAgent.GetAgeAssuranceConfig()` and `GetAgeAssuranceStateForRegion()` with typed models for age-assurance regions, rules, and state.
+* Added `BlueskyAgent.DeleteChatAccount()` and `ExportChatAccountData()` for chat account deletion and JSON Lines export.
+* Added caller-supplied record keys to eligible single-record creation helpers for posts, replies, quotes, likes, reposts, follows, blocks, lists, list items, list blocks, and reference-list opt-outs. Documented fixed-key recovery and APIs that use singleton, derived, or multi-record keys.
+* Added video and external-card `Quote` convenience overloads, with or without text and caller-supplied record keys. External cards can now be used in `EmbeddedRecordWithMedia`, where they are represented by `EmbeddedExternalMedia`, without changing the existing `EmbeddedExternal` inheritance or equality APIs.
+* Added `BlueskyOAuthPermissionSets` for all nine published Bluesky app permission sets and the full chat client permission set.
+* Added `BlueskyAgentBuilder.WithTimeProvider()` to configure the agent clock through its builder.
+* Added `FeedViewPost.OpThreadPostIndex` and `FeedViewPost.OpThreadPostCount`, which expose canonical original-poster thread numbering in feed responses, following [Add OP thread numbering to feed lexicon](https://github.com/bluesky-social/atproto/pull/5540).
+* Added the `Feed.Generator` record and its `GeneratorContentMode` type for reading and writing `app.bsky.feed.generator` repository records.
+* Registered `ThreadGate` and `PostGate` as `BlueskyRecord` subtypes so polymorphic record deserialization retains their gate data.
+* Added `BlueskyJsonSerializerOptions.Default`, a shared, read-only `JsonSerializerOptions` which caches the type metadata it resolves.
+  `BlueskyJsonSerializerOptions.Options` still returns a new, mutable copy on every call; use it only when you need to change the options.
+  `BlueskyJsonSerializerOptions.TypeInfoResolver` no longer builds a new set of options each time it is read.
+
+#### idunno.Bluesky.BotSdk
+
+* Added DI-resolvable `BotReplayProgress` with an atomic, read-only handled-event snapshot containing sequence, service witnessed time, and local observation time, independently of logs, durable checkpoints, and liveness.
+* Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
+* Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
+* Added `AddInMemoryBotStorage()` for development and tests. It logs that its process-local state is not production durable.
+* Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
+* Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
+* Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
+* Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
+* Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
+* Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
+* The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
+* Added `MalformedEventException` for bot policies to signal invalid source events that fail validation with exceptions other than `JsonException`; the reader audits and skips those events while other policy failures remain fail-fast.
+
+#### idunno.Bluesky.BotSdk.MySQL
+
+* Added a MySQL 8.4+ storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+
+#### idunno.Bluesky.BotSdk.PostgreSQL
+
+* Added a PostgreSQL storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+* Requests exceeding an empty hourly or daily write budget report an explicit invalid-operation error instead of a null timestamp conversion failure.
+
+#### idunno.Bluesky.BotSdk.SQLite
+
+* Added a persistent local SQLite storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Documented the minimum `app.bsky.actor.getProfile` RPC permission required by claims transformation, replacing the incorrect requirement for `transition:generic`.
+* Added opt-in OAuth client metadata generation and publishing with `AddBlueskyOAuthClientMetadata()`, `UseBlueskyOAuthClientMetadata()` and `BlueskyOAuthClientMetadataOptions.GenerateJson()`, using the configured web client's URLs, scopes and permission sets.
+* Generated OAuth client metadata describes a confidential client, publishing the public key in `jwks` with `private_key_jwt` and `ES256`, when `OAuthOptions.ClientSigningKey` is set.
+* `OAuthOptions.ClientSigningKey` is loaded from `OAuthOptions.ClientSigningKeyPath` when set, expanding `~` and environment variables and resolving relative paths against the content root.
+* Keys in `OAuthOptions.AdditionalClientSigningKeyPaths` are loaded into `AdditionalClientSigningKeys`, and the generated metadata publishes every configured signing key in `jwks`.
+* The identity stores persist the client signing key ID of each OAuth session, so refresh and revocation use the key the session started with.
+* Added `BlueskyClaimsTransformerOptions.TimeProvider`, defaulting to `TimeProvider.System`. It is used for credential expiry checks and, when no custom `Cache` is set, to expire cached profiles.
+
+#### idunno.Bluesky.AspNet.Authentication.SQLite
+
+* Added `SqliteCorrelationStateCache.CreateWithTimeProvider()` and `SqliteIdentityStore.CreateWithTimeProvider()`, which create stores that
+  use the supplied `TimeProvider` for entry expiry, refresh locks and expired entry sweeps.
+
+#### idunno.Bluesky.AspNet.Authentication.PostgreSQL
+
+* Added PostgreSQL implementations of the identity store and correlation state cache, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache`, with schema definitions in `schema.sql` and development container setup in `Start-PostgreSqlContainer.ps1`.
+
+#### Samples
+
+* Added `Samples.BotSdk`, a reply-only durable bot sample with developer-mode simulation, in-memory storage, and health and metrics endpoints.
+* Added `--replay-live-buffer-capacity` to `Samples.JetstreamReplay` to configure the decoded-event buffer during live replay, defaulting to 1,024 events and rejecting non-positive values.
+* Added `Samples.BlazorAuthentication`, an Interactive Server Blazor Web App with Bluesky OAuth authentication, timeline, claims and conditional profile editing, using the ASP.NET authentication handler and UI. Circuit operations validate the session and refresh server-side credentials. Activity-based, antiforgery-protected HTTP heartbeats renew cookies and synchronize circuit expiry without reloading the page; idle sessions still expire.
+* Added a success indication after saving a profile in `Samples.AspNetAuthentication`.
+* Added `Samples.AspNetProgressiveAuthentication`, demonstrating read-only login, just-in-time profile-write consent and safe completion of encrypted, expiring, account/session-bound pending edits, with focused tests.
+* Added a packaged WinUI 3 OAuth sample (`Samples.WinUIOAuth`) with native protocol activation, in-memory login state and credentials, read-only profile display, profile refresh and token revocation on logout. The app is in the main solution and evaluates as an empty library on non-Windows hosts; callback routing tests run cross-platform.
+* Added `Samples.ReactBff`, a React and ASP.NET backend-for-frontend sample demonstrating OAuth, isolated server-side credentials, timeline retrieval, creating and deleting a post, and CSRF-protected logout.
+* Added `Samples.AspNetTunnelAuthentication`, an HTTPS reverse-tunnel sample that requires Bluesky authentication and displays the authenticated DID using only the `atproto` scope. It is a confidential client, includes `New-ClientSigningKey.ps1` to create its signing key, and provides controls to refresh credentials and log out.
+  The sample uses npm-restored Bootstrap styling for its session, authentication, privacy and terms pages.
+  Its key-generation script restricts private-key files to the current user before writing key material, including when replacing an existing key.
+  A Bash/OpenSSL equivalent also generates key pairs and rotation configuration.
+  The PowerShell generator preserves existing keys in directories containing literal brackets unless replacement is explicitly requested.
+* Added `Samples.AspNetClientMetadata`, which previews generated OAuth client metadata for example.org with the `atproto` scope and Bluesky `ViewAll` permission set.
+* Added `Samples.ProgressiveOAuth`, which reads the timeline, demonstrates a missing-scope post failure, adds create/delete Permission Sets for the same account, then retries and deletes the same post.
+* Added `Samples.OAuthPermissionSets`, which uses permission sets to create a post, refresh credentials, and delete the same post.
+* Added `Samples.Firehose`, which reads the relay firehose and prints each kind of event, using `DidHandleCache` to show verified handles.
+* Added `Samples.ModerationLabels`, which prints the labels a labeler applies and negates, defaulting to the Bluesky moderation service and
+  selectable with `--labeler`. `--list` enumerates every labeler which has published a labeler service record, annotated with its handle,
+  display name and declared label values, with an optional case-insensitive wildcard pattern to filter handles. `--live` narrows that list
+  to the labelers which answer a query. `--labels` prints the selected labeler's declared label values, one per line.
+* Added `Samples.RepoCar`, which downloads and verifies a repository CAR, then prints its records and selected post and graph fields.
+* Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
+  before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
+
+### Changed
+
+#### idunno.AtProto
+
+* DAG-CBOR readers now consistently limit nesting to 64 levels across supported runtimes and report the SDK depth-limit error before the platform reader rejects the value.
+* XRPC responses are now deserialized directly from their UTF-8 bytes, held in a pooled buffer, rather than first being decoded into a string.
+  A response that is not valid UTF-8 now fails to deserialize, rather than having its invalid bytes replaced, and a leading UTF-8 byte order mark is ignored.
+  Raw string responses also reject invalid UTF-8 and report an `InvalidResponse` error.
+* XRPC request bodies are now serialized directly to UTF-8 bytes. The `Content-Type` header is unchanged, `application/json; charset=utf-8`.
+* Firehose and Jetstream web socket messages are now received into pooled buffers. A message that arrives in a single fragment is copied once, rather than
+  being assembled in a `MemoryStream`, and compressed Jetstream messages are decoded without an intermediate copy.
+* Reduced allocations when merging request headers, recording XRPC metrics, and copying Jetstream extension data.
+* Firehose commit and sync events now take their CAR block and record data from the event's `Blocks` rather than copying each block, reducing
+  allocations when decoding a commit by about 16%.
+* Jetstream archive blocks are decoded without copying the decompressed block or its columns, and Jetstream metrics no longer format the server
+  address for every message or archive event.
+* Jetstream archive identity, account and sync events are deserialized directly from their converted JSON, rather than through a `JsonElement`,
+  and `DagCbor.ToJsonElement()` no longer copies the element it returns.
+* Preparing a moderation label for signature verification now removes the signature from the encoded label, rather than re-encoding
+  every other field, more than halving its cost and cutting its allocations by more than 80%.
+
+#### idunno.AtProto.OAuthCallback
+
+* The default OAuth failure page now displays the same logo in the same position as the success page.
+* OAuth callback failure pages now display HTML-encoded `error` and `error_description` values when present.
+
+#### idunno.AtProto.Types
+
+* `Cid` now caches its string form and hash code, so repeated calls to `ToString()`, `Value` and `GetHashCode()`, such as when a `Cid` is a dictionary key, no longer allocate.
+  `Cid.FromDagCbor()` no longer copies the hash it has just calculated, and `ToBytes()` and the byte constructors no longer copy through intermediate lists.
+* `AtUri` now caches its string form, so repeated calls to `ToString()` no longer allocate.
+* `Did`, `Handle`, `Nsid`, `RecordKey`, `AtUri` and `TimestampIdentifier` now validate with single pass parsers rather than regular expressions, making
+  parsing between four and ten times faster and allocating far less. `Nsid` equality no longer allocates, and `Nsid.Name` and `Nsid.Authority`
+  no longer split the NSID. Generating a `TimestampIdentifier` no longer validates the value it has just built.
+
+#### idunno.Bluesky
+
+* `PostView.SelfLabels` and `ProfileViewBasic.SelfLabels` (for both actors and chat members) no longer allocate when there are no labels, and allocate less when there are.
+* Posts and `PostBuilder` now accept empty text without requiring an embed, matching the lexicon's required-string semantics. Null text without an embed remains invalid.
+* Embedded-only posts now expose and serialize empty `text` instead of omitting the required field. A builder still distinguishes unset text from explicitly empty text.
+
+#### Samples
+
+* Updated `Samples.JetstreamReplay` to recover from archive generation mismatches using the latest saved checkpoint, with up to five retries and a cancellable 30-second wait before each retry. Documented runtime recovery and possible repeated events.
+* Updated `Samples.JetstreamReplay` to log and skip invalid archive records and undecodable blocks through `onArchiveError`, documenting the potential data loss as checkpoints advance.
+* Returning to an idle Blazor sample tab checks the session immediately. Account-bound, per-tab profile drafts survive session expiry and sign-in, retaining their original CID for conditional saves.
+* The Blazor sample navigation displays an account dropdown triggered by the authenticated user's avatar and handle, with manage-profile and sign-out options on component and authentication UI pages.
+* The Blazor timeline renders images attached to quoted posts, inline animated GIFs with alt text and hover descriptions, and video controls with a Bluesky playback fallback. Static images open in closable full-size dialogs with alt-text captions. Signed-out navigation places the sign-in link on the right.
+* Blazor sample credential writes atomically check the original session against logout and login replacement. Cookie renewal uses the handler's reference-cookie sliding renewal without re-adding identities, and authorization-failure sign-in links retain the current local route.
+* Blazor sample heartbeat recovery retains the current page, discarded drafts are removed from the editor even when profile reload fails, and image-viewer buttons have an accessible action name.
+* Updated `Samples.AspNetAuthentication` to request `BlueskyOAuthPermissionSets.FullApp` at login, keeping its standard authentication UI and direct profile-save flow. Added an ASP.NET progressive authorization guide covering permission planning, same-session consent and safe completion of pending operations.
+* `Samples.Jetstream` now uses `DidHandleCache` rather than its own cache, so handles are bidirectionally verified, a handle which
+  cannot be verified is shown as `handle.invalid`, and cached handles are invalidated when the jetstream receives an identity event.
+* Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
+  `CallbackServer.CreateAsync()` for race-free callback server startup.
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* The `PostBuilder + StrongReference` operator now follows `Quote()` behavior: it throws `InvalidOperationException` when a quote already exists instead of replacing it, and `ArgumentException` when the reference does not identify a Bluesky post. The obsolete static `PostBuilder.Add(PostBuilder, StrongReference)` overload retains its previous quote-replacement behavior for compatibility.
+* `Quote` text-only and image helpers now extract facets by default, matching text-bearing `Post` and `ReplyTo` helpers. URLs and mentions can gain facets, and mentions can trigger handle-resolution network requests. Pass `extractFacets: false` to preserve the previous quote behavior. All quote and card-only post helpers expose explicit facet control while retaining existing method signatures and positional cancellation-token calls. `PostBuilder` publishing remains prepared-facets-only.
+
+#### idunno.AtProto
+
+* `Cid.Hash` now returns an `IReadOnlyList<byte>` rather than a `byte[]`, so callers can no longer cast it to `byte[]` and change the hash.
+  Use `Hash.ToArray()` if a mutable `byte[]` is required.
+* `IdentityResolution.ResolveVerifiedHandleAsync()` and `IdentityResolution.VerifyHandleAsync()`, and the `Resolution` methods they replace, now only consider
+  the first valid handle in a DID document's `alsoKnownAs` entries, as the [AT Protocol DID specification](https://atproto.com/specs/did) requires.
+  Previously every declared handle was tried, so a DID document could claim any handle it listed, and each listed handle cost a resolution.
+* `AtProtoJetstream` and `AtProtoJetstreamBuilder` now default to Jetstream v2 and `wss://jetstream.us-west.bsky.network`.
+  To keep using v1 set `ProtocolVersion` to `JetstreamProtocolVersion.V1`.
+* Agent JSON options are now copied and finalized as a read-only snapshot during construction. Configure serializer settings, converters, and resolvers on `AtProtoAgentOptions.HttpJsonOptions` or `BlueskyAgentOptions.HttpJsonOptions` before constructing the agent; changes to `agent.JsonOptions.JsonSerializerOptions` after construction now throw instead of changing subsequent requests.
+* `AtProtoJetstream.ConnectAsync()` now throws `JetstreamConnectionException`, rather than `WebSocketException`, when a server refuses the connection with an HTTP error, for both protocol versions.
+* `AtProtoJetstream.CollectionFilter`, the `collections` constructor parameters and `AtProtoJetstreamBuilder.FilterTo()` now take
+  `CollectionSelector` rather than `Nsid`, so a collection filter can name a wildcard namespace such as `app.bsky.feed.*` as well as an exact
+  collection. `CollectionSelector` converts implicitly from both `string` and `Nsid`, so only code which builds a typed `Nsid[]` needs changing.
+* The preferred Jetstream event and payload class names now start with `Jetstream` rather than `AtJetstream`
+  (including the former `AtJetStreamIdentity`). Old type names remain for compatibility; update event type
+  patterns and newly written code to use `JetstreamEvent`, `JetstreamCommitEvent` and the corresponding new names.
+* `WebSocketOptions.Proxy` is obsolete. `AtProtoJetstream`, `AtProtoJetstreamBuilder.WithWebSocketOptions()` and `AtProtoFirehose` now throw
+  `ArgumentException` when it is set. Both connect their web sockets through an `HttpClient`, and .NET does not allow a web socket which does
+  that to have its own proxy, so setting it already made every connection attempt fail with an `ArgumentException`.
+  Set `HttpClientOptions.ProxyUri` instead, or configure the proxy on the handler of an `HttpClient` or `IHttpClientFactory` you supply.
+* `Resolution` is obsolete. Use `IdentityResolution` and its `Async` methods instead; `Resolution` forwards to them. Resolution log messages now use the
+  `idunno.AtProto.IdentityResolution` category rather than `idunno.AtProto.Resolution`.
+* `Label.Signature`, and the `signature` parameter of the `Label` constructor, are now `Bytes?` rather than `IEnumerable<byte>`.
+  Over JSON the AT Protocol data model encodes bytes as a `$bytes` object, which `IEnumerable<byte>` cannot read, so every signed
+  label failed to deserialize. Use `Signature.Value` for the bytes as a collection, or `Signature.ToBytes()` for a `byte[]`, and pass
+  `null` rather than an empty collection for an unsigned label.
+
+#### idunno.Bluesky
+
+* `ThreadGate` and `PostGate` now derive from `BlueskyRecord` instead of directly from `AtProtoRecord`. Their `Type` properties have been removed because the record discriminator is written by `System.Text.Json` polymorphism.
+* `ThreadGate` and `PostGate` are no longer `sealed`. `System.Text.Json` does not support polymorphism metadata on sealed types, and that metadata is what writes the lexicon `$type` when a gate is serialized as its own concrete type.
+* `BlueskyServer.GetUploadStatus()` now takes a `ServiceCredential`, because the video service rejects unauthenticated upload status requests.
+* `BlueskyServer.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices()`, `GetSuggestions()` and `SearchPostsV2()`
+  now take an optional `AccessCredentials?`, rather than a required one.
+* `BlueskyServer.BlueskyJsonSerializerOptions` now returns the shared, read-only `BlueskyJsonSerializerOptions.Default`.
+  Changing it, for example by adding a converter or a type info resolver, now throws `InvalidOperationException`.
+  Use `BlueskyJsonSerializerOptions.Options` to get a copy you can change.
+
+### Fixed
+
+#### Build and test
+
+* Replaced timing-sensitive streaming, authentication, callback, and concurrency test delays with controlled clocks and explicit synchronization. Database deadline and request-order assertions no longer depend on later wall-clock samples. New clock and synchronization seams are internal; public APIs are unchanged.
+* Made default post, draft-post, and notification-seen timestamp tests deterministic, and replaced remaining OAuth and Jetstream state/log polling with explicit completion signals.
+* Made OAuth access-token lifetime validation tests and the Jetstream HTTP-date retry test independent of wall-clock time, including checking the retry deadline with a controlled clock.
+* CI now runs the AT Proto and Bluesky allocation-budget tests in dedicated processes with background GC disabled,
+  without changing their thresholds. GC traces, measurements and raw test results are retained even when tests fail.
+
+#### idunno.AtProto
+
+* Labels and self-labels now accept empty values while retaining their UTF-8 length limits and rejecting null.
+* OAuth login-response cleanup clears residual login context on completion, including cancellation and failure, without discarding a newer login prepared or restored on the same client.
+* `DescribeServer()` now accepts an empty required `availableUserDomains` array.
+* Tolerant JSON normalization now handles unknown metadata on polymorphic dictionary envelopes and preserves caller-defined composite resolvers when finalizing options.
+* Tolerant JSON normalization now preserves polymorphic collection `$values` envelopes selected through interface contracts and does not capture ignored properties as extension data.
+* Tolerant JSON normalization now consumes malformed dictionary envelope metadata safely and preserves preinitialized extension-data entries when inserting temporary aliases.
+
+* Fixed Jetstream receive-side close replies racing a completed close or socket disposal. Asynchronous disposal now waits for the receive loop and message parsers to finish.
+* Jetstream asynchronous cleanup attempts every stage even after a handler failure, waits for outstanding receive loops from replaced connections, prevents delayed post-connect receive tasks from starting during disposal, and associates deferred state notifications with their source socket without holding locks during callbacks.
+* Concurrent Jetstream asynchronous disposal calls share one cleanup operation, and parser drains are serialized to prevent competing drains from deadlocking.
+* Replay reconnect diagnostics retain queued server errors instead of masking them with a following remote close or transport disconnect.
+* Jetstream queues collected connection transitions before allowing a competing close, preserving same-socket notification order without invoking callbacks under the connection semaphore.
+* Replay now drains pending message parsers before completing a faulted live handoff, and logs distinct overflow, close, transport, server-error and expired-cursor recovery reasons without changing the bounded buffer or checkpoint semantics.
+* Accepted access-token scope claims beginning with the case-sensitive `ref:` prefix for server-resolved scopes and permission sets.
+* OAuth callbacks, refreshes and credential revocation now preserve the original client identifier and scope overrides, including restored logins and stored identities.
+* Missing-scope warnings no longer compare permission-set references literally against expanded grants, or opaque `ref:` grants against requested scopes.
+* `AddAtProtoAgentOptions(AtProtoAgentOptions)` now preserves the configured `TimeProvider`.
+* Fixed `QueryLabels()` failing against every labeler which returns a signed label. `Label.Signature` was typed as `IEnumerable<byte>`,
+  but a signature is encoded as a `$bytes` object over JSON, so deserializing the response threw and the call returned a null result
+  with an `OK` status code. See the breaking change above for the new type.
+* `did:web` resolution no longer accepts a DID whose host ends with a percent encoded new line, such as `did:web:example.com%0A`.
+
+#### idunno.AtProto.Types
+
+* `Bytes` now accepts a base64 string whose `=` padding has been omitted, which the AT Protocol data model allows.
+  Jetstream, and other Go based implementations, encode `$bytes` without the padding, which previously caused deserialization to
+  throw a `JsonException`, most visibly when reading the `blocks` of a version 2 jetstream sync event.
+  Encoding is unchanged, and still emits the padding.
+  Only a wholly unpadded string has its padding inferred, so a partially padded one, such as `TQ=`, is still rejected.
+* `Did`, `Handle`, `RecordKey` and `AtUri` no longer accept a value with a trailing new line, such as `"did:plc:abc\n"`. Their regular
+  expressions ended in `$`, which in .NET also matches before a final new line.
+* The `Handle` constructor now validates a handle before lower casing it, so it no longer accepts a handle containing a non-ASCII character
+  which lower cases to an ASCII letter, such as the Kelvin sign, U+212A. `Handle.TryParse()` already rejected these.
+
+#### idunno.Bluesky
+
+* Corrected `ChatPreference` obsolete guidance to reference the existing chat notification APIs and types, clarifying that they use separate endpoints rather than being drop-in replacements. The legacy type remains available for compatibility.
+* Fixed the missing query separator before `cid` in `GetLikes()`.
+* Fixed view polymorphism metadata by making `LabelerView` derive from `View` and removing a duplicate chat join-link registration.
+* Added chat join-link embedded views through `MessageView.EmbeddedView`, retaining the existing record-only `Embed` property and constructor.
+* Unknown rich-text facet features and chat message views now retain their `$type` and all extra fields when round-tripped.
+* Post deserialization now requires `text`, and timestamped record deserialization requires `createdAt`. Empty text remains valid.
+* Draft post text, draft caption content and generator display names now accept empty strings without weakening their explicit limits or formats.
+* Actor searches now accept empty or omitted query strings, preserving the distinction between `q=` and an absent `q`.
+* Chat methods and models now accept empty unconstrained identifiers, revisions, join-link codes and open-string values, while retaining null, group-name and reaction constraints.
+* Chat member, facet, facet-feature, reaction, label, join-link preview and related-profile collections now reject null entries instead of exposing them through non-nullable contracts.
+* Corrected generator `descriptionFacets` and profile-associated `feedgens` JSON property names.
+* Registered chat actor declarations for deserialization through `BlueskyRecord`.
+* Notification filterable preferences now enforce required `include`, `list` and `push` fields.
+* Blocked posts now expose the required author and enforce the required `blocked: true` flag.
+* Corrected post, quote and reply helper documentation to identify null-tag failures as `ArgumentNullException`.
+* Fixed whitespace-only post text being rejected during deserialization and creation through `Post`, `PostBuilder` and `BlueskyAgent.Post()`. Nonempty whitespace is preserved, and text length limits are unchanged.
+* Fixed empty and whitespace-only rich-text facet tags being rejected by `TagFacetFeature` during deserialization. Tag values are preserved unchanged; null and length validation and `HashTag` authoring validation remain unchanged.
+* Fixed schema-valid empty post-level tags and rich-text facets with empty feature arrays being rejected during record deserialization. Null values and required-field validation remain enforced.
+* `PostBuilder` and the `BlueskyAgent` post, quote and reply authoring methods now accept empty post-level tags, matching the post lexicon. Null tags and tag length limits remain enforced.
+* `AddBlueskyAgentOptions(BlueskyAgentOptions)` now preserves the configured `TimeProvider`.
+* Textless video and external-card `Quote()` helpers omit language metadata, matching textless image quotes. Text-bearing quotes retain their language metadata.
+* Fixed `ThreadGate` and `PostGate` writes to include their lexicon `"$type"` discriminator when serialized as their concrete record types.
+* `BlueskyAgent.SearchStarterPacks()`, `SearchStarterPacksV2()`, `GetPostThreadV2()`, `GetLabelerServices(IEnumerable<Did>)`, `GetSuggestions()` and
+  `SearchPostsV2()` no longer throw `AuthenticationRequiredException` when the agent is unauthenticated, as their lexicons describe public endpoints.
+* Unauthenticated `SearchPostsV2()` now uses `api.bsky.app` even if the agent's service still points to a former PDS after logout.
+* `BlueskyAgent.GetThreadGate()`, `GetThreadGateRecord()`, `GetPostGate()` and `GetPostGateRecord()` now read the gate from
+  the post author's repository, on the author's PDS, rather than the authenticated user's repository, and no longer require authentication.
+* `BlueskyAgent.GetUploadStatus()` now sends a service authentication token to the video service, which previously rejected the request,
+  and throws `AuthenticationRequiredException` when the agent is unauthenticated.
+* `LabelerPolicies.LabelValues` and `LabelValueDefinitions` now drop any `null` entries a labeler returns.
+  Neither `JsonRequired` nor `RespectNullableAnnotations` applies to a collection's element type, so a null entry inside an otherwise well formed
+  collection was handed to callers of `GetLabelerServices()` and `GetLabelerDeclaration()` despite the non-nullable element types.
+* Bounds `DeleteFromList` pagination and returns an explicit upstream pagination error if the list API cycles cursors or exceeds the page limit.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* Temporary agents used for credential revocation and refresh now use the authentication handler's configured `TimeProvider`,
+  keeping token expiry decisions consistent without changing the shared agent options.
+* Temporary agents used for profile claims transformation now use the transformer's configured `TimeProvider` for token expiry,
+  keeping cache-miss lookups consistent with the transformer's credential precheck without changing the shared agent options.
+* Temporary OAuth agents used during sign-in now use the authentication handler's configured `TimeProvider` without changing the shared agent options.
+* `DistributedCacheCorrelationStateCache` entries now expire relative to when they are stored, so expiry is measured by the backing cache's
+  clock rather than the local wall clock.
+* Authentication ticket and correlation-cookie expiry, refresh waits, and the default ephemeral identity and correlation caches now use the
+  authentication handler's configured `TimeProvider`.
+
+### Documentation
+
+* Added warnings that data returned from Bluesky and AT Protocol APIs, Jetstream, the firehose, and other remote sources is untrusted and must be
+  encoded or validated before display, and that sample code does not sanitize or validate the data it uses.
+* Added a warning to the logging documentation that log messages can contain remote or request-controlled values which may pollute plain text logs,
+  and a recommendation to use a production-quality structured logger.
+
 ## 7.0.1 - 2026-09-26
 
 ### Fixed
@@ -7,45 +478,45 @@
 #### idunno.AtProto
 
 * Fixed a race condition which could leave a subscriber holding a spent refresh token as the last credentials persisted, and which could leave a subscriber holding credentials for a session which had already ended.
-    * Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
-    * Ended OAuth sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely. Sessions issued from a handle and password keep retrying, as they did before, so that a refresh which failed part way through is retried rather than ending the session.
-    * Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
-    * Made the notification for credentials a refresh has already committed uncancellable, so cancelling the caller cannot leave a superseded set of credentials as the last ones persisted.
-    * Deferred credential update notifications raised from inside a handler until that handler has finished, so a handler which refreshes before it persists is given the refreshed credentials last.
-    * Notified credentials committed by a refresh a handler triggered even when that handler then fails, so a failure cannot leave a spent refresh token as the last credentials a handler was given.
-    * Raised `Unauthenticated` before `TokenRefreshFailed` when a refresh ends a session, so a `TokenRefreshFailed` handler which throws can no longer suppress the notification that the session has ended, and one which reauthenticates can no longer make it arrive after the new session's `Authenticated`.
-    * Notified credentials committed by a refresh a handler started but did not await. Work started inside a handler carries the notification it was started from, so a refresh which outlived that handler previously handed its credentials to a notification which had already finished and nothing raised them.
-    * Ordered `Unauthenticated` behind any credential update notification which is still running, so a handler suspended when the session ends can no longer finish afterwards and leave credentials for the ended session in durable storage with nothing following to discard them.
-    * Dropped a deferred credential update notification whose credentials the agent has already replaced, so a notification which reaches the queue after the credentials which superseded it can no longer displace, and discard, the notification for the current ones.
-    * Deferred `Unauthenticated` raised from inside a credential update handler until that handler has finished, so a handler which ends the session can no longer persist the ended session's credentials after the event has been raised.
-    * Ordered `Authenticated` behind any credential update notification which is still running, so a handler suspended when a new session starts can no longer finish afterwards and write the previous session's credentials over the new ones.
-    * Raised `Unauthenticated` for a session replaced by a login, so a subscriber is told the previous session is finished with rather than being left holding credentials for it.
-    * Raised `Unauthenticated` when a failed login or a failed logout discards the agent credentials. The credentials were cleared silently, leaving a subscriber holding a session the server had rejected in durable storage and restoring it on the next start.
-    * Raised `Authenticated` when refreshing a stored credential starts a session on an agent which did not have one, so restoring a session reports itself in the same way logging in does.
-    * Discarded credentials a refresh produced for a different actor to the one the agent is authenticated as, rather than publishing them. Refreshing a stored credential for another account re-pointed the agent, and everything built on it, at that account with no indication the session had changed.
-    * Declined a refresh of a credential belonging to a different actor before the token endpoint is called, so the supplied credential is left unspent. Rejecting the result afterwards exchanged the caller's refresh token and then discarded its replacement, destroying the stored session it was asked to refresh.
-    * Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
-    * Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
-    * Applied the DPoP nonce freshness check to any credential implementing `IDPoPBoundCredential`, rather than only to `DPoPAccessCredentials`. A credential type of your own passed to `Login` previously took an unguarded path which published the snapshot the request started with, restoring a spent refresh token and discarding the credentials a refresh had just been issued.
-    * Reported credential changes in the order they were committed in, rather than in the order the notifications happened to reach the queue. A session which ended because its refresh token had been spent could be reported as ending after a login which followed it, so a subscriber which discards its stored credentials when a session ends discarded the session which was actually live.
-    * Raised `Authenticated` for a session a login started even when the subscriber for the session it replaced throws. The new credentials are live by then, so a subscriber which was never told the session started went on holding the ones for the session it replaced.
-    * Stopped `Logout` deadlocking with a credential update handler which calls back into the agent. The session ending was raised while the refresh semaphore was held, so a handler waiting for that semaphore and a logout waiting for that handler's notification turn waited on each other for ever.
-    * Checked that a refresh of credentials issued from a handle and password returns a session for the account being refreshed, throwing `SecurityTokenValidationException` when it does not, matching the check already made on an OAuth refresh. Restoring a stored credential on an agent which holds no credentials has no current account to compare against, so nothing downstream caught a session issued for the wrong one.
-    * Rechecked that a refresh is still for the account the agent is authenticated as once the refresh semaphore has been granted. A login or another refresh could re-point the agent while the call queued, so the exchange went ahead on a stale check, spending the caller's refresh token and destroying the stored session it was asked to refresh.
-    * Reserved a place in the notification queue for every change, including one committed by work a handler started but did not await. Such work could see the handler's notification running when it committed and find it finished by the time it raised, so its events were queued behind a change which was committed after it and a session which had already ended was reported as ending after the one which replaced it.
-    * Stopped a cancelled notification the queue had already stepped over being recorded again, which left an entry for a turn nothing would ever visit. A long lived agent whose notifications are repeatedly cancelled grew that list without bound.
-    * Notified credentials committed by a refresh started from inside an `Authenticated` or `Unauthenticated` subscriber. The notification was deferred into the session event and then discarded, so a subscriber was never told about a live token pair and went on storing a refresh token the server would not honour.
-    * Skipped `Authenticated` for a session a subscriber for the session it replaced has itself logged out of or replaced, so a session start describing credentials the agent no longer holds is no longer announced last.
-    * Gave up the notification turn before raising `TokenRefreshFailed`, so a subscriber which reauthenticates on that thread no longer waits for a turn only the thread it is blocking can give up.
-    * Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
-    * Stopped a login called from inside a deferred `Unauthenticated` handler deadlocking. The scope the handler was running under could close before the handler ran, so the login it started waited for a notification turn instead of deferring, and deadlocked against the notification still holding the queue it was waiting for.
-    * Stopped a reentrant login or logout leapfrogging a change already committed and waiting for its own place in the notification queue. Draining what a handler deferred previously raised it as soon as the handler which caused it returned, rather than behind the change it was reentrant from, so a subscriber could be told about a session which had already been replaced after the one which replaced it.
-    * Held the refresh semaphore whilst clearing credentials for a failed login. Taking the notification turn and clearing the credentials were previously two separate steps, so a login or refresh which committed in the gap between them could have its own credentials read and cleared instead, and reported as ending before the session it actually started was reported as beginning.
-    * Stopped a notification leapfrogging a turn which had reserved its place in the queue but not yet reached it. The earliest genuinely waiting turn was previously found by scanning only registered waiters, which a caller has no entry in between taking its turn and actually waiting for it, so a reentrant drain running in that window could not see it was there.
-    * Stopped a reentrant call which raises both `Authenticated`/`Unauthenticated` and `CredentialsUpdated` from the same commit having that ordering reversed once both ended up deferred. The drain always took a deferred credential notification ahead of a deferred session event regardless of which was actually deferred first, reversing the ordering `RaiseSessionStartAndCredentialsUpdatedAsync` relies on for a refresh which starts a session.
-    * Drained deferred session events in ascending turn order rather than the order they happened to be appended in. Two reentrant commits can take turns in ascending order but append their deferred session events in the reverse of that order once both have released the refresh semaphore, so a later commit's session-start or session-end could be raised ahead of an earlier commit's.
-    * Ordered a deferred credential notification against a deferred session event by turn number first, rather than by which was deferred sooner. A credential notification for a later turn could be deferred before an earlier turn's session event, giving it a lower sequence number despite committing second, letting a stale `Unauthenticated` raised for that later turn overwrite credentials an earlier turn had already restored.
-    * Stopped the deferred-notification drain spinning forever on an uncommitted leftover, such as a DPoP nonce rotation, that nothing else was left to raise. The loop's "keep going" check did not require the same commit that its "take the next one" step already did, so the two disagreed about whether the leftover was safe, and the loop asked forever while still holding the notification turn.
+  * Prevented stale DPoP nonce updates from replacing newer credentials or invalidating a refresh in progress; nonce changes are carried into credentials issued by that refresh.
+  * Ended OAuth sessions whose refresh token is known to have been spent without replacement instead of retrying indefinitely. Sessions issued from a handle and password keep retrying, as they did before, so that a refresh which failed part way through is retried rather than ending the session.
+  * Serialized credential update notifications so a handler which is still running when a refresh completes cannot persist superseded credentials.
+  * Made the notification for credentials a refresh has already committed uncancellable, so cancelling the caller cannot leave a superseded set of credentials as the last ones persisted.
+  * Deferred credential update notifications raised from inside a handler until that handler has finished, so a handler which refreshes before it persists is given the refreshed credentials last.
+  * Notified credentials committed by a refresh a handler triggered even when that handler then fails, so a failure cannot leave a spent refresh token as the last credentials a handler was given.
+  * Raised `Unauthenticated` before `TokenRefreshFailed` when a refresh ends a session, so a `TokenRefreshFailed` handler which throws can no longer suppress the notification that the session has ended, and one which reauthenticates can no longer make it arrive after the new session's `Authenticated`.
+  * Notified credentials committed by a refresh a handler started but did not await. Work started inside a handler carries the notification it was started from, so a refresh which outlived that handler previously handed its credentials to a notification which had already finished and nothing raised them.
+  * Ordered `Unauthenticated` behind any credential update notification which is still running, so a handler suspended when the session ends can no longer finish afterwards and leave credentials for the ended session in durable storage with nothing following to discard them.
+  * Dropped a deferred credential update notification whose credentials the agent has already replaced, so a notification which reaches the queue after the credentials which superseded it can no longer displace, and discard, the notification for the current ones.
+  * Deferred `Unauthenticated` raised from inside a credential update handler until that handler has finished, so a handler which ends the session can no longer persist the ended session's credentials after the event has been raised.
+  * Ordered `Authenticated` behind any credential update notification which is still running, so a handler suspended when a new session starts can no longer finish afterwards and write the previous session's credentials over the new ones.
+  * Raised `Unauthenticated` for a session replaced by a login, so a subscriber is told the previous session is finished with rather than being left holding credentials for it.
+  * Raised `Unauthenticated` when a failed login or a failed logout discards the agent credentials. The credentials were cleared silently, leaving a subscriber holding a session the server had rejected in durable storage and restoring it on the next start.
+  * Raised `Authenticated` when refreshing a stored credential starts a session on an agent which did not have one, so restoring a session reports itself in the same way logging in does.
+  * Discarded credentials a refresh produced for a different actor to the one the agent is authenticated as, rather than publishing them. Refreshing a stored credential for another account re-pointed the agent, and everything built on it, at that account with no indication the session had changed.
+  * Declined a refresh of a credential belonging to a different actor before the token endpoint is called, so the supplied credential is left unspent. Rejecting the result afterwards exchanged the caller's refresh token and then discarded its replacement, destroying the stored session it was asked to refresh.
+  * Forgot the refresh tokens a session exchanged when that session ends or is replaced by a login. A session which ended because its refresh token had been spent kept those records, so a later session whose refresh token matched one of them had its first refresh treated as already spent and was cleared immediately.
+  * Notified credentials a refresh has committed even when an `Authenticated` subscriber throws, so a failure to handle a session starting can no longer leave durable storage holding the spent refresh token those credentials replaced.
+  * Applied the DPoP nonce freshness check to any credential implementing `IDPoPBoundCredential`, rather than only to `DPoPAccessCredentials`. A credential type of your own passed to `Login` previously took an unguarded path which published the snapshot the request started with, restoring a spent refresh token and discarding the credentials a refresh had just been issued.
+  * Reported credential changes in the order they were committed in, rather than in the order the notifications happened to reach the queue. A session which ended because its refresh token had been spent could be reported as ending after a login which followed it, so a subscriber which discards its stored credentials when a session ends discarded the session which was actually live.
+  * Raised `Authenticated` for a session a login started even when the subscriber for the session it replaced throws. The new credentials are live by then, so a subscriber which was never told the session started went on holding the ones for the session it replaced.
+  * Stopped `Logout` deadlocking with a credential update handler which calls back into the agent. The session ending was raised while the refresh semaphore was held, so a handler waiting for that semaphore and a logout waiting for that handler's notification turn waited on each other for ever.
+  * Checked that a refresh of credentials issued from a handle and password returns a session for the account being refreshed, throwing `SecurityTokenValidationException` when it does not, matching the check already made on an OAuth refresh. Restoring a stored credential on an agent which holds no credentials has no current account to compare against, so nothing downstream caught a session issued for the wrong one.
+  * Rechecked that a refresh is still for the account the agent is authenticated as once the refresh semaphore has been granted. A login or another refresh could re-point the agent while the call queued, so the exchange went ahead on a stale check, spending the caller's refresh token and destroying the stored session it was asked to refresh.
+  * Reserved a place in the notification queue for every change, including one committed by work a handler started but did not await. Such work could see the handler's notification running when it committed and find it finished by the time it raised, so its events were queued behind a change which was committed after it and a session which had already ended was reported as ending after the one which replaced it.
+  * Stopped a cancelled notification the queue had already stepped over being recorded again, which left an entry for a turn nothing would ever visit. A long lived agent whose notifications are repeatedly cancelled grew that list without bound.
+  * Notified credentials committed by a refresh started from inside an `Authenticated` or `Unauthenticated` subscriber. The notification was deferred into the session event and then discarded, so a subscriber was never told about a live token pair and went on storing a refresh token the server would not honour.
+  * Skipped `Authenticated` for a session a subscriber for the session it replaced has itself logged out of or replaced, so a session start describing credentials the agent no longer holds is no longer announced last.
+  * Gave up the notification turn before raising `TokenRefreshFailed`, so a subscriber which reauthenticates on that thread no longer waits for a turn only the thread it is blocking can give up.
+  * Carried a DPoP nonce rotated during a refresh into the credentials that refresh issued for any credential implementing `IDPoPBoundCredential`, rather than only for `DPoPAccessCredentials`.
+  * Stopped a login called from inside a deferred `Unauthenticated` handler deadlocking. The scope the handler was running under could close before the handler ran, so the login it started waited for a notification turn instead of deferring, and deadlocked against the notification still holding the queue it was waiting for.
+  * Stopped a reentrant login or logout leapfrogging a change already committed and waiting for its own place in the notification queue. Draining what a handler deferred previously raised it as soon as the handler which caused it returned, rather than behind the change it was reentrant from, so a subscriber could be told about a session which had already been replaced after the one which replaced it.
+  * Held the refresh semaphore whilst clearing credentials for a failed login. Taking the notification turn and clearing the credentials were previously two separate steps, so a login or refresh which committed in the gap between them could have its own credentials read and cleared instead, and reported as ending before the session it actually started was reported as beginning.
+  * Stopped a notification leapfrogging a turn which had reserved its place in the queue but not yet reached it. The earliest genuinely waiting turn was previously found by scanning only registered waiters, which a caller has no entry in between taking its turn and actually waiting for it, so a reentrant drain running in that window could not see it was there.
+  * Stopped a reentrant call which raises both `Authenticated`/`Unauthenticated` and `CredentialsUpdated` from the same commit having that ordering reversed once both ended up deferred. The drain always took a deferred credential notification ahead of a deferred session event regardless of which was actually deferred first, reversing the ordering `RaiseSessionStartAndCredentialsUpdatedAsync` relies on for a refresh which starts a session.
+  * Drained deferred session events in ascending turn order rather than the order they happened to be appended in. Two reentrant commits can take turns in ascending order but append their deferred session events in the reverse of that order once both have released the refresh semaphore, so a later commit's session-start or session-end could be raised ahead of an earlier commit's.
+  * Ordered a deferred credential notification against a deferred session event by turn number first, rather than by which was deferred sooner. A credential notification for a later turn could be deferred before an earlier turn's session event, giving it a lower sequence number despite committing second, letting a stale `Unauthenticated` raised for that later turn overwrite credentials an earlier turn had already restored.
+  D* Stopped the deferred-notification drain spinning forever on an uncommitted leftover, such as a DPoP nonce rotation, that nothing else was left to raise. The loop's "keep going" check did not require the same commit that its "take the next one" step already did, so the two disagreed about whether the leftover was safe, and the loop asked forever while still holding the notification turn.
 
 ## 7.0.0 - 2026-09-24
 

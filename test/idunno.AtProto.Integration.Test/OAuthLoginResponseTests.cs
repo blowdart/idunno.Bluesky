@@ -2,12 +2,15 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Security.Cryptography;
+using System.Text;
 
 using idunno.AtProto.Authentication;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -28,6 +31,387 @@ public class OAuthLoginResponseTests
 
     private static readonly string s_signingKeyJson = CreatePublicSigningKeyJson();
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExpectedDidIsValidatedBeforePublishingLoginCredentials(bool hasExistingSession, bool matches)
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+        AccessCredentials? originalCredentials = null;
+        Did expectedDid = new(matches ? AccountDid : "did:plc:originalaccount");
+
+        if (hasExistingSession)
+        {
+            originalCredentials = new AccessCredentials(
+                service: s_service,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: CreateAccessJwt(expectedDid),
+                refreshToken: "originalRefreshToken");
+            Assert.True(await agent.Login(originalCredentials, TestContext.Current.CancellationToken));
+        }
+
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        OAuthClient restoredClient = CreateClient(server);
+        restoredClient.State = savedState;
+
+        if (matches)
+        {
+            Assert.True(await agent.ProcessOAuth2LoginResponse(
+                restoredClient, CallbackData(savedState.State), expectedDid, TestContext.Current.CancellationToken));
+            Assert.True(agent.IsAuthenticated);
+            Assert.Equal(expectedDid, agent.Credentials.Did);
+            Assert.IsType<DPoPAccessCredentials>(agent.Credentials);
+            Assert.NotSame(originalCredentials, agent.Credentials);
+        }
+        else
+        {
+            OAuthException exception = await Assert.ThrowsAsync<OAuthException>(() =>
+                agent.ProcessOAuth2LoginResponse(
+                    restoredClient, CallbackData(savedState.State), expectedDid, TestContext.Current.CancellationToken));
+            Assert.Contains(expectedDid.ToString(), exception.Message, StringComparison.Ordinal);
+            Assert.Contains(AccountDid, exception.Message, StringComparison.Ordinal);
+            Assert.Equal(hasExistingSession, agent.IsAuthenticated);
+            if (hasExistingSession)
+            {
+                Assert.Same(originalCredentials, agent.Credentials);
+                Assert.Equal(s_service, agent.Service);
+            }
+        }
+
+        Assert.Null(restoredClient.State);
+    }
+
+    [Fact]
+    public async Task ExistingAgentLoginOverloadStillAcceptsValidatedCredentialsWithoutAnExpectedDid()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+        string callbackData = CallbackData(client.State!.State);
+
+        Assert.True(await agent.ProcessOAuth2LoginResponse(client, callbackData, TestContext.Current.CancellationToken));
+        Assert.True(agent.IsAuthenticated);
+        Assert.Equal(new Did(AccountDid), agent.Credentials.Did);
+    }
+
+    [Fact]
+    [SuppressMessage("Usage", "xUnit1051:Calls to methods which accept CancellationToken should use TestContext.Current.CancellationToken", Justification = "This regression verifies source compatibility of a default literal; null validation prevents any network operation.")]
+    public async Task ExistingAgentLoginOverloadAcceptsADefaultLiteralCancellationToken()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(null!, "?code=test", default));
+    }
+
+    [Fact]
+    public async Task ExpectedDidOverloadRejectsNullArgumentsBeforeProcessingTheCallback()
+    {
+        LoginTestServer server = new();
+        using AtProtoAgent agent = new(s_service, new TestHttpClientFactory(server.TestServer));
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(null!, "?code=test", new Did(AccountDid), TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            agent.ProcessOAuth2LoginResponse(CreateClient(server), "?code=test", null!, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ProgressiveRequestsUseOneClientIdWithDifferentParScopesAndPreserveCallbackAndRefreshContext()
+    {
+        string[] initialScopes = ["atproto", "rpc:app.bsky.feed.getTimeline?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview"];
+        string[] expandedScopes =
+        [
+            .. initialScopes,
+            new OAuthPermissionSet("app.bsky.authCreatePosts", "did:web:api.bsky.app#bsky_appview"),
+            new OAuthPermissionSet("app.bsky.authDeleteContent")
+        ];
+        string clientId = QueryHelpers.AddQueryString("http://localhost/", "scope", string.Join(" ", expandedScopes));
+        OAuthOptions options = new(clientId, s_returnUri, expandedScopes);
+        LoginTestServer server = new();
+
+        foreach (string[] scopes in new[] { initialScopes, expandedScopes })
+        {
+            OAuthClient client = CreateClient(server, options);
+            await client.BuildOAuth2LoginUri(
+                service: s_service,
+                authority: s_authority,
+                returnUri: s_returnUri,
+                scopes: scopes,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            string expectedScope = string.Join(" ", scopes);
+            Assert.Equal(clientId, server.RequestedClientId);
+            Assert.Equal(expectedScope, server.RequestedScopes);
+            Assert.Equal(string.Join(" ", expandedScopes), QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"]);
+
+            OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+            OAuthClient restoredClient = CreateClient(server, options);
+            DPoPAccessCredentials? credentials = await restoredClient.ProcessOAuth2Response(
+                savedState, CallbackData(savedState.State), TestContext.Current.CancellationToken);
+
+            Assert.NotNull(credentials);
+            Assert.Equal(clientId, server.TokenRequestedClientId);
+            Assert.Equal(clientId, credentials.OAuthClientId);
+            Assert.Equal(expectedScope, credentials.RequestedScope);
+
+            DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+                new DPoPRefreshCredential(credentials),
+                s_authority,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.NotNull(refreshed);
+            Assert.Equal(clientId, server.RefreshRequestedClientId);
+            Assert.Equal(expectedScope, server.RefreshRequestedScopes);
+        }
+    }
+
+    [Fact]
+    public async Task LocalhostClientWithCallbackQueryDeclaresTheFullAppScopesSentToPar()
+    {
+        const string clientId = "http://localhost?redirect_uri=http://127.0.0.1/Bluesky/Callback&scope=atproto%20include%3Aapp.bsky.authFullApp%3Faud%3Ddid%253Aweb%253Aapi.bsky.app%2523bsky_appview";
+        OAuthOptions options = new(clientId, new Uri("http://127.0.0.1:5251/Bluesky/Callback"))
+        {
+            Scopes = ["atproto"],
+            PermissionSets = [new("app.bsky.authFullApp", "did:web:api.bsky.app#bsky_appview")]
+        };
+        LoginTestServer server = new();
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: options.ReturnUri!,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(clientId, server.RequestedClientId);
+        Assert.Equal(string.Join(" ", options.GetRequestedScopes()), server.RequestedScopes);
+        Assert.Equal(server.RequestedScopes, QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"].ToString());
+        Assert.Equal("http://127.0.0.1/Bluesky/Callback", QueryHelpers.ParseQuery(new Uri(clientId).Query)["redirect_uri"].ToString());
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task LoginAndRefreshRequestsUsePermissionSetsUnlessScopesAreExplicitlyOverridden(bool localhost, bool overrideScopes)
+    {
+        LoginTestServer server = new();
+        OAuthOptions options = new(localhost ? "http://localhost" : ClientId, s_returnUri)
+        {
+            Scopes = ["atproto", "blob:image/*"],
+            PermissionSets = [new("com.example.authBasic", "did:web:api.example.com#appview")]
+        };
+        OAuthClient client = CreateClient(server, options);
+        string[]? scopes = overrideScopes ? ["atproto", new OAuthPermissionSet("com.example.authOther")] : null;
+        string expected = string.Join(" ", scopes ?? options.GetRequestedScopes());
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            scopes: scopes,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, server.RequestedScopes);
+        if (localhost)
+        {
+            Assert.Equal(expected, QueryHelpers.ParseQuery(new Uri(server.RequestedClientId!).Query)["scope"]);
+        }
+        else
+        {
+            Assert.Equal(ClientId, server.RequestedClientId);
+        }
+
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        Assert.Equal(expected, savedState.RequestedScope);
+        Assert.Equal(server.RequestedClientId, savedState.OAuthClientId);
+
+        options.Scopes = ["atproto", "blob:video/*"];
+        options.PermissionSets = [new("com.example.authChanged")];
+        OAuthClient restoredClient = CreateClient(server, options);
+        DPoPAccessCredentials? credentials = await restoredClient.ProcessOAuth2Response(
+            savedState,
+            CallbackData(savedState.State),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Equal(server.RequestedClientId, server.TokenRequestedClientId);
+        Assert.Equal(expected, credentials.RequestedScope);
+        Assert.Equal(server.RequestedClientId, credentials.OAuthClientId);
+        OAuthClient refreshClient = CreateClient(server, options);
+        DPoPAccessCredentials? refreshed = await refreshClient.RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshed);
+        Assert.Equal(expected, refreshed.RequestedScope);
+        Assert.Equal(credentials.OAuthClientId, refreshed.OAuthClientId);
+        Assert.Equal(expected, server.RefreshRequestedScopes);
+        Assert.Equal(server.RequestedClientId, server.RefreshRequestedClientId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LoginRetainsTheParSigningKeyAcrossRotationAndRefresh(bool restoreState)
+    {
+        LoginTestServer server = new();
+        using System.Security.Cryptography.ECDsa activeKey = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        using System.Security.Cryptography.ECDsa previousKey = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(activeKey.ExportPkcs8PrivateKeyPem(), "active")
+        };
+        options.AdditionalClientSigningKeys.Add(OAuthClientSigningKey.FromPem(previousKey.ExportPkcs8PrivateKeyPem(), "previous"));
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        Assert.Equal("active", savedState.ClientSigningKeyId);
+        Assert.Equal("active", new JsonWebToken(server.ParClientAssertion!).Kid);
+        OAuthClientSigningKey originalKey = options.ClientSigningKey;
+        options.ClientSigningKey = Assert.Single(options.AdditionalClientSigningKeys);
+        options.AdditionalClientSigningKeys.Clear();
+        options.AdditionalClientSigningKeys.Add(originalKey);
+
+        DPoPAccessCredentials? credentials = restoreState
+            ? await CreateClient(server, options).ProcessOAuth2Response(
+                savedState, CallbackData(savedState.State), cancellationToken: TestContext.Current.CancellationToken)
+            : await client.ProcessOAuth2LoginResponse(
+                CallbackData(savedState.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Equal("active", credentials.ClientSigningKeyId);
+        Assert.Equal("active", new JsonWebToken(server.TokenClientAssertion!).Kid);
+
+        DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+            new DPoPRefreshCredential(credentials),
+            s_authority,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshed);
+        Assert.Equal("active", refreshed.ClientSigningKeyId);
+        Assert.Equal("active", new JsonWebToken(server.TokenClientAssertion!).Kid);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConfidentialLoginAndRefreshNonceRetriesCreateFreshClientAssertions(bool restoreState)
+    {
+        LoginTestServer server = new() { ChallengeNonce = true };
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(key.ExportPkcs8PrivateKeyPem(), "active")
+        };
+        OAuthClient client = CreateClient(server, options);
+        await client.BuildOAuth2LoginUri(s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+
+        DPoPAccessCredentials? credentials = restoreState
+            ? await CreateClient(server, options).ProcessOAuth2Response(
+                state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken)
+            : await client.ProcessOAuth2LoginResponse(
+                CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        DPoPAccessCredentials? refreshed = await CreateClient(server, options).RefreshCredentials(
+            new DPoPRefreshCredential(credentials), s_authority, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(refreshed);
+        Assert.Equal("active", refreshed.ClientSigningKeyId);
+        Assert.Equal(["par", "par", "authorization_code", "authorization_code", "refresh_token", "refresh_token"], server.AssertionOperations);
+        Assert.Equal(6, server.AssertionJtis.Count);
+        Assert.Equal(6, server.AssertionJtis.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Theory]
+    [InlineData("https://CLIENT.test/callback", "https://client.test/callback")]
+    [InlineData("https://client.test", "https://client.test/")]
+    [InlineData("dev.idunno.bluesky:/callback", "dev.idunno.bluesky:/callback")]
+    public async Task LoginUsesTheNormalizedRedirectUriForParAndTokenExchange(string callback, string expected)
+    {
+        LoginTestServer server = new();
+        Uri returnUri = new(callback);
+        OAuthClient client = CreateClient(server, new OAuthOptions(ClientId, returnUri));
+
+        await client.BuildOAuth2LoginUri(s_service, s_authority, returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(expected, server.ParRedirectUri);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        DPoPAccessCredentials? credentials = await CreateClient(server, new OAuthOptions(ClientId, returnUri)).ProcessOAuth2Response(
+            state, expected + CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Equal(expected, server.TokenRedirectUri);
+        Assert.Equal(state.CodeVerifier, server.TokenCodeVerifier);
+        Assert.Equal(Base64UrlEncoder.Encode(SHA256.HashData(Encoding.ASCII.GetBytes(state.CodeVerifier))), server.ParCodeChallenge);
+    }
+
+    [Fact]
+    public async Task LoginRejectsARemovedParSigningKeyBeforeTokenExchange()
+    {
+        LoginTestServer server = new();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        OAuthOptions options = new(ClientId, s_returnUri)
+        {
+            ClientSigningKey = OAuthClientSigningKey.FromPem(key.ExportPkcs8PrivateKeyPem(), "original")
+        };
+        OAuthClient client = CreateClient(server, options);
+        await client.BuildOAuth2LoginUri(s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState state = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        options.ClientSigningKey = OAuthClientSigningKey.FromPem(key.ExportPkcs8PrivateKeyPem(), "replacement");
+        OAuthClient restored = CreateClient(server, options);
+
+        await Assert.ThrowsAsync<OAuthException>(() => restored.ProcessOAuth2Response(
+            state, CallbackData(state.State), cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Null(server.TokenClientAssertion);
+        AssertLoginStateCleared(restored);
+    }
+
+    [Fact]
+    public async Task LoginWithALocalhostClientIdRecordsNoClientSigningKey()
+    {
+        LoginTestServer server = new();
+        OAuthOptions options = new("http://localhost", s_returnUri);
+        OAuthClient client = CreateClient(server, options);
+
+        await client.BuildOAuth2LoginUri(
+            service: s_service,
+            authority: s_authority,
+            returnUri: s_returnUri,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        OAuthLoginState savedState = OAuthLoginState.FromJson(client.State!.ToJson())!;
+        DPoPAccessCredentials? credentials = await CreateClient(server, options).ProcessOAuth2Response(
+            savedState,
+            CallbackData(savedState.State),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(credentials);
+        Assert.Null(credentials.ClientSigningKeyId);
+    }
+
     [Fact]
     public async Task ASuccessfullyProcessedLoginResponseDiscardsTheLoginState()
     {
@@ -39,6 +423,7 @@ public class OAuthLoginResponseTests
             authority: s_authority,
             returnUri: s_returnUri,
             clientId: ClientId,
+            stateExtraProperties: new Dictionary<string, string> { ["retained"] = "private" },
             cancellationToken: TestContext.Current.CancellationToken);
 
         DPoPAccessCredentials? credentials = await client.ProcessOAuth2LoginResponse(
@@ -50,7 +435,7 @@ public class OAuthLoginResponseTests
 
         // The authorize state carries a single use code verifier which the server has now spent, and the proof key is a
         // private key. Neither has any further use, and both are readable through State until they are discarded.
-        Assert.Null(client.State);
+        AssertLoginStateCleared(client);
     }
 
     [Fact]
@@ -72,7 +457,187 @@ public class OAuthLoginResponseTests
                 clientId: ClientId,
                 cancellationToken: TestContext.Current.CancellationToken));
 
-        Assert.Null(client.State);
+        AssertLoginStateCleared(client);
+    }
+
+    [Theory]
+    [InlineData("success", "build")]
+    [InlineData("success", "restore")]
+    [InlineData("success", "restoreSame")]
+    [InlineData("protocolError", "build")]
+    [InlineData("protocolError", "restore")]
+    [InlineData("protocolError", "restoreSame")]
+    [InlineData("cancellation", "build")]
+    [InlineData("cancellation", "restore")]
+    [InlineData("cancellation", "restoreSame")]
+    public async Task CompletingAnOlderResponsePreservesANewerInstalledLogin(string outcome, string replacement)
+    {
+        LoginTestServer server = new() { GateTokenRequests = true, ReturnTokenError = outcome == "protocolError" };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            stateExtraProperties: new Dictionary<string, string> { ["login"] = "original" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState originalState = client.State!;
+        client.State = originalState;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(originalState.State), cancellationToken: cancellation.Token);
+
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            if (replacement == "build")
+            {
+                await client.BuildOAuth2LoginUri(
+                    s_service, s_authority, s_returnUri,
+                    stateExtraProperties: new Dictionary<string, string> { ["login"] = "new" },
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+            else if (replacement == "restore")
+            {
+                OAuthClient other = CreateClient(server);
+                await other.BuildOAuth2LoginUri(
+                    s_service, s_authority, s_returnUri,
+                    stateExtraProperties: new Dictionary<string, string> { ["login"] = "restored" },
+                    cancellationToken: TestContext.Current.CancellationToken);
+                client.State = other.State!;
+            }
+            else
+            {
+                client.State = originalState;
+            }
+
+            OAuthLoginState newerState = client.State!;
+            object? newerCache = GetPrivateField(client, "_oidcClient");
+            if (outcome == "cancellation")
+            {
+                await cancellation.CancelAsync();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => processing);
+            }
+            else
+            {
+                server.TokenRelease.TrySetResult();
+                DPoPAccessCredentials? credentials = await processing;
+                if (outcome == "success")
+                {
+                    Assert.NotNull(credentials);
+                    Assert.Equal(originalState.ProofKey, credentials.DPoPProofKey);
+                }
+                else
+                {
+                    Assert.Null(credentials);
+                }
+            }
+
+            Assert.Equal(newerState, client.State);
+            Assert.Equal(newerState.CorrelationId, GetPrivateField(client, "_correlationId"));
+            Assert.Equal(newerState.ProofKey, GetPrivateField(client, "_proofKey"));
+            Assert.Same(newerCache, GetPrivateField(client, "_oidcClient"));
+            if (newerCache is null)
+            {
+                AssertOidcClientCleared(client);
+            }
+            else
+            {
+                Assert.Equal(newerState.ProofKey, GetPrivateField(client, "_oidcClientProofKey"));
+            }
+
+            server.GateTokenRequests = false;
+            server.ReturnTokenError = false;
+            Assert.NotNull(await client.ProcessOAuth2LoginResponse(
+                CallbackData(newerState.State), cancellationToken: TestContext.Current.CancellationToken));
+            AssertLoginStateCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+            await cancellation.CancelAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData("protocolError")]
+    [InlineData("cancellation")]
+    [InlineData("exchangeException")]
+    public async Task AnUnsuccessfulExchangeDiscardsAllLoginState(string outcome)
+    {
+        LoginTestServer server = new()
+        {
+            GateTokenRequests = true,
+            ReturnTokenError = outcome == "protocolError",
+            ThrowDuringTokenExchange = outcome == "exchangeException"
+        };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri,
+            stateExtraProperties: new Dictionary<string, string> { ["retained"] = "private" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(client.State!.State), cancellationToken: cancellation.Token);
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            if (outcome == "cancellation")
+            {
+                await cancellation.CancelAsync();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => processing);
+            }
+            else
+            {
+                server.TokenRelease.TrySetResult();
+                // Duende reports both protocol errors and exceptions from the HTTP exchange as an error result.
+                Assert.Null(await processing);
+            }
+
+            AssertLoginStateCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+            await cancellation.CancelAsync();
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnOlderExchangeCannotPublishItsCachedKeyAfterStateIsReplaced(bool restoreSameState)
+    {
+        LoginTestServer server = new() { GateTokenRequests = true };
+        OAuthClient client = CreateClient(server);
+        await client.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState originalState = client.State!;
+        OAuthClient other = CreateClient(server);
+        await other.BuildOAuth2LoginUri(
+            s_service, s_authority, s_returnUri, cancellationToken: TestContext.Current.CancellationToken);
+        OAuthLoginState newerState = restoreSameState ? originalState : other.State!;
+
+        IEnumerable<string> ReplaceStateBeforeCreatingClient()
+        {
+            client.State = newerState;
+            yield return "atproto";
+        }
+
+        Task<DPoPAccessCredentials?> processing = client.ProcessOAuth2LoginResponse(
+            CallbackData(originalState.State),
+            scopes: ReplaceStateBeforeCreatingClient(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        try
+        {
+            await server.TokenEntered.Task.WaitAsync(TestContext.Current.CancellationToken);
+            AssertOidcClientCleared(client);
+            server.TokenRelease.TrySetResult();
+            Assert.NotNull(await processing);
+            Assert.Equal(newerState, client.State);
+            AssertOidcClientCleared(client);
+        }
+        finally
+        {
+            server.TokenRelease.TrySetResult();
+        }
     }
 
     [Fact]
@@ -162,11 +727,38 @@ public class OAuthLoginResponseTests
 
     private static string CallbackData(string state) => $"?code=authorizationCode&state={state}";
 
-    private static OAuthClient CreateClient(LoginTestServer server) =>
+    private static object? GetPrivateField(OAuthClient client, string name) =>
+        typeof(OAuthClient).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(client);
+
+    private static void AssertLoginStateCleared(OAuthClient client)
+    {
+        Assert.Null(client.State);
+        Assert.Equal(Guid.Empty, GetPrivateField(client, "_correlationId"));
+        foreach (string field in new[]
+        {
+            "_loginGeneration", "_authorizeState", "_expectedAuthority", "_expectedService", "_proofKey",
+            "_stateExtraProperties", "_loginClientId", "_loginRequestedScope", "_loginSigningKeyId"
+        })
+        {
+            Assert.Null(GetPrivateField(client, field));
+        }
+
+        AssertOidcClientCleared(client);
+    }
+
+    private static void AssertOidcClientCleared(OAuthClient client)
+    {
+        foreach (string field in new[] { "_oidcClient", "_oidcClientProofKey", "_oidcClientAuthority", "_oidcClientSigningKeyId" })
+        {
+            Assert.Null(GetPrivateField(client, field));
+        }
+    }
+
+    private static OAuthClient CreateClient(LoginTestServer server, OAuthOptions? options = null) =>
         new(httpClientConfigurator: httpClient => httpClient,
             innerHandlerFactory: server.TestServer.CreateHandler,
             loggerFactory: null,
-            options: new OAuthOptions(ClientId, s_returnUri));
+            options: options ?? new OAuthOptions(ClientId, s_returnUri));
 
     private static string CreateAccessJwt(Did did) =>
         JwtBuilder.CreateJwt(did, issuer: Authority, audience: ServerDid, scope: "atproto");
@@ -213,6 +805,44 @@ public class OAuthLoginResponseTests
         /// Gets or sets a value indicating whether the token endpoint issues a bearer token rather than a DPoP bound one.
         /// </summary>
         internal bool IssueBearerToken { get; set; }
+
+        internal bool ChallengeNonce { get; set; }
+
+        internal bool GateTokenRequests { get; set; }
+
+        internal bool ReturnTokenError { get; set; }
+
+        internal bool ThrowDuringTokenExchange { get; set; }
+
+        internal TaskCompletionSource TokenEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal TaskCompletionSource TokenRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        internal List<string> AssertionJtis { get; } = [];
+
+        internal List<string> AssertionOperations { get; } = [];
+
+        internal string? RequestedScopes { get; private set; }
+
+        internal string? ParClientAssertion { get; private set; }
+
+        internal string? ParRedirectUri { get; private set; }
+
+        internal string? ParCodeChallenge { get; private set; }
+
+        internal string? TokenRedirectUri { get; private set; }
+
+        internal string? TokenCodeVerifier { get; private set; }
+
+        internal string? TokenClientAssertion { get; private set; }
+
+        internal string? RequestedClientId { get; private set; }
+
+        internal string? TokenRequestedClientId { get; private set; }
+
+        internal string? RefreshRequestedScopes { get; private set; }
+
+        internal string? RefreshRequestedClientId { get; private set; }
 
         internal string? TokenRequestProofKeyThumbprint
         {
@@ -263,13 +893,61 @@ public class OAuthLoginResponseTests
                     return;
 
                 case "/par" when request.Method == HttpMethod.Post.Method:
+                    IFormCollection form = await request.ReadFormAsync();
+                    RequestedScopes = form["scope"].ToString();
+                    ParClientAssertion = form["client_assertion"].ToString();
+                    ParRedirectUri = form["redirect_uri"].ToString();
+                    ParCodeChallenge = form["code_challenge"].ToString();
+                    RequestedClientId = form["client_id"].ToString();
+                    if (ChallengeNonce && await ChallengeOrRejectAssertion(context, ParClientAssertion, "par"))
+                    {
+                        return;
+                    }
+
                     response.StatusCode = StatusCodes.Status201Created;
                     response.ContentType = "application/json";
                     await response.WriteAsync("""{"request_uri":"urn:ietf:params:oauth:request_uri:test","expires_in":90}""");
                     return;
 
                 case "/token" when request.Method == HttpMethod.Post.Method:
+                    if (GateTokenRequests)
+                    {
+                        TokenEntered.TrySetResult();
+                        await TokenRelease.Task.WaitAsync(context.RequestAborted);
+                    }
+
+                    if (ThrowDuringTokenExchange)
+                    {
+                        throw new InvalidOperationException("Token exchange failed.");
+                    }
+
+                    if (ReturnTokenError)
+                    {
+                        response.StatusCode = StatusCodes.Status400BadRequest;
+                        response.ContentType = "application/json";
+                        await response.WriteAsync("""{"error":"invalid_grant"}""", context.RequestAborted);
+                        return;
+                    }
+
                     RecordProofKey(request);
+                    IFormCollection tokenForm = await request.ReadFormAsync();
+                    TokenClientAssertion = tokenForm["client_assertion"].ToString();
+                    TokenRedirectUri = tokenForm["redirect_uri"].ToString();
+                    TokenCodeVerifier = tokenForm["code_verifier"].ToString();
+                    if (ChallengeNonce && await ChallengeOrRejectAssertion(context, TokenClientAssertion, tokenForm["grant_type"].ToString()))
+                    {
+                        return;
+                    }
+
+                    if (tokenForm["grant_type"] == "refresh_token")
+                    {
+                        RefreshRequestedScopes = tokenForm["scope"].ToString();
+                        RefreshRequestedClientId = tokenForm["client_id"].ToString();
+                    }
+                    else
+                    {
+                        TokenRequestedClientId = tokenForm["client_id"].ToString();
+                    }
 
                     response.Headers["DPoP-Nonce"] = "serverIssuedNonce";
                     response.ContentType = "application/json";
@@ -293,6 +971,29 @@ public class OAuthLoginResponseTests
                     response.StatusCode = StatusCodes.Status404NotFound;
                     return;
             }
+        }
+
+        private async Task<bool> ChallengeOrRejectAssertion(HttpContext context, string assertion, string operation)
+        {
+            string jti = new JsonWebToken(assertion).Id;
+            bool reused = AssertionJtis.Contains(jti, StringComparer.Ordinal);
+            AssertionJtis.Add(jti);
+            AssertionOperations.Add(operation);
+            string nonce = $"{operation}-nonce";
+            JsonWebToken proof = new(context.Request.Headers["DPoP"].ToString());
+
+            if (reused || !proof.TryGetClaim("nonce", out System.Security.Claims.Claim? nonceClaim) || nonceClaim.Value != nonce)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["DPoP-Nonce"] = nonce;
+                await context.Response.WriteAsync(reused
+                    ? """{"error":"invalid_client","error_description":"Reused client assertion"}"""
+                    : """{"error":"use_dpop_nonce"}""");
+                return true;
+            }
+
+            return false;
         }
 
         private void RecordProofKey(HttpRequest request)

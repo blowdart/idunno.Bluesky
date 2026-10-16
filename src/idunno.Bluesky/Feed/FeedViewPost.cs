@@ -11,10 +11,18 @@ namespace idunno.Bluesky.Feed;
 public sealed record FeedViewPost : View
 {
     [JsonConstructor]
-    internal FeedViewPost(PostView post, ReplyReference? reply, ReasonBase? reason, string? feedContext)
+    internal FeedViewPost(
+        PostView post,
+        ReplyReference? reply,
+        int? opThreadPostIndex,
+        int? opThreadPostCount,
+        ReasonBase? reason,
+        string? feedContext)
     {
         Post = post;
         Reply = reply;
+        OpThreadPostIndex = opThreadPostIndex;
+        OpThreadPostCount = opThreadPostCount;
         Reason = reason;
         FeedContext = feedContext;
     }
@@ -31,6 +39,18 @@ public sealed record FeedViewPost : View
     /// </summary>
     [JsonInclude]
     public ReplyReference? Reply { get; init; }
+
+    /// <summary>
+    /// Gets the 1-indexed position of this post within the contiguous OP thread. Only present when this post is part of the OP thread.
+    /// </summary>
+    [JsonInclude]
+    public int? OpThreadPostIndex { get; init; }
+
+    /// <summary>
+    /// Gets the total number of posts in the contiguous OP thread that this post belongs to. Only present when this post is part of the OP thread.
+    /// </summary>
+    [JsonInclude]
+    public int? OpThreadPostCount { get; init; }
 
     /// <summary>
     /// An optional reason indicating why the post is in a feed, typically either a <see cref="ReasonRepost"/> or <see cref="ReasonPin"/>.

@@ -647,9 +647,19 @@ public static class CollectionNsid
     public static Nsid PostGate => new("app.bsky.feed.postgate");
 
     /// <summary>
+    /// The NSID for a user's feed generators collection.
+    /// </summary>
+    public static Nsid Generator => new("app.bsky.feed.generator");
+
+    /// <summary>
     /// The NSID for an actor's profile.
     /// </summary>
     public static Nsid Profile => new("app.bsky.actor.profile");
+
+    /// <summary>
+    /// The NSID for an actor's profile link collection.
+    /// </summary>
+    public static Nsid Link => new("app.bsky.actor.link");
 
     /// <summary>
     /// The NSID for a user's verification collection.
@@ -728,6 +738,11 @@ public static class RecordType
     public const string Post = "app.bsky.feed.post";
 
     /// <summary>
+    /// Indicates a feed generator record.
+    /// </summary>
+    public const string Generator = "app.bsky.feed.generator";
+
+    /// <summary>
     /// Indicates a like record.
     /// </summary>
     public const string Like = "app.bsky.feed.like";
@@ -761,6 +776,11 @@ public static class RecordType
     /// Indicates a profile record.
     /// </summary>
     public const string Profile = "app.bsky.actor.profile";
+
+    /// <summary>
+    /// Indicates a link record shown on an actor's profile.
+    /// </summary>
+    public const string ActorLink = "app.bsky.actor.link";
 
     /// <summary>
     /// Indicates a starter pack record.

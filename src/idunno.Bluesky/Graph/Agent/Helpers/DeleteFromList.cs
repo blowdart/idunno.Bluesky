@@ -12,6 +12,8 @@ namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
+    private const int MaximumListPages = 1_000;
+
     /// <summary>
     /// Deletes the list entry referred to by the <paramref name="uri"/>.
     /// </summary>
@@ -140,9 +142,11 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken)
     {
         string? cursor = null;
+        HashSet<string> seenCursors = new(StringComparer.Ordinal);
+        int pagesRead = 0;
         AtProtoHttpResult<ListViewWithItems> listEntriesResult;
 
-        do
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -151,6 +155,7 @@ public partial class BlueskyAgent
                 limit: 100,
                 cursor: cursor,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+            pagesRead++;
 
             if (!listEntriesResult.Succeeded)
             {
@@ -170,8 +175,32 @@ public partial class BlueskyAgent
             }
 
             cursor = listEntriesResult.Result.Cursor;
+
+            if (string.IsNullOrEmpty(cursor))
+            {
+                break;
+            }
+
+            if (!seenCursors.Add(cursor))
+            {
+                return new AtProtoHttpResult<DeleteResult>(
+                    result: null,
+                    statusCode: HttpStatusCode.BadGateway,
+                    httpResponseHeaders: listEntriesResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("PaginationCursorLoop", $"The list API returned a cursor that was already used while searching list {uri}."),
+                    rateLimit: listEntriesResult.RateLimit);
+            }
+
+            if (pagesRead >= MaximumListPages)
+            {
+                return new AtProtoHttpResult<DeleteResult>(
+                    result: null,
+                    statusCode: HttpStatusCode.BadGateway,
+                    httpResponseHeaders: listEntriesResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("PaginationPageLimitExceeded", $"Searching list {uri} exceeded the maximum of {MaximumListPages} pages."),
+                    rateLimit: listEntriesResult.RateLimit);
+            }
         }
-        while (!string.IsNullOrEmpty(cursor));
 
         return new AtProtoHttpResult<DeleteResult>(
             result: null,

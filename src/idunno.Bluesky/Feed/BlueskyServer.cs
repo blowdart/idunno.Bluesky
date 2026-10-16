@@ -367,11 +367,15 @@ public static partial class BlueskyServer
                 case FeedFilter.PostsAndAuthorThreads:
                     filterParameter = "posts_and_author_threads";
                     break;
+
+                case FeedFilter.PostsWithVideo:
+                    filterParameter = "posts_with_video";
+                    break;
             }
 
             if (filterParameter is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&feedFilter={filterParameter}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&filter={filterParameter}");
             }
         }
         if (includePins is not null)
@@ -686,7 +690,7 @@ public static partial class BlueskyServer
         queryStringBuilder.Append(CultureInfo.InvariantCulture, $"uri={Uri.EscapeDataString(uri.ToString())}");
         if (cid is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"cid={Uri.EscapeDataString(cid.ToString())}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cid={Uri.EscapeDataString(cid.ToString())}");
         }
         if (limit is not null)
         {
@@ -729,12 +733,37 @@ public static partial class BlueskyServer
         }
     }
 
+    /// <inheritdoc cref="GetListFeed(AtUri, int?, string?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public static Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
+        AtUri list,
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials? accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetListFeed(
+            list, limit, cursor, since: null, service: service, accessCredentials: accessCredentials, httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated, loggerFactory: loggerFactory, subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: maximumResponseSize, cancellationToken: cancellationToken);
+    }
+
     /// <summary>
     /// Get a feed of recent posts from a list (posts and reposts from any actors on the list).
     /// </summary>
     /// <param name="list">The <see cref="AtUri"/> of the list whose recent posts should be retrieved.</param>
     /// <param name="limit">The maximum number of items to return from the api.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="since">An optional cursor boundary for returning only newer feed items.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -757,14 +786,15 @@ public static partial class BlueskyServer
         AtUri list,
         int? limit,
         string? cursor,
+        string? since,
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        IEnumerable<Did>? subscribedLabelers = null,
-        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
-        CancellationToken cancellationToken = default)
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated,
+        ILoggerFactory? loggerFactory,
+        IEnumerable<Did>? subscribedLabelers,
+        int maximumResponseSize,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(list);
         ArgumentNullException.ThrowIfNull(service);
@@ -786,6 +816,10 @@ public static partial class BlueskyServer
         {
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
         }
+        if (since is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&since={Uri.EscapeDataString(since)}");
+        }
 
         string queryString = queryStringBuilder.ToString();
 
@@ -803,7 +837,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
-                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
+                new PagedViewReadOnlyCollection<FeedViewPost>(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor, response.Result.StartCursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -978,6 +1012,31 @@ public static partial class BlueskyServer
         }
     }
 
+    /// <inheritdoc cref="GetQuotes(AtUri, Cid?, int?, string?, string?, Uri, AccessCredentials?, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public static Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
+        AtUri uri,
+        Cid? cid,
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials? accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetQuotes(
+            uri, cid, limit, cursor, sort: null, service: service, accessCredentials: accessCredentials, httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated, loggerFactory: loggerFactory, subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: maximumResponseSize, cancellationToken: cancellationToken);
+    }
+
     /// <summary>
     /// Get a list of quotes for a given post.
     /// </summary>
@@ -985,6 +1044,7 @@ public static partial class BlueskyServer
     /// <param name="cid">If supplied, filters to quotes of specific version (by <see cref="AtProto.Cid">content identifier</see>) of the post record.</param>
     /// <param name="limit">The maximum number of posts to return.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="sort">The optional ordering of quote results; the lexicon currently defines <c>latest</c> and <c>top</c>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>, or <see langword="null" /> to make an unauthenticated request.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -1008,14 +1068,15 @@ public static partial class BlueskyServer
         Cid? cid,
         int? limit,
         string? cursor,
+        string? sort,
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        IEnumerable<Did>? subscribedLabelers = null,
-        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
-        CancellationToken cancellationToken = default)
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated,
+        ILoggerFactory? loggerFactory,
+        IEnumerable<Did>? subscribedLabelers,
+        int maximumResponseSize,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(service);
@@ -1040,6 +1101,10 @@ public static partial class BlueskyServer
         if (cursor is not null)
         {
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor.ToString())}");
+        }
+        if (sort is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&sort={Uri.EscapeDataString(sort)}");
         }
 
         string queryString = queryStringBuilder.ToString();
@@ -1172,9 +1237,32 @@ public static partial class BlueskyServer
         }
     }
 
+    /// <inheritdoc cref="GetSuggestedFeeds(int?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds pagination options.")]
+    public static Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetSuggestedFeeds(
+            limit: null, cursor: null, service: service, accessCredentials: accessCredentials, httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated, loggerFactory: loggerFactory, subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: maximumResponseSize, cancellationToken: cancellationToken);
+    }
+
     /// <summary>
     /// Get a list of suggested feeds for the user whose access token is supplied.
     /// </summary>
+    /// <param name="limit">The maximum number of suggested feeds to return.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -1185,6 +1273,7 @@ public static partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
     [UnconditionalSuppressMessage(
                 "Trimming",
                 "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -1193,23 +1282,41 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<SuggestedFeeds>> GetSuggestedFeeds(
+        int? limit,
+        string? cursor,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        IEnumerable<Did>? subscribedLabelers = null,
-        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
-        CancellationToken cancellationToken = default)
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated,
+        ILoggerFactory? loggerFactory,
+        IEnumerable<Did>? subscribedLabelers,
+        int maximumResponseSize,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, Maximum.PostsToList);
+        }
+
+        StringBuilder queryStringBuilder = new();
+        if (limit is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"?limit={limit}");
+        }
+        if (cursor is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"{(queryStringBuilder.Length is 0 ? "?" : "&")}cursor={Uri.EscapeDataString(cursor)}");
+        }
+
         BlueskyHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<GetSuggestedFeedsResponse> response = await client.Get(
             service,
-            GetSuggestedFeedsEndpoint,
+            $"{GetSuggestedFeedsEndpoint}{queryStringBuilder}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
@@ -1237,12 +1344,37 @@ public static partial class BlueskyServer
         }
     }
 
+    /// <inheritdoc cref="GetTimeline(string?, int?, string?, string?, Uri, AccessCredentials, HttpClient, Func{AtProtoCredential, CancellationToken, Task}?, ILoggerFactory?, IEnumerable{Did}?, int, CancellationToken)"/>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Usage",
+        "RS0027",
+        Justification = "The shorter overload preserves the existing optional-parameter API; the extended overload adds the lexicon option.")]
+    public static Task<AtProtoHttpResult<Timeline>> GetTimeline(
+        string? algorithm,
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        return GetTimeline(
+            algorithm, limit, cursor, since: null, service: service, accessCredentials: accessCredentials, httpClient: httpClient,
+            onCredentialsUpdated: onCredentialsUpdated, loggerFactory: loggerFactory, subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: maximumResponseSize, cancellationToken: cancellationToken);
+    }
+
     /// <summary>
     /// Get a view of the requesting account's home timeline. This is expected to be some form of reverse-chronological feed.
     /// </summary>
     /// <param name="algorithm">Variant 'algorithm' for timeline. Implementation-specific. NOTE: most feed flexibility has been moved to feed generator mechanism.</param>
     /// <param name="limit">The maximum number of post views to return.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
+    /// <param name="since">An optional cursor boundary for returning only newer timeline items.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -1265,14 +1397,15 @@ public static partial class BlueskyServer
         string? algorithm,
         int? limit,
         string? cursor,
+        string? since,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        IEnumerable<Did>? subscribedLabelers = null,
-        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
-        CancellationToken cancellationToken = default)
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated,
+        ILoggerFactory? loggerFactory,
+        IEnumerable<Did>? subscribedLabelers,
+        int maximumResponseSize,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
@@ -1300,6 +1433,10 @@ public static partial class BlueskyServer
         {
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
         }
+        if (!string.IsNullOrWhiteSpace(since))
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&since={Uri.EscapeDataString(since)}");
+        }
 
         string queryString = queryStringBuilder.ToString();
 
@@ -1318,7 +1455,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<Timeline>(
-                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor),
+                new Timeline(WithoutNullEntries(response.Result.Feed, service, nameof(response.Result.Feed), loggerFactory), response.Result.Cursor, response.Result.StartCursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

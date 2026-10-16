@@ -121,7 +121,7 @@
     <value>Cannot add a video to a post that already has images.</value>
   </data>
   <data name="EmptyPostTextValidationError" xml:space="preserve">
-    <value>Post text cannot be null or empty unless there are images, video or another type of embedded record.</value>
+    <value>Post text cannot be null unless there are images, video or another type of embedded record.</value>
   </data>
   <data name="PostBuilderAddQuoteToNonPostError" xml:space="preserve">
     <value>Only strong references to records of collection 'app.bsky.feed.post' can be quoted.</value>

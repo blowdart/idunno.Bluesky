@@ -9,7 +9,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
-using System.Timers;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
@@ -373,6 +372,16 @@ public partial class AtProtoAgent
     internal Func<Task>? LogoutHoldingCredentialRefreshSemaphore { get; set; }
 
     /// <summary>
+    /// Gets or sets the observer of a logout's pending credential semaphore acquisition.
+    /// </summary>
+    internal Action<Task>? LogoutCredentialRefreshWaiting { get; set; }
+
+    /// <summary>
+    /// Gets or sets the observer of a login's pending credential semaphore acquisition.
+    /// </summary>
+    internal Action<Task>? LoginCredentialRefreshWaiting { get; set; }
+
+    /// <summary>
     /// Called by a refresh once it has decided to proceed but before it waits for
     /// <see cref="_credentialRefreshSemaphore"/>, so that a test can commit a change whilst the refresh is queued for
     /// it and check what the refresh does when it is finally granted.
@@ -432,7 +441,15 @@ public partial class AtProtoAgent
     /// </remarks>
     private readonly TimeSpan _immediateRefreshInterval = new(0, 0, 1);
 
-    private System.Timers.Timer? _credentialRefreshTimer;
+    private ITimer? _credentialRefreshTimer;
+    private double _credentialRefreshTimerInterval;
+    private long _credentialRefreshTimerScheduledAt;
+    private TimeSpan _credentialRefreshTimerDueTime;
+    private bool _credentialRefreshTimerEnabled;
+
+    internal double CredentialRefreshTimerInterval => _credentialRefreshTimerInterval;
+
+    internal bool CredentialRefreshTimerEnabled => _credentialRefreshTimerEnabled;
 
     /// <summary>
     /// Gets the current credentials for the agent, if any.
@@ -638,7 +655,7 @@ public partial class AtProtoAgent
             {
                 return _credentials is IAccessCredential accessCredential &&
                     accessCredential.Did is not null &&
-                    accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
+                    !accessCredential.IsExpiredAt(Clock);
             }
         }
     }
@@ -1933,7 +1950,7 @@ public partial class AtProtoAgent
     /// </remarks>
     public virtual OAuthClient CreateOAuthClient()
     {
-        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
+        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions, Clock)
         {
             MaximumResponseSize = MaximumResponseSize
         };
@@ -1949,7 +1966,7 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
+        var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions, Clock)
         {
             State = state,
             MaximumResponseSize = MaximumResponseSize
@@ -2085,7 +2102,7 @@ public partial class AtProtoAgent
 
         Options.OAuthOptions.Validate();
 
-        scopes ??= Options.OAuthOptions.Scopes;
+        scopes ??= Options.OAuthOptions.GetRequestedScopes();
         ArgumentNullException.ThrowIfNull(scopes);
 
         if (validateDiscoveredEndpoints)
@@ -2185,13 +2202,53 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is <see langword="null"/>.</exception>
-    public async Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default)
+    [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "The expected-DID overload requires all four arguments, preserving existing calls including a three-argument default literal.")]
+    public Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default) =>
+        ProcessOAuth2LoginResponseCore(oAuthClient, callbackData, expectedDid: null, cancellationToken);
+
+    /// <summary>
+    /// Processes an OAuth login response and sets the agent credentials only when the authorized DID matches the expected DID.
+    /// </summary>
+    /// <param name="oAuthClient">The OAuth client containing the saved login state.</param>
+    /// <param name="callbackData">The data returned to the callback URI.</param>
+    /// <param name="expectedDid">The DID the authorization must identify.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>A value indicating whether the agent authenticated successfully.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="oAuthClient"/> or <paramref name="expectedDid"/> is <see langword="null"/>.</exception>
+    /// <exception cref="OAuthException">The login response fails OAuth validation or identifies a DID other than <paramref name="expectedDid"/>.</exception>
+    /// <remarks>
+    /// <para>The DID is checked after validating the returned credentials and before replacing the agent's session.
+    /// A DID mismatch leaves any existing session unchanged.</para>
+    /// <para>For progressive scope requests, supply the original session's DID.
+    /// See <see href="https://atproto.com/specs/oauth#identity-authentication">OAuth identity authentication</see>.</para>
+    /// </remarks>
+    public Task<bool> ProcessOAuth2LoginResponse(
+        OAuthClient oAuthClient,
+        string callbackData,
+        Did expectedDid,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(expectedDid);
+
+        return ProcessOAuth2LoginResponseCore(oAuthClient, callbackData, expectedDid, cancellationToken);
+    }
+
+    private async Task<bool> ProcessOAuth2LoginResponseCore(
+        OAuthClient oAuthClient,
+        string callbackData,
+        Did? expectedDid,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(oAuthClient);
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2LoginResponse(callbackData, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (accessCredentials is not null)
         {
+            if (expectedDid is not null && accessCredentials.Did != expectedDid)
+            {
+                throw new OAuthException($"The authorized DID {accessCredentials.Did} does not match the expected DID {expectedDid}.");
+            }
+
             return await Login(accessCredentials, cancellationToken).ConfigureAwait(false);
         }
         else
@@ -2288,7 +2345,8 @@ public partial class AtProtoAgent
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuth(
+            AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuthWithTimeProvider(
+                timeProvider: Clock,
                 audience: audience,
                 expiry: expiry,
                 lxm: lxm,
@@ -2808,7 +2866,9 @@ public partial class AtProtoAgent
 
         try
         {
-            await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            Task credentialWait = _credentialRefreshSemaphore.WaitAsync(cancellationToken);
+            LogoutCredentialRefreshWaiting?.Invoke(credentialWait);
+            await credentialWait.ConfigureAwait(false);
 
             try
             {
@@ -2843,6 +2903,48 @@ public partial class AtProtoAgent
 
             FinishNotificationTurn(pendingSessionEnd.NotificationTurn);
         }
+    }
+
+    /// <summary>
+    /// Builds the form fields for a token revocation request.
+    /// </summary>
+    /// <param name="token">The token to revoke.</param>
+    /// <param name="tokenTypeHint">The type of <paramref name="token"/>.</param>
+    /// <param name="clientId">The client ID.</param>
+    /// <param name="authorizationServer">The authorization server the request is sent to.</param>
+    /// <param name="signingKey">The confidential client signing key, if one is configured.</param>
+    /// <returns>The revocation request form fields.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A confidential client authenticates revocation requests with a client assertion, as it does every other request
+    ///   to the authorization server. Localhost development client IDs are always public clients.
+    /// </para>
+    /// </remarks>
+    internal KeyValuePair<string, string>[] BuildRevocationForm(
+        string token,
+        string tokenTypeHint,
+        string clientId,
+        Uri authorizationServer,
+        OAuthClientSigningKey? signingKey)
+    {
+        List<KeyValuePair<string, string>> form =
+        [
+            new("token", token),
+            new("token_type_hint", tokenTypeHint),
+            new("client_id", clientId),
+        ];
+
+        if (signingKey is not null && !clientId.StartsWith("http://localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            form.Add(new("client_assertion_type", OAuthClientSigningKey.JwtBearerClientAssertionType));
+            form.Add(new("client_assertion", signingKey.CreateClientAssertion(
+                clientId,
+                authorizationServer,
+                Clock.GetUtcNow(),
+                Options?.OAuthOptions?.ClientAssertionClockSkew ?? OAuthOptions.DefaultClientAssertionClockSkew)));
+        }
+
+        return [.. form];
     }
 
     [UnconditionalSuppressMessage(
@@ -2889,9 +2991,9 @@ public partial class AtProtoAgent
 
             Options.OAuthOptions.Validate();
 
-            string scopeString = string.Join(" ", Options.OAuthOptions.Scopes.Where(s => !string.IsNullOrEmpty(s)));
+            string scopeString = string.Join(" ", Options.OAuthOptions.GetRequestedScopes().Where(s => !string.IsNullOrEmpty(s)));
 
-            string clientId = Options.OAuthOptions.ClientId;
+            string clientId = (credentials as DPoPAccessCredentials)?.OAuthClientId ?? Options.OAuthOptions.ClientId;
 
             // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
             // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
@@ -2899,6 +3001,8 @@ public partial class AtProtoAgent
             {
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
+
+            OAuthClientSigningKey? revocationSigningKey = Options.OAuthOptions.GetClientSigningKey(accessCredentials.ClientSigningKeyId, out _);
 
             Logger.LogoutCalled(_logger, credentials.Did, credentials.Service);
 
@@ -2937,38 +3041,32 @@ public partial class AtProtoAgent
                 }
 
                 // First revoke the refresh token, then revoke the access token.
-                using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
-                        new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
-                        new KeyValuePair<string, string>("client_id", clientId),
-                    ]))
+                AtProtoHttpResult<EmptyResponse> refreshTokenRevokeResponse = await revokeRequest.Post(
+                    service: authorizationService,
+                    endpoint: revocationEndpoint.AbsolutePath,
+                    contentFactory: () => new FormUrlEncodedContent(
+                        BuildRevocationForm(accessCredentials.RefreshToken, "refresh_token", clientId, authorizationService, revocationSigningKey)),
+                    requestHeaders: null,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                    credentials: dPoPRevokeCredentials,
+                    onCredentialsUpdated: logoutCredentialsUpdated,
+                    httpClient: HttpClient,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!refreshTokenRevokeResponse.Succeeded)
                 {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, refreshTokenRevokeResponse.StatusCode, "refresh_token");
 
-                    if (!revokeResponse.Succeeded)
+                    // The credentials are discarded even though the revocation failed, so that a failed logout does not
+                    // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
+                    // DeleteSession() below.
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
+                    throw new LogoutException()
                     {
-                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "refresh_token");
-
-                        // The credentials are discarded even though the revocation failed, so that a failed logout does not
-                        // leave an agent which still reports itself as authenticated. This matches the behaviour of a failed
-                        // DeleteSession() below.
-                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
-
-                        throw new LogoutException()
-                        {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
-                    }
+                        StatusCode = refreshTokenRevokeResponse.StatusCode,
+                        Error = refreshTokenRevokeResponse.AtErrorDetail
+                    };
                 }
 
                 // Now revoke the access token.
@@ -2976,38 +3074,32 @@ public partial class AtProtoAgent
                 // but some may require both to be revoked to ensure the session is fully revoked, so calling both to be safe.
                 dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
 
-                using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
-                        new KeyValuePair<string, string>("token_type_hint", "access_token"),
-                        new KeyValuePair<string, string>("client_id", clientId),
-                    ]))
+                AtProtoHttpResult<EmptyResponse> accessTokenRevokeResponse = await revokeRequest.Post(
+                    service: authorizationService,
+                    endpoint: revocationEndpoint.AbsolutePath,
+                    contentFactory: () => new FormUrlEncodedContent(
+                        BuildRevocationForm(accessCredentials.AccessJwt, "access_token", clientId, authorizationService, revocationSigningKey)),
+                    requestHeaders: null,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                    credentials: dPoPRevokeCredentials,
+                    onCredentialsUpdated: logoutCredentialsUpdated,
+                    httpClient: HttpClient,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!accessTokenRevokeResponse.Succeeded)
                 {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, accessTokenRevokeResponse.StatusCode, "access_token");
 
-                    if (!revokeResponse.Succeeded)
+                    // The refresh token has already been revoked by this point, so the session is over whatever happens
+                    // to the access token. Holding on to the credentials would leave the agent reporting itself as
+                    // authenticated against a session which no longer exists.
+                    ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
+
+                    throw new LogoutException()
                     {
-                        Logger.RevokeFailed(_logger, credentials.Did, credentials.Service, revokeResponse.StatusCode, "access_token");
-
-                        // The refresh token has already been revoked by this point, so the session is over whatever happens
-                        // to the access token. Holding on to the credentials would leave the agent reporting itself as
-                        // authenticated against a session which no longer exists.
-                        ClearCredentialsAndRecordSessionEnd(pendingSessionEnd);
-
-                        throw new LogoutException()
-                        {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
-                    }
+                        StatusCode = accessTokenRevokeResponse.StatusCode,
+                        Error = accessTokenRevokeResponse.AtErrorDetail
+                    };
                 }
 
                 succeeded = true;
@@ -3107,7 +3199,7 @@ public partial class AtProtoAgent
                 throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
             }
 
-            DPoPRefreshCredential refreshCredential = new(accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
+            DPoPRefreshCredential refreshCredential = new(accessCredentials);
 
             return await RefreshOAuthIssuedCredentials(refreshCredential, accessCredentials.Did, cancellationToken).ConfigureAwait(false);
         }
@@ -3241,7 +3333,7 @@ public partial class AtProtoAgent
         return authorizationServer;
     }
 
-    private static TimeSpan GetTimeToJwtTokenExpiry(string jwt)
+    private TimeSpan GetTimeToJwtTokenExpiry(string jwt)
     {
         if (string.IsNullOrEmpty(jwt))
         {
@@ -3251,7 +3343,7 @@ public partial class AtProtoAgent
         JsonWebToken token = new(jwt);
 
         DateTimeOffset validUntil = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
-        TimeSpan validityPeriod = validUntil - DateTimeOffset.UtcNow;
+        TimeSpan validityPeriod = validUntil - Clock.GetUtcNow();
 
         return validityPeriod;
     }
@@ -3279,7 +3371,9 @@ public partial class AtProtoAgent
 
         UnauthenticatedEventArgs? replacedSession;
 
-        await _credentialRefreshSemaphore.WaitAsync().ConfigureAwait(false);
+        Task credentialWait = _credentialRefreshSemaphore.WaitAsync();
+        LoginCredentialRefreshWaiting?.Invoke(credentialWait);
+        await credentialWait.ConfigureAwait(false);
 
         // Taken before the credentials are published, and without waiting, so the refresh semaphore is not held across
         // a wait for a turn. A login which published first and queued afterwards could be overtaken by a refresh which
@@ -3918,8 +4012,25 @@ public partial class AtProtoAgent
         }
     }
 
-    private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+    private void RefreshTimerElapsed(object? state)
     {
+        lock (_timerLock)
+        {
+            if (!_credentialRefreshTimerEnabled)
+            {
+                return;
+            }
+
+            TimeSpan elapsed = Clock.GetElapsedTime(_credentialRefreshTimerScheduledAt);
+            if (elapsed < _credentialRefreshTimerDueTime)
+            {
+                _credentialRefreshTimer!.Change(_credentialRefreshTimerDueTime - elapsed, Timeout.InfiniteTimeSpan);
+                return;
+            }
+
+            _credentialRefreshTimerEnabled = false;
+        }
+
         Logger.BackgroundTokenRefreshFired(_logger);
 
         BackgroundRefreshCredentials().FireAndForget();
@@ -3979,11 +4090,9 @@ public partial class AtProtoAgent
 
             EnsureTokenRefreshTimer();
 
-            _credentialRefreshTimer.Interval = retryIn.TotalMilliseconds;
-            _credentialRefreshTimer.Enabled = true;
-            _credentialRefreshTimer.Start();
+            ChangeRefreshTimer(retryIn);
 
-            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimer.Interval, exception);
+            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimerInterval, exception);
         }
     }
 
@@ -3992,9 +4101,9 @@ public partial class AtProtoAgent
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   The timer is created here, and only here, so that the Elapsed handler is subscribed exactly once. Subscribing on
-    ///   every start would leave the handler attached multiple times, and every tick would then start as many concurrent
-    ///   refreshes as there are subscriptions, each racing to spend the same refresh token.
+    ///   The timer is created here, and only here, so that its callback is registered exactly once. Creating a new timer
+    ///   on every start would leave multiple timers running, and every tick would then start another refresh racing to
+    ///   spend the same refresh token.
     /// </para>
     /// <para>Callers must hold <see cref="_timerLock"/>.</para>
     /// </remarks>
@@ -4003,9 +4112,22 @@ public partial class AtProtoAgent
     {
         if (_credentialRefreshTimer is null)
         {
-            _credentialRefreshTimer = new System.Timers.Timer();
-            _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+            _credentialRefreshTimer = Clock.CreateTimer(
+                RefreshTimerElapsed,
+                state: null,
+                dueTime: Timeout.InfiniteTimeSpan,
+                period: Timeout.InfiniteTimeSpan);
         }
+    }
+
+    private void ChangeRefreshTimer(TimeSpan dueTime)
+    {
+        EnsureTokenRefreshTimer();
+        _credentialRefreshTimerInterval = Math.Min(dueTime.TotalMilliseconds, int.MaxValue);
+        _credentialRefreshTimerDueTime = TimeSpan.FromMilliseconds(_credentialRefreshTimerInterval);
+        _credentialRefreshTimerScheduledAt = Clock.GetTimestamp();
+        _credentialRefreshTimerEnabled = true;
+        _credentialRefreshTimer.Change(_credentialRefreshTimerDueTime, Timeout.InfiniteTimeSpan);
     }
 
     private void StartTokenRefreshTimer()
@@ -4035,13 +4157,9 @@ public partial class AtProtoAgent
                     return;
                 }
 
-                EnsureTokenRefreshTimer();
+                ChangeRefreshTimer(refreshIn);
 
-                _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                _credentialRefreshTimer.Enabled = true;
-                _credentialRefreshTimer.Start();
-
-                Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
+                Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
             }
         }
     }
@@ -4088,13 +4206,9 @@ public partial class AtProtoAgent
                 return;
             }
 
-            EnsureTokenRefreshTimer();
+            ChangeRefreshTimer(_immediateRefreshInterval);
 
-            _credentialRefreshTimer.Interval = _immediateRefreshInterval.TotalMilliseconds;
-            _credentialRefreshTimer.Enabled = true;
-            _credentialRefreshTimer.Start();
-
-            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
+            Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimerInterval);
         }
     }
 
@@ -4104,7 +4218,7 @@ public partial class AtProtoAgent
     /// <param name="dispose">A flag indicating whether the timer should be disposed of as well as stopped.</param>
     /// <remarks>
     /// <para>
-    ///   Stopping the timer does not recall an Elapsed callback which has already been handed to the thread pool, so a refresh
+    ///   Stopping the timer does not recall a callback which has already been handed to the thread pool, so a refresh
     ///   which stops the timer can still be joined by one the timer started moments earlier. The second refresh blocks on the
     ///   refresh semaphore and then finds the token it holds has already been exchanged, which is what stops it presenting a
     ///   spent token to the server.
@@ -4116,12 +4230,12 @@ public partial class AtProtoAgent
         {
             if (_credentialRefreshTimer is not null)
             {
-                _credentialRefreshTimer.Stop();
+                _credentialRefreshTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                _credentialRefreshTimerEnabled = false;
                 Logger.TokenRefreshTimerStopped(_logger);
 
                 if (dispose)
                 {
-                    _credentialRefreshTimer.Elapsed -= RefreshTimerElapsed;
                     _credentialRefreshTimer.Dispose();
                     _credentialRefreshTimer = null;
                 }

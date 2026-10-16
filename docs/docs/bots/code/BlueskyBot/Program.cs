@@ -1,4 +1,4 @@
-﻿using BlueskyBot;
+using BlueskyBot;
 using Coravel;
 using Coravel.Invocable;
 using idunno.Bluesky;

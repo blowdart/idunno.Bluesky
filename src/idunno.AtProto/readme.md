@@ -1,4 +1,4 @@
-﻿# idunno.AtProto
+# idunno.AtProto
 
 ## About
 
@@ -11,7 +11,7 @@
 * Blob uploads
 * Self labelling
 * Handle and PDS resolution
-* AT Protocol Jetstream support
+* AT Protocol Jetstream, Jetstream V2 and Firehose support
 
 * Trimming is supported for applications targeting .NET 9.0 or later.
 
@@ -53,6 +53,7 @@ if (loginResult.Succeeded)
 ## Related Packages
 
 * [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).
+* [idunno.Bluesky.AspNet.Authentication](https://www.nuget.org/packages/idunno.Bluesky.AspNet.Authentication) which provides an ASP.NET Core authentication handler for Bluesky.
 * [idunno.AtProto.OAuthCallback](https://www.nuget.org/packages/idunno.AtProto.OAuthCallback) which provides a local callback server for OAuth authentication.
 * [idunno.AtProto.Types](https://www.nuget.org/packages/idunno.AtProto.Types) which contains base types for the AtProto network.
 

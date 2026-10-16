@@ -18,7 +18,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="q"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than 100.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
     /// <remarks><para>The XRPC endpoint for searching starter packs currently returns a 404.</para></remarks>
     public async Task<AtProtoHttpResult<SearchStarterPacksV2Result>> SearchStarterPacksV2(
         string q,
@@ -31,11 +30,6 @@ public partial class BlueskyAgent
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
-        }
-
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
         }
 
         return await BlueskyServer.SearchStarterPacksV2(

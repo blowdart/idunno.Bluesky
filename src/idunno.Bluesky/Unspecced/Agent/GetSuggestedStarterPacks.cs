@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.Unspecced;
 
 namespace idunno.Bluesky;
 
@@ -33,7 +34,41 @@ public partial class BlueskyAgent
 #pragma warning disable BSKYUnspecced
         return await BlueskyServer.GetSuggestedStarterPacks(
             limit,
-            service: Service,
+            service: IsAuthenticated ? Service : ReadOnlyServiceUri,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+#pragma warning restore BSKYUnspecced
+    }
+
+    /// <summary>
+    /// Gets suggested starter packs and the identifier for the recommendation which produced them.
+    /// </summary>
+    /// <param name="limit">The number of starter packs to return. Must be between 1 and 25.</param>
+    /// <param name="subscribedLabelers">An optional list of labeler DIDs to accept labels from.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>A result containing the suggested starter packs and their optional recommendation identifier.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="limit"/> is less than 1 or greater than 25.</exception>
+    [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
+    public async Task<AtProtoHttpResult<RecommendationReadOnlyCollection<StarterPackView>>> GetSuggestedStarterPacksWithRecommendation(
+        int? limit = null,
+        IEnumerable<Did>? subscribedLabelers = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, Maximum.SuggestedStarterPacks);
+        }
+
+#pragma warning disable BSKYUnspecced
+        return await BlueskyServer.GetSuggestedStarterPacksWithRecommendation(
+            limit,
+            service: IsAuthenticated ? Service : ReadOnlyServiceUri,
             accessCredentials: Credentials,
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,

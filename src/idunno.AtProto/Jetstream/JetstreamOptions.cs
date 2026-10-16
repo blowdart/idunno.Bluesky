@@ -3,6 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Text;
+using System.Text.Json.Serialization;
 
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +16,63 @@ namespace idunno.AtProto.Jetstream;
 public record JetstreamOptions
 {
     /// <summary>
+    /// Gets the optional API key used only for HTTP archive access, never for the live WebSocket.
+    /// </summary>
+    /// <exception cref="ArgumentException">The key is empty or white space.</exception>
+    [JsonIgnore]
+    public string? ApiKey
+    {
+        get;
+
+        init
+        {
+            if (value is not null)
+            {
+                ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            }
+
+            field = value;
+        }
+    }
+
+    /// <summary>
+    /// Prints configuration without disclosing the archive API key.
+    /// </summary>
+    /// <param name="builder">The destination for the printable properties.</param>
+    /// <returns><see langword="true"/> when properties were printed.</returns>
+    /// <exception cref="ArgumentNullException">The destination is <see langword="null"/>.</exception>
+    protected virtual bool PrintMembers(StringBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        builder.Append("ApiKey = [redacted], LoggerFactory = ").Append(LoggerFactory)
+            .Append(", MeterFactory = ").Append(MeterFactory)
+            .Append(", TimeProvider = ").Append(TimeProvider)
+            .Append(", ProtocolVersion = ").Append(ProtocolVersion)
+            .Append(", UseCompression = ").Append(UseCompression)
+            .Append(", Dictionary = ").Append(Dictionary)
+            .Append(", TaskFactory = ").Append(TaskFactory)
+            .Append(", BufferSize = ").Append(BufferSize)
+            .Append(", ReplayLiveBufferCapacity = ").Append(ReplayLiveBufferCapacity)
+            .Append(", MaxMessageSize = ").Append(MaxMessageSize)
+            .Append(", CloseTimeout = ").Append(CloseTimeout)
+            .Append(", SendTimeout = ").Append(SendTimeout)
+            .Append(", ArchiveReadTimeout = ").Append(ArchiveReadTimeout)
+            .Append(", MaximumConcurrentMessageParsers = ").Append(MaximumConcurrentMessageParsers)
+            .Append(", DidHandleResolver = ").Append(DidHandleResolver);
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the <see cref="IDidHandleResolver"/>, if any, whose cached handle for a DID is invalidated when an <c>#identity</c> event is received.
+    /// </summary>
+    /// <value>A DID handle resolver, or <see langword="null"/> to not invalidate any handles. The default is <see langword="null"/>.</value>
+    /// <remarks>
+    /// <para>The resolver is not disposed by the jetstream. Events from a jetstream's archive also invalidate handles.</para>
+    /// <para>A malicious server can send an <c>#identity</c> event before each event for a DID so its handle is never cached.</para>
+    /// </remarks>
+    public IDidHandleResolver? DidHandleResolver { get; init; }
+
+    /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
     /// </summary>
     public ILoggerFactory? LoggerFactory { get; set; }
@@ -24,14 +83,66 @@ public record JetstreamOptions
     public IMeterFactory? MeterFactory { get; set; }
 
     /// <summary>
+    /// Gets the provider used for Jetstream time reads and timed waits.
+    /// </summary>
+    /// <value>The time provider. The default is <see cref="TimeProvider.System"/>.</value>
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The provider times reconnection, receive failure and archive retry delays, archive read timeouts, and the
+    ///   <see cref="CloseTimeout"/> and <see cref="SendTimeout"/> deadlines for close handshakes, close replies and
+    ///   options update messages. The synchronous wait for an in-flight connection attempt during disposal is bounded by
+    ///   <see cref="CloseTimeout"/> using the system clock, so disposal cannot block on a provider which never advances.
+    /// </para>
+    /// </remarks>
+    public TimeProvider TimeProvider
+    {
+        get;
+        init
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    } = TimeProvider.System;
+
+    /// <summary>
+    /// Gets the version of the jetstream protocol to use. Defaults to <see cref="JetstreamProtocolVersion.V2"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is not a defined <see cref="JetstreamProtocolVersion"/>.</exception>
+    /// <remarks>
+    /// <para>The version decides the endpoint connected to, the parameters the filters and cursor are sent in, and the
+    /// shape of the messages the server sends, so it has to match the server being connected to.</para>
+    /// </remarks>
+    public JetstreamProtocolVersion ProtocolVersion
+    {
+        get;
+
+        init
+        {
+            if (!Enum.IsDefined(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown jetstream protocol version.");
+            }
+
+            field = value;
+        }
+    } = JetstreamProtocolVersion.V2;
+
+    /// <summary>
     /// Gets a flag indicating whether the underlying WebSocket should use compression. Defaults to <see langword="true"/>.
     /// </summary>
+    /// <remarks>
+    /// <para>With <see cref="JetstreamProtocolVersion.V1"/> messages are decompressed with <see cref="Dictionary"/>.
+    /// With <see cref="JetstreamProtocolVersion.V2"/> the server's current dictionary is downloaded from it when
+    /// connecting, and downloaded again if the server has since replaced it.</para>
+    /// </remarks>
     public bool UseCompression { get; init; } = true;
 
     /// <summary>
-    /// Gets the dictionary to use for zst decompression.
+    /// Gets the dictionary to use for zst decompression with <see cref="JetstreamProtocolVersion.V1"/>.
     /// </summary>
     /// <remarks>
+    /// <para>Not used with <see cref="JetstreamProtocolVersion.V2"/>, which downloads the dictionary from the server.</para>
     /// <para>Copied on the way in and on the way out. The dictionary is handed to native code each time a message is
     /// decompressed, so a caller which held on to the array it supplied could otherwise change what that code reads
     /// whilst it is reading it.</para>
@@ -71,6 +182,34 @@ public record JetstreamOptions
             field = value;
         }
     } = 8096;
+
+    /// <summary>
+    /// Gets the maximum number of decoded events buffered by the live portion of replay.
+    /// </summary>
+    /// <value>A positive event count. The default is 1,024.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>This includes live-cursor catch-up, not archive download blocks, and is independent of
+    /// <see cref="BufferSize"/> and <see cref="MaxMessageSize"/>, which count bytes.</para>
+    /// <para>The capacity is captured when each replay live channel is created and cannot resize that channel.
+    /// This property is init-only; creating a copy with a different capacity does not change an existing client
+    /// or its later replay enumerations. Supply the copy to a new client to use the new capacity.</para>
+    /// <para>A larger buffer can absorb bursts or temporary consumer pauses, but cannot fix sustained consumption
+    /// slower than incoming traffic. Events have variable memory cost; this count is not a fixed memory budget.
+    /// Overflow still drains queued events and recovers from consumed progress without silently dropping events.
+    /// Buffering is not durable storage: persist effects before complete checkpoints and tolerate repeated delivery.</para>
+    /// </remarks>
+    public int ReplayLiveBufferCapacity
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+            field = value;
+        }
+    } = 1024;
 
     /// <summary>
     /// Gets the maximum total message size, in bytes. Messages exceeding this limit will be rejected. Defaults to 1 MB.
@@ -139,6 +278,26 @@ public record JetstreamOptions
         init
         {
             ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets how long an archive response body may make no progress during a single read. Defaults to 30 seconds.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The timeout is less than or equal to zero or exceeds the timer's maximum duration.</exception>
+    /// <remarks><para>This timeout applies to each network read, not to quota pacing or a server's
+    /// <c>Retry-After</c> delay. A stalled read is retried from the last byte received within the bounded
+    /// archive download resume limit.</para></remarks>
+    public TimeSpan ArchiveReadTimeout
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value, TimeSpan.FromMilliseconds(uint.MaxValue - 1));
 
             field = value;
         }

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="ZstdSharp.Port" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" Aliases="global,AtProto" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Corpus\*.bin.gz" CopyToOutputDirectory="PreserveNewest" LinkBase="Corpus" />
+  </ItemGroup>
+
+</Project>

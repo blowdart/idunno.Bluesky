@@ -35,5 +35,13 @@ public enum JetStreamEventKind
     /// <summary>
     /// The message is about an identity event.
     /// </summary>
-    Identity
+    Identity,
+
+    /// <summary>
+    /// The message is about a sync event, which says the commit chain for a repo is broken and the repo should be fetched again.
+    /// </summary>
+    /// <remarks>
+    /// <para>Only sent by <see cref="JetstreamProtocolVersion.V2"/> servers.</para>
+    /// </remarks>
+    Sync
 }

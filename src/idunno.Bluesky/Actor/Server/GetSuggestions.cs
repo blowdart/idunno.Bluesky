@@ -15,12 +15,12 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     /// <summary>
-    /// Get a list of suggested actors for the authenticated user. The expected use is discovery of accounts to follow during new account onboarding.
+    /// Get a list of suggested actors, personalized for the authenticated user if <paramref name="accessCredentials"/> are supplied. The expected use is discovery of accounts to follow during new account onboarding.
     /// </summary>
     /// <param name="limit">The maximum number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+    /// <param name="accessCredentials">Optional <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -28,7 +28,7 @@ public static partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -41,7 +41,7 @@ public static partial class BlueskyServer
         int? limit,
         string? cursor,
         Uri service,
-        AccessCredentials accessCredentials,
+        AccessCredentials? accessCredentials,
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
@@ -50,7 +50,6 @@ public static partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         int limitValue = limit ?? 50;

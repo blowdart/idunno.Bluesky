@@ -21,7 +21,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        seenAt ??= DateTimeOffset.UtcNow;
+        seenAt ??= RecordTimeProvider.GetUtcNow();
 
         return await BlueskyServer.UpdateNotificationSeenAt(
             (DateTimeOffset)seenAt,

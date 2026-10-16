@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;

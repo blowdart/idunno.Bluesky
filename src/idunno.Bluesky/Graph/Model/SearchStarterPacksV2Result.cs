@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-using idunno.Bluesky.Graph.Model;
-
 namespace idunno.Bluesky.Graph;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 

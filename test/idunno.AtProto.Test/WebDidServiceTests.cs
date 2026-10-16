@@ -59,6 +59,7 @@ public class WebDidServiceTests
     [InlineData("example.com%3Fquery")]
     [InlineData("example.com%23fragment")]
     [InlineData("example.com%0Aevil.invalid")]
+    [InlineData("example.com%0A")]
     // Neither an empty identifier nor a malformed host is a hostname.
     [InlineData("")]
     [InlineData(".")]
