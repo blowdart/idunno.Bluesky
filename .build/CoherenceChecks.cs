@@ -426,7 +426,7 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
             }
             else
             {
-                WriteError($"CHANGELOG.MD version heading for {version} found at line {lineNumber} but release date is missing or invalid.");
+                WriteError($"CHANGELOG.MD version heading for {version} found at line {lineNumber+1} but release date is missing or invalid. [{releaseDateString}]");
                 return false;
             }
         }

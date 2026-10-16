@@ -1,6 +1,6 @@
 # Version History
 
-## 8.0.0 - 2026-16-10
+## 8.0.0 - 2026-10-16
 
 🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
 
