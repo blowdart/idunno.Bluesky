@@ -1,6 +1,6 @@
 # Version History
 
-## 8.0.0 - **unreleased**
+## 8.0.0 - 2026-16-10
 
 🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.
 
@@ -12,11 +12,7 @@
 
 🎉 **New** A bot SDK delivering a runtime with hosted Jetstream replay, durable action dispatch, credential recovery, rate-limit accounting, operational health checks, and metrics for applications that build Bluesky bots.
 
-### Added
-
-#### Samples
-
-* Separated `Samples.ReactBff` frontend tests from builds. Builds still install dependencies and compile the frontend; run `npm test` in `ClientApp` separately. GitHub Actions workflows run frontend tests explicitly, and CI Build publishes their JUnit results alongside the .NET results.
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -159,7 +155,6 @@
 * Added `ProfileAssociatedChat.AllowGroupInvites`, preserving known and future group invitation policy strings.
 * Malformed profile-link collections return standard `InvalidResponse` results from HTTP reads instead of escaping as argument exceptions. Assigning invalid profile-record links directly retains argument validation.
 * Malformed link-record titles and icons now use standard repository error handling: single-record reads return `InvalidResponse`, and paged reads skip and log invalid records. Public constructors and initializers retain argument validation.
-
 * Added experimental Atmosphere Explore retrieval with typed article, publication, gallery, livestream, announcement and application views.
 * Added typed projections for hydrated external article, publication, theme, gallery, gallery-image and livestream data while preserving the original JSON. Content identifiers retain AT URIs as well as HTTPS addresses.
 * Added profile-record link references, OP thread position/count on embedded records, feed start cursors and starter-pack recommendation identifiers without replacing existing API signatures.
@@ -197,18 +192,12 @@
 
 #### idunno.Bluesky.BotSdk
 
-* Added DI-resolvable `BotReplayProgress` with an atomic, read-only handled-event snapshot containing sequence, service witnessed time, and local observation time, independently of logs, durable checkpoints, and liveness.
 * Added a hosted durable Jetstream v2 replay and action runtime with complete checkpoint persistence, transactional event progress, stable action identities, uncertainty reconciliation, credential encryption, durable rate-limit accounting, health endpoints, and Prometheus diagnostics.
-* Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
-* Added `AddInMemoryBotStorage()` for development and tests. It logs that its process-local state is not production durable.
-* Bot outbound limits and developer-mode mutation restrictions use an isolated HTTP client and do not affect other SDK agents in the host.
-* Deletion suppression includes actions enqueued by the same event across all storage providers, while retaining uncertain work for reconciliation.
-* Message-based `RemoteFailureException` constructors classify their internal-server-error status as retryable.
-* Bot registration replaces earlier direct `BotOptions` registrations so runtime services receive the same validated settings as `IOptions<BotOptions>`.
-* Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
-* Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
-* The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
-* Added `MalformedEventException` for bot policies to signal invalid source events that fail validation with exceptions other than `JsonException`; the reader audits and skips those events while other policy failures remain fail-fast.
+  * Added built-in reply, like, repost, private bookmark, and existing-list author membership handlers, plus versioned application-defined action handlers.
+  * InMemory storage for development and tests. It logs that its process-local state is not production durable.
+  * Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
+  * Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
+  * DI-resolvable `BotReplayProgress` with an atomic, read-only handled-event snapshot containing sequence, service witnessed time, and local observation time, independently of logs, durable checkpoints, and liveness.
 
 #### idunno.Bluesky.BotSdk.MySQL
 
@@ -217,7 +206,6 @@
 #### idunno.Bluesky.BotSdk.PostgreSQL
 
 * Added a PostgreSQL storage provider with transactional ownership, replay state, action outbox, credentials, and rate accounting.
-* Requests exceeding an empty hourly or daily write budget report an explicit invalid-operation error instead of a null timestamp conversion failure.
 
 #### idunno.Bluesky.BotSdk.SQLite
 
@@ -268,7 +256,7 @@
 * Added `Samples.JetstreamReplay`, which replays a selected handle's records and account events from the archive
   before tailing live, with an optional `_JetstreamApiKey` environment variable and checkpoint file.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -324,7 +312,7 @@
 * Updated `Samples.OAuth`, `Samples.OAuthNonceRollover`, `Samples.ConsoleShellOAuth` and `Samples.AgentEvents` to use
   `CallbackServer.CreateAsync()` for race-free callback server startup.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -370,7 +358,7 @@
   Changing it, for example by adding a converter or a type info resolver, now throws `InvalidOperationException`.
   Use `BlueskyJsonSerializerOptions.Options` to get a copy you can change.
 
-### Fixed
+### ✅ Fixed
 
 #### Build and test
 
@@ -466,6 +454,7 @@
 
 ### Documentation
 
+* Added BotSDK documentation for the replay and action runtime, including its durable checkpointing, transactional event handling, and health and metrics endpoints.
 * Added warnings that data returned from Bluesky and AT Protocol APIs, Jetstream, the firehose, and other remote sources is untrusted and must be
   encoded or validated before display, and that sample code does not sanitize or validate the data it uses.
 * Added a warning to the logging documentation that log messages can contain remote or request-controlled values which may pollute plain text logs,
@@ -473,7 +462,7 @@
 
 ## 7.0.1 - 2026-09-26
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -525,7 +514,7 @@
 ⚠️ **Important** If saving authentication state migrate to `CredentialsUpdatedAsync` from `OnCredentialsUpdated`.
   See [Persisting updated credentials](https://bluesky.idunno.dev/docs/savingAndRestoringAuthentication.html#credentialsUpdatedAsync).
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto.Types
 
@@ -677,7 +666,7 @@
   a new SQLite authentication database from the packaged schema. The rows which have been allowed to expire are swept periodically, on an interval
   configurable through the `expiredEntrySweepInterval` constructor parameter.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -708,7 +697,7 @@
 * The documentation for `JobState.Unknown` and `UploadState.Unknown` no longer describes them as errors. The lexicon specifies that any state which is not a
   known value indicates the job is still in process, so callers should keep polling rather than give up.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto.Types
 
@@ -923,7 +912,7 @@
   `PostBuilderException` and `DraftException`. They chained to the parameterless base constructor and discarded both arguments, so an exception
   deserialized through them lost its message, stack trace and inner exception. Binary serialization of exceptions is obsolete from .NET 8 onwards.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto.Types
 
@@ -1499,7 +1488,7 @@
 
 ## 6.0.0 - 2026-09-05
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -1524,7 +1513,7 @@
 * Added `Preferences.Interests` property, which is an `InterestsPreference` instance, which in turn allows for a new `UpdatedAt` property.
 * Added `Preferences.LiveEventPreferences` property, which is a `LiveEventPreferences` instance.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -1568,7 +1557,7 @@
   * `BlueskyAgent.PutPreference` has been removed, use `BlueskyAgent.PutPreferences` instead, which accepts a `Preferences` instance and replaces the entire preferences for the authenticated user.
 * `ActivitySubscription` has been replace with `Actor.ProfileAssociatedActivitySubscription` to match the lexicon definition. `ProfileAssociated` has been updated to use the new record.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -1578,7 +1567,7 @@
 
 ## 5.0.0 - 2026-08-24
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -1606,7 +1595,7 @@
   See [Add content visibility lexicon](https://github.com/bluesky-social/atproto/pull/5372).
 * Added `KnownLikers` view. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 * `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
@@ -1622,7 +1611,7 @@
 * `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
 * `GetAnimatedGifJobStatus` has been removed, use `GetJobStatus` instead.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -1630,7 +1619,7 @@
 
 ## 4.0.0 - 2026-08-10
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -1653,7 +1642,7 @@
 * Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
 * Added `SubscribedLabelers` optional parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -1663,7 +1652,7 @@
 
 * Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -1680,7 +1669,7 @@
 
 ## 3.1.0 - 2026-07-29
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -1691,7 +1680,7 @@
 
 ## 3.0.0 - 2026-07-11
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -1797,7 +1786,7 @@
 * Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
 * Added `SearchPostsV2` to allow searching for posts with more advanced filtering options.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -1808,7 +1797,7 @@
 
 * Added missing `Like` settings to `Notification.Preferences`.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto.Types
 
@@ -1835,7 +1824,7 @@
 
 ## 2.0.0 - 2026-06-02
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto.Types
 
@@ -1851,7 +1840,7 @@
 * Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
 * Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.Bluesky
 
@@ -1861,7 +1850,7 @@
 * Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
 * Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -1878,7 +1867,7 @@
 
 ## 1.8.3 - 2026-05-16
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -1891,7 +1880,7 @@
 * Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
 * Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.Bluesky
 
@@ -1899,13 +1888,13 @@
 
 ## 1.8.2 - 2026-05-11
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
 * Added support for `GetListsWithMembership()`, which enumerates the lists created by the authenticated user, and includes membership information about the specified actor in those lists.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.Bluesky
 
@@ -1913,13 +1902,13 @@
 
 ## 1.8.1 - 2026-04-23
 
-### Changed
+### 🟢 Changed
 
 * Updated OpenTelemetry dependencies to address [CVE-2026-40894 - OpenTelemetry dotnet: Excessive memory allocation when parsing OpenTelemetry propagation headers](https://nvd.nist.gov/vuln/detail/CVE-2026-40894)
 
 ## 1.8.0 - 2026-04-04
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -1967,7 +1956,7 @@
 * Added documentation for metrics.
 * Added documentation for setting a status on a profile.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -2011,7 +2000,7 @@
 
 ## 1.6.0 - 2026-02-21
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2027,7 +2016,7 @@
 * Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.
 * Added `Post(DraftWithId)` to create a post from a draft.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2037,7 +2026,7 @@
 
 * Removed erroneous references to `CreatePost()`, thanks [shiftkey](https://github.com/shiftkey)
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -2051,7 +2040,7 @@
 
 * Removed `Type` property from `Facet`.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2063,7 +2052,7 @@
 
 ## 1.5.0 - 2026-02-02
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2085,7 +2074,7 @@
 * Added `Presentation` property to `EmbeddedVideo` and `EmbeddedVideoView` to for video presentation hints.
 * Added `VideoPresentationKnowValues` static class with known presentation values for videos.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.Bluesky
 
@@ -2094,7 +2083,7 @@
 * `EmbeddedVideo` and `EmbeddedVideoView` include the optional `Presentation` property. See [Add presentation to video embed as a hint to the client about how to display the video](https://github.com/bluesky-social/atproto/pull/4581).
 * `EmbeddedVideo` and `EmbeddedVideoView` constructors updated to take optional `presentation` parameter.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2109,7 +2098,7 @@
 
 ## 1.4.0 - 2026-18-01
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 * Add public `AtProtoJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
@@ -2122,13 +2111,13 @@ for custom `AtProtoRecord` classes.
 * Add `SetLiveStatus` to indicate if a user is live streaming, and `SetStatus` and `DeleteStatus` to set and delete a user's status.
 * Add `BlueskyJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
 * Fix `PutRecord<TRecord>(AtProtoRepositoryRecord<TRecord>)` to use the record CID for `swapRecord`, not the `swapCommit`.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -2136,7 +2125,7 @@ for custom `AtProtoRecord` classes.
 
 ## 1.3.0 - 2026-01-10
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2150,7 +2139,7 @@ for custom `AtProtoRecord` classes.
 * Add documentation for using the raw client.
 * Add documentation on using your own record types with typed client, and an approach to mapping a lexicon definition to a C# POCO.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -2163,7 +2152,7 @@ for custom `AtProtoRecord` classes.
 
 ## 1.2.0 - 2025-12-27
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2187,7 +2176,7 @@ for custom `AtProtoRecord` classes.
 * Add .NET 10 support
 * Add support for configuration binding and options in DI.
 
-### Changed
+### 🟢 Changed
 
 #### idunno.AtProto
 
@@ -2204,7 +2193,7 @@ for custom `AtProtoRecord` classes.
 * Update 3rd party dependencies.
 * Add Uri and Cid to statusView on profile responses. See [[APP-1750] Add uri and cid to statusView on profile responses](https://github.com/bluesky-social/atproto/pull/4516).
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2226,7 +2215,7 @@ for custom `AtProtoRecord` classes.
 
 ## 1.1.0 - 2025-09-30
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2242,13 +2231,13 @@ for custom `AtProtoRecord` classes.
 * Add support for Tags in `ReplyTo()` and `Quote()` methods.
 * Expose `FacetExtractor` on `BlueskyAgent`.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
 * Calling logout on an agent which is authenticated via OAuth no longer causes a DPoP error on the AtProto API.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -2256,7 +2245,7 @@ for custom `AtProtoRecord` classes.
 
 ## 1.0.0 - 2025-09-17
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2268,7 +2257,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.8 - 2025-09-08
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2278,13 +2267,13 @@ for custom `AtProtoRecord` classes.
 
 * Bookmark support, `CreateBookmark()`, `DeleteBookmark()`, `GetBookmarks()` and the `BookmarkCount` property on `PostView`.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
 * Fixed `TimeStampIdentifier` generation to generate correct values.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2293,7 +2282,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.7- 2025-07-11
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2307,7 +2296,7 @@ for custom `AtProtoRecord` classes.
 * Added the ability to get and set notification preferences, `agent.GetNotificationPreferences()` and `agent.SetNotificationPreferences`.
 * Added the activity subscription support, `agent.ListActivitySubscriptions()`, `agent.SetActivitySubscription()`
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2319,7 +2308,7 @@ for custom `AtProtoRecord` classes.
 
 * Added details on a reconnect/retry strategy for the `JetStream`.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -2334,14 +2323,14 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.5 - 2025-06-10
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
 * Add optional parameter, `embeddedPost` to `SendMessage` to allow for embedding of posts in direct messages.
 * Add live status to profile views
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2349,7 +2338,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.4 - 2025-05-30
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2357,7 +2346,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.3 - 2025-05-30
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -2365,7 +2354,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.2 - 2025-05-29
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2382,7 +2371,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.1 - 2025-05-21
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2398,7 +2387,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.9.0 - 2025-05-11
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2414,7 +2403,7 @@ for custom `AtProtoRecord` classes.
 * Add Jetstream sample
 * Add bot sample
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2454,7 +2443,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.8.0 - 2025-05-01
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2462,7 +2451,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.7.0 - 2025-04-26
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2472,13 +2461,13 @@ for custom `AtProtoRecord` classes.
 
 * Added simple tutorial docs with the same topic as the official sdk docs
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
 * Correct how DeleteLike() works so it takes the ATUri of the post to delete the like from.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -2486,7 +2475,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.6.1 - 2025-04-23
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -2498,7 +2487,7 @@ for custom `AtProtoRecord` classes.
 * Add `CreateBlueskyRecord` to make manually creating known Bluesky records easier.
 * Make `VerificationRecordValue` public so everyone can create vanity verification records for [Jerry Chen](https://bsky.app/profile/did:plc:vc7f4oafdgxsihk4cry2xpze).
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2506,7 +2495,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.6.0 - 2025-04-21
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2514,13 +2503,13 @@ for custom `AtProtoRecord` classes.
 
 ## 0.5.0 - 2025-04-21
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
 * Fix [direct message support](https://github.com/blowdart/idunno.Bluesky/issues/135).
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2538,7 +2527,7 @@ for custom `AtProtoRecord` classes.
 * Add support for `GetLabelerDeclaration()` and `GetLabelerServices()`.
 * Add support for `CreateModerationReport()`, including well-known constants.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 #### idunno.AtProto
 
@@ -2551,7 +2540,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.4.1 - 2025-03-17
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2559,7 +2548,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.4.0 - 2025-02-18
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
@@ -2567,13 +2556,13 @@ for custom `AtProtoRecord` classes.
 
 ## 0.3.0 - 2025-02-15
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
 * OAuth support.
 
-### Breaking Changes
+### ⚠️ Breaking Changes
 
 * Agent constructors no longer take parameters directly. Use the appropriate options class instead.
 
@@ -2626,13 +2615,13 @@ for custom `AtProtoRecord` classes.
 
 ## 0.2.1 - 2025-01-05
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
 * Extra logging in token refresh
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -2645,7 +2634,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.2.0 - 2024-12-27
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
@@ -2657,20 +2646,20 @@ for custom `AtProtoRecord` classes.
 
 ## 0.1.3 - 2024-12-22
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
 * Add self labels for posts.
 * *Breaking* - Consolidation of record value classes.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
 * Fixed facet positioning.
 
-### Breaking changes
+### ⚠️ Breaking Changes
 
 #### idunno.Bluesky
 
@@ -2682,13 +2671,13 @@ for custom `AtProtoRecord` classes.
 
 ## 0.1.2 - 2024-12-19
 
-### Added
+### ➕ Added
 
 #### idunno.Bluesky
 
 * Adds Profile editing.
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.Bluesky
 
@@ -2697,7 +2686,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.1.1 - 2024-12-14
 
-### Fixed
+### ✅ Fixed
 
 #### idunno.AtProto
 
@@ -2705,7 +2694,7 @@ for custom `AtProtoRecord` classes.
 
 ## 0.1.0 - 2024-12-12
 
-### Added
+### ➕ Added
 
 #### idunno.AtProto
 
