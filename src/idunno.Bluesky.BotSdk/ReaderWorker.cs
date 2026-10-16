@@ -22,6 +22,7 @@ namespace idunno.Bluesky.BotSdk;
 /// <param name="ownership">The local permission signal backed by the database lease.</param>
 /// <param name="options">The replay and account configuration.</param>
 /// <param name="health">The in-memory worker deadline tracker.</param>
+/// <param name="observations">The in-memory handled-event observations.</param>
 /// <param name="logger">The reader diagnostic logger.</param>
 /// <param name="loggerFactory">The factory for SDK diagnostics and shared correlation scopes.</param>
 /// <param name="time">The clock used for progress diagnostics and recovery delays.</param>
@@ -33,6 +34,7 @@ internal sealed class ReaderWorker(
     Ownership ownership,
     BotOptions options,
     WorkerHealth health,
+    BotReplayProgress observations,
     ILogger<ReaderWorker> logger,
     ILoggerFactory loggerFactory,
     TimeProvider time,
@@ -88,6 +90,7 @@ internal sealed class ReaderWorker(
             while (!stoppingToken.IsCancellationRequested)
             {
                 CancellationToken leaseToken = await ownership.WaitAsync("reader", health, stoppingToken).ConfigureAwait(false);
+                observations.BeginOwnership(leaseToken);
 
                 // Losing ownership cancels this enumeration just like shutdown. Any uncommitted
                 // event will be delivered again from the durable checkpoint on the next attempt.
@@ -251,7 +254,7 @@ internal sealed class ReaderWorker(
         BotLog.ReplayStarting(logger, request.AfterSeq.Value, state.StartedAt, state.Service);
         BotLog.ReplayRestored(logger, processed, saved?.ReplayAfterSeq ?? saved?.PlanAfterSeq, saved?.LiveAfterSeq);
 
-        ReplayProgress progress = new(time, logger);
+        ReplayProgress progress = new(time, logger, observations);
 
         ReplayClock clock = new(time);
 #pragma warning disable CA2000 // ReplayCleanup performs bounded, instrumented asynchronous disposal in finally.
@@ -359,65 +362,8 @@ internal sealed class ReaderWorker(
 
                     try
                     {
-                        (long sequence, DateTimeOffset witnessedAt) = ValidateReplayPosition(item);
-
-                        if (sequence <= processed)
-                        {
-                            // Still consume duplicates so SDK checkpoints can advance. Never repeat the
-                            // application side effects just because archive recovery repeats an event.
-                            continue;
-                        }
-
-                        health.Set("reader", "handling event", TimeSpan.FromSeconds(45));
-
-                        IReadOnlyList<BotAction> work = EvaluatePolicy(policy, item, state.StartedAt, out Exception? malformedException);
-                        string? malformed = malformedException?.Message;
-
-                        // Invalid policy output is a programming/configuration failure, not malformed source data.
-                        foreach (BotAction action in work)
-                        {
-                            handlers.Validate(action);
-                        }
-
-                        AtUri? deletedUri = item is JetstreamCommitEvent { Commit.Operation: JetstreamCommitOperation.Delete } deleted
-                            ? new AtUri($"at://{deleted.Did}/{deleted.Commit.Collection}/{deleted.Commit.RKey}") : null;
-
-                        int inserted = 0;
-
-                        if (work.Count > 0 || malformed is not null || deletedUri is not null)
-                        {
-                            // Commit every side effect before requesting the next event. Other events
-                            // only advance our in-memory boundary until the next saved checkpoint.
-                            diagnostics.Phase = "event database transaction";
-                            inserted = await diagnostics.DatabaseAsync(
-                                () => database.HandleAsync(sequence, work, malformed, cancellationToken, deletedUri)).ConfigureAwait(false);
-                            diagnostics.DurableEvent(sequence);
-                            diagnostics.Phase = "handling event";
-                        }
-
-                        processed = sequence;
-                        _generationRecovery.Observe(processed);
-                        diagnostics.Processed(sequence, witnessedAt);
-
-                        if (malformed is not null)
-                        {
-                            if (item is JetstreamCommitEvent post)
-                            {
-                                string sourceUri = $"at://{post.Did}/{post.Commit.Collection}/{post.Commit.RKey}";
-                                BotLog.PostSkipped(logger, sourceUri, sequence, malformed, malformedException!);
-                            }
-                            else
-                            {
-                                BotLog.Skipped(logger, "post", sequence, malformed);
-                            }
-                        }
-
-                        if (inserted > 0)
-                        {
-                            BotLog.Enqueued(logger, sequence, inserted);
-                        }
-
-                        progress.Observe(sequence, witnessedAt);
+                        processed = await HandleEventAsync(
+                            item, state.StartedAt, processed, diagnostics, progress, cancellationToken).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -448,6 +394,84 @@ internal sealed class ReaderWorker(
             // Observe its duration without imposing a new timeout or changing disposal order.
             await ReplayCleanup.DisposeSdkAsync(jetstream.DisposeAsync, diagnostics, time).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>Handles one event sequentially before publishing its observed progress.</summary>
+    /// <param name="item">The replay event.</param>
+    /// <param name="startedAt">The durable eligibility boundary.</param>
+    /// <param name="processed">The already handled boundary.</param>
+    /// <param name="diagnostics">The enumeration's diagnostics.</param>
+    /// <param name="progress">The handled-progress observer and logger.</param>
+    /// <param name="cancellationToken">The replay attempt's cancellation token.</param>
+    /// <returns>The handled boundary after successful processing.</returns>
+    internal async ValueTask<long> HandleEventAsync(
+        JetstreamEvent item,
+        DateTimeOffset startedAt,
+        long processed,
+        ReplayDiagnostics diagnostics,
+        ReplayProgress progress,
+        CancellationToken cancellationToken)
+    {
+        (long sequence, DateTimeOffset witnessedAt) = ValidateReplayPosition(item);
+
+        if (sequence <= processed)
+        {
+            // Still consume duplicates so SDK checkpoints can advance. Never repeat the
+            // application side effects just because archive recovery repeats an event.
+            return processed;
+        }
+
+        health.Set("reader", "handling event", TimeSpan.FromSeconds(45));
+
+        IReadOnlyList<BotAction> work = EvaluatePolicy(policy, item, startedAt, out Exception? malformedException);
+        string? malformed = malformedException?.Message;
+
+        // Invalid policy output is a programming/configuration failure, not malformed source data.
+        foreach (BotAction action in work)
+        {
+            handlers.Validate(action);
+        }
+
+        AtUri? deletedUri = item is JetstreamCommitEvent { Commit.Operation: JetstreamCommitOperation.Delete } deleted
+            ? new AtUri($"at://{deleted.Did}/{deleted.Commit.Collection}/{deleted.Commit.RKey}") : null;
+
+        int inserted = 0;
+
+        if (work.Count > 0 || malformed is not null || deletedUri is not null)
+        {
+            // Commit every side effect before requesting the next event. Other events
+            // only advance our in-memory boundary until the next saved checkpoint.
+            diagnostics.Phase = "event database transaction";
+            inserted = await diagnostics.DatabaseAsync(
+                () => database.HandleAsync(sequence, work, malformed, cancellationToken, deletedUri)).ConfigureAwait(false);
+            diagnostics.DurableEvent(sequence);
+            diagnostics.Phase = "handling event";
+        }
+
+        _generationRecovery.Observe(sequence);
+        diagnostics.Processed(sequence, witnessedAt);
+
+        if (malformed is not null)
+        {
+            if (item is JetstreamCommitEvent post)
+            {
+                string sourceUri = $"at://{post.Did}/{post.Commit.Collection}/{post.Commit.RKey}";
+                BotLog.PostSkipped(logger, sourceUri, sequence, malformed, malformedException!);
+            }
+            else
+            {
+                BotLog.Skipped(logger, "post", sequence, malformed);
+            }
+        }
+
+        if (inserted > 0)
+        {
+            BotLog.Enqueued(logger, sequence, inserted);
+        }
+
+        progress.Observe(sequence, witnessedAt);
+
+        return sequence;
     }
 
     /// <summary>Records the initiating failure once without confusing host shutdown, ownership loss, and read-slice expiry.</summary>
