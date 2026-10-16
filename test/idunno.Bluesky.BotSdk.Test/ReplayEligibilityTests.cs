@@ -63,9 +63,9 @@ public sealed class ReplayEligibilityTests
         Assert.NotNull(malformed);
     }
 
-    /// <summary>Does not automatically treat post model validation failures as malformed JSON.</summary>
+    /// <summary>Audits an oversized sample post through its explicit malformed-event signal.</summary>
     [Fact]
-    public void SampleOversizedPostRecordRequiresExplicitMalformedEventSignal()
+    public void SampleOversizedPostRecordReachesReaderAudit()
     {
         JetstreamCommitEvent original = TestRecords.Event("#beans");
         using JsonDocument json = JsonDocument.Parse(JsonSerializer.Serialize(new
@@ -79,9 +79,10 @@ public sealed class ReplayEligibilityTests
         };
         BeansBotPolicy policy = new();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => policy.Evaluate(item, TestRecords.Start));
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out _));
+        Assert.Throws<MalformedEventException>(() => policy.Evaluate(item, TestRecords.Start));
+        Assert.Empty(ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out Exception? malformed));
+        MalformedEventException exception = Assert.IsType<MalformedEventException>(malformed);
+        Assert.IsType<ArgumentOutOfRangeException>(exception.InnerException);
     }
 
     /// <summary>Rejects consecutive and nonconsecutive repeated cursors without rejecting distinct pages.</summary>
