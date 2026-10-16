@@ -207,6 +207,7 @@
 * Replay validates mandatory sequence and witnessed-time metadata before policy evaluation or durable event effects.
 * Pending deleted actions are finalized locally without authentication; uncertain deleted actions still authenticate for remote reconciliation.
 * The reply-only sample propagates malformed or null post records to the reader's audit path instead of silently treating them as unmatched events.
+* Added `MalformedEventException` for bot policies to signal invalid source events that fail validation with exceptions other than `JsonException`; the reader audits and skips those events while other policy failures remain fail-fast.
 
 #### idunno.Bluesky.BotSdk.MySQL
 

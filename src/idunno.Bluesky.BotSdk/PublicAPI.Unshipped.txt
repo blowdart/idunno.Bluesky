@@ -166,6 +166,10 @@ idunno.Bluesky.BotSdk.ListItemActionHandler.ListItemActionHandler() -> void
 idunno.Bluesky.BotSdk.ListItemActionHandler.PayloadVersion.get -> int
 idunno.Bluesky.BotSdk.ListItemActionHandler.ReconcileAsync(idunno.Bluesky.BotSdk.BotAction! action, idunno.Bluesky.BotSdk.IBotActionRemote! remote, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.Bluesky.BotSdk.BotActionResult?>!
 idunno.Bluesky.BotSdk.ListItemActionHandler.Validate(idunno.Bluesky.BotSdk.BotAction! action) -> void
+idunno.Bluesky.BotSdk.MalformedEventException
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException() -> void
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException(string! message) -> void
+idunno.Bluesky.BotSdk.MalformedEventException.MalformedEventException(string! message, System.Exception! innerException) -> void
 idunno.Bluesky.BotSdk.OwnershipLostException
 idunno.Bluesky.BotSdk.OwnershipLostException.OwnershipLostException() -> void
 idunno.Bluesky.BotSdk.OwnershipLostException.OwnershipLostException(string! message) -> void

@@ -59,8 +59,29 @@ public sealed class ReplayEligibilityTests
         };
         BeansBotPolicy policy = new();
         Assert.ThrowsAny<JsonException>(() => policy.Evaluate(item, TestRecords.Start));
-        Assert.Empty(ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out JsonException? malformed));
+        Assert.Empty(ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out Exception? malformed));
         Assert.NotNull(malformed);
+    }
+
+    /// <summary>Does not automatically treat post model validation failures as malformed JSON.</summary>
+    [Fact]
+    public void SampleOversizedPostRecordRequiresExplicitMalformedEventSignal()
+    {
+        JetstreamCommitEvent original = TestRecords.Event("#beans");
+        using JsonDocument json = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            text = new string('a', 301),
+            createdAt = TestRecords.Start
+        }));
+        JetstreamCommitEvent item = original with
+        {
+            Commit = original.Commit with { Record = json.RootElement.Clone() }
+        };
+        BeansBotPolicy policy = new();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => policy.Evaluate(item, TestRecords.Start));
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            ReaderWorker.EvaluatePolicy(policy, item, TestRecords.Start, out _));
     }
 
     /// <summary>Rejects consecutive and nonconsecutive repeated cursors without rejecting distinct pages.</summary>
@@ -87,17 +108,23 @@ public sealed class ReplayEligibilityTests
     /// <param name="failureKind">The policy failure category.</param>
     [Theory]
     [InlineData("json")]
+    [InlineData("malformed")]
     [InlineData("kind")]
     [InlineData("key")]
     [InlineData("argument")]
+    [InlineData("out-of-range")]
     [InlineData("data")]
     public void PolicyValidationErrorsAreNotMalformedSourceData(string failureKind)
     {
         FailingPolicy policy = new(failureKind);
-        if (failureKind == "json")
+        if (failureKind is "json" or "malformed")
         {
-            Assert.Empty(ReaderWorker.EvaluatePolicy(policy, TestRecords.Event(), TestRecords.Start, out JsonException? malformed));
+            Assert.Empty(ReaderWorker.EvaluatePolicy(policy, TestRecords.Event(), TestRecords.Start, out Exception? malformed));
             Assert.Same(policy.Failure, malformed);
+            if (malformed is MalformedEventException malformedEvent)
+            {
+                Assert.IsType<ArgumentOutOfRangeException>(malformedEvent.InnerException);
+            }
         }
         else
         {
@@ -112,7 +139,11 @@ public sealed class ReplayEligibilityTests
         public Exception Failure { get; } = failureKind switch
         {
             "json" => new JsonException("Malformed source record."),
+            "malformed" => new MalformedEventException(
+                "Source record violates model validation.",
+                new ArgumentOutOfRangeException("text")),
             "data" => new InvalidDataException("Policy data failure."),
+            "out-of-range" => new ArgumentOutOfRangeException("policy"),
             _ => new ArgumentException("Policy configuration failure.")
         };
 
