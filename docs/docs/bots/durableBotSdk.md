@@ -348,6 +348,34 @@ The runtime provides endpoints you can wire up to monitoring tools:
   - `bluesky_bot_actions`: The count of actions grouped by status (`pending`, `uncertain`, `sent`, `simulated`, `not-sent`).
   - `bluesky_bot_retry_due_actions`: The count of actions currently scheduled for retry.
 
+#### Reading handled replay progress
+
+`AddBlueskyBot` also registers the singleton `BotReplayProgress`. Read its `Snapshot` once to obtain an immutable, internally consistent observation without querying storage or remote services. For example, after registering the bot, add an application status endpoint:
+
+```csharp
+app.MapGet("/status/replay", async (HttpContext context, BotReplayProgress progress, TimeProvider time) =>
+{
+    ReplayProgressSnapshot snapshot = progress.Snapshot;
+    double? lagSeconds = snapshot.WitnessedAt is DateTimeOffset witnessedAt
+        ? (time.GetUtcNow() - witnessedAt).TotalSeconds
+        : null;
+
+    await context.Response.WriteAsync(
+        $"Handled sequence: {snapshot.Sequence?.ToString() ?? "unknown"}; " +
+        $"witnessed: {snapshot.WitnessedAt?.ToString("O") ?? "unknown"}; " +
+        $"observed locally: {snapshot.ObservedAt?.ToString("O") ?? "unknown"}; " +
+        $"estimated lag seconds: {lagSeconds?.ToString() ?? "unknown"}");
+});
+```
+
+All three fields are `null` before the first successfully handled event. Observations include ignored events and malformed events deliberately skipped after their audit succeeds. Failed or in-flight handling does not advance them. Archive record/block skips without a handled event do not establish a witnessed-time observation; restored checkpoints and suppressed duplicates do not establish one either.
+
+**Handled progress is not durable progress.** Ignored-event progress can be coalesced before checkpoint persistence, so this snapshot can be ahead of the durable processed-through metric. It says nothing about whether queued actions have been dispatched.
+
+Wall-clock minus service witnessed time estimates replay lag, not post age. The estimate can be negative because clocks differ. Even a near-zero lag does not prove live-stream mode or socket connectivity; a healthy worker may still be hours behind. Continue using the unchanged health endpoints for **liveness**, not backlog.
+
+Quiet reads, reconnects, and transient re-enumeration within the same ownership period retain the last observation and its original local timestamp, even when logs are disabled or throttled. While in standby, the retained observation is historical, not evidence of current ownership. When the reader acquires a new ownership period, the snapshot resets to unknown until another event is handled. Observations are process-local and are lost on restart.
+
 ### Rate limiting and cooldowns
 
 The runtime enforces conservative outbound rate limits to prevent your bot from exceeding Bluesky's API budgets. If the server signals that a rate limit has been hit, the sender automatically pauses and schedules retries according to the server's cooldown.

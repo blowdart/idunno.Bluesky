@@ -296,6 +296,7 @@ public static class BotHosting
         services.TryAddSingleton(provider => new ActionStatistics(provider.GetRequiredService<TimeProvider>().GetUtcNow()));
         services.AddSingleton<Ownership>();
         services.AddSingleton<WorkerHealth>();
+        services.AddSingleton(_ => new BotReplayProgress());
         services.AddSingleton<CredentialVault>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBotActionHandler, ReplyActionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBotActionHandler, LikeActionHandler>());

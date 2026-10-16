@@ -8,9 +8,11 @@ namespace idunno.Bluesky.BotSdk;
 /// <summary>Reports bounded replay lag and throughput without changing progress or asserting socket connectivity.</summary>
 /// <param name="time">The clock used for elapsed time and event lag.</param>
 /// <param name="logger">The progress diagnostic logger.</param>
+/// <param name="observations">The process-local handled-event observations.</param>
 internal sealed class ReplayProgress(
     TimeProvider time,
-    ILogger logger)
+    ILogger logger,
+    BotReplayProgress observations)
 {
     private static readonly TimeSpan s_reportInterval = TimeSpan.FromSeconds(15);
     private long _reportedAt = time.GetTimestamp();
@@ -30,7 +32,9 @@ internal sealed class ReplayProgress(
         _receivedAt = time.GetTimestamp();
         _events++;
 
-        TimeSpan lag = time.GetUtcNow() - witnessedAt;
+        DateTimeOffset observedAt = time.GetUtcNow();
+        observations.Observe(sequence, witnessedAt, observedAt);
+        TimeSpan lag = observedAt - witnessedAt;
 
         // "Near current time" is a lag estimate, not proof that the SDK has left archive replay.
         // Negative lag is reported explicitly because clocks can differ.

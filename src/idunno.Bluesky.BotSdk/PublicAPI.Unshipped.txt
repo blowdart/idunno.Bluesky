@@ -1,4 +1,17 @@
 #nullable enable
+idunno.Bluesky.BotSdk.BotReplayProgress
+idunno.Bluesky.BotSdk.BotReplayProgress.Snapshot.get -> idunno.Bluesky.BotSdk.ReplayProgressSnapshot
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Equals(idunno.Bluesky.BotSdk.ReplayProgressSnapshot other) -> bool
+~override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Equals(object obj) -> bool
+override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.GetHashCode() -> int
+~override idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ToString() -> string
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ReplayProgressSnapshot() -> void
+static idunno.Bluesky.BotSdk.ReplayProgressSnapshot.operator !=(idunno.Bluesky.BotSdk.ReplayProgressSnapshot left, idunno.Bluesky.BotSdk.ReplayProgressSnapshot right) -> bool
+static idunno.Bluesky.BotSdk.ReplayProgressSnapshot.operator ==(idunno.Bluesky.BotSdk.ReplayProgressSnapshot left, idunno.Bluesky.BotSdk.ReplayProgressSnapshot right) -> bool
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.ObservedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.Sequence.get -> long?
+idunno.Bluesky.BotSdk.ReplayProgressSnapshot.WitnessedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.BotSdk.ActionStatistics
 idunno.Bluesky.BotSdk.ActionStatistics.ActionStatistics(System.DateTimeOffset startedAt) -> void
 idunno.Bluesky.BotSdk.ActionStatistics.RecordCompletion() -> void
