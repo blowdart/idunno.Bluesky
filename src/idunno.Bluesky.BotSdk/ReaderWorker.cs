@@ -56,24 +56,24 @@ internal sealed class ReaderWorker(
         return (sequence, witnessedAt);
     }
 
-    /// <summary>Audits explicit JSON source-data failures without swallowing policy validation errors.</summary>
+    /// <summary>Audits explicitly identified malformed source events without swallowing policy errors.</summary>
     /// <param name="policy">The application's event policy.</param>
     /// <param name="item">The replay event.</param>
     /// <param name="startedAt">The durable eligibility boundary.</param>
-    /// <param name="malformed">The source-data exception, if parsing failed.</param>
-    /// <returns>The actions selected by the policy, or an empty collection for malformed JSON.</returns>
+    /// <param name="malformed">The malformed-source exception, if one was thrown.</param>
+    /// <returns>The actions selected by the policy, or an empty collection for malformed source data.</returns>
     internal static IReadOnlyList<BotAction> EvaluatePolicy(
         IBotPolicy policy,
         JetstreamEvent item,
         DateTimeOffset startedAt,
-        out JsonException? malformed)
+        out Exception? malformed)
     {
         malformed = null;
         try
         {
             return policy.Evaluate(item, startedAt);
         }
-        catch (JsonException exception)
+        catch (Exception exception) when (exception is JsonException or MalformedEventException)
         {
             malformed = exception;
             return [];
@@ -370,7 +370,7 @@ internal sealed class ReaderWorker(
 
                         health.Set("reader", "handling event", TimeSpan.FromSeconds(45));
 
-                        IReadOnlyList<BotAction> work = EvaluatePolicy(policy, item, state.StartedAt, out JsonException? malformedException);
+                        IReadOnlyList<BotAction> work = EvaluatePolicy(policy, item, state.StartedAt, out Exception? malformedException);
                         string? malformed = malformedException?.Message;
 
                         // Invalid policy output is a programming/configuration failure, not malformed source data.

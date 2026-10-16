@@ -59,7 +59,8 @@ public sealed class BeansBotPolicy : IBotPolicy
     /// A list of <see cref="BotAction"/> items to be saved and dispatched.
     /// Returns an empty list if no action is needed for this event.
     /// </returns>
-    /// <exception cref="JsonException">An eligible post record is malformed or deserializes to <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">An eligible post record contains invalid JSON or deserializes to <see langword="null"/>.</exception>
+    /// <exception cref="MalformedEventException">An eligible post record violates model validation.</exception>
     public IReadOnlyList<BotAction> Evaluate(JetstreamEvent item, DateTimeOffset startedAt)
     {
         // Archive replay can start at a segment boundary before the bot's durable start time.
@@ -119,8 +120,16 @@ public sealed class BeansBotPolicy : IBotPolicy
         // source-generated serializer options (BlueskyJsonSerializerOptions.Options)
         // for AOT and trimming safety.
         // Let the reader audit malformed source records before committing progress.
-        Post post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options)
-            ?? throw new JsonException("The post record is null.");
+        Post post;
+        try
+        {
+            post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options)
+                ?? throw new JsonException("The post record is null.");
+        }
+        catch (ArgumentException exception)
+        {
+            throw new MalformedEventException("The post record violates model validation.", exception);
+        }
 
         if (string.IsNullOrWhiteSpace(post.Text))
         {

@@ -88,7 +88,7 @@ The startup and recovery order depends on the saved replay checkpoint:
 3. **Live stream handoff**: After reaching the pinned sealed archive tip, replay connects to the live WebSocket feed from that tip or the last delivered sequence, whichever is later. A restart with a saved checkpoint containing `LiveAfterSeq` resumes directly in the live stage instead of replaying the archive first.
 4. **Automatic archive fallback**: If the live cursor has expired and the server returns `CursorTooOld`, replay falls back to the archive from the last delivered sequence. It replays sequentially to a newly pinned sealed tip, then hands off to the live stream again. The runtime suppresses repeated events using durable processed-through progress and stable action identity.
 
-Normal handoff and expired-cursor recovery are automatic. Unavailable or malformed history is not silently skipped; recovery remains subject to the runtime's documented limits and may require operator intervention.
+Normal handoff and expired-cursor recovery are automatic. When a policy reports malformed source JSON with `JsonException` or explicitly invalid source data with `MalformedEventException`, the reader logs and audits that event before skipping it and advancing. Other policy failures stop processing. Unavailable archive history is not skipped; recovery remains subject to the runtime's documented limits and may require operator intervention.
 
 ## Writing a bot policy
 
@@ -96,7 +96,12 @@ Your bot logic lives in a class that implements `IBotPolicy`. The policy has a s
 
 Let's create `SimpleReplyBotPolicy.cs`:
 
+> [!IMPORTANT]
+> The reader audits and skips `JsonException` and `MalformedEventException`. Deserialization can also throw exceptions such as `ArgumentOutOfRangeException` when a record violates model validation (for example, an oversized post). Catch such exceptions around source-record deserialization and rethrow them as `MalformedEventException`; do not convert exceptions from unrelated policy logic.
+
 ```csharp
+using System.Text.Json;
+
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
 using idunno.AtProto.Repo;
@@ -134,8 +139,16 @@ public sealed class SimpleReplyBotPolicy : IBotPolicy
         }
 
         // Let the reader audit malformed records before committing progress.
-        Post post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options)
-            ?? throw new JsonException("The post record is null.");
+        Post post;
+        try
+        {
+            post = commitEvent.Commit.Record.Value.Deserialize<Post>(BlueskyJsonSerializerOptions.Options)
+                ?? throw new JsonException("The post record is null.");
+        }
+        catch (ArgumentException exception)
+        {
+            throw new MalformedEventException("The post record violates model validation.", exception);
+        }
 
         // Check if the post contains our trigger word
         if (!post.Text.Contains("#hello", StringComparison.OrdinalIgnoreCase))
