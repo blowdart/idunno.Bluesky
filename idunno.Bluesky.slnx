@@ -126,6 +126,7 @@
   <Folder Name="/docs/docs/bots/">
     <File Path="docs/docs/bots/customBotActions.md" />
     <File Path="docs/docs/bots/durableBotSdk.md" />
+    <File Path="docs/docs/bots/followersOnlyReplyBot.md" />
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />
   </Folder>
