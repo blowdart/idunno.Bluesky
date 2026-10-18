@@ -220,6 +220,45 @@ public class ParsingReviewRegressionTests
         Assert.Equal(!valid, post.Validate(new ValidationContext(post)).Any(result => result.MemberNames.Contains(nameof(Post.Langs))));
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void MessageJoinLinkEmbedsParseAndValidate(bool validate)
+    {
+        using JsonDocument document = JsonDocument.Parse("""
+            {"text":"join","embed":{"$type":"chat.bsky.embed.joinLink","code":"example"}}
+            """);
+        Assert.True(MessageInput.TryParse(document, validate, out MessageInput? message));
+        Chat.Embed.JoinLink embed = Assert.IsType<Chat.Embed.JoinLink>(message.Embed);
+        Assert.Equal("example", embed.Code);
+        Assert.Empty(message.Validate(new ValidationContext(message)));
+        MessageInput constructed = new("join") { Embed = new Chat.Embed.JoinLink("example") };
+        Assert.Empty(constructed.Validate(new ValidationContext(constructed)));
+    }
+
+    [Theory]
+    [InlineData("threadGate", false)]
+    [InlineData("postGate", false)]
+    [InlineData("threadGate", true)]
+    [InlineData("postGate", true)]
+    public void GateTargetsRequireRecordKeysWithoutPreventingTolerantParsing(string kind, bool hasRecordKey)
+    {
+        string uri = hasRecordKey ? PostUri : PostUri[..PostUri.LastIndexOf('/')];
+        using JsonDocument document = JsonDocument.Parse($$"""{"post":"{{uri}}",{{CreatedAt}}}""");
+        if (kind == "threadGate")
+        {
+            Assert.Equal(hasRecordKey, ThreadGate.TryParse(document, out _));
+        }
+        else
+        {
+            Assert.Equal(hasRecordKey, PostGate.TryParse(document, out _));
+        }
+
+        IValidatableObject gate = Parse(kind, document, validate: false);
+        Assert.Equal(!hasRecordKey, gate.Validate(new ValidationContext(gate)).Any(result => result.MemberNames.Contains("Post")));
+        Assert.Equal(uri, gate is ThreadGate thread ? thread.Post.ToString() : ((PostGate)gate).Post.ToString());
+    }
+
     private static IValidatableObject Parse(string kind, JsonDocument document, bool validate) => kind switch
     {
         "profile" => Profile.Parse(document, validate),

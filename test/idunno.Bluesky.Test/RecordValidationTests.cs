@@ -256,4 +256,42 @@ public class RecordValidationTests
         Post post = new("post", s_createdAt, facets: [facet]);
         Assert.Empty(post.Validate(new ValidationContext(post)));
     }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void ProfileReferencesValidateRequiredMembers(bool missingUri, bool missingCid)
+    {
+        StrongReference valid = new(s_postUri, new Cid("bafyreiaahtgpdozb4wjdymb3tvifuwdmxjtumhjxl25lykvsoq3v3l4une"));
+        StrongReference reference = valid with
+        {
+            Uri = missingUri ? null! : valid.Uri,
+            Cid = missingCid ? null! : valid.Cid
+        };
+        Actor.Profile profile = new()
+        {
+            Links = [valid, reference],
+            PinnedPost = reference,
+            JoinedViaStarterPack = reference
+        };
+        List<string> expected = [];
+        foreach (string prefix in new[] { "Links[1]", "PinnedPost", "JoinedViaStarterPack" })
+        {
+            if (missingUri)
+            {
+                expected.Add($"{prefix}.Uri");
+            }
+
+            if (missingCid)
+            {
+                expected.Add($"{prefix}.Cid");
+            }
+        }
+
+        Assert.Equal(expected, profile.Validate(new ValidationContext(profile)).SelectMany(result => result.MemberNames));
+        Actor.Profile empty = new();
+        Assert.Empty(empty.Validate(new ValidationContext(empty)));
+    }
 }

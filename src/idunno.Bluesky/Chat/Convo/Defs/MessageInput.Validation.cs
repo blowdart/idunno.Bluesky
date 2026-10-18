@@ -132,9 +132,9 @@ public sealed partial record MessageInput : IValidatableObject, IRecordValidatab
             }
         }
 
-        if (Embed is not null and not EmbeddedRecord)
+        if (Embed is not null and not EmbeddedRecord and not Chat.Embed.JoinLink)
         {
-            yield return new ValidationResult("A chat message embed must be a record reference.", [nameof(Embed)]);
+            yield return new ValidationResult("A chat message embed must be a record reference or join link.", [nameof(Embed)]);
         }
 
         if (ReplyTo is { MessageId: null })

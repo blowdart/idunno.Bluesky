@@ -111,7 +111,7 @@ public partial record ThreadGate : IValidatableObject, IRecordValidatable
 
     private IEnumerable<ValidationResult> ValidateGate()
     {
-        if (Post is null || Post.Collection != CollectionNsid.Post)
+        if (Post is null || Post.Collection != CollectionNsid.Post || Post.RecordKey is null)
         {
             yield return new ValidationResult("The gated URI must reference a post.", [nameof(Post)]);
         }

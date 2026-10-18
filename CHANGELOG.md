@@ -31,6 +31,7 @@
 * Record parsing now enforces required blob fields and non-null reply message IDs in both validation modes, rejects non-string type discriminators and retains the SDK's handling of unknown dollar-prefixed metadata. Ordinary JSON deserialization remains unchanged.
 * Recursive validation now reports indexed facet features and associated references, reports null facet indices instead of throwing, accepts galleries up to the lexicon's 20-item schema limit, and checks the post language collection's three-entry limit. Gallery authoring guards retain their ten-item limit.
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
+* Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 
 
 ## 8.0.0 - 2026-10-16

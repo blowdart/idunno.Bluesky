@@ -203,22 +203,24 @@ public partial record Profile : IValidatableObject, IRecordValidatable
             yield return new ValidationResult("The website must be an absolute URI.", [nameof(Website)]);
         }
 
-        if (Links is not null)
+        foreach (ValidationResult result in RecordValidation.Collection(Links, nameof(Links), 10))
         {
-            if (Links.Count > 10)
+            yield return result;
+        }
+
+        if (PinnedPost is not null)
+        {
+            foreach (ValidationResult result in RecordValidation.Reference(PinnedPost, nameof(PinnedPost)))
             {
-                yield return new ValidationResult("A profile cannot contain more than ten links.", [nameof(Links)]);
+                yield return result;
             }
+        }
 
-            int index = 0;
-            foreach (StrongReference? link in Links)
+        if (JoinedViaStarterPack is not null)
+        {
+            foreach (ValidationResult result in RecordValidation.Reference(JoinedViaStarterPack, nameof(JoinedViaStarterPack)))
             {
-                if (link is null)
-                {
-                    yield return new ValidationResult("A profile link cannot be null.", [$"{nameof(Links)}[{index}]"]);
-                }
-
-                index++;
+                yield return result;
             }
         }
 

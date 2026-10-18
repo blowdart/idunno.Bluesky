@@ -97,6 +97,10 @@ Nested types can also be validated independently.
 Validation checks required URI and CID members of embedded and associated strong references, mention DIDs, and nonblank
 link facet values. Link facets retain their existing support for nonempty strings that are not valid absolute URIs;
 validate those destinations before using them.
+Profile links, pinned posts and starter pack attribution also validate their strong-reference members without fetching
+referenced records. Message validation accepts record references and group-chat join links.
+Thread and post gate targets must identify a post record, including its record key; tolerant parsing retains collection-only
+targets so validation can report them.
 
 Failures identify member paths, including collection indices, such as:
 
