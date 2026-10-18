@@ -20,7 +20,7 @@ namespace idunno.AtProto;
 /// </remarks>
 [JsonConverter(typeof(Json.HandleConverter))]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed class Handle : AtIdentifier, IEquatable<Handle>
+public sealed class Handle : AtIdentifier, IEquatable<Handle>, IParsable<Handle>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private const int MaximumLength = 253;
@@ -229,6 +229,44 @@ public sealed class Handle : AtIdentifier, IEquatable<Handle>
 
         result = new Handle(s, false);
         return true;
+    }
+
+    /// <summary>
+    /// Parses a string into a <see cref="Handle"/>.
+    /// </summary>
+    /// <param name="s">The handle to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed handle.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid handle.</exception>
+    public static Handle Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out Handle? result))
+        {
+            return result;
+        }
+
+        throw new FormatException("The value is not a valid handle.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into a <see cref="Handle"/>.
+    /// </summary>
+    /// <param name="s">The handle to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed handle, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid handle; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Handle result)
+    {
+        if (s is null)
+        {
+            result = null;
+            return false;
+        }
+
+        return TryParse(s, out result);
     }
 
     private static bool Validate(string s, bool throwOnError)

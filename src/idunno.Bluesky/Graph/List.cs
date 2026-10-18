@@ -18,7 +18,7 @@ namespace idunno.Bluesky.Graph;
     IgnoreUnrecognizedTypeDiscriminators = true,
     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(List), typeDiscriminator: RecordType.List)]
-public record List : BlueskyTimestampedRecord
+public partial record List : BlueskyTimestampedRecord
 {
     string _name;
     string? _description;

@@ -525,9 +525,9 @@ public static class Maximum
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is the client authoring limit documented by
-    /// <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json">app.bsky.embed.gallery</see>,
-    /// not the schema limit, which is twenty. Galleries read from the service are not held to this limit.
+    /// The <see href="https://github.com/bluesky-social/atproto/blob/main/packages/api/lexicons/app/bsky/embed/gallery.json">app.bsky.embed.gallery</see>
+    /// lexicon recommends a soft limit of ten items in authoring UIs, while reserving a schema-level ceiling of twenty for future use.
+    /// Constructors and authoring helpers enforce ten; validation of existing records accepts up to twenty.
     /// </para>
     /// </remarks>
     public static readonly int GalleryItems = 10;

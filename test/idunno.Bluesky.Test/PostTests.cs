@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
+
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
@@ -43,6 +45,73 @@ public class PostTests
         var post = new Post(clock);
 
         Assert.Equal(clock.GetUtcNow(), post.CreatedAt);
+    }
+
+    [Fact]
+    public void ValidateReturnsNoResultsForValidPost()
+    {
+        Post post = new("Valid post", tags: ["tag"]);
+
+        List<ValidationResult> validationResults = [.. post.Validate(new ValidationContext(post))];
+
+        Assert.Empty(validationResults);
+    }
+
+    [Fact]
+    public void ValidateAllowsNullTextOnlyWhenPostHasAnEmbed()
+    {
+        Post withoutEmbed = new("Valid post")
+        {
+            Text = null
+        };
+        Post withEmbed = new(null, embeddedRecord: new EmbeddedExternal("https://example.com", "Example", "An example card"));
+        Post emptyPost = new();
+
+        List<ValidationResult> missingTextResults = [.. withoutEmbed.Validate(new ValidationContext(withoutEmbed))];
+        List<ValidationResult> embeddedPostResults = [.. withEmbed.Validate(new ValidationContext(withEmbed))];
+        List<ValidationResult> emptyPostResults = [.. emptyPost.Validate(new ValidationContext(emptyPost))];
+
+        Assert.Contains(missingTextResults, result => result.MemberNames.Contains(nameof(Post.Text)));
+        Assert.Empty(embeddedPostResults);
+        Assert.Empty(emptyPostResults);
+    }
+
+    [Fact]
+    public void ValidateReturnsResultsForInvalidPostTextAndTags()
+    {
+        Post post = new("Valid post")
+        {
+            Text = new string('a', Maximum.PostLengthInBytes + 1),
+            Tags = [new string('x', Maximum.TagLengthInBytes + 1), null!]
+        };
+
+        List<ValidationResult> validationResults = [.. post.Validate(new ValidationContext(post))];
+
+        Assert.Equal(3, validationResults.Count);
+        Assert.Contains(validationResults, result => result.MemberNames.Contains(nameof(Post.Text)));
+        Assert.Equal(2, validationResults.Count(result => result.MemberNames.Contains(nameof(Post.Tags))));
+    }
+
+    [Fact]
+    public void ValidateReturnsResultWhenMaximumNumberOfTagsIsExceeded()
+    {
+        Post post = new("Valid post")
+        {
+            Tags = Enumerable.Range(0, Maximum.ExternalTagsInPost + 1).Select(index => index.ToString()).ToList()
+        };
+
+        List<ValidationResult> validationResults = [.. post.Validate(new ValidationContext(post))];
+
+        ValidationResult validationResult = Assert.Single(validationResults);
+        Assert.Contains(nameof(Post.Tags), validationResult.MemberNames);
+    }
+
+    [Fact]
+    public void ValidateThrowsForNullValidationContext()
+    {
+        Post post = new("Valid post");
+
+        Assert.Throws<ArgumentNullException>(() => post.Validate(null!).ToList());
     }
 
     [Fact]

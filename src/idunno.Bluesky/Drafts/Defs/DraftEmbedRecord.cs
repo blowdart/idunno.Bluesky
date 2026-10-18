@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedRecord), typeDiscriminator: "app.bsky.draft.defs#draftEmbedRecord")]
-public record DraftEmbedRecord
+public partial record DraftEmbedRecord
 {
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedRecord"/> with the specified strong reference to a record.

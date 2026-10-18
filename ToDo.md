@@ -6,5 +6,4 @@
 
 ## Breaking
 
-* IParsable support
 * Union result types

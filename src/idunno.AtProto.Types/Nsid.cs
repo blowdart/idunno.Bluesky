@@ -4,6 +4,7 @@
 using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -17,7 +18,7 @@ namespace idunno.AtProto;
 /// </remarks>
 [JsonConverter(typeof(Json.NsidConverter))]
 [TypeConverter(typeof(NsidTypeConverter))]
-public sealed partial class Nsid : IEquatable<Nsid>
+public sealed partial class Nsid : IEquatable<Nsid>, IParsable<Nsid>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private readonly string _value;
@@ -135,6 +136,47 @@ public sealed partial class Nsid : IEquatable<Nsid>
         }
 
         return Parse(s, false, out result);
+    }
+
+    /// <summary>
+    /// Parses a string into an <see cref="Nsid"/>.
+    /// </summary>
+    /// <param name="s">The NSID to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed NSID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid NSID.</exception>
+    public static Nsid Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out Nsid? result))
+        {
+            return result!;
+        }
+
+        throw new FormatException("The value is not a valid NSID.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into an <see cref="Nsid"/>.
+    /// </summary>
+    /// <param name="s">The NSID to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed NSID, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid NSID; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Nsid result)
+    {
+        if (s is null)
+        {
+            result = null;
+            return false;
+        }
+
+        bool succeeded = TryParse(s, out Nsid? parsed);
+        result = parsed!;
+
+        return succeeded;
     }
 
     /// <summary>

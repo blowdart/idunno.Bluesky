@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Feed.Gates;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(ThreadGate), typeDiscriminator: RecordType.ThreadGate)]
-public record ThreadGate : BlueskyRecord
+public partial record ThreadGate : BlueskyRecord
 {
     /// <summary>
     /// Creates a new instance of <see cref="ThreadGate"/>.

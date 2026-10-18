@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
+
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
@@ -15,6 +17,61 @@ namespace idunno.Bluesky.Test;
 [ExcludeFromCodeCoverage]
 public class PostBuilderTests
 {
+    [Theory]
+    [InlineData(null, false, 1)]
+    [InlineData(null, true, 2)]
+    [InlineData("Valid post", false, 0)]
+    [InlineData("Valid post", true, 1)]
+    [InlineData(" ", false, 0)]
+    public void ValidatePreservesExistingValidationRules(string? text, bool hasLabels, int expectedErrorCount)
+    {
+        PostBuilder builder = new(text);
+        if (hasLabels)
+        {
+            builder.SetSelfLabels(new PostSelfLabels(new SelfLabels(new SelfLabel(SelfLabelValues.Nudity))));
+        }
+
+        string[] expectedErrors = [.. builder.ValidationErrors()];
+        IValidatableObject validatable = builder;
+        ValidationResult[] results = [.. validatable.Validate(new ValidationContext(builder))];
+        List<ValidationResult> annotationResults = [];
+
+        Assert.Equal(expectedErrorCount, results.Length);
+        Assert.Equal(expectedErrors, results.Select(result => result.ErrorMessage));
+        Assert.All(results, result => Assert.Empty(result.MemberNames));
+        Assert.Equal(expectedErrorCount == 0, builder.IsValid());
+        Assert.Equal(builder.IsValid(), Validator.TryValidateObject(builder, new ValidationContext(builder), annotationResults, validateAllProperties: true));
+        Assert.Equal(expectedErrors, annotationResults.Select(result => result.ErrorMessage));
+    }
+
+    [Fact]
+    public void ValidateCapturesBuilderStateBeforeEnumeration()
+    {
+        PostBuilder builder = new(text: null);
+        IEnumerable<ValidationResult> invalidResults = builder.Validate(new ValidationContext(builder));
+
+        builder.WithText("Valid post");
+        IEnumerable<ValidationResult> validResults = builder.Validate(new ValidationContext(builder));
+
+        Assert.Empty(validResults);
+        Assert.Single(invalidResults);
+        Assert.Single(invalidResults);
+        Assert.True(builder.IsValid());
+
+        builder.SetSelfLabels(new PostSelfLabels(new SelfLabels(new SelfLabel(SelfLabelValues.Nudity))));
+
+        Assert.Empty(validResults);
+        Assert.False(builder.IsValid());
+    }
+
+    [Fact]
+    public void ValidateRejectsNullContextImmediately()
+    {
+        PostBuilder builder = new("Valid post");
+
+        Assert.Throws<ArgumentNullException>(() => builder.Validate(null!));
+    }
+
     [Fact]
     public void FluentEmbedAndInteractionPreferencesMethodsReturnTheBuilder()
     {

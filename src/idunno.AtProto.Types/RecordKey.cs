@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -11,7 +12,7 @@ namespace idunno.AtProto;
 /// A reference to an individual record withing a collection in an atproto repository.
 /// </summary>
 [JsonConverter(typeof(Json.RecordKeyConverter))]
-public sealed partial class RecordKey : IEquatable<RecordKey>
+public sealed partial class RecordKey : IEquatable<RecordKey>, IParsable<RecordKey>
 {
     private const int MaximumLength = 512;
 
@@ -192,6 +193,47 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
         }
 
         return Parse(s, false, out result);
+    }
+
+    /// <summary>
+    /// Parses a string into a <see cref="RecordKey"/>.
+    /// </summary>
+    /// <param name="s">The record key to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed record key.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid record key.</exception>
+    public static RecordKey Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out RecordKey? result))
+        {
+            return result!;
+        }
+
+        throw new FormatException("The value is not a valid record key.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into a <see cref="RecordKey"/>.
+    /// </summary>
+    /// <param name="s">The record key to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed record key, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid record key; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out RecordKey result)
+    {
+        if (s is null)
+        {
+            result = null;
+            return false;
+        }
+
+        bool succeeded = TryParse(s, out RecordKey? parsed);
+        result = parsed!;
+
+        return succeeded;
     }
 
     internal static bool Parse(string s, bool throwOnError, out RecordKey? result)

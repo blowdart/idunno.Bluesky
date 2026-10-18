@@ -14,8 +14,10 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedImage), typeDiscriminator: "app.bsky.draft.defs#draftEmbedImage")]
-public record DraftEmbedImage
+public partial record DraftEmbedImage
 {
+    private string? _altText;
+
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedImage"/> with the specified local reference and optional alt text.
     /// </summary>
@@ -60,7 +62,7 @@ public record DraftEmbedImage
     [JsonPropertyName("alt")]
     public string? AltText
     {
-        get;
+        get => _altText;
 
         set
         {
@@ -68,7 +70,7 @@ public record DraftEmbedImage
                 value?.GetGraphemeLength() ?? 0,
                 Maximum.DraftEmbedAltTextLengthInGraphemes);
 
-            field = value;
+            _altText = value;
         }
     }
 }

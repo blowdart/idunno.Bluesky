@@ -54,6 +54,16 @@ await agent.Post("New gated post",
     cancellationToken: cancellationToken);
 ```
 
+## Parsing and validating gate records
+
+`ThreadGate` and `PostGate` implement `IValidatableObject`. Validation checks that the gated URI points to a Bluesky post,
+the rule and URI collection limits, and required collection entries. Failures identify members such as `Post` and `Rules[0]`.
+
+Both types expose `Parse` and `TryParse` overloads accepting a `JsonDocument` or `JsonElement`.
+These methods validate by default. Use `validate: false` to inspect a gate with an incorrect post collection or over-limit
+collections, then call `Validate(new ValidationContext(gate))` to inspect failures. Tolerant parsing still rejects malformed
+JSON, missing required fields and invalid protocol identifiers. Existing public constructor guards and agent deserialization are unchanged.
+
 ## Default user preferences for post and thread gates.
 
 Bluesky allows users to set default preferences for post and thread gates. You can retrieve these preferences with `agent.GetPreferences()`.

@@ -12,7 +12,7 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedGallery), typeDiscriminator: "app.bsky.draft.defs#draftEmbedGallery")]
-public record DraftEmbedGallery
+public partial record DraftEmbedGallery
 {
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedGallery"/> with the specified items.
