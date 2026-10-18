@@ -207,6 +207,23 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Fact]
+    public async Task LiveStreamReportsAutomaticReconnectionIsDisabledWhenLimitIsZero()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using var server = new TestJetstreamServer();
+        await server.Start((socket, _, token) => socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, token));
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: new JetstreamOptions { UseCompression = false });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 41, cancellationToken: cancellationToken, maximumReconnectAttempts: 0).GetAsyncEnumerator(cancellationToken);
+
+        IOException error = await Assert.ThrowsAsync<IOException>(
+            () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal("The live Jetstream disconnected. SDK-managed automatic reconnection is disabled.", error.Message);
+        Assert.Single(server.Connections);
+    }
+
+    [Fact]
     public async Task LiveStreamStopsAfterFiveTransientReconnectAttempts()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -227,7 +244,7 @@ public class AtProtoJetstreamV2Tests
 
         IOException error = await Assert.ThrowsAsync<IOException>(
             () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
-        Assert.Contains("5 reconnection attempts", error.Message, StringComparison.Ordinal);
+        Assert.Equal("The live Jetstream disconnected after the SDK exhausted its 5 reconnection attempts.", error.Message);
         Assert.Equal(12, attempts); // The rejected WebSocket upgrade and its error-detail request each count once.
         Assert.Throws<ArgumentOutOfRangeException>(() => jetstream.StreamAsync(
             cursor: null, maximumReconnectAttempts: -1, cancellationToken: cancellationToken));
