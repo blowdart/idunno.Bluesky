@@ -173,7 +173,10 @@ public sealed partial class Nsid : IEquatable<Nsid>, IParsable<Nsid>
             return false;
         }
 
-        return TryParse(s, out result);
+        bool succeeded = TryParse(s, out Nsid? parsed);
+        result = parsed!;
+
+        return succeeded;
     }
 
     /// <summary>

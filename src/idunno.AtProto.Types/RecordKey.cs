@@ -230,7 +230,10 @@ public sealed partial class RecordKey : IEquatable<RecordKey>, IParsable<RecordK
             return false;
         }
 
-        return TryParse(s, out result);
+        bool succeeded = TryParse(s, out RecordKey? parsed);
+        result = parsed!;
+
+        return succeeded;
     }
 
     internal static bool Parse(string s, bool throwOnError, out RecordKey? result)

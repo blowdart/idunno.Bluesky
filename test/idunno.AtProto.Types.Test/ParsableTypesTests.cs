@@ -23,8 +23,10 @@ public class ParsableTypesTests
         Assert.True(T.TryParse(validValue, provider: null, out T? tryParseResult));
         Assert.Equal(parsed, tryParseResult);
 
-        Assert.False(T.TryParse(invalidValue, provider: null, out _));
-        Assert.False(T.TryParse(null, provider: null, out _));
+        Assert.False(T.TryParse(invalidValue, provider: null, out T? invalidResult));
+        Assert.Null(invalidResult);
+        Assert.False(T.TryParse(null, provider: null, out T? nullResult));
+        Assert.Null(nullResult);
         Assert.Throws<FormatException>(() => T.Parse(invalidValue, provider: null));
         Assert.Throws<ArgumentNullException>(() => T.Parse(null!, provider: null));
     }
