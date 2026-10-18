@@ -294,4 +294,24 @@ public class RecordValidationTests
         Actor.Profile empty = new();
         Assert.Empty(empty.Validate(new ValidationContext(empty)));
     }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", true)]
+    [InlineData("code", true)]
+    public void MessageJoinLinksValidateRequiredCodeAfterMutation(string? code, bool valid)
+    {
+        Chat.Embed.JoinLink link = new("code");
+        MessageInput message = new("join") { Embed = link with { Code = code! } };
+        ValidationResult[] results = [.. message.Validate(new ValidationContext(message))];
+        if (valid)
+        {
+            Assert.Empty(results);
+        }
+        else
+        {
+            ValidationResult result = Assert.Single(results);
+            Assert.Equal(["Embed.Code"], result.MemberNames);
+        }
+    }
 }

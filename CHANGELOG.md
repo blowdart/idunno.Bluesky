@@ -32,6 +32,7 @@
 * Recursive validation now reports indexed facet features and associated references, reports null facet indices instead of throwing, accepts galleries up to the lexicon's 20-item schema limit, and checks the post language collection's three-entry limit. Gallery authoring guards retain their ten-item limit.
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
+* Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
 
 
 ## 8.0.0 - 2026-10-16
