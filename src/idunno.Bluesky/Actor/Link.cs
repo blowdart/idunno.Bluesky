@@ -16,8 +16,11 @@ namespace idunno.Bluesky.Actor;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Link), RecordType.ActorLink)]
-public record Link : BlueskyTimestampedRecord
+public partial record Link : BlueskyTimestampedRecord
 {
+    private readonly string? _title;
+    private readonly Blob? _icon;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Link"/> record.
     /// </summary>
@@ -87,7 +90,7 @@ public record Link : BlueskyTimestampedRecord
     [JsonPropertyName("titleProjection")]
     public string? Title
     {
-        get;
+        get => _title;
         init
         {
             if (value is not null)
@@ -96,7 +99,7 @@ public record Link : BlueskyTimestampedRecord
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 320);
             }
 
-            field = value;
+            _title = value;
         }
     }
 
@@ -109,7 +112,7 @@ public record Link : BlueskyTimestampedRecord
     [JsonPropertyName("iconProjection")]
     public Blob? Icon
     {
-        get;
+        get => _icon;
         init
         {
             if (value is not null)
@@ -121,7 +124,7 @@ public record Link : BlueskyTimestampedRecord
                 }
             }
 
-            field = value;
+            _icon = value;
         }
     }
 

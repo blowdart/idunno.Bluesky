@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -10,7 +11,7 @@ namespace idunno.Bluesky.Embed;
 /// <summary>
 /// Defines the record structure for embedding videos in a post.
 /// </summary>
-public record EmbeddedVideo : EmbeddedMediaBase
+public record EmbeddedVideo : EmbeddedMediaBase, IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Constructs a new instance of <see cref="EmbeddedVideo"/>
@@ -113,6 +114,55 @@ public record EmbeddedVideo : EmbeddedMediaBase
     public string? Presentation { get; init; }
 
     /// <summary>
+    /// Validates the video blob, captions and aspect ratio.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the video is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateVideo();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateVideo();
+
+    private IEnumerable<ValidationResult> ValidateVideo()
+    {
+        foreach (ValidationResult result in RecordValidation.Blob(Video, nameof(Video), 300_000_000, "video/mp4"))
+        {
+            yield return result;
+        }
+
+        foreach (ValidationResult result in RecordValidation.Nested(AspectRatio, nameof(AspectRatio), required: false))
+        {
+            yield return result;
+        }
+
+        if (Captions is not null)
+        {
+            if (Captions.Count > Maximum.EmbedVideoCaptions)
+            {
+                yield return new ValidationResult(
+                    $"A video cannot contain more than {Maximum.EmbedVideoCaptions} captions.",
+                    [nameof(Captions)]);
+            }
+
+            int index = 0;
+            foreach (Caption? caption in Captions)
+            {
+                foreach (ValidationResult result in RecordValidation.Nested(caption, $"{nameof(Captions)}[{index}]"))
+                {
+                    yield return result;
+                }
+
+                index++;
+            }
+        }
+    }
+
+    /// <summary>
     /// Determines whether the specified <see cref="EmbeddedVideo"/> is equal to the current instance.
     /// </summary>
     /// <param name="other">The <see cref="EmbeddedVideo"/> to compare against the current instance.</param>
@@ -181,8 +231,20 @@ public static class VideoPresentationKnownValues
 /// <remarks>
 /// <para>Captions are in the <see href="https://www.w3.org/TR/webvtt1/">VTT</see> format.</para>
 /// </remarks>
-public record Caption
+public record Caption : IValidatableObject, IRecordValidatable
 {
+    internal Caption(string lang, Blob file, bool validate)
+    {
+        if (validate)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(lang);
+        }
+
+        ArgumentNullException.ThrowIfNull(file);
+        Lang = lang;
+        File = file;
+    }
+
     /// <summary>
     /// Creates a new instance of <see cref="Caption"/>.
     /// </summary>
@@ -191,13 +253,8 @@ public record Caption
     /// <exception cref="ArgumentException">Thrown when <paramref name="lang"/> is <see langword="null" /> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is <see langword="null" />.</exception>
     [JsonConstructor]
-    public Caption(string lang, Blob file)
+    public Caption(string lang, Blob file) : this(lang, file, validate: true)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(lang);
-        ArgumentNullException.ThrowIfNull(file);
-
-        Lang = lang;
-        File = file;
     }
 
     /// <summary>
@@ -213,4 +270,32 @@ public record Caption
     [JsonInclude]
     [JsonRequired]
     public Blob File { get; init; }
+
+    /// <summary>
+    /// Validates the caption language and blob.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the caption is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateCaption();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateCaption();
+
+    private IEnumerable<ValidationResult> ValidateCaption()
+    {
+        if (string.IsNullOrWhiteSpace(Lang))
+        {
+            yield return new ValidationResult("A caption language is required.", [nameof(Lang)]);
+        }
+
+        foreach (ValidationResult result in RecordValidation.Blob(File, nameof(File), 20_000, "text/vtt"))
+        {
+            yield return result;
+        }
+    }
 }

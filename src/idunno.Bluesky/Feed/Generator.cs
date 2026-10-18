@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Feed;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Generator), typeDiscriminator: RecordType.Generator)]
-public record Generator : BlueskyRecord
+public partial record Generator : BlueskyRecord
 {
     /// <summary>
     /// Gets the DID of the feed generator service.

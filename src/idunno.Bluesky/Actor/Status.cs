@@ -14,8 +14,10 @@ namespace idunno.Bluesky.Actor;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Status), typeDiscriminator: RecordType.Status)]
-public record Status : BlueskyTimestampedRecord
+public partial record Status : BlueskyTimestampedRecord
 {
+    private int? _durationMinutes;
+
     /// <summary>
     /// Creates a new instance of <see cref="Status"/>, with the specified <paramref name="accountStatus"/> value.
     /// </summary>
@@ -117,7 +119,7 @@ public record Status : BlueskyTimestampedRecord
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? DurationMinutes
     {
-        get;
+        get => _durationMinutes;
 
         set
         {
@@ -126,7 +128,7 @@ public record Status : BlueskyTimestampedRecord
                 ArgumentOutOfRangeException.ThrowIfLessThan(value.Value, 1);
             }
 
-            field = value;
+            _durationMinutes = value;
         }
     }
 }

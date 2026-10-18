@@ -15,8 +15,10 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(Draft), typeDiscriminator: "app.bsky.draft.defs#draft")]
-public record Draft
+public partial record Draft
 {
+    private readonly IReadOnlyList<DraftPost> _posts = null!;
+
     /// <summary>
     /// Creates a new instance of <see cref="Draft"/> with the specified properties.
     /// </summary>
@@ -156,7 +158,7 @@ public record Draft
     [JsonRequired]
     public IReadOnlyList<DraftPost> Posts
     {
-        get;
+        get => _posts;
 
         init
         {
@@ -168,7 +170,7 @@ public record Draft
                 value.Count,
                 Maximum.DraftPosts);
 
-            field = new List<DraftPost>(value).AsReadOnly();
+            _posts = new List<DraftPost>(value).AsReadOnly();
         }
     }
 

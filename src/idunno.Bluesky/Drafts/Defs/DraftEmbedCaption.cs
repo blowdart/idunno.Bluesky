@@ -15,8 +15,11 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedCaption), typeDiscriminator: "app.bsky.draft.defs#draftEmbedCaption")]
-public record DraftEmbedCaption
+public partial record DraftEmbedCaption
 {
+    private string _lang = null!;
+    private string _content = null!;
+
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedCaption"/> with the specified content and language.
     /// </summary>
@@ -43,13 +46,13 @@ public record DraftEmbedCaption
     [JsonRequired]
     public string Lang
     {
-        get;
+        get => _lang;
 
         set
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            field = value;
+            _lang = value;
         }
     }
 
@@ -61,14 +64,14 @@ public record DraftEmbedCaption
     [JsonRequired]
     public string Content
     {
-        get;
+        get => _content;
 
         set
         {
             ArgumentNullException.ThrowIfNull(value);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DraftEmbedCaptionContentLengthInBytes);
 
-            field = value;
+            _content = value;
         }
     }
 }

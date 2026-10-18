@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
@@ -15,8 +16,26 @@ namespace idunno.Bluesky.Embed.External;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Properties), typeDiscriminator: "app.bsky.embed.external#external")]
-public record Properties
+public record Properties : IValidatableObject, IRecordValidatable
 {
+    private string _uri;
+
+    internal Properties(string uri, string title, string description, Blob? thumbnail, IReadOnlyCollection<StrongReference>? associatedRefs, bool validate)
+    {
+        if (validate)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(uri);
+        }
+
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(description);
+        _uri = uri;
+        Title = title;
+        Description = description;
+        Thumbnail = thumbnail;
+        AssociatedRefs = associatedRefs;
+    }
+
     /// <summary>
     /// Creates a new instance of <see cref="Properties"/>.
     /// </summary>
@@ -29,18 +48,9 @@ public record Properties
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> or <paramref name="description"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
-    public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
+    public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null)
+        : this(uri, title, description, thumbnail, associatedRefs, validate: true)
     {
-        // Even though we are using a string for the URI, we still want to ensure that it is not null or whitespace, as its marked as required in the lexicon and this a bare minimum validation.
-        ArgumentException.ThrowIfNullOrWhiteSpace(uri);
-        ArgumentNullException.ThrowIfNull(title);
-        ArgumentNullException.ThrowIfNull(description);
-
-        Uri = uri;
-        Title = title;
-        Description = description;
-        Thumbnail = thumbnail;
-        AssociatedRefs = associatedRefs;
     }
 
     /// <summary>
@@ -52,13 +62,13 @@ public record Properties
     [JsonRequired]
     [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "The official Bluesky can create facets with illegal URIs, so this property is a string to accommodate those cases.")]
     public string Uri {
-        get;
+        get => _uri;
 
         set
         {
             // Even though we are using a string for the URI, we still want to ensure that it is not null or whitespace, as its marked as required in the lexicon and this a bare minimum validation.
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
-            field = value;
+            _uri = value;
         }
     }
 
@@ -113,6 +123,52 @@ public record Properties
     {
         get;
         set => field = value is null ? null : [.. value];
+    }
+
+    /// <summary>
+    /// Validates the external card URI, text, thumbnail and associated references.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the external card is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateProperties();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateProperties();
+
+    private IEnumerable<ValidationResult> ValidateProperties()
+    {
+        if (!System.Uri.TryCreate(Uri, UriKind.Absolute, out _))
+        {
+            yield return new ValidationResult("An absolute external URI is required.", [nameof(Uri)]);
+        }
+
+        if (Title is null)
+        {
+            yield return new ValidationResult("A title is required.", [nameof(Title)]);
+        }
+
+        if (Description is null)
+        {
+            yield return new ValidationResult("A description is required.", [nameof(Description)]);
+        }
+
+        if (Thumbnail is not null)
+        {
+            foreach (ValidationResult result in RecordValidation.Blob(Thumbnail, nameof(Thumbnail), 1_000_000, "image/*"))
+            {
+                yield return result;
+            }
+        }
+
+        if (AssociatedRefs is not null && AssociatedRefs.Any(reference => reference is null))
+        {
+            yield return new ValidationResult("Associated references cannot contain null.", [nameof(AssociatedRefs)]);
+        }
     }
 
     /// <summary>

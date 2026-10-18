@@ -1,1 +1,13 @@
 #nullable enable
+static idunno.AtProto.AtUri.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.AtUri!
+static idunno.AtProto.AtUri.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.AtUri! result) -> bool
+static idunno.AtProto.Cid.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.Cid!
+static idunno.AtProto.Cid.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.Cid! result) -> bool
+static idunno.AtProto.Did.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.Did!
+static idunno.AtProto.Did.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.Did! result) -> bool
+static idunno.AtProto.Handle.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.Handle!
+static idunno.AtProto.Handle.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.Handle! result) -> bool
+static idunno.AtProto.Nsid.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.Nsid!
+static idunno.AtProto.Nsid.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.Nsid! result) -> bool
+static idunno.AtProto.RecordKey.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.RecordKey!
+static idunno.AtProto.RecordKey.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.RecordKey! result) -> bool

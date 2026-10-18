@@ -14,8 +14,13 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// Represents a message in a chat conversation.
 /// </summary>
-public sealed record MessageInput
+public sealed partial record MessageInput
 {
+    [JsonConstructor]
+    internal MessageInput()
+    {
+    }
+
     /// <summary>
     /// Creates a new instance of <see cref="MessageInput"/>.
     /// </summary>

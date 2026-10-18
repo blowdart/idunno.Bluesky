@@ -62,6 +62,36 @@ use the `DraftEmbedRecord` class which takes a `StrongReference` to the post (or
 
 ## Retrieving and manipulating drafts
 
+### Parsing and validating draft JSON
+
+`Draft` and `DraftPost` implement `IValidatableObject` and expose `Parse` and `TryParse` overloads for `JsonDocument`
+and `JsonElement`. These methods validate by default. Pass `validate: false` to retain over-limit text, collections
+and invalid nested draft media values for inspection:
+
+```c#
+using System.ComponentModel.DataAnnotations;
+using idunno.Bluesky.Drafts;
+
+if (Draft.TryParse(document, validate: false, out Draft? draft))
+{
+    foreach (ValidationResult error in draft.Validate(new ValidationContext(draft)))
+    {
+        Console.WriteLine($"{string.Join(", ", error.MemberNames)}: {error.ErrorMessage}");
+    }
+}
+```
+
+Validation cascades through posts, images, galleries, videos and captions, reporting paths such as
+`Posts[0].EmbedVideos[0].Captions[0].Lang`. Draft media types also implement `IValidatableObject` independently.
+Gallery validation uses the schema limit of 20 items, not the authoring recommendation of 10.
+Local reference validation checks the stored path text only; it neither accesses files nor verifies their existence or permissions.
+
+Tolerant parsing still rejects missing required values, malformed shapes and invalid protocol identifiers.
+It is opt-in for these methods and does not change how agents deserialize draft API responses or the existing public constructor and setter guards.
+Draft validation uses draft limits; it does not imply that the draft is small enough to publish as a post.
+
+### Retrieving and editing
+
 To retrieve a draft, use the `GetDrafts` method, which will return a collection of `DraftView`s. This is a pageable view which you can
 present to your user, allowing them to pick which draft to reload into your UI.
 

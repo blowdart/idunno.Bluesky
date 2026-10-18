@@ -4,11 +4,30 @@
 
 ### ➕ Added
 
+#### idunno.AtProto.Types
+
+* Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
+
+#### idunno.Bluesky
+
+* Added `Post.Parse` and `Post.TryParse` overloads accepting a `JsonDocument` or `JsonElement`. Validation is enabled by default; overloads accepting `validate: false` support tolerant parsing of over-limit post text and invalid nested facet and media values, including aspect ratio dimensions, caption languages and external card URIs. Public constructors and ordinary JSON deserialization retain their existing validation.
+* Added `IValidatableObject` support to `Post`, `Facet`, `ByteSlice`, `TagFacetFeature`, `EmbeddedImages` and `EmbeddedGallery`. Post validation reports failures in nested facets and embeds, including byte ranges, tag lengths, image counts and gallery item counts.
+* Added `IValidatableObject` support to `PostBuilder`, preserving the rules, messages and snapshot behavior of its existing `ValidationErrors()` and `IsValid()` methods.
+* Added `IValidatableObject` support to embedded images, gallery images, videos, captions, aspect ratios, external cards and their properties, record references and records with media. Validation cascades through nested embeds, reporting indexed member paths and checking blob MIME types and declared sizes.
+* Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Profile`. Validation checks profile text, links, website and image blobs. Passing `validate: false` preserves over-limit text and invalid link collections for later validation without weakening public constructors, setters or ordinary JSON deserialization.
+* Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to lists, starter packs, thread gates, post gates, `MessageInput`, `Draft` and `DraftPost`. Validation is enabled by default; `validate: false` preserves constraint-invalid values for later validation, including nested facets and draft media, without disabling required-field, JSON shape or protocol identifier checks.
+* Added recursive `IValidatableObject` support to draft images, videos, captions, galleries, external links, record references and local file references. Failures include indexed member paths; local file validation checks path text only and never accesses files.
+* Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
+
 ### 🟢 Changed
 
 ### ⚠️ Breaking Changes
 
 ### ✅ Fixed
+
+#### idunno.Bluesky
+
+* Fixed source-generated JSON deserialization of `MessageInput` by supplying a JSON constructor compatible with its property types. Text and facet setters retain their existing validation.
 
 
 ## 8.0.0 - 2026-10-16

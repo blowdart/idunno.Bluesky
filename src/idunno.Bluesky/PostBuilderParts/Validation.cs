@@ -1,14 +1,35 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
+
 using idunno.AtProto;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
-public sealed partial class PostBuilder
+public sealed partial class PostBuilder : IValidatableObject
 {
+    /// <summary>
+    /// Validates the builder using the same rules as <see cref="ValidationErrors"/>.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the builder is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// The results describe a single snapshot of the builder taken when this method is called,
+    /// rather than when the results are enumerated.
+    /// </para>
+    /// </remarks>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return [.. ValidationErrors().Select(error => new ValidationResult(error))];
+    }
+
     /// <summary>
     /// Determines whether this instance of <see cref="PostBuilder"/> is valid and can be converted to a <see cref="Post"/>.
     /// </summary>

@@ -141,7 +141,7 @@ public class PostBuilderConcurrencyTests
     [Fact]
     public void ValidationErrorsAreProducedWhenItIsCalledRatherThanWhenItIsEnumerated()
     {
-        PostBuilder builder = new();
+        PostBuilder builder = new(text: null);
 
         IEnumerable<string> errors = builder.ValidationErrors();
 

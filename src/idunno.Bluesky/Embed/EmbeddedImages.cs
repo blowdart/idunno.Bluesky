@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Embed;
@@ -8,7 +9,7 @@ namespace idunno.Bluesky.Embed;
 /// <summary>
 /// Represents embedded images in a post for.
 /// </summary>
-public record EmbeddedImages : EmbeddedMediaBase
+public record EmbeddedImages : EmbeddedMediaBase, IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Creates a new instance of <see cref="EmbeddedImages"/>.
@@ -46,6 +47,51 @@ public record EmbeddedImages : EmbeddedMediaBase
     [JsonInclude]
     [JsonRequired]
     public ICollection<EmbeddedImage> Images { get; init; }
+
+    /// <summary>
+    /// Validates the embedded images and their count.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the images are valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateImages();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord()
+    {
+        return ValidateImages();
+    }
+
+    private IEnumerable<ValidationResult> ValidateImages()
+    {
+        if (Images is null)
+        {
+            yield return new ValidationResult("Images are required.", [nameof(Images)]);
+            yield break;
+        }
+
+        if (Images.Count > Maximum.ImagesInPost)
+        {
+            yield return new ValidationResult(
+                $"An embedded image set cannot contain more than {Maximum.ImagesInPost} images.",
+                [nameof(Images)]);
+        }
+
+        int index = 0;
+        foreach (EmbeddedImage? image in Images)
+        {
+            foreach (ValidationResult result in RecordValidation.Nested(image, $"{nameof(Images)}[{index}]"))
+            {
+                yield return result;
+            }
+
+            index++;
+        }
+    }
 
     /// <summary>
     /// Determines whether the specified <see cref="EmbeddedImages"/> is equal to the current instance.

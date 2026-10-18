@@ -6,6 +6,7 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Gallery;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
@@ -47,6 +48,167 @@ public class PostTests
             envelopeJson, BlueskyServer.BlueskyJsonSerializerOptions);
         Assert.NotNull(envelope);
         Assert.Equal(" ", envelope.Value.Text);
+    }
+
+    [Fact]
+    public void ParseJsonDocumentAndElementDeserializesPost()
+    {
+        const string json = """
+            {
+              "$type": "app.bsky.feed.post",
+              "text": "Parsed from JSON",
+              "createdAt": "2026-10-08T15:43:06.08711400Z"
+            }
+            """;
+
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        Post fromDocument = Post.Parse(document);
+        Post fromElement = Post.Parse(document.RootElement);
+
+        Assert.Equal("Parsed from JSON", fromDocument.Text);
+        Assert.Equal("Parsed from JSON", fromElement.Text);
+        Assert.Equal(fromDocument.CreatedAt, fromElement.CreatedAt);
+    }
+
+    [Fact]
+    public void TryParseJsonDocumentAndElementDeserializesPost()
+    {
+        const string json = """
+            {
+              "$type": "app.bsky.feed.post",
+              "text": "Parsed from JSON",
+              "createdAt": "2026-10-08T15:43:06.08711400Z"
+            }
+            """;
+
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        Assert.True(Post.TryParse(document, out Post? fromDocument));
+        Assert.True(Post.TryParse(document.RootElement, out Post? fromElement));
+        Assert.Equal("Parsed from JSON", fromDocument!.Text);
+        Assert.Equal("Parsed from JSON", fromElement!.Text);
+    }
+
+    [Fact]
+    public void TryParseJsonReturnsFalseForInvalidPostJson()
+    {
+        using JsonDocument invalidPost = JsonDocument.Parse("""{"text": null}""");
+        using JsonDocument jsonNull = JsonDocument.Parse("null");
+        JsonElement undefined = default;
+
+        Assert.False(Post.TryParse(invalidPost, out _));
+        Assert.False(Post.TryParse(jsonNull, out _));
+        Assert.False(Post.TryParse((JsonDocument?)null, out _));
+        Assert.False(Post.TryParse(undefined, out _));
+    }
+
+    [Fact]
+    public void ParseJsonThrowsForInvalidPostJson()
+    {
+        using JsonDocument invalidPost = JsonDocument.Parse("""{"text": null}""");
+        using JsonDocument jsonNull = JsonDocument.Parse("null");
+
+        Assert.Throws<JsonException>(() => Post.Parse(invalidPost));
+        Assert.Throws<JsonException>(() => Post.Parse(jsonNull));
+        Assert.Throws<JsonException>(() => Post.Parse(default(JsonElement)));
+        Assert.Throws<ArgumentNullException>(() => Post.Parse((JsonDocument)null!));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TolerantParseRetainsPostsExceedingTextLimits(bool testBytes)
+    {
+        string text = testBytes
+            ? new string('a', Maximum.PostLengthInBytes + 1)
+            : new string('a', Maximum.PostLengthInGraphemes + 1);
+        using JsonDocument document = JsonDocument.Parse(CreatePostJson(text, hasEmbed: false));
+
+        Assert.False(Post.TryParse(document, out _));
+        Assert.True(Post.TryParse(document, validate: false, out Post? post));
+        Assert.NotNull(post);
+        Assert.Equal(text, post.Text);
+        Assert.Contains(
+            post.Validate(new System.ComponentModel.DataAnnotations.ValidationContext(post)),
+            result => result.MemberNames.Contains(nameof(Post.Text)));
+        Assert.Throws<JsonException>(() => Post.Parse(document));
+        Assert.Equal(text, Post.Parse(document, validate: false).Text);
+    }
+
+    [Fact]
+    public void TolerantParseRetainsInvalidFacetAndValidationReportsNestedErrors()
+    {
+        string json = $$"""
+            {
+              "$type": "app.bsky.feed.post",
+              "text": "x",
+              "createdAt": "2026-10-08T15:43:06.08711400Z",
+              "facets": [
+                {
+                  "index": { "byteStart": 2, "byteEnd": 1 },
+                  "features": [
+                    { "$type": "app.bsky.richtext.facet#tag", "tag": "{{new string('x', Maximum.TagLengthInBytes + 1)}}" }
+                  ]
+                }
+              ]
+            }
+            """;
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        Assert.False(Post.TryParse(document, out _));
+        Assert.True(Post.TryParse(document, validate: false, out Post? post));
+        Assert.NotNull(post);
+
+        List<System.ComponentModel.DataAnnotations.ValidationResult> validationResults =
+            [.. post.Validate(new System.ComponentModel.DataAnnotations.ValidationContext(post))];
+        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets.Index.ByteEnd"));
+        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets.Features.Tag"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ParseValidatesNestedImageLimitsAndTolerantModeRetainsTheRecord(bool gallery)
+    {
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpeg", 1024);
+        EmbeddedImage image = new(blob, "alt text");
+        EmbeddedBase embed;
+        string expectedMember;
+
+        if (gallery)
+        {
+            GalleryImage galleryImage = new(blob, "alt text", new AspectRatio(1, 1));
+            EmbeddedGallery embeddedGallery = new([galleryImage])
+            {
+                Items = Enumerable.Repeat(galleryImage, Maximum.GalleryItems + 1).ToList()
+            };
+            embed = embeddedGallery;
+            expectedMember = "EmbeddedRecord.Items";
+        }
+        else
+        {
+            EmbeddedImages embeddedImages = new([image])
+            {
+                Images = Enumerable.Repeat(image, Maximum.ImagesInPost + 1).ToList()
+            };
+            embed = embeddedImages;
+            expectedMember = "EmbeddedRecord.Images";
+        }
+
+        Post sourcePost = new("Post with too many images")
+        {
+            EmbeddedRecord = embed
+        };
+        string json = JsonSerializer.Serialize(sourcePost, BlueskyServer.BlueskyJsonSerializerOptions);
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        Assert.False(Post.TryParse(document, out _));
+        Assert.True(Post.TryParse(document, validate: false, out Post? post));
+        Assert.NotNull(post);
+        Assert.Contains(
+            post.Validate(new System.ComponentModel.DataAnnotations.ValidationContext(post)),
+            result => result.MemberNames.Contains(expectedMember));
     }
 
     [Theory]

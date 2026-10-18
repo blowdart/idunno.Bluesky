@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -12,7 +13,7 @@ namespace idunno.Bluesky.Embed.Gallery;
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(GalleryImage), typeDiscriminator: "app.bsky.embed.gallery#image")]
-public record GalleryImage
+public record GalleryImage : IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Creates a new instance of <see cref="Image"/>
@@ -71,4 +72,37 @@ public record GalleryImage
     [JsonInclude]
     [JsonRequired]
     public AspectRatio AspectRatio { get; init; }
+
+    /// <summary>
+    /// Validates the gallery image blob, alternative text and required aspect ratio.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the image is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateImage();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateImage();
+
+    private IEnumerable<ValidationResult> ValidateImage()
+    {
+        foreach (ValidationResult result in RecordValidation.Blob(Image, nameof(Image), 2_000_000, "image/*"))
+        {
+            yield return result;
+        }
+
+        if (AltText is null)
+        {
+            yield return new ValidationResult("Alternative text is required.", [nameof(AltText)]);
+        }
+
+        foreach (ValidationResult result in RecordValidation.Nested(AspectRatio, nameof(AspectRatio)))
+        {
+            yield return result;
+        }
+    }
 }

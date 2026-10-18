@@ -1,7 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -20,7 +22,7 @@ namespace idunno.Bluesky;
 /// </remarks>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Post), typeDiscriminator: RecordType.Post)]
-public record class Post : BlueskyTimestampedRecord
+public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecord.CreatedAt"/> to the current date and time.
@@ -31,6 +33,7 @@ public record class Post : BlueskyTimestampedRecord
 
     internal Post(TimeProvider timeProvider) : base(timeProvider.GetUtcNow())
     {
+        Text = string.Empty;
     }
 
     /// <summary>
@@ -96,7 +99,20 @@ public record class Post : BlueskyTimestampedRecord
         SelfLabels? labels,
         ICollection<string>? tags) : this(text, createdAt, facets, langs, embeddedRecord, reply, labels, tags)
     {
-        ArgumentNullException.ThrowIfNull(text);
+    }
+
+    private Post(PostJsonValue record, EmbeddedBase? embeddedRecord, ICollection<Facet>? facets) : base(record.CreatedAt)
+    {
+        Text = record.Text;
+        Facets = facets;
+        Langs = record.Langs;
+        EmbeddedRecord = embeddedRecord;
+        Reply = record.Reply;
+        Labels = record.Labels;
+        Tags = record.Tags;
+        ExtensionData = record.ExtensionData
+            .Where(property => property.Key != "$type")
+            .ToDictionary(property => property.Key, property => property.Value.Clone());
     }
 
     /// <summary>
@@ -105,10 +121,10 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="post">The <see cref="Post"/> to create the new instance from.</param>
     public Post(Post post) : base(post)
     {
-        _text = null;
+        UnnormalizedText = null;
         if (post is not null)
         {
-            _text = post._text;
+            UnnormalizedText = post.UnnormalizedText;
             CreatedAt = post.CreatedAt;
             EmbeddedRecord = post.EmbeddedRecord;
             Reply = post.Reply;
@@ -539,7 +555,386 @@ public record class Post : BlueskyTimestampedRecord
         }
     }
 
+    /// <summary>
+    /// Parses a JSON document into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="document">The JSON document to parse.</param>
+    /// <returns>A <see cref="Post"/> deserialized from the JSON document.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="document"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">The JSON document does not contain a valid <see cref="Post"/>.</exception>
+    public static Post Parse(JsonDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
 
+        return Parse(document.RootElement, validate: true);
+    }
+
+    /// <summary>
+    /// Parses a JSON document into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="document">The JSON document to parse.</param>
+    /// <param name="validate"><see langword="true"/> to reject posts that fail validation; otherwise, <see langword="false"/>.</param>
+    /// <returns>A <see cref="Post"/> deserialized from the JSON document.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="document"/> is <see langword="null"/>.</exception>
+    /// <exception cref="JsonException">The JSON document does not contain a valid <see cref="Post"/>.</exception>
+    public static Post Parse(JsonDocument document, bool validate)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        return Parse(document.RootElement, validate);
+    }
+
+    /// <summary>
+    /// Parses a JSON element into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="element">The JSON element to parse.</param>
+    /// <returns>A <see cref="Post"/> deserialized from the JSON element.</returns>
+    /// <exception cref="JsonException">The JSON element does not contain a valid <see cref="Post"/>.</exception>
+    public static Post Parse(JsonElement element)
+    {
+        return Parse(element, validate: true);
+    }
+
+    /// <summary>
+    /// Parses a JSON element into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="element">The JSON element to parse.</param>
+    /// <param name="validate"><see langword="true"/> to reject posts that fail validation; otherwise, <see langword="false"/>.</param>
+    /// <returns>A <see cref="Post"/> deserialized from the JSON element.</returns>
+    /// <exception cref="JsonException">The JSON element does not contain a valid <see cref="Post"/>.</exception>
+    public static Post Parse(JsonElement element, bool validate)
+    {
+        if (TryDeserialize(element, validate, out Post? result))
+        {
+            return result;
+        }
+
+        throw new JsonException("The JSON value does not contain a post.");
+    }
+
+    /// <summary>
+    /// Tries to parse a JSON document into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="document">The JSON document to parse.</param>
+    /// <param name="result">The parsed <see cref="Post"/> if successful; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the JSON document contains a valid <see cref="Post"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(JsonDocument? document, [MaybeNullWhen(false)] out Post result)
+    {
+        return TryParse(document, validate: true, out result);
+    }
+
+    /// <summary>
+    /// Tries to parse a JSON document into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="document">The JSON document to parse.</param>
+    /// <param name="validate"><see langword="true"/> to reject posts that fail validation; otherwise, <see langword="false"/>.</param>
+    /// <param name="result">The parsed <see cref="Post"/> if successful; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the JSON document contains a post that passes the selected validation mode; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(JsonDocument? document, bool validate, [MaybeNullWhen(false)] out Post result)
+    {
+        result = null;
+
+        return document is not null && TryDeserialize(document.RootElement, validate, out result);
+    }
+
+    /// <summary>
+    /// Tries to parse a JSON element into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="element">The JSON element to parse.</param>
+    /// <param name="result">The parsed <see cref="Post"/> if successful; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the JSON element contains a valid <see cref="Post"/>; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(JsonElement element, [MaybeNullWhen(false)] out Post result)
+    {
+        return TryParse(element, validate: true, out result);
+    }
+
+    /// <summary>
+    /// Tries to parse a JSON element into a <see cref="Post"/>.
+    /// </summary>
+    /// <param name="element">The JSON element to parse.</param>
+    /// <param name="validate"><see langword="true"/> to reject posts that fail validation; otherwise, <see langword="false"/>.</param>
+    /// <param name="result">The parsed <see cref="Post"/> if successful; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the JSON element contains a post that passes the selected validation mode; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse(JsonElement element, bool validate, [MaybeNullWhen(false)] out Post result)
+    {
+        return TryDeserialize(element, validate, out result);
+    }
+
+    private static bool TryDeserialize(JsonElement element, bool validate, [MaybeNullWhen(false)] out Post result)
+    {
+        result = null;
+
+        if (element.ValueKind is JsonValueKind.Undefined)
+        {
+            return false;
+        }
+
+        try
+        {
+            result = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.Post);
+            if (result is null)
+            {
+                return false;
+            }
+
+            if (validate && result.ValidatePost().Any())
+            {
+                result = null;
+                return false;
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            result = null;
+            return !validate && TryDeserializeUnvalidated(element, out result);
+        }
+        catch (ArgumentException)
+        {
+            result = null;
+            return !validate && TryDeserializeUnvalidated(element, out result);
+        }
+    }
+
+    private static bool TryDeserializeUnvalidated(JsonElement element, [MaybeNullWhen(false)] out Post result)
+    {
+        result = null;
+
+        try
+        {
+            result = DeserializeUnvalidated(element);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
+    private static Post DeserializeUnvalidated(JsonElement element)
+    {
+        PostJsonValue record = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.PostJsonValue)
+            ?? throw new JsonException("The JSON value does not contain a post.");
+
+        EmbeddedBase? embeddedRecord = null;
+        if (record.EmbeddedRecord is JsonElement embed && embed.ValueKind is not JsonValueKind.Null)
+        {
+            embeddedRecord = JsonSerializer.Deserialize(embed, Json.TolerantMediaJson.EmbeddedBaseTypeInfo);
+        }
+
+        ICollection<Facet>? facets = record.Facets?.Select(DeserializeUnvalidatedFacet).ToList();
+
+        return new Post(record, embeddedRecord, facets);
+    }
+
+    internal static Facet DeserializeUnvalidatedFacet(JsonElement element)
+    {
+        FacetJsonValue facet = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.FacetJsonValue)
+            ?? throw new JsonException("A facet must be an object.");
+
+        if (facet.Index is null || facet.Features is null)
+        {
+            throw new JsonException("A facet must contain an index and features.");
+        }
+
+        List<FacetFeature> features = [];
+        foreach (JsonElement feature in facet.Features)
+        {
+            features.Add(DeserializeUnvalidatedFacetFeature(feature));
+        }
+
+        return new Facet(ByteSlice.CreateUnvalidated(facet.Index.ByteStart, facet.Index.ByteEnd), features)
+        {
+            ExtensionData = element.EnumerateObject()
+                .Where(property => !property.Name.Equals("index", StringComparison.OrdinalIgnoreCase) &&
+                    !property.Name.Equals("features", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(property => property.Name, property => property.Value.Clone())
+        };
+    }
+
+    private static FacetFeature DeserializeUnvalidatedFacetFeature(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Object &&
+            element.TryGetProperty("$type", out JsonElement discriminator) &&
+            discriminator.ValueKind is JsonValueKind.String &&
+            discriminator.GetString() is "app.bsky.richtext.facet#tag")
+        {
+            TagFacetFeatureJsonValue tagFeature = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.TagFacetFeatureJsonValue)
+                ?? throw new JsonException("A tag facet feature must be an object.");
+
+            if (tagFeature.Tag is null)
+            {
+                throw new JsonException("A tag facet feature must contain a tag.");
+            }
+
+            return TagFacetFeature.CreateUnvalidated(tagFeature.Tag);
+        }
+
+        return JsonSerializer.Deserialize(element, SourceGenerationContext.Default.FacetFeature)
+            ?? throw new JsonException("A facet feature cannot be null.");
+    }
+
+    /// <summary>
+    /// Validates the post text and tags against Bluesky's post constraints.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the post is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidatePost();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord()
+    {
+        return ValidatePost();
+    }
+
+    private IEnumerable<ValidationResult> ValidatePost()
+    {
+        string? text = UnnormalizedText;
+        if (text is null && EmbeddedRecord is null)
+        {
+            yield return new ValidationResult(
+                "Text cannot be null unless the post contains an embedded record.",
+                [nameof(Text)]);
+        }
+
+        if (!string.IsNullOrEmpty(text) &&
+            (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        {
+            yield return new ValidationResult(
+                $"Text must not exceed {Maximum.PostLengthInBytes} UTF-8 bytes or {Maximum.PostLengthInGraphemes} graphemes.",
+                [nameof(Text)]);
+        }
+
+        if (Tags is not null)
+        {
+            if (Tags.Count > Maximum.ExternalTagsInPost)
+            {
+                yield return new ValidationResult(
+                    $"Tags must not contain more than {Maximum.ExternalTagsInPost} tags.",
+                    [nameof(Tags)]);
+            }
+
+            int position = 0;
+            foreach (string? tag in Tags)
+            {
+                if (tag is null)
+                {
+                    yield return new ValidationResult($"Tag at position {position} cannot be null.", [nameof(Tags)]);
+                }
+                else if (tag.GetUtf8Length() > Maximum.TagLengthInBytes || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
+                {
+                    yield return new ValidationResult(
+                        $"Tag at position {position} must not exceed {Maximum.TagLengthInBytes} UTF-8 bytes or {Maximum.TagLengthInGraphemes} graphemes.",
+                        [nameof(Tags)]);
+                }
+
+                position++;
+            }
+        }
+
+        int facetPosition = 0;
+        foreach (Facet? facet in Facets ?? [])
+        {
+            if (facet is null)
+            {
+                yield return new ValidationResult($"Facet at position {facetPosition} cannot be null.", [nameof(Facets)]);
+            }
+            else
+            {
+                foreach (ValidationResult result in PrefixValidationResults(((IRecordValidatable)facet).ValidateRecord(), nameof(Facets)))
+                {
+                    yield return result;
+                }
+            }
+
+            facetPosition++;
+        }
+
+        foreach (ValidationResult result in ValidateEmbeddedRecord())
+        {
+            yield return result;
+        }
+    }
+
+    internal sealed class PostJsonValue
+    {
+        [JsonRequired]
+        public DateTimeOffset CreatedAt { get; init; }
+
+        [JsonRequired]
+        public string? Text { get; init; }
+
+        public ICollection<JsonElement>? Facets { get; init; }
+
+        public ICollection<string>? Langs { get; init; }
+
+        [JsonPropertyName("embed")]
+        public JsonElement? EmbeddedRecord { get; init; }
+
+        public ReplyReferences? Reply { get; init; }
+
+        public SelfLabels? Labels { get; init; }
+
+        public ICollection<string>? Tags { get; init; }
+
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement> ExtensionData { get; set; } = [];
+    }
+
+    internal sealed class FacetJsonValue
+    {
+        [JsonRequired]
+        public ByteSliceJsonValue? Index { get; init; }
+
+        [JsonRequired]
+        public ICollection<JsonElement>? Features { get; init; }
+
+    }
+
+    internal sealed class ByteSliceJsonValue
+    {
+        [JsonRequired]
+        public long ByteStart { get; init; }
+
+        [JsonRequired]
+        public long ByteEnd { get; init; }
+    }
+
+    internal sealed class TagFacetFeatureJsonValue
+    {
+        [JsonRequired]
+        public string? Tag { get; init; }
+    }
+
+    private IEnumerable<ValidationResult> ValidateEmbeddedRecord()
+    {
+        if (EmbeddedRecord is IRecordValidatable validatable)
+        {
+            foreach (ValidationResult result in PrefixValidationResults(validatable.ValidateRecord(), nameof(EmbeddedRecord)))
+            {
+                yield return result;
+            }
+        }
+    }
+
+    private static IEnumerable<ValidationResult> PrefixValidationResults(IEnumerable<ValidationResult> results, string prefix)
+    {
+        foreach (ValidationResult result in results)
+        {
+            string[] memberNames = [.. result.MemberNames.Select(memberName => $"{prefix}.{memberName}")];
+            yield return new ValidationResult(result.ErrorMessage, memberNames);
+        }
+    }
 
     /// <summary>
     /// Gets the text for the post. Embedded-only posts use an empty string.
@@ -548,13 +943,11 @@ public record class Post : BlueskyTimestampedRecord
     [JsonRequired]
     public string? Text
     {
-        get => _text ?? string.Empty;
-        internal set => _text = value;
+        get => UnnormalizedText ?? string.Empty;
+        internal set => UnnormalizedText = value;
     }
 
-    internal string? UnnormalizedText => _text;
-
-    private string? _text;
+    internal string? UnnormalizedText { get; private set; }
 
     /// <summary>
     /// Gets a list of <see cref="Facet"/>s for the post, if any.
