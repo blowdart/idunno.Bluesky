@@ -5,10 +5,65 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
+using idunno.AtProto;
+using idunno.Bluesky.Chat;
+
 namespace idunno.Bluesky.Json;
 
 internal static class RecordJson
 {
+    internal static JsonSerializerOptions Options { get; } = BlueskyJsonSerializerOptions.Create(Configure);
+
+    internal static void Configure(JsonSerializerOptions options)
+    {
+        options.TypeInfoResolver = options.TypeInfoResolver!.WithAddedModifier(typeInfo =>
+        {
+            if (typeInfo.Type == typeof(Blob))
+            {
+                foreach (JsonPropertyInfo property in typeInfo.Properties.Where(property => property.Name is "ref" or "mimeType" or "size"))
+                {
+                    property.IsRequired = true;
+                }
+
+                typeInfo.OnDeserialized = value =>
+                {
+                    Blob blob = (Blob)value;
+                    if (blob.Reference?.Link is null || blob.MimeType is null)
+                    {
+                        throw new JsonException("A blob requires a reference, MIME type and size.");
+                    }
+                };
+            }
+            else if (typeInfo.Type == typeof(ReplyReference))
+            {
+                typeInfo.OnDeserialized = value =>
+                {
+                    if (((ReplyReference)value).MessageId is null)
+                    {
+                        throw new JsonException("A reply message ID is required.");
+                    }
+                };
+            }
+        });
+    }
+
+    internal static void CheckDiscriminator(JsonElement element)
+    {
+        if (element.ValueKind is JsonValueKind.Object &&
+            element.TryGetProperty("$type", out JsonElement discriminator) &&
+            discriminator.ValueKind is not JsonValueKind.String)
+        {
+            throw new JsonException("A type discriminator must be a string.");
+        }
+    }
+
+    internal static T? Read<T>(JsonElement element, JsonTypeInfo<T> typeInfo)
+    {
+        CheckDiscriminator(element);
+
+        return JsonSerializer.Deserialize(element, (JsonTypeInfo<T>)Options.GetTypeInfo(typeInfo.Type));
+    }
+
     internal static T Parse<T>(JsonElement element, bool validate, JsonTypeInfo<T> typeInfo, Func<JsonElement, T?> readUnvalidated)
         where T : class, IRecordValidatable
     {
@@ -36,7 +91,8 @@ internal static class RecordJson
 
         try
         {
-            result = validate ? JsonSerializer.Deserialize(element, typeInfo) : readUnvalidated(element);
+            CheckDiscriminator(element);
+            result = validate ? Read(element, typeInfo) : readUnvalidated(element);
             if (result is null || (validate && result.ValidateRecord().Any()))
             {
                 result = null;

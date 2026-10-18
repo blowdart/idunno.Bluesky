@@ -165,9 +165,9 @@ public record Properties : IValidatableObject, IRecordValidatable
             }
         }
 
-        if (AssociatedRefs is not null && AssociatedRefs.Any(reference => reference is null))
+        foreach (ValidationResult result in RecordValidation.Collection(AssociatedRefs, nameof(AssociatedRefs), int.MaxValue))
         {
-            yield return new ValidationResult("Associated references cannot contain null.", [nameof(AssociatedRefs)]);
+            yield return result;
         }
     }
 

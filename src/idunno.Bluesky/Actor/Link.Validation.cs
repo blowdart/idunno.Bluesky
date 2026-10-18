@@ -93,7 +93,7 @@ public partial record Link : IValidatableObject, IRecordValidatable
 
     private static Link? DeserializeUnvalidated(JsonElement element)
     {
-        LinkJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.LinkJsonValue);
+        LinkJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.LinkJsonValue);
 
         return value is null ? null : new Link(value);
     }

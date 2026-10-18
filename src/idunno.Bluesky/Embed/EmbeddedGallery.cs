@@ -173,10 +173,11 @@ public record EmbeddedGallery : EmbeddedMediaBase, IValidatableObject, IRecordVa
 
     private IEnumerable<ValidationResult> ValidateGallery()
     {
-        if (Items.Count > Maximum.GalleryItems)
+        // The lexicon's schema ceiling is twenty; Maximum.GalleryItems applies its recommended ten-item authoring limit.
+        if (Items.Count > 20)
         {
             yield return new ValidationResult(
-                $"An embedded gallery cannot contain more than {Maximum.GalleryItems} items.",
+                "An embedded gallery cannot contain more than 20 items.",
                 [nameof(Items)]);
         }
 

@@ -83,7 +83,7 @@ public partial record Generator : IValidatableObject, IRecordValidatable
 
     private static Generator? DeserializeUnvalidated(JsonElement element)
     {
-        GeneratorJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.GeneratorJsonValue);
+        GeneratorJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.GeneratorJsonValue);
         if (value is null)
         {
             return null;

@@ -17,19 +17,21 @@ internal static class TolerantMediaJson
 
     private static JsonTypeInfo<EmbeddedBase> CreateTypeInfo()
     {
-        JsonSerializerOptions options = new(SourceGenerationContext.Default.Options);
-        options.Converters.Add(new AspectRatioConverter());
-        options.Converters.Add(new CaptionConverter());
-        options.Converters.Add(new ExternalPropertiesConverter());
-        options.TypeInfoResolver = SourceGenerationContext.Default.WithAddedModifier(typeInfo =>
+        JsonSerializerOptions options = BlueskyJsonSerializerOptions.Create(options =>
         {
-            if (typeInfo.Type == typeof(Embed.External.Properties))
+            options.Converters.Add(new AspectRatioConverter());
+            options.Converters.Add(new CaptionConverter());
+            options.Converters.Add(new ExternalPropertiesConverter());
+            RecordJson.Configure(options);
+            options.TypeInfoResolver = options.TypeInfoResolver!.WithAddedModifier(typeInfo =>
             {
-                // The opt-in converter reads the entire card, including its optional discriminator.
-                typeInfo.PolymorphismOptions = null;
-            }
+                if (typeInfo.Type == typeof(Embed.External.Properties))
+                {
+                    // The opt-in converter reads the entire card, including its optional discriminator.
+                    typeInfo.PolymorphismOptions = null;
+                }
+            });
         });
-        options.MakeReadOnly();
 
         return (JsonTypeInfo<EmbeddedBase>)options.GetTypeInfo(typeof(EmbeddedBase));
     }
@@ -38,7 +40,8 @@ internal static class TolerantMediaJson
     {
         public override AspectRatio Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            AspectRatioJsonValue value = JsonSerializer.Deserialize(ref reader, SourceGenerationContext.Default.AspectRatioJsonValue)
+            using JsonDocument document = JsonDocument.ParseValue(ref reader);
+            AspectRatioJsonValue value = RecordJson.Read(document.RootElement, SourceGenerationContext.Default.AspectRatioJsonValue)
                 ?? throw new JsonException("An aspect ratio must be an object.");
 
             return new AspectRatio(value.Width, value.Height, validate: false);
@@ -54,7 +57,8 @@ internal static class TolerantMediaJson
     {
         public override Caption Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            CaptionJsonValue value = JsonSerializer.Deserialize(ref reader, SourceGenerationContext.Default.CaptionJsonValue)
+            using JsonDocument document = JsonDocument.ParseValue(ref reader);
+            CaptionJsonValue value = RecordJson.Read(document.RootElement, SourceGenerationContext.Default.CaptionJsonValue)
                 ?? throw new JsonException("A caption must be an object.");
 
             if (value.Lang is null || value.File is null)
@@ -75,7 +79,8 @@ internal static class TolerantMediaJson
     {
         public override Embed.External.Properties Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            ExternalPropertiesJsonValue value = JsonSerializer.Deserialize(ref reader, SourceGenerationContext.Default.ExternalPropertiesJsonValue)
+            using JsonDocument document = JsonDocument.ParseValue(ref reader);
+            ExternalPropertiesJsonValue value = RecordJson.Read(document.RootElement, SourceGenerationContext.Default.ExternalPropertiesJsonValue)
                 ?? throw new JsonException("External card properties must be an object.");
 
             if (value.Uri is null || value.Title is null || value.Description is null)

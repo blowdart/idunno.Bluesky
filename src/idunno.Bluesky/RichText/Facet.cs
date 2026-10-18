@@ -94,29 +94,10 @@ public record Facet : IValidatableObject, IRecordValidatable
 
     private IEnumerable<ValidationResult> ValidateFacet()
     {
-        foreach (ValidationResult result in PrefixValidationResults(((IRecordValidatable)Index).ValidateRecord(), nameof(Index)))
+        foreach (ValidationResult result in RecordValidation.Nested(Index, nameof(Index))
+            .Concat(RecordValidation.Collection(Features, nameof(Features), int.MaxValue)))
         {
             yield return result;
-        }
-
-        foreach (FacetFeature feature in Features)
-        {
-            if (feature is IRecordValidatable validatable)
-            {
-                foreach (ValidationResult result in PrefixValidationResults(validatable.ValidateRecord(), nameof(Features)))
-                {
-                    yield return result;
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<ValidationResult> PrefixValidationResults(IEnumerable<ValidationResult> results, string prefix)
-    {
-        foreach (ValidationResult result in results)
-        {
-            string[] memberNames = result.MemberNames.Select(memberName => $"{prefix}.{memberName}").ToArray();
-            yield return new ValidationResult(result.ErrorMessage, memberNames);
         }
     }
 }

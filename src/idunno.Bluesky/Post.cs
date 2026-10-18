@@ -671,7 +671,7 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
 
         try
         {
-            result = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.Post);
+            result = Json.RecordJson.Read(element, SourceGenerationContext.Default.Post);
             if (result is null)
             {
                 return false;
@@ -718,7 +718,7 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
 
     private static Post DeserializeUnvalidated(JsonElement element)
     {
-        PostJsonValue record = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.PostJsonValue)
+        PostJsonValue record = Json.RecordJson.Read(element, SourceGenerationContext.Default.PostJsonValue)
             ?? throw new JsonException("The JSON value does not contain a post.");
 
         EmbeddedBase? embeddedRecord = null;
@@ -734,7 +734,7 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
 
     internal static Facet DeserializeUnvalidatedFacet(JsonElement element)
     {
-        FacetJsonValue facet = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.FacetJsonValue)
+        FacetJsonValue facet = Json.RecordJson.Read(element, SourceGenerationContext.Default.FacetJsonValue)
             ?? throw new JsonException("A facet must be an object.");
 
         if (facet.Index is null || facet.Features is null)
@@ -764,7 +764,7 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
             discriminator.ValueKind is JsonValueKind.String &&
             discriminator.GetString() is "app.bsky.richtext.facet#tag")
         {
-            TagFacetFeatureJsonValue tagFeature = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.TagFacetFeatureJsonValue)
+            TagFacetFeatureJsonValue tagFeature = Json.RecordJson.Read(element, SourceGenerationContext.Default.TagFacetFeatureJsonValue)
                 ?? throw new JsonException("A tag facet feature must be an object.");
 
             if (tagFeature.Tag is null)
@@ -775,7 +775,7 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
             return TagFacetFeature.CreateUnvalidated(tagFeature.Tag);
         }
 
-        return JsonSerializer.Deserialize(element, SourceGenerationContext.Default.FacetFeature)
+        return Json.RecordJson.Read(element, SourceGenerationContext.Default.FacetFeature)
             ?? throw new JsonException("A facet feature cannot be null.");
     }
 
@@ -842,22 +842,10 @@ public record class Post : BlueskyTimestampedRecord, IValidatableObject, IRecord
             }
         }
 
-        int facetPosition = 0;
-        foreach (Facet? facet in Facets ?? [])
+        foreach (ValidationResult result in RecordValidation.Collection(Facets, nameof(Facets), int.MaxValue)
+            .Concat(RecordValidation.Collection(Langs, nameof(Langs), 3)))
         {
-            if (facet is null)
-            {
-                yield return new ValidationResult($"Facet at position {facetPosition} cannot be null.", [nameof(Facets)]);
-            }
-            else
-            {
-                foreach (ValidationResult result in PrefixValidationResults(((IRecordValidatable)facet).ValidateRecord(), nameof(Facets)))
-                {
-                    yield return result;
-                }
-            }
-
-            facetPosition++;
+            yield return result;
         }
 
         foreach (ValidationResult result in ValidateEmbeddedRecord())

@@ -96,7 +96,7 @@ public partial record DraftPost : IValidatableObject, IRecordValidatable
     internal static DraftPost? DeserializeUnvalidated(JsonElement element)
     {
         TolerantDraftJson.CheckType(element, "app.bsky.draft.defs#draftPost");
-        DraftPostJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.DraftPostJsonValue);
+        DraftPostJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.DraftPostJsonValue);
 
         return value is null ? null : new DraftPost(value);
     }

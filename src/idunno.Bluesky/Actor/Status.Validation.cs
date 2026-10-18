@@ -92,7 +92,7 @@ public partial record Status : IValidatableObject, IRecordValidatable
 
     private static Status? DeserializeUnvalidated(JsonElement element)
     {
-        StatusJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.StatusJsonValue);
+        StatusJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.StatusJsonValue);
 
         return value is null ? null : new Status(value);
     }

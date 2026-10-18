@@ -94,7 +94,7 @@ public partial record List : IValidatableObject, IRecordValidatable
 
     private static List? DeserializeUnvalidated(JsonElement element)
     {
-        ListJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.ListJsonValue);
+        ListJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.ListJsonValue);
 
         return value is null ? null : new List(value);
     }

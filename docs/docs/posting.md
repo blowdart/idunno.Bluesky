@@ -55,43 +55,9 @@ If you don't provide `createdAt` the current date and time will be used.
 ## Parsing and validating post records
 
 `Post.Parse()` and `Post.TryParse()` accept a `JsonDocument` or `JsonElement` containing a post record value and validate
-by default. Pass `validate: false` to inspect records that exceed limits or contain invalid nested facets or media:
-
-```c#
-using System.ComponentModel.DataAnnotations;
-using idunno.Bluesky;
-
-if (Post.TryParse(document, validate: false, out Post? post))
-{
-    foreach (ValidationResult error in post.Validate(new ValidationContext(post)))
-    {
-        Console.WriteLine($"{string.Join(", ", error.MemberNames)}: {error.ErrorMessage}");
-    }
-}
-```
-
-Validation cascades into images, galleries, videos, captions and external cards, including media attached to quoted records.
-Failures identify their member paths, for example `EmbeddedRecord.Media.Images[0].AspectRatio.Width`.
-The nested media types also implement `IValidatableObject` and can be validated independently.
-Media checks include required values, counts, aspect ratio dimensions, blob MIME types and declared sizes.
-Image and video alternative text has no length limit in the embed lexicons.
-Blob metadata is untrusted; validation does not inspect or verify the actual file.
-
-Tolerant parsing preserves invalid constraint values but still rejects malformed JSON shapes, missing required media fields,
-and invalid protocol identifiers. Public constructors and ordinary JSON deserialization retain their existing validation.
-This behavior is opt-in for these parsing methods; it does not change how agents deserialize API responses.
-
-The graph `List` and `StarterPack` types provide the same JSON parsing overloads and implement `IValidatableObject`.
-List validation covers name and description limits, description facets and avatar blob metadata, retaining unknown service-defined
-purpose values. Starter pack validation covers name and description limits, its list reference and feed collection.
-Pass `validate: false` to preserve constraint-invalid records, then call `Validate(new ValidationContext(record))`
-to inspect failures. Existing public construction and ordinary JSON deserialization retain their guards.
-
-`Feed.Generator` supports the same parsing and validation pattern for feed generator repository records, not generator views.
-Validation checks the required service DID and display name, display-name limits of 24 graphemes / 240 UTF-8 bytes,
-description limits of 300 graphemes / 3,000 bytes, nested description facets, and PNG/JPEG avatar metadata of at most
-1,000,000 bytes. Tolerant parsing retains invalid facet values and over-limit text for inspection.
-Unknown content modes retain the existing `GeneratorContentMode.Unknown` behavior.
+by default. Bots can pass `validate: false` to inspect constraint-invalid records, then optionally validate them separately.
+See [Parsing and validating records](parsingAndValidatingRecords.md) for the bot-oriented workflow, failure boundaries,
+supported types and the distinction between reading and authoring limits.
 
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 

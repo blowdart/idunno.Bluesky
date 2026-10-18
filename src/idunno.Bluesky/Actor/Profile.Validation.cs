@@ -145,7 +145,7 @@ public partial record Profile : IValidatableObject, IRecordValidatable
         try
         {
             result = validate
-                ? JsonSerializer.Deserialize(element, SourceGenerationContext.Default.ActorProfile)
+                ? Json.RecordJson.Read(element, SourceGenerationContext.Default.ActorProfile)
                 : DeserializeUnvalidated(element);
             if (result is null || (validate && result.ValidateProfile().Any()))
             {
@@ -169,7 +169,7 @@ public partial record Profile : IValidatableObject, IRecordValidatable
 
     private static Profile? DeserializeUnvalidated(JsonElement element)
     {
-        ProfileJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.ProfileJsonValue);
+        ProfileJsonValue? value = Json.RecordJson.Read(element, SourceGenerationContext.Default.ProfileJsonValue);
 
         return value is null ? null : new Profile(value);
     }

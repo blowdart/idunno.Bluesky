@@ -93,7 +93,7 @@ public sealed partial record MessageInput : IValidatableObject, IRecordValidatab
 
     private static MessageInput? DeserializeUnvalidated(JsonElement element)
     {
-        MessageInputJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.MessageInputJsonValue);
+        MessageInputJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.MessageInputJsonValue);
 
         return value is null ? null : new MessageInput(value);
     }

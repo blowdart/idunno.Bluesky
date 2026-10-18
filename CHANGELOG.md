@@ -28,6 +28,8 @@
 #### idunno.Bluesky
 
 * Fixed source-generated JSON deserialization of `MessageInput` by supplying a JSON constructor compatible with its property types. Text and facet setters retain their existing validation.
+* Record parsing now enforces required blob fields and non-null reply message IDs in both validation modes, rejects non-string type discriminators and retains the SDK's handling of unknown dollar-prefixed metadata. Ordinary JSON deserialization remains unchanged.
+* Recursive validation now reports indexed facet features and associated references, reports null facet indices instead of throwing, accepts galleries up to the lexicon's 20-item schema limit, and checks the post language collection's three-entry limit. Gallery authoring guards retain their ten-item limit.
 
 
 ## 8.0.0 - 2026-10-16

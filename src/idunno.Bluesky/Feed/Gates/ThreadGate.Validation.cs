@@ -91,7 +91,7 @@ public partial record ThreadGate : IValidatableObject, IRecordValidatable
 
     private static ThreadGate? DeserializeUnvalidated(JsonElement element)
     {
-        ThreadGateJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.ThreadGateJsonValue);
+        ThreadGateJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.ThreadGateJsonValue);
 
         return value is null ? null : new ThreadGate(value);
     }

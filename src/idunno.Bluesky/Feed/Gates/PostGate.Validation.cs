@@ -91,7 +91,7 @@ public partial record PostGate : IValidatableObject, IRecordValidatable
 
     private static PostGate? DeserializeUnvalidated(JsonElement element)
     {
-        PostGateJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.PostGateJsonValue);
+        PostGateJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.PostGateJsonValue);
 
         return value is null ? null : new PostGate(value);
     }

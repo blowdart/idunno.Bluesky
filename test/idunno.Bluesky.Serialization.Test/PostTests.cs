@@ -162,8 +162,8 @@ public class PostTests
 
         List<System.ComponentModel.DataAnnotations.ValidationResult> validationResults =
             [.. post.Validate(new System.ComponentModel.DataAnnotations.ValidationContext(post))];
-        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets.Index.ByteEnd"));
-        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets.Features.Tag"));
+        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets[0].Index.ByteEnd"));
+        Assert.Contains(validationResults, result => result.MemberNames.Contains("Facets[0].Features[0].Tag"));
     }
 
     [Theory]
@@ -181,7 +181,7 @@ public class PostTests
             GalleryImage galleryImage = new(blob, "alt text", new AspectRatio(1, 1));
             EmbeddedGallery embeddedGallery = new([galleryImage])
             {
-                Items = Enumerable.Repeat(galleryImage, Maximum.GalleryItems + 1).ToList()
+                Items = Enumerable.Repeat(galleryImage, 21).ToList()
             };
             embed = embeddedGallery;
             expectedMember = "EmbeddedRecord.Items";

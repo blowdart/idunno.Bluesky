@@ -11,6 +11,7 @@ using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky.Test;
 
@@ -115,4 +116,49 @@ public class RecordValidationTests
 
     private static Blob CreateBlob(string mimeType, int size) =>
         new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType, size);
+
+    [Fact]
+    public void NullFacetIndexIsReportedThroughEveryContainingRecord()
+    {
+        Facet facet = new(new ByteSlice(0, 1), [new TagFacetFeature("tag")]) { Index = null! };
+        IValidatableObject[] containers =
+        [
+            facet,
+            new Post("post", s_createdAt, facets: [facet]),
+            new Graph.List("list", ListPurpose.CurateList, "description", [facet], createdAt: s_createdAt),
+            new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = "feed", CreatedAt = s_createdAt, DescriptionFacets = [facet] },
+            new MessageInput("message", [facet])
+        ];
+        string[] paths = ["Index", "Facets[0].Index", "DescriptionFacets[0].Index", "DescriptionFacets[0].Index", "Facets[0].Index"];
+        for (int index = 0; index < containers.Length; index++)
+        {
+            IValidatableObject value = containers[index];
+            Assert.Contains(value.Validate(new ValidationContext(value)), result => result.MemberNames.Contains(paths[index]));
+        }
+    }
+
+    [Fact]
+    public void FacetAndFeatureFailuresRetainBothCollectionIndices()
+    {
+        TagFacetFeature invalid = TagFacetFeature.CreateUnvalidated(new string('x', 65));
+        Facet first = new(new ByteSlice(0, 1), [invalid, new TagFacetFeature("valid")]);
+        Facet second = new(new ByteSlice(0, 1), [new TagFacetFeature("valid"), invalid]);
+        Post post = new("text", s_createdAt, facets: [first, second]);
+        ValidationResult[] results = [.. post.Validate(new ValidationContext(post))];
+        Assert.Contains(results, result => result.MemberNames.Contains("Facets[0].Features[0].Tag"));
+        Assert.Contains(results, result => result.MemberNames.Contains("Facets[1].Features[1].Tag"));
+        Assert.Equal(2, results.Length);
+    }
+
+    [Fact]
+    public void AssociatedReferenceErrorsIdentifyEveryInvalidEntry()
+    {
+        StrongReference reference = new(s_postUri, new Cid("bafyreiaahtgpdozb4wjdymb3tvifuwdmxjtumhjxl25lykvsoq3v3l4une"));
+        Embed.External.Properties properties = new("https://example.com", "", "", associatedRefs: [null!, reference, null!]);
+        Post post = new("post", s_createdAt, embeddedRecord: new EmbeddedExternal(properties));
+        string[] members = [.. properties.Validate(new ValidationContext(properties)).SelectMany(result => result.MemberNames)];
+        Assert.Equal(["AssociatedRefs[0]", "AssociatedRefs[2]"], members);
+        string[] nestedMembers = [.. post.Validate(new ValidationContext(post)).SelectMany(result => result.MemberNames)];
+        Assert.Equal(["EmbeddedRecord.External.AssociatedRefs[0]", "EmbeddedRecord.External.AssociatedRefs[2]"], nestedMembers);
+    }
 }

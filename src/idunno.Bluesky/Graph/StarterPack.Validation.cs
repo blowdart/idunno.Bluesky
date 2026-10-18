@@ -92,7 +92,7 @@ public partial record StarterPack : IValidatableObject, IRecordValidatable
 
     private static StarterPack? DeserializeUnvalidated(JsonElement element)
     {
-        StarterPackJsonValue? value = JsonSerializer.Deserialize(element, SourceGenerationContext.Default.StarterPackJsonValue);
+        StarterPackJsonValue? value = RecordJson.Read(element, SourceGenerationContext.Default.StarterPackJsonValue);
 
         return value is null ? null : new StarterPack(value);
     }

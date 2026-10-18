@@ -25,7 +25,7 @@ internal static class TolerantDraftJson
     {
         CheckType(element, discriminator);
 
-        return JsonSerializer.Deserialize(element, typeInfo) ?? throw new JsonException("A draft value must be an object.");
+        return RecordJson.Read(element, typeInfo) ?? throw new JsonException("A draft value must be an object.");
     }
 
     internal static IReadOnlyList<T>? ReadCollection<T>(JsonElement[]? elements, Func<JsonElement, T> read) =>
