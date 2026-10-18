@@ -10,6 +10,9 @@
 
 ### ✅ Fixed
 
+#### idunno.AtProto
+
+* Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
 
 ## 8.0.0 - 2026-10-16
 
