@@ -166,7 +166,10 @@ public partial class AtProtoJetstream
                 cancellationToken.ThrowIfCancellationRequested();
                 if (maximumReconnectAttempts is int maximum && reconnectAttempts >= maximum)
                 {
-                    throw new IOException($"The live Jetstream disconnected after {reconnectAttempts} reconnection attempts.");
+                    string message = maximum == 0
+                        ? "The live Jetstream disconnected. SDK-managed automatic reconnection is disabled."
+                        : $"The live Jetstream disconnected after the SDK exhausted its {reconnectAttempts} reconnection attempts.";
+                    throw new IOException(message);
                 }
 
                 reconnectAttempts++;

@@ -25,6 +25,10 @@
 
 ### ✅ Fixed
 
+#### idunno.AtProto
+
+* Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
+
 #### idunno.Bluesky
 
 * Fixed source-generated JSON deserialization of `MessageInput` by supplying a JSON constructor compatible with its property types. Text and facet setters retain their existing validation.
