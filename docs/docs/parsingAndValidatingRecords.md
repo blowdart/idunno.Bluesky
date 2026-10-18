@@ -94,6 +94,9 @@ Tolerant parsing is not a resource limit. Bound incoming payload sizes and proce
 Supported types implement `IValidatableObject`. Call `Validate(new ValidationContext(record))` to enumerate their
 validation failures. Validation cascades into supported nested values, including facets, media, captions and external cards.
 Nested types can also be validated independently.
+Validation checks required URI and CID members of embedded and associated strong references, mention DIDs, and nonblank
+link facet values. Link facets retain their existing support for nonempty strings that are not valid absolute URIs;
+validate those destinations before using them.
 
 Failures identify member paths, including collection indices, such as:
 

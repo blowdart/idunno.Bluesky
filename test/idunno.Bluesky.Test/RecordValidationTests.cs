@@ -161,4 +161,99 @@ public class RecordValidationTests
         string[] nestedMembers = [.. post.Validate(new ValidationContext(post)).SelectMany(result => result.MemberNames)];
         Assert.Equal(["EmbeddedRecord.External.AssociatedRefs[0]", "EmbeddedRecord.External.AssociatedRefs[2]"], nestedMembers);
     }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void StrongReferenceMembersAreValidatedThroughEveryContainingPath(bool missingUri, bool missingCid)
+    {
+        StrongReference valid = new(s_postUri, new Cid("bafyreiaahtgpdozb4wjdymb3tvifuwdmxjtumhjxl25lykvsoq3v3l4une"));
+        StrongReference reference = valid with
+        {
+            Uri = missingUri ? null! : valid.Uri,
+            Cid = missingCid ? null! : valid.Cid
+        };
+        EmbeddedRecord embed = new(reference);
+        DraftEmbedRecord draftEmbed = new(reference);
+        DraftPost draftPost = new("", (PostSelfLabels?)null, null, null, null, null, [draftEmbed]);
+        Embed.External.Properties card = new("https://example.com", "", "", associatedRefs: [valid, reference]);
+        IValidatableObject[] containers =
+        [
+            embed,
+            new Post("post", s_createdAt, embeddedRecord: embed),
+            new MessageInput("message", embed: embed),
+            draftEmbed,
+            draftPost,
+            new Draft([draftPost], null),
+            card,
+            new Post("post", s_createdAt, embeddedRecord: new EmbeddedExternal(card))
+        ];
+        string[] prefixes =
+        [
+            "Record", "EmbeddedRecord.Record", "Embed.Record", "Record",
+            "EmbedRecords[0].Record", "Posts[0].EmbedRecords[0].Record",
+            "AssociatedRefs[1]", "EmbeddedRecord.External.AssociatedRefs[1]"
+        ];
+
+        for (int index = 0; index < containers.Length; index++)
+        {
+            List<string> expected = [];
+            if (missingUri)
+            {
+                expected.Add($"{prefixes[index]}.Uri");
+            }
+
+            if (missingCid)
+            {
+                expected.Add($"{prefixes[index]}.Cid");
+            }
+
+            IValidatableObject value = containers[index];
+            Assert.Equal(expected, value.Validate(new ValidationContext(value)).SelectMany(result => result.MemberNames));
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void KnownFacetFeaturesReportMissingMembersThroughContainingRecords(string? uri)
+    {
+        Facet facet = new(new ByteSlice(0, 1),
+        [
+            new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk")) { Did = null! },
+            new LinkFacetFeature("https://example.com") { Uri = uri! },
+            new FacetFeature()
+        ]);
+        IValidatableObject[] containers =
+        [
+            facet,
+            new Post("post", s_createdAt, facets: [facet]),
+            new Graph.List("list", ListPurpose.CurateList, "description", [facet], createdAt: s_createdAt),
+            new Generator { Did = new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), DisplayName = "feed", CreatedAt = s_createdAt, DescriptionFacets = [facet] },
+            new MessageInput("message", [facet])
+        ];
+        string[] prefixes = ["", "Facets[0].", "DescriptionFacets[0].", "DescriptionFacets[0].", "Facets[0]."];
+        for (int index = 0; index < containers.Length; index++)
+        {
+            IValidatableObject value = containers[index];
+            string[] expected = [$"{prefixes[index]}Features[0].Did", $"{prefixes[index]}Features[1].Uri"];
+            Assert.Equal(expected, value.Validate(new ValidationContext(value)).SelectMany(result => result.MemberNames));
+        }
+    }
+
+    [Fact]
+    public void FacetValidationPreservesNonemptyLinkAndUnknownFeatureHandling()
+    {
+        Facet facet = new(new ByteSlice(0, 1),
+        [
+            new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk")),
+            new LinkFacetFeature("not an absolute URI"),
+            new FacetFeature()
+        ]);
+        Post post = new("post", s_createdAt, facets: [facet]);
+        Assert.Empty(post.Validate(new ValidationContext(post)));
+    }
 }

@@ -208,11 +208,6 @@ public partial record DraftEmbedRecord : IValidatableObject, IRecordValidatable
 
     IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateReference();
 
-    private IEnumerable<ValidationResult> ValidateReference()
-    {
-        if (Record is null)
-        {
-            yield return new ValidationResult("A record reference is required.", [nameof(Record)]);
-        }
-    }
+    private IEnumerable<ValidationResult> ValidateReference() =>
+        RecordValidation.Reference(Record, nameof(Record));
 }

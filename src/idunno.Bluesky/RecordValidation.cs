@@ -4,7 +4,9 @@
 using System.ComponentModel.DataAnnotations;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Feed.Gates;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
 
@@ -38,6 +40,21 @@ internal static class RecordValidation
                     yield return result;
                 }
             }
+            else if (value is StrongReference reference)
+            {
+                foreach (ValidationResult result in Reference(reference, path))
+                {
+                    yield return result;
+                }
+            }
+            else if (value is MentionFacetFeature { Did: null })
+            {
+                yield return new ValidationResult("A mention DID is required.", [$"{path}.{nameof(MentionFacetFeature.Did)}"]);
+            }
+            else if (value is LinkFacetFeature link && string.IsNullOrWhiteSpace(link.Uri))
+            {
+                yield return new ValidationResult("A link URI is required.", [$"{path}.{nameof(LinkFacetFeature.Uri)}"]);
+            }
             else if (value is ListRule { List: null })
             {
                 yield return new ValidationResult("A list reference is required.", [$"{path}.{nameof(ListRule.List)}"]);
@@ -69,6 +86,25 @@ internal static class RecordValidation
         {
             string[] members = [.. result.MemberNames.Select(member => $"{memberName}.{member}")];
             yield return new ValidationResult(result.ErrorMessage, members.Length == 0 ? [memberName] : members);
+        }
+    }
+
+    internal static IEnumerable<ValidationResult> Reference(StrongReference? reference, string memberName)
+    {
+        if (reference is null)
+        {
+            yield return new ValidationResult("A record reference is required.", [memberName]);
+            yield break;
+        }
+
+        if (reference.Uri is null)
+        {
+            yield return new ValidationResult("A record URI is required.", [$"{memberName}.{nameof(reference.Uri)}"]);
+        }
+
+        if (reference.Cid is null)
+        {
+            yield return new ValidationResult("A record CID is required.", [$"{memberName}.{nameof(reference.Cid)}"]);
         }
     }
 
