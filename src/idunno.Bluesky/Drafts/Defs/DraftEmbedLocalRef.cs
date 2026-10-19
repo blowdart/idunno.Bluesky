@@ -14,8 +14,10 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedLocalRef), typeDiscriminator: "app.bsky.draft.defs#draftEmbedLocalRef")]
-public record DraftEmbedLocalRef
+public partial record DraftEmbedLocalRef
 {
+    private readonly string _path = null!;
+
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedLocalRef"/> with the specified local path.
     /// </summary>
@@ -44,7 +46,7 @@ public record DraftEmbedLocalRef
     [JsonRequired]
     public string Path
     {
-        get;
+        get => _path;
 
         init
         {
@@ -62,7 +64,7 @@ public record DraftEmbedLocalRef
                 value.GetUtf8Length(),
                 Maximum.DraftEmbedLocalRefPathMinimumLengthInBytes);
 
-            field = value;
+            _path = value;
         }
     }
 }

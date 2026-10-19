@@ -6,6 +6,9 @@ and reply to any posts that indicate a problem.
 
 For this example we're going to write a bot that watches for posts that contain certain keywords.
 
+For records that violate SDK constraints, see [Parsing and validating records](../parsingAndValidatingRecords.md).
+It explains how to opt into tolerant parsing and apply your bot's policy to validation failures.
+
 > [!NOTE]
 > You must already have created an account for your bot to run as, and generated a [app password](https://bsky.app/settings/app-passwords) for that account.
 

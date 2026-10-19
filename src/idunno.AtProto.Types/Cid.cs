@@ -16,7 +16,7 @@ namespace idunno.AtProto;
 /// <para>See https://github.com/multiformats/cid for specification.</para>
 /// </remarks>
 [JsonConverter(typeof(Json.CidConverter))]
-public sealed class Cid : IEquatable<Cid>
+public sealed class Cid : IEquatable<Cid>, IParsable<Cid>
 {
     // The multiformats unsigned-varint specification limits values to 9 bytes / 63 bits.
     private const int MaximumVarIntLength = 9;
@@ -491,5 +491,37 @@ public sealed class Cid : IEquatable<Cid>
             result = null;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Parses a string into a <see cref="Cid"/>.
+    /// </summary>
+    /// <param name="s">The content identifier to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed content identifier.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid content identifier.</exception>
+    public static Cid Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out Cid? result))
+        {
+            return result;
+        }
+
+        throw new FormatException("The value is not a valid content identifier.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into a <see cref="Cid"/>.
+    /// </summary>
+    /// <param name="s">The content identifier to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed content identifier, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid content identifier; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Cid result)
+    {
+        return TryParse(s, out result);
     }
 }

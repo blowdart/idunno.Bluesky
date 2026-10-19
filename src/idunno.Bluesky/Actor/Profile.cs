@@ -19,8 +19,13 @@ namespace idunno.Bluesky.Actor;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Profile), typeDiscriminator: RecordType.Profile)]
-public record Profile : BlueskyRecord
+public partial record Profile : BlueskyRecord
 {
+    private string? _displayName;
+    private string? _description;
+    private string? _pronouns;
+    private IReadOnlyCollection<StrongReference>? _links;
+
     /// <summary>
     /// Creates a new instance of <see cref="Profile"/>, with the creation date set to the current UTC time.
     /// </summary>
@@ -151,7 +156,7 @@ public record Profile : BlueskyRecord
     [JsonInclude]
     public string? DisplayName
     {
-        get;
+        get => _displayName;
 
         set
         {
@@ -161,7 +166,7 @@ public record Profile : BlueskyRecord
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DisplayNameLengthInBytes);
             }
 
-            field = value;
+            _displayName = value;
         }
     }
 
@@ -172,7 +177,7 @@ public record Profile : BlueskyRecord
     [JsonInclude]
     public string? Description
     {
-        get;
+        get => _description;
 
         set
         {
@@ -182,7 +187,7 @@ public record Profile : BlueskyRecord
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.DescriptionLengthInBytes);
             }
 
-            field = value;
+            _description = value;
         }
     }
 
@@ -193,7 +198,7 @@ public record Profile : BlueskyRecord
     [JsonInclude]
     public string? Pronouns
     {
-        get;
+        get => _pronouns;
 
         set
         {
@@ -203,7 +208,7 @@ public record Profile : BlueskyRecord
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), Maximum.PronounLengthInBytes);
             }
 
-            field = value;
+            _pronouns = value;
         }
     }
 
@@ -245,7 +250,7 @@ public record Profile : BlueskyRecord
     [JsonIgnore]
     public IReadOnlyCollection<StrongReference>? Links
     {
-        get;
+        get => _links;
         set
         {
             if (value is not null)
@@ -257,7 +262,7 @@ public record Profile : BlueskyRecord
                 }
             }
 
-            field = value is null ? null : Array.AsReadOnly(value.ToArray());
+            _links = value is null ? null : Array.AsReadOnly(value.ToArray());
         }
     }
 

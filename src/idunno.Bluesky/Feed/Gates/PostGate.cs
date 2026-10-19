@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Feed.Gates;
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(PostGate), typeDiscriminator: RecordType.PostGate)]
-public record PostGate : BlueskyRecord
+public partial record PostGate : BlueskyRecord
 {
     /// <summary>
     /// Creates a new instance of <see cref="PostGate"/>.

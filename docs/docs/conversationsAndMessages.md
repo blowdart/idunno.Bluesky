@@ -54,6 +54,13 @@ optionally the message id of the last message seen.
 
 ## <a name="sending">Sending a message</a>
 
+`MessageInput` implements `IValidatableObject`, validating text limits, nested facets, embedded record references and reply references.
+Its `Parse` and `TryParse` overloads accept either a `JsonDocument` or `JsonElement` and validate by default.
+Pass `validate: false` to retain constraint-invalid input, then call `Validate(new ValidationContext(message))` to inspect failures,
+including indexed paths such as `Facets[0].Index.ByteStart`. This opt-in mode still rejects malformed JSON and missing required values.
+It does not relax the guards on public constructors or init accessors, or change how agents deserialize messages.
+
+
 To send a message to a conversation use `SendMessage()`:
 
 ```c#

@@ -18,7 +18,7 @@ namespace idunno.AtProto;
 /// </remarks>
 [JsonConverter(typeof(Json.AtUriConverter))]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class AtUri : IEquatable<AtUri>
+public sealed partial class AtUri : IEquatable<AtUri>, IParsable<AtUri>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private const string Protocol = "at";
@@ -237,6 +237,44 @@ public sealed partial class AtUri : IEquatable<AtUri>
         }
 
         return Parse(s, false, out result);
+    }
+
+    /// <summary>
+    /// Parses a string into an <see cref="AtUri"/>.
+    /// </summary>
+    /// <param name="s">The AT URI to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed AT URI.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid AT URI.</exception>
+    public static AtUri Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out AtUri? result))
+        {
+            return result;
+        }
+
+        throw new FormatException("The value is not a valid AT URI.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into an <see cref="AtUri"/>.
+    /// </summary>
+    /// <param name="s">The AT URI to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed AT URI, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid AT URI; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out AtUri result)
+    {
+        if (s is null)
+        {
+            result = null;
+            return false;
+        }
+
+        return TryParse(s, out result);
     }
 
     private static bool Parse(string s, bool throwOnError, out AtUri? result)

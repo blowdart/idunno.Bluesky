@@ -1,1 +1,132 @@
 #nullable enable
+idunno.Bluesky.Actor.Link.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Actor.Status.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Feed.Generator.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+static idunno.Bluesky.Actor.Link.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Actor.Link!
+static idunno.Bluesky.Actor.Link.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Actor.Link!
+static idunno.Bluesky.Actor.Link.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Actor.Link!
+static idunno.Bluesky.Actor.Link.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Actor.Link!
+static idunno.Bluesky.Actor.Link.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Actor.Link! result) -> bool
+static idunno.Bluesky.Actor.Link.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Actor.Link! result) -> bool
+static idunno.Bluesky.Actor.Link.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Actor.Link! result) -> bool
+static idunno.Bluesky.Actor.Link.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Actor.Link! result) -> bool
+static idunno.Bluesky.Actor.Status.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Actor.Status!
+static idunno.Bluesky.Actor.Status.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Actor.Status!
+static idunno.Bluesky.Actor.Status.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Actor.Status!
+static idunno.Bluesky.Actor.Status.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Actor.Status!
+static idunno.Bluesky.Actor.Status.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Actor.Status! result) -> bool
+static idunno.Bluesky.Actor.Status.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Actor.Status! result) -> bool
+static idunno.Bluesky.Actor.Status.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Actor.Status! result) -> bool
+static idunno.Bluesky.Actor.Status.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Actor.Status! result) -> bool
+static idunno.Bluesky.Feed.Generator.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Feed.Generator!
+static idunno.Bluesky.Feed.Generator.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Feed.Generator!
+static idunno.Bluesky.Feed.Generator.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Feed.Generator!
+static idunno.Bluesky.Feed.Generator.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Feed.Generator!
+static idunno.Bluesky.Feed.Generator.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Feed.Generator! result) -> bool
+static idunno.Bluesky.Feed.Generator.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Feed.Generator! result) -> bool
+static idunno.Bluesky.Feed.Generator.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Feed.Generator! result) -> bool
+static idunno.Bluesky.Feed.Generator.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Feed.Generator! result) -> bool
+idunno.Bluesky.Chat.MessageInput.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.Draft.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftPost.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedCaption.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedExternal.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedGallery.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedImage.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedLocalRef.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedRecord.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Drafts.DraftEmbedVideo.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Feed.Gates.PostGate.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Feed.Gates.ThreadGate.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Graph.List.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Graph.StarterPack.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+static idunno.Bluesky.Chat.MessageInput.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Chat.MessageInput!
+static idunno.Bluesky.Chat.MessageInput.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Chat.MessageInput!
+static idunno.Bluesky.Chat.MessageInput.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Chat.MessageInput!
+static idunno.Bluesky.Chat.MessageInput.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Chat.MessageInput!
+static idunno.Bluesky.Chat.MessageInput.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Chat.MessageInput! result) -> bool
+static idunno.Bluesky.Chat.MessageInput.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Chat.MessageInput! result) -> bool
+static idunno.Bluesky.Chat.MessageInput.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Chat.MessageInput! result) -> bool
+static idunno.Bluesky.Chat.MessageInput.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Chat.MessageInput! result) -> bool
+static idunno.Bluesky.Drafts.Draft.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Drafts.Draft!
+static idunno.Bluesky.Drafts.Draft.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Drafts.Draft!
+static idunno.Bluesky.Drafts.Draft.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Drafts.Draft!
+static idunno.Bluesky.Drafts.Draft.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Drafts.Draft!
+static idunno.Bluesky.Drafts.Draft.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Drafts.Draft! result) -> bool
+static idunno.Bluesky.Drafts.Draft.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Drafts.Draft! result) -> bool
+static idunno.Bluesky.Drafts.Draft.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Drafts.Draft! result) -> bool
+static idunno.Bluesky.Drafts.Draft.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Drafts.Draft! result) -> bool
+static idunno.Bluesky.Drafts.DraftPost.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Drafts.DraftPost!
+static idunno.Bluesky.Drafts.DraftPost.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Drafts.DraftPost!
+static idunno.Bluesky.Drafts.DraftPost.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Drafts.DraftPost!
+static idunno.Bluesky.Drafts.DraftPost.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Drafts.DraftPost!
+static idunno.Bluesky.Drafts.DraftPost.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Drafts.DraftPost! result) -> bool
+static idunno.Bluesky.Drafts.DraftPost.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Drafts.DraftPost! result) -> bool
+static idunno.Bluesky.Drafts.DraftPost.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Drafts.DraftPost! result) -> bool
+static idunno.Bluesky.Drafts.DraftPost.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Drafts.DraftPost! result) -> bool
+static idunno.Bluesky.Feed.Gates.PostGate.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Feed.Gates.PostGate!
+static idunno.Bluesky.Feed.Gates.PostGate.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Feed.Gates.PostGate!
+static idunno.Bluesky.Feed.Gates.PostGate.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Feed.Gates.PostGate!
+static idunno.Bluesky.Feed.Gates.PostGate.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Feed.Gates.PostGate!
+static idunno.Bluesky.Feed.Gates.PostGate.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Feed.Gates.PostGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.PostGate.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Feed.Gates.PostGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.PostGate.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Feed.Gates.PostGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.PostGate.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Feed.Gates.PostGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.ThreadGate.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Feed.Gates.ThreadGate!
+static idunno.Bluesky.Feed.Gates.ThreadGate.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Feed.Gates.ThreadGate!
+static idunno.Bluesky.Feed.Gates.ThreadGate.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Feed.Gates.ThreadGate!
+static idunno.Bluesky.Feed.Gates.ThreadGate.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Feed.Gates.ThreadGate!
+static idunno.Bluesky.Feed.Gates.ThreadGate.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Feed.Gates.ThreadGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.ThreadGate.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Feed.Gates.ThreadGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.ThreadGate.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Feed.Gates.ThreadGate! result) -> bool
+static idunno.Bluesky.Feed.Gates.ThreadGate.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Feed.Gates.ThreadGate! result) -> bool
+static idunno.Bluesky.Graph.List.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Graph.List!
+static idunno.Bluesky.Graph.List.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Graph.List!
+static idunno.Bluesky.Graph.List.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Graph.List!
+static idunno.Bluesky.Graph.List.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Graph.List!
+static idunno.Bluesky.Graph.List.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Graph.List! result) -> bool
+static idunno.Bluesky.Graph.List.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Graph.List! result) -> bool
+static idunno.Bluesky.Graph.List.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Graph.List! result) -> bool
+static idunno.Bluesky.Graph.List.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Graph.List! result) -> bool
+static idunno.Bluesky.Graph.StarterPack.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Graph.StarterPack!
+static idunno.Bluesky.Graph.StarterPack.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Graph.StarterPack!
+static idunno.Bluesky.Graph.StarterPack.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Graph.StarterPack!
+static idunno.Bluesky.Graph.StarterPack.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Graph.StarterPack!
+static idunno.Bluesky.Graph.StarterPack.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Graph.StarterPack! result) -> bool
+static idunno.Bluesky.Graph.StarterPack.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Graph.StarterPack! result) -> bool
+static idunno.Bluesky.Graph.StarterPack.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Graph.StarterPack! result) -> bool
+static idunno.Bluesky.Graph.StarterPack.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Graph.StarterPack! result) -> bool
+idunno.Bluesky.Actor.Profile.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.AspectRatio.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.Caption.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedExternal.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedExternalMedia.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedImage.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedRecord.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedRecordWithMedia.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedVideo.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.External.Properties.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.Gallery.GalleryImage.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+static idunno.Bluesky.Actor.Profile.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Actor.Profile!
+static idunno.Bluesky.Actor.Profile.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Actor.Profile!
+static idunno.Bluesky.Actor.Profile.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Actor.Profile!
+static idunno.Bluesky.Actor.Profile.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Actor.Profile!
+static idunno.Bluesky.Actor.Profile.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Actor.Profile! result) -> bool
+static idunno.Bluesky.Actor.Profile.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Actor.Profile! result) -> bool
+static idunno.Bluesky.Actor.Profile.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Actor.Profile! result) -> bool
+static idunno.Bluesky.Actor.Profile.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Actor.Profile! result) -> bool
+idunno.Bluesky.PostBuilder.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+static idunno.Bluesky.Post.Parse(System.Text.Json.JsonDocument! document) -> idunno.Bluesky.Post!
+static idunno.Bluesky.Post.Parse(System.Text.Json.JsonDocument! document, bool validate) -> idunno.Bluesky.Post!
+static idunno.Bluesky.Post.Parse(System.Text.Json.JsonElement element) -> idunno.Bluesky.Post!
+static idunno.Bluesky.Post.Parse(System.Text.Json.JsonElement element, bool validate) -> idunno.Bluesky.Post!
+static idunno.Bluesky.Post.TryParse(System.Text.Json.JsonDocument? document, out idunno.Bluesky.Post! result) -> bool
+static idunno.Bluesky.Post.TryParse(System.Text.Json.JsonDocument? document, bool validate, out idunno.Bluesky.Post! result) -> bool
+static idunno.Bluesky.Post.TryParse(System.Text.Json.JsonElement element, out idunno.Bluesky.Post! result) -> bool
+static idunno.Bluesky.Post.TryParse(System.Text.Json.JsonElement element, bool validate, out idunno.Bluesky.Post! result) -> bool
+idunno.Bluesky.Post.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedGallery.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.Embed.EmbeddedImages.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.RichText.ByteSlice.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.RichText.Facet.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
+idunno.Bluesky.RichText.TagFacetFeature.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!

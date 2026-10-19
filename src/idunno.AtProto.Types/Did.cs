@@ -19,7 +19,7 @@ namespace idunno.AtProto;
 /// </remarks>
 [JsonConverter(typeof(Json.DidConverter))]
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed partial class Did : AtIdentifier, IEquatable<Did>
+public sealed partial class Did : AtIdentifier, IEquatable<Did>, IParsable<Did>
 {
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private const string DidPrefix = "did:";
@@ -205,6 +205,44 @@ public sealed partial class Did : AtIdentifier, IEquatable<Did>
     public static bool TryParse(string s, [NotNullWhen(true)] out Did? result)
     {
         return Parse(s, false, out result);
+    }
+
+    /// <summary>
+    /// Parses a string into a <see cref="Did"/>.
+    /// </summary>
+    /// <param name="s">The DID to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <returns>The parsed DID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="FormatException"><paramref name="s"/> is not a valid DID.</exception>
+    public static Did Parse(string s, IFormatProvider? provider)
+    {
+        ArgumentNullException.ThrowIfNull(s);
+
+        if (TryParse(s, out Did? result))
+        {
+            return result;
+        }
+
+        throw new FormatException("The value is not a valid DID.");
+    }
+
+    /// <summary>
+    /// Tries to parse a string into a <see cref="Did"/>.
+    /// </summary>
+    /// <param name="s">The DID to parse.</param>
+    /// <param name="provider">The format provider, which is ignored.</param>
+    /// <param name="result">The parsed DID, or <see langword="null"/> if parsing failed.</param>
+    /// <returns><see langword="true"/> if the string is a valid DID; otherwise, <see langword="false"/>.</returns>
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out Did result)
+    {
+        if (s is null)
+        {
+            result = null;
+            return false;
+        }
+
+        return TryParse(s, out result);
     }
 
     internal static bool Parse(string s, bool throwOnError, out Did? result)

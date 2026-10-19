@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.RichText;
@@ -8,7 +9,7 @@ namespace idunno.Bluesky.RichText;
 /// <summary>
 /// The start and end value for a slice to apply a facet to.
 /// </summary>
-public sealed record ByteSlice
+public sealed record ByteSlice : IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Constructs a new instance of <see cref="ByteSlice"/>.
@@ -52,4 +53,50 @@ public sealed record ByteSlice
     [JsonInclude]
     [JsonRequired]
     public long ByteEnd { get; init; }
+
+    internal static ByteSlice CreateUnvalidated(long byteStart, long byteEnd)
+    {
+        return new ByteSlice(byteStart, byteEnd, true);
+    }
+
+    private ByteSlice(long byteStart, long byteEnd, bool _)
+    {
+        ByteStart = byteStart;
+        ByteEnd = byteEnd;
+    }
+
+    /// <summary>
+    /// Validates the byte range.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the byte range is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateByteSlice();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord()
+    {
+        return ValidateByteSlice();
+    }
+
+    private IEnumerable<ValidationResult> ValidateByteSlice()
+    {
+        if (ByteStart < 0)
+        {
+            yield return new ValidationResult("The byte start cannot be negative.", [nameof(ByteStart)]);
+        }
+
+        if (ByteEnd < 0)
+        {
+            yield return new ValidationResult("The byte end cannot be negative.", [nameof(ByteEnd)]);
+        }
+        else if (ByteEnd < ByteStart)
+        {
+            yield return new ValidationResult("The byte end must be greater than or equal to the byte start.", [nameof(ByteEnd)]);
+        }
+    }
 }

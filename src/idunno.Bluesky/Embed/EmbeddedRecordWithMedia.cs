@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Embed;
@@ -8,7 +9,7 @@ namespace idunno.Bluesky.Embed;
 /// <summary>
 /// An embedded record with media.
 /// </summary>
-public record EmbeddedRecordWithMedia : EmbeddedMediaBase
+public record EmbeddedRecordWithMedia : EmbeddedMediaBase, IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Creates a new <see cref="EmbeddedRecordWithMedia"/>
@@ -58,4 +59,43 @@ public record EmbeddedRecordWithMedia : EmbeddedMediaBase
     /// </summary>
     [JsonInclude]
     public EmbeddedRecord Record { get; init; }
+
+    /// <summary>
+    /// Validates the embedded record and its nested media.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the embed is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateMedia();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord() => ValidateMedia();
+
+    private IEnumerable<ValidationResult> ValidateMedia()
+    {
+        foreach (ValidationResult result in RecordValidation.Nested(Record, nameof(Record)))
+        {
+            yield return result;
+        }
+
+        if (Media is null)
+        {
+            yield return new ValidationResult("Media is required.", [nameof(Media)]);
+        }
+        else if (Media is EmbeddedRecordWithMedia)
+        {
+            yield return new ValidationResult("Record-with-media cannot contain another record-with-media embed.", [nameof(Media)]);
+        }
+        else if (Media is IRecordValidatable validatable)
+        {
+            foreach (ValidationResult result in RecordValidation.Nested(validatable, nameof(Media)))
+            {
+                yield return result;
+            }
+        }
+    }
 }

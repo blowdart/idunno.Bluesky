@@ -18,8 +18,10 @@ namespace idunno.Bluesky.Drafts;
 /// </remarks>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftPost), typeDiscriminator: "app.bsky.draft.defs#draftPost")]
-public record DraftPost
+public partial record DraftPost
 {
+    private string _text = null!;
+
     /// <summary>
     /// Creates a new instance of <see cref="DraftPost"/> with the specified content and optional embedded media and labels.
     /// </summary>
@@ -252,7 +254,7 @@ public record DraftPost
     [JsonRequired]
     public string Text
     {
-        get;
+        get => _text;
 
         set
         {
@@ -265,7 +267,7 @@ public record DraftPost
                 value.GetGraphemeLength(),
                 Maximum.DraftTextLengthInGraphemes);
 
-            field = value;
+            _text = value;
         }
     }
 

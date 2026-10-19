@@ -34,7 +34,8 @@ await foreach (JetstreamEvent evt in jetstream.StreamAsync())
 `StreamAsync` opens the connection when iteration starts. Each `JetstreamEvent` has a `Did`, a `Kind`, a
 nullable `Sequence` (populated by v2), and a `WitnessedAt` timestamp. A commit carries the parsed record as
 `JsonElement?`, not a typed Bluesky record; deletes have no record. Check the kind and operation before
-accessing a commit's payload, and validate external records before deserializing them as a particular type.
+accessing a commit's payload. For typed record inspection, including records that violate SDK constraints, see
+[Parsing and validating records](parsingAndValidatingRecords.md).
 
 The default v2 host is `wss://jetstream.us-west.bsky.network`. You can pass a different v2 host as `uri` to
 the constructor; `AtProtoJetstream` appends the subscription path. `StreamAsync` does not support

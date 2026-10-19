@@ -52,6 +52,13 @@ await agent.Post("Hello world from the past.",
 
 If you don't provide `createdAt` the current date and time will be used.
 
+## Parsing and validating post records
+
+`Post.Parse()` and `Post.TryParse()` accept a `JsonDocument` or `JsonElement` containing a post record value and validate
+by default. Bots can pass `validate: false` to inspect constraint-invalid records, then optionally validate them separately.
+See [Parsing and validating records](parsingAndValidatingRecords.md) for the bot-oriented workflow, failure boundaries,
+supported types and the distinction between reading and authoring limits.
+
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 
 The `Post()` method creates a record in your Bluesky repo and returns an `AtProtoHttpResult<CreateRecordResult>`

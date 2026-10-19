@@ -12,7 +12,7 @@ namespace idunno.Bluesky.Drafts;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(DraftEmbedExternal), typeDiscriminator: "app.bsky.draft.defs#draftEmbedExternal")]
-public record DraftEmbedExternal
+public partial record DraftEmbedExternal
 {
     /// <summary>
     /// Creates a new instance of <see cref="DraftEmbedExternal"/> with the specified external <see cref="Uri"/>.

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
@@ -12,7 +13,7 @@ namespace idunno.Bluesky.Embed;
 /// An assortment of media embedded in a Bluesky record (eg, a post).
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Matches Bluesky lexicon")]
-public record EmbeddedGallery : EmbeddedMediaBase
+public record EmbeddedGallery : EmbeddedMediaBase, IValidatableObject, IRecordValidatable
 {
     private List<GalleryImage> _items;
 
@@ -151,6 +152,43 @@ public record EmbeddedGallery : EmbeddedMediaBase
     /// </summary>
     [JsonIgnore]
     public int Count => _items.Count;
+
+    /// <summary>
+    /// Validates the embedded gallery items and their count.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the gallery is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateGallery();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord()
+    {
+        return ValidateGallery();
+    }
+
+    private IEnumerable<ValidationResult> ValidateGallery()
+    {
+        // The lexicon's schema ceiling is twenty; Maximum.GalleryItems applies its recommended ten-item authoring limit.
+        if (Items.Count > 20)
+        {
+            yield return new ValidationResult(
+                "An embedded gallery cannot contain more than 20 items.",
+                [nameof(Items)]);
+        }
+
+        for (int index = 0; index < Items.Count; index++)
+        {
+            foreach (ValidationResult result in RecordValidation.Nested(Items[index], $"{nameof(Items)}[{index}]"))
+            {
+                yield return result;
+            }
+        }
+    }
 
     /// <summary>
     /// Adds an <see cref="GalleryImage"/> item to the gallery.

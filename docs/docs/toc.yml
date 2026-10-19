@@ -105,6 +105,8 @@ items:
 
   - name: Writing Bots
     items:
+      - name: Parsing and validating records
+        href: parsingAndValidatingRecords.md
       - name: Simple bots
         items:
           - name: Writing a scheduled post bot

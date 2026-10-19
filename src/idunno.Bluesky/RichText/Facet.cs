@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,7 +12,7 @@ namespace idunno.Bluesky.RichText;
 /// </summary>
 [JsonPolymorphic]
 [JsonDerivedType(typeof(Facet), typeDiscriminator: "app.bsky.richtext.facet")]
-public record Facet
+public record Facet : IValidatableObject, IRecordValidatable
 {
     /// <summary>
     /// Creates a new instance of <see cref="Facet"/>.
@@ -72,4 +73,31 @@ public record Facet
     [JsonExtensionData]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be writable for json deserialization")]
     public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
+
+    /// <summary>
+    /// Validates the byte range and features in the facet.
+    /// </summary>
+    /// <param name="validationContext">The context in which the validation is performed.</param>
+    /// <returns>A collection of validation errors, or an empty collection when the facet is valid.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="validationContext"/> is <see langword="null"/>.</exception>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        ArgumentNullException.ThrowIfNull(validationContext);
+
+        return ValidateFacet();
+    }
+
+    IEnumerable<ValidationResult> IRecordValidatable.ValidateRecord()
+    {
+        return ValidateFacet();
+    }
+
+    private IEnumerable<ValidationResult> ValidateFacet()
+    {
+        foreach (ValidationResult result in RecordValidation.Nested(Index, nameof(Index))
+            .Concat(RecordValidation.Collection(Features, nameof(Features), int.MaxValue)))
+        {
+            yield return result;
+        }
+    }
 }
