@@ -220,7 +220,110 @@ public class AtProtoJetstreamV2Tests
         IOException error = await Assert.ThrowsAsync<IOException>(
             () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Equal("The live Jetstream disconnected. SDK-managed automatic reconnection is disabled.", error.Message);
+        Assert.Null(error.InnerException);
         Assert.Single(server.Connections);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LiveStreamOverflowDrainsInOrderAndPreservesItsCauseUnlessCancelled(bool cancel)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource overflowParsed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        const long lastBuffered = 41 + 1024;
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(41), token);
+            await burst.Task.WaitAsync(token);
+            for (long sequence = 42; sequence <= lastBuffered + 1; sequence++)
+            {
+                await SendText(socket, IdentityEvent(sequence), token);
+            }
+        });
+        using var jetstream = new ObservedRecordJetstream(server.Uri, lastBuffered + 1, overflowParsed);
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 40, maximumReconnectAttempts: 0, cancellationToken: cancellation.Token).GetAsyncEnumerator(cancellation.Token);
+        Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal(41, stream.Current.Sequence);
+
+        // Pause consumption until the first event beyond the channel capacity has been parsed and offered.
+        burst.SetResult();
+        await overflowParsed.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        for (long sequence = 42; sequence <= lastBuffered; sequence++)
+        {
+            Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Equal(sequence, stream.Current.Sequence);
+        }
+
+        if (cancel)
+        {
+            await cancellation.CancelAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        }
+        else
+        {
+            IOException error = await Assert.ThrowsAsync<IOException>(
+                () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Equal("The live Jetstream disconnected. SDK-managed automatic reconnection is disabled.", error.Message);
+            IOException cause = Assert.IsType<IOException>(error.InnerException);
+            Assert.Equal("The live Jetstream consumer fell behind; reconnecting from the last yielded sequence.", cause.Message);
+        }
+
+        Assert.Contains("cursor=40", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LiveStreamRetryExhaustionOnlyRetainsTheFinalAttemptsCause(bool finalAttemptFaults)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        TimerTrackingTimeProvider timeProvider = new(TimeSpan.FromSeconds(1));
+        timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, connection, token) =>
+        {
+            if (connection == 1 || finalAttemptFaults)
+            {
+                string error = connection == 1 ? "FirstAttempt" : "FinalAttempt";
+                await SendText(socket, $$$"""{"$type":"error","error":"{{{error}}}","message":"interrupted"}""", token);
+            }
+            else
+            {
+                await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, token);
+            }
+        });
+        using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, TimeProvider = timeProvider });
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            cursor: 41, maximumReconnectAttempts: 1, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        Task<bool> next = stream.MoveNextAsync().AsTask();
+        await timeProvider.WaitForTimerAsync(cancellationToken);
+        timeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        IOException error = await Assert.ThrowsAsync<IOException>(
+            () => next.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        Assert.Equal("The live Jetstream disconnected after the SDK exhausted its 1 reconnection attempts.", error.Message);
+        if (finalAttemptFaults)
+        {
+            IOException cause = Assert.IsType<IOException>(error.InnerException);
+            Assert.Contains("The live Jetstream reported an error:", cause.Message, StringComparison.Ordinal);
+            Assert.Contains("FinalAttempt", cause.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("FirstAttempt", cause.Message, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Null(error.InnerException);
+        }
+
+        Assert.Equal(2, server.Connections.Count);
+        Assert.All(server.Connections, connection => Assert.Contains("cursor=41", connection.Query, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -245,6 +348,7 @@ public class AtProtoJetstreamV2Tests
         IOException error = await Assert.ThrowsAsync<IOException>(
             () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Equal("The live Jetstream disconnected after the SDK exhausted its 5 reconnection attempts.", error.Message);
+        Assert.Null(error.InnerException);
         Assert.Equal(12, attempts); // The rejected WebSocket upgrade and its error-detail request each count once.
         Assert.Throws<ArgumentOutOfRangeException>(() => jetstream.StreamAsync(
             cursor: null, maximumReconnectAttempts: -1, cancellationToken: cancellationToken));
@@ -2075,6 +2179,22 @@ public class AtProtoJetstreamV2Tests
             }
 
             base.OnConnectionStateChanged(e);
+        }
+    }
+
+    private sealed class ObservedRecordJetstream(
+        Uri uri,
+        long observedSequence,
+        TaskCompletionSource parsed) : AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: uri, options: new JetstreamOptions { UseCompression = false })
+    {
+        protected override void OnRecordReceived(RecordReceivedEventArgs e)
+        {
+            base.OnRecordReceived(e);
+            if (e.ParsedEvent.Sequence == observedSequence)
+            {
+                parsed.TrySetResult();
+            }
         }
     }
 

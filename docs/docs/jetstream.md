@@ -187,6 +187,12 @@ V2 sequences are cursors scoped to the issuing server. `StreamAsync()` retries t
 failures and suppresses the repeated event from its inclusive cursor within a single enumeration.
 By default retries are unlimited. Pass `maximumReconnectAttempts: 5` to stop after five consecutive
 reconnections; yielding an event resets the count. An exhausted limit throws `IOException`.
+Pass `maximumReconnectAttempts: 0` to disable SDK-managed reconnection when your application owns recovery.
+The final `IOException.InnerException` preserves a captured channel error from that connection attempt,
+such as the consumer falling behind the bounded 1,024-event buffer or a reported fault. A normal disconnect
+without a captured channel error has no inner exception; errors from earlier attempts are not carried forward.
+This evidence helps identify interruptions, but does not prevent them. A `NormalClosure` with the description
+`Client disconnect` alone does not prove a server-initiated failure: SDK cleanup also uses that description.
 To resume after a process restart, supply the last **successfully processed** sequence:
 
 ```csharp
