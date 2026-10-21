@@ -102,8 +102,28 @@ public class StreamMetricsTests
         CancellationToken token = TestContext.Current.CancellationToken;
         using LiveEventQueue queue = new(1, new JetstreamMetrics(null), TimeProvider.System,
             new KeyValuePair<string, object?>("server", "wss://example.com"), token);
-        await queue.WriteAsync(Event(1) with { Sequence = null });
+        await queue.DeliverAsync(Event(1) with { Sequence = null });
         await Assert.ThrowsAsync<InvalidDataException>(() => queue.WaitToReadAsync(token).AsTask());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task JetstreamQueueDeliveryPropagatesGenuineChannelFaults(bool invalidData)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LiveEventQueue queue = new(1, new JetstreamMetrics(null), TimeProvider.System,
+            new KeyValuePair<string, object?>("server", "wss://example.com"), token);
+        await queue.DeliverAsync(Event(1));
+        Task pending = queue.DeliverAsync(Event(2));
+        Assert.False(pending.IsCompleted);
+        Exception fault = invalidData ? new InvalidDataException("Invalid event.") : new IOException("Interrupted.");
+        queue.Complete(fault);
+        Exception error = await Assert.ThrowsAnyAsync<Exception>(() => pending.WaitAsync(TimeSpan.FromSeconds(30), token));
+        Assert.Same(fault, error);
+        Assert.True(queue.TryRead(out _));
+        error = await Assert.ThrowsAnyAsync<Exception>(() => queue.WaitToReadAsync(token).AsTask());
+        Assert.Same(fault, error);
     }
 
     [Fact]

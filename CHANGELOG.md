@@ -33,6 +33,7 @@
 #### idunno.AtProto
 
 * `StreamAsync` now asynchronously waits for bounded event-queue capacity instead of reconnecting when a consumer temporarily falls behind. The wait propagates through parsing to receiving without an unbounded secondary backlog. Genuine interruption diagnostics and replay overflow recovery are unchanged. Larger queues absorb bursts at increased memory cost; neither capacity nor backpressure guarantees that permanently slow consumers keep up with server retention or avoid server-side timeouts.
+* Live backpressure preserves virtual `OnRecordReceived` callbacks, handles expected queue shutdown without false error logs, and keeps queue-wait cancellation separate from socket reads so enumerator and asynchronous Jetstream disposal can complete a bounded graceful close.
 
 ### ⚠️ Breaking Changes
 

@@ -1163,7 +1163,9 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 {
                     // Schedule outside caller code so no receive callbacks run under the disposal lock.
                     LiveEventQueue? liveQueue = _liveQueue;
-                    _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, liveQueue, cancellationToken), CancellationToken.None);
+                    // Queue shutdown cancels connect and capacity waits, not an idle receive needed for graceful close.
+                    CancellationToken receiveCancellationToken = liveQueue?.EnumerationCancellationToken ?? cancellationToken;
+                    _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, liveQueue, receiveCancellationToken), CancellationToken.None);
                     _receiveLoopTasks.Add(_receiveLoopTask);
                     _ = _receiveLoopTask.ContinueWith(ReceiveLoopCompleted, CancellationToken.None,
                         TaskContinuationOptions.None, TaskScheduler.Default);
@@ -2246,7 +2248,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
         // as fast as the machine allows. Reset by any read which succeeds.
         int consecutiveFailures = 0;
 
-        while (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+        while (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested && liveQueue?.IsStopped != true)
         {
             try
             {
@@ -2255,12 +2257,14 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    (webSocketReceiveResult, message) =
-                        await client.ReceiveNextMessageAsync(
+                    Task<(WebSocketReceiveResult Result, byte[] Message)> receive =
+                        client.ReceiveNextMessageAsync(
                             bufferSize: Options.BufferSize,
                             maxMessageSize: Options.MaxMessageSize,
                             logger: _logger,
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                            cancellationToken: cancellationToken);
+                    ReceiveWaiting?.Invoke(receive);
+                    (webSocketReceiveResult, message) = await receive.ConfigureAwait(false);
 
                     consecutiveFailures = 0;
                 }
@@ -2479,12 +2483,13 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 JetStreamLogger.ReceiveLoopStopped(_logger, "Cancellation");
                 break;
             }
-            catch (Exception e) when ((_disposed || _disposing || ReferenceEquals(client, _replacedClient)) &&
+            catch (Exception e) when ((_disposed || _disposing || liveQueue?.IsStopped == true || ReferenceEquals(client, _replacedClient)) &&
                 e is ObjectDisposedException or WebSocketException or OperationCanceledException)
             {
-                // The socket was closed, and possibly disposed, by a reconnection applying updated filters before this
-                // loop noticed. Nothing has gone wrong, so the loop just ends.
-                JetStreamLogger.ReceiveLoopStopped(_logger, _disposed || _disposing ? "Disposal" : "Socket replacement");
+                // Stream cleanup, disposal or filter reconnection closed the socket before this loop noticed.
+                // Nothing has gone wrong, so the loop just ends.
+                JetStreamLogger.ReceiveLoopStopped(_logger,
+                    _disposed || _disposing || liveQueue?.IsStopped == true ? "Disposal" : "Socket replacement");
                 break;
             }
             catch (Exception e)
@@ -2506,7 +2511,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
                 try
                 {
-                    await Task.Delay(s_receiveFailureBackoff, Options.TimeProvider, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(s_receiveFailureBackoff, Options.TimeProvider, liveQueue?.CancellationToken ?? cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -2654,12 +2659,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     try
                     {
                         InvalidateHandle(derivedEvent);
+                        OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
                         if (liveQueue is not null)
                         {
-                            return liveQueue.WriteAsync(derivedEvent as JetstreamEvent);
+                            return liveQueue.DeliverAsync(derivedEvent as JetstreamEvent);
                         }
-
-                        OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
                     }
                     catch (Exception ex)
                     {
@@ -2724,6 +2728,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     internal Action<Task>? ReceiveLoopsDraining { get; set; }
 
     internal Action<Task>? CloseReplyWaiting { get; set; }
+
+    internal Action<Task>? ReceiveWaiting { get; set; }
 
     /// <summary>
     /// Waits until every message parser which is running has finished.

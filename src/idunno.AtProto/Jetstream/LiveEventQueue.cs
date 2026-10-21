@@ -23,13 +23,19 @@ internal sealed class LiveEventQueue : IDisposable
         _metrics = metrics;
         _timeProvider = timeProvider;
         _serverTag = serverTag;
+        EnumerationCancellationToken = cancellationToken;
         _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        CancellationToken = _cancellation.Token;
         _channel = Channel.CreateBounded<JetstreamEvent>(
             new BoundedChannelOptions(capacity) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
         _metrics.StreamBufferCapacity.Add(capacity, serverTag);
     }
 
-    internal CancellationToken CancellationToken => _cancellation.Token;
+    internal CancellationToken CancellationToken { get; }
+
+    internal CancellationToken EnumerationCancellationToken { get; }
+
+    internal bool IsStopped => Volatile.Read(ref _stopped);
 
     internal Action? CapacityWaiting { get; init; }
 
@@ -49,6 +55,22 @@ internal sealed class LiveEventQueue : IDisposable
             }
 
             return false;
+        }
+    }
+
+    internal async Task DeliverAsync(JetstreamEvent? parsedEvent)
+    {
+        try
+        {
+            await WriteAsync(parsedEvent).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (CancellationToken.IsCancellationRequested)
+        {
+            // Only queue delivery is canceled here; parser and virtual callback failures retain their diagnostics.
+        }
+        catch (ChannelClosedException) when (IsStopped)
+        {
+            // Cleanup completes the channel before releasing a producer waiting for capacity.
         }
     }
 
