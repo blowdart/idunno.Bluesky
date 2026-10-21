@@ -8,8 +8,15 @@
 
 * Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
 
+#### idunno.AtProto
+
+* Added `Label.Verify()`, resolving `Label.VerifyAsync()`, and collection signature verification using an issuer's DID document, sharing signature encoding and low-S checks with Firehose labels.
+* Preserved original label timestamp and CID representations and optional negation presence through JSON and Firehose decoding and JSON round trips so issued labels can be verified without retaining raw responses.
+
 #### idunno.Bluesky
 
+* Added labeler declaration creation, authenticated record reads with CIDs, and conditional updates with publication-time policy validation.
+* Added open-ended labeler declaration report reasons, preserving omitted versus empty report scopes.
 * Added `Post.Parse` and `Post.TryParse` overloads accepting a `JsonDocument` or `JsonElement`. Validation is enabled by default; overloads accepting `validate: false` support tolerant parsing of over-limit post text and invalid nested facet and media values, including aspect ratio dimensions, caption languages and external card URIs. Public constructors and ordinary JSON deserialization retain their existing validation.
 * Added `IValidatableObject` support to `Post`, `Facet`, `ByteSlice`, `TagFacetFeature`, `EmbeddedImages` and `EmbeddedGallery`. Post validation reports failures in nested facets and embeds, including byte ranges, tag lengths, image counts and gallery item counts.
 * Added `IValidatableObject` support to `PostBuilder`, preserving the rules, messages and snapshot behavior of its existing `ValidationErrors()` and `IsValid()` methods.
@@ -23,12 +30,18 @@
 
 ### ⚠️ Breaking Changes
 
+#### idunno.Bluesky
+
+* Corrected `Labeler.Service.Labels` from a collection of `SelfLabel` to an optional `SelfLabels` object. Omitted subject types now remain omitted instead of becoming an empty array.
+
 ### ✅ Fixed
 
 #### idunno.AtProto
 
 * Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
 * Preserved the current live Jetstream attempt's channel error as the final `IOException.InnerException` when SDK-managed reconnection is disabled or exhausted, including consumer-buffer overflow diagnostics. This preserves diagnostic evidence without changing buffering or recovery behavior and does not prevent the underlying interruptions.
+* Fixed `QueryLabels()` source-filter query separators and returned pagination cursors.
+* Label decoding rejects explicit null signed fields instead of dropping them before verification, and accepts long fractional timestamps while retaining their signed strings and public offsets.
 
 #### idunno.Bluesky
 
@@ -38,7 +51,6 @@
 * Recursive validation now checks required URI and CID members of embedded and associated strong references, and required mention DIDs and nonblank link values in known facet features. Failures preserve indexed member paths without changing unknown facet handling.
 * Profile validation now checks strong references in links, pinned posts and starter pack attribution. Message validation accepts supported group-chat join-link embeds. Gate validation requires a post record key, while tolerant parsing retains collection-only targets for inspection.
 * Message validation reports missing join-link codes as `Embed.Code`, including when a code is cleared through an initializer or `with` expression.
-
 
 ## 8.0.0 - 2026-10-16
 

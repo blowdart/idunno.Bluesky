@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Formats.Cbor;
+using System.Numerics;
 using System.Security.Cryptography;
 
 namespace idunno.AtProto.Integration.Test;
@@ -83,11 +84,34 @@ internal static class FirehoseTestData
 
     public static byte[] Sign(ECDsa key, byte[] data) => key.SignData(data, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
 
+    public static BigInteger CurveOrder(ECDsa key) => new(
+        Convert.FromHexString(key.ExportParameters(false).Curve.Oid.Value == "1.3.132.0.10"
+            ? "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+            : "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551"),
+        isUnsigned: true,
+        isBigEndian: true);
+
+    public static byte[] SignLabel(ECDsa key, byte[] data)
+    {
+        byte[] signature = Sign(key, data);
+        BigInteger order = CurveOrder(key);
+        BigInteger s = new(signature.AsSpan(32), isUnsigned: true, isBigEndian: true);
+        if (s > order / 2)
+        {
+            byte[] lowS = (order - s).ToByteArray(isUnsigned: true, isBigEndian: true);
+            signature.AsSpan(32).Clear();
+            lowS.CopyTo(signature, 64 - lowS.Length);
+        }
+
+        return signature;
+    }
+
     public static DidDocument DidDocumentFor(string did, string fragment, ECDsa key)
     {
         ECPoint point = key.ExportParameters(false).Q;
         byte[] compressed = [(point.Y![^1] & 1) == 1 ? (byte)0x03 : (byte)0x02, .. point.X!];
-        string multibaseKey = $"z{SimpleBase.Base58.Bitcoin.Encode([0x80, 0x24, .. compressed])}";
+        byte[] prefix = key.ExportParameters(false).Curve.Oid.Value == "1.3.132.0.10" ? [0xE7, 0x01] : [0x80, 0x24];
+        string multibaseKey = $"z{SimpleBase.Base58.Bitcoin.Encode([.. prefix, .. compressed])}";
 
         return new DidDocument(
             new Did(did),
@@ -125,7 +149,7 @@ internal static class FirehoseTestData
             ("cts", Time),
             ("exp", "2027-01-01T00:00:00.000Z"));
 
-        byte[] signature = key is null ? new byte[64] : Sign(key, Encode(label));
+        byte[] signature = key is null ? new byte[64] : SignLabel(key, Encode(label));
 
         if (corruptSignature)
         {

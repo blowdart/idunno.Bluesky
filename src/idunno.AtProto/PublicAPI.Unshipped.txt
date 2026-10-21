@@ -1,1 +1,5 @@
 #nullable enable
+idunno.AtProto.Labels.LabelSignatureVerifier
+idunno.AtProto.Labels.Label.Verify(idunno.AtProto.DidDocument! didDocument) -> void
+idunno.AtProto.Labels.Label.VerifyAsync(System.Net.Http.HttpClient? httpClient = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static idunno.AtProto.Labels.LabelSignatureVerifier.Verify(idunno.AtProto.DidDocument! didDocument, System.Collections.Generic.IEnumerable<idunno.AtProto.Labels.Label!>! labels) -> void

@@ -17,15 +17,20 @@ namespace idunno.AtProto.Benchmarks;
 public class LabelBenchmarks
 {
     private byte[] _label = null!;
+    private Label _decodedLabel = null!;
 
     [GlobalSetup]
-    public void Setup() => _label = SignedLabel();
+    public void Setup()
+    {
+        _label = SignedLabel();
+        _decodedLabel = Decode();
+    }
 
     [Benchmark]
     public Label Decode() => LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(_label, LabelEventDecoder.LabelFields));
 
     [Benchmark]
-    public byte[] GetUnsignedLabel() => LabelEventDecoder.GetUnsignedLabel(_label);
+    public byte[] GetUnsignedLabel() => LabelSignatureVerifier.GetUnsignedLabel(_decodedLabel);
 
     private static byte[] SignedLabel()
     {

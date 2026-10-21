@@ -273,6 +273,8 @@ public class FirehoseTests
     [InlineData("1985-04-12T23:20:50.120000Z", "1985-04-12T23:20:50.1200000+00:00")]
     [InlineData("0001-01-01T00:00:00.000Z", "0001-01-01T00:00:00.0000000+00:00")]
     [InlineData("1985-04-12T23:20:50.12345678912345Z", "1985-04-12T23:20:50.1234567+00:00")]
+    [InlineData("1985-04-12T23:20:50.12345678901234567Z", "1985-04-12T23:20:50.1234567+00:00")]
+    [InlineData("1985-04-12T23:20:50.12345678901234567-07:00", "1985-04-13T06:20:50.1234567+00:00")]
     [InlineData("1985-04-12T23:20:50Z", "1985-04-12T23:20:50.0000000+00:00")]
     [InlineData("1985-04-12T23:20:50.0Z", "1985-04-12T23:20:50.0000000+00:00")]
     [InlineData("1985-04-12T23:20:50.123+00:00", "1985-04-12T23:20:50.1230000+00:00")]
@@ -317,17 +319,21 @@ public class FirehoseTests
         Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(EncodeMap(("did", "not a did")), new CborFieldNames("did")).GetDid("did"));
 
     [Fact]
-    public void GetUnsignedLabelRemovesOnlyTheSignature()
+    public void SignedLabelEncodingPreservesTimestampSpellingAndOmitsUnknownFields()
     {
-        byte[] unsigned = EncodeMap(("cts", "2026-09-28T01:02:03Z"), ("src", "did:plc:ewvi7nxzyoun6zhxsrcy6jgr"), ("uri", "at://x"), ("val", "spam"));
+        byte[] unsigned = EncodeMap(("cts", "2026-09-28T01:02:03Z"), ("src", "did:plc:ewvi7nxzyoun6zhxsrcy6jgr"), ("uri", "at://x"), ("val", "spam"), ("ver", 1L));
         byte[] signed = EncodeMap(
+            ("$type", "com.atproto.label.defs#label"),
             ("cts", "2026-09-28T01:02:03Z"),
             ("sig", new byte[] { 0xFF, 0xFE }),
             ("src", "did:plc:ewvi7nxzyoun6zhxsrcy6jgr"),
             ("uri", "at://x"),
-            ("val", "spam"));
+            ("val", "spam"),
+            ("ver", 1L),
+            ("unknown", "ignored"));
 
-        Assert.Equal(unsigned, LabelEventDecoder.GetUnsignedLabel(signed));
+        Labels.Label label = LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(signed, LabelEventDecoder.LabelFields));
+        Assert.Equal(unsigned, Labels.LabelSignatureVerifier.GetUnsignedLabel(label));
     }
 
     [Fact]
@@ -518,42 +524,7 @@ public class FirehoseTests
     }
 
     [Fact]
-    public void GetUnsignedLabelRejectsLabelsWithTooManyFields()
-    {
-        (string Key, object Value)[] fields = [.. Enumerable.Range(0, LabelEventDecoder.MaximumSignedLabelFields + 1)
-            .Select(i => (string.Create(CultureInfo.InvariantCulture, $"f{i:D3}"), (object)"x"))];
-
-        Assert.Throws<InvalidDataException>(() => LabelEventDecoder.GetUnsignedLabel(EncodeMap(fields)));
-        Assert.NotEmpty(LabelEventDecoder.GetUnsignedLabel(EncodeMap(fields[..LabelEventDecoder.MaximumSignedLabelFields])));
-    }
-
-    [Theory]
-    [InlineData(0, 3, true)]
-    [InlineData(3, 0, true)]
-    [InlineData(2, 2, true)]
-    [InlineData(22, 1, true)]
-    [InlineData(21, 1, true)]
-    [InlineData(30, 32, true)]
-    [InlineData(2, 2, false)]
-    [InlineData(30, 32, false)]
-    public void GetUnsignedLabelMatchesReEncodingTheUnsignedFields(int before, int after, bool signed)
-    {
-        // The data value holds the bytes of an encoded "sig" key, so only a key can match.
-        List<(string Key, object Value)> unsignedFields = [("data", new byte[] { 0x63, (byte)'s', (byte)'i', (byte)'g' })];
-        unsignedFields.AddRange(Enumerable.Range(0, before).Select(i => (string.Create(CultureInfo.InvariantCulture, $"a{i:D2}"), (object)"x")));
-        unsignedFields.AddRange(Enumerable.Range(0, after).Select(i => (string.Create(CultureInfo.InvariantCulture, $"z{i:D2}"), (object)(long)i)));
-
-        List<(string Key, object Value)> fields = [.. unsignedFields];
-        if (signed)
-        {
-            fields.Add(("sig", new byte[64]));
-        }
-
-        Assert.Equal(EncodeMap([.. unsignedFields]), LabelEventDecoder.GetUnsignedLabel(EncodeMap([.. fields])));
-    }
-
-    [Fact]
-    public void GetUnsignedLabelRejectsKeysWhichAreNotStrings()
+    public void LabelDecodingRejectsKeysWhichAreNotStrings()
     {
         byte[] label = Encode(writer =>
         {
@@ -563,7 +534,7 @@ public class FirehoseTests
             writer.WriteEndMap();
         });
 
-        Assert.Throws<InvalidDataException>(() => LabelEventDecoder.GetUnsignedLabel(label));
+        Assert.Throws<InvalidDataException>(() => FirehoseCbor.ReadFields(label, LabelEventDecoder.LabelFields));
     }
 
     public static TheoryData<Func<FirehoseOptions>> InvalidOptions => new()

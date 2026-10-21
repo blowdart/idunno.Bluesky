@@ -184,6 +184,26 @@ internal static class SigningKeyVerifier
 internal sealed class SigningKey(string curveOid, byte[] x, byte[] y)
 {
     /// <summary>
+    /// Verifies a label signature, including the protocol's low-S requirement.
+    /// </summary>
+    internal void VerifyLabel(ReadOnlySpan<byte> signedData, ReadOnlySpan<byte> signature)
+    {
+        BigInteger order = BigInteger.Parse(
+            curveOid == "1.3.132.0.10"
+                ? "0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+                : "0FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture);
+        if (signature.Length != 64 ||
+            new BigInteger(signature[32..], isUnsigned: true, isBigEndian: true) > order / 2)
+        {
+            throw new InvalidDataException("The label signature is not a compact low-S signature.");
+        }
+
+        Verify(signedData, signature, "label");
+    }
+
+    /// <summary>
     /// Verifies <paramref name="signature"/> over <paramref name="signedData"/>.
     /// </summary>
     /// <param name="signedData">The bytes which were signed.</param>
