@@ -83,6 +83,45 @@ public class JetstreamV2Tests
     }
 
     [Fact]
+    public void TheDefaultStreamBufferCapacityIs1024()
+    {
+        Assert.Equal(1024, new JetstreamOptions().StreamBufferCapacity);
+        Assert.Equal(1024, AtProtoJetstreamBuilder.Create().StreamBufferCapacity);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(int.MinValue)]
+    public void StreamBufferCapacityRejectsNonPositiveValues(int capacity)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>("value",
+            () => new JetstreamOptions { StreamBufferCapacity = capacity });
+        Assert.Throws<ArgumentOutOfRangeException>("value",
+            () => AtProtoJetstreamBuilder.Create().StreamBufferCapacity = capacity);
+        Assert.Throws<ArgumentOutOfRangeException>("streamBufferCapacity",
+            () => AtProtoJetstreamBuilder.Create().SetStreamBufferCapacity(capacity));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConstructorsRetainInitOnlyStreamCapacityWhenOptionsAreCopied(bool withHttpClientFactory)
+    {
+        JetstreamOptions options = new() { StreamBufferCapacity = 3, ReplayLiveBufferCapacity = 7 };
+        using AtProtoJetstream jetstream = withHttpClientFactory
+            ? new(new RecordingHttpClientFactory(), options: options)
+            : new(options: options);
+        JetstreamOptions changed = options with { StreamBufferCapacity = 1 };
+
+        Assert.Same(options, jetstream.Options);
+        Assert.Equal(3, jetstream.Options.StreamBufferCapacity);
+        Assert.Equal(1, changed.StreamBufferCapacity);
+        Assert.Equal(7, options.ReplayLiveBufferCapacity);
+        Assert.Contains("StreamBufferCapacity = 3", options.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TheDefaultReplayLiveBufferCapacityIs1024()
     {
         Assert.Equal(1024, new JetstreamOptions().ReplayLiveBufferCapacity);

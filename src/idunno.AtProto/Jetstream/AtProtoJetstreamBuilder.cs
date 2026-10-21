@@ -141,6 +141,25 @@ public sealed class AtProtoJetstreamBuilder
     } = 8096;
 
     /// <summary>
+    /// Gets or sets the maximum number of decoded events queued by live async enumeration.
+    /// </summary>
+    /// <value>A positive event count. The default is 1,024.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>Copied by <see cref="Build"/> to <see cref="JetstreamOptions.StreamBufferCapacity"/>.
+    /// Counts events, not bytes, and does not configure replay. A full queue asynchronously pauses receiving.</para>
+    /// </remarks>
+    public int StreamBufferCapacity
+    {
+        get;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            field = value;
+        }
+    } = 1024;
+
+    /// <summary>
     /// Gets or sets the maximum number of decoded events buffered by the live portion of replay.
     /// </summary>
     /// <value>A positive event count. The default is 1,024.</value>
@@ -466,6 +485,25 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures the maximum number of decoded events queued by live async enumeration.
+    /// </summary>
+    /// <param name="streamBufferCapacity">A positive capacity in decoded events, not bytes.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="streamBufferCapacity"/> is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>Copied by <see cref="Build"/> to <see cref="JetstreamOptions.StreamBufferCapacity"/>.
+    /// Does not resize active queues or configure replay. Larger buffers absorb bursts at increased memory cost,
+    /// but cannot guarantee that a slow consumer keeps up with server retention or avoids server timeouts.</para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder SetStreamBufferCapacity(int streamBufferCapacity)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(streamBufferCapacity);
+        StreamBufferCapacity = streamBufferCapacity;
+
+        return this;
+    }
+
+    /// <summary>
     /// Configures the maximum number of decoded events buffered by the live portion of replay.
     /// </summary>
     /// <param name="replayLiveBufferCapacity">A positive capacity in decoded events, not bytes.</param>
@@ -714,6 +752,7 @@ public sealed class AtProtoJetstreamBuilder
             UseCompression = EnableCompression,
             Dictionary = CompressionDictionary,
             BufferSize = ReadBufferSize,
+            StreamBufferCapacity = StreamBufferCapacity,
             ReplayLiveBufferCapacity = ReplayLiveBufferCapacity,
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,

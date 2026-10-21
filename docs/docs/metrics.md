@@ -91,6 +91,42 @@ Each DPoP retry records a separate attempt duration. The failed attempt is recor
 
 The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.Jetstream.AtProtoJetstream` client.
 
+### Live async enumeration queues
+
+Names below have the prefix `idunno.atproto.jetstream.` and apply only to `StreamAsync`, not event
+subscriptions or `ReplayAsync`.
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `stream.buffer.capacity` | UpDownCounter&lt;long&gt; | {events} | Sum of configured capacities of active live event queues. |
+| `stream.queue.count` | UpDownCounter&lt;long&gt; | {events} | Sum of events currently queued, excluding events already yielded to consumers and the producer's event waiting for capacity. |
+| `total.stream.capacity_waits` | Counter&lt;long&gt; | {waits} | Number of capacity-wait episodes that were actually pending, not the number of asynchronous writes. Includes waits ultimately canceled or faulted. |
+| `stream.capacity_wait.duration` | Histogram&lt;double&gt; | s | Elapsed time per pending capacity-wait episode, recorded when it ends, whether successfully, by cancellation, or by failure. |
+
+These instruments use only a `server` tag containing the configured server's scheme, host and port,
+without paths, queries, credentials, cursors, DIDs or unique stream/connection identifiers. Multiple clients
+sharing the meter and tag aggregate: for capacities 1 and 3, capacity is 4; queue count is the combined
+occupancy, not the maximum, average or occupancy of either individual queue. The ratio of these sums is
+aggregate utilization and can hide pressure on one client. Wait counts sum all episodes, and durations
+combine their observations.
+
+A queue contributes capacity from creation (before connecting) until attempt cleanup or Jetstream disposal.
+Reading removes an event before yielding it, including duplicates suppressed during recovery. Cleanup
+removes all remaining queued events and its capacity exactly once. Reconnection creates a new queue;
+completed-attempt queues no longer contribute during retry delays. No observable callbacks or per-stream
+references are retained by these instruments. Like other up/down counters, current values require a
+listener that has observed the corresponding increments and decrements, not just the latest delta.
+
+Only an incomplete wait for capacity counts; a write or readiness check that completes synchronously does
+not. Wait durations use `JetstreamOptions.TimeProvider`'s monotonic timestamps and include time until a
+canceled or faulted wait finishes, but not consumer processing after capacity is available. A wait still
+in progress has increased the wait count but has not yet produced its duration observation.
+
+Queue capacity is an event count, not a memory budget. Events have variable size. Sustained occupancy
+and waiting can indicate throughput pressure, but cannot identify a particular slow consumer operation.
+Larger queues absorb temporary bursts at increased memory cost; backpressure prevents local queue-overflow
+termination but does not guarantee retention catch-up or prevent server-side timeouts.
+
 ### Metric: total.messages
 
 | Name | Instrument Type | Unit | Description |

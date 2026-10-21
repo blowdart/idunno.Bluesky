@@ -52,6 +52,7 @@ public record JetstreamOptions
             .Append(", Dictionary = ").Append(Dictionary)
             .Append(", TaskFactory = ").Append(TaskFactory)
             .Append(", BufferSize = ").Append(BufferSize)
+            .Append(", StreamBufferCapacity = ").Append(StreamBufferCapacity)
             .Append(", ReplayLiveBufferCapacity = ").Append(ReplayLiveBufferCapacity)
             .Append(", MaxMessageSize = ").Append(MaxMessageSize)
             .Append(", CloseTimeout = ").Append(CloseTimeout)
@@ -184,13 +185,38 @@ public record JetstreamOptions
     } = 8096;
 
     /// <summary>
+    /// Gets the maximum number of decoded events queued by live async enumeration.
+    /// </summary>
+    /// <value>A positive event count. The default is 1,024.</value>
+    /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>Applies only to <see cref="AtProtoJetstream.StreamAsync"/> and excludes the event already yielded.
+    /// A full queue asynchronously pauses receiving. The capacity is captured when the queue is created;
+    /// an active queue cannot be resized. <see cref="ReplayLiveBufferCapacity"/> configures replay separately.
+    /// Unlike <see cref="BufferSize"/> and <see cref="MaxMessageSize"/>, this counts events, not bytes.</para>
+    /// <para>A larger queue absorbs temporary bursts at increased, variable memory cost. Backpressure prevents
+    /// local queue overflow, but cannot guarantee a permanently slow consumer keeps up with server retention
+    /// or avoids server-side timeouts. Persist durable checkpoints after processing events.</para>
+    /// </remarks>
+    public int StreamBufferCapacity
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            field = value;
+        }
+    } = 1024;
+
+    /// <summary>
     /// Gets the maximum number of decoded events buffered by the live portion of replay.
     /// </summary>
     /// <value>A positive event count. The default is 1,024.</value>
     /// <exception cref="ArgumentOutOfRangeException">The value is less than or equal to zero.</exception>
     /// <remarks>
     /// <para>This includes live-cursor catch-up, not archive download blocks, and is independent of
-    /// <see cref="BufferSize"/> and <see cref="MaxMessageSize"/>, which count bytes.</para>
+    /// <see cref="BufferSize"/> and <see cref="MaxMessageSize"/>, which count bytes.
+    /// <see cref="StreamBufferCapacity"/> configures live async enumeration separately.</para>
     /// <para>The capacity is captured when each replay live channel is created and cannot resize that channel.
     /// This property is init-only; creating a copy with a different capacity does not change an existing client
     /// or its later replay enumerations. Supply the copy to a new client to use the new capacity.</para>
