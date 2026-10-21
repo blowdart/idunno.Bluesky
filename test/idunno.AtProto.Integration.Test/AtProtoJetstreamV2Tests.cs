@@ -345,6 +345,7 @@ public class AtProtoJetstreamV2Tests
     [InlineData("async-disposal")]
     [InlineData("sync-disposal")]
     [InlineData("concurrent-disposal")]
+    [InlineData("close")]
     public async Task LiveStreamReleasesAProducerWaitingForCapacity(string exit)
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
@@ -400,6 +401,17 @@ public class AtProtoJetstreamV2Tests
             case "concurrent-disposal":
                 await Task.WhenAll(jetstream.DisposeAsync().AsTask(), stream.DisposeAsync().AsTask())
                     .WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                break;
+            case "close":
+                await jetstream.CloseAsync(cancellationToken: cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                await receiveLoop.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                Assert.Equal(1, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+                Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+                Assert.Equal(42, stream.Current.Sequence);
+                IOException error = await Assert.ThrowsAsync<IOException>(
+                    () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+                Assert.Equal("The live Jetstream disconnected. SDK-managed automatic reconnection is disabled.", error.Message);
+                Assert.Null(error.InnerException);
                 break;
         }
 

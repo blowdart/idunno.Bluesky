@@ -68,10 +68,6 @@ internal sealed class LiveEventQueue : IDisposable
         {
             // Only queue delivery is canceled here; parser and virtual callback failures retain their diagnostics.
         }
-        catch (ChannelClosedException) when (IsStopped)
-        {
-            // Cleanup completes the channel before releasing a producer waiting for capacity.
-        }
     }
 
     internal async Task WriteAsync(JetstreamEvent? parsedEvent)
@@ -107,7 +103,8 @@ internal sealed class LiveEventQueue : IDisposable
             {
                 if (!await writable.ConfigureAwait(false))
                 {
-                    throw new ChannelClosedException();
+                    // Normal completion ends delivery; faulted completion throws from the awaited readiness check.
+                    return;
                 }
             }
             finally

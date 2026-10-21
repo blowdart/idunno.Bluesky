@@ -77,7 +77,7 @@ public class StreamMetricsTests
                 break;
             case "stop":
                 first.Stop();
-                await Assert.ThrowsAsync<ChannelClosedException>(() => pending.WaitAsync(TimeSpan.FromSeconds(30), token));
+                await pending.WaitAsync(TimeSpan.FromSeconds(30), token);
                 break;
         }
 
@@ -109,7 +109,35 @@ public class StreamMetricsTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task JetstreamQueueDeliveryPropagatesGenuineChannelFaults(bool invalidData)
+    public async Task JetstreamQueueDeliveryAcceptsNormalCompletionWithoutDiscardingQueuedEvents(bool waitingForCapacity)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LiveEventQueue queue = new(1, new JetstreamMetrics(null), TimeProvider.System,
+            new KeyValuePair<string, object?>("server", "wss://example.com"), token);
+        await queue.DeliverAsync(Event(1));
+        Task? pending = waitingForCapacity ? queue.DeliverAsync(Event(2)) : null;
+        if (pending is not null)
+        {
+            Assert.False(pending.IsCompleted);
+        }
+
+        queue.Complete();
+        if (pending is not null)
+        {
+            await pending.WaitAsync(TimeSpan.FromSeconds(30), token);
+        }
+
+        await queue.DeliverAsync(Event(3)).WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.True(queue.TryRead(out JetstreamEvent? item));
+        Assert.Equal(1, item?.Sequence);
+        Assert.False(await queue.WaitToReadAsync(token));
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("invalid-data")]
+    [InlineData("channel-closed")]
+    public async Task JetstreamQueueDeliveryPropagatesGenuineChannelFaults(string faultKind)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         using LiveEventQueue queue = new(1, new JetstreamMetrics(null), TimeProvider.System,
@@ -117,8 +145,14 @@ public class StreamMetricsTests
         await queue.DeliverAsync(Event(1));
         Task pending = queue.DeliverAsync(Event(2));
         Assert.False(pending.IsCompleted);
-        Exception fault = invalidData ? new InvalidDataException("Invalid event.") : new IOException("Interrupted.");
+        Exception fault = faultKind switch
+        {
+            "invalid-data" => new InvalidDataException("Invalid event."),
+            "channel-closed" => new ChannelClosedException(),
+            _ => new IOException("Interrupted.")
+        };
         queue.Complete(fault);
+        queue.Complete();
         Exception error = await Assert.ThrowsAnyAsync<Exception>(() => pending.WaitAsync(TimeSpan.FromSeconds(30), token));
         Assert.Same(fault, error);
         Assert.True(queue.TryRead(out _));
