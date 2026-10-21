@@ -225,45 +225,102 @@ public class AtProtoJetstreamV2Tests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task LiveStreamOverflowDrainsInOrderAndPreservesItsCauseUnlessCancelled(bool cancel)
+    [InlineData(1, false, "error")]
+    [InlineData(3, false, "error")]
+    [InlineData(null, false, "error")]
+    [InlineData(2, true, "error")]
+    [InlineData(2, true, "close")]
+    [InlineData(2, true, "abort")]
+    public async Task LiveStreamBackpressureDrainsInOrderAndOnlyReconnectsForGenuineInterruptions(int? configuredCapacity, bool reconnect, string interruption)
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        int capacity = configuredCapacity ?? 1024;
         TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        TaskCompletionSource overflowParsed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        const long lastBuffered = 41 + 1024;
+        TaskCompletionSource waiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource disconnect = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TimerTrackingTimeProvider timeProvider = new(TimeSpan.FromSeconds(1));
+        timeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        long lastProduced = 41 + capacity + 3;
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory factory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> queued = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.queue.count");
+        using MetricCollector<long> capacities = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.buffer.capacity");
+        using MetricCollector<long> waits = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.stream.capacity_waits");
+        using MetricCollector<double> durations = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.capacity_wait.duration");
         using var server = new TestJetstreamServer();
-        await server.Start(async (socket, _, token) =>
+        await server.Start(async (socket, connection, token) =>
         {
-            await SendText(socket, IdentityEvent(41), token);
-            await burst.Task.WaitAsync(token);
-            for (long sequence = 42; sequence <= lastBuffered + 1; sequence++)
+            if (connection == 1)
             {
-                await SendText(socket, IdentityEvent(sequence), token);
+                await SendText(socket, IdentityEvent(41), token);
+                await burst.Task.WaitAsync(token);
+                for (long sequence = 42; sequence <= lastProduced; sequence++)
+                {
+                    await SendText(socket, IdentityEvent(sequence), token);
+                }
+
+                await disconnect.Task.WaitAsync(token);
+            }
+            else
+            {
+                await SendText(socket, IdentityEvent(lastProduced), token);
+                await SendText(socket, IdentityEvent(lastProduced + 1), token);
+                return;
+            }
+
+            switch (interruption)
+            {
+                case "error":
+                    await SendText(socket, """{"$type":"error","error":"GenuineInterruption","message":"interrupted"}""", token);
+                    break;
+                case "close":
+                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, null, token);
+                    break;
+                case "abort":
+                    socket.Abort();
+                    break;
             }
         });
-        using var jetstream = new ObservedRecordJetstream(server.Uri, lastBuffered + 1, overflowParsed);
+        JetstreamOptions options = new() { UseCompression = false, MeterFactory = factory, TimeProvider = timeProvider };
+        if (configuredCapacity is int configured)
+        {
+            options = options with { StreamBufferCapacity = configured };
+        }
+
+        await using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: options);
+        jetstream.StreamCapacityWaiting = () => waiting.TrySetResult();
         await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
-            cursor: 40, maximumReconnectAttempts: 0, cancellationToken: cancellation.Token).GetAsyncEnumerator(cancellation.Token);
+            cursor: 40, maximumReconnectAttempts: reconnect ? 1 : 0, cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
         Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
         Assert.Equal(41, stream.Current.Sequence);
 
-        // Pause consumption until the first event beyond the channel capacity has been parsed and offered.
         burst.SetResult();
-        await overflowParsed.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-        for (long sequence = 42; sequence <= lastBuffered; sequence++)
+        await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.Equal(capacity, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(capacity, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(1, waits.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(42 + capacity, jetstream.LastSequence);
+        Assert.Single(server.Connections);
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
+        for (long sequence = 42; sequence <= lastProduced; sequence++)
         {
             Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
             Assert.Equal(sequence, stream.Current.Sequence);
         }
 
-        if (cancel)
+        disconnect.SetResult();
+        if (reconnect)
         {
-            await cancellation.CancelAsync();
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Task<bool> next = stream.MoveNextAsync().AsTask();
+            await timeProvider.WaitForTimerAsync(cancellationToken);
+            Assert.Equal(0, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+            Assert.Equal(0, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+            timeProvider.Advance(TimeSpan.FromSeconds(1));
+            Assert.True(await next.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+            Assert.Equal(lastProduced + 1, stream.Current.Sequence);
+            Assert.Equal(2, server.Connections.Count);
+            Assert.Contains($"cursor={lastProduced}", server.Connections.Last().Query, StringComparison.Ordinal);
         }
         else
         {
@@ -271,10 +328,141 @@ public class AtProtoJetstreamV2Tests
                 () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
             Assert.Equal("The live Jetstream disconnected. SDK-managed automatic reconnection is disabled.", error.Message);
             IOException cause = Assert.IsType<IOException>(error.InnerException);
-            Assert.Equal("The live Jetstream consumer fell behind; reconnecting from the last yielded sequence.", cause.Message);
+            Assert.Contains("GenuineInterruption", cause.Message, StringComparison.Ordinal);
+            Assert.Contains("cursor=40", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
         }
 
-        Assert.Contains("cursor=40", Assert.Single(server.Connections).Query, StringComparison.Ordinal);
+        await stream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.Equal(0, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(0, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(waits.GetMeasurementSnapshot().Sum(m => m.Value), durations.GetMeasurementSnapshot().Count);
+        Assert.Equal(2, durations.GetMeasurementSnapshot().First().Value);
+    }
+
+    [Theory]
+    [InlineData("cancellation")]
+    [InlineData("enumerator")]
+    [InlineData("async-disposal")]
+    [InlineData("sync-disposal")]
+    [InlineData("concurrent-disposal")]
+    public async Task LiveStreamReleasesAProducerWaitingForCapacity(string exit)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource waiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, _, token) =>
+        {
+            await SendText(socket, IdentityEvent(41), token);
+            await burst.Task.WaitAsync(token);
+            for (long sequence = 42; sequence <= 50; sequence++)
+            {
+                await SendText(socket, IdentityEvent(sequence), token);
+            }
+        });
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory factory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> queued = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.queue.count");
+        using MetricCollector<long> capacities = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.buffer.capacity");
+        using MetricCollector<double> durations = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.capacity_wait.duration");
+        await using var jetstream = new AtProtoJetstream(
+            httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false, StreamBufferCapacity = 1, MeterFactory = factory });
+        jetstream.StreamCapacityWaiting = () => waiting.TrySetResult();
+        await using IAsyncEnumerator<JetstreamEvent> stream = jetstream.StreamAsync(
+            maximumReconnectAttempts: 0, cancellationToken: cancellation.Token).GetAsyncEnumerator(cancellation.Token);
+        Assert.True(await stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+        burst.SetResult();
+        await waiting.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Task receiveLoop = GetField<Task>(jetstream, "_receiveLoopTask");
+        Assert.False(receiveLoop.IsCompleted);
+        Assert.Equal(43, jetstream.LastSequence);
+
+        switch (exit)
+        {
+            case "cancellation":
+                await cancellation.CancelAsync();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                    () => stream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken));
+                break;
+            case "enumerator":
+                await stream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                break;
+            case "async-disposal":
+                await jetstream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                break;
+            case "sync-disposal":
+                jetstream.Dispose();
+                break;
+            case "concurrent-disposal":
+                await Task.WhenAll(jetstream.DisposeAsync().AsTask(), stream.DisposeAsync().AsTask())
+                    .WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+                break;
+        }
+
+        await receiveLoop.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        await stream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+        Assert.Equal(0, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(0, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Single(durations.GetMeasurementSnapshot());
+        Assert.Single(server.Connections);
+    }
+
+    [Fact]
+    public async Task LiveStreamCapacitiesAreIndependentAndMetricsSumQueuesWithTheSameServerTag()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        TaskCompletionSource burst = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource firstWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource secondWaiting = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var server = new TestJetstreamServer();
+        await server.Start(async (socket, _, serverToken) =>
+        {
+            await SendText(socket, IdentityEvent(41), serverToken);
+            await burst.Task.WaitAsync(serverToken);
+            for (long sequence = 42; sequence <= 50; sequence++)
+            {
+                await SendText(socket, IdentityEvent(sequence), serverToken);
+            }
+        });
+        using ServiceProvider services = new ServiceCollection().AddMetrics().BuildServiceProvider();
+        IMeterFactory factory = services.GetRequiredService<IMeterFactory>();
+        using MetricCollector<long> queued = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.queue.count");
+        using MetricCollector<long> capacities = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.stream.buffer.capacity");
+        using MetricCollector<long> waits = new(factory, JetstreamMetrics.MeterName, "idunno.atproto.jetstream.total.stream.capacity_waits");
+        JetstreamOptions options = new() { UseCompression = false, StreamBufferCapacity = 1, MeterFactory = factory };
+        await using var first = new AtProtoJetstream(httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri, options: options);
+        await using var second = new AtProtoJetstream(httpClientFactory: new LocalHttpClientFactory(), uri: server.Uri,
+            options: options with { StreamBufferCapacity = 3 });
+        first.StreamCapacityWaiting = () => firstWaiting.TrySetResult();
+        second.StreamCapacityWaiting = () => secondWaiting.TrySetResult();
+        await using IAsyncEnumerator<JetstreamEvent> firstStream = first.StreamAsync(maximumReconnectAttempts: 0, cancellationToken: token).GetAsyncEnumerator(token);
+        await using IAsyncEnumerator<JetstreamEvent> secondStream = second.StreamAsync(maximumReconnectAttempts: 0, cancellationToken: token).GetAsyncEnumerator(token);
+        Assert.True(await firstStream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token));
+        Assert.True(await secondStream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token));
+        burst.SetResult();
+        await Task.WhenAll(firstWaiting.Task, secondWaiting.Task).WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.Equal(43, first.LastSequence);
+        Assert.Equal(45, second.LastSequence);
+        Assert.Equal(4, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(4, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(2, waits.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.All(capacities.GetMeasurementSnapshot(), measurement => Assert.Equal(server.Uri.GetLeftPart(UriPartial.Authority), measurement.Tags["server"]));
+
+        await firstStream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.Equal(3, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(3, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        for (long sequence = 42; sequence <= 50; sequence++)
+        {
+            Assert.True(await secondStream.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token));
+            Assert.Equal(sequence, secondStream.Current.Sequence);
+        }
+
+        await secondStream.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), token);
+        Assert.Equal(0, queued.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(0, capacities.GetMeasurementSnapshot().Sum(m => m.Value));
+        Assert.Equal(2, server.Connections.Count);
     }
 
     [Theory]
@@ -2179,22 +2367,6 @@ public class AtProtoJetstreamV2Tests
             }
 
             base.OnConnectionStateChanged(e);
-        }
-    }
-
-    private sealed class ObservedRecordJetstream(
-        Uri uri,
-        long observedSequence,
-        TaskCompletionSource parsed) : AtProtoJetstream(
-            httpClientFactory: new LocalHttpClientFactory(), uri: uri, options: new JetstreamOptions { UseCompression = false })
-    {
-        protected override void OnRecordReceived(RecordReceivedEventArgs e)
-        {
-            base.OnRecordReceived(e);
-            if (e.ParsedEvent.Sequence == observedSequence)
-            {
-                parsed.TrySetResult();
-            }
         }
     }
 

@@ -31,6 +31,37 @@ public class AtProtoJetstreamBuilderTests
     [InlineData(false, true)]
     [InlineData(true, false)]
     [InlineData(true, true)]
+    public void BuildCapturesStreamBufferCapacity(bool withHttpClientFactory, bool fluent)
+    {
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();
+        if (fluent)
+        {
+            Assert.Same(builder, builder.SetStreamBufferCapacity(3));
+        }
+        else
+        {
+            builder.StreamBufferCapacity = 3;
+        }
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+        builder.StreamBufferCapacity = 1;
+        using AtProtoJetstream later = builder.Build();
+
+        Assert.Equal(3, jetstream.Options.StreamBufferCapacity);
+        Assert.Equal(1, later.Options.StreamBufferCapacity);
+        Assert.Equal(1024, jetstream.Options.ReplayLiveBufferCapacity);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
     public void BuildCapturesReplayLiveBufferCapacity(bool withHttpClientFactory, bool fluent)
     {
         AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create();

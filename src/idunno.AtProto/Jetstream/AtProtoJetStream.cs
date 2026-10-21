@@ -1162,7 +1162,8 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 if (!_disposed && !_disposing && ReferenceEquals(connectedClient, _client) && connectedClient.State == WebSocketState.Open)
                 {
                     // Schedule outside caller code so no receive callbacks run under the disposal lock.
-                    _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, cancellationToken), CancellationToken.None);
+                    LiveEventQueue? liveQueue = _liveQueue;
+                    _receiveLoopTask = Task.Run(() => ReceiveLoop(connectedClient, liveQueue, cancellationToken), CancellationToken.None);
                     _receiveLoopTasks.Add(_receiveLoopTask);
                     _ = _receiveLoopTask.ContinueWith(ReceiveLoopCompleted, CancellationToken.None,
                         TaskContinuationOptions.None, TaskScheduler.Default);
@@ -2013,6 +2014,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                 lock (_syncLock)
                 {
                     _disposed = true;
+                    _liveQueue?.Stop();
 
                     _client.Dispose();
                     _metrics.RecordConnectionClosed(_client, new KeyValuePair<string, object?>("server", _serverTag));
@@ -2082,6 +2084,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
             completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             _asyncDisposal = completion;
             _disposing = true;
+            _liveQueue?.Stop();
         }
 
         // Derived cleanup and event callbacks must run outside the disposal lock.
@@ -2231,7 +2234,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
     [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
-    private async Task ReceiveLoop(ClientWebSocket client, CancellationToken cancellationToken)
+    private async Task ReceiveLoop(ClientWebSocket client, LiveEventQueue? liveQueue, CancellationToken cancellationToken)
     {
         WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
@@ -2428,10 +2431,10 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     // lets the transport apply the back pressure the server needs to see.
                     await _parseSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
-                    if (_consumptionMode == ConsumptionMode.AsyncEnumeration)
+                    if (liveQueue is not null)
                     {
                         // Preserve sequence order for the single enumerator, including its resume cursor.
-                        await ParseMessageAndReleaseSlot(messageAsString).ConfigureAwait(false);
+                        await ParseMessageAndReleaseSlot(messageAsString, liveQueue).ConfigureAwait(false);
                     }
                     else
                     {
@@ -2604,7 +2607,7 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
-    private Task ParseMessage(string json, ILogger logger)
+    private Task ParseMessage(string json, ILogger logger, LiveEventQueue? liveQueue = null)
     {
         try
         {
@@ -2651,6 +2654,11 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
                     try
                     {
                         InvalidateHandle(derivedEvent);
+                        if (liveQueue is not null)
+                        {
+                            return liveQueue.WriteAsync(derivedEvent as JetstreamEvent);
+                        }
+
                         OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
                     }
                     catch (Exception ex)
@@ -2697,12 +2705,13 @@ public partial class AtProtoJetstream : IDisposable, IAsyncDisposable
     /// Parses the specified <paramref name="json"/> and gives back the slot the receive loop took for it.
     /// </summary>
     /// <param name="json">The message to parse.</param>
+    /// <param name="liveQueue">The connection's async enumeration queue, if any.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    private async Task ParseMessageAndReleaseSlot(string json)
+    private async Task ParseMessageAndReleaseSlot(string json, LiveEventQueue? liveQueue = null)
     {
         try
         {
-            await ParseMessage(json, _logger).FireAndForgetAsync(_logger).ConfigureAwait(false);
+            await ParseMessage(json, _logger, liveQueue).FireAndForgetAsync(_logger).ConfigureAwait(false);
         }
         finally
         {

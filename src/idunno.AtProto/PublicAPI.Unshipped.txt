@@ -1,4 +1,9 @@
 #nullable enable
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.StreamBufferCapacity.get -> int
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.StreamBufferCapacity.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetStreamBufferCapacity(int streamBufferCapacity) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamOptions.StreamBufferCapacity.get -> int
+idunno.AtProto.Jetstream.JetstreamOptions.StreamBufferCapacity.init -> void
 idunno.AtProto.Labels.LabelSignatureVerifier
 idunno.AtProto.Labels.Label.Verify(idunno.AtProto.DidDocument! didDocument) -> void
 idunno.AtProto.Labels.Label.VerifyAsync(System.Net.Http.HttpClient? httpClient = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
