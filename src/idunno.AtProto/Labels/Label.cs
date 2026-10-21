@@ -206,7 +206,7 @@ public sealed record Label : AtProtoObject
     /// <para>A signature is not required. Exact retained timestamp and CID strings and optional field presence are preserved.
     /// The signature, <c>$type</c>, and unknown fields are excluded.</para>
     /// </remarks>
-    public byte[] GetSigningBytes() => LabelEncoding.Encode(this);
+    public byte[] GetCanonicalUnsignedBytes() => LabelEncoding.Encode(this);
 
     /// <summary>
     /// Verifies this label's signature against the issuer's DID document without making network requests.

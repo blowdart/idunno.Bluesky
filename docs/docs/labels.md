@@ -73,7 +73,7 @@ Label retraction = key.CreateNegation(issuer, subject, "spam", createdAt.AddSeco
 
 // Public data only. Publishing this under #atproto_label is a separate operation.
 string publicMultikey = key.ExportPublicKeyMultibase();
-byte[] canonicalPayload = issued.GetSigningBytes();
+byte[] canonicalPayload = issued.GetCanonicalUnsignedBytes();
 ```
 
 Both factories require an explicit creation timestamp and set version 1. `CreateLabel` omits `neg`;
@@ -85,7 +85,7 @@ authorize, persist, or publish labels, and expiry/negation reconciliation belong
 strings and omitted versus explicit `neg: false`. It accepts unsigned version-one labels and can re-sign existing labels
 after a key change without changing their creation time. It rejects missing/unsupported versions and malformed signed fields,
 including values over 128 UTF-8 bytes even when introduced by an `init` mutation. The original label is unchanged.
-`GetSigningBytes()` also works on unsigned version-one labels and excludes `sig`, `$type`, and unknown fields.
+`GetCanonicalUnsignedBytes()` also works on unsigned version-one labels and excludes `sig`, `$type`, and unknown fields.
 Payload encoding is deterministic; ECDSA signature bytes need not be. Signatures use SHA-256 and 64-byte compact
 P1363 encoding with low-S normalization for both curves.
 

@@ -30,12 +30,12 @@ public class LabelSigningSerializationTests
             Label label = JsonSerializer.Deserialize<Label>(json, options)!;
             label.Verify(originalDocument);
             Label roundTripped = JsonSerializer.Deserialize<Label>(JsonSerializer.Serialize(label, options), options)!;
-            Assert.Equal(label.GetSigningBytes(), roundTripped.GetSigningBytes());
+            Assert.Equal(label.GetCanonicalUnsignedBytes(), roundTripped.GetCanonicalUnsignedBytes());
             roundTripped.Verify(originalDocument);
             Assert.Throws<InvalidDataException>(() => (label with { Value = "not-spam" }).Verify(originalDocument));
             using LabelSigningKey key = LabelSigningKey.Generate(curve);
             Label resigned = key.Sign(roundTripped);
-            Assert.Equal(label.GetSigningBytes(), resigned.GetSigningBytes());
+            Assert.Equal(label.GetCanonicalUnsignedBytes(), resigned.GetCanonicalUnsignedBytes());
             resigned.Verify(Document(key.ExportPublicKeyMultibase()));
             label.Verify(originalDocument);
         }

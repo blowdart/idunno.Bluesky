@@ -36,7 +36,7 @@ public class LabelSigningTests
             hex = hex.Replace("63737263", field.EndsWith("false", StringComparison.Ordinal) ? "636E6567F463737263" : "636E6567F563737263", StringComparison.Ordinal);
         }
 
-        Assert.Equal(Convert.FromHexString(hex), label.GetSigningBytes());
+        Assert.Equal(Convert.FromHexString(hex), label.GetCanonicalUnsignedBytes());
     }
 
     [Theory]
@@ -47,12 +47,12 @@ public class LabelSigningTests
         using LabelSigningKey key = LabelSigningKey.Generate(curve);
         Label original = ReadLabel();
         byte[] expected = Convert.FromHexString(PayloadHex);
-        Assert.Equal(expected, original.GetSigningBytes());
+        Assert.Equal(expected, original.GetCanonicalUnsignedBytes());
         Label signed = key.Sign(original);
         Assert.NotSame(original, signed);
         Assert.Null(original.Signature);
-        Assert.Equal(expected, signed.GetSigningBytes());
-        Assert.Equal(expected, (signed with { }).GetSigningBytes());
+        Assert.Equal(expected, signed.GetCanonicalUnsignedBytes());
+        Assert.Equal(expected, (signed with { }).GetCanonicalUnsignedBytes());
 
         byte[] privateKey = key.ExportPkcs8PrivateKey();
         try
@@ -77,7 +77,7 @@ public class LabelSigningTests
         signed.Verify(document);
         using LabelSigningKey replacement = LabelSigningKey.Generate(curve);
         Label resigned = replacement.Sign(signed);
-        Assert.Equal(signed.GetSigningBytes(), resigned.GetSigningBytes());
+        Assert.Equal(signed.GetCanonicalUnsignedBytes(), resigned.GetCanonicalUnsignedBytes());
         resigned.Verify(Document(replacement));
         Assert.Throws<InvalidDataException>(() => resigned.Verify(document));
         Assert.Throws<InvalidDataException>(() => original.Verify(document));
@@ -217,7 +217,7 @@ public class LabelSigningTests
             "long value" => label with { Value = new string('a', 129) },
             _ => throw new ArgumentOutOfRangeException(nameof(failure))
         };
-        Assert.Throws<InvalidDataException>(() => invalid.GetSigningBytes());
+        Assert.Throws<InvalidDataException>(() => invalid.GetCanonicalUnsignedBytes());
         Assert.Throws<InvalidDataException>(() => key.Sign(invalid));
     }
 

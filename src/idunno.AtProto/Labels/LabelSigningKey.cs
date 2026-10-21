@@ -212,7 +212,7 @@ public sealed class LabelSigningKey : IDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
             ArgumentNullException.ThrowIfNull(label);
-            byte[] signature = _key.SignData(label.GetSigningBytes(), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+            byte[] signature = _key.SignData(label.GetCanonicalUnsignedBytes(), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
             SigningCurve.NormalizeSignature(signature, GetOid(Curve));
             return label with { Signature = new Bytes(signature) };
         }

@@ -1,5 +1,5 @@
 #nullable enable
-idunno.AtProto.Labels.Label.GetSigningBytes() -> byte[]!
+idunno.AtProto.Labels.Label.GetCanonicalUnsignedBytes() -> byte[]!
 idunno.AtProto.Labels.LabelSigningCurve
 idunno.AtProto.Labels.LabelSigningCurve.P256 = 0 -> idunno.AtProto.Labels.LabelSigningCurve
 idunno.AtProto.Labels.LabelSigningCurve.Secp256k1 = 1 -> idunno.AtProto.Labels.LabelSigningCurve

@@ -85,12 +85,12 @@ public class LabelSignatureVerificationTests
             {
                 Label signed = key.Sign(original);
                 Assert.Null(original.Signature);
-                Assert.Equal(expected, signed.GetSigningBytes());
+                Assert.Equal(expected, signed.GetCanonicalUnsignedBytes());
                 Assert.True(externalKey.VerifyData(expected, signed.Signature!.ToBytes(), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
                 signed.Verify(DidDocumentFor(OtherDid, "atproto_label", externalKey));
                 Label roundTripped = JsonSerializer.Deserialize<Label>(
                     JsonSerializer.Serialize(signed, AtProtoServer.AtProtoJsonSerializerOptions), AtProtoServer.AtProtoJsonSerializerOptions)!;
-                Assert.Equal(expected, roundTripped.GetSigningBytes());
+                Assert.Equal(expected, roundTripped.GetCanonicalUnsignedBytes());
                 roundTripped.Verify(DidDocumentFor(OtherDid, "atproto_label", externalKey));
             }
         }
