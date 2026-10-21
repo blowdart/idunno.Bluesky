@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Formats.Cbor;
 using System.Security.Cryptography;
 
 using idunno.AtProto.Repo;
@@ -53,37 +52,6 @@ public static class LabelSignatureVerifier
             throw new InvalidDataException("A signed label must have version 1 and a signature.");
         }
 
-        CborWriter writer = new(CborConformanceMode.Canonical);
-        writer.WriteStartMap(5 + (label.CidText is null ? 0 : 1) + (label.ExpiresAtText is null ? 0 : 1) + (label.Negation.HasValue ? 1 : 0));
-        if (label.CidText is not null)
-        {
-            writer.WriteTextString("cid");
-            writer.WriteTextString(label.CidText);
-        }
-
-        writer.WriteTextString("cts");
-        writer.WriteTextString(label.CreationTimestampText);
-        if (label.ExpiresAtText is not null)
-        {
-            writer.WriteTextString("exp");
-            writer.WriteTextString(label.ExpiresAtText);
-        }
-
-        if (label.Negation.HasValue)
-        {
-            writer.WriteTextString("neg");
-            writer.WriteBoolean(label.Negation.Value);
-        }
-
-        writer.WriteTextString("src");
-        writer.WriteTextString(label.Source.ToString());
-        writer.WriteTextString("uri");
-        writer.WriteTextString(label.Uri);
-        writer.WriteTextString("val");
-        writer.WriteTextString(label.Value);
-        writer.WriteTextString("ver");
-        writer.WriteInt32(label.Version.Value);
-        writer.WriteEndMap();
-        return writer.Encode();
+        return LabelEncoding.Encode(label);
     }
 }

@@ -188,12 +188,7 @@ internal sealed class SigningKey(string curveOid, byte[] x, byte[] y)
     /// </summary>
     internal void VerifyLabel(ReadOnlySpan<byte> signedData, ReadOnlySpan<byte> signature)
     {
-        BigInteger order = BigInteger.Parse(
-            curveOid == "1.3.132.0.10"
-                ? "0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
-                : "0FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture);
+        BigInteger order = SigningCurve.GetOrder(curveOid);
         if (signature.Length != 64 ||
             new BigInteger(signature[32..], isUnsigned: true, isBigEndian: true) > order / 2)
         {

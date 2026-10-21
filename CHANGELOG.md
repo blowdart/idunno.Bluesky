@@ -10,6 +10,7 @@
 
 #### idunno.AtProto
 
+* Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
 * Added `Label.Verify()`, resolving `Label.VerifyAsync()`, and collection signature verification using an issuer's DID document, sharing signature encoding and low-S checks with Firehose labels.
 * Preserved original label timestamp and CID representations and optional negation presence through JSON and Firehose decoding and JSON round trips so issued labels can be verified without retaining raw responses.
 
