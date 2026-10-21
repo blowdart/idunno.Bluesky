@@ -692,6 +692,11 @@ public static class CollectionNsid
     public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
 
     /// <summary>
+    /// Gets the NSID for a labeler's service declaration record.
+    /// </summary>
+    public static Nsid LabelerDeclaration => new(RecordType.LabelerDeclaration);
+
+    /// <summary>
     /// The NSID for an actor's chat declaration record.
     /// </summary>
     public static Nsid ChatDeclaration => new("chat.bsky.actor.declaration");

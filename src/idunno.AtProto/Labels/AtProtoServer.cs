@@ -23,7 +23,7 @@ public static partial class AtProtoServer
     /// <summary>
     /// Find labels relevant to the provided AT-URI patterns. Public endpoint for moderation services, though it may return different or additional results with authentication.
     /// </summary>
-    /// <param name="uriPatterns">List of AT URI patterns to match (boolean 'OR'). Each may be a prefix (ending with ''; will match inclusive of the string leading to ''), or a full URI.</param>
+    /// <param name="uriPatterns">List of AT URI patterns to match (boolean 'OR'). Each may be a prefix ending with <c>*</c>, or a full URI.</param>
     /// <param name="sources">Optional list of label sources (DIDs) to filter on.</param>
     /// <param name="limit">Number of results to return. Should be between 1 and 250.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
@@ -82,6 +82,7 @@ public static partial class AtProtoServer
         queryStringBuilder.Append(string.Join("&", uriPatternList.Select(pattern => $"uriPatterns={Uri.EscapeDataString(pattern)}")));
         if (sourcesList.Count > 0)
         {
+            queryStringBuilder.Append('&');
             queryStringBuilder.Append(string.Join("&", sourcesList.Select(source => $"sources={Uri.EscapeDataString(source)}")));
         }
         if (limit is not null)
@@ -107,7 +108,7 @@ public static partial class AtProtoServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
-                new PagedReadOnlyCollection<Label>(WithoutNullEntries(response.Result.Labels, service, nameof(response.Result.Labels), loggerFactory), cursor),
+                new PagedReadOnlyCollection<Label>(WithoutNullEntries(response.Result.Labels, service, nameof(response.Result.Labels), loggerFactory), response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

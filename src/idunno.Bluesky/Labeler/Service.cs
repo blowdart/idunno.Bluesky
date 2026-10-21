@@ -27,7 +27,8 @@ public record Service : BlueskyRecord
     /// <summary>
     /// Gets the labels the labeler declares for itself, if any.
     /// </summary>
-    public ICollection<SelfLabel> Labels { get; init; } = Array.Empty<SelfLabel>();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SelfLabels? Labels { get; init; }
 
     /// <summary>
     /// Gets the <see cref="DateTimeOffset"/> the labeler declaration was created at.
@@ -37,12 +38,25 @@ public record Service : BlueskyRecord
     /// <summary>
     /// Gets the set of subject types (account, record, etc) this service accepts reports on.
     /// </summary>
-    public ICollection<string>? SubjectTypes { get; init; } = Array.Empty<string>();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ICollection<string>? SubjectTypes { get; init; }
+
+    /// <summary>
+    /// Gets the report reasons this service accepts.
+    /// </summary>
+    /// <remarks>
+    /// <para>A value of <see langword="null"/> omits the field and accepts all reasons, including future additions.
+    /// An empty collection accepts no reports. Values may include legacy reasons, granular
+    /// <c>tools.ozone.report.defs</c> reasons, and future reason identifiers.</para>
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ICollection<string>? ReasonTypes { get; init; }
 
     /// <summary>
     /// Gets the set of record types (collection <see cref="Nsid"/>s) which can be reported to this service.
     /// If the value is <see langword="null"/>, as distinct from an empty collection the labeler accepts reports on any record type.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ICollection<Nsid>? SubjectCollections { get; init; }
 
 }

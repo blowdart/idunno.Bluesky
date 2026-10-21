@@ -535,6 +535,7 @@ public class AtProtoFirehoseTests
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         DidDocument document = DidDocumentFor(OtherDid, "atproto_label", key);
         Dictionary<string, object?> label = LabelPayload(key: key, corruptSignature: corrupt);
+        label["future"] = "not signed";
 
         if (unsigned)
         {
@@ -552,6 +553,11 @@ public class AtProtoFirehoseTests
         FirehoseEvent labelsEvent = Assert.Single(await Take(firehose.SubscribeLabelsAsync(cancellationToken: cancellationToken), 1, cancellationToken));
 
         Assert.IsType(expected, labelsEvent);
+        if (labelsEvent is FirehoseLabelsEvent verified)
+        {
+            Assert.Single(verified.Labels).Verify(document);
+            LabelSignatureVerifier.Verify(document, verified.Labels);
+        }
     }
 
     [Theory]

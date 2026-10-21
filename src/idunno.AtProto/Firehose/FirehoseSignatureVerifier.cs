@@ -182,7 +182,14 @@ internal sealed class FirehoseSignatureVerifier : IDisposable
     {
         try
         {
-            key.Verify(signedData, signature, subject);
+            if (subject == "label")
+            {
+                key.VerifyLabel(signedData, signature);
+            }
+            else
+            {
+                key.Verify(signedData, signature, subject);
+            }
         }
         catch (CryptographicException exception)
         {

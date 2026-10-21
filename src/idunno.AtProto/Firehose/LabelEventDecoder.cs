@@ -1,9 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Formats.Cbor;
-using System.Globalization;
-
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
@@ -25,20 +22,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
 
     private const string SignatureField = "sig";
 
-    // The CBOR initial byte of a map, and the additional information value saying its length follows in one byte.
-    private const byte MapMajorType = 0xA0;
-    private const byte OneByteLength = 24;
-
-    /// <summary>
-    /// The most fields a label can have for its signature to be checked. Every field is covered by the signature, so none can be
-    /// skipped, and a label defines nine.
-    /// </summary>
-    internal const int MaximumSignedLabelFields = 64;
-
     private static readonly CborFieldNames s_payloadFields = new("labels");
-
-    // The canonical CBOR encoding of the "sig" key, a three byte text string.
-    private static ReadOnlySpan<byte> EncodedSignatureKey => [0x63, (byte)'s', (byte)'i', (byte)'g'];
 
     /// <summary>
     /// The label fields read when decoding a label.
@@ -95,7 +79,7 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
                 await verifier.VerifyAsync(
                     label.Source,
                     SigningKeyVerifier.LabelSigningKeyFragment,
-                    GetUnsignedLabel(encodedLabels[i]),
+                    LabelSignatureVerifier.GetUnsignedLabel(label),
                     label.Signature.ToBytes(),
                     "label",
                     documents,
@@ -166,6 +150,10 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
                 signature: null)
             {
                 ExpiresAt = fields.GetOptionalDateTime("exp"),
+                CreationTimestampText = fields.GetString("cts"),
+                CidText = cidValue,
+                ExpiresAtText = fields.GetOptionalString("exp"),
+                Negation = fields.IsAbsentOrNull("neg") ? null : negation,
                 Signature = signature is null ? null : new Bytes(signature)
             };
         }
@@ -174,79 +162,4 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
             throw new InvalidDataException("The label is invalid.", exception);
         }
     }
-
-    /// <summary>
-    /// Re-encodes a label without its signature, which is the data the signature covers.
-    /// </summary>
-    /// <param name="encodedLabel">The DAG-CBOR encoded label.</param>
-    /// <returns>The DAG-CBOR encoded label without its <c>sig</c> field.</returns>
-    /// <exception cref="InvalidDataException">The label is not a DAG-CBOR map, or has more than <see cref="MaximumSignedLabelFields"/> fields.</exception>
-    /// <remarks>
-    /// <para>The canonical reader rejects unsorted or duplicate keys and non-canonical values, so removing the signature entry from the
-    /// encoded label, and shortening the map's length, gives exactly the bytes that re-encoding the remaining fields would.</para>
-    /// </remarks>
-    internal static byte[] GetUnsignedLabel(ReadOnlyMemory<byte> encodedLabel) => FirehoseCbor.Wrap(() =>
-    {
-        CborReader reader = new(encodedLabel, CborConformanceMode.Canonical);
-        int length = reader.ReadStartMap() ?? throw new InvalidDataException("The label is an indefinite length map.");
-
-        if (length > MaximumSignedLabelFields)
-        {
-            throw new InvalidDataException(
-                string.Create(CultureInfo.InvariantCulture, $"The label has {length} fields, more than the maximum of {MaximumSignedLabelFields}."));
-        }
-
-        int entriesStart = encodedLabel.Length - reader.BytesRemaining;
-        int signatureStart = -1;
-        int signatureEnd = -1;
-
-        for (int i = 0; i < length; i++)
-        {
-            int entryStart = encodedLabel.Length - reader.BytesRemaining;
-
-            if (reader.PeekState() != CborReaderState.TextString)
-            {
-                throw new InvalidDataException("The label has a key which is not a string.");
-            }
-
-            bool isSignature = reader.ReadEncodedValue().Span.SequenceEqual(EncodedSignatureKey);
-            reader.SkipValue();
-
-            if (isSignature)
-            {
-                signatureStart = entryStart;
-                signatureEnd = encodedLabel.Length - reader.BytesRemaining;
-            }
-        }
-
-        reader.ReadEndMap();
-
-        int entriesEnd = encodedLabel.Length - reader.BytesRemaining;
-        ReadOnlySpan<byte> label = encodedLabel.Span;
-
-        if (signatureStart < 0)
-        {
-            return label[..entriesEnd].ToArray();
-        }
-
-        int unsignedLength = length - 1;
-        int headerLength = unsignedLength < OneByteLength ? 1 : 2;
-        int beforeSignature = signatureStart - entriesStart;
-        byte[] result = new byte[headerLength + beforeSignature + (entriesEnd - signatureEnd)];
-
-        if (unsignedLength < OneByteLength)
-        {
-            result[0] = (byte)(MapMajorType | unsignedLength);
-        }
-        else
-        {
-            result[0] = MapMajorType | OneByteLength;
-            result[1] = (byte)unsignedLength;
-        }
-
-        label[entriesStart..signatureStart].CopyTo(result.AsSpan(headerLength));
-        label[signatureEnd..entriesEnd].CopyTo(result.AsSpan(headerLength + beforeSignature));
-
-        return result;
-    });
 }
