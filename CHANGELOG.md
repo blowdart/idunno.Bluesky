@@ -28,6 +28,7 @@
 #### idunno.AtProto
 
 * Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
+* Preserved the current live Jetstream attempt's channel error as the final `IOException.InnerException` when SDK-managed reconnection is disabled or exhausted, including consumer-buffer overflow diagnostics. This preserves diagnostic evidence without changing buffering or recovery behavior and does not prevent the underlying interruptions.
 
 #### idunno.Bluesky
 

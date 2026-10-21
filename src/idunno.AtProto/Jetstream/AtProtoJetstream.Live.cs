@@ -25,6 +25,7 @@ public partial class AtProtoJetstream
     /// <exception cref="ObjectDisposedException">The Jetstream has been disposed.</exception>
     /// <exception cref="JetstreamConnectionException">The server rejects an expired cursor during the connection handshake.</exception>
     /// <exception cref="InvalidDataException">The server reports an <c>OutdatedCursor</c> notice after the connection is established, or an event has no sequence cursor.</exception>
+    /// <exception cref="IOException">The stream disconnects with SDK-managed reconnection disabled or its attempt limit exhausted. The inner exception contains the current attempt's channel error, if captured.</exception>
     /// <remarks>
     /// <para>Start enumeration with <c>await foreach</c>; disposing the enumerator closes its connection.
     /// This mode cannot be combined with event subscriptions or <see cref="ConnectAsync(Uri?, long?, HttpClient?, CancellationToken)"/>.
@@ -74,6 +75,7 @@ public partial class AtProtoJetstream
 
             while (true)
             {
+                IOException? interruptionCause = null;
                 Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(
                     new BoundedChannelOptions(1024) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
                 void Record(object? _, RecordReceivedEventArgs args)
@@ -122,8 +124,9 @@ public partial class AtProtoJetstream
                         {
                             readable = await channel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
                         }
-                        catch (IOException) when (!cancellationToken.IsCancellationRequested)
+                        catch (IOException ex) when (!cancellationToken.IsCancellationRequested)
                         {
+                            interruptionCause = ex;
                             break;
                         }
 
@@ -169,7 +172,7 @@ public partial class AtProtoJetstream
                     string message = maximum == 0
                         ? "The live Jetstream disconnected. SDK-managed automatic reconnection is disabled."
                         : $"The live Jetstream disconnected after the SDK exhausted its {reconnectAttempts} reconnection attempts.";
-                    throw new IOException(message);
+                    throw new IOException(message, interruptionCause);
                 }
 
                 reconnectAttempts++;
