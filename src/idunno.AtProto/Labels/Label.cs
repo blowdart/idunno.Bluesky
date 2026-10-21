@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
@@ -275,8 +274,9 @@ public sealed record Label : AtProtoObject
 
     private static DateTimeOffset ParseTimestamp(string value)
     {
-        // Use the JSON timestamp parser, rather than accepting additional culture-dependent formats.
-        return JsonSerializer.SerializeToElement(value, SourceGenerationContext.Default.String).GetDateTimeOffset();
+        return ProtocolTimestamp.TryParse(value, out DateTimeOffset result)
+            ? result
+            : throw new InvalidDataException("The label timestamp is not a valid AT Protocol datetime.");
     }
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]

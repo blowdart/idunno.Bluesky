@@ -41,6 +41,7 @@
 * Clarified live Jetstream disconnection errors when SDK-managed reconnection is disabled or its configured attempt limit is exhausted.
 * Preserved the current live Jetstream attempt's channel error as the final `IOException.InnerException` when SDK-managed reconnection is disabled or exhausted, including consumer-buffer overflow diagnostics. This preserves diagnostic evidence without changing buffering or recovery behavior and does not prevent the underlying interruptions.
 * Fixed `QueryLabels()` source-filter query separators and returned pagination cursors.
+* Label decoding rejects explicit null signed fields instead of dropping them before verification, and accepts long fractional timestamps while retaining their signed strings and public offsets.
 
 #### idunno.Bluesky
 

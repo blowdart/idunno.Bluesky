@@ -128,14 +128,14 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
         }
 
         Cid? cid = null;
-        string? cidValue = fields.GetOptionalString("cid");
+        string? cidValue = fields.Contains("cid") ? fields.GetString("cid") : null;
         if (cidValue is not null && !Cid.TryParse(cidValue, out cid))
         {
             throw new InvalidDataException("The label CID is invalid.");
         }
 
         byte[]? signature = fields.IsAbsentOrNull(SignatureField) ? null : fields.GetBytes(SignatureField);
-        bool negation = !fields.IsAbsentOrNull("neg") && fields.GetBoolean("neg");
+        bool? negation = fields.Contains("neg") ? fields.GetBoolean("neg") : null;
 
         try
         {
@@ -145,15 +145,14 @@ internal sealed class LabelEventDecoder(FirehoseOptions options, FirehoseSignatu
                 fields.GetString("uri"),
                 cid,
                 fields.GetString("val"),
-                negation,
+                negation ?? false,
                 fields.GetDateTime("cts"),
                 signature: null)
             {
-                ExpiresAt = fields.GetOptionalDateTime("exp"),
                 CreationTimestampText = fields.GetString("cts"),
                 CidText = cidValue,
-                ExpiresAtText = fields.GetOptionalString("exp"),
-                Negation = fields.IsAbsentOrNull("neg") ? null : negation,
+                ExpiresAtText = fields.Contains("exp") ? fields.GetString("exp") : null,
+                Negation = negation,
                 Signature = signature is null ? null : new Bytes(signature)
             };
         }

@@ -26,7 +26,14 @@ public class LabelSignatureVerificationTests
             TheoryData<string, string, bool?, bool> data = [];
             foreach (string curve in new[] { "1.2.840.10045.3.1.7", "1.3.132.0.10" })
             {
-                foreach (string timestamp in new[] { "2026-01-02T03:04:05Z", "2026-01-02T03:04:05.1200Z", "2026-01-02T04:04:05.12+01:00" })
+                foreach (string timestamp in new[]
+                {
+                    "2026-01-02T03:04:05Z",
+                    "2026-01-02T03:04:05.1200Z",
+                    "2026-01-02T04:04:05.12+01:00",
+                    "2026-01-02T03:04:05.12345678901234567Z",
+                    "2026-01-02T04:04:05.12345678901234567+01:00"
+                })
                 {
                     foreach (bool? negation in new bool?[] { null, false, true })
                     {
@@ -63,7 +70,7 @@ public class LabelSignatureVerificationTests
         else
         {
             data["cid"] = $"z{SimpleBase.Base58.Bitcoin.Encode(CidOf(RecordBytes()).ToBytes())}";
-            data["exp"] = "2027-01-01T01:00:00.0000+01:00";
+            data["exp"] = "2027-01-01T01:00:00.12345678901234567+01:00";
         }
 
         byte[] unsigned = Encode(data);
@@ -74,6 +81,17 @@ public class LabelSignatureVerificationTests
 
         Label jsonLabel = ReadJson(data);
         Label cborLabel = LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields));
+        TimeSpan expectedOffset = timestamp.EndsWith("+01:00", StringComparison.Ordinal) ? TimeSpan.FromHours(1) : TimeSpan.Zero;
+        Assert.Equal(expectedOffset, jsonLabel.CreationTimestamp.Offset);
+        Assert.Equal(expectedOffset, cborLabel.CreationTimestamp.Offset);
+        if (optionalFields)
+        {
+            Assert.Equal(TimeSpan.FromHours(1), jsonLabel.ExpiresAt!.Value.Offset);
+            Assert.Equal(TimeSpan.FromHours(1), cborLabel.ExpiresAt!.Value.Offset);
+            Assert.Equal(1234567, jsonLabel.ExpiresAt.Value.Ticks % TimeSpan.TicksPerSecond);
+            Assert.Equal(1234567, cborLabel.ExpiresAt.Value.Ticks % TimeSpan.TicksPerSecond);
+        }
+
         Assert.Equal(unsigned, LabelSignatureVerifier.GetUnsignedLabel(jsonLabel));
         Assert.Equal(unsigned, LabelSignatureVerifier.GetUnsignedLabel(cborLabel));
         LabelSignatureVerifier.Verify(document, [jsonLabel, cborLabel]);
@@ -87,6 +105,29 @@ public class LabelSignatureVerificationTests
         JsonSerializer.Deserialize<Label>(
             JsonSerializer.Serialize(jsonLabel, AtProtoServer.AtProtoJsonSerializerOptions),
             AtProtoServer.AtProtoJsonSerializerOptions)!.Verify(document);
+    }
+
+    [Theory]
+    [InlineData("cid")]
+    [InlineData("exp")]
+    [InlineData("neg")]
+    public void AddingExplicitNullCannotVerifyAsAnOmittedSignedField(string field)
+    {
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        DidDocument document = DidDocumentFor(OtherDid, "atproto_label", key);
+        Dictionary<string, object?> data = LabelPayload();
+        data.Remove("sig");
+        data.Remove(field);
+        data["sig"] = SignLabel(key, Encode(data));
+        ReadJson(data).Verify(document);
+        LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields)).Verify(document);
+
+        JsonObject json = ToJson(data);
+        json[field] = null;
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Label>(json.ToJsonString(), AtProtoServer.AtProtoJsonSerializerOptions));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Label>(json.ToJsonString(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        data[field] = null;
+        Assert.Throws<InvalidDataException>(() => LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields)));
     }
 
     [Theory]

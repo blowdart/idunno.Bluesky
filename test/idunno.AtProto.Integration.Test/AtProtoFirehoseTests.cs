@@ -561,6 +561,85 @@ public class AtProtoFirehoseTests
     }
 
     [Theory]
+    [InlineData("cid", false)]
+    [InlineData("cid", true)]
+    [InlineData("exp", false)]
+    [InlineData("exp", true)]
+    [InlineData("neg", false)]
+    [InlineData("neg", true)]
+    [InlineData("cts", false)]
+    [InlineData("cts", true)]
+    [InlineData("invalid exp", false)]
+    [InlineData("invalid exp", true)]
+    public async Task MalformedLabelsAreSurfacedWithoutTerminatingTheSubscription(string field, bool verify)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        DidDocument document = DidDocumentFor(OtherDid, "atproto_label", key);
+        Dictionary<string, object?> malformed = LabelPayload(key: key);
+        if (field == "invalid exp")
+        {
+            malformed["exp"] = "invalid timestamp";
+        }
+        else
+        {
+            malformed[field] = field == "cts" ? "invalid timestamp" : null;
+        }
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#labels", LabelsPayload(1, malformed)), token);
+            await Send(socket, Frame("#labels", LabelsPayload(2, LabelPayload(key: key))), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            VerifySignatures = verify,
+            DidDocumentResolver = (_, _) => Task.FromResult<DidDocument?>(document)
+        });
+
+        List<FirehoseEvent> events = await Take(firehose.SubscribeLabelsAsync(cancellationToken: cancellationToken), 2, cancellationToken);
+
+        Assert.IsType<FirehoseInvalidEvent>(events[0]);
+        Assert.Single(Assert.IsType<FirehoseLabelsEvent>(events[1]).Labels).Verify(document);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LongFractionLabelTimestampsDoNotTerminateTheSubscription(bool verify)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        DidDocument document = DidDocumentFor(OtherDid, "atproto_label", key);
+        Dictionary<string, object?> label = LabelPayload();
+        label.Remove("sig");
+        label["cts"] = "2026-01-02T04:04:05.12345678901234567+01:00";
+        label["exp"] = "2027-01-02T04:04:05.12345678901234567-07:00";
+        label["sig"] = SignLabel(key, Encode(label));
+        using var server = new TestFirehoseServer();
+        server.Start(async (socket, _, token) =>
+        {
+            await Send(socket, Frame("#labels", LabelsPayload(1, label)), token);
+            await Send(socket, Frame("#labels", LabelsPayload(2, LabelPayload(key: key))), token);
+        });
+        await using AtProtoFirehose firehose = CreateFirehose(server, new FirehoseOptions
+        {
+            VerifySignatures = verify,
+            DidDocumentResolver = (_, _) => Task.FromResult<DidDocument?>(document)
+        });
+
+        List<FirehoseEvent> events = await Take(firehose.SubscribeLabelsAsync(cancellationToken: cancellationToken), 2, cancellationToken);
+
+        Label decoded = Assert.Single(Assert.IsType<FirehoseLabelsEvent>(events[0]).Labels);
+        Assert.Equal(TimeSpan.FromHours(1), decoded.CreationTimestamp.Offset);
+        Assert.Equal(TimeSpan.FromHours(-7), decoded.ExpiresAt!.Value.Offset);
+        Assert.Equal(1234567, decoded.CreationTimestamp.Ticks % TimeSpan.TicksPerSecond);
+        Assert.Equal(1234567, decoded.ExpiresAt.Value.Ticks % TimeSpan.TicksPerSecond);
+        decoded.Verify(document);
+        Assert.Single(Assert.IsType<FirehoseLabelsEvent>(events[1]).Labels).Verify(document);
+    }
+
+    [Theory]
     [InlineData(true, false, 1)]
     [InlineData(true, true, 2)]
     [InlineData(false, false, 3)]

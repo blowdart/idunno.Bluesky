@@ -41,6 +41,9 @@ Such changes can invalidate an existing signature even when the displayed timest
 Setting `Cid` similarly replaces its original string with the CID's standard representation.
 Other changes to signed properties are also included in subsequent verification, rather than checking stale retained bytes.
 Unknown fields and `$type` are not signed.
+Optional `cid`, `exp`, and `neg` fields may be omitted, but explicit null values are rejected rather than treated as omissions.
+Protocol timestamps may contain more fractional digits than `DateTimeOffset` can represent: public values truncate to seven digits
+and retain their offsets, while verification and JSON round trips retain the full original strings.
 
 A valid signature authenticates the issued label's contents against the supplied document; it does not establish trust in the
 issuer, evaluate expiry, reconcile negations or supersession, or prove which key was published when the label was created.

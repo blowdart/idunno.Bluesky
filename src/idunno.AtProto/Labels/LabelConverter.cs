@@ -66,7 +66,7 @@ internal sealed class LabelConverter : JsonConverter<Label>
                     : null
             };
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or FormatException or OverflowException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or FormatException or OverflowException or InvalidDataException)
         {
             throw new JsonException("The label is malformed.", exception);
         }
@@ -115,5 +115,5 @@ internal sealed class LabelConverter : JsonConverter<Label>
             : throw new JsonException($"The required label field '{name}' is missing.");
 
     private static string? OptionalString(Dictionary<string, JsonElement> fields, string name) =>
-        fields.TryGetValue(name, out JsonElement value) ? value.GetString() : null;
+        fields.ContainsKey(name) ? RequiredString(fields, name) : null;
 }
