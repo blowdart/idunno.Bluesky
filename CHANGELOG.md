@@ -10,6 +10,8 @@
 
 #### idunno.AtProto
 
+* Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
+* Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.
 * Added `Label.Verify()`, resolving `Label.VerifyAsync()`, and collection signature verification using an issuer's DID document, sharing signature encoding and low-S checks with Firehose labels.
 * Preserved original label timestamp and CID representations and optional negation presence through JSON and Firehose decoding and JSON round trips so issued labels can be verified without retaining raw responses.
 
@@ -27,6 +29,11 @@
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
 
 ### 🟢 Changed
+
+#### idunno.AtProto
+
+* `StreamAsync` now asynchronously waits for bounded event-queue capacity instead of reconnecting when a consumer temporarily falls behind. The wait propagates through parsing to receiving without an unbounded secondary backlog. Genuine interruption diagnostics and replay overflow recovery are unchanged. Larger queues absorb bursts at increased memory cost; neither capacity nor backpressure guarantees that permanently slow consumers keep up with server retention or avoid server-side timeouts.
+* Live backpressure preserves virtual `OnRecordReceived` callbacks, handles expected queue shutdown (including explicit `CloseAsync()` while the queue is full) without false error logs, and keeps queue-wait cancellation separate from socket reads so enumerator and asynchronous Jetstream disposal can complete a bounded graceful close.
 
 ### ⚠️ Breaking Changes
 

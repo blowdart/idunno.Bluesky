@@ -70,6 +70,14 @@ public sealed class JetstreamMetrics
 
     internal Counter<long> ReplayHandoffs { get; private set; }
 
+    internal UpDownCounter<long> StreamBufferCapacity { get; private set; }
+
+    internal UpDownCounter<long> StreamQueuedEvents { get; private set; }
+
+    internal Counter<long> StreamCapacityWaits { get; private set; }
+
+    internal Histogram<double> StreamCapacityWaitDuration { get; private set; }
+
     /// <summary>
     /// Gets the meter name publishing metrics.
     /// </summary>
@@ -98,6 +106,10 @@ public sealed class JetstreamMetrics
         nameof(ArchiveEvents),
         nameof(ArchiveFilteredEvents),
         nameof(ReplayHandoffs),
+        nameof(StreamBufferCapacity),
+        nameof(StreamQueuedEvents),
+        nameof(StreamCapacityWaits),
+        nameof(StreamCapacityWaitDuration),
         nameof(ActiveConnections),
         nameof(ConnectionDuration),
         nameof(MessageInterarrivalDuration)
@@ -105,6 +117,26 @@ public sealed class JetstreamMetrics
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
     private void Initialize(Meter meter)
     {
+        StreamBufferCapacity = meter.CreateUpDownCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.stream.buffer.capacity",
+            description: "Sum of configured capacities of active StreamAsync queues.",
+            unit: "{events}");
+
+        StreamQueuedEvents = meter.CreateUpDownCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.stream.queue.count",
+            description: "Queued StreamAsync events, excluding yielded events and the producer waiting for capacity.",
+            unit: "{events}");
+
+        StreamCapacityWaits = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.total.stream.capacity_waits",
+            description: "Number of pending waits for StreamAsync queue capacity, including canceled and faulted waits.",
+            unit: "{waits}");
+
+        StreamCapacityWaitDuration = meter.CreateHistogram<double>(
+            name: $"{MeterName.ToLowerInvariant()}.stream.capacity_wait.duration",
+            description: "Time spent in pending capacity waits, recorded on success, cancellation or failure.",
+            unit: "s");
+
         MessagesReceived = meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.total.messages",
             description: "Number of messages received from the jetstream.",

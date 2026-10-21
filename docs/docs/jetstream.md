@@ -45,6 +45,38 @@ event-driven v1 connection.
 > [!WARNING]
 > Jetstream v2 delivery is at least once: a reconnect cursor is inclusive, so an event can be received again. `StreamAsync` suppresses events at or below the last yielded sequence within one enumeration, but this is not exactly-once processing across application restarts or failures. Persist the last successfully processed sequence with the state it represents, and make processing idempotent. Treat sequence values as server-provided data, not proof of event authenticity.
 
+## Bounded live buffering
+
+`StreamAsync` queues at most `JetstreamOptions.StreamBufferCapacity` decoded events (default **1,024**),
+excluding the event already yielded to your code. When full, it asynchronously waits for consumer capacity
+and pauses the receive path; a full local queue no longer triggers a reconnect, even with
+`maximumReconnectAttempts: 0`. Ordering and inclusive-cursor duplicate suppression are unchanged.
+Cancellation, enumerator disposal (including `break` from `await foreach`), and Jetstream disposal release
+a producer waiting for capacity.
+
+```csharp
+await using var jetstream = new AtProtoJetstream(
+    options: new JetstreamOptions { StreamBufferCapacity = 1024 });
+
+await foreach (JetstreamEvent evt in jetstream.StreamAsync())
+{
+    // Process the event, then persist your durable checkpoint.
+}
+```
+
+The option is init-only and rejects zero and negative values. Each queue captures its capacity when
+created; active queues cannot be resized. A copied options record must be supplied to a new client.
+The builder also provides `StreamBufferCapacity` and `SetStreamBufferCapacity()`.
+`ReplayLiveBufferCapacity` applies only to `ReplayAsync`, whose overflow recovery is unchanged.
+Both capacities count **events**, not bytes: `BufferSize` is the WebSocket read-chunk size and
+`MaxMessageSize` limits an individual message's size in bytes.
+
+A larger queue absorbs temporary bursts at increased, variable memory cost. Backpressure prevents
+local queue-overflow termination; it cannot guarantee a permanently slow consumer keeps up with server
+retention or avoids server-side timeouts. Buffering is not durable storage. Use the
+[queue measurements](metrics.md#live-async-enumeration-queues) to distinguish temporary bursts from
+sustained pressure and tune capacity and throughput; no capacity alone establishes that an application can keep up.
+
 ## Filtering
 
 Supply collections and [DIDs](commonTerms.md#dids) to the constructor. A collection may be an exact NSID

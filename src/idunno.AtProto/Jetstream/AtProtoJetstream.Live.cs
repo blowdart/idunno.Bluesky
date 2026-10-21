@@ -1,10 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 
 using idunno.AtProto.Jetstream.Events;
 
@@ -12,6 +12,11 @@ namespace idunno.AtProto.Jetstream;
 
 public partial class AtProtoJetstream
 {
+    [SuppressMessage("Usage", "CA2213:Disposable fields should be disposed", Justification = "Owned and disposed by the iterator after draining its receive loop. Jetstream disposal stops the queue before draining.")]
+    private LiveEventQueue? _liveQueue;
+
+    internal Action? StreamCapacityWaiting { get; set; }
+
     /// <summary>
     /// Streams decoded events from the live version 2 Jetstream, reconnecting from the last yielded sequence.
     /// </summary>
@@ -34,6 +39,9 @@ public partial class AtProtoJetstream
     /// after connection, rather than silently skipping events. Use <see cref="ReplayAsync"/> for archive-backed recovery.</para>
     /// <para>The cursor is inclusive on the server; events at or below the last yielded sequence are suppressed
     /// on reconnection. Persist a cursor only after processing its event. A process restart may repeat the last event.</para>
+    /// <para>Buffers at most <see cref="JetstreamOptions.StreamBufferCapacity"/> decoded events, excluding the event
+    /// already yielded. A full queue asynchronously pauses receiving rather than triggering reconnection.
+    /// Backpressure does not guarantee that a slow consumer can keep up with server retention or avoid server timeouts.</para>
     /// </remarks>
     public IAsyncEnumerable<JetstreamEvent> StreamAsync(
         long? cursor = null,
@@ -76,53 +84,49 @@ public partial class AtProtoJetstream
             while (true)
             {
                 IOException? interruptionCause = null;
-                Channel<JetstreamEvent> channel = Channel.CreateBounded<JetstreamEvent>(
-                    new BoundedChannelOptions(1024) { SingleReader = true, SingleWriter = true, FullMode = BoundedChannelFullMode.Wait });
-                void Record(object? _, RecordReceivedEventArgs args)
+                using LiveEventQueue queue = new(Options.StreamBufferCapacity, _metrics, Options.TimeProvider,
+                    new KeyValuePair<string, object?>("server", ArchiveServerTag(_uri)), cancellationToken)
                 {
-                    if (args.ParsedEvent is not JetstreamEvent { Sequence: not null } item)
-                    {
-                        channel.Writer.TryComplete(new InvalidDataException("The live Jetstream event has no sequence cursor."));
-                    }
-                    else if (!channel.Writer.TryWrite(item))
-                    {
-                        channel.Writer.TryComplete(new IOException("The live Jetstream consumer fell behind; reconnecting from the last yielded sequence."));
-                    }
+                    CapacityWaiting = StreamCapacityWaiting
+                };
+                lock (_syncLock)
+                {
+                    ObjectDisposedException.ThrowIf(_disposed || _disposing, this);
+                    _liveQueue = queue;
                 }
 
                 void StateChanged(object? _, ConnectionStateChangedEventArgs args)
                 {
                     if (args.State is WebSocketState.Closed or WebSocketState.Aborted)
                     {
-                        channel.Writer.TryComplete();
+                        queue.Complete();
                     }
                 }
 
                 void Fault(object? _, FaultRaisedEventArgs args) =>
-                    channel.Writer.TryComplete(new IOException($"The live Jetstream reported an error: {args.Fault}"));
+                    queue.Complete(new IOException($"The live Jetstream reported an error: {args.Fault}"));
 
                 void Info(object? _, InfoReceivedEventArgs args)
                 {
                     if (args.Name == "OutdatedCursor")
                     {
-                        channel.Writer.TryComplete(new InvalidDataException("The live Jetstream cursor is outside the server's retained events."));
+                        queue.Complete(new InvalidDataException("The live Jetstream cursor is outside the server's retained events."));
                     }
                 }
 
-                _recordReceived += Record;
                 _connectionStateChanged += StateChanged;
                 _faultRaised += Fault;
                 _infoReceived += Info;
                 try
                 {
                     bool connected = await TryConnectLiveAsync(lastYielded == long.MinValue ? cursor : lastYielded,
-                        cancellationToken).ConfigureAwait(false);
+                        queue.CancellationToken).ConfigureAwait(false);
                     while (connected)
                     {
                         bool readable;
                         try
                         {
-                            readable = await channel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
+                            readable = await queue.WaitToReadAsync(cancellationToken).ConfigureAwait(false);
                         }
                         catch (IOException ex) when (!cancellationToken.IsCancellationRequested)
                         {
@@ -135,9 +139,10 @@ public partial class AtProtoJetstream
                             break;
                         }
 
-                        while (channel.Reader.TryRead(out JetstreamEvent? item))
+                        while (queue.TryRead(out JetstreamEvent? item))
                         {
-                            if (item.Sequence is long sequence && sequence > lastYielded)
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (item?.Sequence is long sequence && sequence > lastYielded)
                             {
                                 lastYielded = sequence;
                                 reconnectAttempts = 0;
@@ -148,6 +153,7 @@ public partial class AtProtoJetstream
                 }
                 finally
                 {
+                    queue.Stop();
                     try
                     {
                         if (_client.State is WebSocketState.Open or WebSocketState.CloseReceived or WebSocketState.CloseSent)
@@ -155,11 +161,21 @@ public partial class AtProtoJetstream
                             await CloseAsync(cancellationToken: CancellationToken.None).ConfigureAwait(false);
                         }
 
+                        Task receiveLoops;
+                        lock (_syncLock)
+                        {
+                            receiveLoops = Task.WhenAll(_receiveLoopTasks);
+                        }
+
+                        await receiveLoops.ConfigureAwait(false);
                         await DrainMessageParsersAsync(CancellationToken.None).ConfigureAwait(false);
                     }
                     finally
                     {
-                        _recordReceived -= Record;
+                        lock (_syncLock)
+                        {
+                            _liveQueue = null;
+                        }
                         _connectionStateChanged -= StateChanged;
                         _faultRaised -= Fault;
                         _infoReceived -= Info;
