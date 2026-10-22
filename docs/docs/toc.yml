@@ -121,6 +121,12 @@ items:
             href: bots/customBotActions.md
           - name: Writing a followers-only reply bot
             href: bots/followersOnlyReplyBot.md
+      - name: Writing a labeler
+        items:
+          - name: What is a labeller?
+            href: labeller/overview.md
+          - name: Persistence
+            href: labeller/persistence.md
 
   - name: Jetstream
     items:

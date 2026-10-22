@@ -5,9 +5,11 @@
     <BuildType Name="Release" />
   </Configurations>
   <Folder Name="/.artifacts/">
-    <File Path=".artifacts/Start-MySqlContainer.ps1" />
-    <File Path=".artifacts/Start-PostgreSqlContainer.ps1" />
-    <File Path=".artifacts/Start-RedisContainer.ps1" />
+    <File Path=".artifacts/Start-MySqlAuthenticationContainer.ps1" />
+    <File Path=".artifacts/Start-MySqlLabelerContainer.ps1" />
+    <File Path=".artifacts/Start-PostgreSqlAuthenticationContainer.ps1" />
+    <File Path=".artifacts/Start-PostgreSqlLabelerContainer.ps1" />
+    <File Path=".artifacts/Start-RedisAuthenticationContainer.ps1" />
   </Folder>
   <Folder Name="/.assets/">
     <File Path=".assets/.gitkeep" />
@@ -119,6 +121,10 @@
     <File Path="docs/docs/userPreferences.md" />
     <File Path="docs/docs/video.md" />
     <File Path="docs/docs/windowsOAuth.md" />
+  </Folder>
+  <Folder Name="/docs/docs/labeller/">
+    <File Path="docs/docs/labeller/overview.md" />
+    <File Path="docs/docs/labeller/persistence.md" />
   </Folder>
   <Folder Name="/docs/docs/includes/">
     <File Path="docs/docs/includes/production-configuration.md" />
@@ -345,6 +351,10 @@
     <Project Path="src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj" />
     <Project Path="src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.MySQL/idunno.Bluesky.Labeler.MySQL.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.PostgreSQL/idunno.Bluesky.Labeler.PostgreSQL.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.SQLite/idunno.Bluesky.Labeler.SQLite.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
   <Folder Name="/samples/Jetstream/">
@@ -451,6 +461,9 @@
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Serialization.Test/idunno.Bluesky.Serialization.Test.csproj">

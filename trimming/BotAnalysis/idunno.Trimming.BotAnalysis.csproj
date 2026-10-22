@@ -18,6 +18,14 @@
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.MySQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.SQLite" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler\idunno.Bluesky.Labeler.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.MySQL\idunno.Bluesky.Labeler.MySQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.PostgreSQL\idunno.Bluesky.Labeler.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.Labeler" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.MySQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.PostgreSQL" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.Labeler.SQLite" />
   </ItemGroup>
 
 </Project>

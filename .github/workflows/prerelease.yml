@@ -60,6 +60,31 @@ jobs:
     name: Build prerelease
     needs: coherency
     runs-on: ubuntu-latest
+    services:
+      labeler-postgresql:
+        image: postgres:17
+        env:
+          POSTGRES_USER: labeler_test
+          POSTGRES_PASSWORD: labeler-disposable-ci
+          POSTGRES_DB: labeler_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U labeler_test -d labeler_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      labeler-mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: labeler-disposable-ci
+          MYSQL_ROOT_HOST: "%"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysql -h 127.0.0.1 -u root -plabeler-disposable-ci -e 'SELECT 1'"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      LABELER_TEST_POSTGRESQL_CONNECTION: "Host=127.0.0.1;Port=5432;Database=labeler_test;Username=labeler_test;Password=labeler-disposable-ci;Pooling=false;GSS Encryption Mode=Disable"
+      LABELER_TEST_MYSQL_CONNECTION: "Server=127.0.0.1;Port=3306;User ID=root;Password=labeler-disposable-ci;Pooling=false"
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1

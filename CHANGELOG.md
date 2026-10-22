@@ -4,6 +4,15 @@
 
 ### ➕ Added
 
+#### idunno.Bluesky.Labeler
+
+* Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
+
+#### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
+
+* Added all three persistence providers with transactional sequence allocation, restartable schema setup, packaged `schema.sql`, common real-engine conformance coverage and setup/upgrade/backup guidance.
+* Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
+
 #### idunno.AtProto.Types
 
 * Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
@@ -288,7 +297,7 @@
 
 #### idunno.Bluesky.AspNet.Authentication.PostgreSQL
 
-* Added PostgreSQL implementations of the identity store and correlation state cache, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache`, with schema definitions in `schema.sql` and development container setup in `Start-PostgreSqlContainer.ps1`.
+* Added PostgreSQL implementations of the identity store and correlation state cache, `PostgreSqlIdentityStore` and `PostgreSqlCorrelationStateCache`, with schema definitions in `schema.sql` and development container setup in `Start-PostgreSqlAuthenticationContainer.ps1`.
 
 #### Samples
 

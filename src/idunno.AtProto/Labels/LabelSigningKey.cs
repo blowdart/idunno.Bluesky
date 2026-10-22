@@ -10,7 +10,7 @@ using idunno.AtProto.Repo;
 namespace idunno.AtProto.Labels;
 
 /// <summary>
-/// Owns a local private key used to sign version-one AT Protocol labels.
+/// Owns a local private key used to sign version 1 AT Protocol labels.
 /// </summary>
 /// <remarks>
 /// <para>Generate or import a dedicated label key explicitly, retain it for subsequent signing, and dispose it when finished.
@@ -18,6 +18,7 @@ namespace idunno.AtProto.Labels;
 /// <para>Private material is available only through explicit export methods. Protect exports and passwords yourself;
 /// caller-owned buffers and immutable PEM strings cannot be erased by this class. Curve support depends on the platform provider.</para>
 /// </remarks>
+/// <seealso href="https://atproto.com/specs/label">AT Protocol Labels specification (version 1)</seealso>
 [DebuggerDisplay("{Curve}")]
 [SuppressMessage("Usage", "CA1054:Uri parameters should not be strings", Justification = "Label subjects are protocol URI strings, including DIDs and AT URIs.")]
 public sealed class LabelSigningKey : IDisposable
@@ -194,7 +195,7 @@ public sealed class LabelSigningKey : IDisposable
     }
 
     /// <summary>
-    /// Signs a version-one label, returning a copy with a compact low-S signature.
+    /// Signs a version 1 label, returning a copy with a compact low-S signature.
     /// </summary>
     /// <param name="label">The label to sign or re-sign.</param>
     /// <returns>A new signed label preserving every signed field and its retained representation.</returns>
@@ -219,7 +220,7 @@ public sealed class LabelSigningKey : IDisposable
     }
 
     /// <summary>
-    /// Creates and signs a version-one ordinary label with the negation field omitted.
+    /// Creates and signs a version 1 ordinary label with the negation field omitted.
     /// </summary>
     /// <param name="source">The issuer DID.</param>
     /// <param name="uri">The subject URI.</param>
@@ -237,7 +238,7 @@ public sealed class LabelSigningKey : IDisposable
         CreateSignedLabel(source, uri, value, creationTimestamp, cid, expiresAt, negation: null);
 
     /// <summary>
-    /// Creates and signs a version-one negation label.
+    /// Creates and signs a version 1 negation label.
     /// </summary>
     /// <param name="source">The issuer DID.</param>
     /// <param name="uri">The subject URI of the label to retract.</param>

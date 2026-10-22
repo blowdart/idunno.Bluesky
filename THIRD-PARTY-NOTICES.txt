@@ -13,6 +13,11 @@ Third-party package licenses
 The following third-party NuGet packages are used by the library projects.
 Package versions are intentionally omitted.
 
+The idunno.Bluesky.Labeler provider packages use Microsoft.Extensions.DependencyInjection
+and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.Sqlite
+(MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL
+provider uses MySqlConnector (MIT), listed below.
+
 Component                                       License
 ----------------------------------------------  ----------
 DnsClient                                       Apache-2.0

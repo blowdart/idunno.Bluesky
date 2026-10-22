@@ -1,4 +1,7 @@
 # <a name="labels">Labels</a>
+For operating a standalone service, start with [What is a labeller?](labeller/overview.md),
+then see [provider-backed persistence](labeller/persistence.md).
+
 Labelers and [labels](https://docs.bsky.app/docs/advanced-guides/moderation) are how Bluesky allows for composable moderation.
 A label is published by a moderation service, which a user or an application can choose to subscribe to.
 

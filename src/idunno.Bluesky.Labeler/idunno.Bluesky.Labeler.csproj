@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Host-neutral durable persistence contracts for standalone AT Protocol labelers.</Description>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+    <ProjectReference Include="..\idunno.AtProto\idunno.AtProto.csproj" />
+  </ItemGroup>
+</Project>

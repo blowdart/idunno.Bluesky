@@ -89,7 +89,11 @@ $supportedProjects = @(
     'src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj',
     'src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj',
     'src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj',
-    'src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj'
+    'src/idunno.Bluesky.BotSdk.SQLite/idunno.Bluesky.BotSdk.SQLite.csproj',
+    'src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj',
+    'src/idunno.Bluesky.Labeler.MySQL/idunno.Bluesky.Labeler.MySQL.csproj',
+    'src/idunno.Bluesky.Labeler.PostgreSQL/idunno.Bluesky.Labeler.PostgreSQL.csproj',
+    'src/idunno.Bluesky.Labeler.SQLite/idunno.Bluesky.Labeler.SQLite.csproj'
 )
 
 $excludedProjects = @{
@@ -148,6 +152,10 @@ $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($packageFeed
       <package pattern="idunno.Bluesky.BotSdk.MySQL" />
       <package pattern="idunno.Bluesky.BotSdk.PostgreSQL" />
       <package pattern="idunno.Bluesky.BotSdk.SQLite" />
+      <package pattern="idunno.Bluesky.Labeler" />
+      <package pattern="idunno.Bluesky.Labeler.MySQL" />
+      <package pattern="idunno.Bluesky.Labeler.PostgreSQL" />
+      <package pattern="idunno.Bluesky.Labeler.SQLite" />
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />

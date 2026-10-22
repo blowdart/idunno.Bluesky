@@ -1,4 +1,4 @@
-# Built-in metrics in idunno.AtProto
+# Built-in metrics
 
 This is a reference for metrics built-in for .NET, produced using the [System.Diagnostics.Metrics](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.metric) API.
 
@@ -247,6 +247,101 @@ For dependency-injection scenarios, supply the application's `IMeterFactory` thr
 | `connections.active` | UpDownCounter&lt;long&gt; | {connections} | Current number of open firehose connections, tagged with the server origin. |
 | `connection.duration` | Histogram&lt;double&gt; | s | Duration of completed firehose connections, tagged with the server origin. |
 | `message.interarrival.duration` | Histogram&lt;double&gt; | s | Time between successive frames received on a firehose connection, tagged with the server origin. A rising interval can indicate an idle or stalled stream; it measures frame arrival, not event processing. |
+
+## idunno.Bluesky.Labeler.Persistence
+
+The SQLite, PostgreSQL and MySQL labeler persistence providers report through the
+`idunno.Bluesky.Labeler.Persistence` meter, version `1.0.0`. Its name and version are exposed by
+`LabelPersistenceMetrics.MeterName` and `LabelPersistenceMetrics.MeterVersion` in the
+`idunno.Bluesky.Labeler` namespace.
+
+Register the meter with an existing OpenTelemetry metrics configuration:
+
+```csharp
+using idunno.Bluesky.Labeler;
+
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics => metrics.AddMeter(LabelPersistenceMetrics.MeterName));
+```
+
+Providers use the application's `IMeterFactory` when one is registered in dependency injection,
+otherwise a provider-local static meter. The application owns the factory and its meters.
+The persistence packages do not install an exporter or start background monitoring.
+For development, use:
+
+```powershell
+dotnet-counters monitor --process-id <pid> --counters idunno.Bluesky.Labeler.Persistence
+```
+
+### Instruments
+
+Names below have the prefix `idunno.bluesky.labeler.`.
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `operation.duration` | Histogram&lt;double&gt; | s | End-to-end duration of a completed storage operation, including connection setup, database waits and any internal retry backoff; recorded on success, failure or cancellation. |
+| `operations` | Counter&lt;long&gt; | {operation} | Completed operation outcomes plus separate retry and idempotent-retry diagnostic events; see outcome semantics below before calculating request rates. |
+| `operations.active` | UpDownCounter&lt;long&gt; | {operation} | Process-local in-flight storage calls, incremented on entry and decremented on completion, including failure and cancellation. |
+| `labels` | Counter&lt;long&gt; | {label} | Newly committed labels for `append`, newly exposed labels for `publish`, or returned labels for `query` and `replay`. |
+| `bytes` | Counter&lt;long&gt; | By | Signed JSON bytes newly committed by `append` or returned by `query` and `replay`; excludes canonical payloads, receipts, database overhead and network traffic. Publication adds no bytes. |
+| `publication.pending` | Histogram&lt;long&gt; | {label} | Number of committed but unpublished labels at an explicit successful snapshot sample. |
+| `publication.oldest` | Histogram&lt;double&gt; | s | Database-clock age of the oldest unpublished label at an explicit successful snapshot sample; zero when no labels await publication. |
+
+The duration histogram supplies recommended bucket boundaries of `0.001`, `0.005`, `0.01`, `0.05`,
+`0.1`, `0.5`, `1`, `5` and `15` seconds. Exporters may use different boundaries.
+
+### Tags and outcome semantics
+
+Every instrument uses bounded `provider`, `operation` and `outcome` tags:
+
+| Tag | Values |
+| --- | --- |
+| `provider` | `sqlite`, `postgresql`, `mysql` |
+| `operation` | `initialize`, `state`, `append`, `receipt`, `publish`, `query`, `replay`, `retirement`, `grace`, `retired`, `purge`, `snapshot` |
+| `outcome` | Completed calls: `success`, `cancelled`, `conflict`, `contention`, `database`, `integrity`, `failure`; diagnostic events on `operations`: `retry`, `idempotent`; activity deltas: `active`; label, byte and snapshot measurements: `success` |
+
+No tag contains a database name, connection string, credential, issuer or subject identifier, label value,
+operation key, sequence, cursor or raw exception text.
+
+`conflict` covers rejected state or command operations, including stale revisions and invalid lifecycle
+transitions. `contention` is a classified transient database failure after internal retries are exhausted;
+`database` covers other database exceptions, and `integrity` covers invalid stored data or schema versions
+encountered during ordinary operations. `failure` covers otherwise uncategorized failures.
+Initialization reports `success`, `cancelled` or `failure`; consult its generated logs for schema failures.
+Input validation rejected before an operation starts is not recorded in these instruments.
+
+The `operations` counter records one completion per instrumented call, **and** additional `retry` or
+`idempotent` events when applicable. Exclude those two diagnostic outcomes when calculating completed-call
+rates or failure ratios. A successful idempotent append records both an `idempotent` event and a `success`
+completion, but does not count the original batch again in `labels` or `bytes`. Internal retries contribute
+one duration covering the whole call, not a duration per attempt.
+
+### Interpreting publication and throughput
+
+Call `ILabelStore.GetSnapshotAsync` explicitly to obtain durable backlog measurements. Merely subscribing
+to the meter does not query the database, register an observable SQL callback or schedule sampling.
+An unchanged or missing histogram observation is not evidence that the current backlog is zero.
+
+Backlog and age describe **shared database state**, including work issued by other processes. Multiple
+hosts sampling the same database must not have their backlog observations summed as independent queues.
+All other instruments describe activity of the instrumented process. Multiple stores with the same meter
+and tags aggregate; there are deliberately no per-database tags.
+
+Append and publication throughput count labels only after a successful commit acknowledgement. An ambiguous
+commit failure may therefore leave committed work absent from that process's counters; durable state and
+operation receipts remain authoritative. Read counters count returned data on every call, including repeated
+reads, not distinct historical labels. Publication means local durable visibility, not remote subscriber receipt.
+
+Compare duration percentiles with `retry` and `contention` outcomes to identify lock pressure. Rising sampled
+backlog and oldest age alongside low publication throughput can indicate a stopped or under-capacity publisher.
+High query latency with sparse filters can reflect history scanning while holding the stream lock.
+Lifecycle operations use `retirement`, `grace`, `retired` and `purge` operation tags; schema preparation uses
+`initialize`. Pair those measurements with generated lifecycle logs and persisted checkpoints when diagnosing
+recovery. Activity up/down counters require a listener that observes matching increments and decrements,
+not just the most recent delta.
+
+See [Standalone labeler persistence](labeller/persistence.md) for provider setup, transaction guarantees,
+publication and lifecycle semantics, and backup guidance.
 
 ## idunno.AtProto.DidHandleCache
 
