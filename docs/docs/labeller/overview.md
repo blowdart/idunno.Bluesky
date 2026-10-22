@@ -21,7 +21,7 @@ storage, distribution, administration and shutdown. You'll still need to choose 
 configure your identity, keys and deployment.
 
 > [!NOTE]
-> This work is being built in stages. The signing APIs and persistence packages are parts of that
+> This work is being built in stages. The signing APIs, shared issuance service and persistence packages are parts of that
 > runnable service, not a finished host on their own. The walkthrough below describes the whole service,
 > including the parts still to come.
 
@@ -38,6 +38,10 @@ needs to know whether that author already has the label.
 Once you've made the decision, the labeller signs the label, saves it, and makes it available to subscribers.
 Its public declaration explains what `beans` means. People can then decide whether to subscribe.
 The Bureau can't compel anyone to hide a baked-bean enthusiast.
+
+The [shared issuance and withdrawal service](issuance.md) now handles those decision checks, target
+resolution, signed labels and atomic audit/persistence. A host still supplies authentication,
+authorization and policy implementations, identity/key management and a publication worker.
 
 Of course, a keyword match raises questions. Do coffee beans count? Jelly beans? What happens when
 someone appeals because they were discussing a Java bean? Let's follow the Bureau from its first

@@ -20,9 +20,10 @@ staying alive until the last bean is counted.
 Start with `idunno.Bluesky.Labeler` and choose one provider: `idunno.Bluesky.Labeler.SQLite`,
 `.PostgreSQL`, or `.MySQL`. The storage API stays the same whichever database you choose.
 Your services, CLI and UI shouldn't need their own database-specific code.
-These packages handle storage, not the rest of the labeller. They accept labels you've already signed
-with the [label APIs](../labels.md); they don't provide the policy, administration, protocol host,
-moderation site or private-key store.
+The providers accept labels already signed with the [label APIs](../labels.md). For application
+decisions, use the [shared issuance and withdrawal service](issuance.md), which adds authorization,
+policy checks, target verification and atomic audit. The packages don't provide authentication,
+administration, a protocol host, moderation site or private-key store.
 
 ## Choose a provider and set it up
 
@@ -216,17 +217,21 @@ The store keeps its stream identity, sequence high-water marks and lifecycle met
 sequences or reopen for issuance. Purging doesn't destroy keys or erase anyone else's copies.
 
 Team, audit and moderation persistence belong to their owning workstreams. They must extend typed provider
-transactions when atomic authorization/audit coupling is required. Do not bypass services through a raw
+transactions when atomic authorization/audit coupling is required. Service decision audit is already
+committed atomically with labels through `ILabelStore`; team revocation fencing is not.
+Do not bypass services through a raw
 connection or claim that an independent second write is atomic with issuance.
 
 ## Upgrade and back up your database
 
 Use setup credentials for schema installation/upgrades, and runtime credentials restricted to SELECT,
-INSERT, UPDATE and DELETE on these four tables. Runtime PostgreSQL/MySQL sessions also require permission
+INSERT, UPDATE and DELETE on these five tables. Runtime PostgreSQL/MySQL sessions also require permission
 to read the server settings validated above. Run `InitializeAsync` separately with setup credentials.
 Registration and ordinary operations do not run DDL.
 
-Version one is the first labeler schema. `label_schema` records completion only after all creation steps.
+Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
+`InitializeAsync` upgrades version one additively without changing its signed history, legacy receipts,
+stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
 interruption, because its DDL commits independently. Run upgrades with services stopped/exclusive access,

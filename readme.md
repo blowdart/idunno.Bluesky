@@ -173,11 +173,11 @@ where the `$type` property is not the first property in the JSON object.
 
 ### External dependencies
 
+* [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
+* [Duende.IdentityModel.OidcClient](https://github.com/DuendeSoftware/foss/tree/main/identity-model-oidc-client) - used to do the OAuth heavy lifting.
+* [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) - used in SQLite implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
-* [Microsoft.Data.Sqlite](https://learn.microsoft.com/dotnet/standard/data/sqlite/) - used in SQLite implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
-* [Duende.IdentityModel.OidcClient](https://github.com/DuendeSoftware/foss/tree/main/identity-model-oidc-client) - used to do the OAuth heavy lifting.
-* [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
 * [MySqlConnector](https://mysqlconnector.net/) - used in MySQL implementations of `ICorrelationStateCache` and `IIdentityStore` for Bluesky authentication.
 * [PeterO.CBor](https://github.com/peteroupc/CBOR) - used in Fire Hose decoding.
 * [SimpleBase](https://github.com/ssg/SimpleBase) - used in decoding CIDs.
@@ -185,21 +185,38 @@ where the `$type` property is not the first property in the JSON object.
 * [ZstdSharp](https://github.com/oleg-st/ZstdSharp) - used in Jetstream decompression.
 
 ### External analyzers used during builds
-* [DotNetAnalyzers.DocumentationAnalyzers](https://github.com/DotNetAnalyzers/DocumentationAnalyzers) - used to validate XML docs on public types.
 * [CommentSense](https://www.nuget.org/packages/CommentSense) - used to validate XML docs on public types.
+* [DotNetAnalyzers.DocumentationAnalyzers](https://github.com/DotNetAnalyzers/DocumentationAnalyzers) - used to validate XML docs on public types.
 * [Microsoft.CodeAnalysis.PublicApiAnalyzers](https://github.com/dotnet/roslyn/blob/main/src/RoslynAnalyzers/PublicApiAnalyzers/PublicApiAnalyzers.Help.md) - used to track public API changes.
 * [SonarAnalyzer.CSharp](https://www.sonarsource.com/products/sonarlint/features/visual-studio/) - used for common code smell detection.
 
-### External build &amp; testing tools
+### External build tools
 
 * [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
-* [Coverlet.Collector](https://github.com/coverlet-coverage/coverlet) - used to produce code coverage files
 * [Microsoft.Sbom.Targets](https://www.nuget.org/packages/Microsoft.Sbom.Targets) - used to generate Software Bill of Materials (SBOM) files and embed them in the NuGet packages.
 * [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
 * [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
 * [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
-* [xunit](https://github.com/xunit/xunit) - used for unit tests.
+
+### External backend testing dependencies
+
+* [coverlet.MTP](https://github.com/coverlet-coverage/coverlet) - collects code coverage through MTP; CI enables it with `--coverlet`.
+* [Microsoft.AspNetCore.Mvc.Testing](https://learn.microsoft.com/aspnet/core/test/integration-tests) - provides `WebApplicationFactory` and application-host integration for the ASP.NET sample tests.
+* [Microsoft.AspNetCore.TestHost](https://learn.microsoft.com/aspnet/core/test/integration-tests) - provides an in-memory ASP.NET Core server for HTTP integration and authentication tests.
+* [Microsoft.CodeCoverage](https://www.nuget.org/packages/Microsoft.CodeCoverage) - provides Microsoft's code coverage tooling for the test projects.
+* [Microsoft.Extensions.Diagnostics.Testing](https://learn.microsoft.com/dotnet/core/testing/unit-testing-logging) - provides test collectors for logging and metrics assertions.
+* [Microsoft.Extensions.TimeProvider.Testing](https://learn.microsoft.com/dotnet/core/testing/unit-testing-timeprovider) - provides `FakeTimeProvider` for deterministic clock, timer and expiry tests.
+* [Microsoft.NET.Test.Sdk](https://www.nuget.org/packages/Microsoft.NET.Test.Sdk) - provides .NET test SDK integration for the test projects.
+* [System.IdentityModel.Tokens.Jwt](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - creates JWTs for protocol and authentication integration-test responses.
+* [xunit.runner.visualstudio](https://github.com/xunit/visualstudio.xunit) - provides Visual Studio Test Explorer and VSTest integration.
+* [xunit.v3](https://xunit.net/) - used for test discovery, execution and assertions, including its MTP runner.
+
+### External frontend testing dependencies
+
+* [jsdom](https://github.com/jsdom/jsdom) - provides the browser-like DOM environment for frontend tests.
+* [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) (`@testing-library/react`) - renders and interacts with React components in tests.
+* [Vitest](https://vitest.dev/) - runs the frontend tests.
 
 ## Other .NET Bluesky libraries and projects
 

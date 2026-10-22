@@ -7,10 +7,12 @@
 #### idunno.Bluesky.Labeler
 
 * Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
+* Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
 * Added all three persistence providers with transactional sequence allocation, restartable schema setup, packaged `schema.sql`, common real-engine conformance coverage and setup/upgrade/backup guidance.
+* Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
 * Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
 
 #### idunno.AtProto.Types

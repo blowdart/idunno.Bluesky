@@ -130,12 +130,17 @@ Each lexicon record must also declare its own `[JsonPolymorphic]` and `[JsonDeri
 
 * Target the latest C# language version (currently C# 13); do not use preview language features.
 * Apply the formatting in `.editorconfig`. Use file-scoped namespaces and single-line `using` directives.
+* Follow IDE0007/IDE0008 and the repository's `csharp_style_var_*` settings. Prefer explicit types; do not use `var` where the configured rules prefer a declared type.
+* When a parameter or argument list wraps across lines, put each parameter or argument on its own line, including the first. Apply this to declarations, constructors and calls.
+* Use named arguments when calling methods or constructors with four or more parameters, including optional parameters, so long calls are understandable without consulting their declarations. Expanded `params` elements remain positional when they cannot be named individually.
+* Document private and internal classes and methods as well as public APIs. Explain their purpose and important invariants, not merely what their names already say.
 * Put the opening brace of a block on its own new line; keep a method's final `return` on its own line.
 * Prefer pattern matching and switch expressions. Use `nameof` instead of string literals for member names.
 * Use `?.` where applicable (e.g. `scope?.Dispose()`) and `ObjectDisposedException.ThrowIf` for disposal guards.
-* Prefer primary constructors where possible (e.g. `PagedCidCollection(IList<Cid> list, string? cursor = null) : ReadOnlyCollection<Cid>(list)`),
+* Follow IDE0290: prefer primary constructors where possible (e.g. `PagedCidCollection(IList<Cid> list, string? cursor = null) : ReadOnlyCollection<Cid>(list)`),
   and positional records for internal response models (e.g. `internal sealed record ListReposResponse([property: JsonRequired] List<HostedRepository> Repos, string? Cursor);`).
-  Keep an explicit constructor when it needs different accessibility from the type (such as an `internal` constructor on a public type) or validates its arguments.
+  Simple argument validation can remain in field or property initializers and is not, by itself, a reason to avoid a primary constructor.
+  Keep an explicit constructor when it needs different accessibility from the type (such as an `internal` constructor on a public type), or when cross-argument validation or multi-step initialization is clearer in a constructor body.
 * Every public API needs XML doc comments following the guidance in [`docs.instructions.md`](instructions/docs.instructions.md), which is applied automatically to `*.cs` files.
 
 ### Nullable reference types

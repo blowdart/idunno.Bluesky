@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.PostgreSQL\idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.MySQL\idunno.Bluesky.Labeler.MySQL.csproj" />

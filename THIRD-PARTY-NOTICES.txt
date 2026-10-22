@@ -18,6 +18,9 @@ and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL
 provider uses MySqlConnector (MIT), listed below.
 
+The labeler tests also use Microsoft.Extensions.TimeProvider.Testing (MIT).
+This is a test-only dependency and is not distributed in the labeler packages.
+
 Component                                       License
 ----------------------------------------------  ----------
 DnsClient                                       Apache-2.0

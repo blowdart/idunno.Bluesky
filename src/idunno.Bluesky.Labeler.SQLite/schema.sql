@@ -28,5 +28,12 @@ CREATE TABLE IF NOT EXISTS label_operations (
     request BLOB NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_operations_revision ON label_operations(revision);
+CREATE TABLE IF NOT EXISTS label_decisions (
+    operation_hash BLOB PRIMARY KEY CHECK(length(operation_hash)=32),
+    operation_id TEXT NOT NULL,
+    revision INTEGER NOT NULL CHECK(revision>0),
+    receipt BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_decisions_revision ON label_decisions(revision);
 INSERT OR IGNORE INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '');
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 1);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 2);
