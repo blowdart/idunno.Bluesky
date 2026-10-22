@@ -65,12 +65,18 @@ foreach (string project in projects)
         id = Path.GetFileNameWithoutExtension(project);
     }
 
+    string license = properties["PackageLicenseExpression"]?.GetValue<string>() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(license))
+    {
+        throw new InvalidOperationException($"{id} ({project}) is packable but has no PackageLicenseExpression.");
+    }
+
     packable[id] = new ProjectInfo(
         project,
         id,
         properties["NuGetPackageVersion"]!.GetValue<string>(),
         properties["TargetFrameworks"]!.GetValue<string>().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-        properties["PackageLicenseExpression"]?.GetValue<string>() ?? string.Empty);
+        license);
 }
 
 Console.WriteLine($"Generating SBOMs for {packable.Count} packages.");
@@ -315,7 +321,7 @@ static void Validate(string directory, ProjectInfo info, Dictionary<string, Proj
         {
             errors.Add($"SPDX BOM does not describe {info.Id} {info.Version}.");
         }
-        else if (!string.IsNullOrEmpty(info.License) && root["licenseDeclared"]?.GetValue<string>() != info.License)
+        else if (root["licenseDeclared"]?.GetValue<string>() != info.License)
         {
             errors.Add($"SPDX root package license is not {info.License}.");
         }
