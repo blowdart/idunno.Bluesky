@@ -1,6 +1,7 @@
 version: 2
 updates:
 - package-ecosystem: nuget
+  # Also discovers .config/dotnet-tools.json, including release and SBOM tools.
   directory: "/"
   schedule:
     interval: daily
@@ -80,3 +81,48 @@ updates:
         - github/codeql-action/analyze
         - github/codeql-action/init
         - github/codeql-action/upload-sarif
+
+- package-ecosystem: npm
+  directory: "/samples/Samples.AspNetProgressiveAuthentication"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
+- package-ecosystem: npm
+  directory: "/samples/Samples.AspNetTunnelAuthentication"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
+- package-ecosystem: npm
+  directory: "/samples/Samples.ReactBff/ClientApp"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
+- package-ecosystem: dotnet-sdk
+  directory: "/"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
+- package-ecosystem: devcontainers
+  directory: "/"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
