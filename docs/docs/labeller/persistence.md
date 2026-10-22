@@ -138,7 +138,8 @@ An exception before commit leaves no partial batch.
 An identical key/input returns its original `LabelAppendReceipt`, even if the caller's expected
 revision has since become stale. Changed signed input under that key conflicts.
 The receipt records the original sequence range and revision; its zero range identifies an empty batch.
-Keys are ordinal UTF-8 identities of at most 256 bytes; hash-index matches are checked against full keys.
+Keys are nonblank ordinal UTF-8 identities of at most 256 bytes and cannot contain U+0000 characters;
+hash-index matches are checked against full keys.
 
 **Keep the signed command if you might need to retry.** ECDSA can produce another signature for the same
 payload. If you lose an acknowledgement, call `GetReceiptAsync` rather than signing everything again.

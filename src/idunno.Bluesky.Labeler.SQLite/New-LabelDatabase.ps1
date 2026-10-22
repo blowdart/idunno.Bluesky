@@ -57,11 +57,10 @@ catch [System.IO.IOException]
     throw
 }
 
-$schema = Get-Content -LiteralPath $schemaPath -Raw
-$commands = ".bail on`nBEGIN IMMEDIATE;`n$schema`nCOMMIT;"
-
 try
 {
+    $schema = Get-Content -LiteralPath $schemaPath -Raw
+    $commands = ".bail on`nBEGIN IMMEDIATE;`n$schema`nCOMMIT;"
     $commands | & $sqlite.Source $databasePath
     if ($LASTEXITCODE -ne 0)
     {

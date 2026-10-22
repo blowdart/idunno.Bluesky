@@ -199,6 +199,34 @@ public class ProviderConformanceTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task PurgesRemainingCheckpointReceiptsAfterAllLabelsAreRemoved(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await fixture.Store.AppendAsync("initial", [Sign(key)], cancellationToken: TestContext.Current.CancellationToken);
+        LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("checkpoint", [], state.Revision, 1, TestContext.Current.CancellationToken);
+        state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
+        await fixture.ExecuteAsync("UPDATE label_state SET grace_deadline=0");
+        state = await fixture.Store.CompleteRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+
+        state = await fixture.Store.PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+        Assert.Equal(state.IssuedThrough, state.ReplayFloor);
+        Assert.Equal(LabelerLifecyclePhase.Purging, state.Phase);
+        Assert.Null(await fixture.Store.GetReceiptAsync("initial", TestContext.Current.CancellationToken));
+        Assert.NotNull(await fixture.Store.GetReceiptAsync("checkpoint", TestContext.Current.CancellationToken));
+
+        state = await fixture.NewStore().PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+        Assert.Equal(LabelerLifecyclePhase.Purged, state.Phase);
+        Assert.Null(await fixture.Store.GetReceiptAsync("checkpoint", TestContext.Current.CancellationToken));
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task InitializesFromScriptAndRecoversPartialSchemaButRejectsFutureVersions(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine, initialize: false);
@@ -293,6 +321,8 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.AppendAsync("empty", [], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.AppendAsync(new string('x', 257), [signed], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAnyAsync<ArgumentException>(() => fixture.Store.AppendAsync("\ud800", [signed], cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.AppendAsync("decision\0retry", [signed], cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.GetReceiptAsync("decision\0retry", TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.AppendAsync("oversized", Enumerable.Repeat(signed, 1001).ToArray(), cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.QueryAsync(["a*b"], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.PublishAsync(0, TestContext.Current.CancellationToken));

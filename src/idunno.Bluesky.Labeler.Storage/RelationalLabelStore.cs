@@ -277,6 +277,11 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
     private static void OperationId(string operationId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
+        if (operationId.Contains('\0', StringComparison.Ordinal))
+        {
+            throw new ArgumentException("An operation key cannot contain U+0000.", nameof(operationId));
+        }
+
         ArgumentOutOfRangeException.ThrowIfGreaterThan(s_strictUtf8.GetByteCount(operationId), 256);
     }
 
@@ -664,12 +669,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     cancellationToken, ("@hash", hash)).ConfigureAwait(false);
             }
 
-            long remaining = Integer(await ScalarAsync(connection, transaction,
-                "SELECT COUNT(*) FROM label_operations", cancellationToken).ConfigureAwait(false));
+            object? remaining = await ScalarAsync(connection, transaction,
+                "SELECT 1 FROM label_operations LIMIT 1", cancellationToken).ConfigureAwait(false);
             LabelStoreState next = state with
             {
                 Revision = checked(state.Revision + 1), ReplayFloor = nextFloor,
-                Phase = nextFloor == state.IssuedThrough && remaining == 0 ? LabelerLifecyclePhase.Purged : LabelerLifecyclePhase.Purging
+                Phase = nextFloor == state.IssuedThrough && remaining is null ? LabelerLifecyclePhase.Purged : LabelerLifecyclePhase.Purging
             };
             await SaveAsync(connection, transaction, next, cancellationToken).ConfigureAwait(false);
             return next;

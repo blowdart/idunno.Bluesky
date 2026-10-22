@@ -63,7 +63,7 @@ public interface ILabelStore
     /// Atomically persists an already signed label batch, allocates its ordered sequences and records an idempotency
     /// receipt, optionally advancing retirement enumeration in the same transaction.
     /// </summary>
-    /// <param name="operationId">The nonblank, ordinal idempotency key of at most 256 UTF-8 bytes, retained until explicit purge.</param>
+    /// <param name="operationId">The nonblank, ordinal idempotency key of at most 256 UTF-8 bytes, containing no U+0000 characters and retained until explicit purge.</param>
     /// <param name="labels">The fixed signed batch of at most 1,000 labels; an empty batch is allowed only with a retirement checkpoint.</param>
     /// <param name="expectedRevision">An optional required store revision, or <see langword="null"/> to omit the optimistic concurrency check.</param>
     /// <param name="retirementThrough">
@@ -105,9 +105,11 @@ public interface ILabelStore
     /// Recovers the original append acknowledgement by operation key so a caller can resolve an uncertain write
     /// without generating new signatures.
     /// </summary>
-    /// <param name="operationId">The idempotency key.</param>
+    /// <param name="operationId">The nonblank idempotency key of at most 256 UTF-8 bytes, containing no U+0000 characters.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The receipt, or <see langword="null"/> when the key has not committed or was explicitly purged.</returns>
+    /// <exception cref="ArgumentException">The operation key is blank, contains U+0000 or cannot be encoded as UTF-8.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The operation key exceeds 256 UTF-8 bytes.</exception>
     /// <remarks>
     /// <para>
     /// An absent receipt permits retrying the same fixed signed command, not substituting different input.
