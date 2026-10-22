@@ -8,6 +8,7 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Testing;
@@ -83,6 +84,119 @@ public class ProviderConformanceTests
         Assert.Equal(receipt, await fixture.Store.AppendAsync("fixed", [valid], expectedRevision: -1, cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.AppendAsync("stale", [valid], expectedRevision: 0, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(1, (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).IssuedThrough);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite", false)]
+    [InlineData("postgresql", false)]
+    [InlineData("mysql", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", true)]
+    public async Task RecoversCommitBoundaryFailuresWithoutDuplicatingWrites(string engine, bool loseAcknowledgement)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot[] batch = [Sign(key), Sign(key, "did:plc:two")];
+        LabelStoreState before = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        using MetricCollector<long> operations = new(fixture.MeterFactory, LabelPersistenceMetrics.MeterName, "idunno.bluesky.labeler.operations");
+        int attempts = 0;
+        int commits = 0;
+        LabelAppendReceipt? observed = null;
+        fixture.SetCommitHooks(async (connection, transaction, token) =>
+        {
+            attempts++;
+            using DbCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                SELECT issued, s.revision, (SELECT COUNT(*) FROM label_entries),
+                    (SELECT COUNT(*) FROM label_operations), first_seq, last_seq, o.revision
+                FROM label_state s CROSS JOIN label_operations o WHERE s.id=1
+                """;
+            await using (DbDataReader reader = await command.ExecuteReaderAsync(token))
+            {
+                Assert.True(await reader.ReadAsync(token));
+                Assert.Equal(2, reader.GetInt64(0));
+                Assert.Equal(before.Revision + 1, reader.GetInt64(1));
+                Assert.Equal(2, reader.GetInt64(2));
+                Assert.Equal(1, reader.GetInt64(3));
+                LabelAppendReceipt current = new("commit-boundary", reader.GetInt64(4), reader.GetInt64(5), reader.GetInt64(6));
+                Assert.Equal(1, current.FirstSequence);
+                Assert.Equal(2, current.LastSequence);
+                if (observed is not null)
+                {
+                    Assert.Equal(observed, current);
+                }
+
+                observed = current;
+                Assert.False(await reader.ReadAsync(token));
+            }
+
+            if (!loseAcknowledgement && attempts == 1)
+            {
+                await InjectTransientFailureAsync(engine, connection, transaction, token);
+            }
+        }, async (connection, token) =>
+        {
+            commits++;
+            if (loseAcknowledgement)
+            {
+                await InjectTransientFailureAsync(engine, connection, null, token);
+            }
+        });
+
+        if (loseAcknowledgement)
+        {
+            await Assert.ThrowsAnyAsync<DbException>(() => fixture.Store.AppendAsync("commit-boundary", batch,
+                before.Revision, cancellationToken: TestContext.Current.CancellationToken));
+        }
+        else
+        {
+            LabelAppendReceipt receipt = await fixture.Store.AppendAsync("commit-boundary", batch,
+                before.Revision, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Equal(observed, receipt);
+        }
+
+        Assert.Equal(loseAcknowledgement ? 1 : 2, attempts);
+        Assert.Equal(1, commits);
+        Assert.Equal(loseAcknowledgement ? 0 : 1, operations.GetMeasurementSnapshot()
+            .Count(measurement => measurement.Tags["outcome"]?.ToString() == "retry"));
+        Assert.DoesNotContain(operations.GetMeasurementSnapshot(),
+            measurement => measurement.Tags["outcome"]?.ToString() == "idempotent");
+        fixture.SetCommitHooks();
+        ILabelStore restarted = fixture.NewStore();
+        LabelStoreState recovered = await restarted.GetStateAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(before with { Revision = before.Revision + 1, IssuedThrough = 2 }, recovered);
+        Assert.NotNull(observed);
+        Assert.Equal(observed, await restarted.GetReceiptAsync("commit-boundary", TestContext.Current.CancellationToken));
+        Assert.Equal(observed, await restarted.AppendAsync("commit-boundary", batch, before.Revision,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(recovered, await restarted.GetStateAsync(TestContext.Current.CancellationToken));
+        recovered = await restarted.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        LabelPage replay = await restarted.ReplayAsync(recovered.StreamId, 0, recovered.PublishedThrough,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(new long[] { 1, 2 }, replay.Labels.Select(label => label.Sequence));
+        for (int i = 0; i < batch.Length; i++)
+        {
+            Assert.Equal(batch[i].GetJsonBytes(), replay.Labels[i].SignedLabel.GetJsonBytes());
+        }
+    }
+
+    private static async Task InjectTransientFailureAsync(string engine, DbConnection connection,
+        DbTransaction? transaction, CancellationToken token)
+    {
+        if (engine == "sqlite")
+        {
+            throw new SqliteException("Injected commit-boundary failure.", 5);
+        }
+
+        using DbCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = engine == "postgresql"
+            ? "DO $$ BEGIN RAISE EXCEPTION 'Injected commit-boundary failure' USING ERRCODE = '40001'; END $$"
+            : "SIGNAL SQLSTATE '40001' SET MYSQL_ERRNO = 1213, MESSAGE_TEXT = 'Injected commit-boundary failure'";
+        await command.ExecuteNonQueryAsync(token);
+        throw new InvalidOperationException("The database did not inject the expected transient failure.");
     }
 
     [Theory(Timeout = 120_000)]

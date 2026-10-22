@@ -107,6 +107,29 @@ internal sealed class StoreFixture : IAsyncDisposable
 
     internal IMeterFactory MeterFactory => Services.GetRequiredService<IMeterFactory>();
 
+    internal void SetCommitHooks(
+        Func<DbConnection, DbTransaction, CancellationToken, Task>? beforeCommit = null,
+        Func<DbConnection, CancellationToken, Task>? afterCommit = null)
+    {
+        switch (Store)
+        {
+            case SqliteLabelStore sqlite:
+                sqlite.BeforeCommitAsync = beforeCommit;
+                sqlite.AfterCommitAsync = afterCommit;
+                break;
+            case PostgreSqlLabelStore postgresql:
+                postgresql.BeforeCommitAsync = beforeCommit;
+                postgresql.AfterCommitAsync = afterCommit;
+                break;
+            case MySqlLabelStore mysql:
+                mysql.BeforeCommitAsync = beforeCommit;
+                mysql.AfterCommitAsync = afterCommit;
+                break;
+            default:
+                throw new InvalidOperationException("Unknown test store.");
+        }
+    }
+
     private DbConnection AdminConnection() => Engine == "mysql"
         ? new MySqlConnection(_admin) : new NpgsqlConnection(_admin);
 

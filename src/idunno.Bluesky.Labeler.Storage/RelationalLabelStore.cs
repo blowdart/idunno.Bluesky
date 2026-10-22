@@ -18,6 +18,8 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
 {
     private const int SchemaVersion = 1;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
+    internal Func<DbConnection, DbTransaction, CancellationToken, Task>? BeforeCommitAsync { get; set; }
+    internal Func<DbConnection, CancellationToken, Task>? AfterCommitAsync { get; set; }
     protected abstract string Provider { get; }
     protected abstract string LockSuffix { get; }
     protected abstract string ClockSql { get; }
@@ -144,9 +146,19 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     await using var transactionDisposal = transaction.ConfigureAwait(false);
                     LabelStoreState state = await StateAsync(connection, transaction, token).ConfigureAwait(false);
                     T result = await action(connection, transaction, state).ConfigureAwait(false);
+                    if (BeforeCommitAsync is { } beforeCommit)
+                    {
+                        await beforeCommit(connection, transaction, token).ConfigureAwait(false);
+                    }
+
                     token.ThrowIfCancellationRequested();
                     committing = true;
                     await transaction.CommitAsync(token).ConfigureAwait(false);
+                    if (AfterCommitAsync is { } afterCommit)
+                    {
+                        await afterCommit(connection, token).ConfigureAwait(false);
+                    }
+
                     outcome = "success";
                     return result;
                 }
