@@ -22,7 +22,9 @@ Component                                       License
 CycloneDX .NET tool (CycloneDX)                 Apache-2.0
 CycloneDX CLI                                   Apache-2.0
 check-jsonschema                                Apache-2.0
+certifi (validator dependency)                   MPL-2.0
 Syft                                            Apache-2.0
+typing-extensions (validator dependency)         PSF-2.0
 
 Third-party package licenses
 ----------------------------
