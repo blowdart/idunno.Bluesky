@@ -166,11 +166,21 @@ jobs:
       id-token: write
 
     steps:
+    - name: 'Checkout tool manifest'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        sparse-checkout: |
+          .config/dotnet-tools.json
+          global.json
+          nuget.config
+        sparse-checkout-cone-mode: false
+        persist-credentials: false
+
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
 
-    - name: 'Install Sign CLI'
-      run: dotnet tool install --tool-path ./sign sign --version 0.9.1-beta.25379.1
+    - name: 'Restore .NET tools'
+      run: dotnet tool restore
 
     - name: 'Gather nupkgs from build output'
       uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -189,7 +199,7 @@ jobs:
     - name: Sign
       shell: pwsh
       run: >
-        ./sign/sign code trusted-signing *.nupkg --base-directory ${env:BUILD_OUTPUT} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
+        dotnet tool run sign code trusted-signing *.nupkg --base-directory ${env:BUILD_OUTPUT} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
 
     - name: Expand signed nupkg for attestation
       shell: pwsh
@@ -255,11 +265,14 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: 'Checkout latest sleet.json'
+    - name: 'Checkout Sleet configuration and tool manifest'
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         sparse-checkout: |
           sleet.json
+          .config/dotnet-tools.json
+          global.json
+          nuget.config
         sparse-checkout-cone-mode: false
         persist-credentials: false
 
@@ -272,9 +285,9 @@ jobs:
         name: signed-artifacts
         path : ${{ env.BUILD_OUTPUT }}
 
-    - name: Install Sleet
+    - name: Restore .NET tools
       shell: pwsh
-      run: dotnet tool install --tool-path ./sleet sleet --version 7.2.0
+      run: dotnet tool restore
 
     - name: Authenticate to Azure
       uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
@@ -287,7 +300,7 @@ jobs:
     - name: Publish NuGet Packages to Azure blob storage
       shell : pwsh
       run: |
-         ./sleet/sleet push "${env:BUILD_OUTPUT}" --config ./sleet.json --source feed
+         dotnet tool run sleet push "${env:BUILD_OUTPUT}" --config ./sleet.json --source feed
 
     - name: Setup MyGet and GitHub Packages as NuGet Sources
       shell: pwsh

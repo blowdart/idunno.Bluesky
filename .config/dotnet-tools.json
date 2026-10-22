@@ -8,6 +8,20 @@
         "dotnet-CycloneDX"
       ],
       "rollForward": false
+    },
+    "sign": {
+      "version": "0.9.1-beta.25379.1",
+      "commands": [
+        "sign"
+      ],
+      "rollForward": false
+    },
+    "sleet": {
+      "version": "7.2.0",
+      "commands": [
+        "sleet"
+      ],
+      "rollForward": false
     }
   }
 }
