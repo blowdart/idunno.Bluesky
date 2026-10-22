@@ -50,7 +50,7 @@ Run("dotnet", $"restore \"{Path.Combine(root, "idunno.Bluesky.slnx")}\" {configP
 Dictionary<string, ProjectInfo> packable = [];
 foreach (string project in projects)
 {
-    string propertiesJson = Run("dotnet", $"msbuild \"{project}\" -t:GetBuildVersion -getProperty:IsPackable -getProperty:PackageId -getProperty:NuGetPackageVersion -getProperty:TargetFrameworks -p:Configuration=Release -p:PublicRelease={publicRelease.ToString().ToLowerInvariant()} -nologo")
+    string propertiesJson = Run("dotnet", $"msbuild \"{project}\" -t:GetBuildVersion -getProperty:IsPackable -getProperty:PackageId -getProperty:NuGetPackageVersion -getProperty:TargetFrameworks -getProperty:PackageLicenseExpression -p:Configuration=Release -p:PublicRelease={publicRelease.ToString().ToLowerInvariant()} -nologo")
         .Trim();
 
     JsonNode properties = JsonNode.Parse(propertiesJson)!["Properties"]!;
@@ -69,7 +69,8 @@ foreach (string project in projects)
         project,
         id,
         properties["NuGetPackageVersion"]!.GetValue<string>(),
-        properties["TargetFrameworks"]!.GetValue<string>().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        properties["TargetFrameworks"]!.GetValue<string>().Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+        properties["PackageLicenseExpression"]?.GetValue<string>() ?? string.Empty);
 }
 
 Console.WriteLine($"Generating SBOMs for {packable.Count} packages.");
@@ -101,9 +102,13 @@ try
             JsonNode bom = FilterBom(File.ReadAllText(cycloneDxPath), info, packable);
             File.WriteAllText(cycloneDxPath, bom.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
 
-            Run(syft, $"convert \"{cycloneDxPath}\" -o spdx-json=\"{Path.Combine(outputDirectory, "bom.spdx.json")}\"");
+            string spdxPath = Path.Combine(outputDirectory, "bom.spdx.json");
+            Run(syft, $"convert \"{cycloneDxPath}\" -o spdx-json=\"{spdxPath}\"");
 
-            Validate(outputDirectory, info);
+            JsonNode spdx = NormalizeSpdx(File.ReadAllText(spdxPath), info);
+            File.WriteAllText(spdxPath, spdx.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+
+            Validate(outputDirectory, info, packable);
         }
     }
 }
@@ -134,7 +139,14 @@ static JsonNode FilterBom(string json, ProjectInfo info, Dictionary<string, Proj
             purl.EndsWith($"@{referenced.Version}", StringComparison.Ordinal))
         {
             component["version"] = referenced.Version;
+            component["licenses"] = CreateLicenses(referenced.License);
         }
+    }
+
+    // metadata.licenses in the template would license the BOM document, so the package license goes on the root component.
+    if (bom["metadata"]?["component"] is JsonNode rootComponent)
+    {
+        rootComponent["licenses"] = CreateLicenses(info.License);
     }
 
     // Remove build only packages (PrivateAssets="All" and the like). SPDX has no scope, so this must happen before conversion.
@@ -184,7 +196,70 @@ static JsonNode FilterBom(string json, ProjectInfo info, Dictionary<string, Proj
     return bom;
 }
 
-static void Validate(string directory, ProjectInfo info)
+static JsonArray CreateLicenses(string license)
+{
+    if (string.IsNullOrWhiteSpace(license))
+    {
+        return [];
+    }
+
+    return license.Any(c => c is ' ' or '(' or ')')
+        ? [new JsonObject { ["expression"] = license }]
+        : [new JsonObject { ["license"] = new JsonObject { ["id"] = license } }];
+}
+
+static JsonNode NormalizeSpdx(string json, ProjectInfo info)
+{
+    // Syft describes the document with a synthetic "unknown" root package when the CycloneDX root is a library.
+    // Make the document describe the NuGet package instead.
+    JsonNode spdx = JsonNode.Parse(json)!;
+    JsonArray packages = spdx["packages"]!.AsArray();
+    JsonArray relationships = spdx["relationships"]!.AsArray();
+
+    JsonNode? root = packages.FirstOrDefault(p =>
+        p?["name"]?.GetValue<string>() == info.Id &&
+        p["versionInfo"]?.GetValue<string>() == info.Version);
+
+    if (root?["SPDXID"]?.GetValue<string>() is not string rootId)
+    {
+        throw new InvalidOperationException($"{info.Id}: SPDX conversion did not produce a package for {info.Id} {info.Version}.");
+    }
+
+    string[] syntheticIds = [.. packages
+        .Where(p => p?["SPDXID"]?.GetValue<string>().StartsWith("SPDXRef-DocumentRoot-", StringComparison.Ordinal) == true)
+        .Select(p => p!["SPDXID"]!.GetValue<string>())];
+
+    for (int i = packages.Count - 1; i >= 0; i--)
+    {
+        if (syntheticIds.Contains(packages[i]!["SPDXID"]!.GetValue<string>()))
+        {
+            packages.RemoveAt(i);
+        }
+    }
+
+    for (int i = relationships.Count - 1; i >= 0; i--)
+    {
+        JsonNode relationship = relationships[i]!;
+        if (syntheticIds.Contains(relationship["spdxElementId"]!.GetValue<string>()) ||
+            syntheticIds.Contains(relationship["relatedSpdxElement"]!.GetValue<string>()))
+        {
+            relationships.RemoveAt(i);
+        }
+    }
+
+    relationships.Insert(0, new JsonObject
+    {
+        ["spdxElementId"] = "SPDXRef-DOCUMENT",
+        ["relatedSpdxElement"] = rootId,
+        ["relationshipType"] = "DESCRIBES"
+    });
+
+    spdx["name"] = $"{info.Id} {info.Version}";
+
+    return spdx;
+}
+
+static void Validate(string directory, ProjectInfo info, Dictionary<string, ProjectInfo> packable)
 {
     JsonNode cycloneDx = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "bom.cdx.json")))!;
     JsonNode spdx = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "bom.spdx.json")))!;
@@ -223,9 +298,41 @@ static void Validate(string directory, ProjectInfo info)
         errors.Add($"CycloneDX root component version is not {info.Version}.");
     }
 
-    if (spdx["packages"]?.AsArray() is not JsonArray { Count: > 0 })
+    if (spdx["packages"]?.AsArray() is not JsonArray { Count: > 0 } spdxPackages)
     {
         errors.Add("SPDX BOM contains no packages.");
+    }
+    else
+    {
+        JsonNode[] described = [.. (spdx["relationships"]?.AsArray() ?? []).Where(r => r?["relationshipType"]?.GetValue<string>() == "DESCRIBES")!];
+        JsonNode? root = described.Length == 1
+            ? spdxPackages.FirstOrDefault(p => p?["SPDXID"]?.GetValue<string>() == described[0]["relatedSpdxElement"]?.GetValue<string>())
+            : null;
+
+        if (root is null ||
+            root["name"]?.GetValue<string>() != info.Id ||
+            root["versionInfo"]?.GetValue<string>() != info.Version)
+        {
+            errors.Add($"SPDX BOM does not describe {info.Id} {info.Version}.");
+        }
+        else if (!string.IsNullOrEmpty(info.License) && root["licenseDeclared"]?.GetValue<string>() != info.License)
+        {
+            errors.Add($"SPDX root package license is not {info.License}.");
+        }
+
+        if (spdxPackages.Any(p => p?["SPDXID"]?.GetValue<string>().StartsWith("SPDXRef-DocumentRoot-", StringComparison.Ordinal) == true))
+        {
+            errors.Add("SPDX BOM contains a synthetic document root package.");
+        }
+
+        foreach (JsonNode? package in spdxPackages)
+        {
+            string name = package!["name"]!.GetValue<string>();
+            if (packable.ContainsKey(name) && package["licenseDeclared"]?.GetValue<string>() == "NOASSERTION")
+            {
+                errors.Add($"SPDX package {name} has no declared license.");
+            }
+        }
     }
 
     if (errors.Count > 0)
@@ -261,4 +368,4 @@ static string Run(string fileName, string arguments, string? workingDirectory = 
     return output;
 }
 
-internal sealed record ProjectInfo(string Path, string Id, string Version, string[] TargetFrameworks);
+internal sealed record ProjectInfo(string Path, string Id, string Version, string[] TargetFrameworks, string License);

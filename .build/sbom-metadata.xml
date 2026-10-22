@@ -10,10 +10,5 @@
       <name>idunno.org</name>
       <url>https://github.com/blowdart/idunno.Bluesky</url>
     </supplier>
-    <licenses>
-      <license>
-        <id>MIT</id>
-      </license>
-    </licenses>
   </metadata>
 </bom>
