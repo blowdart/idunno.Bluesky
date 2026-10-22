@@ -1,5 +1,13 @@
 # Version History
 
+## Unreleased
+
+### 🟢 Changed
+
+#### Packaging
+
+* Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
+
 ## 8.0.0 - 2026-10-16
 
 🎉 **New** [JetStream](https://atproto.com/blog/introducing-bluesky-protocol-services) v2 support, including archive snapshots, resumable block and segment downloads, and live replay with bounded planning.

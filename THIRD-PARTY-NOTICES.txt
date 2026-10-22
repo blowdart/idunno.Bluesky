@@ -7,6 +7,20 @@ bring it to our attention by posting an issue.
 
 The attached notices are provided for information only.
 
+Build tooling
+-------------
+
+The following third-party tools are used in the release workflows to generate
+and validate Software Bill of Materials (SBOM) files. They are not distributed
+with the libraries.
+
+Component                                       License
+----------------------------------------------  ----------
+CycloneDX .NET tool (CycloneDX)                 Apache-2.0
+CycloneDX CLI                                   Apache-2.0
+check-jsonschema                                Apache-2.0
+Syft                                            Apache-2.0
+
 Third-party package licenses
 ----------------------------
 
