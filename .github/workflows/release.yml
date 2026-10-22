@@ -103,7 +103,7 @@ jobs:
         chmod +x "${tools}/cyclonedx"
         curl --fail --silent --show-error --location --output "${tools}/spdx-schema.json" "https://raw.githubusercontent.com/spdx/spdx-spec/v2.3/schemas/spdx-schema.json"
         echo "239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b  ${tools}/spdx-schema.json" | sha256sum --check -
-        python3 -m pip install --user check-jsonschema==0.38.2
+        python3 -m pip install --user --require-hashes -r .build/requirements-sbom.txt
         echo "${tools}" >> "${GITHUB_PATH}"
 
     - name: 'Generate SBOMs'
