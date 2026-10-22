@@ -59,6 +59,15 @@ updates:
   cooldown:
     default-days: 7
 
+- package-ecosystem: pip
+  directory: "/.build"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
