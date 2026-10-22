@@ -256,6 +256,76 @@ public class LabelIssuanceServiceConformanceTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task AuthorizesCopiedWithdrawalCidBeforeCommittingAndAuditsFinalGrant(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient httpClient = new(new TargetResolutionHandler());
+        TestLabelIssuanceAuthorizer authorizer = new()
+        {
+            GrantVersion = request => request.ResolvedTarget?.Cid is not null ? "cid-grant" : "unpinned-grant"
+        };
+        LabelIssuanceService service = CreateService(
+            store: fixture.Store,
+            key: key,
+            httpClient: httpClient,
+            authorizer: authorizer,
+            policy: new TestLabelIssuancePolicyProvider(Policy()));
+        LabelTarget record = LabelTarget.Record(
+            new AtUri("at://did:plc:label-test-subject/app.bsky.feed.post/post-key"),
+            new Cid(TargetResolutionHandler.RecordCid));
+        LabelServiceResult<LabelOperationReceipt> issued = await service.ExecuteAsync(
+            LabelOperationRequest.Issue(
+                operationId: "pinned-issue",
+                target: record,
+                value: "spam",
+                context: Context("issue")),
+            TestContext.Current.CancellationToken);
+        Assert.True(issued.Succeeded);
+
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            LabelOperationRequest withdrawal = LabelOperationRequest.Negate(
+                operationId: $"unpinned-withdrawal-{attempt}",
+                target: LabelTarget.Record(record.RecordUri!),
+                value: "spam",
+                context: Context("withdrawal"));
+            LabelStoreState before = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+            authorizer.Deny = request => request.Action == LabelAuthorizationAction.Negate &&
+                request.ResolvedTarget?.Cid is not null;
+
+            LabelServiceResult<LabelOperationReceipt> denied = await service.ExecuteAsync(
+                withdrawal,
+                TestContext.Current.CancellationToken);
+
+            Assert.False(denied.Succeeded);
+            Assert.Equal(LabelServiceErrorCode.Unauthorized, denied.Error.Code);
+            Assert.Equal(before, await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
+            LabelServiceResult<LabelOperationReceipt> absent = await fixture.Store.GetOperationAsync(
+                withdrawal.OperationId,
+                TestContext.Current.CancellationToken);
+            Assert.False(absent.Succeeded);
+            Assert.Equal(LabelServiceErrorCode.OperationNotFound, absent.Error.Code);
+
+            authorizer.Deny = null;
+            LabelServiceResult<LabelOperationReceipt> allowed = await service.ExecuteAsync(
+                withdrawal,
+                TestContext.Current.CancellationToken);
+
+            Assert.True(allowed.Succeeded);
+            Assert.Equal(attempt == 0, allowed.Result.Changed);
+            Assert.Equal("cid-grant", allowed.Result.Audit.AuthorizationVersion);
+            Assert.Equal(record.Cid, allowed.Result.ResolvedTarget.Cid);
+            Assert.NotNull(allowed.Result.Label);
+            Assert.True(allowed.Result.Label.SignedLabel.Label.IsNegationLabel);
+            allowed.Result.Label.SignedLabel.Label.Verify(SigningDocument(key));
+        }
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task AuthorizationAndPolicyDenialsDoNotCommitOrResolveBeforeAdmission(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);

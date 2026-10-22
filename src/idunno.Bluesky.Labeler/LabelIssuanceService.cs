@@ -196,9 +196,26 @@ public sealed class LabelIssuanceService(
                     "The withdrawal CID does not match the current stored decision.");
             }
 
-            if (resolved.RecordUri is { } uri && current is not null)
+            if (resolved.RecordUri is { } uri &&
+                current is not null &&
+                resolved.Cid != current.SignedLabel.Label.Cid)
             {
                 resolved = LabelTarget.Record(uri, current.SignedLabel.Label.Cid);
+                // Copying a stored CID changes the authorized scope, including for audited no-ops.
+                // Use the final grant in the audit and reject denial before signing or committing.
+                grant = await AuthorizeAsync(
+                    action: action,
+                    context: request.Context,
+                    operationId: request.OperationId,
+                    requested: request.Target,
+                    resolved: resolved,
+                    value: request.Value,
+                    admission: false,
+                    token: token).ConfigureAwait(false);
+                if (!grant.Succeeded)
+                {
+                    return LabelServiceResult<LabelOperationReceipt>.Failure(grant.Error);
+                }
             }
         }
 

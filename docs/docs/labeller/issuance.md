@@ -24,7 +24,10 @@ connect to a database, publish a declaration, migrate storage or start a worker.
 An authorizer must return a grant or an explicit failure. There is no default allow-all authorizer.
 The service first checks admission, before looking up receipts or resolving targets, then checks the
 resolved scope. Receipt recovery is authorized against the stored target, even if a handle now points
-elsewhere. `GetOperationAsync` and `GetPublicationStateAsync` are authorized reads too.
+elsewhere. When an unpinned withdrawal copies a stored CID, the service authorizes that final scope
+again before signing or committing, including for audited no-ops. A denial commits neither a label
+nor a receipt; a successful operation records the final grant's version.
+`GetOperationAsync` and `GetPublicationStateAsync` are authorized reads too.
 
 `LabelOperationContext` contains the actor DID, reason and optional correlation identity. These are
 audit inputs, **not proof of authentication**: a trusted host must establish the actor instead of copying

@@ -17,6 +17,9 @@ internal sealed class TestLabelIssuanceAuthorizer : ILabelIssuanceAuthorizer
     /// <summary>Gets or sets the predicate selecting authorization checks to reject.</summary>
     internal Func<LabelAuthorizationRequest, bool>? Deny { get; set; }
 
+    /// <summary>Gets or sets the version recorded for each successfully authorized scope.</summary>
+    internal Func<LabelAuthorizationRequest, string> GrantVersion { get; set; } = _ => "test-grant-v1";
+
     /// <summary>Gets a stable observation of checks for assertions about admission and recovered scope.</summary>
     internal IReadOnlyCollection<LabelAuthorizationRequest> Requests => _requests.ToArray();
 
@@ -32,7 +35,7 @@ internal sealed class TestLabelIssuanceAuthorizer : ILabelIssuanceAuthorizer
                 new(
                     code: LabelServiceErrorCode.Unauthorized,
                     message: "The test authorizer denied this check."))
-            : LabelServiceResult<LabelAuthorizationGrant>.Success(new("test-grant-v1"));
+            : LabelServiceResult<LabelAuthorizationGrant>.Success(new(GrantVersion(request)));
         return Task.FromResult(result);
     }
 }
