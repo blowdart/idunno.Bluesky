@@ -182,6 +182,48 @@ public class ProviderConformanceTests
         }
     }
 
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite", 1)]
+    [InlineData("postgresql", 1)]
+    [InlineData("mysql", 1)]
+    [InlineData("sqlite", 100)]
+    [InlineData("postgresql", 100)]
+    [InlineData("mysql", 100)]
+    public async Task DrainsUnfilteredQueryAndReplayInRequestedPageSizes(string engine, int limit)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot signed = Sign(key);
+        int count = limit * 2 + 1;
+        await fixture.Store.AppendAsync("pages", Enumerable.Repeat(signed, count).ToArray(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        LabelStoreState state = await fixture.Store.PublishAsync(1000, TestContext.Current.CancellationToken);
+        string? cursor = null;
+        long after = 0;
+        do
+        {
+            LabelPage query = await fixture.Store.QueryAsync([], cursor: cursor, limit: limit,
+                cancellationToken: TestContext.Current.CancellationToken);
+            LabelPage replay = await fixture.Store.ReplayAsync(state.StreamId, after, state.PublishedThrough, limit,
+                TestContext.Current.CancellationToken);
+            long[] expected = Enumerable.Range((int)after + 1, Math.Min(limit, count - (int)after))
+                .Select(sequence => (long)sequence).ToArray();
+            Assert.Equal(expected, query.Labels.Select(label => label.Sequence));
+            Assert.Equal(expected, replay.Labels.Select(label => label.Sequence));
+            Assert.Equal(state.PublishedThrough, query.Through);
+            Assert.Equal(state.PublishedThrough, replay.Through);
+            Assert.Null(replay.Cursor);
+            after = expected[^1];
+            cursor = query.Cursor;
+            Assert.Equal(after < count, cursor is not null);
+        }
+        while (cursor is not null);
+
+        Assert.Equal(count, after);
+        Assert.Empty((await fixture.Store.ReplayAsync(state.StreamId, after, state.PublishedThrough, limit,
+            TestContext.Current.CancellationToken)).Labels);
+    }
+
     private static async Task InjectTransientFailureAsync(string engine, DbConnection connection,
         DbTransaction? transaction, CancellationToken token)
     {

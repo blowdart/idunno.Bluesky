@@ -516,9 +516,10 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         long scanned = after;
         while (scanned < through && labels.Count < limit)
         {
+            int scanLimit = patterns.Length == 0 && source is null ? limit - labels.Count : 1000;
             DbCommand command = Command(connection, transaction,
-                "SELECT seq, signed_json, payload, format_version FROM label_entries WHERE seq>@after AND seq<=@through ORDER BY seq LIMIT 1000",
-                ("@after", scanned), ("@through", through));
+                "SELECT seq, signed_json, payload, format_version FROM label_entries WHERE seq>@after AND seq<=@through ORDER BY seq LIMIT @limit",
+                ("@after", scanned), ("@through", through), ("@limit", scanLimit));
             await using var commandDisposal = command.ConfigureAwait(false);
             DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
             await using var readerDisposal = reader.ConfigureAwait(false);
