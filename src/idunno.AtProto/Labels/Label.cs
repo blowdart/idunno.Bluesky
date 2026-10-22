@@ -200,12 +200,13 @@ public sealed record Label : AtProtoObject
     /// <summary>
     /// Gets the canonical unsigned payload used for signing this label.
     /// </summary>
-    /// <returns>A new array containing the version-one signed fields encoded as canonical DAG-CBOR.</returns>
+    /// <returns>A new array containing the version 1 signed fields encoded as canonical DAG-CBOR.</returns>
     /// <exception cref="InvalidDataException">The version is missing or unsupported, or the signed fields are invalid.</exception>
     /// <remarks>
     /// <para>A signature is not required. Exact retained timestamp and CID strings and optional field presence are preserved.
     /// The signature, <c>$type</c>, and unknown fields are excluded.</para>
     /// </remarks>
+    /// <seealso href="https://atproto.com/specs/label">AT Protocol Labels specification (version 1)</seealso>
     public byte[] GetCanonicalUnsignedBytes() => LabelEncoding.Encode(this);
 
     /// <summary>

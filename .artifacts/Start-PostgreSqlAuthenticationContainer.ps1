@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Starts a local MySQL container for idunno.Bluesky.AspNet.Authentication.MySQL and prints a .NET connection string.
+Starts a local PostgreSQL container for idunno.Bluesky.AspNet.Authentication.PostgreSQL and prints a .NET connection string.
 
 .DESCRIPTION
-Checks that Docker is installed and running, starts a MySQL container with a database and a non root user, applies the
-schema.sql shipped with the idunno.Bluesky.AspNet.Authentication.MySQL project, and writes a MySqlConnector connection
+Checks that Docker is installed and running, starts a PostgreSQL container with a database and user, applies the
+schema.sql shipped with the idunno.Bluesky.AspNet.Authentication.PostgreSQL project, and writes an Npgsql connection
 string to the pipeline.
 
 The schema is read from the project rather than repeated here, so that the container cannot drift from the schema the
@@ -14,45 +14,45 @@ This is a development helper. The container publishes only to the loopback addre
 container is removed. Neither is suitable for anything but a local machine.
 
 .PARAMETER ContainerName
-The name to give the container. Defaults to idunno-bluesky-mysql.
+The name to give the container. Defaults to idunno-bluesky-postgresql.
 
 .PARAMETER Port
-The host port to publish MySQL on. Defaults to 3306.
+The host port to publish PostgreSQL on. Defaults to 5432.
 
 .PARAMETER Database
 The database to create and apply the schema to. Defaults to idunno_bluesky.
 
 .PARAMETER UserName
-The non root user to create. Defaults to idunno. MySQL does not allow this to be root.
+The user to create. Defaults to idunno.
 
 .PARAMETER Password
 The password to set on the created user. A random one is generated when this is not supplied, so that no credential
 needs to live in source control.
 
 .PARAMETER Image
-The MySQL image to run. Defaults to mysql:8.4.
+The PostgreSQL image to run. Defaults to postgres:17.
 
 .PARAMETER SchemaPath
-The schema to apply. Defaults to the schema.sql in the idunno.Bluesky.AspNet.Authentication.MySQL project.
+The schema to apply. Defaults to the schema.sql in the idunno.Bluesky.AspNet.Authentication.PostgreSQL project.
 
 .PARAMETER Force
 Removes an existing container of the same name rather than failing. Everything in it is lost.
 
 .EXAMPLE
-.\Start-MySqlContainer.ps1
+.\Start-PostgreSqlAuthenticationContainer.ps1
 
 .EXAMPLE
-$connectionString = .\Start-MySqlContainer.ps1 -Port 3307 -Force
+$connectionString = .\Start-PostgreSqlAuthenticationContainer.ps1 -Port 5433 -Force
 #>
 [CmdletBinding()]
 param(
     [Parameter()]
     [ValidateNotNullOrEmpty()]
-    [string] $ContainerName = 'idunno-bluesky-mysql',
+    [string] $ContainerName = 'idunno-bluesky-postgresql',
 
     [Parameter()]
     [ValidateRange(1, 65535)]
-    [int] $Port = 3306,
+    [int] $Port = 5432,
 
     [Parameter()]
     [ValidateNotNullOrEmpty()]
@@ -68,11 +68,11 @@ param(
 
     [Parameter()]
     [ValidateNotNullOrEmpty()]
-    [string] $Image = 'mysql:8.4',
+    [string] $Image = 'postgres:17',
 
     [Parameter()]
     [ValidateNotNullOrEmpty()]
-    [string] $SchemaPath = (Join-Path $PSScriptRoot '..\src\idunno.Bluesky.AspNet.Authentication.MySQL\schema.sql'),
+    [string] $SchemaPath = (Join-Path $PSScriptRoot '..\src\idunno.Bluesky.AspNet.Authentication.PostgreSQL\schema.sql'),
 
     [Parameter()]
     [switch] $Force
@@ -81,7 +81,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function New-MySqlPassword
+function New-PostgreSqlPassword
 {
     # A connection string is semicolon delimited with equals separated options, so a password containing either would
     # need escaping by every caller. The alphabet below avoids the problem rather than pushing it downstream.
@@ -125,11 +125,6 @@ if ($null -eq $script:DockerPath)
     throw 'Docker is required and must be available on PATH. It can be installed with winget install -e --id Docker.DockerDesktop'
 }
 
-if ($UserName -eq 'root')
-{
-    throw 'MySQL creates root itself, so -UserName cannot be root. Choose another name.'
-}
-
 if (-not (Test-Path -Path $SchemaPath -PathType Leaf))
 {
     throw "The schema could not be found at '$SchemaPath'. Pass -SchemaPath if the script is being run from outside the repository."
@@ -141,12 +136,8 @@ Invoke-Docker -Arguments @('info', '--format', '{{.ServerVersion}}') -FailureMes
 
 if (-not $PSBoundParameters.ContainsKey('Password'))
 {
-    $Password = New-MySqlPassword
+    $Password = New-PostgreSqlPassword
 }
-
-# Root is given its own generated password which is never reported. Nothing here needs root, and a container whose root
-# password is the same as the application user's is a worse starting point for anyone who copies this.
-$rootPassword = New-MySqlPassword
 
 $existing = Invoke-Docker `
     -Arguments @('ps', '--all', '--quiet', '--filter', "name=^/$ContainerName$") `
@@ -169,8 +160,8 @@ if (-not [string]::IsNullOrWhiteSpace(($existing -join '')))
 Write-Verbose "Starting '$ContainerName' from $Image on 127.0.0.1:$Port."
 
 # Published to the loopback address rather than every interface, so a development container with a known password is not
-# offered to the rest of the network. The passwords are passed as environment variables rather than command line
-# arguments so that they do not appear in the process list inside the container.
+# offered to the rest of the network. The password is passed as an environment variable rather than command line
+# arguments so that it does not appear in the process list inside the container.
 try
 {
     Invoke-Docker `
@@ -178,11 +169,10 @@ try
             'run',
             '--detach',
             '--name', $ContainerName,
-            '--publish', "127.0.0.1:${Port}:3306",
-            '--env', "MYSQL_ROOT_PASSWORD=$rootPassword",
-            '--env', "MYSQL_DATABASE=$Database",
-            '--env', "MYSQL_USER=$UserName",
-            '--env', "MYSQL_PASSWORD=$Password",
+            '--publish', "127.0.0.1:${Port}:5432",
+            '--env', "POSTGRES_DB=$Database",
+            '--env', "POSTGRES_USER=$UserName",
+            '--env', "POSTGRES_PASSWORD=$Password",
             $Image) `
         -FailureMessage "The '$ContainerName' container could not be started." | Out-Null
 }
@@ -198,17 +188,14 @@ catch
 
 Write-Verbose "Waiting for '$Database' to accept connections as '$UserName'."
 
-# While the image initialises it runs a temporary server which listens on a unix socket only, and which does not yet
-# have the database or the user. Readiness is therefore tested over TCP, as the application will connect, and as the
-# created user against the created database, so that a connection cannot succeed before the initialisation has finished.
 $ready = $false
 foreach ($attempt in 1..120)
 {
     $probe = & $script:DockerPath `
         'exec' `
-        '--env' "MYSQL_PWD=$Password" `
+        '--env' "PGPASSWORD=$Password" `
         $ContainerName `
-        'mysql' '--protocol=TCP' '--host=127.0.0.1' '--user' $UserName '--database' $Database '--silent' '--execute' 'SELECT 1' 2>&1
+        'psql' '--host=127.0.0.1' '--port=5432' '--username' $UserName '--dbname' $Database '--quiet' '--tuples-only' '--command' 'SELECT 1' 2>&1
 
     if ($LASTEXITCODE -eq 0)
     {
@@ -240,9 +227,9 @@ $schema = Get-Content -Path $SchemaPath -Raw
 $schemaOutput = $schema | & $script:DockerPath `
     'exec' `
     '--interactive' `
-    '--env' "MYSQL_PWD=$Password" `
+    '--env' "PGPASSWORD=$Password" `
     $ContainerName `
-    'mysql' '--protocol=TCP' '--host=127.0.0.1' '--user' $UserName '--database' $Database 2>&1
+    'psql' '--host=127.0.0.1' '--port=5432' '--username' $UserName '--dbname' $Database '--variable=ON_ERROR_STOP=1' 2>&1
 
 if ($LASTEXITCODE -ne 0)
 {
@@ -254,10 +241,10 @@ $expectedTables = @('idunno_bluesky_correlation_states', 'idunno_bluesky_identit
 
 $actualTables = & $script:DockerPath `
     'exec' `
-    '--env' "MYSQL_PWD=$Password" `
+    '--env' "PGPASSWORD=$Password" `
     $ContainerName `
-    'mysql' '--protocol=TCP' '--host=127.0.0.1' '--user' $UserName '--database' $Database '--silent' '--skip-column-names' `
-    '--execute' 'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME' 2>&1
+    'psql' '--host=127.0.0.1' '--port=5432' '--username' $UserName '--dbname' $Database '--quiet' '--tuples-only' '--no-align' `
+    '--command' "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" 2>&1
 
 if ($LASTEXITCODE -ne 0)
 {
@@ -273,4 +260,11 @@ if ($null -ne $missingTables -and @($missingTables).Count -gt 0)
 
 Write-Verbose "'$ContainerName' is ready with $(@($expectedTables).Count) tables in '$Database'."
 
-Write-Output "Server=localhost;Port=$Port;Database=$Database;User ID=$UserName;Password=$Password"
+$builder = [System.Data.Common.DbConnectionStringBuilder]::new()
+$builder['Host'] = 'localhost'
+$builder['Port'] = $Port
+$builder['Database'] = $Database
+$builder['Username'] = $UserName
+$builder['Password'] = $Password
+
+Write-Output $builder.ConnectionString

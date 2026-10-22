@@ -1,0 +1,157 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Data.Common;
+using System.Diagnostics.Metrics;
+
+using idunno.AtProto;
+
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
+
+using MySqlConnector;
+
+using Npgsql;
+
+namespace idunno.Bluesky.Labeler.Test;
+
+internal sealed class StoreFixture : IAsyncDisposable
+{
+    internal static readonly Did Issuer = new("did:plc:label-issuer");
+    private readonly string _database = "label_test_" + Guid.NewGuid().ToString("N");
+    private readonly List<ServiceProvider> _providers = [];
+    private string _admin = string.Empty;
+    internal string Engine { get; }
+    internal string ConnectionString { get; private set; } = string.Empty;
+    internal ILabelStore Store { get; private set; } = null!;
+    internal ServiceProvider Services => _providers[0];
+    private StoreFixture(string engine) => Engine = engine;
+
+    internal static async Task<StoreFixture> CreateAsync(string engine, bool initialize = true)
+    {
+        StoreFixture fixture = new(engine);
+        if (engine == "sqlite")
+        {
+            fixture.ConnectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = Path.Combine(Path.GetTempPath(), fixture._database + ".db"), Pooling = false
+            }.ConnectionString;
+        }
+        else
+        {
+            string variable = engine == "mysql" ? "LABELER_TEST_MYSQL_CONNECTION" : "LABELER_TEST_POSTGRESQL_CONNECTION";
+            fixture._admin = Environment.GetEnvironmentVariable(variable)
+                ?? throw new InvalidOperationException($"Set {variable} to an administrative connection on a disposable Docker database server. Real-engine conformance never skips.");
+            if (engine == "postgresql")
+            {
+                fixture._admin = new NpgsqlConnectionStringBuilder(fixture._admin)
+                {
+                    GssEncryptionMode = GssEncryptionMode.Disable
+                }.ConnectionString;
+            }
+            await using DbConnection connection = fixture.AdminConnection();
+            await connection.OpenAsync();
+            await using DbCommand command = connection.CreateCommand();
+#pragma warning disable CA2100 // The identifier contains only a fixed prefix and generated hexadecimal digits.
+            command.CommandText = $"CREATE DATABASE {fixture._database}";
+#pragma warning restore CA2100
+            await command.ExecuteNonQueryAsync();
+            fixture.ConnectionString = engine == "mysql"
+                ? new MySqlConnectionStringBuilder(fixture._admin) { Database = fixture._database, Pooling = false }.ConnectionString
+                : new NpgsqlConnectionStringBuilder(fixture._admin) { Database = fixture._database, Pooling = false }.ConnectionString;
+        }
+
+        fixture.Store = fixture.NewStore();
+        try
+        {
+            if (initialize)
+            {
+                await fixture.Store.InitializeAsync(Issuer);
+            }
+
+            return fixture;
+        }
+        catch
+        {
+            await fixture.DisposeAsync();
+            throw;
+        }
+    }
+
+    internal ILabelStore NewStore()
+    {
+        ServiceCollection services = new();
+        services.AddMetrics();
+        services.AddLogging(builder => builder.AddFakeLogging(options => options.CollectRecordsForDisabledLogLevels = true));
+        switch (Engine)
+        {
+            case "sqlite":
+                services.AddSqliteLabelStorage(ConnectionString);
+                break;
+            case "mysql":
+                services.AddMySqlLabelStorage(ConnectionString);
+                break;
+            case "postgresql":
+                services.AddPostgreSqlLabelStorage(ConnectionString);
+                break;
+            default:
+                throw new InvalidOperationException("Unknown test engine.");
+        }
+
+        ServiceProvider provider = services.BuildServiceProvider();
+        _providers.Add(provider);
+        return provider.GetRequiredService<ILabelStore>();
+    }
+
+    internal IMeterFactory MeterFactory => Services.GetRequiredService<IMeterFactory>();
+
+    private DbConnection AdminConnection() => Engine == "mysql"
+        ? new MySqlConnection(_admin) : new NpgsqlConnection(_admin);
+
+    internal DbConnection Connection() => Engine switch
+    {
+        "mysql" => new MySqlConnection(ConnectionString),
+        "postgresql" => new NpgsqlConnection(ConnectionString),
+        _ => new SqliteConnection(ConnectionString)
+    };
+
+    internal async Task ExecuteAsync(string sql)
+    {
+        await using DbConnection connection = Connection();
+        await connection.OpenAsync();
+        await using DbCommand command = connection.CreateCommand();
+#pragma warning disable CA2100 // Tests supply fixed fixture-owned SQL only.
+        command.CommandText = sql;
+#pragma warning restore CA2100
+        await command.ExecuteNonQueryAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        foreach (ServiceProvider provider in _providers)
+        {
+            await provider.DisposeAsync();
+        }
+
+        if (Engine == "sqlite")
+        {
+            string path = new SqliteConnectionStringBuilder(ConnectionString).DataSource;
+            foreach (string suffix in new[] { string.Empty, "-wal", "-shm" })
+            {
+                File.Delete(path + suffix);
+            }
+        }
+        else
+        {
+            await using DbConnection connection = AdminConnection();
+            await connection.OpenAsync();
+            await using DbCommand command = connection.CreateCommand();
+#pragma warning disable CA2100 // The fixture owns this generated database name.
+            command.CommandText = $"DROP DATABASE {_database}";
+#pragma warning restore CA2100
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+}

@@ -27,10 +27,10 @@ The Redis image to run. Defaults to redis:8-alpine.
 Removes an existing container of the same name rather than failing. Everything in it is lost.
 
 .EXAMPLE
-.\Start-RedisContainer.ps1
+.\Start-RedisAuthenticationContainer.ps1
 
 .EXAMPLE
-$connectionString = .\Start-RedisContainer.ps1 -Port 6380 -Force
+$connectionString = .\Start-RedisAuthenticationContainer.ps1 -Port 6380 -Force
 #>
 [CmdletBinding()]
 param(

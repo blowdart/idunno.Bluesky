@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>MySQL persistence for standalone AT Protocol labelers.</Description>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+    <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="schema.sql" Pack="true" PackagePath="contentFiles\any\any" />
+    <EmbeddedResource Include="schema.sql" LogicalName="LabelSchema" />
+    <Compile Include="..\idunno.Bluesky.Labeler.Storage\*.cs" Link="Storage\%(Filename)%(Extension)" />
+    <ProjectReference Include="..\idunno.Bluesky.Labeler\idunno.Bluesky.Labeler.csproj" />
+    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+</Project>

@@ -6,6 +6,7 @@ using System.Text.Json.Serialization.Metadata;
 
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
+using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
 using idunno.Bluesky;
@@ -15,6 +16,37 @@ using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
+using idunno.Bluesky.Labeler;
+
+using Microsoft.Extensions.DependencyInjection;
+
+string labelDatabase = Path.Combine(Path.GetTempPath(), $"labeler-smoke-{Guid.NewGuid():N}.db");
+try
+{
+    ServiceCollection labelServices = new();
+    labelServices.AddSqliteLabelStorage($"Data Source={labelDatabase}");
+    await using ServiceProvider labelProvider = labelServices.BuildServiceProvider();
+    ILabelStore store = labelProvider.GetRequiredService<ILabelStore>();
+    Did issuer = new("did:plc:smoke-labeler");
+    await store.InitializeAsync(issuer);
+    using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+    SignedLabelSnapshot signed = new(signingKey.CreateLabel(issuer, "did:plc:subject", "spam", new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+    LabelAppendReceipt receipt = await store.AppendAsync("smoke", [signed]);
+    LabelStoreState published = await store.PublishAsync();
+    LabelPage replay = await store.ReplayAsync(published.StreamId, 0, published.PublishedThrough);
+    if (replay.Labels.Count != 1 || replay.Labels[0].Sequence != receipt.FirstSequence ||
+        !signed.GetJsonBytes().SequenceEqual(replay.Labels[0].SignedLabel.GetJsonBytes()))
+    {
+        throw new InvalidOperationException("The trimmed label store did not preserve its signed label.");
+    }
+}
+finally
+{
+    foreach (string suffix in new[] { string.Empty, "-wal", "-shm" })
+    {
+        File.Delete(labelDatabase + suffix);
+    }
+}
 
 const string whitespacePostJson = """
     {
