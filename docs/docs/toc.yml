@@ -127,6 +127,8 @@ items:
             href: labeller/overview.md
           - name: Persistence
             href: labeller/persistence.md
+          - name: Issuing and withdrawing labels
+            href: labeller/issuance.md
 
   - name: Jetstream
     items:

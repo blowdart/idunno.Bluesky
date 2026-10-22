@@ -33,5 +33,12 @@ CREATE TABLE IF NOT EXISTS label_operations (
     INDEX label_operations_revision(revision),
     CHECK(last_seq>=first_seq)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_decisions (
+    operation_hash BINARY(32) PRIMARY KEY,
+    operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    revision BIGINT NOT NULL CHECK(revision>0),
+    receipt LONGBLOB NOT NULL,
+    INDEX label_decisions_revision(revision)
+) ENGINE=InnoDB;
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 1) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 2) ON DUPLICATE KEY UPDATE id=id;
