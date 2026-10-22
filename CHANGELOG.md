@@ -42,6 +42,10 @@
 
 ### 🟢 Changed
 
+#### Packaging
+
+* Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
+
 #### idunno.AtProto
 
 * `StreamAsync` now asynchronously waits for bounded event-queue capacity instead of reconnecting when a consumer temporarily falls behind. The wait propagates through parsing to receiving without an unbounded secondary backlog. Genuine interruption diagnostics and replay overflow recovery are unchanged. Larger queues absorb bursts at increased memory cost; neither capacity nor backpressure guarantees that permanently slow consumers keep up with server retention or avoid server-side timeouts.

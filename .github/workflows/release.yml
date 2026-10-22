@@ -113,6 +113,34 @@ jobs:
         node-version: '22.x'
         package-manager-cache: false
 
+    - name: 'Install SBOM tools'
+      shell: bash
+      run: |
+        set -euo pipefail
+        dotnet tool restore
+        tools="${RUNNER_TEMP}/sbom-tools"
+        mkdir -p "${tools}"
+        curl --fail --silent --show-error --location --output "${tools}/syft.tar.gz" "https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz"
+        echo "bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d  ${tools}/syft.tar.gz" | sha256sum --check -
+        tar --extract --gzip --file "${tools}/syft.tar.gz" --directory "${tools}" syft
+        curl --fail --silent --show-error --location --output "${tools}/cyclonedx" "https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.33.1/cyclonedx-linux-x64"
+        echo "bfc8b2538da86fe239bc53658bbb63c1c8c510a293c1e6891aa5bea5d3c58746  ${tools}/cyclonedx" | sha256sum --check -
+        chmod +x "${tools}/cyclonedx"
+        curl --fail --silent --show-error --location --output "${tools}/spdx-schema.json" "https://raw.githubusercontent.com/spdx/spdx-spec/v2.3/schemas/spdx-schema.json"
+        echo "239208b7ac287b3cf5d9a9af23f9d69863971102a5e1587a27a398b43490b89b  ${tools}/spdx-schema.json" | sha256sum --check -
+        python3 -m pip install --user check-jsonschema==0.38.2
+        echo "${tools}" >> "${GITHUB_PATH}"
+
+    - name: 'Generate SBOMs'
+      run: dotnet run .build/GenerateSboms.cs -- --public-release true
+
+    - name: 'Validate SBOMs'
+      shell: bash
+      run: |
+        set -euo pipefail
+        find src -path '*/obj/sbom/*/bom.cdx.json' -print0 | xargs -0 -n 1 cyclonedx validate --input-format json --fail-on-errors --input-file
+        find src -path '*/obj/sbom/*/bom.spdx.json' -print0 | xargs -0 python3 -m check_jsonschema --schemafile "${RUNNER_TEMP}/sbom-tools/spdx-schema.json"
+
     - name: 'Build'
       run: dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
 
@@ -128,12 +156,17 @@ jobs:
 
     - name: 'Extract SBOMs'
       shell: pwsh
-      run: > 
-        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Filter *.nupkg -Force | ForEach-Object { 
-          Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
-          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json"
-          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json.sha256"
-          Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
+      run: |
+        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Filter *.nupkg -Force | ForEach-Object {
+          $nupkg = $_
+          $extracted = Join-Path $env:RUNNER_TEMP $nupkg.BaseName
+          Expand-Archive $nupkg.FullName $extracted -Force
+          $boms = @(Get-ChildItem -Path (Join-Path $extracted 'sbom') -Recurse -Filter 'bom.*.json')
+          if ($boms.Count -eq 0) { throw "$($nupkg.Name) does not contain any SBOMs." }
+          # Name each BOM <package>.<version>.<tfm>.cdx.json or <package>.<version>.<tfm>.spdx.json
+          $boms | ForEach-Object { Copy-Item $_.FullName "${env:BUILD_OUTPUT}/$($nupkg.BaseName).$($_.Directory.Name).$($_.Name -replace '^bom\.', '')" }
+          Remove-Item $extracted -Force -Recurse
+        }
 
     - name: 'Generate release notes'
       shell: pwsh
@@ -206,15 +239,17 @@ jobs:
           Copy-Item $_.FullName $($env:ATTESTATION_INPUT)
           Expand-Archive $_.FullName "$($env:ATTESTATION_INPUT)/$($_.Basename)" -Force
 
-          # Place SBOM from the nupkg alongside the nupkg for attestation
-          Copy-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "$($env:ATTESTATION_INPUT)/$($_.Basename).spdx.json"
-          Copy-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "$($env:ATTESTATION_INPUT)/$($_.Basename).spdx.json.sha256"
+          # Place the SBOMs from the nupkg alongside the nupkg for attestation
+          $nupkg = $_
+          $boms = @(Get-ChildItem -Path "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)/sbom" -Recurse -Filter 'bom.*.json')
+          if ($boms.Count -eq 0) { throw "$($nupkg.Name) does not contain any SBOMs." }
+          $boms | ForEach-Object { Copy-Item $_.FullName "$($env:ATTESTATION_INPUT)/$($nupkg.Basename).$($_.Directory.Name).$($_.Name -replace '^bom\.', '')" }
 
           # Remove the extraneous files from the nupkg extraction
-          Remove-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_rels" -Recurse -Force
-          Remove-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/package" -Recurse -Force
+          Remove-Item "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)/_rels" -Recurse -Force
+          Remove-Item "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)/package" -Recurse -Force
           # Need to special case [Content_Types].xml because of those pesky [] characters
-          $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($_.Basename)" -ChildPath "[Content_Types].xml"
+          $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)" -ChildPath "[Content_Types].xml"
           Remove-Item -LiteralPath $contentTypes -Force
         }
 
@@ -335,3 +370,5 @@ jobs:
         --discussion-category "Announcements"
         --verify-tag
         *.nupkg
+        *.cdx.json
+        *.spdx.json
