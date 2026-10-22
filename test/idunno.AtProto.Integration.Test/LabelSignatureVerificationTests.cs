@@ -49,6 +49,59 @@ public class LabelSignatureVerificationTests
 
     [Theory]
     [MemberData(nameof(SignedLabelShapes))]
+    public void SigningPreservesDecodedSignedRepresentations(string curve, string timestamp, bool? negation, bool optionalFields)
+    {
+        using ECDsa externalKey = ECDsa.Create(ECCurve.CreateFromValue(curve));
+        byte[] privateKey = externalKey.ExportPkcs8PrivateKey();
+        try
+        {
+            using LabelSigningKey key = LabelSigningKey.ImportPkcs8PrivateKey(privateKey);
+            Dictionary<string, object?> data = LabelPayload();
+            data.Remove("sig");
+            data["cts"] = timestamp;
+            data.Remove("neg");
+            if (negation.HasValue)
+            {
+                data["neg"] = negation.Value;
+            }
+
+            if (!optionalFields)
+            {
+                data.Remove("cid");
+                data.Remove("exp");
+            }
+            else
+            {
+                data["cid"] = $"z{SimpleBase.Base58.Bitcoin.Encode(CidOf(RecordBytes()).ToBytes())}";
+                data["exp"] = "2027-01-01T01:00:00.12345678901234567+01:00";
+            }
+
+            byte[] expected = Encode(data);
+            data["$type"] = "com.atproto.label.defs#label";
+            data["future"] = true;
+            Label json = ReadJson(data);
+            Label cbor = LabelEventDecoder.DecodeLabel(FirehoseCbor.ReadFields(Encode(data), LabelEventDecoder.LabelFields));
+            foreach (Label original in new[] { json, cbor })
+            {
+                Label signed = key.Sign(original);
+                Assert.Null(original.Signature);
+                Assert.Equal(expected, signed.GetCanonicalUnsignedBytes());
+                Assert.True(externalKey.VerifyData(expected, signed.Signature!.ToBytes(), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
+                signed.Verify(DidDocumentFor(OtherDid, "atproto_label", externalKey));
+                Label roundTripped = JsonSerializer.Deserialize<Label>(
+                    JsonSerializer.Serialize(signed, AtProtoServer.AtProtoJsonSerializerOptions), AtProtoServer.AtProtoJsonSerializerOptions)!;
+                Assert.Equal(expected, roundTripped.GetCanonicalUnsignedBytes());
+                roundTripped.Verify(DidDocumentFor(OtherDid, "atproto_label", externalKey));
+            }
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(privateKey);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(SignedLabelShapes))]
     public void JsonAndCborLabelsUseTheSameSignedRepresentation(string curve, string timestamp, bool? negation, bool optionalFields)
     {
         using ECDsa key = ECDsa.Create(ECCurve.CreateFromValue(curve));

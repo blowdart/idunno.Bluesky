@@ -4,6 +4,26 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.StreamBufferCapacity.set -> voi
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetStreamBufferCapacity(int streamBufferCapacity) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Jetstream.JetstreamOptions.StreamBufferCapacity.get -> int
 idunno.AtProto.Jetstream.JetstreamOptions.StreamBufferCapacity.init -> void
+idunno.AtProto.Labels.Label.GetCanonicalUnsignedBytes() -> byte[]!
+idunno.AtProto.Labels.LabelSigningCurve
+idunno.AtProto.Labels.LabelSigningCurve.P256 = 0 -> idunno.AtProto.Labels.LabelSigningCurve
+idunno.AtProto.Labels.LabelSigningCurve.Secp256k1 = 1 -> idunno.AtProto.Labels.LabelSigningCurve
+idunno.AtProto.Labels.LabelSigningKey
+idunno.AtProto.Labels.LabelSigningKey.Curve.get -> idunno.AtProto.Labels.LabelSigningCurve
+idunno.AtProto.Labels.LabelSigningKey.CreateLabel(idunno.AtProto.Did! source, string! uri, string! value, System.DateTimeOffset creationTimestamp, idunno.AtProto.Cid? cid = null, System.DateTimeOffset? expiresAt = null) -> idunno.AtProto.Labels.Label!
+idunno.AtProto.Labels.LabelSigningKey.CreateNegation(idunno.AtProto.Did! source, string! uri, string! value, System.DateTimeOffset creationTimestamp, idunno.AtProto.Cid? cid = null, System.DateTimeOffset? expiresAt = null) -> idunno.AtProto.Labels.Label!
+idunno.AtProto.Labels.LabelSigningKey.Dispose() -> void
+idunno.AtProto.Labels.LabelSigningKey.ExportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> byte[]!
+idunno.AtProto.Labels.LabelSigningKey.ExportEncryptedPkcs8PrivateKeyPem(System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> string!
+idunno.AtProto.Labels.LabelSigningKey.ExportPkcs8PrivateKey() -> byte[]!
+idunno.AtProto.Labels.LabelSigningKey.ExportPkcs8PrivateKeyPem() -> string!
+idunno.AtProto.Labels.LabelSigningKey.ExportPublicKeyMultibase() -> string!
+idunno.AtProto.Labels.LabelSigningKey.Sign(idunno.AtProto.Labels.Label! label) -> idunno.AtProto.Labels.Label!
+static idunno.AtProto.Labels.LabelSigningKey.Generate(idunno.AtProto.Labels.LabelSigningCurve curve) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.AtProto.Labels.LabelSigningKey.ImportEncryptedPkcs8PrivateKey(System.ReadOnlySpan<byte> source, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.AtProto.Labels.LabelSigningKey.ImportFromEncryptedPem(System.ReadOnlySpan<char> pem, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.AtProto.Labels.LabelSigningKey.ImportFromPem(System.ReadOnlySpan<char> pem) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.AtProto.Labels.LabelSigningKey.ImportPkcs8PrivateKey(System.ReadOnlySpan<byte> source) -> idunno.AtProto.Labels.LabelSigningKey!
 idunno.AtProto.Labels.LabelSignatureVerifier
 idunno.AtProto.Labels.Label.Verify(idunno.AtProto.DidDocument! didDocument) -> void
 idunno.AtProto.Labels.Label.VerifyAsync(System.Net.Http.HttpClient? httpClient = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

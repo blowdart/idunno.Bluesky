@@ -198,6 +198,17 @@ public sealed record Label : AtProtoObject
     public Bytes? Signature { get; init; }
 
     /// <summary>
+    /// Gets the canonical unsigned payload used for signing this label.
+    /// </summary>
+    /// <returns>A new array containing the version-one signed fields encoded as canonical DAG-CBOR.</returns>
+    /// <exception cref="InvalidDataException">The version is missing or unsupported, or the signed fields are invalid.</exception>
+    /// <remarks>
+    /// <para>A signature is not required. Exact retained timestamp and CID strings and optional field presence are preserved.
+    /// The signature, <c>$type</c>, and unknown fields are excluded.</para>
+    /// </remarks>
+    public byte[] GetCanonicalUnsignedBytes() => LabelEncoding.Encode(this);
+
+    /// <summary>
     /// Verifies this label's signature against the issuer's DID document without making network requests.
     /// </summary>
     /// <param name="didDocument">The issuer's DID document obtained from a trusted identity resolver.</param>
