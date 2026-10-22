@@ -195,7 +195,7 @@ where the `$type` property is not the first property in the JSON object.
 * [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
 * [Coverlet.Collector](https://github.com/coverlet-coverage/coverlet) - used to produce code coverage files
-* [Microsoft.Sbom.Targets](https://www.nuget.org/packages/Microsoft.Sbom.Targets) - used to generate Software Bill of Materials (SBOM) files and embed them in the NuGet packages.
+* [CycloneDX .NET tool](https://github.com/CycloneDX/cyclonedx-dotnet) and [Syft](https://github.com/anchore/syft) - used to generate CycloneDX and SPDX Software Bill of Materials (SBOM) files, which are embedded in the NuGet packages under `sbom/<target framework>/`.
 * [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
 * [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
 * [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
