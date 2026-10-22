@@ -45,6 +45,7 @@
 #### Packaging
 
 * Software Bill of Materials (SBOM) files are now generated with the CycloneDX .NET tool and Syft, giving both CycloneDX and SPDX formats. Each NuGet package contains a CycloneDX and an SPDX JSON file per target framework under `sbom/<target framework>/`, and build-only dependencies are excluded. The files are also published as release assets and attested.
+* Release builds suppress deprecated-code analyzer warnings through additive project settings instead of workflow overrides, preserving project-specific warning suppressions. Debug builds retain the deprecated-code warnings.
 
 #### idunno.AtProto
 

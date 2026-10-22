@@ -19,6 +19,7 @@
     <File Path=".build/Directory.Build.Props" />
     <File Path=".build/ExtractReleaseNotes.cs" />
     <File Path=".build/GenerateSboms.cs" />
+    <File Path=".build/requirements-sbom.txt" />
     <File Path=".build/sbom-metadata.xml" />
   </Folder>
   <Folder Name="/.devcontainer/">

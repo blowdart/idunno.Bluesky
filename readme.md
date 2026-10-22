@@ -192,7 +192,7 @@ where the `$type` property is not the first property in the JSON object.
 
 ### External build tools
 
-* [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
+* [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site, pinned in `.config/dotnet-tools.json`. From the repository root, run `dotnet tool restore`, build the projects in Release, then run `dotnet tool run docfx ./docs/docfx.json`.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
 * [CycloneDX .NET tool](https://github.com/CycloneDX/cyclonedx-dotnet) and [Syft](https://github.com/anchore/syft) - used to generate CycloneDX and SPDX Software Bill of Materials (SBOM) files, which are embedded in the NuGet packages under `sbom/<target framework>/`.
 * [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.

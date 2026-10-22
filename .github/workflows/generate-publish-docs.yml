@@ -46,6 +46,9 @@ jobs:
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
 
+    - name: 'Restore .NET tools'
+      run: dotnet tool restore
+
     - name: 'Setup Node'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
@@ -60,7 +63,7 @@ jobs:
       run: npm test
 
     - name: 'Generate docs'
-      run: dotnet dnx docfx ./docs/docfx.json -y
+      run: dotnet tool run docfx ./docs/docfx.json
 
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
