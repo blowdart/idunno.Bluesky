@@ -67,7 +67,7 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
             await ScalarAsync(
                 connection: connection,
                 transaction: null,
-                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('label_schema','label_state','label_entries','label_operations','label_decisions') AND engine<>'InnoDB'",
+                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('label_schema','label_state','label_entries','label_operations','label_decisions','label_distribution') AND engine<>'InnoDB'",
                 token: token).ConfigureAwait(false),
             CultureInfo.InvariantCulture);
         if (invalid != 0)

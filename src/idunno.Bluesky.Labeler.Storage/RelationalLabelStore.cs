@@ -19,7 +19,8 @@ namespace idunno.Bluesky.Labeler.Storage;
 /// internal; application services submit typed commands rather than holding database connections.</para></remarks>
 internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metrics) : ILabelStore
 {
-    private const int SchemaVersion = 2;
+    private const int SchemaVersion = 3;
+    private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
     internal Func<DbConnection, DbTransaction, CancellationToken, Task>? BeforeCommitAsync { get; set; }
@@ -60,7 +61,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             transaction: transaction,
             sql: "SELECT version FROM label_schema WHERE id=1",
             token: token).ConfigureAwait(false);
-        if (version is not null && Integer(version) is not (1 or SchemaVersion))
+        if (version is not null && Integer(version) is not (1 or 2 or SchemaVersion))
         {
             throw new InvalidDataException("The label database schema version is not supported.");
         }
@@ -70,12 +71,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Version one has no service receipts. The additive DDL above can safely resume on MySQL;
-        // mark completion only after every table/index exists, without rebuilding signed history.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v3.
+        await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=2 WHERE id=1",
+            sql: "UPDATE label_schema SET version=3 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -530,6 +531,10 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             }
 
             long last = checked(state.IssuedThrough + batch.Length);
+            if (last > MaximumSequence)
+            {
+                throw new OverflowException("The label stream sequence space is exhausted.");
+            }
             long now = Integer(
                 await ScalarAsync(
                     connection: connection,
@@ -553,6 +558,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     ("@json", batch[i].GetJsonBytes()),
                     ("@payload", batch[i].GetCanonicalUnsignedBytes()),
                     ("@now", now)).ConfigureAwait(false);
+                await IndexDistributionAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sequence: state.IssuedThrough + i + 1,
+                    signed: batch[i],
+                    token: cancellationToken).ConfigureAwait(false);
             }
 
             LabelStoreState next = state with
@@ -855,6 +866,10 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     }
 
                     long sequence = checked(state.IssuedThrough + 1);
+                    if (sequence > MaximumSequence)
+                    {
+                        throw new OverflowException("The label stream sequence space is exhausted.");
+                    }
                     long now = Integer(
                         await ScalarAsync(
                             connection: connection,
@@ -870,6 +885,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                         ("@json", signed.GetJsonBytes()),
                         ("@payload", signed.GetCanonicalUnsignedBytes()),
                         ("@now", now)).ConfigureAwait(false);
+                    await IndexDistributionAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sequence: sequence,
+                        signed: signed,
+                        token: cancellationToken).ConfigureAwait(false);
                     outcome = new(sequence, signed);
                 }
 
@@ -966,6 +987,191 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         }
 
         return signed;
+    }
+
+    /// <summary>Builds an unambiguous binary slot identity without normalizing signed CID text.</summary>
+    private static byte[] DistributionKey(SignedLabelSnapshot signed)
+    {
+        Label label = signed.Label;
+        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(signed.GetJsonBytes());
+        string cid = document.RootElement.TryGetProperty("cid", out System.Text.Json.JsonElement value) ? value.GetString()! : string.Empty;
+        using MemoryStream buffer = new();
+        using BinaryWriter writer = new(buffer, s_strictUtf8);
+        writer.Write(label.Source.Value);
+        writer.Write(label.Uri);
+        writer.Write(cid);
+        writer.Write(label.Value);
+        writer.Flush();
+        return buffer.ToArray();
+    }
+
+    /// <summary>Indexes one immutable event in the same transaction as its append.</summary>
+    private static Task IndexDistributionAsync(
+        DbConnection connection,
+        DbTransaction? transaction,
+        long sequence,
+        SignedLabelSnapshot signed,
+        CancellationToken token)
+    {
+        byte[] key = DistributionKey(signed);
+        return ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "INSERT INTO label_distribution(seq, slot_hash, slot_key) VALUES(@seq,@hash,@key)",
+            token: token,
+            ("@seq", sequence),
+            ("@hash", SHA256.HashData(key)),
+            ("@key", key));
+    }
+
+    /// <summary>Resumes additive projection migration without rewriting signed blobs or duplicating indexed rows.</summary>
+    private static async Task BackfillDistributionAsync(DbConnection connection, DbTransaction? transaction, CancellationToken token)
+    {
+        long after = 0;
+        while (true)
+        {
+            List<StoredLabel> batch = [];
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT e.seq, e.signed_json, e.payload, e.format_version FROM label_entries e LEFT JOIN label_distribution d ON d.seq=e.seq WHERE d.seq IS NULL AND e.seq>@after ORDER BY e.seq LIMIT 100",
+                ("@after", after));
+            await using (command.ConfigureAwait(false))
+            {
+                DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        batch.Add(new StoredLabel(reader.GetInt64(0), Restore(reader)));
+                    }
+                }
+            }
+
+            if (batch.Count == 0)
+            {
+                return;
+            }
+
+            foreach (StoredLabel label in batch)
+            {
+                await IndexDistributionAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sequence: label.Sequence,
+                    signed: label.SignedLabel,
+                    token: token).ConfigureAwait(false);
+            }
+
+            after = batch[^1].Sequence;
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<LabelDistributionPage> ReadDistributionAsync(
+        Guid streamId,
+        long after,
+        long through,
+        IReadOnlyList<string> uriPatterns,
+        IReadOnlyList<Did> sources,
+        int limit = 100,
+        int scanLimit = 1000,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(uriPatterns);
+        ArgumentNullException.ThrowIfNull(sources);
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 250);
+        ArgumentOutOfRangeException.ThrowIfLessThan(scanLimit, limit);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(scanLimit, 1000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(uriPatterns.Count, 100);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(sources.Count, 100);
+        string[] patterns = uriPatterns.ToArray();
+        Did[] issuers = sources.ToArray();
+        foreach (string pattern in patterns)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(pattern);
+            if (pattern.IndexOf('*', StringComparison.Ordinal) is int wildcard && wildcard >= 0 && wildcard != pattern.Length - 1)
+            {
+                throw new ArgumentException("Only a trailing URI wildcard is supported.", nameof(uriPatterns));
+            }
+        }
+
+        return RunAsync(
+            operation: "distribution",
+            action: async (connection, transaction, state) =>
+            {
+                if (streamId != state.StreamId)
+                {
+                    throw new InvalidDataException("The distribution stream identity differs.");
+                }
+
+                DistributionFloor(state, after);
+                Boundaries(state, after, through);
+                List<StoredLabel> labels = [];
+                long scanned = after;
+                int inspected = 0;
+                DbCommand command = Command(
+                    connection: connection,
+                    transaction: transaction,
+                    sql: """
+                        SELECT e.seq, e.signed_json, e.payload, e.format_version,
+                        CASE WHEN d.seq IS NULL THEN -1 WHEN NOT EXISTS (
+                            SELECT 1 FROM label_distribution newer
+                            WHERE newer.slot_hash=d.slot_hash AND newer.slot_key=d.slot_key
+                            AND newer.seq>d.seq AND newer.seq<=@through) THEN 1 ELSE 0 END
+                        FROM label_entries e LEFT JOIN label_distribution d ON d.seq=e.seq
+                        WHERE e.seq>@after AND e.seq<=@through
+                        ORDER BY e.seq LIMIT @limit
+                        """,
+                    ("@after", after),
+                    ("@through", through),
+                    ("@limit", scanLimit));
+                await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
+                DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
+                while (labels.Count < limit && await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    inspected++;
+                    scanned = reader.GetInt64(0);
+                    if (reader.GetInt32(4) < 0)
+                    {
+                        throw new InvalidDataException("A stored label has no distribution metadata.");
+                    }
+
+                    if (reader.GetInt32(4) == 0)
+                    {
+                        continue;
+                    }
+
+                    SignedLabelSnapshot signed = Restore(reader);
+                    Label label = signed.Label;
+                    if ((patterns.Length == 0 || patterns.Any(pattern => pattern.EndsWith('*')
+                        ? label.Uri.StartsWith(pattern[..^1], StringComparison.Ordinal)
+                        : label.Uri.Equals(pattern, StringComparison.Ordinal))) &&
+                        (issuers.Length == 0 || issuers.Contains(label.Source)))
+                    {
+                        labels.Add(new StoredLabel(scanned, signed));
+                    }
+                }
+
+                if (labels.Count < limit && inspected < scanLimit)
+                {
+                    scanned = through;
+                }
+
+                return new LabelDistributionPage(scanned, labels.AsReadOnly());
+            },
+            token: cancellationToken);
+    }
+
+    /// <summary>Distinguishes a concurrently pruned position from a corrupt or incompatible stream.</summary>
+    private static void DistributionFloor(LabelStoreState state, long after)
+    {
+        if (after < state.ReplayFloor)
+        {
+            throw new ArgumentOutOfRangeException(nameof(after), "The requested distribution position is no longer retained.");
+        }
     }
 
     /// <summary>Binds a query continuation to its original ordered patterns and issuer filter.</summary>
@@ -1270,6 +1476,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             }
 
             long nextFloor = state.ReplayFloor + Math.Min(limit, state.IssuedThrough - state.ReplayFloor);
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "DELETE FROM label_distribution WHERE seq<=@floor",
+                token: cancellationToken,
+                ("@floor", nextFloor)).ConfigureAwait(false);
             await ExecuteAsync(
                 connection: connection,
                 transaction: transaction,

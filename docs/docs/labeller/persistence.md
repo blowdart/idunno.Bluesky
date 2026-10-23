@@ -230,13 +230,18 @@ to read the server settings validated above. Run `InitializeAsync` separately wi
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades version one additively without changing its signed history, legacy receipts,
+`InitializeAsync` upgrades versions one and two to version three additively without changing signed history, legacy receipts,
 stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
 interruption, because its DDL commits independently. Run upgrades with services stopped/exclusive access,
 especially on MySQL; do not promise rollback of a partially applied MySQL migration.
 Repeated initialization preserves data. Unknown/newer versions fail rather than being downgraded.
+
+Version three adds `label_distribution` metadata for CID-scoped retained-slot delivery.
+Its backfill resumes missing entries and never rewrites signed JSON or canonical payload bytes.
+New entries and projection metadata commit atomically. The raw store query/replay contracts
+remain historical; [public hosting](hosting.md) selects the latest published slot at a fixed tip.
 
 Back up the whole database together: schema metadata, issuer and stream identity, labels, receipts,
 publication boundaries and lifecycle checkpoints. For SQLite, use its online backup facility or a properly

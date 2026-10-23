@@ -27,7 +27,7 @@ public static class PostgreSqlLabelStorageExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         NpgsqlConnectionStringBuilder settings = new(connectionString) { Timeout = 15, CommandTimeout = 15 };
-        if (services.Any(service => service.ServiceType == typeof(ILabelStore)))
+        if (services.Any(service => service.ServiceType == typeof(ILabelStore) || service.ServiceType == typeof(ILabelDistributionStore)))
         {
             throw new InvalidOperationException("Register exactly one label storage provider.");
         }
@@ -38,6 +38,7 @@ public static class PostgreSqlLabelStorageExtensions
                 settings.ConnectionString,
                 provider.GetRequiredService<ILogger<PostgreSqlLabelStore>>(),
                 new StoreMetrics("postgresql", provider.GetService<IMeterFactory>())));
+        services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

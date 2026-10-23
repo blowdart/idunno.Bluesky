@@ -1,0 +1,27 @@
+#nullable enable
+OpenTelemetry.Metrics.LabelerMetricsExtensions
+static OpenTelemetry.Metrics.LabelerMetricsExtensions.AddBlueskyLabelerMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
+idunno.Bluesky.AspNet.Labeler.LabelerHostingExtensions
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.<Clone>$() -> idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions!
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.BatchSize.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.BatchSize.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Equals(idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? other) -> bool
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.LabelerHostingOptions() -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumMessageBytes.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumMessageBytes.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumSubscriptions.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.MaximumSubscriptions.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.PollInterval.get -> System.TimeSpan
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.PollInterval.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.QueryTimeout.get -> System.TimeSpan
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.QueryTimeout.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.SendTimeout.get -> System.TimeSpan
+idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.SendTimeout.init -> void
+override idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.Equals(object? obj) -> bool
+override idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.GetHashCode() -> int
+override idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.ToString() -> string!
+static idunno.Bluesky.AspNet.Labeler.LabelerHostingExtensions.AddBlueskyLabeler(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.Did! issuer, idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.Bluesky.AspNet.Labeler.LabelerHostingExtensions.MapBlueskyLabeler(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
+static idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.operator !=(idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? left, idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? right) -> bool
+static idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions.operator ==(idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? left, idunno.Bluesky.AspNet.Labeler.LabelerHostingOptions? right) -> bool

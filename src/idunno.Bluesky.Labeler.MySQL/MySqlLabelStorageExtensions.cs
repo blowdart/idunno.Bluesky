@@ -27,7 +27,7 @@ public static class MySqlLabelStorageExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         MySqlConnectionStringBuilder settings = new(connectionString) { ConnectionTimeout = 15, DefaultCommandTimeout = 15 };
-        if (services.Any(service => service.ServiceType == typeof(ILabelStore)))
+        if (services.Any(service => service.ServiceType == typeof(ILabelStore) || service.ServiceType == typeof(ILabelDistributionStore)))
         {
             throw new InvalidOperationException("Register exactly one label storage provider.");
         }
@@ -38,6 +38,7 @@ public static class MySqlLabelStorageExtensions
                 settings.ConnectionString,
                 provider.GetRequiredService<ILogger<MySqlLabelStore>>(),
                 new StoreMetrics("mysql", provider.GetService<IMeterFactory>())));
+        services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

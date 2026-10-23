@@ -1,4 +1,20 @@
 #nullable enable
+idunno.Bluesky.Labeler.ILabelDistributionStore
+idunno.Bluesky.Labeler.ILabelDistributionStore.ReadDistributionAsync(System.Guid streamId, long after, long through, System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! sources, int limit = 100, int scanLimit = 1000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelDistributionPage!>!
+idunno.Bluesky.Labeler.LabelDistributionPage
+idunno.Bluesky.Labeler.LabelDistributionPage.<Clone>$() -> idunno.Bluesky.Labeler.LabelDistributionPage!
+idunno.Bluesky.Labeler.LabelDistributionPage.Deconstruct(out long ScannedThrough, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels) -> void
+idunno.Bluesky.Labeler.LabelDistributionPage.Equals(idunno.Bluesky.Labeler.LabelDistributionPage? other) -> bool
+idunno.Bluesky.Labeler.LabelDistributionPage.LabelDistributionPage(long ScannedThrough, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels) -> void
+idunno.Bluesky.Labeler.LabelDistributionPage.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>!
+idunno.Bluesky.Labeler.LabelDistributionPage.Labels.init -> void
+idunno.Bluesky.Labeler.LabelDistributionPage.ScannedThrough.get -> long
+idunno.Bluesky.Labeler.LabelDistributionPage.ScannedThrough.init -> void
+override idunno.Bluesky.Labeler.LabelDistributionPage.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.LabelDistributionPage.GetHashCode() -> int
+override idunno.Bluesky.Labeler.LabelDistributionPage.ToString() -> string!
+static idunno.Bluesky.Labeler.LabelDistributionPage.operator !=(idunno.Bluesky.Labeler.LabelDistributionPage? left, idunno.Bluesky.Labeler.LabelDistributionPage? right) -> bool
+static idunno.Bluesky.Labeler.LabelDistributionPage.operator ==(idunno.Bluesky.Labeler.LabelDistributionPage? left, idunno.Bluesky.Labeler.LabelDistributionPage? right) -> bool
 idunno.Bluesky.Labeler.ILabelIssuanceAuthorizer
 idunno.Bluesky.Labeler.ILabelIssuanceAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
 idunno.Bluesky.Labeler.ILabelIssuancePolicyProvider
