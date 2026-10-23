@@ -119,7 +119,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException"><paramref name="link"/> does not refer to a link record in the current user's repository, is not present on the profile, or its CID does not match the profile reference.</exception>
     /// <exception cref="AuthenticationRequiredException">The agent is not authenticated.</exception>
     /// <remarks>
-    /// <para>The profile reference is removed before the link record is deleted. If deleting the record fails, it will no longer appear on the profile but may remain in the repository.</para>
+    /// <para>All profile references to the link are removed before the link record is deleted. If deleting the record fails, it will no longer appear on the profile but may remain in the repository.</para>
     /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -163,19 +163,19 @@ public partial class BlueskyAgent
 
         Profile profile = profileResponse.Result.Value;
         StrongReference[] links = profile.Links?.ToArray() ?? [];
-        int linkIndex = Array.FindIndex(links, existing => existing.Uri == uri);
-        if (linkIndex < 0)
+        StrongReference[] matchingLinks = links.Where(existing => existing.Uri == uri).ToArray();
+        if (matchingLinks.Length == 0)
         {
             throw new ArgumentException("The link is not present on the current user's profile.", nameof(link));
         }
 
-        StrongReference profileLink = links[linkIndex];
-        if (profileLink.Cid != link.Cid)
+        if (matchingLinks.Any(existing => existing.Cid != link.Cid))
         {
             throw new ArgumentException("The link CID does not match the profile reference.", nameof(link));
         }
 
-        profile.Links = links.Where((_, index) => index != linkIndex).ToArray();
+        StrongReference profileLink = matchingLinks[0];
+        profile.Links = links.Where(existing => existing.Uri != uri).ToArray();
         AtProtoHttpResult<PutRecordResult> updateResponse =
             await UpdateProfile(profileResponse.Result, cancellationToken).ConfigureAwait(false);
         if (!updateResponse.Succeeded)

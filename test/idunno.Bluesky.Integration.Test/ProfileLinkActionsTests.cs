@@ -150,14 +150,22 @@ public class ProfileLinkActionsTests
             {
                 case 1:
                     Assert.Equal("/xrpc/com.atproto.repo.getRecord", context.Request.Path);
-                    await context.Response.WriteAsync(ProfileRecord(), TestContext.Current.CancellationToken);
+                    await context.Response.WriteAsync(ProfileRecordWithDuplicateLinkReferences(), TestContext.Current.CancellationToken);
                     break;
 
                 case 2:
                     Assert.Equal("/xrpc/com.atproto.repo.putRecord", context.Request.Path);
                     using (JsonDocument request = await JsonDocument.ParseAsync(context.Request.Body, cancellationToken: TestContext.Current.CancellationToken))
                     {
-                        Assert.Empty(request.RootElement.GetProperty("record").GetProperty("links").EnumerateArray());
+                        Assert.Equal(
+                            [
+                                "at://did:plc:test/app.bsky.actor.link/first",
+                                "at://did:plc:test/app.bsky.actor.link/second",
+                                "at://did:plc:test/app.bsky.actor.link/third"
+                            ],
+                            request.RootElement.GetProperty("record").GetProperty("links")
+                                .EnumerateArray()
+                                .Select(reference => reference.GetProperty("uri").GetString()));
                     }
 
                     await context.Response.WriteAsync(
@@ -202,6 +210,18 @@ public class ProfileLinkActionsTests
         {"uri":"at://did:plc:test/app.bsky.actor.profile/self","cid":"{{{ProfileCid}}}",
          "value":{"$type":"app.bsky.actor.profile",
                   "links":[{"uri":"at://did:plc:test/app.bsky.actor.link/existing","cid":"{{{ExistingLinkCid}}}"}]}}
+        """;
+
+    private static string ProfileRecordWithDuplicateLinkReferences() => $$$"""
+        {"uri":"at://did:plc:test/app.bsky.actor.profile/self","cid":"{{{ProfileCid}}}",
+         "value":{"$type":"app.bsky.actor.profile",
+                  "links":[
+                    {"uri":"at://did:plc:test/app.bsky.actor.link/first","cid":"{{{ExistingLinkCid}}}"},
+                    {"uri":"at://did:plc:test/app.bsky.actor.link/existing","cid":"{{{ExistingLinkCid}}}"},
+                    {"uri":"at://did:plc:test/app.bsky.actor.link/second","cid":"{{{ExistingLinkCid}}}"},
+                    {"uri":"at://did:plc:test/app.bsky.actor.link/existing","cid":"{{{ExistingLinkCid}}}"},
+                    {"uri":"at://did:plc:test/app.bsky.actor.link/third","cid":"{{{ExistingLinkCid}}}"}
+                  ]}}
         """;
 
     private static TestServer Respond(string body, Action<HttpContext> inspect) =>
