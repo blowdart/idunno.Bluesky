@@ -116,6 +116,30 @@ as the starting universe: these cannot reveal capabilities with no SDK counterpa
   documentation, passing tests and representative samples are supporting evidence,
   not proof that this inventory is complete.
 
+## Repository-record convenience APIs
+
+For every newly discovered repository-record type, assess its application-facing
+helpers separately from its model, serialization and generic repository support.
+Include records whose CLR types already exist but lack dedicated helpers.
+
+* Inventory existing record-specific agent methods for retrieval, listing,
+  creation, updating and deletion. Distinguish AppView reads from repository-record
+  reads that retain the URI and CID.
+* Identify which operations are meaningful for the record. Do not assume every
+  record needs every CRUD operation. Consider singleton or derived record keys,
+  ownership, conditional writes, and relationships to other records.
+* Report missing helpers as optional SDK conveniences, not lexicon-conformance
+  defects. Generic repository methods do not count as dedicated helpers.
+* Present a table containing the record NSID, CLR type, existing helpers,
+  proposed helpers and any operations intentionally omitted, with reasons.
+* Keep helper proposals narrowly scoped. Do not implicitly create, modify or
+  delete referenced records, lists, feeds or blobs.
+
+When any helpers are proposed, ask whether the user wants them generated.
+Present the proposed scope before asking, and use the available user-question
+tool. Ask once for the discovered batch rather than separately for every record.
+Do not generate helpers without explicit approval.
+
 ## Historical additions and changes
 
 Audit both the current pinned snapshot and upstream history; neither replaces the other.
@@ -256,6 +280,12 @@ Identify experimental status, exclusions and shared dependencies. Obtain explici
 for that scope; approval to fix conformance defects does not implicitly authorize new APIs
 or records. If the user has already approved an enumerated scope, implement that scope
 without asking again, but obtain approval before adding newly discovered capabilities.
+
+Approval to add record models and serialization support does not implicitly
+authorize convenience helpers. Include proposed helpers explicitly in the scope
+decision, offering record support only, record support plus the proposed helpers,
+or a user-selected subset. Do not ask again when the user has already explicitly
+approved the enumerated helper scope.
 
 Follow repository instructions, preserve existing public signatures with overloads,
 keep cancellation tokens last, update public API tracking and source-generation metadata,
