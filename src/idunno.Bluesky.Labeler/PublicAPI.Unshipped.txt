@@ -29,6 +29,7 @@ idunno.Bluesky.Labeler.ILabelStore.GetOperationAsync(string! operationId, System
 idunno.Bluesky.Labeler.ILabelStore.GetReceiptAsync(string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelAppendReceipt?>!
 idunno.Bluesky.Labeler.ILabelStore.GetSnapshotAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreSnapshot!>!
 idunno.Bluesky.Labeler.ILabelStore.GetStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
+idunno.Bluesky.Labeler.ILabelStore.ReplaceSignaturesAsync(System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! labels, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.ILabelStore.InitializeAsync(idunno.AtProto.Did! issuer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.Labeler.ILabelStore.PublishAsync(int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
 idunno.Bluesky.Labeler.ILabelStore.PurgeAsync(long expectedRevision, bool confirmed, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
@@ -263,3 +264,18 @@ static idunno.Bluesky.Labeler.LabelTarget.Account(idunno.AtProto.AtIdentifier! a
 static idunno.Bluesky.Labeler.LabelTarget.Record(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null) -> idunno.Bluesky.Labeler.LabelTarget!
 static idunno.Bluesky.Labeler.StoredLabel.operator !=(idunno.Bluesky.Labeler.StoredLabel? left, idunno.Bluesky.Labeler.StoredLabel? right) -> bool
 static idunno.Bluesky.Labeler.StoredLabel.operator ==(idunno.Bluesky.Labeler.StoredLabel? left, idunno.Bluesky.Labeler.StoredLabel? right) -> bool
+idunno.Bluesky.Labeler.LabelerIdentityDocument
+static idunno.Bluesky.Labeler.LabelerIdentityDocument.CreateDidWebServiceSnippet(idunno.AtProto.Did! did, System.Uri! labelerEndpoint) -> string!
+static idunno.Bluesky.Labeler.LabelerIdentityDocument.CreateDidWebSnippet(idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> string!
+static idunno.Bluesky.Labeler.LabelerIdentityDocument.VerifyPublication(idunno.AtProto.DidDocument! didDocument, idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> void
+idunno.Bluesky.Labeler.LabelSigningKeyRotation
+static idunno.Bluesky.Labeler.LabelSigningKeyRotation.ResignNextBatchAsync(idunno.Bluesky.Labeler.ILabelStore! store, idunno.AtProto.Labels.LabelSigningKey! replacementKey, System.Guid streamId, long afterSequence, long throughSequence, int batchSize = 1000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress!>!
+idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress
+idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.IsComplete.get -> bool
+idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.LastSequence.get -> long
+idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.Through.get -> long
+idunno.Bluesky.Labeler.LabelSigningKeyFile
+static idunno.Bluesky.Labeler.LabelSigningKeyFile.CreateEncryptedBackup(string! sourcePath, string! backupPath) -> void
+static idunno.Bluesky.Labeler.LabelSigningKeyFile.GenerateEncryptedFile(string! path, idunno.AtProto.Labels.LabelSigningCurve curve, System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.Bluesky.Labeler.LabelSigningKeyFile.LoadEncryptedFile(string! path, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!

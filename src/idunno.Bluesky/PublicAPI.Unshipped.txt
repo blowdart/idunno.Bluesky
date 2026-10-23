@@ -131,6 +131,23 @@ idunno.Bluesky.RichText.ByteSlice.Validate(System.ComponentModel.DataAnnotations
 idunno.Bluesky.RichText.Facet.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
 idunno.Bluesky.RichText.TagFacetFeature.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!
 idunno.Bluesky.BlueskyAgent.CreateLabelerDeclaration(idunno.Bluesky.Labeler.Service! declaration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.EnsureLabelerDeclaration(idunno.Bluesky.Labeler.Service! declaration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Labeler.Service!>!>!>!
+idunno.Bluesky.BlueskyAgent.RequestPlcOperationSignature(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.SubmitPlcLabelerIdentityOperation(System.Text.Json.JsonElement signedOperation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.UpdatePlcLabelerIdentity(idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint, string? authorizationToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PlcLabelerIdentityUpdateResult!>!
+idunno.Bluesky.PlcLabelerIdentityUpdateResult
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.DidDocument.get -> idunno.AtProto.DidDocument?
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.Error.get -> idunno.AtProto.AtErrorDetail?
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.RecoveryAction.get -> string?
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.SignedOperation.get -> System.Text.Json.JsonElement?
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.Stage.get -> idunno.Bluesky.PlcLabelerIdentityUpdateStage
+idunno.Bluesky.PlcLabelerIdentityUpdateResult.StatusCode.get -> System.Net.HttpStatusCode?
+idunno.Bluesky.PlcLabelerIdentityUpdateStage
+idunno.Bluesky.PlcLabelerIdentityUpdateStage.SigningFailed = 0 -> idunno.Bluesky.PlcLabelerIdentityUpdateStage
+idunno.Bluesky.PlcLabelerIdentityUpdateStage.SubmissionFailed = 1 -> idunno.Bluesky.PlcLabelerIdentityUpdateStage
+idunno.Bluesky.PlcLabelerIdentityUpdateStage.VerificationFailed = 2 -> idunno.Bluesky.PlcLabelerIdentityUpdateStage
+idunno.Bluesky.PlcLabelerIdentityUpdateStage.Verified = 3 -> idunno.Bluesky.PlcLabelerIdentityUpdateStage
 idunno.Bluesky.BlueskyAgent.AddProfileLink(idunno.Bluesky.Actor.Link! link, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.GetProfileLinks(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileLinkView!>!>!>!
 idunno.Bluesky.BlueskyAgent.RemoveProfileLink(idunno.Bluesky.Actor.ProfileLinkView! link, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.DeleteResult!>!>!

@@ -17,6 +17,7 @@
 * Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
 * Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
+* Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that preserves label fields and sequence positions.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
@@ -40,6 +41,8 @@
 #### idunno.Bluesky
 
 * Added labeler declaration creation, authenticated record reads with CIDs, and conditional updates with publication-time policy validation.
+* Added idempotent labeler declaration setup that avoids replacing a different existing declaration.
+* Added authenticated PLC identity-signature requests and labeler-key/service updates through the PDS, including DID-document verification and signed-operation recovery results.
 * Added open-ended labeler declaration report reasons, preserving omitted versus empty report scopes.
 * Added `Post.Parse` and `Post.TryParse` overloads accepting a `JsonDocument` or `JsonElement`. Validation is enabled by default; overloads accepting `validate: false` support tolerant parsing of over-limit post text and invalid nested facet and media values, including aspect ratio dimensions, caption languages and external card URIs. Public constructors and ordinary JSON deserialization retain their existing validation.
 * Added `IValidatableObject` support to `Post`, `Facet`, `ByteSlice`, `TagFacetFeature`, `EmbeddedImages` and `EmbeddedGallery`. Post validation reports failures in nested facets and embeds, including byte ranges, tag lengths, image counts and gallery item counts.

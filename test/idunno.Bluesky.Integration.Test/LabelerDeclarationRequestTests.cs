@@ -101,8 +101,8 @@ public class LabelerDeclarationRequestTests
                 Assert.Equal(RecordType.LabelerDeclaration, context.Request.Query["collection"]);
                 Assert.Equal("self", context.Request.Query["rkey"]);
                 await context.Response.WriteAsync(
-                    $$"""
-                    {"uri":"at://{{s_did}}/app.bsky.labeler.service/self","cid":"{{s_cid}}",
+                    $$$"""
+                    {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
                     "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
                     "policies":{"labelValues":["spam"]},"reasonTypes":["com.atproto.moderation.defs#reasonSpam"],
                     "subjectTypes":["record"],"subjectCollections":["app.bsky.feed.post"],
@@ -139,6 +139,102 @@ public class LabelerDeclarationRequestTests
 
         Assert.True(updated.Succeeded);
         Assert.Equal(1, writes);
+    }
+
+    [Fact]
+    public async Task EnsureDeclarationIsIdempotentAndDoesNotWriteWhenMatchingRecordExists()
+    {
+        int writes = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.repo.getRecord", context.Request.Path);
+            Assert.Equal("GET", context.Request.Method);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                $$$"""
+                {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
+                "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+                "policies":{"labelValues":["spam"]},"reasonTypes":[]}}
+                """, TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            CreateDeclaration(),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(s_cid, result.Result.Cid);
+        Assert.Equal(0, writes);
+    }
+
+    [Fact]
+    public async Task EnsureDeclarationDoesNotOverwriteDifferentExistingRecord()
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                $$$"""
+                {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
+                "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+                "policies":{"labelValues":["different"]},"reasonTypes":[]}}
+                """, TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            CreateDeclaration(),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(System.Net.HttpStatusCode.Conflict, result.StatusCode);
+        Assert.Equal("DeclarationConflict", result.AtErrorDetail!.Error);
+    }
+
+    [Fact]
+    public async Task EnsureDeclarationCreatesMissingRecordAndVerifiesItAfterward()
+    {
+        int writes = 0;
+        int reads = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (context.Request.Method == "GET")
+            {
+                reads++;
+                if (reads == 1)
+                {
+                    context.Response.StatusCode = 404;
+                    await context.Response.WriteAsync(
+                        """{"error":"RecordNotFound","message":"Missing"}""",
+                        TestContext.Current.CancellationToken);
+                    return;
+                }
+
+                await context.Response.WriteAsync(
+                    $$$"""
+                    {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
+                    "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+                    "policies":{"labelValues":["spam"]},"reasonTypes":[]}}
+                    """, TestContext.Current.CancellationToken);
+                return;
+            }
+
+            writes++;
+            Assert.Equal("/xrpc/com.atproto.repo.createRecord", context.Request.Path);
+            await context.Response.WriteAsync(RecordResponse, TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            CreateDeclaration(),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(s_cid, result.Result.Cid);
+        Assert.Equal(1, writes);
+        Assert.Equal(2, reads);
     }
 
     [Theory]
