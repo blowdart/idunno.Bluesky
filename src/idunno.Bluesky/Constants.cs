@@ -672,6 +672,11 @@ public static class CollectionNsid
     public static Nsid List => new("app.bsky.graph.list");
 
     /// <summary>
+    /// The NSID for a user's starter pack collection.
+    /// </summary>
+    public static Nsid StarterPack => new("app.bsky.graph.starterpack");
+
+    /// <summary>
     /// The NSID for the user's collection of users added to their own lists.
     /// </summary>
     public static Nsid ListItem => new("app.bsky.graph.listitem");

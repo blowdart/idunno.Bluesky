@@ -49,6 +49,7 @@ The following single-record convenience APIs expose a keyed overload:
 | Follows and blocks | `Follow` and `Block` |
 | Lists | `CreateList`, `AddToList`, and `BlockModList` |
 | Reference-list opt-outs | `CreateReferenceListOptOut` |
+| Starter packs | `CreateStarterPack` |
 | Posts | `Post`, `ReplyTo`, and `Quote` |
 
 These collections use caller-selectable `tid` keys. Supply a key that satisfies the collection's lexicon; `TimestampIdentifier.Next()` is a convenient way to create the initial key before persisting it.
@@ -65,6 +66,14 @@ AtProtoHttpResult<CreateRecordResult> result = await agent.CreateList(
 ```
 
 The supplied value is forwarded to the existing `createRecord` or `applyWrites` path. The SDK keeps its normal validation, authentication, and protected HTTP transport. It does not look up or silently deduplicate likes, follows, list items, or other records; the server's response, including an existing-record error, is returned normally. Handle-based `Follow` and `AddToList` first resolve the handle and can return `NotFound` without issuing a create request if it cannot be resolved.
+
+### Starter packs
+
+Create a `Graph.StarterPack` referencing an existing list, then call `CreateStarterPack(starterPack)` or `CreateStarterPack(rKey, starterPack)`. The helper writes to `app.bsky.graph.starterpack` and preserves the supplied record's timestamps and contents.
+
+Use `UpdateStarterPack(uri, starterPack)` to replace the value without a CID comparison. To protect against concurrent changes, retrieve the record with `GetBlueskyRecord<Graph.StarterPack>()`, replace its `Value`, and pass the repository record to `UpdateStarterPack(record)`. This overload sends the retrieved CID as `swapRecord`; handle a conflict by retrieving the latest record before deciding whether to retry.
+
+`DeleteStarterPack(uri)` deletes the starter pack record. Updates and deletes require a URI belonging to the authenticated user. None of these helpers creates, updates, or deletes the referenced list or feeds.
 
 ## Keys that are fixed, derived, or unavailable
 
