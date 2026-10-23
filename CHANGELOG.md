@@ -39,6 +39,7 @@
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to lists, starter packs, thread gates, post gates, `MessageInput`, `Draft` and `DraftPost`. Validation is enabled by default; `validate: false` preserves constraint-invalid values for later validation, including nested facets and draft media, without disabling required-field, JSON shape or protocol identifier checks.
 * Added recursive `IValidatableObject` support to draft images, videos, captions, galleries, external links, record references and local file references. Failures include indexed member paths; local file validation checks path text only and never accesses files.
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
+* Added `BlueskyAgent.GetProfileLinks`, `AddProfileLink` and `RemoveProfileLink` helpers for viewing and managing links on the authenticated user's profile.
 
 ### 🟢 Changed
 
