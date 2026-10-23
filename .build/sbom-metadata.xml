@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<bom xmlns="http://cyclonedx.org/schema/bom/1.6">
+  <metadata>
+    <authors>
+      <author>
+        <name>Barry Dorrans</name>
+      </author>
+    </authors>
+    <supplier>
+      <name>idunno.org</name>
+      <url>https://github.com/blowdart/idunno.Bluesky</url>
+    </supplier>
+  </metadata>
+</bom>

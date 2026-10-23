@@ -7,6 +7,27 @@ bring it to our attention by posting an issue.
 
 The attached notices are provided for information only.
 
+Build tooling
+-------------
+
+The following third-party tools are used in the release workflows to generate
+and validate Software Bill of Materials (SBOM) files and in the documentation
+workflow to generate the documentation site. They are not distributed with
+the libraries.
+
+The Python validator and its transitive dependencies are pinned with SHA-256
+hashes in .build/requirements-sbom.txt.
+
+Component                                       License
+----------------------------------------------  ----------
+CycloneDX .NET tool (CycloneDX)                 Apache-2.0
+CycloneDX CLI                                   Apache-2.0
+DocFX                                          MIT
+check-jsonschema                                Apache-2.0
+certifi (validator dependency)                   MPL-2.0
+Syft                                            Apache-2.0
+typing-extensions (validator dependency)         PSF-2.0
+
 Third-party package licenses
 ----------------------------
 

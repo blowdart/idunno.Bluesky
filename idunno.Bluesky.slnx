@@ -18,6 +18,9 @@
     <File Path=".build/CoherenceChecks.cs" />
     <File Path=".build/Directory.Build.Props" />
     <File Path=".build/ExtractReleaseNotes.cs" />
+    <File Path=".build/GenerateSboms.cs" />
+    <File Path=".build/requirements-sbom.txt" />
+    <File Path=".build/sbom-metadata.xml" />
   </Folder>
   <Folder Name="/.devcontainer/">
     <File Path=".devcontainer/devcontainer.json" />
@@ -307,6 +310,9 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+  </Folder>
+  <Folder Name="/.config/">
+    <File Path=".config/dotnet-tools.json" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
