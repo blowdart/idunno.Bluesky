@@ -280,6 +280,52 @@ public class HostingTests
         streamLabel.Verify(Document(key));
     }
 
+    [Theory]
+    [InlineData(LabelSigningCurve.P256)]
+    [InlineData(LabelSigningCurve.Secp256k1)]
+    public async Task DeliversPaddedRawSnapshotWhenEncodedFrameFits(LabelSigningCurve curve)
+    {
+        const int maximumBytes = 1024;
+        using LabelSigningKey key = LabelSigningKey.Generate(curve);
+        SignedLabelSnapshot original = Shapes(key)[2];
+        byte[] json = Encoding.UTF8.GetBytes(new string(' ', 2048) + Encoding.UTF8.GetString(original.GetJsonBytes()));
+        SignedLabelSnapshot padded = new(json);
+        Assert.True(json.Length > maximumBytes);
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            options: new LabelerHostingOptions { MaximumMessageBytes = maximumBytes },
+            network: true,
+            initialize: async store =>
+            {
+                await store.AppendAsync("padded", [padded], cancellationToken: TestContext.Current.CancellationToken);
+            });
+        using ClientWebSocket socket = new();
+        using CancellationTokenSource watchdog = new(TimeSpan.FromSeconds(30));
+        await socket.ConnectAsync(new Uri(fixture.SocketAddress + "?cursor=0"), watchdog.Token);
+        byte[] frame = await ReceiveAsync(socket);
+        Assert.InRange(frame.Length, 1, maximumBytes);
+        LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel stored = Assert.Single((await fixture.Store.ReplayAsync(
+            streamId: state.StreamId,
+            after: 0,
+            through: state.PublishedThrough,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(frame, LabelFrames.Labels(stored, frame.Length));
+        Assert.Throws<InvalidDataException>(() => LabelFrames.Labels(stored, frame.Length - 1));
+        Assert.Equal(json, stored.SignedLabel.GetJsonBytes());
+
+        using HttpClient client = new();
+        using AtProtoFirehose firehose = new(client, new FirehoseOptions { LabelerUri = fixture.Address });
+        await using IAsyncEnumerator<FirehoseEvent> events = firehose.SubscribeLabelsAsync(
+            cursor: 0,
+            maximumReconnectAttempts: 0,
+            cancellationToken: watchdog.Token).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        Assert.True(await events.MoveNextAsync());
+        Label delivered = Assert.Single(Assert.IsType<FirehoseLabelsEvent>(events.Current).Labels);
+        Assert.Equal(padded.GetCanonicalUnsignedBytes(), delivered.GetCanonicalUnsignedBytes());
+        delivered.Verify(Document(key));
+        socket.Abort();
+    }
+
     /// <summary>Creates independent account and CID-scoped record slots with same-slot replacement and expiry.</summary>
     private static SignedLabelSnapshot[] Shapes(LabelSigningKey key) =>
     [

@@ -10,6 +10,7 @@
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
 * Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
+* Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
 
 #### idunno.Bluesky.Labeler
 

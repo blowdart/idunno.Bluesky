@@ -20,12 +20,6 @@ internal static class LabelFrames
     /// <summary>Builds one sequenced label event with canonical field names but unchanged signed values and presence.</summary>
     internal static byte[] Labels(StoredLabel stored, int maximumBytes)
     {
-        byte[] json = stored.SignedLabel.GetJsonBytes();
-        if (json.Length > maximumBytes)
-        {
-            throw new InvalidDataException("A signed label exceeds the hosting message limit.");
-        }
-
         // The converter canonicalizes accepted property casing and numeric strings, not signed field values.
         Label label = stored.SignedLabel.Label;
         JsonElement root = JsonSerializer.SerializeToElement(label, s_typeInfo);
