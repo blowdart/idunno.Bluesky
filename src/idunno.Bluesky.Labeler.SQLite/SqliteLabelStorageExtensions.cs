@@ -36,7 +36,7 @@ public static class SqliteLabelStorageExtensions
         settings.DefaultTimeout = 15;
         settings.Pooling = false;
         settings.ForeignKeys = true;
-        if (services.Any(service => service.ServiceType == typeof(ILabelStore)))
+        if (services.Any(service => service.ServiceType == typeof(ILabelStore) || service.ServiceType == typeof(ILabelDistributionStore)))
         {
             throw new InvalidOperationException("Register exactly one label storage provider.");
         }
@@ -47,6 +47,7 @@ public static class SqliteLabelStorageExtensions
                 settings.ConnectionString,
                 provider.GetRequiredService<ILogger<SqliteLabelStore>>(),
                 new StoreMetrics("sqlite", provider.GetService<IMeterFactory>())));
+        services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

@@ -23,6 +23,12 @@ CREATE TABLE IF NOT EXISTS label_entries (
     format_version INTEGER NOT NULL CHECK(format_version=1),
     queued_at BIGINT NOT NULL
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_distribution (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    slot_hash BINARY(32) NOT NULL,
+    slot_key LONGBLOB NOT NULL,
+    INDEX label_distribution_slot(slot_hash, seq)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BINARY(32) PRIMARY KEY,
     operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
@@ -41,4 +47,4 @@ CREATE TABLE IF NOT EXISTS label_decisions (
     INDEX label_decisions_revision(revision)
 ) ENGINE=InnoDB;
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 2) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 3) ON DUPLICATE KEY UPDATE id=id;

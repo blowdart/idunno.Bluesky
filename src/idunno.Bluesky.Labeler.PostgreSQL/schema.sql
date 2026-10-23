@@ -19,6 +19,12 @@ CREATE TABLE IF NOT EXISTS label_entries (
     format_version INTEGER NOT NULL CHECK(format_version=1),
     queued_at BIGINT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS label_distribution (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    slot_hash BYTEA NOT NULL CHECK(octet_length(slot_hash)=32),
+    slot_key BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_distribution_slot ON label_distribution(slot_hash, seq);
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BYTEA PRIMARY KEY CHECK(octet_length(operation_hash)=32),
     operation_id TEXT COLLATE "C" NOT NULL,
@@ -36,4 +42,4 @@ CREATE TABLE IF NOT EXISTS label_decisions (
 );
 CREATE INDEX IF NOT EXISTS label_decisions_revision ON label_decisions(revision);
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 2) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 3) ON CONFLICT DO NOTHING;

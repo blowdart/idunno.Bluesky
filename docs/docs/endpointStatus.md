@@ -69,7 +69,7 @@
 | | [app.bsky.graph.unmuteActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteActor) | `BlueskyAgent.Unmute()` | ✔ |
 | | [app.bsky.graph.unmuteActorList](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteActorList) | `BlueskyAgent.UnmuteActorList()` | ✔ |
 | | [app.bsky.graph.unmuteThread](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteThread) | `BlueskyAgent.UnmuteThread()` | ✔ |
-| **Labelers** | [app.bsky.labeler.getServices](https://endpoints.bsky.app/#bluesky-app/tag/appbskylabeler/GET/xrpc/app.bsky.labeler.getServices) | `BlueskyAgent.GetLabelerServices()` | ✔ |
+| **Labelers** | [app.bsky.labeler.getServices](https://endpoints.bsky.app/#bluesky-app/tag/appbskylabeler/GET/xrpc/app.bsky.labeler.getServices) | `BlueskyAgent.GetLabelerServices()`; AppView-owned, not a labeler hosting endpoint | ✔ |
 | **Notifications** | [app.bsky.notifications.getPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/GET/xrpc/app.bsky.notification.getPreferences) | `BlueskyAgent.GetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.getUnreadCount](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/GET/xrpc/app.bsky.notification.getUnreadCount) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |
 | | [app.bsky.notification.listActivitySubscriptions](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/GET/xrpc/app.bsky.notification.listActivitySubscriptions) | `BlueskyAgent.ListActivitySubscriptions()` | ✔ |
@@ -158,8 +158,8 @@
 | Group        | Endpoint                                                     | Class / Method                | Status |
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
 | **Identity** | * _Uses DNS and `.well-known/` endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
-| **Labels**   | [com.atproto.label.queryLabels](https://endpoints.bsky.app/#bluesky-app/tag/comatprotolabel/GET/xrpc/com.atproto.label.queryLabels) | `AtProtoAgent.QueryLabels()` | ✔ |
-| | [com.atproto.label.subscribeLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/subscribeLabels.json) | `AtProtoFirehose.SubscribeLabelsAsync()` | ✔ |
+| **Labels**   | [com.atproto.label.queryLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/queryLabels.json) | `AtProtoAgent.QueryLabels()`; [hosted by `MapBlueskyLabeler()`](labeller/hosting.md) | ✔ |
+| | [com.atproto.label.subscribeLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/subscribeLabels.json) | `AtProtoFirehose.SubscribeLabelsAsync()`; [hosted by `MapBlueskyLabeler()`](labeller/hosting.md) | ✔ |
 | **Moderation**   | [com.atproto.moderation.createReport](https://endpoints.bsky.app/#bluesky-app/tag/comatprotomoderation/POST/xrpc/com.atproto.moderation.createReport) | `AtProtoAgent.CreateModerationReport()` | ✔ |
 | **Repo**     | [com.atproto.repo.applyWrites](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.applyWrites) | `AtProtoAgent.ApplyWrites()` | ✔ |
 | | [com.atproto.repo.createRecord](https://endpoints.bsky.app/#bluesky-app/tag/comatprotorepo/POST/xrpc/com.atproto.repo.createRecord) | `AtProtoAgent.CreateRecord()` | ✔ |

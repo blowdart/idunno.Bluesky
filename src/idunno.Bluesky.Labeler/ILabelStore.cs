@@ -25,7 +25,7 @@ namespace idunno.Bluesky.Labeler;
 /// <para>Authorization, policy, signing and private-key storage belong to callers. Additional authorization
 /// operations requiring atomicity must extend typed provider operations, not use a second independent write or raw database access.</para>
 /// </remarks>
-public interface ILabelStore
+public interface ILabelStore : ILabelDistributionStore
 {
     /// <summary>
     /// Atomically persists an already signed label batch, allocates its ordered sequences and records an idempotency

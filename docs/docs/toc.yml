@@ -129,6 +129,8 @@ items:
             href: labeller/persistence.md
           - name: Issuing and withdrawing labels
             href: labeller/issuance.md
+          - name: Hosting public label distribution
+            href: labeller/hosting.md
 
   - name: Jetstream
     items:

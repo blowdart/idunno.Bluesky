@@ -126,6 +126,7 @@
     <File Path="docs/docs/windowsOAuth.md" />
   </Folder>
   <Folder Name="/docs/docs/labeller/">
+    <File Path="docs/docs/labeller/hosting.md" />
     <File Path="docs/docs/labeller/issuance.md" />
     <File Path="docs/docs/labeller/overview.md" />
     <File Path="docs/docs/labeller/persistence.md" />
@@ -354,6 +355,7 @@
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj" Id="3fc9d41e-099d-461b-92f6-30275b1d8b43" />
     <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Labeler/idunno.Bluesky.AspNet.Labeler.csproj" />
     <Project Path="src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj" />
     <Project Path="src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj" />
     <Project Path="src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
@@ -462,6 +464,9 @@
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.AspNet.Authentication.Test/idunno.Bluesky.AspNet.Authentication.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.AspNet.Labeler.Integration.Test/idunno.Bluesky.AspNet.Labeler.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.BotSdk.Test/idunno.Bluesky.BotSdk.Test.csproj">

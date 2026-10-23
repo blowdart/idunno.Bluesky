@@ -86,6 +86,7 @@ $supportedProjects = @(
     'src/idunno.Bluesky.AspNet.Authentication.PostgreSQL/idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj',
     'src/idunno.Bluesky.AspNet.Authentication.Redis/idunno.Bluesky.AspNet.Authentication.Redis.csproj',
     'src/idunno.Bluesky.AspNet.Authentication.SQLite/idunno.Bluesky.AspNet.Authentication.SQLite.csproj',
+    'src/idunno.Bluesky.AspNet.Labeler/idunno.Bluesky.AspNet.Labeler.csproj',
     'src/idunno.Bluesky.BotSdk/idunno.Bluesky.BotSdk.csproj',
     'src/idunno.Bluesky.BotSdk.MySQL/idunno.Bluesky.BotSdk.MySQL.csproj',
     'src/idunno.Bluesky.BotSdk.PostgreSQL/idunno.Bluesky.BotSdk.PostgreSQL.csproj',
@@ -148,6 +149,7 @@ $escapedPackageFeedPath = [System.Security.SecurityElement]::Escape($packageFeed
       <package pattern="idunno.Bluesky.AspNet.Authentication.PostgreSQL" />
       <package pattern="idunno.Bluesky.AspNet.Authentication.Redis" />
       <package pattern="idunno.Bluesky.AspNet.Authentication.SQLite" />
+      <package pattern="idunno.Bluesky.AspNet.Labeler" />
       <package pattern="idunno.Bluesky.BotSdk" />
       <package pattern="idunno.Bluesky.BotSdk.MySQL" />
       <package pattern="idunno.Bluesky.BotSdk.PostgreSQL" />
