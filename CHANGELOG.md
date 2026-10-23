@@ -8,6 +8,7 @@
 
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
+* Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
 
 #### idunno.Bluesky.Labeler
 
@@ -47,6 +48,8 @@
 * Added recursive `IValidatableObject` support to draft images, videos, captions, galleries, external links, record references and local file references. Failures include indexed member paths; local file validation checks path text only and never accesses files.
 * Added `IValidatableObject` support and JSON `Parse`/`TryParse` overloads to `Actor.Link`, `Actor.Status` and `Feed.Generator`. Validation checks HTTPS link destinations, title and icon constraints, status durations and nested external cards, and generator text, description facets and avatar metadata. Passing `validate: false` retains constraint-invalid values for later validation without relaxing existing public constructor or setter guards. Unknown status strings and generator content modes retain their existing handling.
 * Added `BlueskyAgent.GetProfileLinks`, `AddProfileLink` and `RemoveProfileLink` helpers for viewing and managing links on the authenticated user's profile.
+
+* Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
 
 ### 🟢 Changed
 

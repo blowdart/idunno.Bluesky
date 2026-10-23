@@ -93,6 +93,8 @@ return 405 with `Allow: GET`. No new lexicon-specific query error is invented.
 ## Subscriptions and reconnect
 
 Connect with a WebSocket upgrade to `/xrpc/com.atproto.label.subscribeLabels`.
+Both HTTP/1.1 GET upgrades and HTTP/2 extended CONNECT handshakes are supported;
+CONNECT is accepted only when ASP.NET Core recognizes a WebSocket handshake.
 Binary messages contain the standard concatenated CBOR header and body. Each `#labels`
 event carries one retained signed label and its permanent sequence. Sequence values are
 positive safe integers, never renumbered; storage refuses allocation beyond `2^53 - 1`.

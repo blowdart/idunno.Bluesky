@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -41,14 +42,16 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         LabelerHostingOptions? options = null,
         bool network = false,
         Func<ILabelStore, Task>? initialize = null,
-        string? database = null)
+        string? database = null,
+        bool http2 = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
         if (network)
         {
-            builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
+            builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0, listen =>
+                listen.Protocols = http2 ? HttpProtocols.Http2 : HttpProtocols.Http1));
         }
         else
         {

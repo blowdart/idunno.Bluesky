@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.PostgreSQL\idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.Redis\idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk\idunno.Bluesky.BotSdk.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.MySQL\idunno.Bluesky.BotSdk.MySQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.BotSdk.PostgreSQL\idunno.Bluesky.BotSdk.PostgreSQL.csproj" />
@@ -40,6 +41,7 @@
     <PackageReference Include="idunno.Bluesky.AspNet.Authentication.PostgreSQL" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.AspNet.Authentication.Redis" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.AspNet.Authentication.SQLite" VersionOverride="$(IdunnoPackageVersion)" />
+    <PackageReference Include="idunno.Bluesky.AspNet.Labeler" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.BotSdk" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.BotSdk.MySQL" VersionOverride="$(IdunnoPackageVersion)" />
     <PackageReference Include="idunno.Bluesky.BotSdk.PostgreSQL" VersionOverride="$(IdunnoPackageVersion)" />
@@ -60,6 +62,7 @@
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.Redis" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.SQLite" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Labeler" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.MySQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.BotSdk.PostgreSQL" />

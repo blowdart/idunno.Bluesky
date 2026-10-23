@@ -118,6 +118,53 @@ public class HostingTests
         Assert.Empty(excluded.Result);
     }
 
+    [Fact]
+    public async Task AcceptsHttp2ExtendedConnectHandshake()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot label = Shapes(key)[0];
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            network: true,
+            initialize: async store =>
+            {
+                await store.AppendAsync("http2", [label]);
+                await store.PublishAsync();
+            },
+            http2: true);
+        using HttpMessageInvoker invoker = new(new SocketsHttpHandler());
+        using ClientWebSocket socket = new();
+        socket.Options.HttpVersion = HttpVersion.Version20;
+        socket.Options.HttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+        using CancellationTokenSource watchdog = new(TimeSpan.FromSeconds(30));
+        await socket.ConnectAsync(new Uri(fixture.SocketAddress + "?cursor=0"), invoker, watchdog.Token);
+
+        CborReader frame = new(await ReceiveAsync(socket), CborConformanceMode.Canonical, allowMultipleRootLevelValues: true);
+        Assert.Equal(2, frame.ReadStartMap());
+        Assert.Equal("t", frame.ReadTextString());
+        Assert.Equal("#labels", frame.ReadTextString());
+        Assert.Equal("op", frame.ReadTextString());
+        Assert.Equal(1, frame.ReadInt32());
+        frame.ReadEndMap();
+        Assert.Equal(2, frame.ReadStartMap());
+        Assert.Equal("seq", frame.ReadTextString());
+        Assert.Equal(1, frame.ReadInt64());
+        socket.Abort();
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("CONNECT")]
+    public async Task RejectsNonWebSocketSubscriptionMethods(string method)
+    {
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        using HttpRequestMessage request = new(new HttpMethod(method), "/xrpc/com.atproto.label.subscribeLabels");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Contains("GET", response.Content.Headers.Allow);
+        Assert.Contains("CONNECT", response.Content.Headers.Allow);
+    }
+
     [Theory]
     [InlineData("?cursor=999", "FutureCursor")]
     [InlineData("?cursor=-1", "InvalidRequest")]

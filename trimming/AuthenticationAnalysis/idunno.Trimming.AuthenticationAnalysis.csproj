@@ -16,12 +16,14 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.PostgreSQL\idunno.Bluesky.AspNet.Authentication.PostgreSQL.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.Redis\idunno.Bluesky.AspNet.Authentication.Redis.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Authentication.SQLite\idunno.Bluesky.AspNet.Authentication.SQLite.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
     <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.MySQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.PostgreSQL" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.Redis" />
     <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Authentication.SQLite" />
+    <TrimmerRootAssembly Include="idunno.Bluesky.AspNet.Labeler" />
   </ItemGroup>
 
 </Project>

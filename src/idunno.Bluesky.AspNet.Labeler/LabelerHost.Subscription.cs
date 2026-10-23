@@ -17,14 +17,15 @@ internal sealed partial class LabelerHost
     /// <summary>Admits bounded public subscriptions and pairs each send loop with a cancellable receive drain.</summary>
     internal async Task SubscribeAsync(HttpContext context)
     {
-        if (!HttpMethods.IsGet(context.Request.Method))
+        if (!HttpMethods.IsGet(context.Request.Method) &&
+            !(HttpMethods.IsConnect(context.Request.Method) && context.WebSockets.IsWebSocketRequest))
         {
-            context.Response.Headers.Allow = "GET";
+            context.Response.Headers.Allow = "GET, CONNECT";
             await ErrorAsync(
                 context: context,
                 status: 405,
                 error: "InvalidRequest",
-                message: "Use GET for label subscriptions.").ConfigureAwait(false);
+                message: "Use a WebSocket handshake for label subscriptions.").ConfigureAwait(false);
             return;
         }
 
