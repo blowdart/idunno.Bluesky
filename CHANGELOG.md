@@ -41,8 +41,8 @@
 #### idunno.Bluesky
 
 * Added labeler declaration creation, authenticated record reads with CIDs, and conditional updates with publication-time policy validation.
-* Added idempotent labeler declaration setup that avoids replacing a different existing declaration.
-* Added authenticated PLC identity-signature requests and labeler-key/service updates through the PDS, including DID-document verification and signed-operation recovery results.
+* Added idempotent labeler declaration setup that avoids replacing a different existing declaration and handles named missing-record and concurrent-create protocol errors.
+* Added authenticated PLC identity-signature requests and labeler-key/service updates through the PDS, including version-checked PLC state merges, DID-document verification, and signed-operation recovery results for submission and verification transport failures.
 * Added open-ended labeler declaration report reasons, preserving omitted versus empty report scopes.
 * Added `Post.Parse` and `Post.TryParse` overloads accepting a `JsonDocument` or `JsonElement`. Validation is enabled by default; overloads accepting `validate: false` support tolerant parsing of over-limit post text and invalid nested facet and media values, including aspect ratio dimensions, caption languages and external card URIs. Public constructors and ordinary JSON deserialization retain their existing validation.
 * Added `IValidatableObject` support to `Post`, `Facet`, `ByteSlice`, `TagFacetFeature`, `EmbeddedImages` and `EmbeddedGallery`. Post validation reports failures in nested facets and embeds, including byte ranges, tag lengths, image counts and gallery item counts.

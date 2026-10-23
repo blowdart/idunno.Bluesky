@@ -192,10 +192,11 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">The labeler endpoint is not a valid HTTPS origin.</exception>
     /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">The authenticated account does not use a PLC DID.</exception>
-    /// <exception cref="InvalidDataException">The current DID document cannot be safely converted to a PLC operation.</exception>
+    /// <exception cref="InvalidDataException">The current DID document or PLC audit log does not describe a valid active identity.</exception>
     /// <remarks>
     /// <para>The PDS signs the PLC operation using the account's authorized rotation key. The repository signing key and label signing key do not authorize DID changes.</para>
-    /// <para>Existing verification methods and services are retained. A signed operation is returned after signing so an operator can recover if submission or subsequent verification fails.</para>
+    /// <para>Existing verification methods and services are retained from a versioned PLC audit-log snapshot. If the PDS signs against a different version, the update returns <c>PlcStateChanged</c> without submitting or exposing the unsafe operation. Retry from fresh state, obtaining another authorization code if required.</para>
+    /// <para>A signed operation is returned so an operator can recover if submission or subsequent verification fails, including transport failures and timeouts. Explicit caller cancellation still propagates.</para>
     /// </remarks>
     [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode",
         Justification = "The request and response use JsonObject metadata from the AT Protocol source-generation context.")]
@@ -247,10 +248,30 @@ public partial class BlueskyAgent
                 recoveryAction: null);
         }
 
-        JsonObject verificationMethods = CreateVerificationMethods(currentDocument, did);
+        AtProtoHttpClient directoryClient = new(loggerFactory: LoggerFactory)
+        {
+            MaximumResponseSize = MaximumResponseSize
+        };
+        AtProtoHttpResult<string> audit = await directoryClient.Get(
+            service: _directoryAgent.PlcDirectory,
+            endpoint: $"/{Uri.EscapeDataString(did.Value)}/log/audit",
+            httpClient: HttpClient,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!audit.Succeeded)
+        {
+            return new(
+                PlcLabelerIdentityUpdateStage.SigningFailed,
+                did,
+                signedOperation: null,
+                didDocument: currentDocument,
+                statusCode: audit.StatusCode,
+                error: audit.AtErrorDetail,
+                recoveryAction: "Restore access to the PLC audit log, then retry the identity update from fresh state.");
+        }
+
+        (string previousCid, JsonObject verificationMethods, JsonObject services) = ParsePlcLabelerState(audit.Result, did);
         verificationMethods["atproto_label"] = $"did:key:{signingKey.ExportPublicKeyMultibase()}";
 
-        JsonObject services = CreateServices(currentDocument, did);
         services["atproto_labeler"] = new JsonObject
         {
             ["type"] = "AtprotoLabeler",
@@ -299,9 +320,42 @@ public partial class BlueskyAgent
         using JsonDocument operationDocument = JsonDocument.Parse(operationNode.ToJsonString());
         JsonElement signedOperation = operationDocument.RootElement.Clone();
 
-        AtProtoHttpResult<EmptyResponse> submitResult = await SubmitPlcLabelerIdentityOperation(
-            signedOperation,
-            cancellationToken).ConfigureAwait(false);
+        if (!signedOperation.TryGetProperty("prev", out JsonElement previous) ||
+            previous.ValueKind != JsonValueKind.String ||
+            previous.GetString() != previousCid)
+        {
+            // Never submit stale replacement maps signed against a newer PLC version.
+            return new(
+                PlcLabelerIdentityUpdateStage.SigningFailed,
+                did,
+                signedOperation: null,
+                didDocument: currentDocument,
+                statusCode: HttpStatusCode.Conflict,
+                error: new AtErrorDetail("PlcStateChanged", "The PLC state changed before the operation was signed."),
+                recoveryAction: "Retry the identity update from fresh PLC state; request another authorization code if required.");
+        }
+
+        AtProtoHttpResult<EmptyResponse> submitResult;
+        try
+        {
+            submitResult = await SubmitPlcLabelerIdentityOperation(
+                signedOperation,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException ||
+            (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(
+                PlcLabelerIdentityUpdateStage.SubmissionFailed,
+                did,
+                signedOperation,
+                didDocument: null,
+                statusCode: null,
+                error: new AtErrorDetail("SubmissionUnverified", exception.Message),
+                recoveryAction: "Submission may have succeeded. Resolve the DID and inspect PLC state before retrying the retained signed operation.");
+        }
 
         if (!submitResult.Succeeded)
         {
@@ -315,7 +369,26 @@ public partial class BlueskyAgent
                 recoveryAction: "Resolve the DID; if the operation is not published, call SubmitPlcLabelerIdentityOperation with the returned SignedOperation.");
         }
 
-        DidDocument? publishedDocument = await ResolveDidDocument(did, cancellationToken).ConfigureAwait(false);
+        DidDocument? publishedDocument;
+        try
+        {
+            publishedDocument = await ResolveDidDocument(did, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException ||
+            (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new(
+                PlcLabelerIdentityUpdateStage.VerificationFailed,
+                did,
+                signedOperation,
+                didDocument: null,
+                statusCode: null,
+                error: new AtErrorDetail("PublicationUnverified", exception.Message),
+                recoveryAction: "Retry DID resolution and verify publication before attempting another submission.");
+        }
+
         if (publishedDocument is null)
         {
             return new(
@@ -354,75 +427,54 @@ public partial class BlueskyAgent
             recoveryAction: null);
     }
 
-    /// <summary>Converts existing DID verification methods to the PLC service-name map without dropping keys.</summary>
-    private static JsonObject CreateVerificationMethods(DidDocument didDocument, Did did)
+    /// <summary>Extracts key and service maps together with their PLC operation version, excluding nullified history.</summary>
+    private static (string Cid, JsonObject VerificationMethods, JsonObject Services) ParsePlcLabelerState(
+        string response,
+        Did did)
     {
-        JsonObject verificationMethods = [];
-        foreach (VerificationMethod method in didDocument.VerificationMethods ?? [])
+        JsonArray audit = JsonNode.Parse(response) as JsonArray
+            ?? throw new InvalidDataException("The PLC audit log is not an array.");
+        foreach (JsonNode? entry in audit)
         {
-            string name = GetDidDocumentFragment(method.Id, did);
-            if (method.Type != "Multikey" || string.IsNullOrWhiteSpace(method.PublicKeyMultibase))
+            if (entry is not JsonObject item ||
+                item["did"]?.GetValue<string>() != did.Value ||
+                item["nullified"] is not JsonValue nullified ||
+                !nullified.TryGetValue<bool>(out _))
             {
-                throw new InvalidDataException($"Verification method '{name}' cannot be safely represented in a PLC operation.");
+                throw new InvalidDataException("The PLC audit log contains an invalid entry.");
             }
-
-            if (verificationMethods.ContainsKey(name))
-            {
-                throw new InvalidDataException($"The DID document contains duplicate verification method '{name}'.");
-            }
-
-            verificationMethods[name] = $"did:key:{method.PublicKeyMultibase}";
         }
 
-        return verificationMethods;
-    }
-
-    /// <summary>Converts existing DID services to the PLC service map without dropping endpoints.</summary>
-    private static JsonObject CreateServices(DidDocument didDocument, Did did)
-    {
-        JsonObject services = [];
-        foreach (DidDocService service in didDocument.Services ?? [])
+        JsonObject latest = audit.OfType<JsonObject>()
+            .LastOrDefault(item => !item["nullified"]!.GetValue<bool>())
+            ?? throw new InvalidDataException("The PLC audit log contains no active operation.");
+        string cid = latest["cid"]?.GetValue<string>()
+            ?? throw new InvalidDataException("The PLC audit log contains no active operation.");
+        JsonObject operation = latest["operation"] as JsonObject
+            ?? throw new InvalidDataException("The PLC audit entry contains no operation.");
+        if (operation["type"]?.GetValue<string>() == "plc_operation" &&
+            operation["verificationMethods"] is JsonObject methods &&
+            operation["services"] is JsonObject services)
         {
-            string name = GetDidDocumentFragment(service.Id, did);
-            if (services.ContainsKey(name))
-            {
-                throw new InvalidDataException($"The DID document contains duplicate service '{name}'.");
-            }
-
-            services[name] = new JsonObject
-            {
-                ["type"] = service.Type,
-                ["endpoint"] = service.ServiceEndpoint.AbsoluteUri
-            };
+            return (cid, methods.DeepClone().AsObject(), services.DeepClone().AsObject());
         }
-
-        return services;
-    }
-
-    /// <summary>Extracts a fragment owned by the resolved DID and rejects entries with unrelated identifiers.</summary>
-    private static string GetDidDocumentFragment(string identifier, Did did)
-    {
-        string prefix = $"{did}#";
-        string name;
-        if (identifier.StartsWith(prefix, StringComparison.Ordinal))
+        if (operation["type"]?.GetValue<string>() == "create" &&
+            operation["signingKey"] is JsonValue signingKey &&
+            operation["service"] is JsonValue service)
         {
-            name = identifier[prefix.Length..];
-        }
-        else if (identifier.StartsWith('#'))
-        {
-            name = identifier[1..];
-        }
-        else
-        {
-            throw new InvalidDataException("A DID document entry has an unsupported identifier.");
-        }
-
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new InvalidDataException("A DID document entry has an empty fragment identifier.");
+            return (cid,
+                new JsonObject { ["atproto"] = signingKey.DeepClone() },
+                new JsonObject
+                {
+                    ["atproto_pds"] = new JsonObject
+                    {
+                        ["type"] = "AtprotoPersonalDataServer",
+                        ["endpoint"] = service.DeepClone()
+                    }
+                });
         }
 
-        return name;
+        throw new InvalidDataException("The latest PLC operation is not an active identity.");
     }
 
     /// <summary>Enforces the label lexicon's HTTPS-origin-only labeler endpoint shape.</summary>

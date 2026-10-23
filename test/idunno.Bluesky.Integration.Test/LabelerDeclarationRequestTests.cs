@@ -192,8 +192,12 @@ public class LabelerDeclarationRequestTests
         Assert.Equal("DeclarationConflict", result.AtErrorDetail!.Error);
     }
 
-    [Fact]
-    public async Task EnsureDeclarationCreatesMissingRecordAndVerifiesItAfterward()
+    [Theory]
+    [InlineData(404, 200)]
+    [InlineData(400, 200)]
+    [InlineData(400, 400)]
+    [InlineData(404, 409)]
+    public async Task EnsureDeclarationCreatesMissingRecordAndVerifiesItAfterward(int missingStatus, int createStatus)
     {
         int writes = 0;
         int reads = 0;
@@ -205,7 +209,7 @@ public class LabelerDeclarationRequestTests
                 reads++;
                 if (reads == 1)
                 {
-                    context.Response.StatusCode = 404;
+                    context.Response.StatusCode = missingStatus;
                     await context.Response.WriteAsync(
                         """{"error":"RecordNotFound","message":"Missing"}""",
                         TestContext.Current.CancellationToken);
@@ -223,7 +227,10 @@ public class LabelerDeclarationRequestTests
 
             writes++;
             Assert.Equal("/xrpc/com.atproto.repo.createRecord", context.Request.Path);
-            await context.Response.WriteAsync(RecordResponse, TestContext.Current.CancellationToken);
+            context.Response.StatusCode = createStatus;
+            await context.Response.WriteAsync(
+                createStatus == 200 ? RecordResponse : """{"error":"RecordAlreadyExists","message":"Concurrent setup"}""",
+                TestContext.Current.CancellationToken);
         });
         using BlueskyAgent agent = CreateAgent(server);
 
@@ -235,6 +242,92 @@ public class LabelerDeclarationRequestTests
         Assert.Equal(s_cid, result.Result.Cid);
         Assert.Equal(1, writes);
         Assert.Equal(2, reads);
+    }
+
+    [Theory]
+    [InlineData(400, false)]
+    [InlineData(409, false)]
+    [InlineData(400, true)]
+    [InlineData(409, true)]
+    public async Task EnsureDeclarationPreservesConcurrentConflictsAndOriginalCreateErrors(int createStatus, bool readFails)
+    {
+        int reads = 0;
+        int writes = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (context.Request.Method == "POST")
+            {
+                Assert.Equal("/xrpc/com.atproto.repo.createRecord", context.Request.Path);
+                writes++;
+                context.Response.StatusCode = createStatus;
+                await context.Response.WriteAsync(
+                    """{"error":"RecordAlreadyExists","message":"Concurrent setup"}""",
+                    TestContext.Current.CancellationToken);
+                return;
+            }
+
+            reads++;
+            if (reads == 1 || readFails)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync(
+                    """{"error":"RecordNotFound","message":"Missing"}""",
+                    TestContext.Current.CancellationToken);
+                return;
+            }
+
+            await context.Response.WriteAsync(
+                $$$"""
+                {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
+                "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+                "policies":{"labelValues":["different"]},"reasonTypes":[]}}
+                """,
+                TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            CreateDeclaration(),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(readFails ? createStatus : 409, (int)result.StatusCode);
+        Assert.Equal(readFails ? "RecordAlreadyExists" : "DeclarationConflict", result.AtErrorDetail!.Error);
+        if (readFails)
+        {
+            Assert.Equal("Concurrent setup", result.AtErrorDetail.Message);
+        }
+
+        Assert.Equal(2, reads);
+        Assert.Equal(1, writes);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task EnsureDeclarationDoesNotRetryUnrelatedReadOrCreateErrors(bool createFails)
+    {
+        int requests = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            requests++;
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = 400;
+            string error = createFails && requests == 1 ? "RecordNotFound" : "InvalidRequest";
+            await context.Response.WriteAsync(
+                $$"""{"error":"{{error}}","message":"Rejected"}""",
+                TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            CreateDeclaration(),
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("InvalidRequest", result.AtErrorDetail!.Error);
+        Assert.Equal(createFails ? 2 : 1, requests);
     }
 
     [Theory]

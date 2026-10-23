@@ -42,7 +42,8 @@ public partial class BlueskyAgent
                 : DeclarationConflict(current);
         }
 
-        if (current.StatusCode != HttpStatusCode.NotFound)
+        if (current.StatusCode != HttpStatusCode.NotFound &&
+            current.AtErrorDetail?.Error != "RecordNotFound")
         {
             return current;
         }
@@ -51,7 +52,9 @@ public partial class BlueskyAgent
             declaration: declaration,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!create.Succeeded && create.StatusCode != HttpStatusCode.Conflict)
+        bool alreadyExists = create.StatusCode == HttpStatusCode.Conflict ||
+            create.AtErrorDetail?.Error == "RecordAlreadyExists";
+        if (!create.Succeeded && !alreadyExists)
         {
             return new AtProtoHttpResult<AtProtoRepositoryRecord<Service>>(
                 result: null,
@@ -69,7 +72,7 @@ public partial class BlueskyAgent
                 : DeclarationConflict(current);
         }
 
-        if (!create.Succeeded && create.StatusCode == HttpStatusCode.Conflict)
+        if (!create.Succeeded && alreadyExists)
         {
             return new AtProtoHttpResult<AtProtoRepositoryRecord<Service>>(
                 result: null,

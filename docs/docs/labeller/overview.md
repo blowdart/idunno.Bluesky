@@ -107,9 +107,17 @@ a PLC operation that adds the label verification method and service while preser
 submit that signed operation through the PLC workflow, then resolve the DID and verify publication. This
 uses the account's PLC rotation authority, not the PDS repository signing key or the local label-signing key.
 `BlueskyAgent.RequestPlcOperationSignature()` requests the optional email authorization code, and
-`BlueskyAgent.UpdatePlcLabelerIdentity()` asks the authenticated PDS to sign and submit the update. If
-signing or submission is interrupted, retain the returned signed operation and inspect the resolved DID
-before retrying so the operator can determine whether publication already succeeded. A self-hosted PDS
+`BlueskyAgent.UpdatePlcLabelerIdentity()` asks the authenticated PDS to sign and submit the update.
+It merges key and service maps from the latest non-nullified PLC audit-log operation, then requires the
+signed operation's `prev` to match that snapshot. If another update wins the race, it returns
+`SigningFailed` with `PlcStateChanged` without submitting or returning the unsafe signed operation.
+Retry the update to read fresh state, requesting another authorization code if the PDS requires one;
+authorization codes are not automatically reused.
+
+Submission or verification transport failures and timeouts return the signed operation with a
+`SubmissionFailed` or `VerificationFailed` stage and recovery guidance. Retain that operation and inspect
+the resolved DID and PLC state before retrying so the operator can determine whether publication already
+succeeded. Explicit caller cancellation still throws. A self-hosted PDS
 must expose these identity endpoints; otherwise use an operator-controlled PLC tool with an authorized
 rotation key.
 
