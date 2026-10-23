@@ -3,7 +3,10 @@
 
 using System.Formats.Cbor;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
+using idunno.AtProto;
+using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.AspNet.Labeler;
@@ -12,8 +15,9 @@ namespace idunno.Bluesky.AspNet.Labeler;
 internal static class LabelFrames
 {
     private static readonly string[] s_fields = ["cid", "cts", "exp", "neg", "sig", "src", "uri", "val", "ver"];
+    private static readonly JsonTypeInfo<Label> s_typeInfo = (JsonTypeInfo<Label>)AtProtoJsonSerializerOptions.Default.GetTypeInfo(typeof(Label));
 
-    /// <summary>Builds one sequenced label event without invoking a signer or normalizing its payload.</summary>
+    /// <summary>Builds one sequenced label event with canonical field names but unchanged signed values and presence.</summary>
     internal static byte[] Labels(StoredLabel stored, int maximumBytes)
     {
         byte[] json = stored.SignedLabel.GetJsonBytes();
@@ -22,8 +26,9 @@ internal static class LabelFrames
             throw new InvalidDataException("A signed label exceeds the hosting message limit.");
         }
 
-        using JsonDocument document = JsonDocument.Parse(json);
-        JsonElement root = document.RootElement;
+        // The converter canonicalizes accepted property casing and numeric strings, not signed field values.
+        Label label = stored.SignedLabel.Label;
+        JsonElement root = JsonSerializer.SerializeToElement(label, s_typeInfo);
         CborWriter writer = new(CborConformanceMode.Canonical, allowMultipleRootLevelValues: true);
         Header(writer, "#labels");
         writer.WriteStartMap(2);
@@ -43,7 +48,7 @@ internal static class LabelFrames
             switch (field)
             {
                 case "sig":
-                    writer.WriteByteString(stored.SignedLabel.Label.Signature!.ToBytes());
+                    writer.WriteByteString(label.Signature!.ToBytes());
                     break;
                 case "ver":
                     writer.WriteInt32(value.GetInt32());

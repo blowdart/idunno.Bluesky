@@ -4,6 +4,7 @@
 using System.Formats.Cbor;
 using System.Net;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -227,18 +228,31 @@ public class HostingTests
     }
 
     [Theory]
-    [InlineData(LabelSigningCurve.P256)]
-    [InlineData(LabelSigningCurve.Secp256k1)]
-    public async Task PreservesLegacySignedTextAndExplicitFalseOnBothDeliveryPaths(LabelSigningCurve curve)
+    [InlineData(LabelSigningCurve.P256, false)]
+    [InlineData(LabelSigningCurve.P256, true)]
+    [InlineData(LabelSigningCurve.Secp256k1, false)]
+    [InlineData(LabelSigningCurve.Secp256k1, true)]
+    public async Task PreservesLegacySignedTextAndExplicitFalseOnBothDeliveryPaths(LabelSigningCurve curve, bool rawSnapshot)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(curve);
         Label original = JsonSerializer.Deserialize<Label>(
             """
             {"ver":1,"src":"did:plc:label-issuer","uri":"at://did:plc:subject/app.bsky.actor.profile/self",
             "cid":"BAFYREIGH5FJR6AN3QUJVFBM6XMSO6JYHIDO2DGUIXAEQP3JTCQFT2GOFBA",
-            "val":"spam","neg":false,"cts":"2026-01-02T04:04:05.123456789+01:00"}
+            "val":"spam","neg":false,"cts":"2026-01-02T04:04:05.123456789+01:00","exp":"2027-01-02T04:04:05.987654321+01:00"}
             """, AtProtoJsonSerializerOptions.Default)!;
         SignedLabelSnapshot signed = new(key.Sign(original));
+        if (rawSnapshot)
+        {
+            string json = Encoding.UTF8.GetString(signed.GetJsonBytes());
+            foreach (string field in new[] { "ver", "src", "uri", "cid", "val", "neg", "cts", "exp", "sig" })
+            {
+                json = json.Replace($"\"{field}\":", $"\"{field.ToUpperInvariant()}\":", StringComparison.Ordinal);
+            }
+
+            json = json.Replace("\"VER\":1", "\"VER\":\"1\"", StringComparison.Ordinal);
+            signed = new SignedLabelSnapshot(Encoding.UTF8.GetBytes(json));
+        }
         await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(network: true, initialize: async store =>
         {
             await store.AppendAsync("signed-shape", [signed], cancellationToken: TestContext.Current.CancellationToken);

@@ -9,6 +9,7 @@
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
+* Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
 
 #### idunno.Bluesky.Labeler
 

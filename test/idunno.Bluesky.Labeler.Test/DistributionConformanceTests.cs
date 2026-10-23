@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text;
+
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
@@ -20,6 +22,54 @@ public class DistributionConformanceTests
         second: 5,
         offset: TimeSpan.Zero);
     private const string Subject = "at://did:plc:subject/app.bsky.actor.profile/self";
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite", 0)]
+    [InlineData("sqlite", 1)]
+    [InlineData("sqlite", 2)]
+    [InlineData("postgresql", 0)]
+    [InlineData("postgresql", 1)]
+    [InlineData("postgresql", 2)]
+    [InlineData("mysql", 0)]
+    [InlineData("mysql", 1)]
+    [InlineData("mysql", 2)]
+    public async Task RetainsRawMixedCaseCidSlotsDuringAppendAndBackfill(string engine, int priorVersion)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot scoped = new(key.CreateLabel(
+            source: StoreFixture.Issuer,
+            uri: Subject,
+            value: "spam",
+            creationTimestamp: s_instant,
+            cid: new Cid("bafyreigh5fjr6an3qujvfbm6xmso6jyhido2dguixaeqp3jtcqft2gofba")));
+        string json = Encoding.UTF8.GetString(scoped.GetJsonBytes());
+        SignedLabelSnapshot raw = new(Encoding.UTF8.GetBytes(json.Replace("\"cid\":", "\"CID\":", StringComparison.Ordinal)));
+        SignedLabelSnapshot wide = new(key.CreateLabel(
+            source: StoreFixture.Issuer,
+            uri: Subject,
+            value: "spam",
+            creationTimestamp: s_instant));
+        await fixture.Store.AppendAsync("raw-slots", [raw, wide], cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        if (priorVersion != 0)
+        {
+            await fixture.ExecuteAsync($"UPDATE label_schema SET version={priorVersion}; DELETE FROM label_distribution");
+        }
+
+        ILabelStore restarted = fixture.NewStore();
+        await restarted.InitializeAsync(StoreFixture.Issuer, token);
+        LabelStoreState state = await restarted.GetStateAsync(token);
+        List<StoredLabel> actual = await ReadAllAsync(restarted, state);
+        Assert.Equal([1L, 2L], actual.Select(label => label.Sequence));
+        Assert.Equal(raw.GetJsonBytes(), actual[0].SignedLabel.GetJsonBytes());
+        Assert.Equal(scoped.GetCanonicalUnsignedBytes(), actual[0].SignedLabel.GetCanonicalUnsignedBytes());
+
+        await restarted.AppendAsync("canonical-replacement", [scoped], cancellationToken: token);
+        state = await restarted.PublishAsync(cancellationToken: token);
+        Assert.Equal([2L, 3L], (await ReadAllAsync(restarted, state)).Select(label => label.Sequence));
+    }
 
     [Theory(Timeout = 120_000)]
     [InlineData("sqlite")]

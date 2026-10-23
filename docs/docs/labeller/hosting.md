@@ -65,7 +65,10 @@ schema versions one and two. Back up the projection together with all other stor
 HTTP responses wrap the stored signed JSON. WebSocket frames preserve the signed field
 representations, including timestamp text, optional `neg: false`, CID text and signature
 bytes. Neither path regenerates signatures, filters expiry, invents negations, or publishes
-uncommitted labels. Unlike Ozone's delivery-time key repair, changing a signing key does not
+uncommitted labels. Raw snapshots accepted with mixed-case JSON property names use the
+protocol's canonical field names in CBOR without changing signed values or optional-field
+presence. CID slot indexing also recognizes those property names without normalizing CID text.
+Unlike Ozone's delivery-time key repair, changing a signing key does not
 re-sign retained labels: retain their verification keys and plan rotation outside this host.
 Use lexicon-valid inputs at issuance. Some legacy representations accepted by the SDK,
 such as uppercase base32 CID text, are rejected by stricter official-client validators.

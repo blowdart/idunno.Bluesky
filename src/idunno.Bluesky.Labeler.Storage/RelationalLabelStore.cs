@@ -994,7 +994,10 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
     {
         Label label = signed.Label;
         using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(signed.GetJsonBytes());
-        string cid = document.RootElement.TryGetProperty("cid", out System.Text.Json.JsonElement value) ? value.GetString()! : string.Empty;
+        string cid = document.RootElement.EnumerateObject()
+            .Where(property => property.Name.Equals("cid", StringComparison.OrdinalIgnoreCase))
+            .Select(property => property.Value.GetString())
+            .SingleOrDefault() ?? string.Empty;
         using MemoryStream buffer = new();
         using BinaryWriter writer = new(buffer, s_strictUtf8);
         writer.Write(label.Source.Value);
