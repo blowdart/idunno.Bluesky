@@ -138,6 +138,8 @@ public static class LabelerAdministrationExtensions
         TimeProvider clock,
         ILogger logger)
     {
+        // CodeQL cs/user-controlled-bypass is a false positive here: insecure requests return a denial,
+        // never dispatch; HTTPS requests still require service-token authentication and team authorization.
         if (!context.Request.IsHttps)
         {
             AdministrationResponse transportResponse = new(false, "HttpsRequired", "HTTPS is required.");
