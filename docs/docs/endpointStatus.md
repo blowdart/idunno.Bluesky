@@ -158,6 +158,9 @@
 | Group        | Endpoint                                                     | Class / Method                | Status |
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
 | **Identity** | * _Uses DNS and `.well-known/` endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
+| | [com.atproto.identity.requestPlcOperationSignature](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/identity/requestPlcOperationSignature.json) | `BlueskyAgent.RequestPlcOperationSignature()` | ✔ |
+| | [com.atproto.identity.signPlcOperation](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/identity/signPlcOperation.json) | `BlueskyAgent.UpdatePlcLabelerIdentity()` | ✔ |
+| | [com.atproto.identity.submitPlcOperation](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/identity/submitPlcOperation.json) | `BlueskyAgent.UpdatePlcLabelerIdentity()`, `BlueskyAgent.SubmitPlcLabelerIdentityOperation()` | ✔ |
 | **Labels**   | [com.atproto.label.queryLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/queryLabels.json) | `AtProtoAgent.QueryLabels()`; [hosted by `MapBlueskyLabeler()`](labeller/hosting.md) | ✔ |
 | | [com.atproto.label.subscribeLabels](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/label/subscribeLabels.json) | `AtProtoFirehose.SubscribeLabelsAsync()`; [hosted by `MapBlueskyLabeler()`](labeller/hosting.md) | ✔ |
 | **Moderation**   | [com.atproto.moderation.createReport](https://endpoints.bsky.app/#bluesky-app/tag/comatprotomoderation/POST/xrpc/com.atproto.moderation.createReport) | `AtProtoAgent.CreateModerationReport()` | ✔ |
