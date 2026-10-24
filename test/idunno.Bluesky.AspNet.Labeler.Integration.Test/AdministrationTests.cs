@@ -35,10 +35,10 @@ public class AdministrationTests
     [InlineData("over-limit", HttpStatusCode.Unauthorized)]
     [InlineData("outsider", HttpStatusCode.Forbidden)]
     [InlineData("member", HttpStatusCode.OK)]
-    [InlineData("untrusted-proxy", HttpStatusCode.Unauthorized)]
+    [InlineData("untrusted-proxy", HttpStatusCode.Forbidden)]
     [InlineData("trusted-proxy", HttpStatusCode.OK)]
     [InlineData("trusted-proxy-chain", HttpStatusCode.OK)]
-    [InlineData("spoofed-proxy-chain", HttpStatusCode.Unauthorized)]
+    [InlineData("spoofed-proxy-chain", HttpStatusCode.Forbidden)]
     public async Task RemoteAuthenticationRequiresExactMethodAudienceAndLiveMembership(string kind, HttpStatusCode expected)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -95,6 +95,11 @@ public class AdministrationTests
         using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(expected, response.StatusCode);
         Assert.Equal("no-store", response.Headers.CacheControl!.ToString());
+        if (kind is "untrusted-proxy" or "spoofed-proxy-chain")
+        {
+            Assert.Empty(response.Headers.WwwAuthenticate);
+        }
+
         if (kind == "untrusted-proxy")
         {
             using HttpResponseMessage secure = await GetTeamAsync(fixture, token!);

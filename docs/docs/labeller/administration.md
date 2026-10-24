@@ -74,6 +74,8 @@ registration does not make public label distribution require sign-in.
 Configure admission/rate limiting in the hosting application before administrative handlers.
 Verification and required denial audit consume outbound requests and durable transactions, so
 bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS.
+Requests that do not arrive over direct HTTPS or a verified trusted-proxy HTTPS chain are audited
+and rejected with `403 Forbidden` before service-token authentication.
 When HTTPS terminates at a reverse proxy, call `UseLabelerAdministrationForwardedHeaders` before
 mapping endpoints and configure every trusted hop using ASP.NET Core's `KnownProxies` and
 `KnownIPNetworks`. Set `ForwardLimit` to the trusted chain length. The middleware processes paired

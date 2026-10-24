@@ -190,101 +190,110 @@ public static class LabelerAdministrationExtensions
         TimeProvider clock,
         ILogger logger)
     {
+        if (!context.Request.IsHttps)
+        {
+            AdministrationResponse transportResponse = new(false, "HttpsRequired", "HTTPS is required.");
+            int transportStatus = StatusCodes.Status403Forbidden;
+            LabelServiceResult<LabelAdministrationReceipt> audit = await store.RecordAdministrationDenialAsync(
+                reason: "Insecure transport rejected.",
+                cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            if (!audit.Succeeded)
+            {
+                transportResponse = new(false, "ServiceUnavailable", "The required denial audit could not be persisted.");
+                transportStatus = StatusCodes.Status503ServiceUnavailable;
+            }
+
+            await WriteResponseAsync(context, transportResponse, transportStatus).ConfigureAwait(false);
+            return;
+        }
+
         AdministrationResponse response;
         int status;
         LabelAdministrationCaller? authenticatedCaller = null;
-        if (!context.Request.IsHttps)
+        try
         {
-            response = new(false, "AuthenticationRequired", "HTTPS is required.");
-            status = StatusCodes.Status401Unauthorized;
-        }
-        else
-        {
-            try
+            string header = context.Request.Headers.Authorization.ToString();
+            if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) || header.Length > 16384)
             {
-                string header = context.Request.Headers.Authorization.ToString();
-                if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) || header.Length > 16384)
-                {
-                    throw new InvalidDataException("A service authentication token is required.");
-                }
+                throw new InvalidDataException("A service authentication token is required.");
+            }
 
-                ServiceAuthenticationResult authentication = await ServiceAuthentication.VerifyAsync(
-                    token: header[7..],
-                    audience: configuration.Audience,
-                    method: new Nsid("dev.idunno.labeler.admin." + method),
-                    httpClient: configuration.HttpClient,
-                    timeProvider: clock,
-                    cancellationToken: context.RequestAborted,
-                    maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
-                LabelServiceResult<LabelAdministrationCaller> caller = await store.AuthenticateServiceAsync(authentication, context.RequestAborted).ConfigureAwait(false);
-                if (!caller.Succeeded)
+            ServiceAuthenticationResult authentication = await ServiceAuthentication.VerifyAsync(
+                token: header[7..],
+                audience: configuration.Audience,
+                method: new Nsid("dev.idunno.labeler.admin." + method),
+                httpClient: configuration.HttpClient,
+                timeProvider: clock,
+                cancellationToken: context.RequestAborted,
+                maximumLifetime: configuration.MaximumServiceTokenLifetime).ConfigureAwait(false);
+            LabelServiceResult<LabelAdministrationCaller> caller = await store.AuthenticateServiceAsync(authentication, context.RequestAborted).ConfigureAwait(false);
+            if (!caller.Succeeded)
+            {
+                response = new(false, caller.Error.Code.ToString(), caller.Error.Message);
+            }
+            else
+            {
+                authenticatedCaller = caller.Result;
+                AdministrationCommand command;
+                if (isPost)
                 {
-                    response = new(false, caller.Error.Code.ToString(), caller.Error.Message);
+                    byte[] body = await AdministrationWire.ReadAsync(
+                        context.Request.Body, AdministrationWire.MaximumRequestBytes, context.RequestAborted).ConfigureAwait(false);
+                    command = JsonSerializer.Deserialize(body, AdministrationJsonContext.Default.AdministrationCommand)
+                        ?? throw new JsonException("The command is null.");
+                    command.Validate();
+                    if (command.Method.Length != 0 && command.Method != method)
+                    {
+                        throw new JsonException("The body method does not match the authenticated endpoint.");
+                    }
+
+                    command = command with { Method = method };
                 }
                 else
                 {
-                    authenticatedCaller = caller.Result;
-                    AdministrationCommand command;
-                    if (isPost)
+                    if (context.Request.QueryString.Value?.Length > 2048 ||
+                        context.Request.Query.Any(pair => pair.Value.Count != 1 ||
+                            pair.Key is not ("afterSequence" or "limit" or "operationId" or "reason")))
                     {
-                        byte[] body = await AdministrationWire.ReadAsync(
-                            context.Request.Body, AdministrationWire.MaximumRequestBytes, context.RequestAborted).ConfigureAwait(false);
-                        command = JsonSerializer.Deserialize(body, AdministrationJsonContext.Default.AdministrationCommand)
-                            ?? throw new JsonException("The command is null.");
-                        command.Validate();
-                        if (command.Method.Length != 0 && command.Method != method)
-                        {
-                            throw new JsonException("The body method does not match the authenticated endpoint.");
-                        }
-
-                        command = command with { Method = method };
-                    }
-                    else
-                    {
-                        if (context.Request.QueryString.Value?.Length > 2048 ||
-                            context.Request.Query.Any(pair => pair.Value.Count != 1 ||
-                                pair.Key is not ("afterSequence" or "limit" or "operationId" or "reason")))
-                        {
-                            throw new JsonException("The query parameters are invalid.");
-                        }
-
-                        command = new(
-                            Method: method,
-                            OperationId: context.Request.Query["operationId"].ToString(),
-                            Reason: context.Request.Query["reason"].ToString() is { Length: > 0 } reason ? reason : "Administrative inspection.",
-                            AfterSequence: context.Request.Query.ContainsKey("afterSequence") ? long.Parse(context.Request.Query["afterSequence"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0,
-                            Limit: context.Request.Query.ContainsKey("limit") ? int.Parse(context.Request.Query["limit"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : AdministrationCommand.MaximumAuditPageSize);
+                        throw new JsonException("The query parameters are invalid.");
                     }
 
-                    response = await dispatcher.DispatchAsync(caller.Result, command, context.RequestAborted).ConfigureAwait(false);
+                    command = new(
+                        Method: method,
+                        OperationId: context.Request.Query["operationId"].ToString(),
+                        Reason: context.Request.Query["reason"].ToString() is { Length: > 0 } reason ? reason : "Administrative inspection.",
+                        AfterSequence: context.Request.Query.ContainsKey("afterSequence") ? long.Parse(context.Request.Query["afterSequence"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : 0,
+                        Limit: context.Request.Query.ContainsKey("limit") ? int.Parse(context.Request.Query["limit"].ToString(), System.Globalization.CultureInfo.InvariantCulture) : AdministrationCommand.MaximumAuditPageSize);
                 }
 
-                status = ResponseStatus(response);
+                response = await dispatcher.DispatchAsync(caller.Result, command, context.RequestAborted).ConfigureAwait(false);
             }
-            catch (Exception exception) when (exception is CryptographicException or InvalidDataException)
-            {
-                AdministrationLog.Rejected(logger, exception.GetType().Name);
-                response = new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
-                status = StatusCodes.Status401Unauthorized;
-            }
-            catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or OverflowException)
-            {
-                AdministrationLog.Rejected(logger, exception.GetType().Name);
-                response = new(false, "InvalidRequest", "The administrative input is invalid.");
-                status = StatusCodes.Status400BadRequest;
-            }
-            catch (HttpRequestException)
-            {
-                AdministrationLog.Rejected(logger, "identity-unavailable");
-                response = new(false, "ServiceUnavailable", "Identity verification is unavailable.");
-                status = StatusCodes.Status503ServiceUnavailable;
-            }
-            catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
-            {
-                AdministrationLog.Rejected(logger, "identity-timeout");
-                response = new(false, "ServiceUnavailable", "Identity verification timed out.");
-                status = StatusCodes.Status503ServiceUnavailable;
-            }
+
+            status = ResponseStatus(response);
+        }
+        catch (Exception exception) when (exception is CryptographicException or InvalidDataException)
+        {
+            AdministrationLog.Rejected(logger, exception.GetType().Name);
+            response = new(false, "InvalidToken", "Authentication failed or the message exceeds its bounds.");
+            status = StatusCodes.Status401Unauthorized;
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or OverflowException)
+        {
+            AdministrationLog.Rejected(logger, exception.GetType().Name);
+            response = new(false, "InvalidRequest", "The administrative input is invalid.");
+            status = StatusCodes.Status400BadRequest;
+        }
+        catch (HttpRequestException)
+        {
+            AdministrationLog.Rejected(logger, "identity-unavailable");
+            response = new(false, "ServiceUnavailable", "Identity verification is unavailable.");
+            status = StatusCodes.Status503ServiceUnavailable;
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            AdministrationLog.Rejected(logger, "identity-timeout");
+            response = new(false, "ServiceUnavailable", "Identity verification timed out.");
+            status = StatusCodes.Status503ServiceUnavailable;
         }
 
         if (status is StatusCodes.Status401Unauthorized or StatusCodes.Status400BadRequest)
@@ -301,6 +310,16 @@ public static class LabelerAdministrationExtensions
             }
         }
 
+        await WriteResponseAsync(context, response, status).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes a bounded administrative response with no-store caching.</summary>
+    /// <param name="context">The response context.</param>
+    /// <param name="response">The administrative result.</param>
+    /// <param name="status">The HTTP status code.</param>
+    /// <returns>An asynchronous operation.</returns>
+    private static async Task WriteResponseAsync(HttpContext context, AdministrationResponse response, int status)
+    {
         byte[] payload = AdministrationWire.SerializeResponse(response, out response);
         if (response.Error == "ResponseTooLarge")
         {
