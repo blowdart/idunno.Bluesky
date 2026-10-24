@@ -10,7 +10,6 @@ using idunno.Bluesky.Labeler;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -22,99 +21,6 @@ namespace idunno.Bluesky.AspNet.Labeler;
 public static class LabelerAdministrationExtensions
 {
     private static readonly TimeSpan s_defaultMaximumServiceTokenLifetime = TimeSpan.FromMinutes(15);
-    private static readonly object s_transportEvidenceKey = new();
-
-    /// <summary>Configures forwarded HTTPS metadata from explicitly trusted reverse proxies.</summary>
-    /// <param name="application">The application pipeline.</param>
-    /// <param name="configure">The trusted proxy and forwarding options.</param>
-    /// <returns>The application pipeline.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="application"/> or <paramref name="configure"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">No trusted proxy or network is configured, or paired forwarded protocol/address handling is disabled.</exception>
-    /// <remarks><para>Call this before mapping endpoints. The middleware processes paired <c>X-Forwarded-For</c>
-    /// and <c>X-Forwarded-Proto</c> entries with header symmetry required. It records trusted HTTPS evidence
-    /// only when the connection is encrypted or a configured proxy transformed the request scheme. Add every
-    /// proxy hop to the trusted
-    /// proxy or network lists in <paramref name="configure"/>, and set <see cref="ForwardedHeadersOptions.ForwardLimit"/>
-    /// to the number of trusted hops. Each trusted proxy must sanitize forwarded headers from untrusted clients.
-    /// The application must not be directly reachable around those proxies.</para></remarks>
-    public static IApplicationBuilder UseLabelerAdministrationForwardedHeaders(
-        this IApplicationBuilder application,
-        Action<ForwardedHeadersOptions> configure)
-    {
-        ArgumentNullException.ThrowIfNull(application);
-        ArgumentNullException.ThrowIfNull(configure);
-
-        ForwardedHeadersOptions options = new()
-        {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            RequireHeaderSymmetry = true
-        };
-        options.KnownProxies.Clear();
-#if NET10_0_OR_GREATER
-        options.KnownIPNetworks.Clear();
-#else
-        options.KnownNetworks.Clear();
-#endif
-        configure(options);
-        ForwardedHeaders requiredHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        if ((options.ForwardedHeaders & requiredHeaders) != requiredHeaders || !options.RequireHeaderSymmetry)
-        {
-            throw new InvalidOperationException("Paired forwarded address and protocol handling with header symmetry must remain enabled.");
-        }
-
-        bool hasTrustedNetworks;
-#if NET10_0_OR_GREATER
-        hasTrustedNetworks = options.KnownIPNetworks.Count > 0;
-#else
-        hasTrustedNetworks = options.KnownNetworks.Count > 0;
-#endif
-        if (options.KnownProxies.Count == 0 && !hasTrustedNetworks)
-        {
-            throw new InvalidOperationException("At least one trusted proxy or network must be configured.");
-        }
-
-        application.Use((context, next) =>
-        {
-            context.Items[s_transportEvidenceKey] = new ForwardedTransportState(
-                context.Connection.RemoteIpAddress,
-                context.Features.Get<Microsoft.AspNetCore.Connections.Features.ITlsHandshakeFeature>() is not null,
-                context.Request.Scheme);
-            return next(context);
-        });
-        application.UseForwardedHeaders(options);
-        application.Use(async (context, next) =>
-        {
-            ForwardedTransportState state = (ForwardedTransportState)context.Items[s_transportEvidenceKey]!;
-            bool trustedProxyHttps = !state.DirectTls &&
-                state.ImmediatePeer is { } immediatePeer &&
-                IsTrustedProxy(immediatePeer, options) &&
-                !string.Equals(state.OriginalScheme, "https", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(context.Request.Scheme, "https", StringComparison.OrdinalIgnoreCase);
-            context.Items[s_transportEvidenceKey] = state.DirectTls || trustedProxyHttps;
-            await next(context).ConfigureAwait(false);
-        });
-        return application;
-    }
-
-    /// <summary>Checks whether the connection peer belongs to the configured forwarded-header trust set.</summary>
-    private static bool IsTrustedProxy(System.Net.IPAddress address, ForwardedHeadersOptions options)
-    {
-        if (address.IsIPv4MappedToIPv6 && IsTrustedProxy(address.MapToIPv4(), options))
-        {
-            return true;
-        }
-
-        if (options.KnownProxies.Contains(address))
-        {
-            return true;
-        }
-
-#if NET10_0_OR_GREATER
-        return options.KnownIPNetworks.Any(network => network.Contains(address));
-#else
-        return options.KnownNetworks.Any(network => network.Contains(address));
-#endif
-    }
 
     /// <summary>Registers administration with mandatory provider-backed team and issuance boundaries.</summary>
     /// <param name="services">The service collection.</param>
@@ -179,10 +85,9 @@ public static class LabelerAdministrationExtensions
     /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
     /// <remarks><para>When <paramref name="remoteEnabled"/> is <see langword="false"/>, no remote routes are mapped;
     /// local administration remains available. This is a startup-time setting, so changing it requires a host restart.
-    /// Only service JWTs over encrypted HTTPS or a verified trusted-proxy HTTPS chain are accepted. For TLS-terminating
-    /// proxies, install
-    /// <see cref="UseLabelerAdministrationForwardedHeaders(IApplicationBuilder, Action{ForwardedHeadersOptions})"/>
-    /// before mapping endpoints and configure all trusted proxy hops. Browser OAuth cookies and PDS OAuth
+    /// Only service JWTs on requests where <see cref="HttpRequest.IsHttps"/> is <see langword="true"/> are accepted.
+    /// For TLS-terminating proxies, call ASP.NET Core's <c>UseForwardedHeaders</c> before mapping endpoints and
+    /// configure its trusted proxies and forward limit. Browser OAuth cookies and PDS OAuth
     /// tokens do not grant access.</para></remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
         Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
@@ -233,10 +138,7 @@ public static class LabelerAdministrationExtensions
         TimeProvider clock,
         ILogger logger)
     {
-        bool secureTransport = context.Features.Get<Microsoft.AspNetCore.Connections.Features.ITlsHandshakeFeature>() is not null ||
-            context.Items.TryGetValue(s_transportEvidenceKey, out object? transportEvidence) &&
-            transportEvidence is true;
-        if (!secureTransport)
+        if (!context.Request.IsHttps)
         {
             AdministrationResponse transportResponse = new(false, "HttpsRequired", "HTTPS is required.");
             int transportStatus = StatusCodes.Status403Forbidden;
@@ -392,12 +294,6 @@ public static class LabelerAdministrationExtensions
         _ => StatusCodes.Status400BadRequest
     };
 }
-
-/// <summary>Captures connection-owned transport and request-scheme state before proxy headers are applied.</summary>
-internal sealed record ForwardedTransportState(
-    System.Net.IPAddress? ImmediatePeer,
-    bool DirectTls,
-    string OriginalScheme);
 
 /// <summary>Retains trusted configured service identity independently from incoming request headers.</summary>
 internal sealed record AdministrationConfiguration(

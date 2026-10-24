@@ -53,11 +53,12 @@ builder.Services.AddLabelerLocalAdministration(
 WebApplication app = builder.Build();
 
 // Omit this middleware when the application itself terminates HTTPS.
-app.UseLabelerAdministrationForwardedHeaders(options =>
+app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    options.KnownProxies.Add(IPAddress.Parse("10.0.0.10"));
-    options.KnownProxies.Add(IPAddress.Parse("10.0.0.11"));
-    options.ForwardLimit = 2;
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    RequireHeaderSymmetry = true,
+    ForwardLimit = 2,
+    KnownProxies = { IPAddress.Parse("10.0.0.10"), IPAddress.Parse("10.0.0.11") }
 });
 
 // Read once at startup; changing this setting requires a host restart.
@@ -78,20 +79,19 @@ registration does not make public label distribution require sign-in.
 
 Configure admission/rate limiting in the hosting application before administrative handlers.
 Verification and required denial audit consume outbound requests and durable transactions, so
-bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS.
-Requests that do not arrive over direct HTTPS or a verified trusted-proxy HTTPS chain are audited
-and rejected with `403 Forbidden` before service-token authentication.
-When HTTPS terminates at a reverse proxy, call `UseLabelerAdministrationForwardedHeaders` before
-mapping endpoints and configure every trusted hop using ASP.NET Core's `KnownProxies` and
-`KnownIPNetworks`. Set `ForwardLimit` to the trusted chain length. The middleware processes paired
-`X-Forwarded-For` and `X-Forwarded-Proto` entries with header symmetry required; requests from
-unlisted proxies remain HTTP even if they send those headers.
+bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS:
+requests for which `HttpRequest.IsHttps` is `false` are audited and rejected with `403 Forbidden`
+before service-token authentication.
+When the application terminates TLS itself, no additional configuration is needed. When HTTPS
+terminates at a reverse proxy, call ASP.NET Core's `UseForwardedHeaders` before mapping endpoints,
+as shown above, and list every trusted hop in `KnownProxies` or `KnownIPNetworks`. Set
+`ForwardLimit` to the trusted chain length. ASP.NET Core only trusts forwarded headers from listed
+proxies, so requests from unlisted peers remain HTTP even if they send those headers; ASP.NET Core
+trusts loopback proxies by default unless the lists are cleared.
 Restrict direct network access to the application so clients cannot bypass the trusted proxy chain.
-Both forwarded headers must have matching entries. Configure each trusted proxy to discard untrusted
-incoming forwarding headers and emit accurate address/protocol pairs. Multiple proxy addresses or
-networks can be added to the options.
-IPv4 proxy and network entries also match IPv4-mapped IPv6 peers on dual-mode listeners;
-native IPv6 peers still require their own trusted proxy or network entry.
+Configure each trusted proxy to discard untrusted incoming forwarding headers and emit accurate
+address/protocol pairs. See
+[Configure ASP.NET Core to work with proxy servers and load balancers](https://learn.microsoft.com/aspnet/core/host-and-deploy/proxy-load-balancer).
 
 Set `Labeler:Administration:RemoteEnabled` to `false` in host configuration to omit all remote
 administration routes at startup while leaving a configured local pipe/socket available. It defaults

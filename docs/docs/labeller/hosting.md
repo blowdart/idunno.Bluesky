@@ -39,8 +39,9 @@ your authorization/policy providers or signing key through these endpoints. Term
 at the application or a trusted proxy configured for WebSocket upgrades. Apply deployment-wide
 rate limits and connection admission at that boundary; in-process limits are not cluster quotas.
 Configure trusted forwarded headers, request size limits, origin policies and proxy idle timeouts
-for your deployment. Administrative routes require TLS on the connection to the application itself;
-a proxy that terminates client TLS must re-encrypt its upstream connection for those routes.
+for your deployment. Administrative routes require HTTPS, either directly on the connection to the application or via
+a proxy that terminates TLS, with ASP.NET Core's `UseForwardedHeaders` configured with the trusted
+proxies. See [administration](administration.md) for details.
 
 The hosted worker promotes pending durable events in bounded transactions. Multiple hosts
 can share a database. Readers poll its durable publication boundary, so publication from
