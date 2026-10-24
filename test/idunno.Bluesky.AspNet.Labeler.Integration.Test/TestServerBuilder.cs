@@ -3,11 +3,14 @@
 
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Encodings.Web;
 using System.Threading.Channels;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler;
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -19,6 +22,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
@@ -49,7 +53,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         string? database = null,
         bool http2 = false,
         Action<IServiceCollection>? configureAdministration = null,
-        bool remoteAdministrationEnabled = true)
+        bool remoteAdministrationEnabled = true,
+        bool fallbackAuthorizationRequired = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -67,6 +72,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         builder.Services.AddSingleton<TimeProvider>(fixture.Clock);
         builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
         builder.Services.AddBlueskyLabeler(s_issuer, options);
+        if (fallbackAuthorizationRequired)
+        {
+            builder.Services.AddAuthentication("test")
+                .AddScheme<AuthenticationSchemeOptions, RejectingAuthenticationHandler>("test", _ => { });
+            builder.Services.AddAuthorization(options =>
+                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+        }
+
         configureAdministration?.Invoke(builder.Services);
         fixture._app = builder.Build();
         if (configureAdministration is not null)
@@ -88,6 +101,13 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
                 options.KnownProxies.Add(IPAddress.Parse("192.0.2.2"));
                 options.ForwardLimit = 2;
             });
+        }
+
+        if (fallbackAuthorizationRequired)
+        {
+            fixture._app.UseAuthentication();
+            fixture._app.UseAuthorization();
+            fixture._app.MapGet("/test/fallback", () => "fallback");
         }
 
         fixture._app.UseWebSockets();
@@ -180,6 +200,16 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             }
         }
     }
+}
+
+/// <summary>Rejects browser authentication so fallback-policy tests exercise self-authenticating service routes.</summary>
+internal sealed class RejectingAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
+        Task.FromResult(AuthenticateResult.NoResult());
 }
 
 /// <summary>Uses official fake time while signaling timer registration before a test advances deadlines.</summary>

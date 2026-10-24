@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Buffers.Binary;
 using System.IO.Pipes;
 using System.Net;
 using System.Net.Http.Headers;
@@ -61,9 +62,12 @@ public class AdministrationTests
             "outsider" => Token(key, now, actor: "did:plc:outsider"),
             _ => Token(key, now)
         };
-        using HttpRequestMessage request = new(HttpMethod.Get,
-            (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" or "spoofed-proxy-chain" ? "http" : "https")
-            + "://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        using HttpRequestMessage request = new(HttpMethod.Get, "http://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        if (kind is not ("untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" or "spoofed-proxy-chain"))
+        {
+            AddTrustedProxyHeaders(request);
+        }
+
         if (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" or "spoofed-proxy-chain")
         {
             request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
@@ -155,6 +159,66 @@ public class AdministrationTests
         using JsonDocument local = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint, """{"method":"getTeam"}""", TestContext.Current.CancellationToken));
         Assert.True(local.RootElement.GetProperty("succeeded").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ServiceTokenRoutesBypassHostFallbackPolicyButStillRequireServiceAuthentication()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            fallbackAuthorizationRequired: true);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+
+        using HttpResponseMessage fallback = await fixture.Client.GetAsync("/test/fallback", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, fallback.StatusCode);
+
+        using HttpRequestMessage missingRequest = new(HttpMethod.Get, "http://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        AddTrustedProxyHeaders(missingRequest);
+        using HttpResponseMessage missingCredentials = await fixture.Client.SendAsync(
+            missingRequest, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, missingCredentials.StatusCode);
+
+        using HttpResponseMessage authorized = await GetTeamAsync(fixture, Token(key, now));
+        Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvalidWindowsPipeFrameDoesNotStopTheListener()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        string endpoint = LocalEndpoint();
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        Assert.True((await fixture.Services.BootstrapLocalAdministratorAsync(
+            s_actor, "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+
+        await using (NamedPipeClientStream malformed = new(
+            serverName: ".", pipeName: endpoint, direction: PipeDirection.Out, options: PipeOptions.Asynchronous))
+        {
+            await malformed.ConnectAsync(TestContext.Current.CancellationToken);
+            byte[] invalidLength = new byte[4];
+            BinaryPrimitives.WriteInt32BigEndian(invalidLength, 0);
+            await malformed.WriteAsync(invalidLength, TestContext.Current.CancellationToken);
+            await malformed.FlushAsync(TestContext.Current.CancellationToken);
+        }
+
+        using JsonDocument response = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, """{"method":"getTeam"}""", TestContext.Current.CancellationToken));
+        Assert.True(response.RootElement.GetProperty("succeeded").GetBoolean());
     }
 
     [Fact]
@@ -367,9 +431,18 @@ public class AdministrationTests
     /// <summary>Sends a method-bound service JWT to the HTTPS adapter.</summary>
     private static async Task<HttpResponseMessage> GetTeamAsync(TestServerBuilder fixture, string token)
     {
-        using HttpRequestMessage request = new(HttpMethod.Get, "https://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        using HttpRequestMessage request = new(HttpMethod.Get, "http://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        AddTrustedProxyHeaders(request);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Marks a test request as arriving through the fixture's configured trusted proxy.</summary>
+    private static void AddTrustedProxyHeaders(HttpRequestMessage request)
+    {
+        request.Headers.TryAddWithoutValidation("X-Test-Remote-IP", "192.0.2.1");
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
+        request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
     }
 
     /// <summary>Signs short-lived account service assertions using the test account's repository key.</summary>

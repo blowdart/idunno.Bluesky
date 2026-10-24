@@ -67,6 +67,9 @@ The signing key and hardened identity-resolution HTTP client are caller-owned. C
 network/DNS restrictions, timeouts and cancellation for identity resolution. Registration requires
 one policy and the same provider instance for `ILabelStore` and `ILabelAdministrationStore`; there
 is no permissive fallback. Initialize storage before starting hosted services.
+Remote administration endpoints opt out of a host's ASP.NET authorization fallback policy because
+they perform their own service-token authentication and live team authorization. This endpoint
+metadata does not grant anonymous access: missing or invalid service tokens are still rejected.
 
 `MapBlueskyLabeler()` remains independently registered, public and read-only. Administrative
 registration does not make public label distribution require sign-in.

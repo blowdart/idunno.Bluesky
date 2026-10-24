@@ -289,6 +289,10 @@ internal sealed class LocalAdministrationHost(
                 {
                     AdministrationLog.Rejected(logger, "connection-failed");
                 }
+                catch (InvalidDataException)
+                {
+                    AdministrationLog.Rejected(logger, "invalid-frame");
+                }
                 catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
                 {
                     AdministrationLog.Rejected(logger, "deadline-exceeded");
