@@ -31,6 +31,10 @@ public class ServerTests
             Assert.Equal("/xrpc/com.atproto.server.getServiceAuth", context.Request.Path);
             Assert.Equal(audience.ToString(), context.Request.Query["aud"]);
             Assert.Equal(method.ToString(), context.Request.Query["lxm"]);
+            Assert.Equal(
+                ((useAgent ? time.GetUtcNow() : DateTimeOffset.UtcNow) + TimeSpan.FromMinutes(15))
+                    .ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                context.Request.Query["exp"]);
             Assert.Equal($"Bearer {jwt}", context.Request.Headers.Authorization);
             context.Response.ContentType = "application/json";
             if (error is not null)

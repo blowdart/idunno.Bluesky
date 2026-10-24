@@ -47,9 +47,7 @@ public enum LabelTeamAction
     /// <summary>Binds an OS identity to an active member.</summary>
     BindLocal,
     /// <summary>Revokes an OS identity binding.</summary>
-    RevokeLocal,
-    /// <summary>Revokes an individual service token by its SHA-256 digest.</summary>
-    RevokeToken
+    RevokeLocal
 }
 
 /// <summary>Represents provider-issued authentication evidence for one administrative invocation.</summary>
@@ -97,7 +95,7 @@ public sealed class LabelTeamChange
     /// <param name="target">The target member DID.</param>
     /// <param name="reason">The audit reason.</param>
     /// <param name="role">The role for enrollment or role changes.</param>
-    /// <param name="credential">The OS identity or SHA-256 service token digest, when applicable.</param>
+    /// <param name="credential">The OS identity for a local-binding change, when applicable.</param>
     /// <exception cref="ArgumentException">A text argument is invalid.</exception>
     /// <exception cref="ArgumentNullException"><paramref name="target"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">An enum value or text length is invalid.</exception>
@@ -125,11 +123,6 @@ public sealed class LabelTeamChange
         {
             ValidateLocalIdentity(credential);
         }
-        else if (action == LabelTeamAction.RevokeToken &&
-            (credential is null || credential.Length != 64 || credential.Any(character => !char.IsAsciiHexDigit(character))))
-        {
-            throw new ArgumentException("Supply the service token's 64-character SHA-256 digest.", nameof(credential));
-        }
     }
 
     /// <summary>Gets the stable retry identity.</summary>
@@ -142,7 +135,7 @@ public sealed class LabelTeamChange
     public string Reason { get; }
     /// <summary>Gets the requested role.</summary>
     public LabelTeamRole Role { get; }
-    /// <summary>Gets the OS identity or token digest, when applicable.</summary>
+    /// <summary>Gets the OS identity, when applicable.</summary>
     public string? Credential { get; }
 
     /// <summary>Requires a stable numeric Unix UID or Windows SID rather than a mutable account name.</summary>

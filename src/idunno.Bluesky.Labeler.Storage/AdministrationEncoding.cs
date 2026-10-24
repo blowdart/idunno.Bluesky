@@ -12,7 +12,6 @@ internal sealed class AdministrationState
     public long Sequence { get; set; }
     public Dictionary<string, AdministrationMember> Members { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, AdministrationBinding> Bindings { get; set; } = new(StringComparer.Ordinal);
-    public Dictionary<string, long> RevokedTokens { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>Retains generation tombstones so re-enrollment cannot revive old credentials.</summary>

@@ -323,7 +323,6 @@ idunno.Bluesky.Labeler.LabelTeamAction.Enroll = 0 -> idunno.Bluesky.Labeler.Labe
 idunno.Bluesky.Labeler.LabelTeamAction.Reinstate = 3 -> idunno.Bluesky.Labeler.LabelTeamAction
 idunno.Bluesky.Labeler.LabelTeamAction.Remove = 4 -> idunno.Bluesky.Labeler.LabelTeamAction
 idunno.Bluesky.Labeler.LabelTeamAction.RevokeLocal = 6 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.RevokeToken = 7 -> idunno.Bluesky.Labeler.LabelTeamAction
 idunno.Bluesky.Labeler.LabelTeamAction.SetRole = 1 -> idunno.Bluesky.Labeler.LabelTeamAction
 idunno.Bluesky.Labeler.LabelTeamAction.Suspend = 2 -> idunno.Bluesky.Labeler.LabelTeamAction
 idunno.Bluesky.Labeler.LabelTeamAuthorizer

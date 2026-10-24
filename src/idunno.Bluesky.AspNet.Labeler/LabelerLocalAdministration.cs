@@ -116,7 +116,7 @@ public static class LabelerLocalAdministration
             }
 
             await WriteFrameAsync(pipe, payload, cancellationToken).ConfigureAwait(false);
-            return Encoding.UTF8.GetString(await ReadFrameAsync(pipe, 1024 * 1024, cancellationToken).ConfigureAwait(false));
+            return Encoding.UTF8.GetString(await ReadFrameAsync(pipe, AdministrationWire.MaximumResponseBytes, cancellationToken).ConfigureAwait(false));
         }
 
         using Socket socket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
@@ -128,7 +128,7 @@ public static class LabelerLocalAdministration
 
         using NetworkStream stream = new(socket, ownsSocket: false);
         await WriteFrameAsync(stream, payload, cancellationToken).ConfigureAwait(false);
-        return Encoding.UTF8.GetString(await ReadFrameAsync(stream, 1024 * 1024, cancellationToken).ConfigureAwait(false));
+        return Encoding.UTF8.GetString(await ReadFrameAsync(stream, AdministrationWire.MaximumResponseBytes, cancellationToken).ConfigureAwait(false));
     }
 
     /// <summary>Gets an OS identity without trusting a request-provided UID, SID or username.</summary>
@@ -252,22 +252,46 @@ internal sealed class LocalAdministrationHost(
                 {
                     _ready.TrySetResult();
                     await pipe.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
-                    string? peer = null;
-                    pipe.RunAsClient(() =>
+                    byte[] payload;
+                    using (CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken))
                     {
-                        if (OperatingSystem.IsWindows())
+                        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+                        payload = await LabelerLocalAdministration.ReadFrameAsync(
+                            pipe, AdministrationWire.MaximumRequestBytes, deadline.Token).ConfigureAwait(false);
+                    }
+
+                    string? peer = null;
+                    try
+                    {
+                        pipe.RunAsClient(() =>
                         {
-                            using WindowsIdentity client = WindowsIdentity.GetCurrent();
-                            peer = client.User?.Value;
-                        }
-                    });
+                            if (OperatingSystem.IsWindows())
+                            {
+                                peer = GetImpersonatedSid();
+                            }
+                        });
+                    }
+                    catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+                    {
+                        AdministrationLog.Rejected(logger, "impersonation-failed");
+                        continue;
+                    }
+
                     if (peer != sid.Value)
                     {
                         AdministrationLog.Rejected(logger, "unexpected-sid");
                         continue;
                     }
 
-                    await ProcessAsync(pipe, "sid:" + peer, stoppingToken).ConfigureAwait(false);
+                    await ProcessAsync(pipe, "sid:" + peer, stoppingToken, payload).ConfigureAwait(false);
+                }
+                catch (IOException)
+                {
+                    AdministrationLog.Rejected(logger, "connection-failed");
+                }
+                catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
+                {
+                    AdministrationLog.Rejected(logger, "deadline-exceeded");
                 }
                 finally
                 {
@@ -324,10 +348,18 @@ internal sealed class LocalAdministrationHost(
         }
     }
 
+    /// <summary>Reads the impersonated Windows client's SID inside the named-pipe callback.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static string? GetImpersonatedSid()
+    {
+        using WindowsIdentity client = WindowsIdentity.GetCurrent();
+        return client.User?.Value;
+    }
+
     /// <summary>Authenticates before parsing input and bounds malformed requests without stopping the host.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
         Justification = "Untrusted JSON and authentication exceptions may contain sensitive input; log only their category.")]
-    private async Task ProcessAsync(Stream stream, string peer, CancellationToken stoppingToken)
+    private async Task ProcessAsync(Stream stream, string peer, CancellationToken stoppingToken, byte[]? preReadPayload = null)
     {
         using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(30));
@@ -343,7 +375,8 @@ internal sealed class LocalAdministrationHost(
             {
                 try
                 {
-                    byte[] payload = await LabelerLocalAdministration.ReadFrameAsync(stream, AdministrationWire.MaximumRequestBytes, deadline.Token).ConfigureAwait(false);
+                    byte[] payload = preReadPayload ??
+                        await LabelerLocalAdministration.ReadFrameAsync(stream, AdministrationWire.MaximumRequestBytes, deadline.Token).ConfigureAwait(false);
                     AdministrationCommand command = JsonSerializer.Deserialize(payload, AdministrationJsonContext.Default.AdministrationCommand)
                         ?? throw new JsonException("The command is null.");
                     response = await dispatcher.DispatchAsync(caller.Result, command, deadline.Token).ConfigureAwait(false);
@@ -359,8 +392,8 @@ internal sealed class LocalAdministrationHost(
                 }
             }
 
-            await LabelerLocalAdministration.WriteFrameAsync(
-                stream, JsonSerializer.SerializeToUtf8Bytes(response, AdministrationJsonContext.Default.AdministrationResponse), deadline.Token).ConfigureAwait(false);
+            byte[] responsePayload = AdministrationWire.SerializeResponse(response, out response);
+            await LabelerLocalAdministration.WriteFrameAsync(stream, responsePayload, deadline.Token).ConfigureAwait(false);
         }
         catch (IOException)
         {

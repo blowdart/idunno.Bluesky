@@ -14,6 +14,8 @@ namespace idunno.AtProto;
 
 public static partial class AtProtoServer
 {
+    internal static readonly TimeSpan DefaultServiceAuthExpiry = TimeSpan.FromMinutes(15);
+
     // https://docs.bsky.app/docs/api/com-atproto-server-create-session
     private const string CreateSessionEndpoint = "/xrpc/com.atproto.server.createSession";
 
@@ -274,7 +276,7 @@ public static partial class AtProtoServer
     /// Get access credentials on behalf of the requesting DID for the requested <paramref name="audience"/>.
     /// </summary>
     /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
-    /// <param name="expiry">The length of time the token should be valid for.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 15 minutes.</param>
     /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
     /// <param name="service">The service to get a signed token from.</param>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
@@ -397,12 +399,8 @@ public static partial class AtProtoServer
 
         StringBuilder endpointBuilder = new($"{GetServiceAuthEndpoint}?");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"aud={Uri.EscapeDataString(audience)}");
-        if (expiry is not null)
-        {
-            DateTimeOffset expiresOn = timeProvider.GetUtcNow() + expiry.Value;
-
-            endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
-        }
+        DateTimeOffset expiresOn = timeProvider.GetUtcNow() + (expiry ?? DefaultServiceAuthExpiry);
+        endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"&lxm={lxm}");
         string endpoint = endpointBuilder.ToString();
 

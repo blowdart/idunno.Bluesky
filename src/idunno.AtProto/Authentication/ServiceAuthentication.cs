@@ -20,6 +20,7 @@ namespace idunno.AtProto;
 public static class ServiceAuthentication
 {
     private const int MaximumTokenLength = 8192;
+    private static readonly TimeSpan s_defaultMaximumLifetime = TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// Verifies a service token's signature, issuer, audience, method and lifetime.
@@ -29,14 +30,17 @@ public static class ServiceAuthentication
     /// <param name="method">The exact XRPC method receiving the token.</param>
     /// <param name="httpClient">The HTTP client used to resolve the issuer's DID document.</param>
     /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
+    /// <param name="maximumLifetime">The maximum accepted token lifetime. The default is 15 minutes.</param>
     /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
     /// <returns>The verified identity and identifiers for replay protection.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
     /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
     /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
     /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
     /// <remarks>
-    /// <para>Requires an integer lifetime of at most 60 seconds, allows five seconds of clock skew, and accepts only
+    /// <para>Requires an integer lifetime no greater than <paramref name="maximumLifetime"/>, defaults to 15 minutes,
+    /// allows five seconds of clock skew, and accepts only
     /// ES256 or ES256K signatures made by the issuer's matching <c>#atproto</c> key.</para>
     /// <para>This method does not prevent replay. The caller must atomically reserve the issuer and token identifier
     /// and the token hash before accepting a request, retaining them through the expiry plus clock skew.</para>
@@ -47,6 +51,7 @@ public static class ServiceAuthentication
         Nsid method,
         HttpClient httpClient,
         TimeProvider? timeProvider = null,
+        TimeSpan? maximumLifetime = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(token);
@@ -54,6 +59,8 @@ public static class ServiceAuthentication
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(httpClient);
         cancellationToken.ThrowIfCancellationRequested();
+        TimeSpan lifetimeLimit = maximumLifetime ?? s_defaultMaximumLifetime;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetimeLimit, TimeSpan.Zero);
 
         try
         {
@@ -117,7 +124,7 @@ public static class ServiceAuthentication
             DateTimeOffset issuedAt = ReadTimestamp(payload, "iat");
             DateTimeOffset expiresAt = ReadTimestamp(payload, "exp");
             DateTimeOffset now = (timeProvider ?? TimeProvider.System).GetUtcNow();
-            ValidateLifetime(issuedAt, expiresAt, now);
+            ValidateLifetime(issuedAt, expiresAt, now, lifetimeLimit);
 
             DidDocument? document = await IdentityResolution.ResolveDidDocumentAsync(
                 did: did,
@@ -130,7 +137,7 @@ public static class ServiceAuthentication
             }
 
             key.Verify(Encoding.ASCII.GetBytes($"{parts[0]}.{parts[1]}"), signature, "service token");
-            ValidateLifetime(issuedAt, expiresAt, (timeProvider ?? TimeProvider.System).GetUtcNow());
+            ValidateLifetime(issuedAt, expiresAt, (timeProvider ?? TimeProvider.System).GetUtcNow(), lifetimeLimit);
 
             return new ServiceAuthenticationResult(
                 issuer: did,
@@ -236,10 +243,14 @@ public static class ServiceAuthentication
     /// <summary>
     /// Enforces the bounded lifetime before and after DID resolution.
     /// </summary>
-    private static void ValidateLifetime(DateTimeOffset issuedAt, DateTimeOffset expiresAt, DateTimeOffset now)
+    private static void ValidateLifetime(
+        DateTimeOffset issuedAt,
+        DateTimeOffset expiresAt,
+        DateTimeOffset now,
+        TimeSpan maximumLifetime)
     {
         TimeSpan lifetime = expiresAt - issuedAt;
-        if (lifetime <= TimeSpan.Zero || lifetime > TimeSpan.FromSeconds(60) ||
+        if (lifetime <= TimeSpan.Zero || lifetime > maximumLifetime ||
             issuedAt - now > TimeSpan.FromSeconds(5) || now - expiresAt > TimeSpan.FromSeconds(5))
         {
             throw new InvalidDataException("The service token lifetime is invalid or has expired.");

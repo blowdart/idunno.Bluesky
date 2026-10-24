@@ -178,7 +178,7 @@ public class LabelAdministrationTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
-    public async Task ServiceReplayRevocationAndExpiryUseDurableProviderState(string engine)
+    public async Task ServiceReplayAndExpiryUseDurableProviderState(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
@@ -196,9 +196,6 @@ public class LabelAdministrationTests
         Assert.True((await store.AuthorizeAsync(caller, LabelAdministrationPermission.Moderate, "Current token.", TestContext.Current.CancellationToken)).Succeeded);
         ILabelAdministrationStore restarted = (ILabelAdministrationStore)fixture.NewStore();
         Assert.False((await restarted.AuthenticateServiceAsync(first, TestContext.Current.CancellationToken)).Succeeded);
-        Assert.True((await store.ChangeTeamAsync(administrator, Change(
-            LabelTeamAction.RevokeToken, "revoke-token", credential: first.TokenHash), TestContext.Current.CancellationToken)).Succeeded);
-        Assert.False((await restarted.AuthorizeAsync(caller, LabelAdministrationPermission.Moderate, "Revoked token.", TestContext.Current.CancellationToken)).Succeeded);
         ServiceAuthenticationResult second = await ServiceAuthentication.VerifyAsync(
             token: ServiceToken(key, clock.GetUtcNow(), audience), audience: audience, method: method,
             httpClient: identity, timeProvider: clock, cancellationToken: TestContext.Current.CancellationToken);

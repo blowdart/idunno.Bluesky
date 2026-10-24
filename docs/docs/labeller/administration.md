@@ -49,6 +49,15 @@ builder.Services.AddLabelerLocalAdministration(
     OperatingSystem.IsWindows() ? "bean-bureau-admin" : "/run/bean-bureau/admin.sock");
 
 WebApplication app = builder.Build();
+
+// Omit this middleware when the application itself terminates HTTPS.
+app.UseLabelerAdministrationForwardedHeaders(options =>
+{
+    options.KnownProxies.Add(IPAddress.Parse("10.0.0.10"));
+    options.KnownProxies.Add(IPAddress.Parse("10.0.0.11"));
+    options.ForwardLimit = 2;
+});
+
 app.MapLabelerAdministration();
 ```
 
@@ -62,8 +71,13 @@ registration does not make public label distribution require sign-in.
 
 Configure admission/rate limiting in the hosting application before administrative handlers.
 Verification and required denial audit consume outbound requests and durable transactions, so
-bound unauthenticated traffic and monitor audit growth. Configure forwarded headers only for
-explicitly trusted proxies; arbitrary forwarded headers must not establish the HTTPS boundary.
+bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS.
+When HTTPS terminates at a reverse proxy, call `UseLabelerAdministrationForwardedHeaders` before
+mapping endpoints and configure every trusted hop using ASP.NET Core's `KnownProxies` and
+`KnownIPNetworks`. Set `ForwardLimit` to the trusted chain length. The middleware only processes
+`X-Forwarded-Proto`; requests from unlisted proxies remain HTTP even if they send that header.
+Restrict direct network access to the application so clients cannot bypass the trusted proxy chain.
+Multiple proxy addresses or networks can be added to the options.
 
 ## Deliberate, browserless setup and local use
 
@@ -161,8 +175,12 @@ Metadata can supply a name/logo, but an authorization server need not display un
 
 After OAuth establishes the expected account DID and authoritative PDS/authorization-server
 relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Request the
-**exact** audience `did:web:labeler.example#labeler_admin`, exact `lxm`, and expiry at most 60 seconds
-away. Present only that service JWT as an HTTPS Bearer token to:
+**exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`. `GetServiceAuth` requests
+a 15-minute token by default; specify a different positive `expiry` when acquiring the token. The
+labeler accepts up to 15 minutes by default; set `maximumServiceTokenLifetime` when registering
+administration to change that limit. This is currently a registration API setting, not an
+`appsettings` binding; binding it from host configuration is planned for a later configuration-file
+integration. Present only that service JWT as an HTTPS Bearer token to:
 
 ```text
 https://labeler.example/xrpc/dev.idunno.labeler.admin.getTeam
@@ -176,7 +194,8 @@ every hosted or self-hosted PDS deployment has rolled it out.
 
 The verifier checks bounded JWT shape, duplicate/ambiguous claims, `typ`, ES256/P-256 or
 ES256K/secp256k1 signature, the account's repository `#atproto` key and matching DID document/controller,
-exact scalar audience and `lxm`, integer times, at most 60-second lifetime, five-second clock
+exact scalar audience and `lxm`, integer times, a lifetime no greater than the configured maximum
+(15 minutes by default), five-second clock
 tolerance, and `jti`. Provider admission uses database time for persisted expiry and consumes replay
 identity durably across replicas. A retry obtains a **new service token** but retains the original
 application operation ID.
@@ -191,28 +210,32 @@ strings are rejected; actor identity is never accepted from the body.
 `enroll` takes `target` (DID or verified handle), `role`, `operationId` and `reason`.
 `changeTeam` takes a DID `target`, numeric `action`, `operationId`, `reason`, and any action-specific
 `role` or `credential`. Roles are Viewer=0, Moderator=1, Administrator=2. Team actions are Enroll=0
-(use `enroll`), SetRole=1, Suspend=2, Reinstate=3, Remove=4, BindLocal=5, RevokeLocal=6, RevokeToken=7.
-Binding credentials are `uid:<decimal>` or `sid:<SID>`; token revocation uses the SHA-256 hex digest
-of the exact ASCII JWT, not the raw token. Do not put raw credentials in reasons or logs.
+(use `enroll`), SetRole=1, Suspend=2, Reinstate=3, Remove=4, BindLocal=5, RevokeLocal=6.
+Binding credentials are `uid:<decimal>` or `sid:<SID>`. Service tokens are short-lived and
+single-use; the provider records consumed issuer/`jti` pairs until expiry and rejects replay.
+Suspend or remove a member to revoke their team access. Do not put raw credentials in reasons or logs.
 
 `issueLabel` and `negateLabel` use `operationId`, `target`, `value`, `reason`, and optional `cid`,
 `expiresAt` (issue only), and `correlationId`. The shared issuance service still enforces policy,
 target verification, lifecycle and semantic retries. `getOperation` requires `operationId`;
-`getAudit` accepts `afterSequence` and `limit` (1-100); read queries may include `reason`.
+`getAudit` accepts `afterSequence` and `limit` (1-16), bounding the maximum serialized audit
+response below the local transport's 1 MiB frame limit even when reasons require JSON escaping;
+read queries may include `reason`.
 Responses contain `succeeded`, classified `error`/`message`, and the applicable bounded result.
 HTTPS distinguishes invalid authentication (401), insufficient live authority (403), malformed
-input (400), and dependency/audit unavailability (503). Local responses use the same result envelope.
+input (400), and dependency/audit or response-size unavailability (503). Local responses use the
+same result envelope and are bounded to 4 MiB, enough for the maximum 1,000-member team while
+keeping all transport responses finite.
 
 Member suspension/removal invalidates all active invocation evidence and removes local bindings.
-Reinstatement does not restore removed bindings. Token hashes can be revoked individually;
-their denial entries are retained for two minutes, exceeding the accepted JWT lifetime/skew, then
-pruned on team changes. Up to 1,000 member tombstones, 1,000 bindings and 10,000 simultaneous
-revocations are supported; capacity exhaustion is explicit, never silent eviction.
+Reinstatement does not restore removed bindings. The provider retains service-token replay entries
+through their expiry plus clock skew. Up to 1,000 member tombstones and 1,000 bindings are
+supported; capacity exhaustion is explicit, never silent eviction.
 
 Service JWTs do not identify an upstream desktop OAuth session. Revoke an individual desktop's
-OAuth session at its PDS; revoke a team member to block all of that DID's labeler access immediately.
-Revocation does not erase previously committed labels, receipts or audit. A label transaction that
-wins serialization before revocation may finish; one reaching the fence afterwards cannot commit,
+OAuth session at its PDS; suspend or remove a team member to block that DID's labeler access immediately.
+These changes do not erase previously committed labels, receipts or audit. A label transaction that
+wins serialization before a membership change may finish; one reaching the fence afterwards cannot commit,
 including no-op/recovery decisions. Successful label/no-op audit links the operation ID, DID and OS
 identity where applicable. Required denial audit failures fail closed.
 

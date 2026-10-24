@@ -120,7 +120,8 @@ public class ServiceAuthenticationTests
     [InlineData(0, 60, true)]
     [InlineData(5, 60, true)]
     [InlineData(6, 60, false)]
-    [InlineData(0, 61, false)]
+    [InlineData(0, 900, true)]
+    [InlineData(0, 901, false)]
     [InlineData(0, 0, false)]
     [InlineData(0, -1, false)]
     [InlineData(-65, 60, true)]
@@ -156,6 +157,27 @@ public class ServiceAuthenticationTests
                 timeProvider: time,
                 cancellationToken: TestContext.Current.CancellationToken));
         }
+    }
+
+    [Fact]
+    public async Task EnforcesConfiguredMaximumLifetime()
+    {
+        FakeTimeProvider time = CreateClock();
+        JsonObject payload = Payload(time);
+        payload["exp"] = time.GetUtcNow().AddMinutes(2).ToUnixTimeSeconds();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+            token: token,
+            audience: s_audience,
+            method: s_method,
+            httpClient: client,
+            timeProvider: time,
+            cancellationToken: TestContext.Current.CancellationToken,
+            maximumLifetime: TimeSpan.FromMinutes(1)));
     }
 
     [Theory]

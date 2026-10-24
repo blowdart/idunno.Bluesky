@@ -202,11 +202,6 @@ internal abstract partial class RelationalLabelStore
                 binding.Did == caller.Actor.Value && binding.Credential == caller.Credential;
         }
 
-        if (administration.RevokedTokens.ContainsKey(caller.Credential))
-        {
-            return false;
-        }
-
         long now = Integer(await ScalarAsync(
             connection: connection,
             transaction: transaction,
@@ -216,9 +211,9 @@ internal abstract partial class RelationalLabelStore
             Integer(await ScalarAsync(
                 connection: connection,
                 transaction: transaction,
-                sql: "SELECT COUNT(*) FROM label_admin_tokens WHERE token_hash=@hash AND actor=@actor AND expires_ms>@now",
+                sql: "SELECT COUNT(*) FROM label_admin_tokens WHERE replay_hash=@hash AND actor=@actor AND expires_ms>@now",
                 token: token,
-                ("@hash", caller.Credential),
+                ("@hash", Convert.FromHexString(caller.Credential)),
                 ("@actor", caller.Actor.Value),
                 ("@now", now)).ConfigureAwait(false)) == 1;
     }
@@ -339,7 +334,7 @@ internal abstract partial class RelationalLabelStore
             byte[] replay = SHA256.HashData(Encoding.UTF8.GetBytes(authentication.Issuer.Value + "\n" + authentication.TokenId));
             long expiry = authentication.ExpiresAt.ToUnixTimeMilliseconds();
             if (!team.Bootstrapped || authentication.Audience.Did.Value != state.Issuer ||
-                expiry <= now || team.RevokedTokens.ContainsKey(authentication.TokenHash) ||
+                expiry <= now ||
                 !team.Members.TryGetValue(authentication.Issuer.Value, out AdministrationMember? member) ||
                 !member.Active || member.Removed ||
                 await ScalarAsync(
@@ -350,7 +345,7 @@ internal abstract partial class RelationalLabelStore
                 await AuditAdministrationAsync(
                     connection: connection, transaction: transaction, administration: team, actor: authentication.Issuer,
                     localIdentity: null, operationId: string.Empty, action: "authenticate",
-                    reason: "Invalid membership, audience, revoked or replayed credential.", succeeded: false,
+                    reason: "Invalid membership, audience or replayed credential.", succeeded: false,
                     token: cancellationToken).ConfigureAwait(false);
                 return AdminFailure<LabelAdministrationCaller>("The service credential or membership is not valid.");
             }
@@ -366,7 +361,7 @@ internal abstract partial class RelationalLabelStore
                 ("@actor", authentication.Issuer.Value), ("@expiry", expiry)).ConfigureAwait(false);
             return LabelServiceResult<LabelAdministrationCaller>.Success(new(
                 issuer: new(state.Issuer), actor: authentication.Issuer, generation: member.Generation,
-                credential: authentication.TokenHash, localIdentity: null, expiresAt: authentication.ExpiresAt));
+                credential: Convert.ToHexString(replay), localIdentity: null, expiresAt: authentication.ExpiresAt));
         }, cancellationToken);
     }
 
@@ -433,14 +428,7 @@ internal abstract partial class RelationalLabelStore
                 return original;
             }
 
-            long now = Integer(await ScalarAsync(
-                connection: connection, transaction: transaction, sql: ClockSql, token: cancellationToken).ConfigureAwait(false));
-            foreach (string expired in team.RevokedTokens.Where(entry => entry.Value <= now).Select(entry => entry.Key).ToArray())
-            {
-                team.RevokedTokens.Remove(expired);
-            }
-
-            string? failure = ApplyTeamChange(team, change, now);
+            string? failure = ApplyTeamChange(team, change);
             LabelAdministrationReceipt receipt = await AuditAdministrationAsync(
                 connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
                 localIdentity: caller.LocalIdentity, operationId: change.OperationId, action: change.Action.ToString(),
@@ -456,7 +444,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Applies a bounded team change after all invariant checks, leaving denied state unchanged.</summary>
-    private static string? ApplyTeamChange(AdministrationState team, LabelTeamChange change, long now)
+    private static string? ApplyTeamChange(AdministrationState team, LabelTeamChange change)
     {
         string did = change.Target.Value;
         team.Members.TryGetValue(did, out AdministrationMember? member);
@@ -501,16 +489,6 @@ internal abstract partial class RelationalLabelStore
             }
 
             team.Bindings.Remove(change.Credential!);
-        }
-        else if (change.Action == LabelTeamAction.RevokeToken)
-        {
-            if (team.RevokedTokens.Count >= 10000)
-            {
-                return "The credential revocation capacity is exhausted.";
-            }
-
-            // This exceeds the verifier's sixty-second lifetime and permitted clock skew.
-            team.RevokedTokens[change.Credential!.ToUpperInvariant()] = checked(now + 120_000);
         }
         else
         {

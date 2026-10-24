@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Channels;
 
 using idunno.AtProto;
@@ -11,6 +12,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
@@ -65,12 +68,33 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         builder.Services.AddBlueskyLabeler(s_issuer, options);
         configureAdministration?.Invoke(builder.Services);
         fixture._app = builder.Build();
+        if (configureAdministration is not null)
+        {
+            fixture._app.Use(async (context, next) =>
+            {
+                if (context.Request.Headers.TryGetValue("X-Test-Remote-IP", out Microsoft.Extensions.Primitives.StringValues address))
+                {
+                    context.Connection.RemoteIpAddress = IPAddress.Parse(address.ToString());
+                }
+
+                await next(context);
+            });
+            fixture._app.UseLabelerAdministrationForwardedHeaders(options =>
+            {
+                options.KnownProxies.Add(IPAddress.Loopback);
+                options.KnownProxies.Add(IPAddress.Parse("192.0.2.1"));
+                options.KnownProxies.Add(IPAddress.Parse("192.0.2.2"));
+                options.ForwardLimit = 2;
+            });
+        }
+
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
         if (configureAdministration is not null)
         {
             fixture._app.MapLabelerAdministration();
         }
+
         await fixture.Store.InitializeAsync(s_issuer);
         if (initialize is not null)
         {

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -22,6 +23,14 @@ internal sealed class AdministrationDispatcher(
     [
         "getTeam", "getAudit", "changeTeam", "enroll", "issueLabel", "negateLabel",
         "getOperation", "getPublicationState", "authorizeMaintenance"
+    ];
+    internal static readonly string[] s_getMethods =
+    [
+        "getTeam", "getAudit", "getOperation", "getPublicationState"
+    ];
+    internal static readonly string[] s_postMethods =
+    [
+        "changeTeam", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance"
     ];
 
     /// <summary>Validates one bounded command and invokes no transport-specific business logic.</summary>
@@ -78,6 +87,11 @@ internal sealed class AdministrationDispatcher(
                 }
             case "getAudit":
                 {
+                    if (command.Limit is < 1 or > AdministrationCommand.MaximumAuditPageSize)
+                    {
+                        return new(false, "InvalidRequest", "The audit page size must be between 1 and 16.");
+                    }
+
                     LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> result = await administration.GetAdministrationAuditAsync(
                         caller: caller, afterSequence: command.AfterSequence, limit: command.Limit, cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded
@@ -116,9 +130,21 @@ internal sealed class AdministrationDispatcher(
             case "negateLabel":
                 {
                     Cid? cid = command.Cid is null ? null : new(command.Cid);
-                    LabelTarget target = command.Target.StartsWith("at://", StringComparison.Ordinal)
-                        ? LabelTarget.Record(new AtUri(command.Target), cid)
-                        : LabelTarget.Account(AtIdentifier.Create(command.Target));
+                    LabelTarget target;
+                    if (command.Target.StartsWith("at://", StringComparison.Ordinal))
+                    {
+                        if (!AtUri.TryParse(command.Target, out AtUri? atUri))
+                        {
+                            return new(false, "InvalidRequest", "The record target is not a valid AT URI.");
+                        }
+
+                        target = LabelTarget.Record(atUri, cid);
+                    }
+                    else
+                    {
+                        target = LabelTarget.Account(AtIdentifier.Create(command.Target));
+                    }
+
                     LabelOperationContext context = new(caller.Actor, command.Reason, command.CorrelationId);
                     LabelOperationRequest request = command.Method == "issueLabel"
                         ? LabelOperationRequest.Issue(
@@ -176,8 +202,10 @@ internal sealed record AdministrationCommand(
     DateTimeOffset? ExpiresAt = null,
     string? CorrelationId = null,
     long AfterSequence = 0,
-    int Limit = 100)
+    int Limit = 16)
 {
+    internal const int MaximumAuditPageSize = 16;
+
     /// <summary>Rejects JSON nulls explicitly on every supported target framework.</summary>
     internal void Validate()
     {
@@ -220,6 +248,7 @@ internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 internal static class AdministrationWire
 {
     internal const int MaximumRequestBytes = 16 * 1024;
+    internal const int MaximumResponseBytes = 4 * 1024 * 1024;
 
     /// <summary>Reads one length-prefixed local message or a bounded HTTP request body.</summary>
     internal static async Task<byte[]> ReadAsync(Stream stream, int maximum, CancellationToken token)
@@ -238,5 +267,19 @@ internal static class AdministrationWire
         }
 
         throw new System.Text.Json.JsonException("The administrative message exceeds its size limit.");
+    }
+
+    /// <summary>Serializes a response within the shared transport frame bound.</summary>
+    internal static byte[] SerializeResponse(AdministrationResponse response, out AdministrationResponse boundedResponse)
+    {
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(response, AdministrationJsonContext.Default.AdministrationResponse);
+        if (payload.Length <= MaximumResponseBytes)
+        {
+            boundedResponse = response;
+            return payload;
+        }
+
+        boundedResponse = new(false, "ResponseTooLarge", "The administrative response exceeds its size limit.");
+        return JsonSerializer.SerializeToUtf8Bytes(boundedResponse, AdministrationJsonContext.Default.AdministrationResponse);
     }
 }

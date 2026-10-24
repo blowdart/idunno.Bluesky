@@ -15,7 +15,7 @@ public partial class AtProtoAgent
     /// <param name="service">The server issuing the token.</param>
     /// <param name="audience">The destination service reference.</param>
     /// <param name="lxm">The XRPC method to bind the token to.</param>
-    /// <param name="expiry">An optional token lifetime.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 15 minutes.</param>
     /// <param name="cancellationToken">A cancellation token for the request.</param>
     /// <returns>The service credential HTTP result.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>

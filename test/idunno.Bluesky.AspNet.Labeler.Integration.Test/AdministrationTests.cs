@@ -31,9 +31,13 @@ public class AdministrationTests
     [InlineData("wrong-service", HttpStatusCode.Unauthorized)]
     [InlineData("wrong-method", HttpStatusCode.Unauthorized)]
     [InlineData("expired", HttpStatusCode.Unauthorized)]
+    [InlineData("fifteen-minute", HttpStatusCode.OK)]
+    [InlineData("over-limit", HttpStatusCode.Unauthorized)]
     [InlineData("outsider", HttpStatusCode.Forbidden)]
     [InlineData("member", HttpStatusCode.OK)]
-    [InlineData("http", HttpStatusCode.Unauthorized)]
+    [InlineData("untrusted-proxy", HttpStatusCode.Unauthorized)]
+    [InlineData("trusted-proxy", HttpStatusCode.OK)]
+    [InlineData("trusted-proxy-chain", HttpStatusCode.OK)]
     public async Task RemoteAuthenticationRequiresExactMethodAudienceAndLiveMembership(string kind, HttpStatusCode expected)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -51,11 +55,32 @@ public class AdministrationTests
             "wrong-service" => Token(key, now, audience: TestServerBuilder.s_issuer.Value + "#other"),
             "wrong-method" => Token(key, now, method: "dev.idunno.labeler.admin.getAudit"),
             "expired" => Token(key, now.AddMinutes(-2)),
+            "fifteen-minute" => Token(key, now, lifetime: TimeSpan.FromMinutes(15)),
+            "over-limit" => Token(key, now, lifetime: TimeSpan.FromMinutes(15).Add(TimeSpan.FromSeconds(1))),
             "outsider" => Token(key, now, actor: "did:plc:outsider"),
             _ => Token(key, now)
         };
         using HttpRequestMessage request = new(HttpMethod.Get,
-            (kind == "http" ? "http" : "https") + "://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+            (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" ? "http" : "https")
+            + "://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        if (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain")
+        {
+            request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+            request.Headers.TryAddWithoutValidation(
+                "X-Test-Remote-IP",
+                kind switch
+                {
+                    "trusted-proxy" => "192.0.2.1",
+                    "trusted-proxy-chain" => "192.0.2.2",
+                    _ => "192.0.2.99"
+                });
+            if (kind == "trusted-proxy-chain")
+            {
+                request.Headers.Remove("X-Forwarded-Proto");
+                request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https,http");
+            }
+        }
+
         if (token is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -64,13 +89,19 @@ public class AdministrationTests
         using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
         Assert.Equal(expected, response.StatusCode);
         Assert.Equal("no-store", response.Headers.CacheControl!.ToString());
+        if (kind == "untrusted-proxy")
+        {
+            using HttpResponseMessage secure = await GetTeamAsync(fixture, token!);
+            Assert.Equal(HttpStatusCode.OK, secure.StatusCode);
+        }
+
         using HttpResponseMessage publicResponse = await fixture.Client.GetAsync(
             "/xrpc/com.atproto.label.queryLabels?uriPatterns=did:plc:subject", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, publicResponse.StatusCode);
     }
 
     [Fact]
-    public async Task ServiceTokenReplayAndHashRevocationAreDurable()
+    public async Task ServiceTokenReplayIsDurableAndCoversEquivalentSignatures()
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
@@ -84,20 +115,31 @@ public class AdministrationTests
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         using HttpResponseMessage replay = await GetTeamAsync(fixture, token);
         Assert.Equal(HttpStatusCode.Forbidden, replay.StatusCode);
-        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
-        string revoked = Token(key, now);
-        string hash = Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(revoked)));
-        Assert.True((await team.ChangeTeamAsync(administrator, new(
-            operationId: "revoke-token", action: LabelTeamAction.RevokeToken, target: s_actor,
-            reason: "Revoke leaked token.", credential: hash), TestContext.Current.CancellationToken)).Succeeded);
-        using HttpResponseMessage rejected = await GetTeamAsync(fixture, revoked);
-        Assert.Equal(HttpStatusCode.Forbidden, rejected.StatusCode);
+        using HttpResponseMessage rejectedMalleated = await GetTeamAsync(fixture, MalleateSignature(token));
+        Assert.Equal(HttpStatusCode.Forbidden, rejectedMalleated.StatusCode);
+        ServiceAuthenticationResult evidence = await ServiceAuthentication.VerifyAsync(
+            token: token, audience: s_audience, method: "dev.idunno.labeler.admin.getTeam",
+            httpClient: identity, timeProvider: fixture.Clock, cancellationToken: TestContext.Current.CancellationToken);
         using ServiceProvider restarted = fixture.OtherProvider();
         ILabelAdministrationStore other = restarted.GetRequiredService<ILabelAdministrationStore>();
-        ServiceAuthenticationResult evidence = await ServiceAuthentication.VerifyAsync(
-            token: revoked, audience: s_audience, method: "dev.idunno.labeler.admin.getTeam",
-            httpClient: identity, timeProvider: fixture.Clock, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False((await other.AuthenticateServiceAsync(evidence, TestContext.Current.CancellationToken)).Succeeded);
+    }
+
+    [Fact]
+    public async Task RemoteAuthenticationHonorsConfiguredServiceTokenLifetime()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(
+            key, identity, maximumServiceTokenLifetime: TimeSpan.FromSeconds(30));
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        using HttpResponseMessage response = await GetTeamAsync(
+            fixture, Token(key, now, lifetime: TimeSpan.FromSeconds(31)));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Theory]
@@ -105,6 +147,8 @@ public class AdministrationTests
     [InlineData("""{"method":"changeTeam","actor":"did:plc:spoofed"}""", "InvalidRequest")]
     [InlineData("""{"method":"getTeam","target":null}""", "InvalidRequest")]
     [InlineData("""{"method":"unknownMethod"}""", "InvalidRequest")]
+    [InlineData("""{"method":"getAudit","limit":17}""", "InvalidRequest")]
+    [InlineData("""{"method":"issueLabel","operationId":"invalid-uri","target":"at://did:plc:subject/app.bsky.feed.post/key?x=y","value":"spam","reason":"Reject malformed record URI."}""", "InvalidRequest")]
     [InlineData("""{"method":"issueLabel","operationId":"rejected-policy","target":"did:plc:administration-actor","value":"unavailable","reason":"Reject an undeclared value."}""", "ValueNotDeclared")]
     public async Task LocalChannelAuditsRejectedInvocationsWithoutStoppingTheHost(string command, string expectedError)
     {
@@ -186,6 +230,37 @@ public class AdministrationTests
     }
 
     [Fact]
+    public async Task AuditPageWithMaximumEscapedReasonsFitsLocalFrameLimit()
+    {
+        const int maximumAuditPageSize = 16;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        string endpoint = LocalEndpoint();
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        LabelServiceResult<LabelAdministrationReceipt> bootstrap = await fixture.Services.BootstrapLocalAdministratorAsync(
+            s_actor, "bootstrap", TestContext.Current.CancellationToken);
+        Assert.True(bootstrap.Succeeded, bootstrap.Error?.Message);
+
+        ILabelAdministrationStore store = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        string reason = new('\u0001', 4096);
+        for (int index = 0; index < maximumAuditPageSize; index++)
+        {
+            Assert.True((await store.RecordAdministrationDenialAsync(
+                reason, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        }
+
+        string command = $$"""{"method":"getAudit","afterSequence":{{bootstrap.Result!.Sequence}},"limit":16}""";
+        string wireResponse = await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, command, TestContext.Current.CancellationToken);
+        Assert.True(Encoding.UTF8.GetByteCount(wireResponse) < 1024 * 1024);
+        using JsonDocument response = JsonDocument.Parse(wireResponse);
+        JsonElement audit = response.RootElement.GetProperty("audit");
+        Assert.Equal(maximumAuditPageSize, audit.GetArrayLength());
+        Assert.All(audit.EnumerateArray(), entry =>
+            Assert.Equal(4096, entry.GetProperty("reason").GetString()!.Length));
+    }
+
+    [Fact]
     public void LinuxSocketDirectoriesRejectSymlinksPermissiveModesAndReplaceableAncestors()
     {
         if (!OperatingSystem.IsLinux())
@@ -220,12 +295,16 @@ public class AdministrationTests
     }
 
     /// <summary>Creates an opt-in administrative host without changing public-distribution defaults.</summary>
-    private static async Task<TestServerBuilder> CreateAsync(LabelSigningKey key, HttpClient identity, string? endpoint = null)
+    private static async Task<TestServerBuilder> CreateAsync(
+        LabelSigningKey key,
+        HttpClient identity,
+        string? endpoint = null,
+        TimeSpan? maximumServiceTokenLifetime = null)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(configureAdministration: services =>
         {
             services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
-            services.AddLabelerAdministration(s_audience, key, identity);
+            services.AddLabelerAdministration(s_audience, key, identity, maximumServiceTokenLifetime);
             if (endpoint is not null)
             {
                 services.AddLabelerLocalAdministration(endpoint);
@@ -264,12 +343,13 @@ public class AdministrationTests
         DateTimeOffset now,
         string? audience = null,
         string method = "dev.idunno.labeler.admin.getTeam",
-        string? actor = null)
+        string? actor = null,
+        TimeSpan? lifetime = null)
     {
         string header = Base64Url(Encoding.UTF8.GetBytes("""{"typ":"JWT","alg":"ES256"}"""));
         string payload = $$"""
             {"iss":"{{actor ?? s_actor.Value}}","aud":"{{audience ?? s_audience.ToString()}}",
-             "lxm":"{{method}}","iat":{{now.ToUnixTimeSeconds()}},"exp":{{now.AddSeconds(60).ToUnixTimeSeconds()}},
+             "lxm":"{{method}}","iat":{{now.ToUnixTimeSeconds()}},"exp":{{(now + (lifetime ?? TimeSpan.FromSeconds(60))).ToUnixTimeSeconds()}},
              "jti":"{{Guid.NewGuid():N}}"}
             """;
         string signingInput = header + "." + Base64Url(Encoding.UTF8.GetBytes(payload));
@@ -280,6 +360,31 @@ public class AdministrationTests
 
     /// <summary>Encodes JWT segments without padding.</summary>
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+    /// <summary>Changes the ECDSA S value to its equivalent curve-order complement.</summary>
+    private static string MalleateSignature(string token)
+    {
+        string[] parts = token.Split('.');
+        byte[] signature = Convert.FromBase64String(parts[2].Replace('-', '+').Replace('_', '/').PadRight((parts[2].Length + 3) / 4 * 4, '='));
+        byte[] order = Convert.FromHexString("FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551");
+        byte[] s = signature.AsSpan(32, 32).ToArray();
+        byte[] malleatedS = new byte[s.Length];
+        int borrow = 0;
+        for (int index = s.Length - 1; index >= 0; index--)
+        {
+            int digit = order[index] - s[index] - borrow;
+            borrow = digit < 0 ? 1 : 0;
+            malleatedS[index] = (byte)(digit < 0 ? digit + 256 : digit);
+        }
+
+        if (borrow != 0)
+        {
+            throw new InvalidOperationException("The test signature is outside the P-256 curve order.");
+        }
+
+        byte[] malleated = [.. signature.AsSpan(0, 32), .. malleatedS];
+        return string.Join('.', parts[0], parts[1], Base64Url(malleated));
+    }
 
     /// <summary>Serves matching account DID documents without external identity services.</summary>
     private sealed class IdentityHandler(string multikey) : HttpMessageHandler
