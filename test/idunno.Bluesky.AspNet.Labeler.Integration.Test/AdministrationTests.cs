@@ -558,6 +558,24 @@ public class AdministrationTests
             Assert.Equal(4096, entry.GetProperty("reason").GetString()!.Length));
     }
 
+    [Theory]
+    [InlineData("/run/labeler/../admin.sock")]
+    [InlineData("/run/labeler/./admin.sock")]
+    [InlineData("/run//labeler/admin.sock")]
+    [InlineData("//run/labeler/admin.sock")]
+    [InlineData("/run/labeler/admin.sock/")]
+    [InlineData("admin.sock")]
+    public void LinuxSocketEndpointsRejectNoncanonicalPaths(string endpoint)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        ArgumentException error = Assert.Throws<ArgumentException>(() => LabelerLocalAdministration.ValidateEndpoint(endpoint));
+        Assert.Equal(nameof(endpoint), error.ParamName);
+    }
+
     [Fact]
     public void LinuxSocketDirectoriesRejectSymlinksPermissiveModesAndReplaceableAncestors()
     {
@@ -578,8 +596,17 @@ public class AdministrationTests
             File.SetUnixFileMode(directory, privateMode | UnixFileMode.OtherRead);
             Assert.Throws<UnauthorizedAccessException>(() => LocalPeer.VerifyDirectory(directory));
             File.SetUnixFileMode(directory, privateMode);
-            Directory.CreateSymbolicLink(link, directory);
+            Directory.CreateSymbolicLink(link, parent);
             Assert.Throws<UnauthorizedAccessException>(() => LocalPeer.VerifyDirectory(link));
+            string socket = Path.Combine(directory, "admin.sock");
+            LabelerLocalAdministration.ValidateEndpoint(socket);
+            string ambiguousSocket = Path.Combine(link, "..", "admin.sock");
+            Assert.Equal(Path.Combine(parent, "admin.sock"), Path.GetFullPath(ambiguousSocket));
+            LocalPeer.VerifyDirectory(Path.GetDirectoryName(Path.GetFullPath(ambiguousSocket))!);
+            Assert.Throws<ArgumentException>(() => LabelerLocalAdministration.ValidateEndpoint(ambiguousSocket));
+            ServiceCollection services = new();
+            Assert.Throws<ArgumentException>(() => services.AddLabelerLocalAdministration(ambiguousSocket));
+            Assert.Empty(services);
             File.SetUnixFileMode(parent, privateMode | UnixFileMode.GroupWrite);
             Assert.Throws<UnauthorizedAccessException>(() => LocalPeer.VerifyDirectory(directory));
         }

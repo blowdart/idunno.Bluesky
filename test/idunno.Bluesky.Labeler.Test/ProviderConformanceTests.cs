@@ -743,11 +743,21 @@ public class ProviderConformanceTests
         Assert.Throws<InvalidDataException>(() => new SignedLabelSnapshot(new Label(1, StoreFixture.Issuer, "did:plc:subject", null, "spam", false, s_instant, null)));
     }
 
-    [Fact(Timeout = 120_000)]
-    public async Task RejectsMySqlTablesChangedToNontransactionalStorage()
+    [Theory(Timeout = 120_000)]
+    [InlineData("label_schema")]
+    [InlineData("label_state")]
+    [InlineData("label_entries")]
+    [InlineData("label_operations")]
+    [InlineData("label_decisions")]
+    [InlineData("label_distribution")]
+    [InlineData("label_team")]
+    [InlineData("label_admin_audit")]
+    [InlineData("label_admin_receipts")]
+    [InlineData("label_admin_tokens")]
+    public async Task RejectsMySqlTablesChangedToNontransactionalStorage(string table)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync("mysql");
-        await fixture.ExecuteAsync("ALTER TABLE label_entries ENGINE=MyISAM");
+        await fixture.ExecuteAsync($"ALTER TABLE {table} ENGINE=MyISAM");
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken));
     }

@@ -164,9 +164,12 @@ public static class LabelerLocalAdministration
         {
             throw new PlatformNotSupportedException("Protected local sockets support Linux x64 and arm64.");
         }
-        else if (!Path.IsPathFullyQualified(endpoint) || Encoding.UTF8.GetByteCount(endpoint) > 100)
+        else if (!Path.IsPathFullyQualified(endpoint) ||
+            !string.Equals(endpoint, Path.GetFullPath(endpoint), StringComparison.Ordinal) ||
+            endpoint.EndsWith(Path.DirectorySeparatorChar) ||
+            Encoding.UTF8.GetByteCount(endpoint) > 100)
         {
-            throw new ArgumentException("Use an absolute Linux socket filename no longer than 100 UTF-8 bytes.", nameof(endpoint));
+            throw new ArgumentException("Use a canonical absolute Linux socket filename no longer than 100 UTF-8 bytes, without dot segments or redundant separators.", nameof(endpoint));
         }
     }
 

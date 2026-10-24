@@ -11,6 +11,7 @@
 * Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
 * Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
 * Persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
+* Rejects noncanonical Linux administration socket paths before directory validation or socket access.
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
@@ -27,6 +28,7 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Validates InnoDB storage for all MySQL administration tables as well as label tables, rejecting nontransactional existing tables.
 * Added additive schema-version-four team, credential replay, audit and receipt persistence with shared transaction-valid administration across all three providers.
 * Indexes administrative token expiry for bounded cleanup scans; initialization adds the index to existing version-four databases.
 * Stops successful audit-feed reads from generating further feed entries while retaining durable denial auditing.

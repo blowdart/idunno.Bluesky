@@ -128,6 +128,8 @@ human operators; audit retains both the delegated DID and the authenticated OS i
 Linux x64/arm64 uses a filesystem Unix socket, kernel `SO_PEERCRED`, a service-owned mode-0700
 directory and mode-0600 socket. Ancestors must be trusted directories, not symlinks; a root-owned
 sticky temporary directory is permitted. Use `/run/...`, not a symlinked `/var/run/...` path.
+Socket paths must be canonical absolute filenames, without `.` or `..` segments, redundant
+separators or a trailing separator; ambiguous paths are rejected rather than normalized.
 Windows uses a protected current-service-SID named-pipe ACL with network identities denied; clients
 verify the server owner and use a local-only pipe connection. Unsupported platforms fail closed.
 The supplied local transport admits the service's own UID/SID, not arbitrary local users.
