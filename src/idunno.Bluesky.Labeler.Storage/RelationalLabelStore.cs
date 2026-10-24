@@ -613,13 +613,14 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(labels);
-        if (labels.Count > 1_000)
+        StoredLabel[] batch = [.. labels];
+        if (batch.Length > 1_000)
         {
             throw new ArgumentOutOfRangeException(nameof(labels), "At most 1,000 signatures can be replaced in one batch.");
         }
 
         long previousSequence = 0;
-        foreach (StoredLabel label in labels)
+        foreach (StoredLabel label in batch)
         {
             ArgumentNullException.ThrowIfNull(label);
             ArgumentNullException.ThrowIfNull(label.SignedLabel);
@@ -631,7 +632,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             previousSequence = label.Sequence;
         }
 
-        if (labels.Count == 0)
+        if (batch.Length == 0)
         {
             return Task.CompletedTask;
         }
@@ -645,7 +646,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     throw new InvalidOperationException("Only published labels in an active labeler can have their signatures replaced.");
                 }
 
-                foreach (StoredLabel label in labels)
+                foreach (StoredLabel label in batch)
                 {
                     Label unsigned = label.SignedLabel.Label;
                     if (!string.Equals(unsigned.Source.Value, state.Issuer, StringComparison.Ordinal))

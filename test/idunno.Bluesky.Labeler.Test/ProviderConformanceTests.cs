@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections;
 using System.Data.Common;
 using System.Text;
 using System.Text.Json;
@@ -118,6 +119,69 @@ public class ProviderConformanceTests
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplaceSignaturesAsync(
             [new StoredLabel(stored.Sequence, changed)],
             TestContext.Current.CancellationToken));
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task SignatureReplacementUsesTheValidatedSnapshotWhenCallerChangesTheBatch(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot published = Sign(originalKey);
+        SignedLabelSnapshot unpublished = Sign(originalKey, "did:plc:pending");
+        await fixture.Store.AppendAsync("published", [published], cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("pending", [unpublished], cancellationToken: TestContext.Current.CancellationToken);
+        StoredLabel expected = new(1, new SignedLabelSnapshot(replacementKey.Sign(published.Label)));
+        StoredLabel forbidden = new(2, new SignedLabelSnapshot(replacementKey.Sign(unpublished.Label)));
+        MutatingReplacementBatch input = new(expected, forbidden);
+
+        await fixture.Store.ReplaceSignaturesAsync(input, TestContext.Current.CancellationToken);
+
+        Assert.Equal(forbidden, input.Current);
+        LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel updated = Assert.Single((await fixture.Store.ReplayAsync(
+            state.StreamId,
+            0,
+            1,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(expected.SignedLabel.GetJsonBytes(), updated.SignedLabel.GetJsonBytes());
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        StoredLabel pending = Assert.Single((await fixture.Store.ReplayAsync(
+            state.StreamId,
+            1,
+            2,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(unpublished.GetJsonBytes(), pending.SignedLabel.GetJsonBytes());
+    }
+
+    /// <summary>Changes the caller-owned batch immediately after its first read, without relying on task timing.</summary>
+    private sealed class MutatingReplacementBatch(StoredLabel initial, StoredLabel replacement) : IReadOnlyList<StoredLabel>
+    {
+        internal StoredLabel Current { get; private set; } = initial;
+
+        public int Count => 1;
+
+        public StoredLabel this[int index]
+        {
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfNotEqual(index, 0);
+                StoredLabel current = Current;
+                Current = replacement;
+                return current;
+            }
+        }
+
+        public IEnumerator<StoredLabel> GetEnumerator()
+        {
+            yield return this[0];
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     [Theory(Timeout = 120_000)]

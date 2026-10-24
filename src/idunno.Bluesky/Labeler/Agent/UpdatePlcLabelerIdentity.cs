@@ -374,9 +374,7 @@ public partial class BlueskyAgent
         {
             publishedDocument = await ResolveDidDocument(did, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (
-            exception is HttpRequestException ||
-            (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        catch (Exception exception) when (IsPlcVerificationResolutionFailure(exception, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             return new(
@@ -426,6 +424,16 @@ public partial class BlueskyAgent
             error: null,
             recoveryAction: null);
     }
+
+    /// <summary>Recognizes recoverable resolution failures, including the DID constructor rejecting a null response identifier.</summary>
+    private static bool IsPlcVerificationResolutionFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception switch
+        {
+            HttpRequestException => true,
+            ArgumentNullException argumentException => argumentException.ParamName == "id",
+            OperationCanceledException => !cancellationToken.IsCancellationRequested,
+            _ => false
+        };
 
     /// <summary>Extracts key and service maps together with their PLC operation version, excluding nullified history.</summary>
     private static (string Cid, JsonObject VerificationMethods, JsonObject Services) ParsePlcLabelerState(

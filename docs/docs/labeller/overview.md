@@ -129,6 +129,8 @@ Verification also rejects published labeler endpoints containing credentials or 
 URI equality would otherwise match the expected HTTPS origin.
 Missing or null labeler service endpoints are publication mismatches and retain the same verification
 failure and PLC recovery behavior.
+If a post-submission DID response has a null document identifier, the update also returns
+`VerificationFailed` with the signed operation so the operator can recover.
 
 During key rotation, pause issuance and publish pending labels, then publish and verify the replacement key
 before re-signing existing retained labels in bounded batches with `LabelSigningKeyRotation`. Persist each

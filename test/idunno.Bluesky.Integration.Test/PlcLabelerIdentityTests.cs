@@ -31,6 +31,50 @@ public class PlcLabelerIdentityTests
     };
 
     [Theory]
+    [InlineData(200, null)]
+    [InlineData(400, "InvalidToken")]
+    [InlineData(401, "AuthenticationRequired")]
+    public async Task PlcAuthorizationRequestUsesAuthenticatedPostAndReturnsPdsErrors(int status, string? error)
+    {
+        int requests = 0;
+        string token = JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString());
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            requests++;
+            Assert.Equal("POST", context.Request.Method);
+            Assert.Equal("/xrpc/com.atproto.identity.requestPlcOperationSignature", context.Request.Path);
+            Assert.Equal($"Bearer {token}", context.Request.Headers.Authorization.ToString());
+            context.Response.StatusCode = status;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                error is null ? "{}" : $$"""{"error":"{{error}}","message":"Authorization denied"}""",
+                TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+        agent.Credentials = new AccessCredentials(
+            TestServerBuilder.DefaultUri,
+            AuthenticationType.UsernamePassword,
+            token,
+            "refreshToken");
+
+        AtProtoHttpResult<EmptyResponse> result = await agent.RequestPlcOperationSignature(TestContext.Current.CancellationToken);
+
+        Assert.Equal(status, (int)result.StatusCode);
+        Assert.Equal(status == 200, result.Succeeded);
+        Assert.Equal(error, result.AtErrorDetail?.Error);
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
+    public async Task PlcAuthorizationRequestRequiresAuthentication()
+    {
+        using BlueskyAgent agent = new();
+
+        await Assert.ThrowsAsync<AuthenticationRequiredException>(() =>
+            agent.RequestPlcOperationSignature(TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task PlcIdentityUpdatePreservesExistingEntriesAndVerifiesPublishedDocument(bool legacy)
@@ -447,6 +491,7 @@ public class PlcLabelerIdentityTests
     [InlineData("service", """{"id":null,"type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
     [InlineData("verificationMethod", """{"id":"","type":"Multikey","controller":"did:plc:hfgp6pj3akhqxntgqwramlbg"}""")]
     [InlineData("service", """{"id":"","type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    [InlineData("id", "null")]
     public async Task PlcIdentityUpdateRetainsSignedOperationWhenPublishedDocumentContainsMalformedEntries(string collection, string malformedEntry)
     {
         using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -482,7 +527,14 @@ public class PlcLabelerIdentityTests
                         ["type"] = "AtprotoLabeler",
                         ["serviceEndpoint"] = s_endpoint.AbsoluteUri
                     });
-                    document[collection]!.AsArray().Add(JsonNode.Parse(malformedEntry));
+                    if (collection == "id")
+                    {
+                        document["id"] = null;
+                    }
+                    else
+                    {
+                        document[collection]!.AsArray().Add(JsonNode.Parse(malformedEntry));
+                    }
                 }
 
                 await context.Response.WriteAsync(document.ToJsonString(), TestContext.Current.CancellationToken);
