@@ -343,6 +343,45 @@ public static partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(audience);
+
+        return await GetServiceAuthWithTimeProvider(
+            timeProvider: timeProvider,
+            audience: audience.Value,
+            expiry: expiry,
+            lxm: lxm,
+            service: service,
+            accessCredentials: accessCredentials,
+            httpClient: httpClient,
+            credentialsUpdated: credentialsUpdated,
+            loggerFactory: loggerFactory,
+            maximumResponseSize: maximumResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Requests a token using the exact audience string and supplied clock.
+    /// </summary>
+    [UnconditionalSuppressMessage("Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    internal static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuthWithTimeProvider(
+        TimeProvider timeProvider,
+        string audience,
+        TimeSpan? expiry,
+        Nsid lxm,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(audience);
         ArgumentNullException.ThrowIfNull(lxm);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);

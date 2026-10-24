@@ -22,8 +22,9 @@ Start with `idunno.Bluesky.Labeler` and choose one provider: `idunno.Bluesky.Lab
 Your services, CLI and UI shouldn't need their own database-specific code.
 The providers accept labels already signed with the [label APIs](../labels.md). For application
 decisions, use the [shared issuance and withdrawal service](issuance.md), which adds authorization,
-policy checks, target verification and atomic audit. The packages don't provide authentication,
-administration, a protocol host, moderation site or private-key store.
+policy checks, target verification and atomic audit. Opt into [administrative authentication and
+teams](administration.md) and [public hosting](hosting.md) separately. There is no moderation UI or
+managed private-key store.
 
 ## Choose a provider and set it up
 
@@ -230,7 +231,7 @@ to read the server settings validated above. Run `InitializeAsync` separately wi
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades versions one and two to version three additively without changing signed history, legacy receipts,
+`InitializeAsync` upgrades versions one, two and three to version four additively without changing signed history, legacy receipts,
 stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after

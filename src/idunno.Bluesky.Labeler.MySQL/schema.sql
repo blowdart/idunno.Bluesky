@@ -47,4 +47,19 @@ CREATE TABLE IF NOT EXISTS label_decisions (
     INDEX label_decisions_revision(revision)
 ) ENGINE=InnoDB;
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 3) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_admin_receipts (
+    operation_hash BINARY(32) PRIMARY KEY,
+    operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    intent LONGBLOB NOT NULL,
+    payload LONGBLOB NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_admin_tokens (
+    replay_hash BINARY(32) PRIMARY KEY,
+    token_hash VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    actor TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    expires_ms BIGINT NOT NULL,
+    INDEX label_admin_token_hash(token_hash)
+) ENGINE=InnoDB;
+INSERT INTO label_schema(id, version) VALUES(1, 4) ON DUPLICATE KEY UPDATE id=id;

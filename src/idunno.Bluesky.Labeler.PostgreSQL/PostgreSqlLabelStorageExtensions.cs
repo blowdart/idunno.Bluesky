@@ -41,6 +41,7 @@ public static class PostgreSqlLabelStorageExtensions
                 provider.GetRequiredService<ILogger<PostgreSqlLabelStore>>(),
                 new StoreMetrics("postgresql", provider.GetService<IMeterFactory>())));
         services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelAdministrationStore>(provider => (ILabelAdministrationStore)provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

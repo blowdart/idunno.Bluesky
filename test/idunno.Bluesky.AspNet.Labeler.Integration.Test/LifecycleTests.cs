@@ -277,7 +277,7 @@ public class LifecycleTests
     /// <summary>Builds signed data with an explicit test-owned timestamp, never a wall-clock deadline.</summary>
     private static SignedLabelSnapshot Signed(LabelSigningKey key, string uri, DateTimeOffset timestamp) =>
         new(key.CreateLabel(
-            source: TestServerBuilder.Issuer,
+            source: TestServerBuilder.s_issuer,
             uri: uri,
             value: "spam",
             creationTimestamp: timestamp));

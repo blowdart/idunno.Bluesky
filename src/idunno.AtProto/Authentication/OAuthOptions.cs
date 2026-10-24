@@ -328,8 +328,8 @@ public sealed class OAuthOptions
     ///   so a single setting is enough to reach a server which does not serve HTTPS.
     /// </para>
     /// <para>
-    ///   HTTP is also allowed on the transport, without this being set, when <see cref="ReturnUri"/> itself uses HTTP,
-    ///   because an application whose own callback is not served over HTTPS is by definition not in a position to require it.
+    ///   For an <c>http://localhost</c> development client ID only, HTTP is also allowed on the transport
+    ///   when <see cref="ReturnUri"/> uses HTTP. Production native loopback callbacks do not enable this allowance.
     /// </para>
     /// <para>
     ///   Only turn this on for local development, as in the localhost client setup described at
@@ -349,8 +349,8 @@ public sealed class OAuthOptions
     ///   so a single setting is enough to reach a server running on the local machine.
     /// </para>
     /// <para>
-    ///   Loopback addresses are also allowed on the transport, without this being set, when <see cref="ReturnUri"/> is
-    ///   itself a loopback address.
+    ///   For an <c>http://localhost</c> development client ID only, loopback addresses are also allowed on the transport
+    ///   when <see cref="ReturnUri"/> is a loopback address. Production native callbacks do not enable this allowance.
     /// </para>
     /// <para>
     ///   Only turn this on for local development. Allowing loopback removes a protection against a hostile handle
@@ -361,17 +361,30 @@ public sealed class OAuthOptions
 
     /// <summary>
     /// Gets a value indicating whether HTTP may be used on the wire, taking both <see cref="AllowInsecureProtocols"/>
-    /// and the scheme of <see cref="ReturnUri"/> into account.
+    /// and a localhost development client's callback scheme into account.
     /// </summary>
     internal bool AllowInsecureProtocolsOnTheWire =>
-        AllowInsecureProtocols || (ReturnUri is not null && ReturnUri.Scheme == Uri.UriSchemeHttp);
+        AllowInsecureProtocols || (IsLocalhostDevelopmentClient && ReturnUri is not null && ReturnUri.Scheme == Uri.UriSchemeHttp);
 
     /// <summary>
     /// Gets a value indicating whether a loopback address may be used on the wire, taking both <see cref="AllowLoopback"/>
-    /// and <see cref="ReturnUri"/> into account.
+    /// and a localhost development client's callback address into account.
     /// </summary>
     internal bool AllowLoopbackOnTheWire =>
-        AllowLoopback || (ReturnUri is not null && ReturnUri.IsLoopback);
+        AllowLoopback || (IsLocalhostDevelopmentClient && ReturnUri is not null && ReturnUri.IsLoopback);
+
+    /// <summary>
+    /// Gets a value indicating whether the client uses the special localhost development client ID.
+    /// </summary>
+    private bool IsLocalhostDevelopmentClient =>
+        Uri.TryCreate(ClientId, UriKind.Absolute, out Uri? clientId) &&
+        clientId.IsWellFormedOriginalString() &&
+        clientId.Scheme == Uri.UriSchemeHttp &&
+        string.Equals(clientId.Host, "localhost", StringComparison.OrdinalIgnoreCase) &&
+        clientId.IsDefaultPort &&
+        clientId.AbsolutePath == "/" &&
+        string.IsNullOrEmpty(clientId.UserInfo) &&
+        string.IsNullOrEmpty(clientId.Fragment);
 
     /// <summary>
     /// Gets or sets the list of permissions to request.
@@ -433,5 +446,5 @@ public sealed class OAuthOptions
     /// </summary>
     /// <returns>A snapshot of the scopes to request, deduplicated using ordinal comparison.</returns>
     public IEnumerable<string> GetRequestedScopes() =>
-        Scopes.Concat(PermissionSets.Select(permissionSet => permissionSet.ToString())).Distinct(StringComparer.Ordinal).ToArray();
+        [.. Scopes.Concat(PermissionSets.Select(permissionSet => permissionSet.ToString())).Distinct(StringComparer.Ordinal)];
 }

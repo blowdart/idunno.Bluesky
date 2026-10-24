@@ -8,11 +8,11 @@ using idunno.AtProto.Authentication;
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Configures the optional fields in a web client's OAuth metadata document.
+/// Configures an OAuth client metadata document.
 /// </summary>
 /// <remarks>
 /// <para>The client ID, optional name and homepage, callback, initial scopes and any client signing key come from the application's <see cref="OAuthOptions"/>.</para>
-/// <para>Native applications are not supported by this document generator.</para>
+/// <para>Web applications are the default. Native applications must explicitly select <see cref="ApplicationType"/> and cannot use client signing keys.</para>
 /// </remarks>
 public sealed class BlueskyOAuthClientMetadataOptions
 {
@@ -22,6 +22,12 @@ public sealed class BlueskyOAuthClientMetadataOptions
     public BlueskyOAuthClientMetadataOptions()
     {
     }
+
+    /// <summary>
+    /// Gets or sets the application type advertised in the metadata document.
+    /// </summary>
+    /// <value>The application type. The default is <see cref="BlueskyOAuthClientApplicationType.Web"/>.</value>
+    public BlueskyOAuthClientApplicationType ApplicationType { get; set; }
 
     /// <summary>
     /// Gets or sets the HTTPS URL of the client logo.
@@ -37,42 +43,67 @@ public sealed class BlueskyOAuthClientMetadataOptions
     public IList<string> AdditionalScopes { get; } = [];
 
     /// <summary>
-    /// Generates a web client's AT Protocol OAuth metadata JSON document.
+    /// Generates an AT Protocol OAuth metadata JSON document.
     /// </summary>
     /// <param name="oAuthOptions">The application's OAuth configuration.</param>
     /// <returns>A JSON document suitable for publishing at the configured client ID.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="oAuthOptions"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">A URL or scope is invalid, the configured scopes do not include <c>atproto</c>, or signing keys share an identifier.</exception>
+    /// <exception cref="ArgumentException">
+    /// A URL, scope or application type is invalid, the configured scopes do not include <c>atproto</c>,
+    /// signing keys share an identifier, or a native client has a signing key or key path.
+    /// </exception>
     /// <remarks>
     /// <para>The document declares DPoP, authorization code and refresh token support.</para>
     /// <para>The callback URL uses <see cref="Uri.ToString"/> to match the redirect URI sent by the OAuth client.</para>
     /// <para>
-    ///   When <see cref="OAuthOptions.ClientSigningKey"/> is set the document describes a confidential client, publishing the
+    ///   For web applications, when <see cref="OAuthOptions.ClientSigningKey"/> is set the document describes a confidential client, publishing the
     ///   public keys of it and of any <see cref="OAuthOptions.AdditionalClientSigningKeys"/> in <c>jwks</c> with
     ///   <c>private_key_jwt</c> client authentication. Otherwise it describes a public client with no client authentication.
     /// </para>
     /// <para>Localhost development client IDs use virtual metadata supplied by the authorization server and cannot be published with this generator.</para>
+    /// <para>
+    /// Native public clients can declare an HTTP callback on the literal loopback IP address <c>127.0.0.1</c> or <c>[::1]</c>,
+    /// but not the hostname <c>localhost</c>. A port may be omitted to allow an ephemeral callback port under RFC 8252.
+    /// This does not permit insecure authorization server or personal data server transport.
+    /// </para>
     /// </remarks>
     public string GenerateJson(OAuthOptions oAuthOptions)
     {
         ArgumentNullException.ThrowIfNull(oAuthOptions);
+        if (ApplicationType is not BlueskyOAuthClientApplicationType.Web and not BlueskyOAuthClientApplicationType.Native)
+        {
+            throw new ArgumentException($"{nameof(ApplicationType)} must be web or native.");
+        }
+
+        bool native = ApplicationType == BlueskyOAuthClientApplicationType.Native;
+        if (native &&
+            (oAuthOptions.ClientSigningKey is not null ||
+             !string.IsNullOrWhiteSpace(oAuthOptions.ClientSigningKeyPath) ||
+             oAuthOptions.AdditionalClientSigningKeys.Count != 0 ||
+             oAuthOptions.AdditionalClientSigningKeyPaths.Any(path => !string.IsNullOrWhiteSpace(path))))
+        {
+            throw new ArgumentException("Native applications must be public clients without client signing keys.", nameof(oAuthOptions));
+        }
+
         oAuthOptions.ValidateClientSigningKeyIds();
 
         if (!Uri.TryCreate(oAuthOptions.ClientId, UriKind.Absolute, out Uri? clientId) ||
             !IsHttpsUrl(clientId) ||
             HasExplicitPort(clientId) ||
-            !string.IsNullOrEmpty(clientId.Fragment))
+            !string.IsNullOrEmpty(clientId.Fragment) ||
+            (native && (clientId.IsLoopback || IsLocalhost(clientId))))
         {
             throw new ArgumentException("The client ID must be an absolute HTTPS URL without credentials, a port or a fragment.", nameof(oAuthOptions));
         }
 
         Uri? returnUri = oAuthOptions.ReturnUri;
         if (returnUri is null ||
-            !IsHttpsUrl(returnUri) ||
+            !(IsHttpsUrl(returnUri) || (native && IsNativeLoopbackCallback(returnUri))) ||
             !string.IsNullOrEmpty(returnUri.Fragment) ||
-            (returnUri.IsDefaultPort && HasExplicitPort(returnUri)))
+            (native && IsLocalhost(returnUri)) ||
+            (returnUri.Scheme == Uri.UriSchemeHttps && returnUri.IsDefaultPort && HasExplicitPort(returnUri)))
         {
-            throw new ArgumentException("The callback must be an absolute HTTPS URL without credentials, a fragment or an explicit default port.", nameof(oAuthOptions));
+            throw new ArgumentException("The callback must use HTTPS or a native public client's HTTP loopback IP, without credentials or a fragment. HTTPS callbacks cannot specify the default port.", nameof(oAuthOptions));
         }
 
         string[] scopes = [.. oAuthOptions.GetRequestedScopes().Concat(AdditionalScopes).Distinct(StringComparer.Ordinal)];
@@ -109,17 +140,18 @@ public sealed class BlueskyOAuthClientMetadataOptions
         ];
 
         OAuthClientMetadata document = new(
-            oAuthOptions.ClientId,
-            [returnUri.ToString()],
-            string.Join(' ', scopes),
-            oAuthOptions.ClientName,
-            oAuthOptions.ClientUri?.OriginalString,
-            LogoUri?.OriginalString,
-            oAuthOptions.TosUri?.OriginalString,
-            oAuthOptions.PolicyUri?.OriginalString,
-            signingKey is null ? "none" : "private_key_jwt",
-            signingKey is null ? null : OAuthClientSigningKey.Algorithm,
-            signingKey is null ? null : new OAuthClientJsonWebKeySet(keys));
+            ClientId: oAuthOptions.ClientId,
+            RedirectUris: [returnUri.ToString()],
+            Scope: string.Join(' ', scopes),
+            ClientName: oAuthOptions.ClientName,
+            ClientUri: oAuthOptions.ClientUri?.OriginalString,
+            LogoUri: LogoUri?.OriginalString,
+            TosUri: oAuthOptions.TosUri?.OriginalString,
+            PolicyUri: oAuthOptions.PolicyUri?.OriginalString,
+            TokenEndpointAuthMethod: signingKey is null ? "none" : "private_key_jwt",
+            TokenEndpointAuthSigningAlgorithm: signingKey is null ? null : OAuthClientSigningKey.Algorithm,
+            JsonWebKeySet: signingKey is null ? null : new OAuthClientJsonWebKeySet(keys),
+            ApplicationType: native ? "native" : "web");
 
         return JsonSerializer.Serialize(document, SourceGenerationContext.Default.OAuthClientMetadata);
     }
@@ -131,6 +163,29 @@ public sealed class BlueskyOAuthClientMetadataOptions
         !string.IsNullOrEmpty(uri.Host) && string.IsNullOrEmpty(uri.UserInfo);
 
     private static bool IsHttpsUrl(Uri uri) => IsWebUrl(uri) && uri.Scheme == Uri.UriSchemeHttps;
+
+    /// <summary>
+    /// Checks the localhost hostname, including its absolute DNS form.
+    /// </summary>
+    private static bool IsLocalhost(Uri uri) =>
+        string.Equals(uri.IdnHost.TrimEnd('.'), "localhost", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Checks that an HTTP callback uses a literal RFC 8252 loopback address.
+    /// </summary>
+    private static bool IsNativeLoopbackCallback(Uri uri)
+    {
+        if (!IsWebUrl(uri) || uri.Scheme != Uri.UriSchemeHttp)
+        {
+            return false;
+        }
+
+        string authority = uri.OriginalString[(uri.OriginalString.IndexOf("://", StringComparison.Ordinal) + 3)..].Split('/', '?', '#')[0];
+
+        return authority is "127.0.0.1" or "[::1]" ||
+            authority.StartsWith("127.0.0.1:", StringComparison.Ordinal) ||
+            authority.StartsWith("[::1]:", StringComparison.Ordinal);
+    }
 
     private static void ValidateHttpsUrl(Uri? uri, string propertyName)
     {

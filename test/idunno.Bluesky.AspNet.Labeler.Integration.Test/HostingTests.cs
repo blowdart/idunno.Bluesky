@@ -330,24 +330,24 @@ public class HostingTests
     private static SignedLabelSnapshot[] Shapes(LabelSigningKey key) =>
     [
         new(key.CreateLabel(
-            source: TestServerBuilder.Issuer,
+            source: TestServerBuilder.s_issuer,
             uri: "did:plc:subject",
             value: "spam",
             creationTimestamp: s_instant)),
         new(key.CreateLabel(
-            source: TestServerBuilder.Issuer,
+            source: TestServerBuilder.s_issuer,
             uri: "did:plc:subject",
             value: "spam",
             creationTimestamp: s_instant.AddSeconds(1))),
         new(key.CreateLabel(
-            source: TestServerBuilder.Issuer,
+            source: TestServerBuilder.s_issuer,
             uri: "at://did:plc:subject/app.bsky.actor.profile/self",
             value: "spam",
             creationTimestamp: s_instant,
             cid: new Cid("bafyreigh5fjr6an3qujvfbm6xmso6jyhido2dguixaeqp3jtcqft2gofba"),
             expiresAt: s_instant.AddSeconds(1))),
         new(key.CreateNegation(
-            source: TestServerBuilder.Issuer,
+            source: TestServerBuilder.s_issuer,
             uri: "did:plc:subject",
             value: "spam",
             creationTimestamp: s_instant.AddSeconds(2)))

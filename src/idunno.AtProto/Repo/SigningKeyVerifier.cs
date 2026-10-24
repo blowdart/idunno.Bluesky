@@ -184,6 +184,11 @@ internal static class SigningKeyVerifier
 internal sealed class SigningKey(string curveOid, byte[] x, byte[] y)
 {
     /// <summary>
+    /// Gets the JOSE algorithm corresponding to this key's curve.
+    /// </summary>
+    internal string JwtAlgorithm => curveOid == "1.3.132.0.10" ? "ES256K" : "ES256";
+
+    /// <summary>
     /// Verifies a label signature, including the protocol's low-S requirement.
     /// </summary>
     internal void VerifyLabel(ReadOnlySpan<byte> signedData, ReadOnlySpan<byte> signature)

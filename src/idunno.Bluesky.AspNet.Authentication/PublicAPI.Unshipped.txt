@@ -1,1 +1,7 @@
 #nullable enable
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType.Native = 1 -> idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType.Web = 0 -> idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.ApplicationType.get -> idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientApplicationType
+idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions.ApplicationType.set -> void
+static Microsoft.AspNetCore.Builder.BlueskyOAuthClientMetadataExtensions.UseBlueskyOAuthClientMetadata(this Microsoft.AspNetCore.Builder.IApplicationBuilder! app, idunno.AtProto.Authentication.OAuthOptions! oAuthOptions, idunno.Bluesky.AspNet.Authentication.BlueskyOAuthClientMetadataOptions! metadataOptions) -> Microsoft.AspNetCore.Builder.IApplicationBuilder!

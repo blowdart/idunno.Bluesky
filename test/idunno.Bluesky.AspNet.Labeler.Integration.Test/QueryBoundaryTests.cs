@@ -88,20 +88,20 @@ public class QueryBoundaryTests
     public void RegistrationRejectsMissingDuplicateAndUnboundedConfiguration()
     {
         ServiceCollection missing = new();
-        Assert.Throws<InvalidOperationException>(() => missing.AddBlueskyLabeler(TestServerBuilder.Issuer));
+        Assert.Throws<InvalidOperationException>(() => missing.AddBlueskyLabeler(TestServerBuilder.s_issuer));
         ServiceCollection services = new();
         services.AddSqliteLabelStorage("Data Source=not-opened-by-registration.db");
         Assert.Throws<ArgumentOutOfRangeException>(() => services.AddBlueskyLabeler(
-            TestServerBuilder.Issuer, new LabelerHostingOptions { QueryTimeout = Timeout.InfiniteTimeSpan }));
+            TestServerBuilder.s_issuer, new LabelerHostingOptions { QueryTimeout = Timeout.InfiniteTimeSpan }));
         Assert.Throws<ArgumentOutOfRangeException>(() => services.AddBlueskyLabeler(
-            TestServerBuilder.Issuer, new LabelerHostingOptions { MaximumSubscriptions = 0 }));
-        services.AddBlueskyLabeler(TestServerBuilder.Issuer);
-        Assert.Throws<InvalidOperationException>(() => services.AddBlueskyLabeler(TestServerBuilder.Issuer));
+            TestServerBuilder.s_issuer, new LabelerHostingOptions { MaximumSubscriptions = 0 }));
+        services.AddBlueskyLabeler(TestServerBuilder.s_issuer);
+        Assert.Throws<InvalidOperationException>(() => services.AddBlueskyLabeler(TestServerBuilder.s_issuer));
     }
 
     /// <summary>Creates immutable signed input without using the clock for any deadline or scheduling assertion.</summary>
     private static SignedLabelSnapshot Signed(LabelSigningKey key, string uri) => new(key.CreateLabel(
-        source: TestServerBuilder.Issuer,
+        source: TestServerBuilder.s_issuer,
         uri: uri,
         value: "spam",
         creationTimestamp: DateTimeOffset.UnixEpoch));

@@ -1,4 +1,19 @@
 #nullable enable
+idunno.AtProto.AtProtoServiceReference
+idunno.AtProto.AtProtoServiceReference.AtProtoServiceReference(idunno.AtProto.Did! did, string! fragment) -> void
+idunno.AtProto.AtProtoServiceReference.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.AtProtoServiceReference.Fragment.get -> string!
+override idunno.AtProto.AtProtoServiceReference.ToString() -> string!
+idunno.AtProto.ServiceAuthentication
+idunno.AtProto.ServiceAuthenticationResult
+idunno.AtProto.ServiceAuthenticationResult.Audience.get -> idunno.AtProto.AtProtoServiceReference!
+idunno.AtProto.ServiceAuthenticationResult.Issuer.get -> idunno.AtProto.Did!
+idunno.AtProto.ServiceAuthenticationResult.TokenId.get -> string!
+idunno.AtProto.ServiceAuthenticationResult.ExpiresAt.get -> System.DateTimeOffset
+idunno.AtProto.ServiceAuthenticationResult.TokenHash.get -> string!
+static idunno.AtProto.ServiceAuthentication.VerifyAsync(string! token, idunno.AtProto.AtProtoServiceReference! audience, idunno.AtProto.Nsid! method, System.Net.Http.HttpClient! httpClient, System.TimeProvider? timeProvider = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.ServiceAuthenticationResult!>!
+idunno.AtProto.AtProtoAgent.GetServiceAuth(System.Uri! service, idunno.AtProto.AtProtoServiceReference! audience, idunno.AtProto.Nsid! lxm, System.TimeSpan? expiry = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.ServiceCredential!>!>!
+static idunno.AtProto.AtProtoServer.GetServiceAuth(idunno.AtProto.AtProtoServiceReference! audience, System.TimeSpan? expiry, idunno.AtProto.Nsid! lxm, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? credentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.ServiceCredential!>!>!
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.StreamBufferCapacity.get -> int
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.StreamBufferCapacity.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetStreamBufferCapacity(int streamBufferCapacity) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!

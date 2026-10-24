@@ -16,11 +16,9 @@ internal sealed record OAuthClientMetadata(
     [property: JsonPropertyName("policy_uri")] string? PolicyUri,
     [property: JsonPropertyName("token_endpoint_auth_method")] string TokenEndpointAuthMethod,
     [property: JsonPropertyName("token_endpoint_auth_signing_alg")] string? TokenEndpointAuthSigningAlgorithm,
-    [property: JsonPropertyName("jwks")] OAuthClientJsonWebKeySet? JsonWebKeySet)
+    [property: JsonPropertyName("jwks")] OAuthClientJsonWebKeySet? JsonWebKeySet,
+    [property: JsonPropertyName("application_type")] string ApplicationType)
 {
-    [JsonPropertyName("application_type")]
-    public string ApplicationType { get; } = "web";
-
     [JsonPropertyName("grant_types")]
     public string[] GrantTypes { get; } = ["authorization_code", "refresh_token"];
 

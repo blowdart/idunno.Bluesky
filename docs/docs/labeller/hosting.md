@@ -3,8 +3,9 @@
 `idunno.Bluesky.AspNet.Labeler` hosts the public, read-only
 `com.atproto.label.queryLabels` HTTP endpoint and `com.atproto.label.subscribeLabels`
 WebSocket endpoint. It uses the [shared persistence](persistence.md) and
-[issuance](issuance.md) services without Ozone. It does not provide an administration
-API, moderation UI, identity provisioning, automatic retention, or a signing-key manager.
+[issuance](issuance.md) services without Ozone. [Administration](administration.md) is a separate,
+explicit opt-in; it does not change these public routes. There is no moderation UI, identity
+provisioning, automatic retention, or signing-key manager.
 
 ## Application setup
 
