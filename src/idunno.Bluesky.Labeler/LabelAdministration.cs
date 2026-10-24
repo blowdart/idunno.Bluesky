@@ -273,6 +273,8 @@ public interface ILabelAdministrationStore
     /// <param name="limit">The maximum count, between one and one thousand.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The audit page or a denial.</returns>
+    /// <remarks><para>Successful reads do not append events to the feed being read. Authorization denials are
+    /// still audited. Pages are live rather than a fixed snapshot; concurrent administrative activity can add events.</para></remarks>
     Task<LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>>> GetAdministrationAuditAsync(
         LabelAdministrationCaller caller,
         long afterSequence = 0,

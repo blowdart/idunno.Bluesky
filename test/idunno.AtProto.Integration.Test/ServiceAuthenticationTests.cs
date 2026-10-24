@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using idunno.AtProto.Authentication;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Time.Testing;
@@ -19,6 +21,56 @@ public class ServiceAuthenticationTests
 {
     private static readonly AtProtoServiceReference s_audience = new(new Did(OtherDid), "atproto_labeler");
     private static readonly Nsid s_method = new("com.atproto.label.applyLabels");
+
+    [Theory]
+    [InlineData(-5)]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(5)]
+    public async Task DefaultAcquisitionLeavesHeadroomForIndependentPdsClock(int clientOffsetSeconds)
+    {
+        FakeTimeProvider pdsClock = CreateClock();
+        FakeTimeProvider clientClock = new(pdsClock.GetUtcNow().AddSeconds(clientOffsetSeconds));
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer pds = TestServerBuilder.CreateServer(TestServerBuilder.DefaultDomainName, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.server.getServiceAuth", context.Request.Path);
+            long expiry = long.Parse(context.Request.Query["exp"].ToString(), System.Globalization.CultureInfo.InvariantCulture);
+            Assert.Equal(clientClock.GetUtcNow().AddSeconds(895).ToUnixTimeSeconds(), expiry);
+            JsonObject claims = Payload(pdsClock);
+            claims["exp"] = expiry;
+            string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", claims.ToJsonString());
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync($$"""{"token":"{{token}}"}""", TestContext.Current.CancellationToken);
+        });
+        using HttpClient pdsClient = pds.CreateClient();
+        AccessCredentials credentials = new(
+            TestServerBuilder.DefaultUri,
+            AuthenticationType.UsernamePassword,
+            JwtBuilder.CreateJwt(new Did(TestDid), timeProvider: clientClock),
+            "refresh-token");
+        AtProtoHttpResult<ServiceCredential> acquired = await AtProtoServer.GetServiceAuthWithTimeProvider(
+            timeProvider: clientClock,
+            audience: s_audience.ToString(),
+            expiry: null,
+            lxm: s_method,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: credentials,
+            httpClient: pdsClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(acquired.Succeeded);
+        using TestServer resolver = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient resolverClient = resolver.CreateClient();
+        ServiceAuthenticationResult verified = await ServiceAuthentication.VerifyAsync(
+            token: acquired.Result.AccessJwt,
+            audience: s_audience,
+            method: s_method,
+            httpClient: resolverClient,
+            timeProvider: pdsClock,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(clientClock.GetUtcNow().AddSeconds(895), verified.ExpiresAt);
+    }
 
     [Theory]
     [InlineData("1.2.840.10045.3.1.7", "ES256", false)]

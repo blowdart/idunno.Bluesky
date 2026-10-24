@@ -34,12 +34,11 @@ public class ServerTests
             long expiry = long.Parse(context.Request.Query["exp"].ToString(), System.Globalization.CultureInfo.InvariantCulture);
             if (useAgent)
             {
-                Assert.Equal((time.GetUtcNow() + TimeSpan.FromMinutes(15)).ToUnixTimeSeconds(), expiry);
+                Assert.Equal(time.GetUtcNow().AddSeconds(895).ToUnixTimeSeconds(), expiry);
             }
             else
             {
-                long expected = (DateTimeOffset.UtcNow + TimeSpan.FromMinutes(15)).ToUnixTimeSeconds();
-                Assert.InRange(expiry, expected - 2, expected + 2);
+                Assert.True(expiry > 0);
             }
             Assert.Equal($"Bearer {jwt}", context.Request.Headers.Authorization);
             context.Response.ContentType = "application/json";
@@ -116,15 +115,17 @@ public class ServerTests
         Assert.Empty(result.Result.AvailableUserDomains);
     }
 
-    [Fact]
-    public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider(bool useDefaultExpiry)
     {
         string domainName = TestServerBuilder.CreateRandomHostName();
         Uri service = new($"https://{domainName}");
         Did audience = new("did:plc:abcdefghijklmnopqrstuvwx");
-        TimeSpan expiry = TimeSpan.FromMinutes(5);
+        TimeSpan? expiry = useDefaultExpiry ? null : TimeSpan.FromMinutes(5);
         FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-        long expectedExpiry = (timeProvider.GetUtcNow() + expiry).ToUnixTimeSeconds();
+        long expectedExpiry = timeProvider.GetUtcNow().AddSeconds(useDefaultExpiry ? 895 : 300).ToUnixTimeSeconds();
 
         TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
         {

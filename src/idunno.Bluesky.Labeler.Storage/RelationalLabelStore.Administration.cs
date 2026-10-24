@@ -552,12 +552,12 @@ internal abstract partial class RelationalLabelStore
             bool allowed = await HasPermissionAsync(
                 connection: connection, transaction: transaction, state: state, administration: team,
                 caller: caller, permission: LabelAdministrationPermission.Inspect, token: cancellationToken).ConfigureAwait(false);
-            await AuditAdministrationAsync(
-                connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
-                localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "audit-read",
-                reason: "Inspect audit.", succeeded: allowed, token: cancellationToken).ConfigureAwait(false);
             if (!allowed)
             {
+                await AuditAdministrationAsync(
+                    connection: connection, transaction: transaction, administration: team, actor: caller.Actor,
+                    localIdentity: caller.LocalIdentity, operationId: string.Empty, action: "audit-read",
+                    reason: "Inspect audit.", succeeded: false, token: cancellationToken).ConfigureAwait(false);
                 return AdminFailure<IReadOnlyList<LabelAdministrationReceipt>>("Inspection requires current team authority.");
             }
 

@@ -195,7 +195,8 @@ Metadata can supply a name/logo, but an authorization server need not display un
 After OAuth establishes the expected account DID and authoritative PDS/authorization-server
 relationship, call `GetServiceAuth` using the new `AtProtoServiceReference` overload. Request the
 **exact** audience `did:web:labeler.example#labeler_admin` and exact `lxm`. `GetServiceAuth` requests
-a 15-minute token by default; specify a different positive `expiry` when acquiring the token. The
+a token expiring in 14 minutes 55 seconds by default, leaving five seconds of client/PDS clock-skew
+headroom below the verifier maximum; specify a different positive `expiry` when acquiring the token. The
 labeler accepts up to 15 minutes by default; set `maximumServiceTokenLifetime` when registering
 administration to change that limit. This is currently a registration API setting, not an
 `appsettings` binding; binding it from host configuration is planned for a later configuration-file
@@ -242,6 +243,10 @@ response below the local transport's 1 MiB frame limit even when reasons require
 read queries may include `reason`. Both HTTP and local read commands use
 `Administrative inspection.` when the reason is omitted or blank; mutation commands still require
 an explicit nonblank reason.
+Successful audit reads do not append audit events to their own feed, so a traversal can reach an
+empty page when other administrative activity is idle, including with `limit=1`. Denied audit reads
+remain durably audited. Pages are live, not a fixed snapshot; concurrent administrative activity can
+add new events while a traversal is in progress.
 Responses contain `succeeded`, classified `error`/`message`, and the applicable bounded result.
 HTTPS distinguishes invalid authentication (401), insufficient live authority (403), malformed
 input (400), and dependency/audit or response-size unavailability (503). Local responses use the

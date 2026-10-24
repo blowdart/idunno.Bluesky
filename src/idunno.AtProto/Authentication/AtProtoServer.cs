@@ -14,7 +14,7 @@ namespace idunno.AtProto;
 
 public static partial class AtProtoServer
 {
-    internal static readonly TimeSpan DefaultServiceAuthExpiry = TimeSpan.FromMinutes(15);
+    internal static readonly TimeSpan DefaultServiceAuthExpiry = TimeSpan.FromMinutes(15) - TimeSpan.FromSeconds(5);
 
     // https://docs.bsky.app/docs/api/com-atproto-server-create-session
     private const string CreateSessionEndpoint = "/xrpc/com.atproto.server.createSession";
@@ -276,7 +276,7 @@ public static partial class AtProtoServer
     /// Get access credentials on behalf of the requesting DID for the requested <paramref name="audience"/>.
     /// </summary>
     /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
-    /// <param name="expiry">The requested token lifetime. The default is 15 minutes.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 14 minutes 55 seconds, leaving five seconds of clock-skew headroom below a 15-minute verifier maximum.</param>
     /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
     /// <param name="service">The service to get a signed token from.</param>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>

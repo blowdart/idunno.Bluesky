@@ -2262,7 +2262,7 @@ public partial class AtProtoAgent
     /// </summary>
     /// <param name="service">The server to request the service authentication from.</param>
     /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
-    /// <param name="expiry">The requested token lifetime. The default is 15 minutes.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 14 minutes 55 seconds, leaving five seconds of clock-skew headroom below a 15-minute verifier maximum.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -2303,7 +2303,7 @@ public partial class AtProtoAgent
     /// <param name="service">The server to request the service authentication from.</param>
     /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
     /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
-    /// <param name="expiry">The requested token lifetime. The default is 15 minutes.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 14 minutes 55 seconds, leaving five seconds of clock-skew headroom below a 15-minute verifier maximum.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">

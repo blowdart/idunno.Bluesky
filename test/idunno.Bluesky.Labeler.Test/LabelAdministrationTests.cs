@@ -393,6 +393,53 @@ public class LabelAdministrationTests
         await AssertTokenExpiryIndexAsync(fixture);
     }
 
+    [Theory]
+    [InlineData("sqlite", 1)]
+    [InlineData("postgresql", 1)]
+    [InlineData("mysql", 1)]
+    [InlineData("sqlite", 2)]
+    [InlineData("postgresql", 2)]
+    [InlineData("mysql", 2)]
+    public async Task AuditTraversalTerminatesWithoutGeneratingEntriesAndStillAuditsDenials(string engine, int limit)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore store = (ILabelAdministrationStore)fixture.Store;
+        LabelAdministrationCaller administrator = await BootstrapAsync(store);
+        await EnrollAndBindAsync(store, administrator, LabelTeamRole.Viewer);
+        LabelAdministrationCaller member = (await store.AuthenticateLocalAsync("uid:1", TestContext.Current.CancellationToken)).Result!;
+        Assert.True((await store.ChangeTeamAsync(
+            administrator, Change(LabelTeamAction.Suspend, "suspend"), TestContext.Current.CancellationToken)).Succeeded);
+        Assert.False((await store.GetAdministrationAuditAsync(
+            member, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        IReadOnlyList<LabelAdministrationReceipt> initial = (await store.GetAdministrationAuditAsync(
+            administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+        Assert.Contains(initial, receipt => !receipt.Succeeded && receipt.Action == "audit-read" && receipt.Actor == s_member);
+        List<LabelAdministrationReceipt> traversal = [];
+        long after = 0;
+        bool reachedEnd = false;
+        for (int pageNumber = 0; pageNumber <= initial.Count; pageNumber++)
+        {
+            LabelServiceResult<IReadOnlyList<LabelAdministrationReceipt>> page = await store.GetAdministrationAuditAsync(
+                caller: administrator, afterSequence: after, limit: limit, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.True(page.Succeeded);
+            if (page.Result.Count == 0)
+            {
+                reachedEnd = true;
+                break;
+            }
+
+            traversal.AddRange(page.Result);
+            after = page.Result[^1].Sequence;
+        }
+
+        Assert.True(reachedEnd);
+        Assert.Equal(initial, traversal);
+        Assert.Empty((await store.GetAdministrationAuditAsync(
+            caller: administrator, afterSequence: after, limit: limit, cancellationToken: TestContext.Current.CancellationToken)).Result!);
+        Assert.Equal(initial, (await store.GetAdministrationAuditAsync(
+            administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!);
+    }
+
     /// <summary>Checks provider metadata for an expiry-leading cleanup index, including the indexed column.</summary>
     private static async Task AssertTokenExpiryIndexAsync(StoreFixture fixture)
     {
