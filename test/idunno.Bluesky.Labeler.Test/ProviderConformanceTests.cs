@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections;
 using System.Data.Common;
 using System.Text;
 using System.Text.Json;
@@ -9,8 +10,8 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
@@ -63,6 +64,173 @@ public class ProviderConformanceTests
                 restored.SignedLabel.Label.Verify(Document(key));
                 Assert.Equal(receipt, await restarted.GetReceiptAsync(id, TestContext.Current.CancellationToken));
             }
+        }
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task ReplacesRetainedLabelSignaturesWithoutChangingFieldsOrSequences(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot original = Sign(originalKey);
+        LabelAppendReceipt receipt = await fixture.Store.AppendAsync(
+            "key-rotation",
+            [original],
+            cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        LabelStoreState before = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel stored = Assert.Single((await fixture.Store.ReplayAsync(
+            before.StreamId,
+            0,
+            receipt.LastSequence,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+
+        SignedLabelSnapshot replacement = new(replacementKey.Sign(stored.SignedLabel.Label));
+        await fixture.Store.ReplaceSignaturesAsync(
+            [new StoredLabel(stored.Sequence, replacement)],
+            TestContext.Current.CancellationToken);
+
+        StoredLabel updated = Assert.Single((await fixture.Store.ReplayAsync(
+            before.StreamId,
+            0,
+            receipt.LastSequence,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(stored.Sequence, updated.Sequence);
+        Assert.Equal(stored.SignedLabel.GetCanonicalUnsignedBytes(), updated.SignedLabel.GetCanonicalUnsignedBytes());
+        Assert.Equal(
+            stored.SignedLabel.Label.CreationTimestamp,
+            updated.SignedLabel.Label.CreationTimestamp);
+        updated.SignedLabel.Label.Verify(Document(replacementKey));
+
+        LabelStoreState after = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        Assert.True(after.Revision > before.Revision);
+        Assert.Equal(before.IssuedThrough, after.IssuedThrough);
+        Assert.Equal(before.PublishedThrough, after.PublishedThrough);
+
+        SignedLabelSnapshot changed = new(replacementKey.CreateLabel(
+            StoreFixture.Issuer,
+            "did:plc:subject",
+            "changed",
+            s_instant));
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplaceSignaturesAsync(
+            [new StoredLabel(stored.Sequence, changed)],
+            TestContext.Current.CancellationToken));
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task SignatureReplacementUsesTheValidatedSnapshotWhenCallerChangesTheBatch(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        SignedLabelSnapshot published = Sign(originalKey);
+        SignedLabelSnapshot unpublished = Sign(originalKey, "did:plc:pending");
+        await fixture.Store.AppendAsync("published", [published], cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("pending", [unpublished], cancellationToken: TestContext.Current.CancellationToken);
+        StoredLabel expected = new(1, new SignedLabelSnapshot(replacementKey.Sign(published.Label)));
+        StoredLabel forbidden = new(2, new SignedLabelSnapshot(replacementKey.Sign(unpublished.Label)));
+        MutatingReplacementBatch input = new(expected, forbidden);
+
+        await fixture.Store.ReplaceSignaturesAsync(input, TestContext.Current.CancellationToken);
+
+        Assert.Equal(forbidden, input.Current);
+        LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel updated = Assert.Single((await fixture.Store.ReplayAsync(
+            state.StreamId,
+            0,
+            1,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(expected.SignedLabel.GetJsonBytes(), updated.SignedLabel.GetJsonBytes());
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        StoredLabel pending = Assert.Single((await fixture.Store.ReplayAsync(
+            state.StreamId,
+            1,
+            2,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        Assert.Equal(unpublished.GetJsonBytes(), pending.SignedLabel.GetJsonBytes());
+    }
+
+    /// <summary>Changes the caller-owned batch immediately after its first read, without relying on task timing.</summary>
+    private sealed class MutatingReplacementBatch(StoredLabel initial, StoredLabel replacement) : IReadOnlyList<StoredLabel>
+    {
+        internal StoredLabel Current { get; private set; } = initial;
+
+        public int Count => 1;
+
+        public StoredLabel this[int index]
+        {
+            get
+            {
+                ArgumentOutOfRangeException.ThrowIfNotEqual(index, 0);
+                StoredLabel current = Current;
+                Current = replacement;
+                return current;
+            }
+        }
+
+        public IEnumerator<StoredLabel> GetEnumerator()
+        {
+            yield return this[0];
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task ResignsPublishedHistoryInResumableBatches(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        LabelAppendReceipt receipt = await fixture.Store.AppendAsync(
+            "rotation-batch",
+            [Sign(originalKey), Sign(originalKey, "did:plc:second")],
+            cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+
+        LabelSigningKeyRotationProgress first = await LabelSigningKeyRotation.ResignNextBatchAsync(
+            fixture.Store,
+            replacementKey,
+            state.StreamId,
+            afterSequence: 0,
+            throughSequence: receipt.LastSequence,
+            batchSize: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, first.LastSequence);
+        Assert.False(first.IsComplete);
+
+        LabelSigningKeyRotationProgress second = await LabelSigningKeyRotation.ResignNextBatchAsync(
+            fixture.Store,
+            replacementKey,
+            first.StreamId,
+            afterSequence: first.LastSequence,
+            throughSequence: first.Through,
+            batchSize: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(receipt.LastSequence, second.LastSequence);
+        Assert.True(second.IsComplete);
+
+        LabelPage page = await fixture.Store.ReplayAsync(
+            state.StreamId,
+            0,
+            receipt.LastSequence,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(2, page.Labels.Count);
+        foreach (StoredLabel label in page.Labels)
+        {
+            label.SignedLabel.Label.Verify(Document(replacementKey));
         }
     }
 
@@ -195,7 +363,7 @@ public class ProviderConformanceTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
         int count = limit * 2 + 1;
-        await fixture.Store.AppendAsync("pages", Enumerable.Repeat(signed, count).ToArray(),
+        await fixture.Store.AppendAsync("pages", [.. Enumerable.Repeat(signed, count)],
             cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.PublishAsync(1000, TestContext.Current.CancellationToken);
         string? cursor = null;
@@ -206,8 +374,11 @@ public class ProviderConformanceTests
                 cancellationToken: TestContext.Current.CancellationToken);
             LabelPage replay = await fixture.Store.ReplayAsync(state.StreamId, after, state.PublishedThrough, limit,
                 TestContext.Current.CancellationToken);
-            long[] expected = Enumerable.Range((int)after + 1, Math.Min(limit, count - (int)after))
-                .Select(sequence => (long)sequence).ToArray();
+            long[] expected =
+            [
+                .. Enumerable.Range((int)after + 1, Math.Min(limit, count - (int)after))
+                    .Select(sequence => (long)sequence)
+            ];
             Assert.Equal(expected, query.Labels.Select(label => label.Sequence));
             Assert.Equal(expected, replay.Labels.Select(label => label.Sequence));
             Assert.Equal(state.PublishedThrough, query.Through);
@@ -251,12 +422,15 @@ public class ProviderConformanceTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot signed = Sign(key);
         TaskCompletionSource start = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        ILabelStore[] stores = Enumerable.Range(0, 12).Select(_ => fixture.NewStore()).ToArray();
-        Task<LabelAppendReceipt>[] tasks = Enumerable.Range(0, 12).Select(i => Task.Run(async () =>
-        {
-            await start.Task;
-            return await stores[i].AppendAsync("op-" + (i % 6), [signed]);
-        })).ToArray();
+        ILabelStore[] stores = [.. Enumerable.Range(0, 12).Select(_ => fixture.NewStore())];
+        Task<LabelAppendReceipt>[] tasks =
+        [
+            .. Enumerable.Range(0, 12).Select(i => Task.Run(async () =>
+            {
+                await start.Task;
+                return await stores[i].AppendAsync("op-" + (i % 6), [signed]);
+            }))
+        ];
         start.SetResult();
         LabelAppendReceipt[] receipts = await Task.WhenAll(tasks);
         Assert.Equal(6, receipts.Distinct().Count());
@@ -456,7 +630,7 @@ public class ProviderConformanceTests
         await fixture.ExecuteAsync(await File.ReadAllTextAsync(
             Path.Combine(FindRoot(), "src", "idunno.Bluesky.Labeler." + package, "schema.sql"), TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
-        ILabelStore[] stores = Enumerable.Range(0, 4).Select(_ => fixture.NewStore()).ToArray();
+        ILabelStore[] stores = [.. Enumerable.Range(0, 4).Select(_ => fixture.NewStore())];
         await Task.WhenAll(stores.Select(store => Task.Run(() => store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken))));
         LabelStoreState[] states = await Task.WhenAll(stores.Select(store => store.GetStateAsync(TestContext.Current.CancellationToken)));
         Assert.Single(states.Distinct());
@@ -479,7 +653,7 @@ public class ProviderConformanceTests
         await Assert.ThrowsAnyAsync<ArgumentException>(() => fixture.Store.AppendAsync("\ud800", [signed], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.AppendAsync("decision\0retry", [signed], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.GetReceiptAsync("decision\0retry", TestContext.Current.CancellationToken));
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.AppendAsync("oversized", Enumerable.Repeat(signed, 1001).ToArray(), cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.AppendAsync("oversized", [.. Enumerable.Repeat(signed, 1001)], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentException>(() => fixture.Store.QueryAsync(["a*b"], cancellationToken: TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => fixture.Store.PublishAsync(0, TestContext.Current.CancellationToken));
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplayAsync(before.StreamId, -1, 0, cancellationToken: TestContext.Current.CancellationToken));
@@ -540,7 +714,7 @@ public class ProviderConformanceTests
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         SignedLabelSnapshot unmatched = Sign(key);
-        await fixture.Store.AppendAsync("chunk", Enumerable.Repeat(unmatched, 1000).ToArray(), cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("chunk", [.. Enumerable.Repeat(unmatched, 1000)], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.AppendAsync("match", [Sign(key, "did:plc:target")], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.PublishAsync(1000, TestContext.Current.CancellationToken);
         Assert.Empty((await fixture.Store.QueryAsync(["did:plc:target"], cancellationToken: TestContext.Current.CancellationToken)).Labels);

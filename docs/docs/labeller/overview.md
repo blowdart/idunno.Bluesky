@@ -90,6 +90,55 @@ in its DID document, and use the `#atproto_labeler` service entry to point consu
 Keep the private key somewhere safe, separate from the label database and from repository or OAuth keys.
 Sort out backups and recovery before you have labels depending on that key.
 
+For a `did:web` identity, publish these as additions to the existing DID document: merge the generated
+`verificationMethod` and `service` entries into their arrays, preserving every other document property
+and entry. The `#atproto_labeler` service endpoint is an HTTPS origin without a path, query, or fragment.
+Only the public multibase key belongs in the document; keep the encrypted private key and its backup
+under separate access controls. `LabelSigningKeyFile` creates key files and backups with access restricted
+to the current user: a protected ACL granting only the current Windows identity full control, or Unix mode
+`0600`. Windows creation fails if those ACL rules cannot be enforced. Protect the containing directory
+against replacement or deletion by other users, and arrange access explicitly if the service runs under
+a different identity from the operator creating the key. After publishing, resolve the DID document and verify that it contains
+exactly the expected label-key and labeler-service entries. When changing the endpoint, replace only the
+service entry identified by `#atproto_labeler`, not the complete DID document, and verify the resolved result again.
+
+For a `did:plc` identity, do not edit or upload a DID document. The account's PDS must authorize and sign
+a PLC operation that adds the label verification method and service while preserving the current DID data;
+submit that signed operation through the PLC workflow, then resolve the DID and verify publication. This
+uses the account's PLC rotation authority, not the PDS repository signing key or the local label-signing key.
+`BlueskyAgent.RequestPlcOperationSignature()` requests the optional email authorization code, and
+`BlueskyAgent.UpdatePlcLabelerIdentity()` asks the authenticated PDS to sign and submit the update.
+It merges key and service maps from the latest non-nullified PLC audit-log operation, then requires the
+signed operation's `prev` to match that snapshot. If another update wins the race, it returns
+`SigningFailed` with `PlcStateChanged` without submitting or returning the unsafe signed operation.
+Retry the update to read fresh state, requesting another authorization code if the PDS requires one;
+authorization codes are not automatically reused.
+
+Submission or verification transport failures, response-body IO failures, and timeouts return the signed operation with a
+`SubmissionFailed` or `VerificationFailed` stage and recovery guidance. Retain that operation and inspect
+the resolved DID and PLC state before retrying so the operator can determine whether publication already
+succeeded. Explicit caller cancellation still throws. A self-hosted PDS
+must expose these identity endpoints; otherwise use an operator-controlled PLC tool with an authorized
+rotation key.
+
+Publication verification rejects null verification-method or service entries and missing or empty entry
+identifiers, including unrelated entries. `LabelerIdentityDocument.VerifyPublication()` reports these as
+`InvalidDataException`; PLC verification after submission returns `VerificationFailed` with the signed
+operation and recovery guidance instead of treating a malformed document as verified.
+Verification also rejects published labeler endpoints containing credentials or fragments, even when
+URI equality would otherwise match the expected HTTPS origin.
+Missing or null labeler service endpoints are publication mismatches and retain the same verification
+failure and PLC recovery behavior.
+If a post-submission DID response has a null document identifier, the update also returns
+`VerificationFailed` with the signed operation so the operator can recover.
+
+During key rotation, pause issuance and publish pending labels, then publish and verify the replacement key
+before re-signing existing retained labels in bounded batches with `LabelSigningKeyRotation`. Persist each
+returned sequence checkpoint for recovery. The helper preserves the original `cts`, signed fields and stream
+sequence; it does not emit replacement events. A current DID document contains only the currently published
+label key, so it cannot by itself validate historical signatures made by a key that has been removed. Labels
+outside retained local history cannot be re-signed by the helper, and consumers may not retain prior keys.
+
 Next, publish an `app.bsky.labeler.service` declaration record. This describes the labels you offer
 and your labelling policy, including supported subject types and report reasons where applicable.
 For the Bureau, this is where you explain the `beans` label.

@@ -68,8 +68,22 @@ bytes. Neither path regenerates signatures, filters expiry, invents negations, o
 uncommitted labels. Raw snapshots accepted with mixed-case JSON property names use the
 protocol's canonical field names in CBOR without changing signed values or optional-field
 presence. CID slot indexing also recognizes those property names without normalizing CID text.
-Unlike Ozone's delivery-time key repair, changing a signing key does not
-re-sign retained labels: retain their verification keys and plan rotation outside this host.
+Unlike Ozone's delivery-time key repair, this host deliberately does not re-sign labels
+when delivering them. This keeps private signing keys out of the public-facing serving
+tier and lets multiple hosts deliver stored signatures without coordinating signing-key
+changes or signature caches. Delivery-time repair would make rotation easier for operators,
+but would require signing-key access during requests and would only repair newly delivered
+copies, not labels already cached by consumers.
+
+Changing a signing key therefore does not automatically re-sign retained labels. Use
+`LabelSigningKeyRotation` as an explicit maintenance operation, following the
+[key rotation guidance](overview.md#2-set-things-up-and-announce-that-youre-open).
+It preserves signed fields, creation timestamps and stream sequences without emitting
+replacement events. Retain old public verification keys for historical signatures;
+archiving them alone does not ensure consumers can discover or trust them through the
+current DID document. This separation is between serving and maintenance, not a requirement
+to implement rotation outside the SDK.
+
 Use lexicon-valid inputs at issuance. Some legacy representations accepted by the SDK,
 such as uppercase base32 CID text, are rejected by stricter official-client validators.
 Distribution cannot normalize already-signed fields without invalidating their signatures.

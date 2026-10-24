@@ -10,7 +10,9 @@ using Microsoft.Extensions.Logging;
 
 using MySqlConnector;
 
+#pragma warning disable IDE0130 // Providers share the labeler namespace across separate packages.
 namespace idunno.Bluesky.Labeler;
+#pragma warning restore IDE0130
 
 /// <summary>Registers durable MySQL label persistence.</summary>
 public static class MySqlLabelStorageExtensions

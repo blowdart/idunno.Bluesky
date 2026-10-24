@@ -9,7 +9,9 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable IDE0130 // Providers share the labeler namespace across separate packages.
 namespace idunno.Bluesky.Labeler;
+#pragma warning restore IDE0130
 
 /// <summary>Registers durable SQLite label persistence.</summary>
 public static class SqliteLabelStorageExtensions

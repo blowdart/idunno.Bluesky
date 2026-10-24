@@ -11,7 +11,9 @@ using Microsoft.Extensions.Logging;
 
 using MySqlConnector;
 
+#pragma warning disable IDE0130 // Providers share the labeler namespace across separate packages.
 namespace idunno.Bluesky.Labeler;
+#pragma warning restore IDE0130
 
 /// <summary>Applies MySQL durability checks and row locking to shared decision storage.</summary>
 /// <remarks><para>MySQL DDL commits independently. Setup holds a schema lock and repeats additive

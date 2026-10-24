@@ -53,7 +53,7 @@ public static class LabelIssuanceServiceCollectionExtensions
     /// <summary>Rejects missing or ambiguous dependencies instead of silently selecting a registration.</summary>
     private static T Single<T>(IServiceProvider provider) where T : class
     {
-        T[] instances = provider.GetServices<T>().ToArray();
+        T[] instances = [.. provider.GetServices<T>()];
         return instances.Length == 1 ? instances[0] :
             throw new InvalidOperationException($"Register exactly one {typeof(T).Name}.");
     }

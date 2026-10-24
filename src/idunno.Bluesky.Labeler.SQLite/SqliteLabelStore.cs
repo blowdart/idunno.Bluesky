@@ -9,7 +9,9 @@ using idunno.Bluesky.Labeler.Storage;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable IDE0130 // Providers share the labeler namespace across separate packages.
 namespace idunno.Bluesky.Labeler;
+#pragma warning restore IDE0130
 
 /// <summary>Applies SQLite durability settings and immediate writer transactions to shared decision storage.</summary>
 /// <remarks><para>The immediate transaction is the cross-process stream lock. Schema setup and additive

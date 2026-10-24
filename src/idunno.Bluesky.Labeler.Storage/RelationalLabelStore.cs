@@ -481,7 +481,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
     {
         OperationId(operationId);
         ArgumentNullException.ThrowIfNull(labels);
-        SignedLabelSnapshot[] batch = labels.ToArray();
+        SignedLabelSnapshot[] batch = [.. labels];
         ArgumentOutOfRangeException.ThrowIfGreaterThan(batch.Length, 1000);
         if (batch.Any(label => label is null) || (batch.Length == 0 && retirementThrough is null))
         {
@@ -605,6 +605,89 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         }
 
         return receipt;
+    }
+
+    /// <summary>Re-signs existing events atomically while refusing changes to their canonical signed payloads.</summary>
+    public Task ReplaceSignaturesAsync(
+        IReadOnlyList<StoredLabel> labels,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(labels);
+        StoredLabel[] batch = [.. labels];
+        if (batch.Length > 1_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(labels), "At most 1,000 signatures can be replaced in one batch.");
+        }
+
+        long previousSequence = 0;
+        foreach (StoredLabel label in batch)
+        {
+            ArgumentNullException.ThrowIfNull(label);
+            ArgumentNullException.ThrowIfNull(label.SignedLabel);
+            if (label.Sequence <= previousSequence)
+            {
+                throw new ArgumentException("Replacement labels must have strictly increasing sequence positions.", nameof(labels));
+            }
+
+            previousSequence = label.Sequence;
+        }
+
+        if (batch.Length == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(
+            operation: "replace-signatures",
+            action: async (connection, transaction, state) =>
+            {
+                if (state.Phase != LabelerLifecyclePhase.Active || previousSequence > state.PublishedThrough)
+                {
+                    throw new InvalidOperationException("Only published labels in an active labeler can have their signatures replaced.");
+                }
+
+                foreach (StoredLabel label in batch)
+                {
+                    Label unsigned = label.SignedLabel.Label;
+                    if (!string.Equals(unsigned.Source.Value, state.Issuer, StringComparison.Ordinal))
+                    {
+                        throw new InvalidDataException("A replacement label has the wrong issuer.");
+                    }
+
+                    object? storedPayload = await ScalarAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "SELECT payload FROM label_entries WHERE seq=@seq",
+                        token: cancellationToken,
+                        ("@seq", label.Sequence)).ConfigureAwait(false);
+                    if (storedPayload is not byte[] payload)
+                    {
+                        throw new InvalidOperationException("A replacement sequence does not exist in retained history.");
+                    }
+
+                    if (!payload.AsSpan().SequenceEqual(label.SignedLabel.GetCanonicalUnsignedBytes()))
+                    {
+                        throw new InvalidDataException("A replacement changes signed label fields.");
+                    }
+
+                    await ExecuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "UPDATE label_entries SET signed_json=@json WHERE seq=@seq",
+                        token: cancellationToken,
+                        ("@json", label.SignedLabel.GetJsonBytes()),
+                        ("@seq", label.Sequence)).ConfigureAwait(false);
+                }
+
+                LabelStoreState next = state with { Revision = checked(state.Revision + 1) };
+                await SaveAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    state: next,
+                    token: cancellationToken).ConfigureAwait(false);
+                return true;
+            },
+            token: cancellationToken);
     }
 
     public Task<LabelAppendReceipt?> GetReceiptAsync(string operationId, CancellationToken cancellationToken = default)
@@ -1089,8 +1172,8 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         ArgumentOutOfRangeException.ThrowIfGreaterThan(scanLimit, 1000);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(uriPatterns.Count, 100);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(sources.Count, 100);
-        string[] patterns = uriPatterns.ToArray();
-        Did[] issuers = sources.ToArray();
+        string[] patterns = [.. uriPatterns];
+        Did[] issuers = [.. sources];
         foreach (string pattern in patterns)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(pattern);
@@ -1310,7 +1393,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
         Limit(limit);
         ArgumentNullException.ThrowIfNull(uriPatterns);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(uriPatterns.Count, 100);
-        string[] patterns = uriPatterns.ToArray();
+        string[] patterns = [.. uriPatterns];
         foreach (string pattern in patterns)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(pattern);

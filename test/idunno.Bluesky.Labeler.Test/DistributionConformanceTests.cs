@@ -142,7 +142,7 @@ public class DistributionConformanceTests
             reference[(label.Source.Value, label.Uri, label.Cid?.ToString() ?? string.Empty, label.Value)] = i;
         }
 
-        int[] expected = reference.Values.Order().ToArray();
+        int[] expected = [.. reference.Values.Order()];
         Assert.Equal(expected.Select(index => index + 1L), actual.Select(label => label.Sequence));
         for (int i = 0; i < expected.Length; i++)
         {
@@ -275,7 +275,7 @@ public class DistributionConformanceTests
             uri: Subject,
             value: "spam",
             creationTimestamp: s_instant));
-        await fixture.Store.AppendAsync("batch", Enumerable.Repeat(signed, 1000).ToArray(), cancellationToken: token);
+        await fixture.Store.AppendAsync("batch", [.. Enumerable.Repeat(signed, 1000)], cancellationToken: token);
         await fixture.Store.AppendAsync("replacement", [signed], cancellationToken: token);
         await fixture.Store.PublishAsync(1000, token);
         LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: token);

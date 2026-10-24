@@ -73,6 +73,22 @@ public interface ILabelStore : ILabelDistributionStore
         long? retirementThrough = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Replaces signatures for a bounded set of existing labels without changing their signed fields or sequence positions.</summary>
+    /// <param name="labels">The ordered stored labels containing replacement signatures and their original sequences.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task representing the atomic signature replacement.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="labels"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The batch is not strictly ordered or contains invalid sequence positions.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The batch contains more than 1,000 labels.</exception>
+    /// <exception cref="InvalidOperationException">A sequence does not exist or is not yet published.</exception>
+    /// <exception cref="InvalidDataException">A replacement changes signed fields or has a different issuer.</exception>
+    /// <remarks>
+    /// <para>Use this after pausing issuance and verifying that the replacement public key is published. It changes only signatures; each label's timestamp, other signed fields and sequence remain unchanged. Submit bounded batches and persist the returned batch boundary externally so a rotation can resume after interruption.</para>
+    /// </remarks>
+    Task ReplaceSignaturesAsync(
+        IReadOnlyList<StoredLabel> labels,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Starts a caller-selected waiting period after retirement enumeration and publication finish, allowing
     /// downstream consumers time to retrieve negations before retirement can complete.

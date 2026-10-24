@@ -21,7 +21,7 @@ internal sealed class TestLabelIssuanceAuthorizer : ILabelIssuanceAuthorizer
     internal Func<LabelAuthorizationRequest, string> GrantVersion { get; set; } = _ => "test-grant-v1";
 
     /// <summary>Gets a stable observation of checks for assertions about admission and recovered scope.</summary>
-    internal IReadOnlyCollection<LabelAuthorizationRequest> Requests => _requests.ToArray();
+    internal IReadOnlyCollection<LabelAuthorizationRequest> Requests => [.. _requests];
 
     /// <summary>Records each admission or resolved-scope check before returning the configured denial or versioned grant.</summary>
     public Task<LabelServiceResult<LabelAuthorizationGrant>> AuthorizeAsync(
