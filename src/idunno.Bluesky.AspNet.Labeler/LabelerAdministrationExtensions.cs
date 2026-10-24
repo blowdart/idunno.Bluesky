@@ -99,6 +99,11 @@ public static class LabelerAdministrationExtensions
     /// <summary>Checks whether the connection peer belongs to the configured forwarded-header trust set.</summary>
     private static bool IsTrustedProxy(System.Net.IPAddress address, ForwardedHeadersOptions options)
     {
+        if (address.IsIPv4MappedToIPv6 && IsTrustedProxy(address.MapToIPv4(), options))
+        {
+            return true;
+        }
+
         if (options.KnownProxies.Contains(address))
         {
             return true;

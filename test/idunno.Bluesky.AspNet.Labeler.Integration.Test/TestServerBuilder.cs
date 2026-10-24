@@ -97,8 +97,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                 options.KnownProxies.Add(IPAddress.Loopback);
+                options.KnownProxies.Add(IPAddress.IPv6Loopback);
                 options.KnownProxies.Add(IPAddress.Parse("192.0.2.1"));
                 options.KnownProxies.Add(IPAddress.Parse("192.0.2.2"));
+#if NET10_0_OR_GREATER
+                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("203.0.113.0/24"));
+#else
+                options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("203.0.113.0"), 24));
+#endif
                 options.ForwardLimit = 2;
             });
         }

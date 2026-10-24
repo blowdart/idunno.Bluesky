@@ -17,6 +17,7 @@ using idunno.Bluesky.Labeler;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
@@ -141,6 +142,111 @@ public class AdministrationTests
         Assert.False((await other.AuthenticateServiceAsync(evidence, TestContext.Current.CancellationToken)).Succeeded);
     }
 
+    [Theory]
+    [InlineData("::ffff:192.0.2.1", HttpStatusCode.OK)]
+    [InlineData("203.0.113.10", HttpStatusCode.OK)]
+    [InlineData("::ffff:203.0.113.10", HttpStatusCode.OK)]
+    [InlineData("::1", HttpStatusCode.OK)]
+    [InlineData("::ffff:192.0.2.99", HttpStatusCode.Forbidden)]
+    [InlineData("2001:db8::1", HttpStatusCode.Forbidden)]
+    public async Task ProxyTrustPreservesIpv6AndRecognizesMappedIpv4(string peer, HttpStatusCode expected)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        using HttpRequestMessage request = new(HttpMethod.Get, "http://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
+        request.Headers.TryAddWithoutValidation("X-Test-Remote-IP", peer);
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
+        request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token(key, now));
+
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(expected, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("issueLabel", "valid", HttpStatusCode.OK, null)]
+    [InlineData("enroll", "valid", HttpStatusCode.OK, null)]
+    [InlineData("changeTeam", "valid", HttpStatusCode.OK, null)]
+    [InlineData("issueLabel", "viewer", HttpStatusCode.Forbidden, "Unauthorized")]
+    [InlineData("issueLabel", "malformed", HttpStatusCode.BadRequest, "InvalidRequest")]
+    [InlineData("issueLabel", "oversized", HttpStatusCode.BadRequest, "InvalidRequest")]
+    [InlineData("issueLabel", "mismatched", HttpStatusCode.BadRequest, "InvalidRequest")]
+    [InlineData("issueLabel", "null", HttpStatusCode.BadRequest, "InvalidRequest")]
+    [InlineData("issueLabel", "no-reason", HttpStatusCode.BadRequest, "InvalidRequest")]
+    public async Task RemotePostsEnforceAuthorizationAndAuditRejectedBodies(
+        string method,
+        string kind,
+        HttpStatusCode expected,
+        string? expectedError)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        Did viewer = new("did:plc:viewer");
+        Assert.True((await new LabelTeamService(team, identity).EnrollAsync(
+            caller: administrator, member: viewer, role: LabelTeamRole.Viewer,
+            operationId: "setup-viewer", reason: "Set up viewer.", cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        string body = method switch
+        {
+            "enroll" => """{"operationId":"post-operation","target":"did:plc:new-member","role":0,"reason":"Enroll member."}""",
+            "changeTeam" => """{"operationId":"post-operation","target":"did:plc:viewer","action":1,"role":1,"reason":"Promote viewer."}""",
+            _ => """{"operationId":"post-operation","target":"did:plc:subject","value":"spam","reason":"Issue a label."}"""
+        };
+        body = kind switch
+        {
+            "malformed" => "{",
+            "oversized" => new string(' ', AdministrationWire.MaximumRequestBytes + 1),
+            "mismatched" => """{"method":"enroll","operationId":"post-operation","target":"did:plc:new-member","reason":"Must not dispatch."}""",
+            "null" => "null",
+            "no-reason" => """{"operationId":"post-operation","target":"did:plc:subject","value":"spam"}""",
+            _ => body
+        };
+        using HttpRequestMessage request = new(HttpMethod.Post, "http://localhost/xrpc/dev.idunno.labeler.admin." + method);
+        AddTrustedProxyHeaders(request);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token(
+            key: key, now: now, method: "dev.idunno.labeler.admin." + method,
+            actor: kind == "viewer" ? viewer.Value : s_actor.Value));
+        request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(expected, response.StatusCode);
+        using JsonDocument result = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(expected == HttpStatusCode.OK, result.RootElement.GetProperty("succeeded").GetBoolean());
+        if (expectedError is not null)
+        {
+            Assert.Equal(expectedError, result.RootElement.GetProperty("error").GetString());
+        }
+
+        ILabelStore labels = fixture.Services.GetRequiredService<ILabelStore>();
+        LabelStoreState state = await labels.GetStateAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(expected == HttpStatusCode.OK && method == "issueLabel" ? 1 : 0, state.IssuedThrough);
+        IReadOnlyList<LabelTeamMember> members = (await team.GetTeamAsync(administrator, TestContext.Current.CancellationToken)).Result!;
+        Assert.Equal(expected == HttpStatusCode.OK && method == "enroll" ? 3 : 2, members.Count);
+        Assert.Equal(expected == HttpStatusCode.OK && method == "changeTeam" ? LabelTeamRole.Moderator : LabelTeamRole.Viewer,
+            Assert.Single(members, member => member.Did == viewer).Role);
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+            administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+        if (expected != HttpStatusCode.OK)
+        {
+            Assert.Contains(audit, receipt => !receipt.Succeeded && receipt.Actor == (kind == "viewer" ? viewer : s_actor));
+            Assert.DoesNotContain(audit, receipt => receipt.Succeeded && receipt.OperationId == "post-operation");
+        }
+        else
+        {
+            Assert.Contains(audit, receipt => receipt.Succeeded && receipt.Actor == s_actor && receipt.OperationId == "post-operation");
+        }
+    }
+
     [Fact]
     public async Task RemoteAdministrationCanBeDisabledWithoutDisablingLocalAdministration()
     {
@@ -191,8 +297,11 @@ public class AdministrationTests
         Assert.Equal(HttpStatusCode.OK, authorized.StatusCode);
     }
 
-    [Fact]
-    public async Task InvalidWindowsPipeFrameDoesNotStopTheListener()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(AdministrationWire.MaximumRequestBytes + 1)]
+    public async Task InvalidWindowsPipeFrameIsAuditedWithoutStoppingTheListener(int length)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -211,7 +320,7 @@ public class AdministrationTests
         {
             await malformed.ConnectAsync(TestContext.Current.CancellationToken);
             byte[] invalidLength = new byte[4];
-            BinaryPrimitives.WriteInt32BigEndian(invalidLength, 0);
+            BinaryPrimitives.WriteInt32BigEndian(invalidLength, length);
             await malformed.WriteAsync(invalidLength, TestContext.Current.CancellationToken);
             await malformed.FlushAsync(TestContext.Current.CancellationToken);
         }
@@ -219,6 +328,41 @@ public class AdministrationTests
         using JsonDocument response = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint, """{"method":"getTeam"}""", TestContext.Current.CancellationToken));
         Assert.True(response.RootElement.GetProperty("succeeded").GetBoolean());
+        ILabelAdministrationStore store = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await store.AuthenticateLocalAsync(
+            LabelerLocalAdministration.CurrentIdentity(), TestContext.Current.CancellationToken)).Result!;
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await store.GetAdministrationAuditAsync(
+            caller, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+        Assert.Contains(audit, receipt => !receipt.Succeeded && receipt.Reason == "Malformed local administrative frame.");
+    }
+
+    [Theory]
+    [InlineData("getPublicationState", null)]
+    [InlineData("getPublicationState", "")]
+    [InlineData("getPublicationState", "   ")]
+    [InlineData("getOperation", null)]
+    [InlineData("getOperation", "")]
+    [InlineData("getOperation", "   ")]
+    public async Task LocalInspectionSuppliesDefaultReasonWithoutChangingMutationRequirements(string method, string? reason)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        string endpoint = LocalEndpoint();
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        Assert.True((await fixture.Services.BootstrapLocalAdministratorAsync(
+            s_actor, "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        using JsonDocument issued = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, """{"method":"issueLabel","operationId":"inspection-operation","target":"did:plc:subject","value":"spam","reason":"Issue for inspection."}""",
+            TestContext.Current.CancellationToken));
+        Assert.True(issued.RootElement.GetProperty("succeeded").GetBoolean());
+        string reasonProperty = reason is null ? string.Empty : ",\"reason\":\"" + reason + "\"";
+        using JsonDocument response = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, $$"""{"method":"{{method}}","operationId":"inspection-operation"{{reasonProperty}}}""", TestContext.Current.CancellationToken));
+        Assert.True(response.RootElement.GetProperty("succeeded").GetBoolean());
+        using JsonDocument mutation = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, """{"method":"issueLabel","operationId":"no-reason","target":"did:plc:subject","value":"spam"}""",
+            TestContext.Current.CancellationToken));
+        Assert.Equal("InvalidRequest", mutation.RootElement.GetProperty("error").GetString());
     }
 
     [Fact]
@@ -323,6 +467,51 @@ public class AdministrationTests
             Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
                 File.GetUnixFileMode(Path.GetDirectoryName(endpoint)!));
         }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RejectedLocalPeerConsumesFrameBeforeReplyingWithoutParsingIt(bool revoked)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        ILabelAdministrationStore store = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await store.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        LabelAdministrationCaller administrator = (await store.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+        if (revoked)
+        {
+            foreach (LabelTeamAction action in new[] { LabelTeamAction.BindLocal, LabelTeamAction.RevokeLocal })
+            {
+                Assert.True((await store.ChangeTeamAsync(
+                    caller: administrator,
+                    change: new(
+                        operationId: action.ToString(), action: action, target: s_actor,
+                        reason: "Configure revoked peer.", credential: "uid:42"),
+                    cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+            }
+        }
+
+        using MemoryStream frame = new();
+        await LabelerLocalAdministration.WriteFrameAsync(frame, "{"u8.ToArray(), TestContext.Current.CancellationToken);
+        await using ReadBeforeReplyStream stream = new(frame.ToArray());
+        using LocalAdministrationHost host = new(
+            endpoint: "unused",
+            dispatcher: fixture.Services.GetRequiredService<AdministrationDispatcher>(),
+            store: store,
+            logger: NullLogger<LocalAdministrationHost>.Instance);
+        await host.ProcessAsync(stream, "uid:42", TestContext.Current.CancellationToken);
+        Assert.Equal(stream.Length, stream.Position);
+        stream.Response.Position = 0;
+        byte[] response = await LabelerLocalAdministration.ReadFrameAsync(
+            stream.Response, AdministrationWire.MaximumResponseBytes, TestContext.Current.CancellationToken);
+        using JsonDocument denied = JsonDocument.Parse(response);
+        Assert.Equal("Unauthorized", denied.RootElement.GetProperty("error").GetString());
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await store.GetAdministrationAuditAsync(
+            administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+        Assert.Contains(audit, receipt => !receipt.Succeeded && receipt.LocalIdentity == "uid:42");
+        Assert.DoesNotContain(audit, receipt => receipt.Reason == "Malformed local administrative invocation.");
     }
 
     [Fact]
@@ -508,6 +697,28 @@ public class AdministrationTests
             {
                 Content = new StringContent(document, Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    /// <summary>Rejects responses written before the entire client frame has been consumed, without scheduling races.</summary>
+    private sealed class ReadBeforeReplyStream(byte[] frame) : MemoryStream(frame, writable: false)
+    {
+        internal MemoryStream Response { get; } = new();
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            Assert.Equal(Length, Position);
+            return Response.WriteAsync(buffer, cancellationToken);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Response.Dispose();
+            }
+
+            base.Dispose(disposing);
         }
     }
 

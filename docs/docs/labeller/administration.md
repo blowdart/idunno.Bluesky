@@ -15,7 +15,7 @@ standard AT Protocol moderation endpoints.
 |---|---|
 | Viewer | Inspect team, administrative audit, operation receipts and publication progress |
 | Moderator | Viewer permissions plus issue and negate labels |
-| Administrator | Moderator permissions plus team/binding/token management and maintenance authorization |
+| Administrator | Moderator permissions plus team/binding management and maintenance authorization |
 
 Authority is persisted by **DID**, never handle. `LabelTeamService` verifies a matching DID document;
 enrollment by handle also verifies the handle in both directions. Enrollment is an administrator's
@@ -88,6 +88,8 @@ Restrict direct network access to the application so clients cannot bypass the t
 Both forwarded headers must have matching entries. Configure each trusted proxy to discard untrusted
 incoming forwarding headers and emit accurate address/protocol pairs. Multiple proxy addresses or
 networks can be added to the options.
+IPv4 proxy and network entries also match IPv4-mapped IPv6 peers on dual-mode listeners;
+native IPv6 peers still require their own trusted proxy or network entry.
 
 Set `Labeler:Administration:RemoteEnabled` to `false` in host configuration to omit all remote
 administration routes at startup while leaving a configured local pipe/socket available. It defaults
@@ -235,12 +237,18 @@ Suspend or remove a member to revoke their team access. Do not put raw credentia
 target verification, lifecycle and semantic retries. `getOperation` requires `operationId`;
 `getAudit` accepts `afterSequence` and `limit` (1-16), bounding the maximum serialized audit
 response below the local transport's 1 MiB frame limit even when reasons require JSON escaping;
-read queries may include `reason`.
+read queries may include `reason`. Both HTTP and local read commands use
+`Administrative inspection.` when the reason is omitted or blank; mutation commands still require
+an explicit nonblank reason.
 Responses contain `succeeded`, classified `error`/`message`, and the applicable bounded result.
 HTTPS distinguishes invalid authentication (401), insufficient live authority (403), malformed
 input (400), and dependency/audit or response-size unavailability (503). Local responses use the
 same result envelope and are bounded to 4 MiB, enough for the maximum 1,000-member team while
 keeping all transport responses finite.
+Local transports consume the bounded command frame before replying to an unbound or revoked
+OS peer, but never deserialize or dispatch that peer's command. Invalid frame lengths are
+rejected and recorded as unattributed denial audit entries without stopping the listener.
+Audit persistence failures are logged without accepting the command.
 
 Member suspension/removal invalidates all active invocation evidence and removes local bindings.
 Reinstatement does not restore removed bindings. The provider retains service-token replay entries

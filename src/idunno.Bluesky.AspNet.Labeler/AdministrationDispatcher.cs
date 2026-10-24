@@ -40,6 +40,11 @@ internal sealed class AdministrationDispatcher(
         CancellationToken token)
     {
         command.Validate();
+        if (s_getMethods.Contains(command.Method, StringComparer.Ordinal) && string.IsNullOrWhiteSpace(command.Reason))
+        {
+            command = command with { Reason = "Administrative inspection." };
+        }
+
         AdministrationResponse response = await DispatchCoreAsync(caller, command, token).ConfigureAwait(false);
         if (!response.Succeeded)
         {

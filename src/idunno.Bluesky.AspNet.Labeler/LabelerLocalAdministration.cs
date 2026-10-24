@@ -291,7 +291,7 @@ internal sealed class LocalAdministrationHost(
                 }
                 catch (InvalidDataException)
                 {
-                    AdministrationLog.Rejected(logger, "invalid-frame");
+                    await RecordInvalidFrameAsync(stoppingToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
                 {
@@ -352,6 +352,27 @@ internal sealed class LocalAdministrationHost(
         }
     }
 
+    /// <summary>Persists a bounded, unattributed frame denial and reports storage failure without accepting the command.</summary>
+    private async Task RecordInvalidFrameAsync(CancellationToken stoppingToken)
+    {
+        AdministrationLog.Rejected(logger, "invalid-frame");
+        using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(30));
+        try
+        {
+            LabelServiceResult<LabelAdministrationReceipt> audit = await store.RecordAdministrationDenialAsync(
+                reason: "Malformed local administrative frame.", cancellationToken: deadline.Token).ConfigureAwait(false);
+            if (!audit.Succeeded)
+            {
+                AdministrationLog.Rejected(logger, "denial-audit-unavailable");
+            }
+        }
+        catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
+        {
+            AdministrationLog.Rejected(logger, "denial-audit-timeout");
+        }
+    }
+
     /// <summary>Reads the impersonated Windows client's SID inside the named-pipe callback.</summary>
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private static string? GetImpersonatedSid()
@@ -360,15 +381,17 @@ internal sealed class LocalAdministrationHost(
         return client.User?.Value;
     }
 
-    /// <summary>Authenticates before parsing input and bounds malformed requests without stopping the host.</summary>
+    /// <summary>Consumes a bounded frame before replying, but authenticates before parsing or dispatching its payload.</summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
         Justification = "Untrusted JSON and authentication exceptions may contain sensitive input; log only their category.")]
-    private async Task ProcessAsync(Stream stream, string peer, CancellationToken stoppingToken, byte[]? preReadPayload = null)
+    internal async Task ProcessAsync(Stream stream, string peer, CancellationToken stoppingToken, byte[]? preReadPayload = null)
     {
         using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(30));
         try
         {
+            byte[] payload = preReadPayload ??
+                await LabelerLocalAdministration.ReadFrameAsync(stream, AdministrationWire.MaximumRequestBytes, deadline.Token).ConfigureAwait(false);
             LabelServiceResult<LabelAdministrationCaller> caller = await store.AuthenticateLocalAsync(peer, deadline.Token).ConfigureAwait(false);
             AdministrationResponse response;
             if (!caller.Succeeded)
@@ -379,8 +402,6 @@ internal sealed class LocalAdministrationHost(
             {
                 try
                 {
-                    byte[] payload = preReadPayload ??
-                        await LabelerLocalAdministration.ReadFrameAsync(stream, AdministrationWire.MaximumRequestBytes, deadline.Token).ConfigureAwait(false);
                     AdministrationCommand command = JsonSerializer.Deserialize(payload, AdministrationJsonContext.Default.AdministrationCommand)
                         ?? throw new JsonException("The command is null.");
                     response = await dispatcher.DispatchAsync(caller.Result, command, deadline.Token).ConfigureAwait(false);
@@ -398,6 +419,10 @@ internal sealed class LocalAdministrationHost(
 
             byte[] responsePayload = AdministrationWire.SerializeResponse(response, out response);
             await LabelerLocalAdministration.WriteFrameAsync(stream, responsePayload, deadline.Token).ConfigureAwait(false);
+        }
+        catch (InvalidDataException)
+        {
+            await RecordInvalidFrameAsync(stoppingToken).ConfigureAwait(false);
         }
         catch (IOException)
         {

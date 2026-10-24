@@ -10,6 +10,7 @@
 * Added a startup-time switch for mapping or omitting remote administration routes independently of protected local administration.
 * Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
 * Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
+* Recognizes IPv4-mapped trusted proxy peers, persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
