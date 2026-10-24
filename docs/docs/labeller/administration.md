@@ -58,7 +58,9 @@ app.UseLabelerAdministrationForwardedHeaders(options =>
     options.ForwardLimit = 2;
 });
 
-app.MapLabelerAdministration();
+// Read once at startup; changing this setting requires a host restart.
+app.MapLabelerAdministration(
+    remoteEnabled: app.Configuration.GetValue("Labeler:Administration:RemoteEnabled", defaultValue: true));
 ```
 
 The signing key and hardened identity-resolution HTTP client are caller-owned. Configure outbound
@@ -74,10 +76,18 @@ Verification and required denial audit consume outbound requests and durable tra
 bound unauthenticated traffic and monitor audit growth. Administrative routes require HTTPS.
 When HTTPS terminates at a reverse proxy, call `UseLabelerAdministrationForwardedHeaders` before
 mapping endpoints and configure every trusted hop using ASP.NET Core's `KnownProxies` and
-`KnownIPNetworks`. Set `ForwardLimit` to the trusted chain length. The middleware only processes
-`X-Forwarded-Proto`; requests from unlisted proxies remain HTTP even if they send that header.
+`KnownIPNetworks`. Set `ForwardLimit` to the trusted chain length. The middleware processes paired
+`X-Forwarded-For` and `X-Forwarded-Proto` entries with header symmetry required; requests from
+unlisted proxies remain HTTP even if they send those headers.
 Restrict direct network access to the application so clients cannot bypass the trusted proxy chain.
-Multiple proxy addresses or networks can be added to the options.
+Both forwarded headers must have matching entries. Configure each trusted proxy to discard untrusted
+incoming forwarding headers and emit accurate address/protocol pairs. Multiple proxy addresses or
+networks can be added to the options.
+
+Set `Labeler:Administration:RemoteEnabled` to `false` in host configuration to omit all remote
+administration routes at startup while leaving a configured local pipe/socket available. It defaults
+to `true` when the host explicitly maps administration, preserving the existing opt-in behavior.
+Changes take effect after restarting the host.
 
 ## Deliberate, browserless setup and local use
 

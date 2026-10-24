@@ -28,11 +28,12 @@ public static class LabelerAdministrationExtensions
     /// <param name="configure">The trusted proxy and forwarding options.</param>
     /// <returns>The application pipeline.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="application"/> or <paramref name="configure"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">No trusted proxy or network is configured, or forwarded protocol handling is disabled.</exception>
-    /// <remarks><para>Call this before mapping endpoints. The middleware processes only <c>X-Forwarded-Proto</c>.
-    /// Add every proxy hop to the trusted proxy or network lists in <paramref name="configure"/>,
-    /// and set <see cref="ForwardedHeadersOptions.ForwardLimit"/>
-    /// to the number of trusted hops. The application must not be directly reachable around those proxies.</para></remarks>
+    /// <exception cref="InvalidOperationException">No trusted proxy or network is configured, or paired forwarded protocol/address handling is disabled.</exception>
+    /// <remarks><para>Call this before mapping endpoints. The middleware processes paired <c>X-Forwarded-For</c>
+    /// and <c>X-Forwarded-Proto</c> entries with header symmetry required. Add every proxy hop to the trusted
+    /// proxy or network lists in <paramref name="configure"/>, and set <see cref="ForwardedHeadersOptions.ForwardLimit"/>
+    /// to the number of trusted hops. Each trusted proxy must sanitize forwarded headers from untrusted clients.
+    /// The application must not be directly reachable around those proxies.</para></remarks>
     public static IApplicationBuilder UseLabelerAdministrationForwardedHeaders(
         this IApplicationBuilder application,
         Action<ForwardedHeadersOptions> configure)
@@ -42,7 +43,8 @@ public static class LabelerAdministrationExtensions
 
         ForwardedHeadersOptions options = new()
         {
-            ForwardedHeaders = ForwardedHeaders.XForwardedProto
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+            RequireHeaderSymmetry = true
         };
         options.KnownProxies.Clear();
 #if NET10_0_OR_GREATER
@@ -51,9 +53,10 @@ public static class LabelerAdministrationExtensions
         options.KnownNetworks.Clear();
 #endif
         configure(options);
-        if (!options.ForwardedHeaders.HasFlag(ForwardedHeaders.XForwardedProto))
+        ForwardedHeaders requiredHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        if ((options.ForwardedHeaders & requiredHeaders) != requiredHeaders || !options.RequireHeaderSymmetry)
         {
-            throw new InvalidOperationException("Forwarded protocol handling must remain enabled.");
+            throw new InvalidOperationException("Paired forwarded address and protocol handling with header symmetry must remain enabled.");
         }
 
         bool hasTrustedNetworks;
@@ -129,17 +132,27 @@ public static class LabelerAdministrationExtensions
 
     /// <summary>Maps HTTPS administration methods using exact-audience service authentication.</summary>
     /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="remoteEnabled"><see langword="true"/> to expose remote administration routes at host startup; otherwise, <see langword="false"/>.</param>
     /// <returns>The endpoint route builder.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
-    /// <remarks><para>Only service JWTs over HTTPS are accepted. For TLS-terminating proxies, install
+    /// <remarks><para>When <paramref name="remoteEnabled"/> is <see langword="false"/>, no remote routes are mapped;
+    /// local administration remains available. This is a startup-time setting, so changing it requires a host restart.
+    /// Only service JWTs over HTTPS are accepted. For TLS-terminating proxies, install
     /// <see cref="UseLabelerAdministrationForwardedHeaders(IApplicationBuilder, Action{ForwardedHeadersOptions})"/>
     /// before mapping endpoints and configure all trusted proxy hops. Browser OAuth cookies and PDS OAuth
     /// tokens do not grant access.</para></remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S6667:Logging in a catch clause should pass the caught exception as a parameter",
         Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
-    public static IEndpointRouteBuilder MapLabelerAdministration(this IEndpointRouteBuilder endpoints)
+    public static IEndpointRouteBuilder MapLabelerAdministration(
+        this IEndpointRouteBuilder endpoints,
+        bool remoteEnabled = true)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
+        if (!remoteEnabled)
+        {
+            return endpoints;
+        }
+
         AdministrationDispatcher dispatcher = endpoints.ServiceProvider.GetRequiredService<AdministrationDispatcher>();
         AdministrationConfiguration configuration = endpoints.ServiceProvider.GetRequiredService<AdministrationConfiguration>();
         ILabelAdministrationStore store = endpoints.ServiceProvider.GetRequiredService<ILabelAdministrationStore>();

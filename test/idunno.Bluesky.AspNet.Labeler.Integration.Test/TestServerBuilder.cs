@@ -48,7 +48,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         Func<ILabelStore, Task>? initialize = null,
         string? database = null,
         bool http2 = false,
-        Action<IServiceCollection>? configureAdministration = null)
+        Action<IServiceCollection>? configureAdministration = null,
+        bool remoteAdministrationEnabled = true)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -81,6 +82,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             });
             fixture._app.UseLabelerAdministrationForwardedHeaders(options =>
             {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
                 options.KnownProxies.Add(IPAddress.Loopback);
                 options.KnownProxies.Add(IPAddress.Parse("192.0.2.1"));
                 options.KnownProxies.Add(IPAddress.Parse("192.0.2.2"));
@@ -92,7 +94,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         fixture._app.MapBlueskyLabeler();
         if (configureAdministration is not null)
         {
-            fixture._app.MapLabelerAdministration();
+            fixture._app.MapLabelerAdministration(remoteAdministrationEnabled);
         }
 
         await fixture.Store.InitializeAsync(s_issuer);

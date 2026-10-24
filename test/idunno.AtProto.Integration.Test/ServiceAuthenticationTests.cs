@@ -186,6 +186,7 @@ public class ServiceAuthenticationTests
     [InlineData("wrong-document")]
     [InlineData("wrong-fragment")]
     [InlineData("duplicate-key")]
+    [InlineData("null-method")]
     [InlineData("no-document")]
     [InlineData("corrupt-signature")]
     [InlineData("short-signature")]
@@ -206,6 +207,10 @@ public class ServiceAuthenticationTests
                 alsoKnownAs: null,
                 verificationMethods: [.. document.VerificationMethods!, .. document.VerificationMethods!],
                 services: null);
+        }
+        else if (failure == "null-method")
+        {
+            document = document with { VerificationMethods = [null!] };
         }
 
         using TestServer server = Resolver(failure == "no-document" ? null : document);

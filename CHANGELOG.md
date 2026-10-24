@@ -7,6 +7,7 @@
 #### idunno.Bluesky.AspNet.Labeler
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
+* Added a startup-time switch for mapping or omitting remote administration routes independently of protected local administration.
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.

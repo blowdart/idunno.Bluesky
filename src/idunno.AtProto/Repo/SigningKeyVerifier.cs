@@ -62,8 +62,13 @@ internal static class SigningKeyVerifier
 
         string methodId = $"{did}#{fragment}";
         VerificationMethod? verificationMethod = null;
-        foreach (VerificationMethod method in didDocument.VerificationMethods ?? [])
+        foreach (VerificationMethod? method in didDocument.VerificationMethods ?? [])
         {
+            if (method is null)
+            {
+                throw new InvalidDataException($"The DID document for '{did}' contains a null verification method.");
+            }
+
             if (method.Id == methodId)
             {
                 if (verificationMethod is not null)

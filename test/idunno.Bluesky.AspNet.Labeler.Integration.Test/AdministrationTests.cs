@@ -38,6 +38,7 @@ public class AdministrationTests
     [InlineData("untrusted-proxy", HttpStatusCode.Unauthorized)]
     [InlineData("trusted-proxy", HttpStatusCode.OK)]
     [InlineData("trusted-proxy-chain", HttpStatusCode.OK)]
+    [InlineData("spoofed-proxy-chain", HttpStatusCode.Unauthorized)]
     public async Task RemoteAuthenticationRequiresExactMethodAudienceAndLiveMembership(string kind, HttpStatusCode expected)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -61,10 +62,11 @@ public class AdministrationTests
             _ => Token(key, now)
         };
         using HttpRequestMessage request = new(HttpMethod.Get,
-            (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" ? "http" : "https")
+            (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" or "spoofed-proxy-chain" ? "http" : "https")
             + "://localhost/xrpc/dev.idunno.labeler.admin.getTeam");
-        if (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain")
+        if (kind is "untrusted-proxy" or "trusted-proxy" or "trusted-proxy-chain" or "spoofed-proxy-chain")
         {
+            request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
             request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https");
             request.Headers.TryAddWithoutValidation(
                 "X-Test-Remote-IP",
@@ -74,8 +76,12 @@ public class AdministrationTests
                     "trusted-proxy-chain" => "192.0.2.2",
                     _ => "192.0.2.99"
                 });
-            if (kind == "trusted-proxy-chain")
+            if (kind is "trusted-proxy-chain" or "spoofed-proxy-chain")
             {
+                request.Headers.Remove("X-Forwarded-For");
+                request.Headers.TryAddWithoutValidation(
+                    "X-Forwarded-For",
+                    kind == "trusted-proxy-chain" ? "198.51.100.10, 192.0.2.1" : "192.0.2.1");
                 request.Headers.Remove("X-Forwarded-Proto");
                 request.Headers.TryAddWithoutValidation("X-Forwarded-Proto", "https,http");
             }
@@ -111,18 +117,39 @@ public class AdministrationTests
         DateTimeOffset now = await DatabaseNowAsync(fixture);
         fixture.Clock.SetUtcNow(now);
         string token = Token(key, now);
-        using HttpResponseMessage first = await GetTeamAsync(fixture, token);
+        string equivalentSignature = MalleateSignature(token);
+        using HttpResponseMessage first = await GetTeamAsync(fixture, equivalentSignature);
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         using HttpResponseMessage replay = await GetTeamAsync(fixture, token);
         Assert.Equal(HttpStatusCode.Forbidden, replay.StatusCode);
-        using HttpResponseMessage rejectedMalleated = await GetTeamAsync(fixture, MalleateSignature(token));
-        Assert.Equal(HttpStatusCode.Forbidden, rejectedMalleated.StatusCode);
+        using HttpResponseMessage rejectedEquivalentReplay = await GetTeamAsync(fixture, equivalentSignature);
+        Assert.Equal(HttpStatusCode.Forbidden, rejectedEquivalentReplay.StatusCode);
         ServiceAuthenticationResult evidence = await ServiceAuthentication.VerifyAsync(
             token: token, audience: s_audience, method: "dev.idunno.labeler.admin.getTeam",
             httpClient: identity, timeProvider: fixture.Clock, cancellationToken: TestContext.Current.CancellationToken);
         using ServiceProvider restarted = fixture.OtherProvider();
         ILabelAdministrationStore other = restarted.GetRequiredService<ILabelAdministrationStore>();
         Assert.False((await other.AuthenticateServiceAsync(evidence, TestContext.Current.CancellationToken)).Succeeded);
+    }
+
+    [Fact]
+    public async Task RemoteAdministrationCanBeDisabledWithoutDisablingLocalAdministration()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        string endpoint = LocalEndpoint();
+        await using TestServerBuilder fixture = await CreateAsync(
+            key, identity, endpoint, remoteAdministrationEnabled: false);
+        LabelServiceResult<LabelAdministrationReceipt> bootstrap = await fixture.Services.BootstrapLocalAdministratorAsync(
+            s_actor, "bootstrap", TestContext.Current.CancellationToken);
+        Assert.True(bootstrap.Succeeded, bootstrap.Error?.Message);
+
+        using HttpResponseMessage remote = await GetTeamAsync(fixture, Token(key, await DatabaseNowAsync(fixture)));
+        Assert.Equal(HttpStatusCode.NotFound, remote.StatusCode);
+
+        using JsonDocument local = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint, """{"method":"getTeam"}""", TestContext.Current.CancellationToken));
+        Assert.True(local.RootElement.GetProperty("succeeded").GetBoolean());
     }
 
     [Fact]
@@ -299,17 +326,20 @@ public class AdministrationTests
         LabelSigningKey key,
         HttpClient identity,
         string? endpoint = null,
-        TimeSpan? maximumServiceTokenLifetime = null)
+        TimeSpan? maximumServiceTokenLifetime = null,
+        bool remoteAdministrationEnabled = true)
     {
-        TestServerBuilder fixture = await TestServerBuilder.CreateAsync(configureAdministration: services =>
-        {
-            services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
-            services.AddLabelerAdministration(s_audience, key, identity, maximumServiceTokenLifetime);
-            if (endpoint is not null)
+        TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
             {
-                services.AddLabelerLocalAdministration(endpoint);
-            }
-        });
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, key, identity, maximumServiceTokenLifetime);
+                if (endpoint is not null)
+                {
+                    services.AddLabelerLocalAdministration(endpoint);
+                }
+            },
+            remoteAdministrationEnabled: remoteAdministrationEnabled);
         fixture.OwnedSocketDirectory = endpoint is not null && OperatingSystem.IsLinux() ? Path.GetDirectoryName(endpoint) : null;
         return fixture;
     }
