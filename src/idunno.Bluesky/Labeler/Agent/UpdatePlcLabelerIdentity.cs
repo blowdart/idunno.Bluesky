@@ -510,6 +510,12 @@ public partial class BlueskyAgent
     /// <summary>Checks whether the DID document already contains the exact requested key and service.</summary>
     private static bool IsLabelerPublication(DidDocument document, Did did, LabelSigningKey signingKey, Uri endpoint)
     {
+        if ((document.VerificationMethods ?? []).Any(method => method is null || string.IsNullOrWhiteSpace(method.Id)) ||
+            (document.Services ?? []).Any(service => service is null || string.IsNullOrWhiteSpace(service.Id)))
+        {
+            throw new InvalidDataException("The DID document contains a null entry or an empty entry identifier.");
+        }
+
         if (document.Id != did)
         {
             return false;

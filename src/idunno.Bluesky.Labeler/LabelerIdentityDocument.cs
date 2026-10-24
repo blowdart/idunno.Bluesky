@@ -92,6 +92,12 @@ public static class LabelerIdentityDocument
             throw new InvalidDataException("The resolved DID document belongs to a different identifier.");
         }
 
+        if ((didDocument.VerificationMethods ?? []).Any(method => method is null || string.IsNullOrWhiteSpace(method.Id)) ||
+            (didDocument.Services ?? []).Any(service => service is null || string.IsNullOrWhiteSpace(service.Id)))
+        {
+            throw new InvalidDataException("The DID document contains a null entry or an empty entry identifier.");
+        }
+
         string expectedKey = signingKey.ExportPublicKeyMultibase();
         VerificationMethod[] keyEntries =
         [

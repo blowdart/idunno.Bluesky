@@ -42,16 +42,17 @@ public static class LabelSigningKeyFile
         ValidatePassword(password);
         ArgumentNullException.ThrowIfNull(pbeParameters);
 
-        LabelSigningKey key = LabelSigningKey.Generate(curve);
-        byte[] encrypted = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
         string fullPath = Path.GetFullPath(path);
         string directory = Path.GetDirectoryName(fullPath)!;
         Directory.CreateDirectory(directory);
         string temporaryPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp");
+        LabelSigningKey key = LabelSigningKey.Generate(curve);
+        byte[] encrypted = [];
         bool completed = false;
 
         try
         {
+            encrypted = key.ExportEncryptedPkcs8PrivateKey(password, pbeParameters);
             using (FileStream stream = CreatePrivateFile(temporaryPath))
             {
                 stream.Write(encrypted);
@@ -65,14 +66,14 @@ public static class LabelSigningKeyFile
         finally
         {
             CryptographicOperations.ZeroMemory(encrypted);
-            if (File.Exists(temporaryPath))
-            {
-                File.Delete(temporaryPath);
-            }
-
             if (!completed)
             {
                 key.Dispose();
+            }
+
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
             }
         }
     }

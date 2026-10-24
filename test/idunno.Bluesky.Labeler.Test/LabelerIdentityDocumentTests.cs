@@ -17,6 +17,69 @@ namespace idunno.Bluesky.Labeler.Test;
 public class LabelerIdentityDocumentTests
 {
     [Fact]
+    public void EncryptedKeyFilePreparationAndExportFailuresLeaveNoOutput()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string blocker = Path.Combine(directory, "blocker");
+        string keyPath = Path.Combine(directory, "label-key.p8");
+        File.WriteAllText(blocker, "not a directory");
+
+        try
+        {
+            PbeParameters parameters = new(PbeEncryptionAlgorithm.Aes256Cbc, HashAlgorithmName.SHA256, 100_000);
+            Assert.Throws<IOException>(() => LabelSigningKeyFile.GenerateEncryptedFile(
+                path: Path.Combine(blocker, "label-key.p8"),
+                curve: (LabelSigningCurve)(-1),
+                password: "test-only-password",
+                pbeParameters: parameters));
+            PbeParameters unsupported = new(PbeEncryptionAlgorithm.Aes256Cbc, new HashAlgorithmName("Unsupported"), 1);
+            Assert.Throws<CryptographicException>(() => LabelSigningKeyFile.GenerateEncryptedFile(
+                path: keyPath,
+                curve: LabelSigningCurve.P256,
+                password: "test-only-password",
+                pbeParameters: unsupported));
+            Assert.False(File.Exists(keyPath));
+            Assert.Equal([blocker], Directory.GetFiles(directory));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData("verificationMethod", "null")]
+    [InlineData("service", "null")]
+    [InlineData("verificationMethod", """{"type":"Multikey","controller":"did:web:labeler.example"}""")]
+    [InlineData("service", """{"type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    [InlineData("verificationMethod", """{"id":null,"type":"Multikey","controller":"did:web:labeler.example"}""")]
+    [InlineData("service", """{"id":null,"type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    [InlineData("verificationMethod", """{"id":"","type":"Multikey","controller":"did:web:labeler.example"}""")]
+    [InlineData("service", """{"id":"","type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    public void PublicationRejectsMalformedEntriesEvenAlongsideValidLabelerEntries(string collection, string malformedEntry)
+    {
+        Did did = new("did:web:labeler.example");
+        Uri endpoint = new("https://labels.example");
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        JsonObject document = JsonNode.Parse(LabelerIdentityDocument.CreateDidWebSnippet(did, signingKey, endpoint))!.AsObject();
+        document["id"] = did.Value;
+        document[collection]!.AsArray().Add(JsonNode.Parse(malformedEntry));
+        JsonSerializerOptions options = new(AtProtoJsonSerializerOptions.Default);
+#if NET9_0_OR_GREATER
+        // Exercise the public verifier with malformed objects independently of serializer nullability enforcement.
+        options.RespectNullableAnnotations = false;
+#endif
+        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), options)!;
+
+        Assert.Throws<InvalidDataException>(() => LabelerIdentityDocument.VerifyPublication(
+            didDocument: resolved,
+            did: did,
+            signingKey: signingKey,
+            labelerEndpoint: endpoint));
+    }
+
+    [Fact]
     public void EncryptedKeyFileRoundTripsAndDoesNotOverwrite()
     {
         string directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

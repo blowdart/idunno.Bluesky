@@ -361,6 +361,81 @@ public class PlcLabelerIdentityTests
         Assert.NotNull(result.RecoveryAction);
     }
 
+    [Theory]
+    [InlineData("verificationMethod", "null")]
+    [InlineData("service", "null")]
+    [InlineData("verificationMethod", """{"type":"Multikey","controller":"did:plc:hfgp6pj3akhqxntgqwramlbg"}""")]
+    [InlineData("service", """{"type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    [InlineData("verificationMethod", """{"id":null,"type":"Multikey","controller":"did:plc:hfgp6pj3akhqxntgqwramlbg"}""")]
+    [InlineData("service", """{"id":null,"type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    [InlineData("verificationMethod", """{"id":"","type":"Multikey","controller":"did:plc:hfgp6pj3akhqxntgqwramlbg"}""")]
+    [InlineData("service", """{"id":"","type":"AtprotoLabeler","serviceEndpoint":"https://labels.example"}""")]
+    public async Task PlcIdentityUpdateRetainsSignedOperationWhenPublishedDocumentContainsMalformedEntries(string collection, string malformedEntry)
+    {
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        int reads = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (context.Request.Path == $"/{s_did}/log/audit")
+            {
+                await WriteAuditLog(context);
+            }
+            else if (context.Request.Path == $"/{s_did}")
+            {
+                reads++;
+                JsonObject document = new()
+                {
+                    ["id"] = s_did.Value,
+                    ["verificationMethod"] = new JsonArray(),
+                    ["service"] = new JsonArray()
+                };
+                if (reads > 1)
+                {
+                    document["verificationMethod"]!.AsArray().Add(new JsonObject
+                    {
+                        ["id"] = $"{s_did}#atproto_label",
+                        ["type"] = "Multikey",
+                        ["controller"] = s_did.Value,
+                        ["publicKeyMultibase"] = signingKey.ExportPublicKeyMultibase()
+                    });
+                    document["service"]!.AsArray().Add(new JsonObject
+                    {
+                        ["id"] = "#atproto_labeler",
+                        ["type"] = "AtprotoLabeler",
+                        ["serviceEndpoint"] = s_endpoint.AbsoluteUri
+                    });
+                    document[collection]!.AsArray().Add(JsonNode.Parse(malformedEntry));
+                }
+
+                await context.Response.WriteAsync(document.ToJsonString(), TestContext.Current.CancellationToken);
+            }
+            else if (context.Request.Path == "/xrpc/com.atproto.identity.signPlcOperation")
+            {
+                await context.Response.WriteAsync(
+                    new JsonObject { ["operation"] = CreateSignedOperation(signingKey) }.ToJsonString(),
+                    TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                Assert.Equal("/xrpc/com.atproto.identity.submitPlcOperation", context.Request.Path);
+                await context.Response.WriteAsync("{}", TestContext.Current.CancellationToken);
+            }
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        PlcLabelerIdentityUpdateResult result = await agent.UpdatePlcLabelerIdentity(
+            signingKey,
+            s_endpoint,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(PlcLabelerIdentityUpdateStage.VerificationFailed, result.Stage);
+        Assert.Equal("signed-operation", result.SignedOperation!.Value.GetProperty("sig").GetString());
+        Assert.Equal("PublicationUnverified", result.Error!.Error);
+        Assert.NotNull(result.RecoveryAction);
+        Assert.Equal(2, reads);
+    }
+
     /// <summary>Returns a versioned PLC snapshot containing unrelated data and a later nullified fork.</summary>
     private static async Task WriteAuditLog(HttpContext context, bool legacy = false)
     {

@@ -121,6 +121,11 @@ succeeded. Explicit caller cancellation still throws. A self-hosted PDS
 must expose these identity endpoints; otherwise use an operator-controlled PLC tool with an authorized
 rotation key.
 
+Publication verification rejects null verification-method or service entries and missing or empty entry
+identifiers, including unrelated entries. `LabelerIdentityDocument.VerifyPublication()` reports these as
+`InvalidDataException`; PLC verification after submission returns `VerificationFailed` with the signed
+operation and recovery guidance instead of treating a malformed document as verified.
+
 During key rotation, pause issuance and publish pending labels, then publish and verify the replacement key
 before re-signing existing retained labels in bounded batches with `LabelSigningKeyRotation`. Persist each
 returned sequence checkpoint for recovery. The helper preserves the original `cts`, signed fields and stream
