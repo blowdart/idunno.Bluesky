@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -23,6 +24,7 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
     /// <remarks>
     /// <para>A matching existing record is returned unchanged. A different existing declaration is reported as a conflict and is never overwritten. A failed read or create is returned through the result.</para>
+    /// <para>Matching ignores JSON object-property order, including extension data, but preserves array order and the distinction between omitted and empty fields.</para>
     /// <para>This publishes only <c>app.bsky.labeler.service/self</c>; it does not publish a signing key or labeler endpoint in the DID document.</para>
     /// </remarks>
     public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Service>>> EnsureLabelerDeclaration(
@@ -85,11 +87,12 @@ public partial class BlueskyAgent
         return current;
     }
 
+    /// <summary>Compares declaration values without treating JSON object-property order as significant.</summary>
     private static bool DeclarationsMatch(Service existing, Service requested)
     {
-        byte[] existingJson = JsonSerializer.SerializeToUtf8Bytes(existing, SourceGenerationContext.Default.LabelerService);
-        byte[] requestedJson = JsonSerializer.SerializeToUtf8Bytes(requested, SourceGenerationContext.Default.LabelerService);
-        return existingJson.AsSpan().SequenceEqual(requestedJson);
+        JsonNode? existingJson = JsonSerializer.SerializeToNode(existing, SourceGenerationContext.Default.LabelerService);
+        JsonNode? requestedJson = JsonSerializer.SerializeToNode(requested, SourceGenerationContext.Default.LabelerService);
+        return JsonNode.DeepEquals(existingJson, requestedJson);
     }
 
     private static AtProtoHttpResult<AtProtoRepositoryRecord<Service>> DeclarationConflict(

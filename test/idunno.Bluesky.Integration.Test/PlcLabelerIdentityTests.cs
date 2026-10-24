@@ -232,6 +232,70 @@ public class PlcLabelerIdentityTests
     }
 
     [Theory]
+    [InlineData("https://operator@labels.example/", false)]
+    [InlineData("https://operator:password@labels.example/", false)]
+    [InlineData("https://labels.example/#unexpected", false)]
+    [InlineData("https://operator@labels.example/", true)]
+    [InlineData("https://operator:password@labels.example/", true)]
+    [InlineData("https://labels.example/#unexpected", true)]
+    public async Task PlcIdentityUpdateRejectsForbiddenPublishedEndpointComponents(string invalidEndpoint, bool invalidAfterSubmission)
+    {
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        int reads = 0;
+        int submissions = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (context.Request.Path == $"/{s_did}/log/audit")
+            {
+                await WriteAuditLog(context);
+            }
+            else if (context.Request.Path == $"/{s_did}")
+            {
+                reads++;
+                string publishedEndpoint = (reads == 1 || invalidAfterSubmission) ? invalidEndpoint : s_endpoint.AbsoluteUri;
+                await context.Response.WriteAsync(
+                    $$"""
+                    {"id":"{{s_did}}",
+                    "verificationMethod":[{"id":"#atproto_label","type":"Multikey","controller":"{{s_did}}","publicKeyMultibase":"{{signingKey.ExportPublicKeyMultibase()}}"}],
+                    "service":[{"id":"#atproto_labeler","type":"AtprotoLabeler","serviceEndpoint":"{{publishedEndpoint}}"}]}
+                    """,
+                    TestContext.Current.CancellationToken);
+            }
+            else if (context.Request.Path == "/xrpc/com.atproto.identity.signPlcOperation")
+            {
+                await context.Response.WriteAsync(
+                    new JsonObject { ["operation"] = CreateSignedOperation(signingKey) }.ToJsonString(),
+                    TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                Assert.Equal("/xrpc/com.atproto.identity.submitPlcOperation", context.Request.Path);
+                submissions++;
+                await context.Response.WriteAsync("{}", TestContext.Current.CancellationToken);
+            }
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        PlcLabelerIdentityUpdateResult result = await agent.UpdatePlcLabelerIdentity(
+            signingKey,
+            s_endpoint,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            invalidAfterSubmission ? PlcLabelerIdentityUpdateStage.VerificationFailed : PlcLabelerIdentityUpdateStage.Verified,
+            result.Stage);
+        Assert.Equal("signed-operation", result.SignedOperation!.Value.GetProperty("sig").GetString());
+        Assert.Equal(1, submissions);
+        Assert.Equal(2, reads);
+        if (invalidAfterSubmission)
+        {
+            Assert.Equal("PublicationUnverified", result.Error!.Error);
+            Assert.NotNull(result.RecoveryAction);
+        }
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task PlcIdentityUpdateNeverSubmitsMapsSignedAgainstANewerVersion(bool missingPrevious)

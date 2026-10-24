@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -189,6 +190,78 @@ public class LabelerDeclarationRequestTests
 
         Assert.False(result.Succeeded);
         Assert.Equal(System.Net.HttpStatusCode.Conflict, result.StatusCode);
+        Assert.Equal("DeclarationConflict", result.AtErrorDetail!.Error);
+    }
+
+    [Theory]
+    [InlineData("""{"first":1,"nested":{"a":true,"b":false},"items":[1,2]}""", true)]
+    [InlineData("""{"first":1,"nested":{"a":false,"b":false},"items":[1,2]}""", false)]
+    [InlineData("""{"first":1,"nested":{"a":true,"b":false},"items":[2,1]}""", false)]
+    [InlineData("""{"first":1,"nested":{"a":true,"b":false}}""", false)]
+    [InlineData("""{"first":1,"nested":{"a":true,"b":false},"items":[]}""", false)]
+    public async Task EnsureDeclarationComparesExtensionDataStructurally(string requestedExtension, bool matches)
+    {
+        JsonObject requested = JsonSerializer.SerializeToNode(CreateDeclaration(), BlueskyServer.BlueskyJsonSerializerOptions)!.AsObject();
+        requested["futureField"] = JsonNode.Parse(requestedExtension);
+        requested["anotherField"] = 42;
+        Service declaration = JsonSerializer.Deserialize<Service>(requested.ToJsonString(), BlueskyServer.BlueskyJsonSerializerOptions)!;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.repo.getRecord", context.Request.Path);
+            Assert.Equal("GET", context.Request.Method);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(
+                $$$"""
+                {"uri":"at://{{{s_did}}}/app.bsky.labeler.service/self","cid":"{{{s_cid}}}",
+                "value":{"$type":"app.bsky.labeler.service","createdAt":"2026-01-01T00:00:00Z",
+                "policies":{"labelValues":["spam"]},"reasonTypes":[],"anotherField":42,
+                "futureField":{"items":[1,2],"nested":{"b":false,"a":true},"first":1}
+                }}
+                """,
+                TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            declaration,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(matches, result.Succeeded);
+        if (!matches)
+        {
+            Assert.Equal("DeclarationConflict", result.AtErrorDetail!.Error);
+        }
+    }
+
+    [Theory]
+    [InlineData("reasonTypes")]
+    [InlineData("subjectTypes")]
+    [InlineData("subjectCollections")]
+    public async Task EnsureDeclarationDistinguishesOmittedAndEmptyReportScopes(string property)
+    {
+        JsonObject requested = JsonSerializer.SerializeToNode(CreateDeclaration(), BlueskyServer.BlueskyJsonSerializerOptions)!.AsObject();
+        requested[property] = new JsonArray();
+        Service declaration = JsonSerializer.Deserialize<Service>(requested.ToJsonString(), BlueskyServer.BlueskyJsonSerializerOptions)!;
+        requested.Remove(property);
+        JsonObject response = new()
+        {
+            ["uri"] = $"at://{s_did}/app.bsky.labeler.service/self",
+            ["cid"] = s_cid.Value,
+            ["value"] = requested
+        };
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            Assert.Equal("GET", context.Request.Method);
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(response.ToJsonString(), TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<Service>> result = await agent.EnsureLabelerDeclaration(
+            declaration,
+            TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
         Assert.Equal("DeclarationConflict", result.AtErrorDetail!.Error);
     }
 

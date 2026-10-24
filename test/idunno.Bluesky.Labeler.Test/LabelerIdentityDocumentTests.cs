@@ -204,4 +204,27 @@ public class LabelerIdentityDocumentTests
             "https://new-labels.example/",
             snippetObject["service"]![0]!["serviceEndpoint"]!.GetValue<string>());
     }
+
+    [Theory]
+    [InlineData("https://operator@labels.example/")]
+    [InlineData("https://operator:password@labels.example/")]
+    [InlineData("https://labels.example/#unexpected")]
+    public void PublicationRejectsEndpointComponentsIgnoredByUriEquality(string publishedEndpoint)
+    {
+        Did did = new("did:web:labeler.example");
+        Uri endpoint = new("https://labels.example");
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        JsonObject document = JsonNode.Parse(LabelerIdentityDocument.CreateDidWebSnippet(did, signingKey, endpoint))!.AsObject();
+        document["id"] = did.Value;
+        document["service"]![0]!["serviceEndpoint"] = publishedEndpoint;
+        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(
+            document.ToJsonString(),
+            AtProtoJsonSerializerOptions.Default)!;
+
+        Assert.Throws<InvalidDataException>(() => LabelerIdentityDocument.VerifyPublication(
+            didDocument: resolved,
+            did: did,
+            signingKey: signingKey,
+            labelerEndpoint: endpoint));
+    }
 }

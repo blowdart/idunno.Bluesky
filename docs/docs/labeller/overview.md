@@ -125,6 +125,8 @@ Publication verification rejects null verification-method or service entries and
 identifiers, including unrelated entries. `LabelerIdentityDocument.VerifyPublication()` reports these as
 `InvalidDataException`; PLC verification after submission returns `VerificationFailed` with the signed
 operation and recovery guidance instead of treating a malformed document as verified.
+Verification also rejects published labeler endpoints containing credentials or fragments, even when
+URI equality would otherwise match the expected HTTPS origin.
 
 During key rotation, pause issuance and publish pending labels, then publish and verify the replacement key
 before re-signing existing retained labels in bounded batches with `LabelSigningKeyRotation`. Persist each

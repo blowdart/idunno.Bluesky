@@ -540,6 +540,9 @@ public partial class BlueskyAgent
             methods[0].PublicKeyMultibase != expectedKey ||
             services.Length != 1 ||
             services[0].Type != "AtprotoLabeler" ||
+            !services[0].ServiceEndpoint.IsAbsoluteUri ||
+            !string.IsNullOrEmpty(services[0].ServiceEndpoint.UserInfo) ||
+            !string.IsNullOrEmpty(services[0].ServiceEndpoint.Fragment) ||
             services[0].ServiceEndpoint != endpoint)
         {
             return false;
