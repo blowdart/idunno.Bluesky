@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -563,6 +564,128 @@ public class PlcLabelerIdentityTests
         Assert.Equal("PublicationUnverified", result.Error!.Error);
         Assert.NotNull(result.RecoveryAction);
         Assert.Equal(2, reads);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task PlcIdentityUpdateRetainsRecoveryOnResponseBodyFailure(bool verification, bool callerCancellation)
+    {
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using CancellationTokenSource cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.ContentType = "application/json";
+            if (context.Request.Path == $"/{s_did}/log/audit")
+            {
+                await WriteAuditLog(context);
+            }
+            else if (context.Request.Path == $"/{s_did}")
+            {
+                await context.Response.WriteAsync(
+                    $$"""{"id":"{{s_did}}","verificationMethod":[],"service":[]}""",
+                    TestContext.Current.CancellationToken);
+            }
+            else if (context.Request.Path == "/xrpc/com.atproto.identity.signPlcOperation")
+            {
+                await context.Response.WriteAsync(
+                    new JsonObject { ["operation"] = CreateSignedOperation(signingKey) }.ToJsonString(),
+                    TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                Assert.Equal("/xrpc/com.atproto.identity.submitPlcOperation", context.Request.Path);
+                await context.Response.WriteAsync("{}", TestContext.Current.CancellationToken);
+            }
+        });
+        using BodyFailureHandler handler = new(
+            server.CreateHandler(),
+            verification,
+            cancellation,
+            callerCancellation);
+        using BlueskyAgent agent = new(handler)
+        {
+            Service = TestServerBuilder.DefaultUri,
+            Credentials = new AccessCredentials(
+                TestServerBuilder.DefaultUri,
+                AuthenticationType.UsernamePassword,
+                JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString()),
+                "refreshToken")
+        };
+
+        if (callerCancellation)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => agent.UpdatePlcLabelerIdentity(
+                signingKey,
+                s_endpoint,
+                cancellationToken: cancellation.Token));
+        }
+        else
+        {
+            PlcLabelerIdentityUpdateResult result = await agent.UpdatePlcLabelerIdentity(
+                signingKey,
+                s_endpoint,
+                cancellationToken: cancellation.Token);
+
+            Assert.Equal(
+                verification ? PlcLabelerIdentityUpdateStage.VerificationFailed : PlcLabelerIdentityUpdateStage.SubmissionFailed,
+                result.Stage);
+            Assert.Equal("signed-operation", result.SignedOperation!.Value.GetProperty("sig").GetString());
+            Assert.Equal(verification ? "PublicationUnverified" : "SubmissionUnverified", result.Error!.Error);
+            Assert.NotNull(result.RecoveryAction);
+        }
+
+        Assert.True(handler.BodyReadAttempted);
+    }
+
+    /// <summary>Injects a body-read failure only after a signed operation has been obtained.</summary>
+    private sealed class BodyFailureHandler(
+        HttpMessageHandler innerHandler,
+        bool verification,
+        CancellationTokenSource cancellation,
+        bool callerCancellation) : DelegatingHandler(innerHandler), IHttpClientFactory
+    {
+        private int _documentReads;
+
+        internal bool BodyReadAttempted { get; private set; }
+
+        public HttpClient CreateClient(string name) => new(this, disposeHandler: false);
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response = await base.SendAsync(request, cancellationToken);
+            bool failBody = verification
+                ? request.RequestUri!.AbsolutePath == $"/{s_did}" && ++_documentReads == 2
+                : request.RequestUri!.AbsolutePath == "/xrpc/com.atproto.identity.submitPlcOperation";
+            if (failBody)
+            {
+                response.Content.Dispose();
+                response.StatusCode = verification ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
+                response.Content = new StreamContent(new FailingResponseStream(() =>
+                {
+                    BodyReadAttempted = true;
+                    if (callerCancellation)
+                    {
+                        cancellation.Cancel();
+                    }
+                }));
+                response.Content.Headers.ContentType = new("application/json");
+            }
+
+            return response;
+        }
+    }
+
+    /// <summary>Throws an HTTP IO exception from the bounded response reader rather than the request handler.</summary>
+    private sealed class FailingResponseStream(Action onRead) : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            onRead();
+            return ValueTask.FromException<int>(new HttpIOException(HttpRequestError.ResponseEnded, "Injected incomplete response body."));
+        }
     }
 
     /// <summary>Returns a versioned PLC snapshot containing unrelated data and a later nullified fork.</summary>

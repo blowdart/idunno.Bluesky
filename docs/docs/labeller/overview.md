@@ -114,7 +114,7 @@ signed operation's `prev` to match that snapshot. If another update wins the rac
 Retry the update to read fresh state, requesting another authorization code if the PDS requires one;
 authorization codes are not automatically reused.
 
-Submission or verification transport failures and timeouts return the signed operation with a
+Submission or verification transport failures, response-body IO failures, and timeouts return the signed operation with a
 `SubmissionFailed` or `VerificationFailed` stage and recovery guidance. Retain that operation and inspect
 the resolved DID and PLC state before retrying so the operator can determine whether publication already
 succeeded. Explicit caller cancellation still throws. A self-hosted PDS

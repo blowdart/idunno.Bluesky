@@ -343,7 +343,7 @@ public partial class BlueskyAgent
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (
-            exception is HttpRequestException ||
+            exception is HttpRequestException or IOException ||
             (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -430,6 +430,7 @@ public partial class BlueskyAgent
         exception switch
         {
             HttpRequestException => true,
+            IOException => true,
             ArgumentNullException argumentException => argumentException.ParamName == "id",
             OperationCanceledException => !cancellationToken.IsCancellationRequested,
             _ => false
