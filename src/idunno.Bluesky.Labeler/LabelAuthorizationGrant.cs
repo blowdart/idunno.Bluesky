@@ -15,4 +15,7 @@ public sealed class LabelAuthorizationGrant(string version)
     /// <summary>Gets the version identifying the authorization decision.</summary>
     /// <value>The nonblank authorization version.</value>
     public string Version { get; } = LabelInput.ValidateText(version, nameof(version), 256);
+
+    /// <summary>Gets the optional provider-issued administration evidence.</summary>
+    public LabelAdministrationCaller? AdministrationCaller { get; internal init; }
 }

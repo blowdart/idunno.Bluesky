@@ -279,3 +279,98 @@ idunno.Bluesky.Labeler.LabelSigningKeyFile
 static idunno.Bluesky.Labeler.LabelSigningKeyFile.CreateEncryptedBackup(string! sourcePath, string! backupPath) -> void
 static idunno.Bluesky.Labeler.LabelSigningKeyFile.GenerateEncryptedFile(string! path, idunno.AtProto.Labels.LabelSigningCurve curve, System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> idunno.AtProto.Labels.LabelSigningKey!
 static idunno.Bluesky.Labeler.LabelSigningKeyFile.LoadEncryptedFile(string! path, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
+idunno.Bluesky.Labeler.ILabelAdministrationStore
+idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthenticateLocalAsync(string! localIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationCaller!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthenticateServiceAsync(idunno.AtProto.ServiceAuthenticationResult! authentication, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationCaller!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.LabelAdministrationPermission permission, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.BootstrapAsync(idunno.AtProto.Did! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.ChangeTeamAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.LabelTeamChange! change, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.GetAdministrationAuditAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, long afterSequence = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.GetTeamAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelTeamMember!>!>!>!
+idunno.Bluesky.Labeler.LabelAdministrationCaller
+idunno.Bluesky.Labeler.LabelAdministrationCaller.Actor.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.LabelAdministrationCaller.Issuer.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.LabelAdministrationCaller.LocalIdentity.get -> string?
+idunno.Bluesky.Labeler.LabelAdministrationPermission
+idunno.Bluesky.Labeler.LabelAdministrationPermission.Inspect = 0 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
+idunno.Bluesky.Labeler.LabelAdministrationPermission.Maintain = 3 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
+idunno.Bluesky.Labeler.LabelAdministrationPermission.ManageTeam = 2 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
+idunno.Bluesky.Labeler.LabelAdministrationPermission.Moderate = 1 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
+idunno.Bluesky.Labeler.LabelAdministrationReceipt
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.<Clone>$() -> idunno.Bluesky.Labeler.LabelAdministrationReceipt!
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Action.get -> string!
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Action.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Actor.get -> idunno.AtProto.Did?
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Actor.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Deconstruct(out long Sequence, out string! OperationId, out idunno.AtProto.Did? Actor, out string? LocalIdentity, out string! Action, out string! Reason, out bool Succeeded) -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Equals(idunno.Bluesky.Labeler.LabelAdministrationReceipt? other) -> bool
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.LabelAdministrationReceipt(long Sequence, string! OperationId, idunno.AtProto.Did? Actor, string? LocalIdentity, string! Action, string! Reason, bool Succeeded) -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.LocalIdentity.get -> string?
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.LocalIdentity.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.OperationId.get -> string!
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.OperationId.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Reason.get -> string!
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Reason.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Sequence.get -> long
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Sequence.init -> void
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Succeeded.get -> bool
+idunno.Bluesky.Labeler.LabelAdministrationReceipt.Succeeded.init -> void
+idunno.Bluesky.Labeler.LabelAuthorizationGrant.AdministrationCaller.get -> idunno.Bluesky.Labeler.LabelAdministrationCaller?
+idunno.Bluesky.Labeler.LabelDecisionCommit.AdministrationCaller.get -> idunno.Bluesky.Labeler.LabelAdministrationCaller?
+idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.BindLocal = 5 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.Enroll = 0 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.Reinstate = 3 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.Remove = 4 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.RevokeLocal = 6 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.RevokeToken = 7 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.SetRole = 1 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAction.Suspend = 2 -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamAuthorizer
+idunno.Bluesky.Labeler.LabelTeamAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
+idunno.Bluesky.Labeler.LabelTeamAuthorizer.LabelTeamAuthorizer(idunno.Bluesky.Labeler.ILabelAdministrationStore! store, idunno.Bluesky.Labeler.LabelAdministrationCaller! caller) -> void
+idunno.Bluesky.Labeler.LabelTeamChange
+idunno.Bluesky.Labeler.LabelTeamChange.Action.get -> idunno.Bluesky.Labeler.LabelTeamAction
+idunno.Bluesky.Labeler.LabelTeamChange.Credential.get -> string?
+idunno.Bluesky.Labeler.LabelTeamChange.LabelTeamChange(string! operationId, idunno.Bluesky.Labeler.LabelTeamAction action, idunno.AtProto.Did! target, string! reason, idunno.Bluesky.Labeler.LabelTeamRole role = idunno.Bluesky.Labeler.LabelTeamRole.Viewer, string? credential = null) -> void
+idunno.Bluesky.Labeler.LabelTeamChange.OperationId.get -> string!
+idunno.Bluesky.Labeler.LabelTeamChange.Reason.get -> string!
+idunno.Bluesky.Labeler.LabelTeamChange.Role.get -> idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamChange.Target.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.LabelTeamMember
+idunno.Bluesky.Labeler.LabelTeamMember.<Clone>$() -> idunno.Bluesky.Labeler.LabelTeamMember!
+idunno.Bluesky.Labeler.LabelTeamMember.Active.get -> bool
+idunno.Bluesky.Labeler.LabelTeamMember.Active.init -> void
+idunno.Bluesky.Labeler.LabelTeamMember.Deconstruct(out idunno.AtProto.Did! Did, out idunno.Bluesky.Labeler.LabelTeamRole Role, out bool Active, out bool Removed) -> void
+idunno.Bluesky.Labeler.LabelTeamMember.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.LabelTeamMember.Did.init -> void
+idunno.Bluesky.Labeler.LabelTeamMember.Equals(idunno.Bluesky.Labeler.LabelTeamMember? other) -> bool
+idunno.Bluesky.Labeler.LabelTeamMember.LabelTeamMember(idunno.AtProto.Did! Did, idunno.Bluesky.Labeler.LabelTeamRole Role, bool Active, bool Removed) -> void
+idunno.Bluesky.Labeler.LabelTeamMember.Removed.get -> bool
+idunno.Bluesky.Labeler.LabelTeamMember.Removed.init -> void
+idunno.Bluesky.Labeler.LabelTeamMember.Role.get -> idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamMember.Role.init -> void
+idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamRole.Administrator = 2 -> idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamRole.Moderator = 1 -> idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamRole.Viewer = 0 -> idunno.Bluesky.Labeler.LabelTeamRole
+idunno.Bluesky.Labeler.LabelTeamService
+idunno.Bluesky.Labeler.LabelTeamService.BootstrapAsync(idunno.AtProto.AtIdentifier! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.LabelTeamService.EnrollAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.AtProto.AtIdentifier! member, idunno.Bluesky.Labeler.LabelTeamRole role, string! operationId, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.LabelTeamService.LabelTeamService(idunno.Bluesky.Labeler.ILabelAdministrationStore! store, System.Net.Http.HttpClient! httpClient) -> void
+override idunno.Bluesky.Labeler.LabelAdministrationReceipt.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.LabelAdministrationReceipt.GetHashCode() -> int
+override idunno.Bluesky.Labeler.LabelAdministrationReceipt.ToString() -> string!
+override idunno.Bluesky.Labeler.LabelTeamMember.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.LabelTeamMember.GetHashCode() -> int
+override idunno.Bluesky.Labeler.LabelTeamMember.ToString() -> string!
+static idunno.Bluesky.Labeler.LabelAdministrationReceipt.operator !=(idunno.Bluesky.Labeler.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.LabelAdministrationReceipt? right) -> bool
+static idunno.Bluesky.Labeler.LabelAdministrationReceipt.operator ==(idunno.Bluesky.Labeler.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.LabelAdministrationReceipt? right) -> bool
+static idunno.Bluesky.Labeler.LabelTeamMember.operator !=(idunno.Bluesky.Labeler.LabelTeamMember? left, idunno.Bluesky.Labeler.LabelTeamMember? right) -> bool
+static idunno.Bluesky.Labeler.LabelTeamMember.operator ==(idunno.Bluesky.Labeler.LabelTeamMember? left, idunno.Bluesky.Labeler.LabelTeamMember? right) -> bool
+idunno.Bluesky.Labeler.ILabelAdministrationStore.AuditMaintenanceAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, string! operationId, string! reason, idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase phase = idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Intent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.ILabelAdministrationStore.RecordAdministrationDenialAsync(string! reason, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Completed = 1 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Failed = 2 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Intent = 0 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase

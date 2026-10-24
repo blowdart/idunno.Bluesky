@@ -13,10 +13,10 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
-using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
@@ -24,13 +24,14 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 /// <param name="database">The existing test-owned database to reopen without taking deletion ownership, or null for a new file.</param>
 internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposable
 {
-    internal static readonly Did Issuer = new("did:plc:label-issuer");
+    internal static readonly Did s_issuer = new("did:plc:label-issuer");
     private readonly string _database = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     private readonly bool _ownsDatabase = database is null;
     private WebApplication _app = null!;
     internal ILabelStore Store => _app.Services.GetRequiredService<ILabelStore>();
     internal IServiceProvider Services => _app.Services;
     internal string DatabasePath => _database;
+    internal string? OwnedSocketDirectory { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
     internal SignalClock Clock { get; } = new();
     internal HttpClient Client { get; private set; } = null!;
@@ -43,7 +44,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool network = false,
         Func<ILabelStore, Task>? initialize = null,
         string? database = null,
-        bool http2 = false)
+        bool http2 = false,
+        Action<IServiceCollection>? configureAdministration = null)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -60,11 +62,16 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
 
         builder.Services.AddSingleton<TimeProvider>(fixture.Clock);
         builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
-        builder.Services.AddBlueskyLabeler(Issuer, options);
+        builder.Services.AddBlueskyLabeler(s_issuer, options);
+        configureAdministration?.Invoke(builder.Services);
         fixture._app = builder.Build();
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
-        await fixture.Store.InitializeAsync(Issuer);
+        if (configureAdministration is not null)
+        {
+            fixture._app.MapLabelerAdministration();
+        }
+        await fixture.Store.InitializeAsync(s_issuer);
         if (initialize is not null)
         {
             await initialize(fixture.Store);
@@ -141,6 +148,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 File.Delete(_database + suffix);
             }
+            if (OwnedSocketDirectory is { } directory)
+            {
+                Directory.Delete(directory);
+            }
         }
     }
 }
@@ -160,6 +171,9 @@ internal sealed class SignalClock : TimeProvider
     public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
     public override long GetTimestamp() => _clock.GetTimestamp();
     public override long TimestampFrequency => _clock.TimestampFrequency;
+
+    /// <summary>Aligns service-token evaluation with the test database's authoritative expiry clock.</summary>
+    internal void SetUtcNow(DateTimeOffset value) => _clock.SetUtcNow(value);
 
     /// <summary>Publishes a phase signal only after the underlying fake timer exists.</summary>
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)

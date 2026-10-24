@@ -7,8 +7,8 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
@@ -41,6 +41,160 @@ public class OAuthClientMetadataTests
         Assert.Equal(8, root.EnumerateObject().Count());
         Assert.False(root.TryGetProperty("jwks", out _));
         Assert.False(root.TryGetProperty("token_endpoint_auth_signing_alg", out _));
+    }
+
+    [Theory]
+    [InlineData("http://127.0.0.1/callback")]
+    [InlineData("http://[::1]/callback")]
+    [InlineData("http://127.0.0.1:49152/callback")]
+    [InlineData("http://[::1]:49152/callback")]
+    [InlineData("http://127.0.0.1:80/callback")]
+    [InlineData(Callback)]
+    public void GeneratesNativePublicClientMetadata(string callback)
+    {
+        const string scope = "rpc:com.atproto.server.getServiceAuth?aud=did%3Aweb%3Alabeler.example%23labeler";
+        OAuthOptions oAuthOptions = new(ClientId, new Uri(callback))
+        {
+            ClientName = "Native administration",
+            ClientUri = new Uri("https://app.example.com/")
+        };
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native,
+            LogoUri = new Uri("https://app.example.com/logo.png")
+        };
+        options.AdditionalScopes.Add(scope);
+
+        using JsonDocument document = JsonDocument.Parse(options.GenerateJson(oAuthOptions));
+        JsonElement root = document.RootElement;
+
+        Assert.Equal(ClientId, root.GetProperty("client_id").GetString());
+        Assert.Equal(new Uri(callback).ToString(), Assert.Single(root.GetProperty("redirect_uris").EnumerateArray()).GetString());
+        Assert.Equal("native", root.GetProperty("application_type").GetString());
+        Assert.Equal("none", root.GetProperty("token_endpoint_auth_method").GetString());
+        Assert.Equal("Native administration", root.GetProperty("client_name").GetString());
+        Assert.Equal(oAuthOptions.ClientUri.OriginalString, root.GetProperty("client_uri").GetString());
+        Assert.Equal(options.LogoUri.OriginalString, root.GetProperty("logo_uri").GetString());
+        Assert.Equal($"atproto {scope}", root.GetProperty("scope").GetString());
+        Assert.Equal(["atproto"], oAuthOptions.GetRequestedScopes());
+        Assert.True(root.GetProperty("dpop_bound_access_tokens").GetBoolean());
+        Assert.Equal(["authorization_code", "refresh_token"], root.GetProperty("grant_types").EnumerateArray().Select(value => value.GetString()));
+        Assert.Equal("code", Assert.Single(root.GetProperty("response_types").EnumerateArray()).GetString());
+        Assert.False(root.TryGetProperty("jwks", out _));
+        Assert.False(root.TryGetProperty("token_endpoint_auth_signing_alg", out _));
+    }
+
+    [Theory]
+    [InlineData("http://localhost/callback")]
+    [InlineData("https://localhost/callback")]
+    [InlineData("https://localhost./callback")]
+    [InlineData("http://127.0.0.2/callback")]
+    [InlineData("http://127.1/callback")]
+    [InlineData("http://2130706433/callback")]
+    [InlineData("http://[::ffff:127.0.0.1]/callback")]
+    [InlineData("http://app.example.com/callback")]
+    [InlineData("http://127.0.0.1/callback#fragment")]
+    [InlineData("http://[::1]/callback#fragment")]
+    [InlineData("http://user:password@127.0.0.1/callback")]
+    [InlineData("http://user:password@[::1]/callback")]
+    [InlineData("https://user:password@app.example.com/callback")]
+    [InlineData("https://app.example.com/callback#fragment")]
+    [InlineData("/callback")]
+    [InlineData(null)]
+    public void RejectsInvalidNativeCallbacks(string? callback)
+    {
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+
+        Assert.Throws<ArgumentException>(() => options.GenerateJson(
+            new OAuthOptions(ClientId, callback is null ? null : new Uri(callback, UriKind.RelativeOrAbsolute))));
+    }
+
+    [Theory]
+    [InlineData("http://localhost")]
+    [InlineData("http://app.example.com/metadata")]
+    [InlineData("https://localhost/metadata")]
+    [InlineData("https://localhost./metadata")]
+    [InlineData("https://127.0.0.1/metadata")]
+    [InlineData("https://[::1]/metadata")]
+    [InlineData("https://app.example.com:443/metadata")]
+    [InlineData("https://app.example.com:8443/metadata")]
+    [InlineData("https://app.example.com/metadata#fragment")]
+    [InlineData("https://user:password@app.example.com/metadata")]
+    public void RequiresAProductionHttpsClientIdForNativeMetadata(string clientId)
+    {
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+
+        Assert.Throws<ArgumentException>(() => options.GenerateJson(
+            new OAuthOptions(clientId, new Uri("http://127.0.0.1/callback"))));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void RejectsNativeClientSigningKeysIncludingUnloadedPaths(int configuration)
+    {
+        OAuthOptions oAuthOptions = new(ClientId, new Uri("http://127.0.0.1/callback"));
+        switch (configuration)
+        {
+            case 0:
+                oAuthOptions.ClientSigningKey = CreateSigningKey("active");
+                break;
+            case 1:
+                oAuthOptions.ClientSigningKeyPath = "active.pem";
+                break;
+            case 2:
+                oAuthOptions.AdditionalClientSigningKeys.Add(CreateSigningKey("previous"));
+                break;
+            case 3:
+                oAuthOptions.AdditionalClientSigningKeyPaths.Add("previous.pem");
+                break;
+        }
+
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+
+        Assert.Throws<ArgumentException>(() => options.GenerateJson(oAuthOptions));
+    }
+
+    [Fact]
+    public void RejectsUnknownApplicationTypes()
+    {
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = (BlueskyOAuthClientApplicationType)int.MaxValue
+        };
+
+        Assert.Throws<ArgumentException>(() => options.GenerateJson(new OAuthOptions(ClientId, new Uri(Callback))));
+    }
+
+    [Fact]
+    public void NativeGenerationDoesNotChangeTheWebDefaultOrCacheCallbackValidation()
+    {
+        OAuthOptions oAuthOptions = new(ClientId, new Uri("http://127.0.0.1/callback"));
+        BlueskyOAuthClientMetadataOptions options = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+        using JsonDocument nativeDocument = JsonDocument.Parse(options.GenerateJson(oAuthOptions));
+        Assert.Equal("native", nativeDocument.RootElement.GetProperty("application_type").GetString());
+
+        options.ApplicationType = BlueskyOAuthClientApplicationType.Web;
+        Assert.Throws<ArgumentException>(() => options.GenerateJson(oAuthOptions));
+        Assert.Throws<ArgumentException>(() => new BlueskyOAuthClientMetadataOptions().GenerateJson(oAuthOptions));
+
+        oAuthOptions.ReturnUri = new Uri(Callback);
+        using JsonDocument webDocument = JsonDocument.Parse(options.GenerateJson(oAuthOptions));
+        Assert.Equal("web", webDocument.RootElement.GetProperty("application_type").GetString());
     }
 
     [Theory]
@@ -184,6 +338,9 @@ public class OAuthClientMetadataTests
     [InlineData("https://app.example.com/callback#fragment")]
     [InlineData("https://user:password@app.example.com/callback")]
     [InlineData("https://app.example.com:443/callback")]
+    [InlineData("http://127.0.0.1/callback")]
+    [InlineData("http://[::1]/callback")]
+    [InlineData("http://127.0.0.1:49152/callback")]
     public void RejectsInvalidCallbacks(string? callback)
     {
         Assert.Throws<ArgumentException>(() => new BlueskyOAuthClientMetadataOptions().GenerateJson(
@@ -420,6 +577,87 @@ public class OAuthClientMetadataTests
     public async Task InvalidConfigurationFailsWhenBuildingThePipeline()
     {
         await Assert.ThrowsAsync<ArgumentException>(() => CreateHost("http://localhost"));
+    }
+
+    [Theory]
+    [InlineData("GET", "/native-metadata.json?version=1", 200)]
+    [InlineData("HEAD", "/native-metadata.json?version=1", 200)]
+    [InlineData("POST", "/native-metadata.json?version=1", 405)]
+    [InlineData("GET", "/native-metadata.json?version=2", 401)]
+    [InlineData("GET", "/native-metadata.json", 401)]
+    [InlineData("GET", "/Native-metadata.json?version=1", 401)]
+    public async Task PublishesSeparateNativeAndWebDocumentsFromConfiguration(string method, string path, int expectedStatus)
+    {
+        const string nativeClientId = "https://app.example.com/native-metadata.json?version=1";
+        OAuthOptions nativeOAuthOptions = new(nativeClientId, new Uri("http://127.0.0.1/callback"));
+        BlueskyOAuthClientMetadataOptions nativeMetadataOptions = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+        using IHost host = await new HostBuilder().ConfigureWebHost(webHost => webHost
+            .UseTestServer()
+            .ConfigureServices(services =>
+            {
+                services.Configure<BlueskyAgentOptions>(options =>
+                    options.OAuthOptions = new OAuthOptions(ClientId, new Uri(Callback)));
+                services.AddBlueskyOAuthClientMetadata();
+            })
+            .Configure(app =>
+            {
+                app.UseBlueskyOAuthClientMetadata();
+                app.UseBlueskyOAuthClientMetadata(nativeOAuthOptions, nativeMetadataOptions);
+                app.Run(context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                });
+            })).StartAsync(TestContext.Current.CancellationToken);
+        nativeOAuthOptions.ClientName = "Changed after pipeline startup";
+        nativeMetadataOptions.ApplicationType = BlueskyOAuthClientApplicationType.Web;
+
+        using HttpClient client = host.GetTestClient();
+        using HttpRequestMessage request = new(new HttpMethod(method), path);
+        request.Headers.Host = "attacker.example";
+        request.Headers.Add("X-Forwarded-Host", "attacker.example");
+        using HttpResponseMessage response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(expectedStatus, (int)response.StatusCode);
+        if (method == "GET" && expectedStatus == 200)
+        {
+            using JsonDocument document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(nativeClientId, document.RootElement.GetProperty("client_id").GetString());
+            Assert.Equal("native", document.RootElement.GetProperty("application_type").GetString());
+            Assert.False(document.RootElement.TryGetProperty("client_name", out _));
+        }
+        else if (method is "HEAD" or "POST")
+        {
+            Assert.Empty(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        }
+
+        using HttpResponseMessage webResponse = await client.GetAsync("/oauth-client-metadata.json", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, webResponse.StatusCode);
+        using JsonDocument webDocument = JsonDocument.Parse(await webResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(ClientId, webDocument.RootElement.GetProperty("client_id").GetString());
+        Assert.Equal("web", webDocument.RootElement.GetProperty("application_type").GetString());
+        Assert.Equal(Callback, webDocument.RootElement.GetProperty("redirect_uris")[0].GetString());
+    }
+
+    [Fact]
+    public void ExplicitPublicationRequiresNoAgentRegistrationAndValidatesAtStartup()
+    {
+        using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
+        ApplicationBuilder app = new(provider);
+        OAuthOptions options = new(ClientId, new Uri("http://127.0.0.1/callback"));
+        BlueskyOAuthClientMetadataOptions metadataOptions = new()
+        {
+            ApplicationType = BlueskyOAuthClientApplicationType.Native
+        };
+
+        Assert.Same(app, app.UseBlueskyOAuthClientMetadata(options, metadataOptions));
+        options.ClientSigningKeyPath = "private.pem";
+        Assert.Throws<ArgumentException>(() => app.UseBlueskyOAuthClientMetadata(options, metadataOptions));
+        Assert.Throws<ArgumentNullException>(() => app.UseBlueskyOAuthClientMetadata(null!, metadataOptions));
+        Assert.Throws<ArgumentNullException>(() => app.UseBlueskyOAuthClientMetadata(options, null!));
+        Assert.Throws<ArgumentNullException>(() => BlueskyOAuthClientMetadataExtensions.UseBlueskyOAuthClientMetadata(null!, options, metadataOptions));
     }
 
     [Fact]

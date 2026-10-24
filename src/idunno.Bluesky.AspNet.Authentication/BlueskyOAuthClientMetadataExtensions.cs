@@ -21,7 +21,7 @@ namespace Microsoft.AspNetCore.Builder;
 public static class BlueskyOAuthClientMetadataExtensions
 {
     /// <summary>
-    /// Publishes the configured public web client's OAuth metadata document.
+    /// Publishes the configured OAuth client's metadata document.
     /// </summary>
     /// <param name="app">The application pipeline.</param>
     /// <returns>The application pipeline.</returns>
@@ -42,6 +42,36 @@ public static class BlueskyOAuthClientMetadataExtensions
             throw new InvalidOperationException("Configure BlueskyAgentOptions.OAuthOptions before publishing client metadata.");
         BlueskyOAuthClientMetadataOptions metadataOptions =
             app.ApplicationServices.GetRequiredService<IOptions<BlueskyOAuthClientMetadataOptions>>().Value;
+
+        return app.UseBlueskyOAuthClientMetadata(oAuthOptions, metadataOptions);
+    }
+
+    /// <summary>
+    /// Publishes an explicitly configured OAuth client metadata document.
+    /// </summary>
+    /// <param name="app">The application pipeline.</param>
+    /// <param name="oAuthOptions">The OAuth configuration for the client whose metadata is published.</param>
+    /// <param name="metadataOptions">The metadata configuration, including the application type.</param>
+    /// <returns>The application pipeline.</returns>
+    /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The metadata configuration is invalid.</exception>
+    /// <remarks>
+    /// <para>Call before authentication or other middleware that might intercept the metadata URL.</para>
+    /// <para>
+    /// The document is validated and generated once from configuration, never from request headers or query parameters.
+    /// Register this overload for a separate native client ID alongside the application's existing web client metadata.
+    /// Each document must have a distinct configured path and query.
+    /// </para>
+    /// </remarks>
+    public static IApplicationBuilder UseBlueskyOAuthClientMetadata(
+        this IApplicationBuilder app,
+        OAuthOptions oAuthOptions,
+        BlueskyOAuthClientMetadataOptions metadataOptions)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(oAuthOptions);
+        ArgumentNullException.ThrowIfNull(metadataOptions);
+
         string document = metadataOptions.GenerateJson(oAuthOptions);
         Uri clientId = new(oAuthOptions.ClientId);
         PathString path = PathString.FromUriComponent(clientId);

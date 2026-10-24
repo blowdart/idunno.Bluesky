@@ -105,4 +105,8 @@ public sealed class LabelDecisionCommit
     /// <summary>Gets the audit outcome to commit.</summary>
     /// <value>The immutable audit record.</value>
     public LabelAuditRecord Audit { get; }
+
+    /// <summary>Gets the optional provider-issued caller checked atomically with the decision.</summary>
+    /// <remarks><para>A bootstrapped administrative provider rejects decisions without this evidence.</para></remarks>
+    public LabelAdministrationCaller? AdministrationCaller { get; internal init; }
 }

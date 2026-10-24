@@ -17,9 +17,9 @@ namespace idunno.Bluesky.Labeler.Storage;
 /// <summary>Serializes durable label mutations and decision receipts under one provider-owned stream lock.</summary>
 /// <remarks><para>Linked into each provider assembly. SQL, client types and transaction fault hooks stay
 /// internal; application services submit typed commands rather than holding database connections.</para></remarks>
-internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metrics) : ILabelStore
+internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics) : ILabelStore, ILabelAdministrationStore
 {
-    private const int SchemaVersion = 3;
+    private const int SchemaVersion = 4;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -61,7 +61,7 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             transaction: transaction,
             sql: "SELECT version FROM label_schema WHERE id=1",
             token: token).ConfigureAwait(false);
-        if (version is not null && Integer(version) is not (1 or 2 or SchemaVersion))
+        if (version is not null && Integer(version) is not (1 or 2 or 3 or SchemaVersion))
         {
             throw new InvalidDataException("The label database schema version is not supported.");
         }
@@ -71,12 +71,12 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v3.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v4.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=3 WHERE id=1",
+            sql: "UPDATE label_schema SET version=4 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -869,6 +869,38 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     action: async (connection, transaction, state) =>
             {
                 LabelOperationRequest request = decision.Request;
+                AdministrationState? administration = null;
+                if (decision.AdministrationCaller is { } caller)
+                {
+                    administration = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                    if (!await HasPermissionAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        state: state,
+                        administration: administration,
+                        caller: caller,
+                        permission: LabelAdministrationPermission.Moderate,
+                        token: cancellationToken).ConfigureAwait(false))
+                    {
+                        await AuditAdministrationAsync(
+                            connection: connection,
+                            transaction: transaction,
+                            administration: administration,
+                            actor: caller.Actor,
+                            localIdentity: caller.LocalIdentity,
+                            operationId: request.OperationId,
+                            action: request.Kind.ToString(),
+                            reason: request.Context.Reason,
+                            succeeded: false,
+                            token: cancellationToken).ConfigureAwait(false);
+                        return AdminFailure<LabelOperationReceipt>("The team or credential grant is no longer valid.");
+                    }
+                }
+                else if ((await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).Bootstrapped)
+                {
+                    return AdminFailure<LabelOperationReceipt>("Administrative stores require a transaction-valid caller.");
+                }
+
                 LabelOperationReceipt? existing = await DecisionReceiptAsync(
                     connection: connection,
                     transaction: transaction,
@@ -1003,6 +1035,20 @@ internal abstract class RelationalLabelStore(ILogger logger, StoreMetrics metric
                     ("@id", request.OperationId),
                     ("@revision", next.Revision),
                     ("@receipt", DecisionReceiptEncoding.Encode(receipt))).ConfigureAwait(false);
+                if (administration is not null && decision.AdministrationCaller is { } authenticatedCaller)
+                {
+                    await AuditAdministrationAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        administration: administration,
+                        actor: authenticatedCaller.Actor,
+                        localIdentity: authenticatedCaller.LocalIdentity,
+                        operationId: request.OperationId,
+                        action: request.Kind.ToString(),
+                        reason: request.Context.Reason,
+                        succeeded: true,
+                        token: cancellationToken).ConfigureAwait(false);
+                }
                 return LabelServiceResult<LabelOperationReceipt>.Success(receipt);
             },
                     token: cancellationToken,

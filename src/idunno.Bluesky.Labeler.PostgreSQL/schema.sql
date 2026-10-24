@@ -42,4 +42,9 @@ CREATE TABLE IF NOT EXISTS label_decisions (
 );
 CREATE INDEX IF NOT EXISTS label_decisions_revision ON label_decisions(revision);
 INSERT INTO label_state(id, stream_id, issuer) VALUES(1, '00000000000000000000000000000000', '') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 3) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_team (id INTEGER PRIMARY KEY CHECK(id=1), payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BYTEA PRIMARY KEY, operation_id TEXT COLLATE "C" NOT NULL, intent BYTEA NOT NULL, payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BYTEA PRIMARY KEY, token_hash TEXT COLLATE "C" NOT NULL, actor TEXT COLLATE "C" NOT NULL, expires_ms BIGINT NOT NULL);
+CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
+INSERT INTO label_schema(id, version) VALUES(1, 4) ON CONFLICT DO NOTHING;

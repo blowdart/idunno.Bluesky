@@ -34,11 +34,11 @@ audit inputs, **not proof of authentication**: a trusted host must establish the
 an untrusted request field. Don't expose the storage interfaces as administrative endpoints.
 
 > [!IMPORTANT]
-> Administrative authentication and team management are separate work. An authorization version in an
-> audit record is evidence of the grant used, not a database-enforced revocation fence. Authorization
-> and policy callbacks run outside the storage transaction. Before exposing mutation endpoints, the
-> host and admin-auth implementation must agree how grants remain valid through commit, including
-> concurrent revocation. This service does not implement identity, membership or that integration.
+> An authorization version string is audit evidence, not a database-enforced revocation fence.
+> [Administrative authentication and teams](administration.md) supplies provider-issued caller
+> evidence through `LabelTeamAuthorizer`, with current role/credential checks under the label commit
+> lock. Bootstrapped stores reject unfenced decisions. Custom non-administrative embedding remains
+> supported, but a custom version string never becomes equivalent to that typed fence.
 
 The policy lists declared values and independently permits account and record labels. A null
 `AllowedRecordCollections` permits every collection; an empty collection permits none. These are

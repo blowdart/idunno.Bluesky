@@ -131,6 +131,8 @@ items:
             href: labeller/issuance.md
           - name: Hosting public label distribution
             href: labeller/hosting.md
+          - name: Administrative authentication and teams
+            href: labeller/administration.md
 
   - name: Jetstream
     items:

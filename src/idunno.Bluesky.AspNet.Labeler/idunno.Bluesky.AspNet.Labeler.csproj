@@ -3,6 +3,7 @@
     <Description>ASP.NET Core query and subscription hosting for standalone AT Protocol labelers.</Description>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <NeutralLanguage>en-US</NeutralLanguage>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

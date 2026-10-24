@@ -100,9 +100,10 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     }
 
     /// <summary>
-    /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
+    /// Gets the DID portion of the audience the access token was issued for.
     /// </summary>
     /// <remarks>
+    /// <para>For a service-reference audience, this property returns its controlling DID without the service fragment.</para>
     /// <para>
     ///   The token, its subject and its expiry are published together by the <see cref="AccessJwt"/> setter, so this
     ///   never returns a value part written by a refresh running on another thread. Each property takes the lock
@@ -133,6 +134,9 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
     }
 
+    /// <summary>
+    /// Extracts the destination DID and expiry, accepting both bare DID and validated service-reference audiences.
+    /// </summary>
     private static (Did did, DateTimeOffset expiresOn) ExtractJwtProperties(string jwt)
     {
         JsonWebToken token = new(jwt);
@@ -144,6 +148,12 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
             throw new ArgumentException("Service token carries no audience.", nameof(jwt));
         }
 
-        return (new Did(token.Audiences.First()), DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
+        string audience = token.Audiences.First();
+        int fragmentIndex = audience.IndexOf('#', StringComparison.Ordinal);
+        Did did = fragmentIndex < 0
+            ? new Did(audience)
+            : new AtProtoServiceReference(new Did(audience[..fragmentIndex]), audience[(fragmentIndex + 1)..]).Did;
+
+        return (did, DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc));
     }
 }
