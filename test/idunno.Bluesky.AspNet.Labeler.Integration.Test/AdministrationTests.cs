@@ -30,6 +30,7 @@ public class AdministrationTests
     [InlineData("missing", HttpStatusCode.Unauthorized)]
     [InlineData("oauth", HttpStatusCode.Unauthorized)]
     [InlineData("malformed-unicode", HttpStatusCode.Unauthorized)]
+    [InlineData("not-yet-valid", HttpStatusCode.Unauthorized)]
     [InlineData("bare-audience", HttpStatusCode.Unauthorized)]
     [InlineData("wrong-service", HttpStatusCode.Unauthorized)]
     [InlineData("wrong-method", HttpStatusCode.Unauthorized)]
@@ -57,6 +58,7 @@ public class AdministrationTests
             "oauth" => "pds-oauth-access-token",
             "malformed-unicode" => Base64Url(Encoding.UTF8.GetBytes("""{"typ":"\uD800","alg":"ES256"}"""))
                 + "." + Base64Url("{}"u8.ToArray()) + "." + Base64Url(new byte[64]),
+            "not-yet-valid" => Token(key, now, notBefore: now.AddSeconds(30)),
             "bare-audience" => Token(key, now, audience: TestServerBuilder.s_issuer.Value),
             "wrong-service" => Token(key, now, audience: TestServerBuilder.s_issuer.Value + "#other"),
             "wrong-method" => Token(key, now, method: "dev.idunno.labeler.admin.getAudit"),
@@ -114,7 +116,7 @@ public class AdministrationTests
             Assert.Equal(HttpStatusCode.OK, secure.StatusCode);
         }
 
-        if (kind == "malformed-unicode")
+        if (kind is "malformed-unicode" or "not-yet-valid")
         {
             LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
             IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
@@ -652,7 +654,8 @@ public class AdministrationTests
         string? audience = null,
         string method = "dev.idunno.labeler.admin.getTeam",
         string? actor = null,
-        TimeSpan? lifetime = null)
+        TimeSpan? lifetime = null,
+        DateTimeOffset? notBefore = null)
     {
         string header = Base64Url(Encoding.UTF8.GetBytes("""{"typ":"JWT","alg":"ES256"}"""));
         string payload = $$"""
@@ -660,6 +663,12 @@ public class AdministrationTests
              "lxm":"{{method}}","iat":{{now.ToUnixTimeSeconds()}},"exp":{{(now + (lifetime ?? TimeSpan.FromSeconds(60))).ToUnixTimeSeconds()}},
              "jti":"{{Guid.NewGuid():N}}"}
             """;
+        if (notBefore is { } earliest)
+        {
+            payload = payload.TrimEnd().TrimEnd('}') + ",\"nbf\":"
+                + earliest.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture) + "}";
+        }
+
         string signingInput = header + "." + Base64Url(Encoding.UTF8.GetBytes(payload));
         using ECDsa signer = ECDsa.Create();
         signer.ImportPkcs8PrivateKey(key.ExportPkcs8PrivateKey(), out _);

@@ -44,6 +44,7 @@
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.
 * Rejects malformed Unicode in service JWT JSON as invalid authentication rather than allowing an unhandled JSON-reading exception.
+* Validates optional integer service-token `nbf` timestamps before and after identity resolution, rejecting premature use outside the five-second clock tolerance.
 * Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
 * Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
 * Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.

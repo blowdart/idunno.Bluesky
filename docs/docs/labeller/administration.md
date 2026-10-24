@@ -215,10 +215,12 @@ every hosted or self-hosted PDS deployment has rolled it out.
 The verifier checks bounded JWT shape, duplicate/ambiguous claims, `typ`, ES256/P-256 or
 ES256K/secp256k1 signature, the account's repository `#atproto` key and matching DID document/controller,
 exact scalar audience and `lxm`, integer times, a lifetime no greater than the configured maximum
-(15 minutes by default), five-second clock
+(15 minutes by default), optional integer `nbf` (not-before) preceding expiry, five-second clock
 tolerance, and `jti`. Provider admission uses database time for persisted expiry and consumes replay
 identity durably across replicas. A retry obtains a **new service token** but retains the original
 application operation ID.
+Lifetime and not-before checks run both before and after DID resolution; a token whose `nbf`
+is more than five seconds in the future is rejected rather than admitted early.
 
 ## Commands, revocation and audit
 

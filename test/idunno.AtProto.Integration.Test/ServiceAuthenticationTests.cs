@@ -124,6 +124,13 @@ public class ServiceAuthenticationTests
     [InlineData("exp", "null")]
     [InlineData("exp", "1e999")]
     [InlineData("exp", "9223372036854775807")]
+    [InlineData("nbf", "null")]
+    [InlineData("nbf", "\"1767225600\"")]
+    [InlineData("nbf", "true")]
+    [InlineData("nbf", "[]")]
+    [InlineData("nbf", "1.1")]
+    [InlineData("nbf", "1e999")]
+    [InlineData("nbf", "9223372036854775807")]
     public async Task RejectsInvalidScalarClaims(string claim, string value)
     {
         FakeTimeProvider time = CreateClock();
@@ -238,6 +245,67 @@ public class ServiceAuthenticationTests
                 timeProvider: time,
                 cancellationToken: TestContext.Current.CancellationToken));
         }
+    }
+
+    [Theory]
+    [InlineData(-30, true)]
+    [InlineData(0, true)]
+    [InlineData(5, true)]
+    [InlineData(6, false)]
+    [InlineData(30, false)]
+    [InlineData(60, false)]
+    [InlineData(61, false)]
+    public async Task EnforcesOptionalNotBeforeWithClockSkew(int offsetSeconds, bool succeeds)
+    {
+        FakeTimeProvider time = CreateClock();
+        JsonObject payload = Payload(time);
+        payload["nbf"] = time.GetUtcNow().AddSeconds(offsetSeconds).ToUnixTimeSeconds();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        if (succeeds)
+        {
+            ServiceAuthenticationResult result = await ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: s_method,
+                httpClient: client,
+                timeProvider: time,
+                cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Equal(new Did(TestDid), result.Issuer);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: s_method,
+                httpClient: client,
+                timeProvider: time,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task RechecksNotBeforeAfterResolutionWhenTheClockMovesBackwards()
+    {
+        ResolutionClock time = new(CreateClock());
+        JsonObject payload = Payload(time);
+        payload["iat"] = time.GetUtcNow().AddSeconds(-30).ToUnixTimeSeconds();
+        payload["nbf"] = time.GetUtcNow().ToUnixTimeSeconds();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer server = Resolver(
+            DidDocumentFor(TestDid, "atproto", key), time.MoveBackwards);
+        using HttpClient client = server.CreateClient();
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+            token: token,
+            audience: s_audience,
+            method: s_method,
+            httpClient: client,
+            timeProvider: time,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -394,6 +462,17 @@ public class ServiceAuthenticationTests
             httpClient: client,
             timeProvider: time,
             cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>Switches between fixed fake clocks at the explicit resolution boundary to simulate a wall-clock correction.</summary>
+    private sealed class ResolutionClock(FakeTimeProvider initialClock) : TimeProvider
+    {
+        private FakeTimeProvider _clock = initialClock;
+
+        public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
+
+        /// <summary>Moves the reported wall clock backwards without relying on scheduler timing.</summary>
+        internal void MoveBackwards() => _clock = new FakeTimeProvider(_clock.GetUtcNow().AddSeconds(-6));
     }
 
     /// <summary>
