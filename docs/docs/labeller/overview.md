@@ -127,6 +127,8 @@ identifiers, including unrelated entries. `LabelerIdentityDocument.VerifyPublica
 operation and recovery guidance instead of treating a malformed document as verified.
 Verification also rejects published labeler endpoints containing credentials or fragments, even when
 URI equality would otherwise match the expected HTTPS origin.
+Missing or null labeler service endpoints are publication mismatches and retain the same verification
+failure and PLC recovery behavior.
 
 During key rotation, pause issuance and publish pending labels, then publish and verify the replacement key
 before re-signing existing retained labels in bounded batches with `LabelSigningKeyRotation`. Persist each

@@ -238,7 +238,11 @@ public class PlcLabelerIdentityTests
     [InlineData("https://operator@labels.example/", true)]
     [InlineData("https://operator:password@labels.example/", true)]
     [InlineData("https://labels.example/#unexpected", true)]
-    public async Task PlcIdentityUpdateRejectsForbiddenPublishedEndpointComponents(string invalidEndpoint, bool invalidAfterSubmission)
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    public async Task PlcIdentityUpdateRejectsForbiddenPublishedEndpointComponents(string? invalidEndpoint, bool invalidAfterSubmission)
     {
         using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         int reads = 0;
@@ -253,14 +257,23 @@ public class PlcLabelerIdentityTests
             else if (context.Request.Path == $"/{s_did}")
             {
                 reads++;
-                string publishedEndpoint = (reads == 1 || invalidAfterSubmission) ? invalidEndpoint : s_endpoint.AbsoluteUri;
-                await context.Response.WriteAsync(
+                string? publishedEndpoint = (reads == 1 || invalidAfterSubmission) ? invalidEndpoint : s_endpoint.AbsoluteUri;
+                JsonObject document = JsonNode.Parse(
                     $$"""
                     {"id":"{{s_did}}",
                     "verificationMethod":[{"id":"#atproto_label","type":"Multikey","controller":"{{s_did}}","publicKeyMultibase":"{{signingKey.ExportPublicKeyMultibase()}}"}],
                     "service":[{"id":"#atproto_labeler","type":"AtprotoLabeler","serviceEndpoint":"{{publishedEndpoint}}"}]}
-                    """,
-                    TestContext.Current.CancellationToken);
+                    """)!.AsObject();
+                if (publishedEndpoint is null)
+                {
+                    document["service"]![0]!["serviceEndpoint"] = null;
+                }
+                else if (publishedEndpoint.Length == 0)
+                {
+                    document["service"]![0]!.AsObject().Remove("serviceEndpoint");
+                }
+
+                await context.Response.WriteAsync(document.ToJsonString(), TestContext.Current.CancellationToken);
             }
             else if (context.Request.Path == "/xrpc/com.atproto.identity.signPlcOperation")
             {

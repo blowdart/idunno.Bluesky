@@ -227,4 +227,38 @@ public class LabelerIdentityDocumentTests
             signingKey: signingKey,
             labelerEndpoint: endpoint));
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PublicationRejectsMissingOrNullServiceEndpoint(bool missing)
+    {
+        Did did = new("did:web:labeler.example");
+        Uri endpoint = new("https://labels.example");
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        JsonObject document = JsonNode.Parse(LabelerIdentityDocument.CreateDidWebSnippet(did, signingKey, endpoint))!.AsObject();
+        document["id"] = did.Value;
+        JsonObject service = document["service"]![0]!.AsObject();
+        if (missing)
+        {
+            service.Remove("serviceEndpoint");
+        }
+        else
+        {
+            service["serviceEndpoint"] = null;
+        }
+
+        JsonSerializerOptions options = new(AtProtoJsonSerializerOptions.Default);
+#if NET9_0_OR_GREATER
+        // Exercise verifier validation independently of serializer nullability enforcement.
+        options.RespectNullableAnnotations = false;
+#endif
+        DidDocument resolved = JsonSerializer.Deserialize<DidDocument>(document.ToJsonString(), options)!;
+
+        Assert.Throws<InvalidDataException>(() => LabelerIdentityDocument.VerifyPublication(
+            didDocument: resolved,
+            did: did,
+            signingKey: signingKey,
+            labelerEndpoint: endpoint));
+    }
 }

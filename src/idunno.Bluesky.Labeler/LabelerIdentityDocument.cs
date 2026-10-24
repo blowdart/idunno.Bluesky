@@ -119,10 +119,10 @@ public static class LabelerIdentityDocument
         ];
         if (serviceEntries.Length != 1 ||
             serviceEntries[0].Type != LabelerServiceType ||
-            !serviceEntries[0].ServiceEndpoint.IsAbsoluteUri ||
-            !string.IsNullOrEmpty(serviceEntries[0].ServiceEndpoint.UserInfo) ||
-            !string.IsNullOrEmpty(serviceEntries[0].ServiceEndpoint.Fragment) ||
-            serviceEntries[0].ServiceEndpoint != labelerEndpoint)
+            serviceEntries[0].ServiceEndpoint is not { IsAbsoluteUri: true } publishedEndpoint ||
+            !string.IsNullOrEmpty(publishedEndpoint.UserInfo) ||
+            !string.IsNullOrEmpty(publishedEndpoint.Fragment) ||
+            publishedEndpoint != labelerEndpoint)
         {
             throw new InvalidDataException("The DID document does not publish the expected #atproto_labeler service.");
         }
