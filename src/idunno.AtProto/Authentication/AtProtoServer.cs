@@ -14,6 +14,8 @@ namespace idunno.AtProto;
 
 public static partial class AtProtoServer
 {
+    internal static readonly TimeSpan DefaultServiceAuthExpiry = TimeSpan.FromMinutes(15) - TimeSpan.FromSeconds(5);
+
     // https://docs.bsky.app/docs/api/com-atproto-server-create-session
     private const string CreateSessionEndpoint = "/xrpc/com.atproto.server.createSession";
 
@@ -274,7 +276,7 @@ public static partial class AtProtoServer
     /// Get access credentials on behalf of the requesting DID for the requested <paramref name="audience"/>.
     /// </summary>
     /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
-    /// <param name="expiry">The length of time the token should be valid for.</param>
+    /// <param name="expiry">The requested token lifetime. The default is 14 minutes 55 seconds, leaving five seconds of clock-skew headroom below a 15-minute verifier maximum.</param>
     /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
     /// <param name="service">The service to get a signed token from.</param>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
@@ -343,6 +345,45 @@ public static partial class AtProtoServer
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(audience);
+
+        return await GetServiceAuthWithTimeProvider(
+            timeProvider: timeProvider,
+            audience: audience.Value,
+            expiry: expiry,
+            lxm: lxm,
+            service: service,
+            accessCredentials: accessCredentials,
+            httpClient: httpClient,
+            credentialsUpdated: credentialsUpdated,
+            loggerFactory: loggerFactory,
+            maximumResponseSize: maximumResponseSize,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Requests a token using the exact audience string and supplied clock.
+    /// </summary>
+    [UnconditionalSuppressMessage("Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    internal static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuthWithTimeProvider(
+        TimeProvider timeProvider,
+        string audience,
+        TimeSpan? expiry,
+        Nsid lxm,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Func<AtProtoCredential, CancellationToken, Task>? credentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(audience);
         ArgumentNullException.ThrowIfNull(lxm);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);
@@ -358,12 +399,8 @@ public static partial class AtProtoServer
 
         StringBuilder endpointBuilder = new($"{GetServiceAuthEndpoint}?");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"aud={Uri.EscapeDataString(audience)}");
-        if (expiry is not null)
-        {
-            DateTimeOffset expiresOn = timeProvider.GetUtcNow() + expiry.Value;
-
-            endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
-        }
+        DateTimeOffset expiresOn = timeProvider.GetUtcNow() + (expiry ?? DefaultServiceAuthExpiry);
+        endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
         endpointBuilder.Append(CultureInfo.InvariantCulture, $"&lxm={lxm}");
         string endpoint = endpointBuilder.ToString();
 

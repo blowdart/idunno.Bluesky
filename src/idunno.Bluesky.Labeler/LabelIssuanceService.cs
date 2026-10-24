@@ -286,7 +286,10 @@ public sealed class LabelIssuanceService(
             resolvedTarget: resolved,
             expectedRevision: snapshot.Result.State.Revision,
             signedLabel: signed,
-            audit: audit);
+            audit: audit)
+        {
+            AdministrationCaller = grant.Result.AdministrationCaller
+        };
         LabelServiceResult<LabelOperationReceipt> committed = await _store.CommitDecisionAsync(commit, token).ConfigureAwait(false);
         if (committed.Succeeded)
         {

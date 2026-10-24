@@ -41,6 +41,7 @@ public static class MySqlLabelStorageExtensions
                 provider.GetRequiredService<ILogger<MySqlLabelStore>>(),
                 new StoreMetrics("mysql", provider.GetService<IMeterFactory>())));
         services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelAdministrationStore>(provider => (ILabelAdministrationStore)provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

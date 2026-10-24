@@ -14,6 +14,87 @@ namespace idunno.AtProto.Integration.Test;
 
 public class ServerTests
 {
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, "BadExpiration")]
+    [InlineData(true, "BadExpiration")]
+    public async Task GetServiceAuthPreservesTheExactServiceAudience(bool useAgent, string? error)
+    {
+        Uri service = TestServerBuilder.DefaultUri;
+        AtProtoServiceReference audience = new(new Did("did:plc:abcdefghijklmnopqrstuvwx"), "atproto_labeler");
+        Nsid method = new("com.atproto.label.applyLabels");
+        FakeTimeProvider time = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+        string jwt = JwtBuilder.CreateJwt(audience.Did, audience: audience.ToString(), timeProvider: time);
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultDomainName, async context =>
+        {
+            Assert.Equal("/xrpc/com.atproto.server.getServiceAuth", context.Request.Path);
+            Assert.Equal(audience.ToString(), context.Request.Query["aud"]);
+            Assert.Equal(method.ToString(), context.Request.Query["lxm"]);
+            long expiry = long.Parse(context.Request.Query["exp"].ToString(), System.Globalization.CultureInfo.InvariantCulture);
+            if (useAgent)
+            {
+                Assert.Equal(time.GetUtcNow().AddSeconds(895).ToUnixTimeSeconds(), expiry);
+            }
+            else
+            {
+                Assert.True(expiry > 0);
+            }
+            Assert.Equal($"Bearer {jwt}", context.Request.Headers.Authorization);
+            context.Response.ContentType = "application/json";
+            if (error is not null)
+            {
+                context.Response.StatusCode = 400;
+                await context.Response.WriteAsync(
+                    $$"""{"error":"{{error}}","message":"Rejected expiry."}""", TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                await context.Response.WriteAsync($$"""{"token":"{{jwt}}"}""", TestContext.Current.CancellationToken);
+            }
+        });
+        using HttpClient client = server.CreateClient();
+        AccessCredentials credentials = new(service, AuthenticationType.UsernamePassword, jwt, "refresh-token");
+        AtProtoHttpResult<ServiceCredential> result;
+        if (useAgent)
+        {
+            using AtProtoAgent agent = new(
+                service: service,
+                httpClientFactory: new TestHttpClientFactory(server),
+                options: new AtProtoAgentOptions { TimeProvider = time })
+            {
+                Credentials = credentials
+            };
+            result = await agent.GetServiceAuth(
+                service: service,
+                audience: audience,
+                lxm: method,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+        else
+        {
+            result = await AtProtoServer.GetServiceAuth(
+                audience: audience,
+                expiry: null,
+                lxm: method,
+                service: service,
+                accessCredentials: credentials,
+                httpClient: client,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        if (error is not null)
+        {
+            Assert.False(result.Succeeded);
+            Assert.Equal(error, result.AtErrorDetail?.Error);
+        }
+        else
+        {
+            Assert.True(result.Succeeded);
+            Assert.Equal(jwt, result.Result.AccessJwt);
+        }
+    }
+
     [Fact]
     public async Task DescribeServerAcceptsAnEmptyRequiredDomainsArray()
     {
@@ -34,15 +115,17 @@ public class ServerTests
         Assert.Empty(result.Result.AvailableUserDomains);
     }
 
-    [Fact]
-    public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GetServiceAuthBuildsExpiryFromTheSuppliedTimeProvider(bool useDefaultExpiry)
     {
         string domainName = TestServerBuilder.CreateRandomHostName();
         Uri service = new($"https://{domainName}");
         Did audience = new("did:plc:abcdefghijklmnopqrstuvwx");
-        TimeSpan expiry = TimeSpan.FromMinutes(5);
+        TimeSpan? expiry = useDefaultExpiry ? null : TimeSpan.FromMinutes(5);
         FakeTimeProvider timeProvider = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-        long expectedExpiry = (timeProvider.GetUtcNow() + expiry).ToUnixTimeSeconds();
+        long expectedExpiry = timeProvider.GetUtcNow().AddSeconds(useDefaultExpiry ? 895 : 300).ToUnixTimeSeconds();
 
         TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
         {

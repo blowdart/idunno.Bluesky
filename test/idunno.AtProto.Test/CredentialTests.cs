@@ -85,6 +85,42 @@ public class CredentialTests
         Assert.Equal(new Did(SecondDid), credential.Did);
     }
 
+    [Theory]
+    [InlineData("", "#atproto_labeler")]
+    [InlineData("#atproto_labeler", "")]
+    [InlineData("#atproto_labeler", "#another_service")]
+    public void ServiceCredentialsAcceptAndReplaceServiceReferenceAudiences(string originalFragment, string replacementFragment)
+    {
+        DateTimeOffset expiry = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        string originalToken = CreateJwt(audience: FirstDid + originalFragment, expires: expiry);
+        ServiceCredential credential = new(s_service, originalToken);
+        Assert.Equal(new Did(FirstDid), credential.Did);
+        Assert.Equal(originalToken, credential.AccessJwt);
+
+        string replacement = CreateJwt(audience: SecondDid + replacementFragment, expires: expiry.AddMinutes(1));
+        credential.AccessJwt = replacement;
+
+        Assert.Equal(new Did(SecondDid), credential.Did);
+        Assert.Equal(replacement, credential.AccessJwt);
+        Assert.Equal(expiry.AddMinutes(1), credential.ExpiresOn);
+    }
+
+    [Theory]
+    [InlineData("#")]
+    [InlineData("##atproto_labeler")]
+    [InlineData("#invalid fragment")]
+    [InlineData("#invalid%")]
+    public void RejectedServiceReferencesDoNotChangeCredentialState(string fragment)
+    {
+        DateTimeOffset expiry = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        string originalToken = CreateJwt(audience: FirstDid, expires: expiry);
+        ServiceCredential credential = new(s_service, originalToken);
+        Assert.ThrowsAny<ArgumentException>(() => credential.AccessJwt = CreateJwt(audience: SecondDid + fragment, expires: expiry.AddMinutes(1)));
+        Assert.Equal(originalToken, credential.AccessJwt);
+        Assert.Equal(new Did(FirstDid), credential.Did);
+        Assert.Equal(expiry, credential.ExpiresOn);
+    }
+
     [Fact]
     public void ARejectedAccessJwtLeavesAnAccessCredentialHoldingItsPreviousTokenDidAndExpiry()
     {

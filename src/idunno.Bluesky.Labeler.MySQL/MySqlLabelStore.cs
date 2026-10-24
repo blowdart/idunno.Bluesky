@@ -69,7 +69,7 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
             await ScalarAsync(
                 connection: connection,
                 transaction: null,
-                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('label_schema','label_state','label_entries','label_operations','label_decisions','label_distribution') AND engine<>'InnoDB'",
+                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('label_schema','label_state','label_entries','label_operations','label_decisions','label_distribution','label_team','label_admin_audit','label_admin_receipts','label_admin_tokens') AND engine<>'InnoDB'",
                 token: token).ConfigureAwait(false),
             CultureInfo.InvariantCulture);
         if (invalid != 0)
@@ -100,6 +100,19 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
         try
         {
             await ApplySchemaAsync(connection, null, token).ConfigureAwait(false);
+            object? expiryIndex = await ScalarAsync(
+                connection: connection,
+                transaction: null,
+                sql: "SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='label_admin_tokens' AND index_name='label_admin_token_expiry'",
+                token: token).ConfigureAwait(false);
+            if (Convert.ToInt64(expiryIndex, CultureInfo.InvariantCulture) == 0)
+            {
+                await ExecuteAsync(
+                    connection: connection,
+                    transaction: null,
+                    sql: "CREATE INDEX label_admin_token_expiry ON label_admin_tokens(expires_ms)",
+                    token: token).ConfigureAwait(false);
+            }
         }
         finally
         {

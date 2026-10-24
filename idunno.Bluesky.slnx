@@ -126,6 +126,7 @@
     <File Path="docs/docs/windowsOAuth.md" />
   </Folder>
   <Folder Name="/docs/docs/labeller/">
+    <File Path="docs/docs/labeller/administration.md" />
     <File Path="docs/docs/labeller/hosting.md" />
     <File Path="docs/docs/labeller/issuance.md" />
     <File Path="docs/docs/labeller/overview.md" />

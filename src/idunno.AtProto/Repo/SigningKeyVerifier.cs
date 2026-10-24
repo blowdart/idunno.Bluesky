@@ -62,8 +62,13 @@ internal static class SigningKeyVerifier
 
         string methodId = $"{did}#{fragment}";
         VerificationMethod? verificationMethod = null;
-        foreach (VerificationMethod method in didDocument.VerificationMethods ?? [])
+        foreach (VerificationMethod? method in didDocument.VerificationMethods ?? [])
         {
+            if (method is null)
+            {
+                throw new InvalidDataException($"The DID document for '{did}' contains a null verification method.");
+            }
+
             if (method.Id == methodId)
             {
                 if (verificationMethod is not null)
@@ -183,6 +188,11 @@ internal static class SigningKeyVerifier
 /// <param name="y">The y coordinate of the public point.</param>
 internal sealed class SigningKey(string curveOid, byte[] x, byte[] y)
 {
+    /// <summary>
+    /// Gets the JOSE algorithm corresponding to this key's curve.
+    /// </summary>
+    internal string JwtAlgorithm => curveOid == "1.3.132.0.10" ? "ES256K" : "ES256";
+
     /// <summary>
     /// Verifies a label signature, including the protocol's low-S requirement.
     /// </summary>

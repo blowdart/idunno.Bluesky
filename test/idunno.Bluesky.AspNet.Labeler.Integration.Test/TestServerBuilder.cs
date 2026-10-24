@@ -2,21 +2,28 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Encodings.Web;
 using System.Threading.Channels;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler;
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
-using Microsoft.Data.Sqlite;
 
 namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 
@@ -24,13 +31,14 @@ namespace idunno.Bluesky.AspNet.Labeler.Integration.Test;
 /// <param name="database">The existing test-owned database to reopen without taking deletion ownership, or null for a new file.</param>
 internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposable
 {
-    internal static readonly Did Issuer = new("did:plc:label-issuer");
+    internal static readonly Did s_issuer = new("did:plc:label-issuer");
     private readonly string _database = database ?? Path.Combine(Path.GetTempPath(), "label_host_" + Guid.NewGuid().ToString("N") + ".db");
     private readonly bool _ownsDatabase = database is null;
     private WebApplication _app = null!;
     internal ILabelStore Store => _app.Services.GetRequiredService<ILabelStore>();
     internal IServiceProvider Services => _app.Services;
     internal string DatabasePath => _database;
+    internal string? OwnedSocketDirectory { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
     internal SignalClock Clock { get; } = new();
     internal HttpClient Client { get; private set; } = null!;
@@ -43,7 +51,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool network = false,
         Func<ILabelStore, Task>? initialize = null,
         string? database = null,
-        bool http2 = false)
+        bool http2 = false,
+        Action<IServiceCollection>? configureAdministration = null,
+        bool remoteAdministrationEnabled = true,
+        bool fallbackAuthorizationRequired = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -60,11 +71,64 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
 
         builder.Services.AddSingleton<TimeProvider>(fixture.Clock);
         builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
-        builder.Services.AddBlueskyLabeler(Issuer, options);
+        builder.Services.AddBlueskyLabeler(s_issuer, options);
+        if (fallbackAuthorizationRequired)
+        {
+            builder.Services.AddAuthentication("test")
+                .AddScheme<AuthenticationSchemeOptions, RejectingAuthenticationHandler>("test", _ => { });
+            builder.Services.AddAuthorization(options =>
+                options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+        }
+
+        configureAdministration?.Invoke(builder.Services);
         fixture._app = builder.Build();
+        if (configureAdministration is not null)
+        {
+            fixture._app.Use(async (context, next) =>
+            {
+                if (context.Request.Headers.TryGetValue("X-Test-Remote-IP", out Microsoft.Extensions.Primitives.StringValues address))
+                {
+                    context.Connection.RemoteIpAddress = IPAddress.Parse(address.ToString());
+                }
+
+                await next(context);
+            });
+            ForwardedHeadersOptions forwardedOptions = new()
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+                RequireHeaderSymmetry = true,
+                ForwardLimit = 2
+            };
+            forwardedOptions.KnownProxies.Clear();
+            forwardedOptions.KnownProxies.Add(IPAddress.Loopback);
+            forwardedOptions.KnownProxies.Add(IPAddress.IPv6Loopback);
+            forwardedOptions.KnownProxies.Add(IPAddress.Parse("192.0.2.1"));
+            forwardedOptions.KnownProxies.Add(IPAddress.Parse("192.0.2.2"));
+#if NET10_0_OR_GREATER
+            forwardedOptions.KnownIPNetworks.Clear();
+            forwardedOptions.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("203.0.113.0/24"));
+#else
+            forwardedOptions.KnownNetworks.Clear();
+            forwardedOptions.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("203.0.113.0"), 24));
+#endif
+            fixture._app.UseForwardedHeaders(forwardedOptions);
+        }
+
+        if (fallbackAuthorizationRequired)
+        {
+            fixture._app.UseAuthentication();
+            fixture._app.UseAuthorization();
+            fixture._app.MapGet("/test/fallback", () => "fallback");
+        }
+
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
-        await fixture.Store.InitializeAsync(Issuer);
+        if (configureAdministration is not null)
+        {
+            fixture._app.MapLabelerAdministration(remoteAdministrationEnabled);
+        }
+
+        await fixture.Store.InitializeAsync(s_issuer);
         if (initialize is not null)
         {
             await initialize(fixture.Store);
@@ -141,8 +205,22 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 File.Delete(_database + suffix);
             }
+            if (OwnedSocketDirectory is { } directory)
+            {
+                Directory.Delete(directory);
+            }
         }
     }
+}
+
+/// <summary>Rejects browser authentication so fallback-policy tests exercise self-authenticating service routes.</summary>
+internal sealed class RejectingAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
+        Task.FromResult(AuthenticateResult.NoResult());
 }
 
 /// <summary>Uses official fake time while signaling timer registration before a test advances deadlines.</summary>
@@ -160,6 +238,9 @@ internal sealed class SignalClock : TimeProvider
     public override DateTimeOffset GetUtcNow() => _clock.GetUtcNow();
     public override long GetTimestamp() => _clock.GetTimestamp();
     public override long TimestampFrequency => _clock.TimestampFrequency;
+
+    /// <summary>Aligns service-token evaluation with the test database's authoritative expiry clock.</summary>
+    internal void SetUtcNow(DateTimeOffset value) => _clock.SetUtcNow(value);
 
     /// <summary>Publishes a phase signal only after the underlying fake timer exists.</summary>
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)

@@ -6,6 +6,12 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
+* Added a startup-time switch for mapping or omitting remote administration routes independently of protected local administration.
+* Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
+* Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
+* Persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
+* Rejects noncanonical Linux administration socket paths before directory validation or socket access.
 * Added public ASP.NET label queries and WebSocket subscriptions over shared durable signed-label storage, without Ozone. Includes retained-slot results, stable query pagination, exclusive subscription cursors, bounded replay/live polling, admission/deadline limits, liveness/readiness health checks, hosting metrics and discovery/deployment guidance.
 * Added `AddBlueskyLabelerMetrics()` for separate OpenTelemetry collection setup.
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
@@ -14,6 +20,7 @@
 
 #### idunno.Bluesky.Labeler
 
+* Added verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit OS delegations, live member and binding revocation, concurrent last-administrator protection, durable administrative audit and maintenance intent/result contracts. Typed grants fence label/no-op commits against authorization changes.
 * Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
 * Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
@@ -21,6 +28,10 @@
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
+* Validates InnoDB storage for all MySQL administration tables as well as label tables, rejecting nontransactional existing tables.
+* Added additive schema-version-four team, credential replay, audit and receipt persistence with shared transaction-valid administration across all three providers.
+* Indexes administrative token expiry for bounded cleanup scans; initialization adds the index to existing version-four databases.
+* Stops successful audit-feed reads from generating further feed entries while retaining durable denial auditing.
 * Added all three persistence providers with transactional sequence allocation, restartable schema setup, packaged `schema.sql`, common real-engine conformance coverage and setup/upgrade/backup guidance.
 * Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
 * Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
@@ -32,6 +43,10 @@
 
 #### idunno.AtProto
 
+* Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
+* Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.
+* Rejects malformed Unicode in service JWT JSON as invalid authentication rather than allowing an unhandled JSON-reading exception.
+* Validates optional integer service-token `nbf` timestamps before and after identity resolution, rejecting premature use outside the five-second clock tolerance.
 * Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
 * Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
 * Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.
@@ -56,6 +71,10 @@
 
 * Added `CreateStarterPack()`, `UpdateStarterPack()` and `DeleteStarterPack()` helpers, and `CollectionNsid.StarterPack`. Creation supports caller-supplied record keys, and updates using repository records compare the previous CID to protect against concurrent changes. These helpers modify only the starter pack record, not its referenced list or feeds.
 
+#### idunno.Bluesky.AspNet.Authentication
+
+* Added production native public-client metadata and independent explicit-options metadata documents, with literal loopback callbacks and unchanged web-client defaults.
+
 ### 🟢 Changed
 
 #### Packaging
@@ -75,6 +94,10 @@
 * Corrected `Labeler.Service.Labels` from a collection of `SelfLabel` to an optional `SelfLabels` object. Omitted subject types now remain omitted instead of becoming an empty array.
 
 ### ✅ Fixed
+
+#### idunno.Bluesky.AspNet.Labeler
+
+* Fixed malformed record targets bypassing denial auditing, bounded audit pages and responses to fit local IPC frames, and Windows named-pipe impersonation failures terminating the listener.
 
 #### idunno.AtProto
 

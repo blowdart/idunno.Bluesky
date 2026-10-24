@@ -177,7 +177,7 @@
 | **Server** | [com.atproto.server.createSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.createSession) | `AtProtoAgent.Login()` | ✔ |
 | | [com.atproto.server.deleteSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.deleteSession) | `AtProtoAgent.Logout()` | ✔ |
 | | [com.atproto.server.describeServer](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.describeServer) | `AtProtoAgent.DescribeServer()` | ✔ |
-| | [com.atproto.server.getServiceAuth](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getServiceAuth) | `AtProtoAgent.GetServiceAuth()` | ✔ |
+| | [com.atproto.server.getServiceAuth](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/server/getServiceAuth.json) | `AtProtoAgent.GetServiceAuth()` (DID or exact `AtProtoServiceReference` audience) | ✔ |
 | | [com.atproto.server.getSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/GET/xrpc/com.atproto.server.getSession) | `AtProtoAgent.GetSession()` | ✔ |
 | | [com.atproto.server.refreshSession](https://endpoints.bsky.app/#bluesky-app/tag/comatprotoserver/POST/xrpc/com.atproto.server.refreshSession) | `AtProtoAgent.RefreshSession()` | ✔ |
 | **Sync** | [com.atproto.sync.getBlob](https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/sync/getBlob.json) | `AtProtoAgent.GetBlob()` | ✔ |
