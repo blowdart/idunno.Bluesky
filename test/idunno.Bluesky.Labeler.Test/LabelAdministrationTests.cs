@@ -373,6 +373,41 @@ public class LabelAdministrationTests
             cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
     }
 
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task TokenExpiryIndexIsInstalledAndRepairedOnReinitialization(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await AssertTokenExpiryIndexAsync(fixture);
+        await fixture.ExecuteAsync(engine switch
+        {
+            "mysql" => "DROP INDEX label_admin_token_expiry ON label_admin_tokens",
+            _ => "DROP INDEX label_admin_token_expiry"
+        });
+        ILabelStore reopened = fixture.NewStore();
+        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await AssertTokenExpiryIndexAsync(fixture);
+        await reopened.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        await AssertTokenExpiryIndexAsync(fixture);
+    }
+
+    /// <summary>Checks provider metadata for an expiry-leading cleanup index, including the indexed column.</summary>
+    private static async Task AssertTokenExpiryIndexAsync(StoreFixture fixture)
+    {
+        await using DbConnection connection = fixture.Connection();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using DbCommand command = connection.CreateCommand();
+        command.CommandText = fixture.Engine switch
+        {
+            "mysql" => "SELECT column_name FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='label_admin_tokens' AND index_name='label_admin_token_expiry' AND seq_in_index=1",
+            "postgresql" => "SELECT pg_get_indexdef(indexrelid,1,true) FROM pg_index WHERE indexrelid='label_admin_token_expiry'::regclass",
+            _ => "SELECT name FROM pragma_index_info('label_admin_token_expiry') WHERE seqno=0"
+        };
+        Assert.Equal("expires_ms", await command.ExecuteScalarAsync(TestContext.Current.CancellationToken));
+    }
+
     /// <summary>Reads the same authoritative clock as persisted credential fencing.</summary>
     private static async Task<DateTimeOffset> DatabaseNowAsync(StoreFixture fixture)
     {

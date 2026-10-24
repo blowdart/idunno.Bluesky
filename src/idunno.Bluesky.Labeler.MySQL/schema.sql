@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS label_admin_tokens (
     token_hash VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     actor TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
     expires_ms BIGINT NOT NULL,
-    INDEX label_admin_token_hash(token_hash)
+    INDEX label_admin_token_hash(token_hash),
+    INDEX label_admin_token_expiry(expires_ms)
 ) ENGINE=InnoDB;
 INSERT INTO label_schema(id, version) VALUES(1, 4) ON DUPLICATE KEY UPDATE id=id;

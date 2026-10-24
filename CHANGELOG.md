@@ -28,6 +28,7 @@
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
 * Added additive schema-version-four team, credential replay, audit and receipt persistence with shared transaction-valid administration across all three providers.
+* Indexes administrative token expiry for bounded cleanup scans; initialization adds the index to existing version-four databases.
 * Added all three persistence providers with transactional sequence allocation, restartable schema setup, packaged `schema.sql`, common real-engine conformance coverage and setup/upgrade/backup guidance.
 * Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
 * Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
@@ -41,6 +42,7 @@
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens now request a 15-minute lifetime by default; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.
+* Rejects malformed Unicode in service JWT JSON as invalid authentication rather than allowing an unhandled JSON-reading exception.
 * Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
 * Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
 * Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.

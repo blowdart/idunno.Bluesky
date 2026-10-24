@@ -117,6 +117,35 @@ public class ServiceAuthenticationTests
     }
 
     [Theory]
+    [InlineData("""{"typ":"\uD800","alg":"ES256"}""", false)]
+    [InlineData("""{"typ":"JWT","alg":"\uDC00"}""", false)]
+    [InlineData("""{"typ":"JWT","alg":"ES256","kid":"\uD800"}""", false)]
+    [InlineData("""{"typ":"JWT","alg":"ES256","\uD800":0}""", false)]
+    [InlineData("""{"typ":"JWT","alg":"ES256","extra":{"nested":["\uDC00"]}}""", false)]
+    [InlineData("""{"iss":"\uD800"}""", true)]
+    [InlineData("""{"jti":"\uDC00"}""", true)]
+    [InlineData("""{"extra":[{"\uD800":"value"}]}""", true)]
+    public async Task RejectsMalformedUnicodeBeforeIdentityResolution(string json, bool isPayload)
+    {
+        FakeTimeProvider time = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using TestServer server = Resolver(null, () => Assert.Fail("Malformed Unicode must be rejected before DID resolution."));
+        using HttpClient client = server.CreateClient();
+        string token = Sign(
+            key,
+            isPayload ? """{"typ":"JWT","alg":"ES256"}""" : json,
+            isPayload ? json : Payload(time).ToJsonString());
+        InvalidDataException exception = await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+            token: token,
+            audience: s_audience,
+            method: s_method,
+            httpClient: client,
+            timeProvider: time,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.IsType<InvalidOperationException>(exception.InnerException);
+    }
+
+    [Theory]
     [InlineData(0, 60, true)]
     [InlineData(5, 60, true)]
     [InlineData(6, 60, false)]

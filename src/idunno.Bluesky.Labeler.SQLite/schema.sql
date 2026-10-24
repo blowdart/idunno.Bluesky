@@ -47,4 +47,5 @@ CREATE TABLE IF NOT EXISTS label_admin_audit (seq INTEGER PRIMARY KEY, payload B
 CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BLOB PRIMARY KEY, operation_id TEXT NOT NULL, intent BLOB NOT NULL, payload BLOB NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BLOB PRIMARY KEY, token_hash TEXT NOT NULL, actor TEXT NOT NULL, expires_ms INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS label_admin_token_expiry ON label_admin_tokens(expires_ms);
 INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 4);

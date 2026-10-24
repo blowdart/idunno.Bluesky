@@ -24,6 +24,8 @@ grant, not proof that a new member has signed in. Members authenticate independe
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
 Schema version four upgrades versions one, two and three additively through `InitializeAsync`.
+Initialization also installs the administrative token-expiry index on existing version-four
+databases so cleanup can select expired replay entries without scanning all retained tokens.
 Back up all tables together and stop older application versions before upgrading.
 
 Team changes, last-administrator checks and label commit fences use the same provider serialization

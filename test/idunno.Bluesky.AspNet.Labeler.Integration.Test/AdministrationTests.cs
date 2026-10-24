@@ -29,6 +29,7 @@ public class AdministrationTests
     [Theory]
     [InlineData("missing", HttpStatusCode.Unauthorized)]
     [InlineData("oauth", HttpStatusCode.Unauthorized)]
+    [InlineData("malformed-unicode", HttpStatusCode.Unauthorized)]
     [InlineData("bare-audience", HttpStatusCode.Unauthorized)]
     [InlineData("wrong-service", HttpStatusCode.Unauthorized)]
     [InlineData("wrong-method", HttpStatusCode.Unauthorized)]
@@ -54,6 +55,8 @@ public class AdministrationTests
         {
             "missing" => null,
             "oauth" => "pds-oauth-access-token",
+            "malformed-unicode" => Base64Url(Encoding.UTF8.GetBytes("""{"typ":"\uD800","alg":"ES256"}"""))
+                + "." + Base64Url("{}"u8.ToArray()) + "." + Base64Url(new byte[64]),
             "bare-audience" => Token(key, now, audience: TestServerBuilder.s_issuer.Value),
             "wrong-service" => Token(key, now, audience: TestServerBuilder.s_issuer.Value + "#other"),
             "wrong-method" => Token(key, now, method: "dev.idunno.labeler.admin.getAudit"),
@@ -109,6 +112,14 @@ public class AdministrationTests
         {
             using HttpResponseMessage secure = await GetTeamAsync(fixture, token!);
             Assert.Equal(HttpStatusCode.OK, secure.StatusCode);
+        }
+
+        if (kind == "malformed-unicode")
+        {
+            LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
+            IReadOnlyList<LabelAdministrationReceipt> audit = (await team.GetAdministrationAuditAsync(
+                administrator, cancellationToken: TestContext.Current.CancellationToken)).Result!;
+            Assert.Contains(audit, receipt => !receipt.Succeeded && receipt.Reason == "Authentication rejected.");
         }
 
         using HttpResponseMessage publicResponse = await fixture.Client.GetAsync(

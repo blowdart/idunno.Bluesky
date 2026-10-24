@@ -47,4 +47,5 @@ CREATE TABLE IF NOT EXISTS label_admin_audit (seq BIGINT PRIMARY KEY, payload BY
 CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BYTEA PRIMARY KEY, operation_id TEXT COLLATE "C" NOT NULL, intent BYTEA NOT NULL, payload BYTEA NOT NULL);
 CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BYTEA PRIMARY KEY, token_hash TEXT COLLATE "C" NOT NULL, actor TEXT COLLATE "C" NOT NULL, expires_ms BIGINT NOT NULL);
 CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS label_admin_token_expiry ON label_admin_tokens(expires_ms);
 INSERT INTO label_schema(id, version) VALUES(1, 4) ON CONFLICT DO NOTHING;

@@ -174,7 +174,7 @@ public static class ServiceAuthentication
     }
 
     /// <summary>
-    /// Rejects duplicate properties anywhere in a JWT JSON object.
+    /// Rejects duplicate properties and invalid Unicode anywhere in a JWT JSON object.
     /// </summary>
     private static void ValidateObject(JsonElement element)
     {
@@ -183,20 +183,27 @@ public static class ServiceAuthentication
             throw new InvalidDataException("JWT headers and claims must be JSON objects.");
         }
 
-        HashSet<string> names = new(StringComparer.Ordinal);
-        foreach (JsonProperty property in element.EnumerateObject())
+        try
         {
-            if (!names.Add(property.Name))
+            HashSet<string> names = new(StringComparer.Ordinal);
+            foreach (JsonProperty property in element.EnumerateObject())
             {
-                throw new InvalidDataException("The service token contains duplicate JSON properties.");
-            }
+                if (!names.Add(property.Name))
+                {
+                    throw new InvalidDataException("The service token contains duplicate JSON properties.");
+                }
 
-            ValidateChildren(property.Value);
+                ValidateChildren(property.Value);
+            }
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new InvalidDataException("The service token contains invalid JSON text.", exception);
         }
     }
 
     /// <summary>
-    /// Traverses nested JSON values to check all objects for duplicates.
+    /// Traverses nested JSON values to validate object properties and force Unicode decoding of every string.
     /// </summary>
     private static void ValidateChildren(JsonElement element)
     {
@@ -210,6 +217,10 @@ public static class ServiceAuthentication
             {
                 ValidateChildren(child);
             }
+        }
+        else if (element.ValueKind == JsonValueKind.String)
+        {
+            _ = element.GetString();
         }
     }
 
