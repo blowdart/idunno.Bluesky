@@ -15,6 +15,29 @@ or reloadable JSON configuration, then run:
 dotnet run --project src\idunno.Bluesky.Labeler.Host
 ```
 
+The checked-in `appsettings.json` contains only non-secret defaults: PostgreSQL,
+environment-backed signing keys, disabled account/record issuance and remote administration,
+no trusted proxies, a forwarding limit of one, and standard logging levels. Environment
+variables override these settings.
+
+Supply these deployment-specific environment variables separately:
+
+| Variable | Purpose |
+|---|---|
+| `Labeler__IssuerDid` | The labeler's issuer DID |
+| `Labeler__PublicEndpoint` | The public HTTPS origin |
+| `Labeler__ConnectionString` | The protected PostgreSQL connection string |
+| `Labeler__AdministrationAudience` | The exact DID and service-fragment audience |
+| `Labeler__DeclaredLabels` | Comma-separated permitted label values |
+| `Labeler__InitialSigningKeyId` | The key ID used only to initialize database selection |
+| `Labeler__SigningKeys__<index>__Id` | A stable key ID |
+| `Labeler__SigningKeys__<index>__PrivateKeyBase64` | The protected base64-encoded private PEM for that ID |
+
+Explicitly set `Labeler__AllowAccountLabels=true` and/or `Labeler__AllowRecordLabels=true`
+for the target types your policy permits. Remote administration remains disabled unless
+`LabelerAdministration__RemoteEnabled=true`; enabling it does not bypass authentication
+or team authorization. Do not add private keys or database credentials to `appsettings.json`.
+
 The host defaults to PostgreSQL for both direct runs and containers. Supply
 `Labeler__ConnectionString` through protected environment configuration; no database credentials
 or fallback SQLite connection string are built into the image. SQLite and MySQL remain explicit

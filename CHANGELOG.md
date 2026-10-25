@@ -46,6 +46,7 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Added a non-secret `appsettings.json` with safe provider, issuance, administration, proxy and logging defaults, plus documented deployment environment variables.
 * Defaults the canonical application and container to PostgreSQL, with a required externally supplied connection string. SQLite and MySQL remain explicit alternatives.
 * Promoted the standalone labeler application from `Samples.LabelerHost` to the canonical `src/idunno.Bluesky.Labeler.Host` project, assembly and namespace, with all three storage providers, mounted-PEM or environment keys, public distribution endpoints, and protected local and remote administration. Updated container publishing and health probes to the new application name; SDK libraries remain independently usable.
 * Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
