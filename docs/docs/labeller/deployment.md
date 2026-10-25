@@ -1,10 +1,16 @@
 # Standalone labeler deployment
 
-`Samples.LabelerHost` is a runnable ASP.NET Core host for the public label distribution
+`idunno.Bluesky.Labeler.Host` is the canonical deployable ASP.NET Core application for the public label distribution
 endpoints, authenticated remote administration, and OS-protected local administration.
-It demonstrates SQLite, PostgreSQL and MySQL storage, PEM or environment-supplied key rings, and
+It supports SQLite, PostgreSQL and MySQL storage, environment-supplied keys by default, an opt-in PEM key ring, and
 configuration-driven issuance policy. Its configuration is deliberately external to the
-image: no database password, account credential or private key is baked into the sample.
+image: no database password, account credential or private key is baked into the application.
+
+The project lives in `src\idunno.Bluesky.Labeler.Host`, targets .NET 10, and is published as the
+labeler container image, not a NuGet library. The independent SDK libraries remain available
+for custom hosts. This application hosts the administration backend but does not include a web UI.
+Build the image from the repository root with
+`docker build --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .`.
 
 ## Required configuration
 
@@ -15,9 +21,9 @@ provider, or a host-owned configuration file:
 |---|---|
 | `Labeler:IssuerDid` | The DID bound to the initialized label database |
 | `Labeler:PublicEndpoint` | The externally published HTTPS origin; never inferred from `Host` |
-| `Labeler:DatabaseProvider` | `sqlite`, `postgresql`, or `mysql` |
+| `Labeler:DatabaseProvider` | `postgresql` (default), or explicit `sqlite` or `mysql` |
 | `Labeler:ConnectionString` | Persistent SQLite file or dedicated PostgreSQL/MySQL database |
-| `Labeler:SigningKeyProvider` | `pem` (default) or `environment`; configure only the selected provider |
+| `Labeler:SigningKeyProvider` | `environment` (default) or explicit opt-in `pem`; configure only the selected provider |
 | `Labeler:SigningKeyDirectory` | PEM provider: read-only directory containing one `<key-id>.pem` per preinstalled key; defaults to `/run/labeler-keys` |
 | `Labeler:ActiveKeyPath` | PEM provider: writable persistent file containing the active key ID; defaults to `/data/active-key` |
 | `Labeler:SigningKeys:<index>:Id` | Environment provider: stable, case-sensitive key ID using ASCII letters, digits, dots, underscores or hyphens |
@@ -62,7 +68,7 @@ ASP.NET Core environment shortcut that trusts all forwarded headers.
 Identity resolution uses the existing `idunno.Security.Ssrf` connection-time DNS/IP protection,
 with redirects disabled; private and loopback issuer endpoints are not allowed.
 
-Initialize the store before serving traffic. The sample calls `InitializeAsync` at startup,
+Initialize the store before serving traffic. The application calls `InitializeAsync` at startup,
 so its database identity must have schema migration privileges. For deployments that separate
 database setup from serving credentials, run initialization as a deliberate setup step and
 restrict serving credentials to the required reads and writes. Back up the complete database
@@ -72,7 +78,7 @@ Bootstrap the first administrator only from an explicitly invoked setup process 
 OS identity that will use local administration:
 
 ```powershell
-dotnet run --project samples\Samples.LabelerHost -- `
+dotnet run --project src\idunno.Bluesky.Labeler.Host -- `
   --bootstrap-admin did:plc:administrator `
   --bootstrap-operation-id initial-team-setup
 ```
@@ -83,7 +89,26 @@ service's ordinary startup arguments or configuration.
 
 ## Key installation and rotation
 
-Install private keys on each host before starting or rotating it. Use opaque filenames such as
+The canonical host defaults to environment-backed keys. Supply the current key and, when
+needed, a retained previous key as separate indexed variables:
+
+```text
+Labeler__SigningKeys__0__Id=current-key-id
+Labeler__SigningKeys__0__PrivateKeyBase64=<encrypted base64-encoded private PEM>
+Labeler__SigningKeys__1__Id=previous-key-id
+Labeler__SigningKeys__1__PrivateKeyBase64=<encrypted base64-encoded previous private PEM>
+Labeler__InitialSigningKeyId=current-key-id
+```
+
+The previous-key entry is optional; omit both of its variables when not needed. These indices
+do not assign active/previous roles. Keep each key's stable ID across redeployments; the database
+selects the active key, and `InitialSigningKeyId` only seeds a new database. A deployment still
+using the previous key remains on that key until the authorized rotation completes. Add
+replacement keys before beginning rotation rather than changing configuration to switch keys.
+Never retain private keys longer than the rotation/recovery procedure requires.
+
+For filesystem-backed installations, explicitly set `Labeler__SigningKeyProvider=pem` and
+install private keys on each host before starting or rotating it. Use opaque filenames such as
 `active.pem` and `replacement.pem`; the filename stem is the key ID. Mount the key directory
 read-only and the active-key file on writable persistent storage. Protect PEM contents with
 the host's secret-management permissions (for Unix, mode `0600` and an owner-only directory).
@@ -169,8 +194,12 @@ gh attestation verify idunno.Bluesky.Labeler.image-digest.txt --repo blowdart/id
 docker pull ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>
 ```
 
-The image runs as UID 1654, listens on port 8080 and includes SQLite defaults for
-`/data/labels.db`. When using SQLite and PEM keys, mount `/data` as durable storage, the key directory read-only, and a
+The image runs as UID 1654, listens on port 8080 and defaults to PostgreSQL, as does a direct
+run of the application. Supply `Labeler__ConnectionString` through protected configuration;
+the image contains no default connection string or database credentials. When using SQLite
+and opt-in PEM keys, set `Labeler__DatabaseProvider=sqlite`,
+`Labeler__ConnectionString=Data Source=/data/labels.db`, and `Labeler__SigningKeyProvider=pem`,
+mount `/data` as durable storage, the key directory read-only, and a
 service-owned mode-`0700` socket directory at `/run/labeler`. A bind mount replaces the image's
 directory permissions: set its ownership to UID 1654 and mode to `0700` on the host too.
 Supply the required identity, policy and
@@ -185,7 +214,7 @@ ASP.NET Core health-check middleware. Liveness does not require database access;
 verifies the publisher and durable store. Its Docker `HEALTHCHECK` probes readiness on
 `http://127.0.0.1:8080/health/labeler/ready` every 30 seconds, with a 30-second startup grace
 period, a 10-second process timeout and three failures before marking the container unhealthy.
-It runs `dotnet Samples.LabelerHost.dll --health-check <URL>` as the container user, without
+It runs `dotnet idunno.Bluesky.Labeler.Host.dll --health-check <URL>` as the container user, without
 starting another host or loading configuration, keys or database connections. The probe accepts
 only HTTP 200, does not follow redirects or use an outbound HTTP proxy, and has a five-second
 HTTP timeout. No curl installation is required.
@@ -195,7 +224,7 @@ or use HTTPS-only binding, override the check with the actual internal readiness
 
 ```yaml
 healthcheck:
-  test: ["CMD", "dotnet", "Samples.LabelerHost.dll", "--health-check", "http://127.0.0.1:8081/health/labeler/ready"]
+  test: ["CMD", "dotnet", "idunno.Bluesky.Labeler.Host.dll", "--health-check", "http://127.0.0.1:8081/health/labeler/ready"]
   interval: 30s
   timeout: 10s
   start_period: 30s
@@ -224,6 +253,10 @@ services:
     ports:
       - "8080:8080"
     stop_grace_period: 90s
+    environment:
+      Labeler__DatabaseProvider: sqlite
+      Labeler__ConnectionString: Data Source=/data/labels.db
+      Labeler__SigningKeyProvider: pem
     volumes:
       - /srv/labeler/data:/data
       - /srv/labeler/keys:/run/labeler-keys:ro

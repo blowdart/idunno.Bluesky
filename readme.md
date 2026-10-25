@@ -66,6 +66,14 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 
 Trimming is supported for applications targeting .NET 9.0 or later.
 
+## Standalone labeler
+
+[`idunno.Bluesky.Labeler.Host`](src/idunno.Bluesky.Labeler.Host/readme.md) is the canonical
+deployable labeler application, with public label distribution and protected administration.
+See the [deployment guide](docs/docs/labeller/deployment.md) for container setup, database and
+signing-key configuration, health checks, and rotation/recovery. The SDK libraries can also be
+used independently to build custom hosts.
+
 ## Current Build Status
 
 [![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml)

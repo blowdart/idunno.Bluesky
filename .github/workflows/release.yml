@@ -259,7 +259,7 @@ jobs:
         metadata="${RUNNER_TEMP}/labeler-image-metadata.json"
         docker buildx build \
           --platform linux/amd64 \
-          --file samples/Samples.LabelerHost/Dockerfile \
+          --file src/idunno.Bluesky.Labeler.Host/Dockerfile \
           --tag "${image}:${GITHUB_REF_NAME}" \
           --provenance=true \
           --sbom=true \

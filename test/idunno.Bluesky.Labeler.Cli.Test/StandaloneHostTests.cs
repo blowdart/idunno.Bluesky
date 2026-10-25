@@ -6,6 +6,8 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.AspNet.Authentication;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Host;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -16,13 +18,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 
-using HostProgram = Samples.LabelerHost.Program;
+using HostProgram = idunno.Bluesky.Labeler.Host.Program;
 
 namespace idunno.Bluesky.Labeler.Cli.Test;
 
 /// <summary>Exercises the standalone host's public native-client metadata and explicit proxy trust boundary.</summary>
 public class StandaloneHostTests
 {
+    [Fact]
+    public void CanonicalHostSerializesBootstrapReceiptWithGeneratedMetadata()
+    {
+        Assert.Equal("idunno.Bluesky.Labeler.Host", typeof(HostProgram).Assembly.GetName().Name);
+        LabelAdministrationReceipt receipt = new(
+            Sequence: 1,
+            OperationId: "bootstrap",
+            Actor: new Did("did:plc:administrator"),
+            LocalIdentity: "uid:1654",
+            Action: "bootstrap",
+            Reason: "Initial setup",
+            Succeeded: true);
+        string json = JsonSerializer.Serialize(receipt, HostJsonSerializerContext.Default.LabelAdministrationReceipt);
+        LabelAdministrationReceipt? restored = JsonSerializer.Deserialize(json, HostJsonSerializerContext.Default.LabelAdministrationReceipt);
+        Assert.Equal(receipt, restored);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

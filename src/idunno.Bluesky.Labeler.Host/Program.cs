@@ -1,15 +1,15 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Labels;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.AspNet.Labeler;
-using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
@@ -17,14 +17,11 @@ using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 using idunno.Security;
 
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
-namespace Samples.LabelerHost;
+namespace idunno.Bluesky.Labeler.Host;
 
+/// <summary>Configures the canonical labeler application and its isolated readiness probe.</summary>
 internal static class Program
 {
     /// <summary>Runs either the standalone labeler host or an isolated readiness probe.</summary>
@@ -47,7 +44,7 @@ internal static class Program
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         Did issuer = new(Required(builder.Configuration, "Labeler:IssuerDid"));
         Uri publicEndpoint = new(Required(builder.Configuration, "Labeler:PublicEndpoint"));
-        string provider = Required(builder.Configuration, "Labeler:DatabaseProvider");
+        string provider = builder.Configuration["Labeler:DatabaseProvider"] ?? "postgresql";
         string connectionString = Required(builder.Configuration, "Labeler:ConnectionString");
         string localAdministrationEndpoint =
             builder.Configuration["Labeler:LocalAdministrationEndpoint"] ??
@@ -85,7 +82,8 @@ internal static class Program
             builder.Configuration.GetSection("LabelerAdministration"));
         builder.Services.AddLabelerLocalAdministration(localAdministrationEndpoint);
 
-        await using WebApplication app = builder.Build();
+        WebApplication app = builder.Build();
+        await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
         await app.Services.GetRequiredService<ILabelStore>()
             .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
             .ConfigureAwait(false);
@@ -114,7 +112,7 @@ internal static class Program
                 return 1;
             }
 
-            Console.WriteLine(JsonSerializer.Serialize(bootstrap.Result));
+            Console.WriteLine(JsonSerializer.Serialize(bootstrap.Result, HostJsonSerializerContext.Default.LabelAdministrationReceipt));
             return 0;
         }
 
@@ -138,7 +136,8 @@ internal static class Program
         using HttpClientHandler handler = new()
         {
             AllowAutoRedirect = false,
-            UseProxy = false
+            UseProxy = false,
+            CheckCertificateRevocationList = true
         };
         using HttpClient client = new(handler) { Timeout = TimeSpan.FromSeconds(5) };
         try
@@ -167,10 +166,10 @@ internal static class Program
         }
     }
 
-    /// <summary>Selects an explicit key provider without changing existing PEM configurations.</summary>
+    /// <summary>Defaults to environment-backed keys and requires explicit selection of filesystem-backed keys.</summary>
     internal static IDisposable CreateSigningKeyRing(IConfiguration configuration)
     {
-        string provider = configuration["Labeler:SigningKeyProvider"] ?? "pem";
+        string provider = configuration["Labeler:SigningKeyProvider"] ?? "environment";
         bool environmentKeys = configuration.GetSection("Labeler:SigningKeys").GetChildren().Any();
         if ((provider == "pem" && environmentKeys) ||
             (provider == "environment" &&
@@ -189,11 +188,13 @@ internal static class Program
         };
     }
 
+    /// <summary>Requires a nonempty configuration value before starting the host.</summary>
     private static string Required(ConfigurationManager configuration, string key) =>
         !string.IsNullOrWhiteSpace(configuration[key])
             ? configuration[key]!
             : throw new InvalidOperationException($"Configuration value '{key}' is required.");
 
+    /// <summary>Parses an explicit issuer service audience without accepting ambiguous fragments.</summary>
     private static AtProtoServiceReference ParseAudience(string value)
     {
         int separator = value.IndexOf('#', StringComparison.Ordinal);
@@ -206,20 +207,30 @@ internal static class Program
     }
 
     /// <summary>Protects identity requests against private-address resolution at connection time.</summary>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+        Justification = "The returned HttpClient owns the handler; failure before ownership transfer disposes it explicitly.")]
     internal static HttpClient CreateIdentityClient()
     {
         SocketsHttpHandler handler = SsrfSocketsHttpHandlerFactory.Create(new SsrfOptions
         {
             ConnectTimeout = TimeSpan.FromSeconds(10)
         });
-        handler.AllowAutoRedirect = false;
-        handler.MaxConnectionsPerServer = 16;
-        handler.PooledConnectionLifetime = TimeSpan.FromMinutes(5);
-        handler.UseCookies = false;
-        return new HttpClient(handler, disposeHandler: true)
+        try
         {
-            Timeout = TimeSpan.FromSeconds(20)
-        };
+            handler.AllowAutoRedirect = false;
+            handler.MaxConnectionsPerServer = 16;
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(5);
+            handler.UseCookies = false;
+            return new HttpClient(handler, disposeHandler: true)
+            {
+                Timeout = TimeSpan.FromSeconds(20)
+            };
+        }
+        catch
+        {
+            handler.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Declares the CLI's method-specific scope superset and its ephemeral loopback callback.</summary>
@@ -239,7 +250,7 @@ internal static class Program
             ClientId = new Uri(publicEndpoint, "/native-client-metadata.json").AbsoluteUri,
             ClientName = "Labeler administration",
             ClientUri = publicEndpoint,
-            ReturnUri = new Uri("http://127.0.0.1/"),
+            ReturnUri = new UriBuilder(Uri.UriSchemeHttp, IPAddress.Loopback.ToString()).Uri,
             Scopes = ["atproto", "identity:*", .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")]
         };
     }
@@ -273,32 +284,5 @@ internal static class Program
         }
 
         app.UseForwardedHeaders(options);
-    }
-}
-
-internal sealed class ConfigurationLabelIssuancePolicyProvider : ILabelIssuancePolicyProvider
-{
-    private readonly LabelIssuancePolicy _policy;
-
-    internal ConfigurationLabelIssuancePolicyProvider(IConfiguration configuration)
-    {
-        string[] values = configuration["Labeler:DeclaredLabels"]?
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
-        if (values.Length == 0)
-        {
-            throw new InvalidOperationException("Configure at least one value in Labeler:DeclaredLabels.");
-        }
-
-        _policy = new(
-            version: "configuration-v1",
-            declaredValues: values,
-            allowAccounts: configuration.GetValue<bool>("Labeler:AllowAccountLabels"),
-            allowRecords: configuration.GetValue<bool>("Labeler:AllowRecordLabels"));
-    }
-
-    public Task<LabelServiceResult<LabelIssuancePolicy>> GetPolicyAsync(CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        return Task.FromResult(LabelServiceResult<LabelIssuancePolicy>.Success(_policy));
     }
 }

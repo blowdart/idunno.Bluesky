@@ -5,11 +5,10 @@ using System.Security.Cryptography;
 using System.Text;
 
 using idunno.AtProto.Labels;
-using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Signing;
 
-namespace Samples.LabelerHost;
+namespace idunno.Bluesky.Labeler.Host;
 
 /// <summary>Loads separately configured private keys into memory and persists only their public selection.</summary>
 internal sealed class EnvironmentLabelSigningKeyRing : ILabelSigningKeyRing, IDisposable

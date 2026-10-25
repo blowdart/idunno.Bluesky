@@ -281,10 +281,6 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="samples/Samples.LabelerHost/Samples.LabelerHost.csproj">
-      <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="true" />
-    </Project>
     <Project Path="samples/Samples.ModerationLabels/Samples.ModerationLabels.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -370,6 +366,7 @@
     <Project Path="src/idunno.Bluesky.Labeler.PostgreSQL/idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.SQLite/idunno.Bluesky.Labeler.SQLite.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>

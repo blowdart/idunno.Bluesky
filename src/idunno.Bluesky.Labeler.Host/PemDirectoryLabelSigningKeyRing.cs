@@ -4,10 +4,9 @@
 using System.Collections.ObjectModel;
 
 using idunno.AtProto.Labels;
-using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Signing;
 
-namespace Samples.LabelerHost;
+namespace idunno.Bluesky.Labeler.Host;
 
 /// <summary>Loads host-installed PEM keys and persists active-key selection outside the image.</summary>
 internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, IDisposable

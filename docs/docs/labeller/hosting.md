@@ -7,6 +7,10 @@ WebSocket endpoint. It uses the [shared persistence](persistence.md) and
 explicit opt-in; it does not change these public routes. There is no moderation UI, identity
 provisioning, automatic retention, or signing-key manager.
 
+To deploy the canonical application rather than compose your own host, use
+[`idunno.Bluesky.Labeler.Host`](deployment.md). The package described here remains the reusable
+HTTP distribution layer.
+
 ## Application setup
 
 Register exactly one storage provider and bind its database to your issuer DID.

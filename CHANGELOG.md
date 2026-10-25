@@ -44,12 +44,14 @@
 * Added public-only durable signing-key selection contracts with seed-once initialization and verified, drained rotation activation.
 * Organized the unreleased labeler APIs into `Issuance`, `Administration`, `Maintenance`, `Signing`, `Storage` and `Identity` namespaces/directories, with one type per file. Consumers must update feature imports; common targets and result/error types remain in the root namespace.
 
-#### Samples
+#### idunno.Bluesky.Labeler.Host
 
-* Added a standalone labeler host sample with all three storage providers, mounted-PEM key-ring example, public distribution endpoints, and protected local and remote administration.
+* Defaults the canonical application and container to PostgreSQL, with a required externally supplied connection string. SQLite and MySQL remain explicit alternatives.
+* Promoted the standalone labeler application from `Samples.LabelerHost` to the canonical `src/idunno.Bluesky.Labeler.Host` project, assembly and namespace, with all three storage providers, mounted-PEM or environment keys, public distribution endpoints, and protected local and remote administration. Updated container publishing and health probes to the new application name; SDK libraries remain independently usable.
 * Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
 * Configures the standalone labeler image's Docker health check to probe ASP.NET readiness using a bounded built-in .NET probe, without curl or starting another host.
 * Supports separate protected environment variables for label-signing keys and database-backed active selection, allowing volume-free deployments such as DigitalOcean App Platform while retaining the PEM provider.
+* Defaults the canonical host to environment-backed current and optional previous keys using separate indexed variables. Filesystem-backed installations must explicitly select the `pem` provider; database-backed active selection and coordinated rotation remain authoritative.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 

@@ -12,9 +12,9 @@ using idunno.Bluesky.Labeler.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-using Samples.LabelerHost;
+using idunno.Bluesky.Labeler.Host;
 
-using HostProgram = Samples.LabelerHost.Program;
+using HostProgram = idunno.Bluesky.Labeler.Host.Program;
 
 namespace idunno.Bluesky.Labeler.Cli.Test;
 
@@ -58,7 +58,8 @@ public class EnvironmentSigningKeyTests
     [InlineData("unknown")]
     [InlineData("pem")]
     [InlineData("environment")]
-    public void RejectsUnknownOrAmbiguousProviderConfiguration(string provider)
+    [InlineData(null)]
+    public void RejectsUnknownOrAmbiguousProviderConfiguration(string? provider)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         Dictionary<string, string?> values = KeyConfiguration(key);
@@ -66,6 +67,38 @@ public class EnvironmentSigningKeyTests
         values["Labeler:ActiveKeyPath"] = "do-not-write";
         Assert.Throws<InvalidOperationException>(() =>
             HostProgram.CreateSigningKeyRing(new ConfigurationBuilder().AddInMemoryCollection(values).Build()));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DefaultsToEnvironmentKeysWithOptionalPreviousKey(bool includePrevious)
+    {
+        using LabelSigningKey current = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey previous = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        Dictionary<string, string?> values = KeyConfiguration(current, includePrevious ? previous : null);
+        values.Remove("Labeler:SigningKeyProvider");
+        using IDisposable lifetime = HostProgram.CreateSigningKeyRing(new ConfigurationBuilder().AddInMemoryCollection(values).Build());
+        EnvironmentLabelSigningKeyRing ring = Assert.IsType<EnvironmentLabelSigningKeyRing>(lifetime);
+        Assert.Equal(current.ExportPublicKeyMultibase(), ring.GetPublicKeyMultibase("original"));
+        if (includePrevious)
+        {
+            Assert.Equal(previous.ExportPublicKeyMultibase(), ring.GetPublicKeyMultibase("replacement"));
+        }
+        else
+        {
+            Assert.Throws<KeyNotFoundException>(() => ring.GetSigningKey("replacement"));
+        }
+
+        Assert.Throws<InvalidOperationException>(() => ring.ActiveKeyId);
+    }
+
+    [Fact]
+    public void DefaultProviderRequiresEnvironmentKeysInsteadOfFallingBackToFiles()
+    {
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            HostProgram.CreateSigningKeyRing(new ConfigurationBuilder().Build()));
+        Assert.Equal("Configure at least one protected signing key.", error.Message);
     }
 
     [Fact]
@@ -196,6 +229,7 @@ public class EnvironmentSigningKeyTests
             File.WriteAllText(selectionPath, "original");
             IConfiguration config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Labeler:SigningKeyProvider"] = "pem",
                 ["Labeler:SigningKeyDirectory"] = directory,
                 ["Labeler:ActiveKeyPath"] = selectionPath
             }).Build();
