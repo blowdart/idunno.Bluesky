@@ -14,6 +14,12 @@ internal sealed partial class LabelerHost
     /// <summary>Serves bounded retained-slot queries with stable pagination and explicit XRPC failures.</summary>
     internal async Task QueryAsync(HttpContext context)
     {
+        using IDisposable? admission = await AdmitTrafficAsync(context).ConfigureAwait(false);
+        if (admission is null)
+        {
+            return;
+        }
+
         if (!HttpMethods.IsGet(context.Request.Method))
         {
             context.Response.Headers.Allow = "GET";

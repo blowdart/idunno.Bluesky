@@ -51,6 +51,7 @@ public static class SqliteLabelStorageExtensions
                 new StoreMetrics("sqlite", provider.GetService<IMeterFactory>())));
         services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         services.AddSingleton<ILabelAdministrationStore>(provider => (ILabelAdministrationStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelMaintenanceStore>(provider => (ILabelMaintenanceStore)provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

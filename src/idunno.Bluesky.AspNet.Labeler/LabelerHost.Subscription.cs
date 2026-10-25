@@ -17,6 +17,12 @@ internal sealed partial class LabelerHost
     /// <summary>Admits bounded public subscriptions and pairs each send loop with a cancellable receive drain.</summary>
     internal async Task SubscribeAsync(HttpContext context)
     {
+        using IDisposable? admission = await AdmitTrafficAsync(context).ConfigureAwait(false);
+        if (admission is null)
+        {
+            return;
+        }
+
         if (!HttpMethods.IsGet(context.Request.Method) &&
             !(HttpMethods.IsConnect(context.Request.Method) && context.WebSockets.IsWebSocketRequest))
         {
@@ -67,7 +73,8 @@ internal sealed partial class LabelerHost
         {
             metrics.Subscription(1);
             using WebSocket socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
-            using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, _lifetime.Token);
+            using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(
+                context.RequestAborted, _lifetime.Token, MaintenanceToken);
             await ServeSocketAsync(context, socket, lifetime).ConfigureAwait(false);
         }
         finally
@@ -290,10 +297,11 @@ internal sealed partial class LabelerHost
         }
 
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(1), clock);
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, _lifetime.Token);
         try
         {
-            await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Subscription ended.", linked.Token).ConfigureAwait(false);
+            WebSocketCloseStatus closeStatus = IsDraining ? (WebSocketCloseStatus)1012 : WebSocketCloseStatus.NormalClosure;
+            string description = IsDraining ? "Service maintenance; reconnect and retry." : "Subscription ended.";
+            await socket.CloseOutputAsync(closeStatus, description, deadline.Token).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is OperationCanceledException or WebSocketException)
         {

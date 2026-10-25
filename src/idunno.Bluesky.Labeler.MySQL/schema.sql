@@ -63,4 +63,31 @@ CREATE TABLE IF NOT EXISTS label_admin_tokens (
     INDEX label_admin_token_hash(token_hash),
     INDEX label_admin_token_expiry(expires_ms)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 4) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_maintenance (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    operation_id VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,
+    phase INTEGER NOT NULL DEFAULT 0 CHECK(phase BETWEEN 0 AND 5),
+    stream_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    previous_key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin,
+    replacement_key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin,
+    replacement_public_key VARCHAR(512) CHARACTER SET ascii COLLATE ascii_bin,
+    through_seq BIGINT NOT NULL DEFAULT 0 CHECK(through_seq>=0),
+    checkpoint BIGINT NOT NULL DEFAULT 0,
+    key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1)),
+    CHECK(checkpoint>=0 AND checkpoint<=through_seq)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_hosts (
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    started_ms BIGINT NOT NULL,
+    last_seen_ms BIGINT NOT NULL,
+    stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
+    operation_id VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)),
+    key_activated INTEGER NOT NULL DEFAULT 0 CHECK(key_activated IN (0,1)),
+    PRIMARY KEY(operation_id, host_id)
+) ENGINE=InnoDB;
+INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 5) ON DUPLICATE KEY UPDATE id=id;

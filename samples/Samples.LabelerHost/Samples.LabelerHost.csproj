@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.PostgreSQL\idunno.Bluesky.Labeler.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.MySQL\idunno.Bluesky.Labeler.MySQL.csproj" />
+  </ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

@@ -39,6 +39,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
     internal IServiceProvider Services => _app.Services;
     internal string DatabasePath => _database;
     internal string? OwnedSocketDirectory { get; set; }
+    internal bool RemoteAdministrationEnabled { get; set; }
     internal LabelerHost Host => _app.Services.GetRequiredService<LabelerHost>();
     internal SignalClock Clock { get; } = new();
     internal HttpClient Client { get; private set; } = null!;
@@ -53,7 +54,7 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         string? database = null,
         bool http2 = false,
         Action<IServiceCollection>? configureAdministration = null,
-        bool remoteAdministrationEnabled = true,
+        bool? remoteAdministrationEnabled = true,
         bool fallbackAuthorizationRequired = false)
     {
         TestServerBuilder fixture = new(database);
@@ -72,6 +73,12 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         builder.Services.AddSingleton<TimeProvider>(fixture.Clock);
         builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
         builder.Services.AddBlueskyLabeler(s_issuer, options);
+        if (remoteAdministrationEnabled is null)
+        {
+            builder.Services.Configure<LabelerAdministrationOptions>(
+                settings => settings.RemoteEnabled = fixture.RemoteAdministrationEnabled);
+        }
+
         if (fallbackAuthorizationRequired)
         {
             builder.Services.AddAuthentication("test")
@@ -125,7 +132,14 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         fixture._app.MapBlueskyLabeler();
         if (configureAdministration is not null)
         {
-            fixture._app.MapLabelerAdministration(remoteAdministrationEnabled);
+            if (remoteAdministrationEnabled.HasValue)
+            {
+                fixture._app.MapLabelerAdministration(remoteAdministrationEnabled.Value);
+            }
+            else
+            {
+                fixture._app.MapLabelerAdministration();
+            }
         }
 
         await fixture.Store.InitializeAsync(s_issuer);

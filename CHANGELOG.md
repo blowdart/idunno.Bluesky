@@ -7,7 +7,7 @@
 #### idunno.Bluesky.AspNet.Labeler
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
-* Added a startup-time switch for mapping or omitting remote administration routes independently of protected local administration.
+* Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
 * Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
 * Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
 * Persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
@@ -17,6 +17,15 @@
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
 * Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
 * Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
+* Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
+
+#### idunno.Bluesky.Labeler.Cli
+
+* Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
+* Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
+* Added resumable maintenance and signing-key rotation commands, did:web publication snippets and authenticated PLC publication using public replacement-key material.
+* Added attestation-verified direct CLI updates and confirmed digest-pinned Docker Compose service redeployment with graceful stop, readiness verification and previous-image rollback.
+* Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
 
 #### idunno.Bluesky.Labeler
 
@@ -25,6 +34,10 @@
 * Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
 * Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that snapshots caller-owned batches and preserves label fields and sequence positions.
+
+#### Samples
+
+* Added a standalone labeler host sample with all three storage providers, mounted-PEM key-ring example, public distribution endpoints, and protected local and remote administration.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 

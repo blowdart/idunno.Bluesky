@@ -23,10 +23,11 @@ grant, not proof that a new member has signed in. Members authenticate independe
 
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
-Schema version four upgrades versions one, two and three additively through `InitializeAsync`.
+Schema version five upgrades versions one through four additively through `InitializeAsync`.
 Initialization also installs the administrative token-expiry index on existing version-four
 databases so cleanup can select expired replay entries without scanning all retained tokens.
-Back up all tables together and stop older application versions before upgrading.
+Version five adds durable coordinated maintenance and signing-key rotation state. Back up all
+tables together and stop older application versions before upgrading.
 
 Team changes, last-administrator checks and label commit fences use the same provider serialization
 lock. Concurrent removal, suspension or demotion cannot eliminate the last active administrator.
@@ -61,9 +62,10 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownProxies = { IPAddress.Parse("10.0.0.10"), IPAddress.Parse("10.0.0.11") }
 });
 
-// Read once at startup; changing this setting requires a host restart.
-app.MapLabelerAdministration(
-    remoteEnabled: app.Configuration.GetValue("Labeler:Administration:RemoteEnabled", defaultValue: true));
+// Remote administration is disabled by default and follows reloadable configuration.
+builder.Services.Configure<LabelerAdministrationOptions>(
+    builder.Configuration.GetSection("Labeler:Administration"));
+app.MapLabelerAdministration();
 ```
 
 The signing key and hardened identity-resolution HTTP client are caller-owned. Configure outbound
@@ -76,6 +78,10 @@ metadata does not grant anonymous access: missing or invalid service tokens are 
 
 `MapBlueskyLabeler()` remains independently registered, public and read-only. Administrative
 registration does not make public label distribution require sign-in.
+Remote administration is disabled unless `Labeler:Administration:RemoteEnabled` is true. Because
+the mapped routes read monitored options on each request, configuration reload can enable or disable
+them without restarting; disabled requests receive 404. This setting never affects protected local
+administration or team membership and does not bypass authentication or authorization.
 
 Configure admission/rate limiting in the hosting application before administrative handlers.
 Verification and required denial audit consume outbound requests and durable transactions, so
@@ -275,9 +281,27 @@ identity where applicable. Required denial audit failures fail closed.
 
 `authorizeMaintenance` records an administrator's authorized intent with `operationId` and `reason`.
 `ILabelAdministrationStore.AuditMaintenanceAsync` distinguishes intent, completed and failed
-coordinator outcomes. These are authorization/audit contracts, **not** a rotation command, lease,
-drain mechanism or cross-host coordinator. A future maintenance integration must recheck authority
-at its own commit boundary and coordinate every writer; an earlier intent is not a reusable grant.
+coordinator outcomes. These audit events are distinct from the durable maintenance lease and
+cross-host rotation coordinator described below.
+
+The `retire` CLI commands use this shared maintenance authorization and audit path together with
+the durable lifecycle checkpoints:
+
+```text
+labeler-admin retire begin --operation-id retire-start --reason "Close the service" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin retire advance --operation-id retire-batch --reason "Negate retained active labels" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin retire grace --days 30 --operation-id retire-grace --reason "Allow consumers to catch up" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin retire complete --operation-id retire-complete --reason "Grace period elapsed" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin retire purge --limit 100 --operation-id retire-purge --reason "Approved local cleanup" --local-endpoint /run/bean-bureau/admin.sock
+```
+
+`begin` permanently closes ordinary issuance. Repeat `advance` until status reports `Distributing`;
+each call publishes pending labels and processes one bounded page, appending signed negations and
+the enumeration checkpoint atomically. It negates only the current unexpired positive decisions,
+preserving CID scope, and skips existing negations and expired decisions. Start the grace period only
+after status shows all issued labels published. `complete` is rejected before the database-clock
+deadline. `purge` requires separate confirmation and removes a bounded local batch; it does not destroy
+the signing key or backups. Retirement does not stop distribution automatically.
 
 Team mutations retain same-intent receipts by operation ID. On `OutcomeUnknown`, recover using that
 ID and the current authorized account; do not invent a new operation. Maintenance audit events are
@@ -288,3 +312,96 @@ infrastructure unavailable to remote callers.
 Protocol references: [OAuth](https://atproto.com/specs/oauth),
 [permissions](https://atproto.com/specs/permission), [XRPC](https://atproto.com/specs/xrpc), and
 the [inspected reference getServiceAuth route](https://github.com/bluesky-social/atproto/blob/57c85d5ea03583dae3ae8d1f51106210dcad315b/packages/pds/src/api/com/atproto/server/getServiceAuth.ts).
+
+## Administration CLI
+
+The self-contained `idunno.Bluesky.Labeler.Cli` executable is published for Windows x64, Linux x64
+and Linux arm64. Each invocation selects exactly one transport. Local mode uses the configured
+protected named pipe or Unix socket and must run under the OS identity explicitly bound to a live
+team member. Remote mode opens the user's browser for native OAuth, obtains a method-bound service
+token from the user's PDS, and calls the labeler's HTTPS administration endpoint. The CLI does not
+store OAuth credentials or accept a private label-signing key.
+
+Download the ZIP matching the operating system and architecture from the GitHub release, then verify
+its build provenance before extracting or running it:
+
+```text
+gh attestation verify idunno.Bluesky.Labeler.Cli-linux-x64.zip --repo blowdart/idunno.Bluesky
+```
+
+Keep the release tag and artifact digest with deployment records. Replace a directly installed CLI only after verifying the new release. The `update` command
+downloads one exact stable release, verifies its GitHub artifact attestation with the installed
+GitHub CLI (`gh`), checks the archive SHA-256 and staged executable, and schedules an atomic
+replacement after the current process exits. It preserves the prior executable as a sibling backup;
+restore that file manually if an interrupted helper leaves the installation unusable.
+
+```text
+labeler-admin update --tag v9.0.1
+```
+
+The update requires a self-contained installation from the Windows x64, Linux x64 or Linux arm64
+release ZIP, GitHub CLI authentication/verification support, and write access to the executable's
+directory. It does not update a `dotnet tool`, package-manager installation or renamed launcher.
+The command asks for confirmation; `--yes` is only for an explicitly controlled script.
+
+Examples below use the executable name `labeler-admin`; substitute the published executable path
+and the endpoint configured by the host.
+
+Read team, publication and lifecycle status, audit, or an operation receipt locally:
+
+```text
+labeler-admin team --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin status --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin audit --after-sequence 100 --limit 16 --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin operation --operation-id label-op-123 --local-endpoint /run/bean-bureau/admin.sock
+```
+
+The status response includes issuer and stream identity, revision, issued/published sequence
+boundaries, replay floor, lifecycle phase, retirement checkpoints, and the grace deadline when set.
+
+Use the configured Windows pipe name instead of the Unix socket path on Windows. Remote commands
+require the labeler's HTTPS origin, exact service reference, administrator handle, and the HTTPS
+URL of the registered native OAuth client metadata. Use a metadata document published by the
+labeler host; do not substitute a development client ID.
+
+```text
+labeler-admin team --admin-url https://labeler.example --audience "did:web:labeler.example#labeler_admin" --handle admin.example --client-id https://labeler.example/native-client-metadata.json
+labeler-admin operation --operation-id label-op-123 --admin-url https://labeler.example --audience "did:web:labeler.example#labeler_admin" --handle admin.example --client-id https://labeler.example/native-client-metadata.json
+```
+
+Issue a label for an account, profile record, post, list, or feed generator. A record URI is kept a
+record target; use `--cid` to pin the operation to one record version. Negation uses the same target
+and value and does not accept an expiry:
+
+```text
+labeler-admin issue did:plc:subject spam --operation-id issue-001 --reason "Manual review" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin issue at://did:plc:subject/app.bsky.actor.profile/self impersonation --cid bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4 --operation-id issue-002 --reason "Profile review" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin negate at://did:plc:subject/app.bsky.feed.post/record-key spam --operation-id negate-001 --reason "Appeal accepted" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin enroll did:plc:new-member --role Moderator --operation-id enroll-001 --reason "Moderator onboarding" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin change-team did:plc:member --action SetRole --role Viewer --operation-id role-001 --reason "Role review" --local-endpoint /run/bean-bureau/admin.sock
+labeler-admin change-team did:plc:member --action BindLocal --credential uid:1001 --operation-id bind-001 --reason "Grant local access" --local-endpoint /run/bean-bureau/admin.sock
+```
+
+Issue and negation, enrollment, and team changes require an interactive confirmation. Use `--yes`
+only in an explicitly controlled script; the operation ID makes a retry recoverable, not harmless
+when changed to a new ID. Mutation reasons are required and written to the shared audit trail.
+Responses are JSON on standard output. Exit codes are 0 for success, 2 for invalid input or declined
+confirmation, 3 for transport/setup errors, 4 for authentication or authorization failure, 5 for
+service failure, and 130 for cancellation.
+
+The CLI exposes shared team, audit, publication/lifecycle state, operation receipts, issuance,
+negation, enrollment, team changes, resumable retirement, and coordinated signing-key rotation.
+Rotation uses durable maintenance shared by all hosts; all participating hosts must drain and
+acknowledge the replacement key before distribution reopens. `rotation recover-plc` checks the
+current DID document before resubmitting a saved signed operation.
+
+The `service-update` command is limited to Docker Compose deployments using the published GHCR
+image. It requires the target and previous images as immutable digests, the Compose service name,
+the public readiness URL, and explicit confirmations that an external backup exists and the
+schema transition is compatible. It pulls both images before replacement, writes an image-only
+temporary Compose override, stops the host with a bounded grace period (90 seconds by default),
+recreates only the selected service, checks readiness, and redeploys the previous digest if the
+new service fails readiness. It never edits the operator's Compose file, enters a running
+container, removes volumes, or updates provider-managed services. Cancellation or process
+interruption can leave deployment state uncertain; inspect `docker compose ps`, the configured
+image digest and readiness endpoint before retrying.

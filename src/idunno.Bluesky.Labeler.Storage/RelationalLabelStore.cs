@@ -17,9 +17,10 @@ namespace idunno.Bluesky.Labeler.Storage;
 /// <summary>Serializes durable label mutations and decision receipts under one provider-owned stream lock.</summary>
 /// <remarks><para>Linked into each provider assembly. SQL, client types and transaction fault hooks stay
 /// internal; application services submit typed commands rather than holding database connections.</para></remarks>
-internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics) : ILabelStore, ILabelAdministrationStore
+internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
+    : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore
 {
-    private const int SchemaVersion = 4;
+    private const int SchemaVersion = 5;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -61,7 +62,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: "SELECT version FROM label_schema WHERE id=1",
             token: token).ConfigureAwait(false);
-        if (version is not null && Integer(version) is not (1 or 2 or 3 or SchemaVersion))
+        if (version is not null && Integer(version) is not (1 or 2 or 3 or 4 or SchemaVersion))
         {
             throw new InvalidDataException("The label database schema version is not supported.");
         }
@@ -71,12 +72,12 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v4.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v5.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=4 WHERE id=1",
+            sql: "UPDATE label_schema SET version=5 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -511,6 +512,11 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 return existing.Value.Receipt;
             }
 
+            if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
+            {
+                throw new InvalidOperationException("Label issuance is blocked during coordinated maintenance.");
+            }
+
             Revision(state, expectedRevision);
             if (state.Issuer.Length == 0)
             {
@@ -641,9 +647,34 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             operation: "replace-signatures",
             action: async (connection, transaction, state) =>
             {
-                if (state.Phase != LabelerLifecyclePhase.Active || previousSequence > state.PublishedThrough)
+                LabelMaintenanceState rotation = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (rotation.Phase != LabelMaintenancePhase.Resigning ||
+                    !rotation.KeyPublicationVerified ||
+                    rotation.StreamId != state.StreamId ||
+                    rotation.LastSequence >= previousSequence ||
+                    previousSequence > rotation.ThroughSequence)
                 {
-                    throw new InvalidOperationException("Only published labels in an active labeler can have their signatures replaced.");
+                    throw new InvalidOperationException("Signature replacement is permitted only at the active rotation checkpoint.");
+                }
+
+                object? nextSequence = await ScalarAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sql: "SELECT MIN(seq) FROM label_entries WHERE seq>@checkpoint AND seq<=@through",
+                    token: cancellationToken,
+                    ("@checkpoint", rotation.LastSequence),
+                    ("@through", rotation.ThroughSequence)).ConfigureAwait(false);
+                object? countValue = await ScalarAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sql: "SELECT COUNT(*) FROM label_entries WHERE seq>@checkpoint AND seq<=@last",
+                    token: cancellationToken,
+                    ("@checkpoint", rotation.LastSequence),
+                    ("@last", previousSequence)).ConfigureAwait(false);
+                if (nextSequence is null || Integer(nextSequence) != batch[0].Sequence ||
+                    Integer(countValue) != batch.Length)
+                {
+                    throw new InvalidOperationException("The replacement batch must cover the next contiguous retained history page.");
                 }
 
                 foreach (StoredLabel label in batch)
@@ -685,6 +716,15 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     transaction: transaction,
                     state: next,
                     token: cancellationToken).ConfigureAwait(false);
+                await ExecuteAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sql: "UPDATE label_maintenance SET checkpoint=@checkpoint, phase=@phase WHERE id=1",
+                    token: cancellationToken,
+                    ("@checkpoint", previousSequence),
+                    ("@phase", previousSequence == rotation.ThroughSequence
+                        ? (int)LabelMaintenancePhase.ReadyToReopen
+                        : (int)LabelMaintenancePhase.Resigning)).ConfigureAwait(false);
                 return true;
             },
             token: cancellationToken);
@@ -1518,6 +1558,11 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             operation: operation,
             action: async (connection, transaction, state) =>
         {
+            if ((await ReadMaintenanceAsync(connection, transaction, token).ConfigureAwait(false)).IsActive)
+            {
+                throw new InvalidOperationException("Lifecycle transitions are blocked during coordinated maintenance.");
+            }
+
             Revision(state, expectedRevision);
             long now = Integer(
                 await ScalarAsync(
@@ -1601,6 +1646,11 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             operation: "purge",
             action: async (connection, transaction, state) =>
         {
+            if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
+            {
+                throw new InvalidOperationException("Retirement purge is blocked during coordinated maintenance.");
+            }
+
             Revision(state, expectedRevision);
             if (state.Phase is not (LabelerLifecyclePhase.Retired or LabelerLifecyclePhase.Purging))
             {

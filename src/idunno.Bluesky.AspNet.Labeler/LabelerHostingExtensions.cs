@@ -24,6 +24,7 @@ public static class LabelerHostingExtensions
     /// <returns>The service collection.</returns>
     /// <exception cref="ArgumentNullException">A required dependency is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">An option is outside its supported range.</exception>
+    /// <exception cref="ArgumentException"><paramref name="options"/> contains an invalid public endpoint.</exception>
     /// <exception cref="InvalidOperationException">Hosting is already registered or the store registration is ambiguous.</exception>
     /// <remarks><para>Register exactly one initialized label store. No keys, credentials, database
     /// migrations, identity changes or administrative mutation endpoints are installed.</para></remarks>
@@ -35,25 +36,39 @@ public static class LabelerHostingExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(issuer);
         if (services.Any(descriptor => descriptor.ServiceType == typeof(LabelerHost)) ||
-            services.Count(descriptor => descriptor.ServiceType == typeof(ILabelStore)) != 1)
+            services.Count(descriptor => descriptor.ServiceType == typeof(ILabelStore)) != 1 ||
+            services.Count(descriptor => descriptor.ServiceType == typeof(ILabelMaintenanceStore)) != 1)
         {
-            throw new InvalidOperationException("Register one label store and register hosting only once.");
+            throw new InvalidOperationException("Register one label store and maintenance store, and register hosting only once.");
         }
 
         LabelerHostingOptions settings = options ?? new();
-        settings.Validate();
+        settings.Validate(nameof(options));
+        services.AddSingleton(settings);
         services.AddLogging();
         services.AddMetrics();
         services.AddSingleton(provider => new HostingMetrics(provider.GetRequiredService<System.Diagnostics.Metrics.IMeterFactory>()));
         services.TryAddSingleton(TimeProvider.System);
-        services.AddSingleton(provider => new LabelerHost(
-            issuer: issuer,
-            store: provider.GetRequiredService<ILabelStore>(),
-            options: settings,
-            clock: provider.GetRequiredService<TimeProvider>(),
-            logger: provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LabelerHost>>(),
-            metrics: provider.GetRequiredService<HostingMetrics>(),
-            applicationLifetime: provider.GetRequiredService<IHostApplicationLifetime>()));
+        services.AddSingleton(provider =>
+        {
+            ILabelStore store = provider.GetRequiredService<ILabelStore>();
+            ILabelMaintenanceStore maintenanceStore = provider.GetRequiredService<ILabelMaintenanceStore>();
+            if (!ReferenceEquals(store, maintenanceStore))
+            {
+                throw new InvalidOperationException("Maintenance coordination and label distribution must use the same provider instance.");
+            }
+
+            return new LabelerHost(
+                issuer: issuer,
+                store: store,
+                maintenanceStore: maintenanceStore,
+                signingKeyRing: provider.GetService<ILabelSigningKeyRing>(),
+                options: settings,
+                clock: provider.GetRequiredService<TimeProvider>(),
+                logger: provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LabelerHost>>(),
+                metrics: provider.GetRequiredService<HostingMetrics>(),
+                applicationLifetime: provider.GetRequiredService<IHostApplicationLifetime>());
+        });
         services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LabelerHost>());
         services.AddHealthChecks().AddCheck<LabelerHost>("bluesky_labeler");
         return services;

@@ -29,6 +29,14 @@ jobs:
       with:
         egress-policy: audit
 
+    - name: Authenticate to GitHub Container Registry
+      shell: bash
+      env:
+        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        printf '%s' "${GHCR_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
     - name: 'Checkout repository'
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -144,6 +152,26 @@ jobs:
     - name: 'Build'
       run: dotnet build --configuration Release --property:PublicRelease=true
 
+    - name: 'Publish self-contained labeler administration CLI'
+      shell: pwsh
+      run: |
+        $null = New-Item -ItemType Directory -Force -Path $env:BUILD_OUTPUT
+        $rids = @('win-x64', 'linux-x64', 'linux-arm64')
+        foreach ($rid in $rids) {
+          $publishDirectory = Join-Path $env:RUNNER_TEMP "labeler-cli/$rid"
+          dotnet publish src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj `
+            --configuration Release `
+            --runtime $rid `
+            --self-contained true `
+            --no-restore `
+            --output $publishDirectory `
+            --property:PublicRelease=true
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Compress-Archive -Path (Join-Path $publishDirectory '*') `
+            -DestinationPath (Join-Path $env:BUILD_OUTPUT "idunno.Bluesky.Labeler.Cli-$rid.zip") `
+            -Force
+        }
+
     - name: 'Test frontend'
       working-directory: samples/Samples.ReactBff/ClientApp
       run: npm test
@@ -184,6 +212,63 @@ jobs:
       with:
         name: build-artifacts
         path: ${{ env.BUILD_OUTPUT }}/*
+        retention-days: 7
+
+  publish-labeler-image:
+    name: Publish standalone labeler image
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      with:
+        egress-policy: audit
+
+    - name: Checkout source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Authenticate to GitHub Container Registry
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -euo pipefail
+        printf '%s' "${GH_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+    - name: Build and publish immutable release image
+      shell: bash
+      run: |
+        set -euo pipefail
+        image="ghcr.io/blowdart/idunno-bluesky-labeler"
+        metadata="${RUNNER_TEMP}/labeler-image-metadata.json"
+        docker buildx build \
+          --platform linux/amd64 \
+          --file samples/Samples.LabelerHost/Dockerfile \
+          --tag "${image}:${GITHUB_REF_NAME}" \
+          --provenance=true \
+          --sbom=true \
+          --push \
+          --metadata-file "${metadata}" \
+          .
+        digest="$(jq -er '."containerimage.digest" | select(test("^sha256:[0-9a-f]{64}$"))' "${metadata}")"
+        printf '%s@%s\n' "${image}" "${digest}" > "${RUNNER_TEMP}/idunno.Bluesky.Labeler.image-digest.txt"
+        gh api --method PATCH \
+          "/user/packages/container/idunno-bluesky-labeler/visibility" \
+          --field visibility=public
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Upload immutable image reference
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: labeler-image-digest
+        path: ${{ runner.temp }}/idunno.Bluesky.Labeler.image-digest.txt
         retention-days: 7
 
   sign:
@@ -262,6 +347,8 @@ jobs:
           $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($nupkg.Basename)" -ChildPath "[Content_Types].xml"
           Remove-Item -LiteralPath $contentTypes -Force
         }
+        Get-ChildItem -Path $env:BUILD_OUTPUT -Filter '*.zip' -File -Force |
+          Copy-Item -Destination $env:ATTESTATION_INPUT
 
     - name: 'List attestation artifacts'
       shell: pwsh
@@ -304,6 +391,12 @@ jobs:
         name: signed-artifacts
         path : ${{ env.BUILD_OUTPUT }}
 
+    - name: 'Gather standalone labeler image digest'
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: labeler-image-digest
+        path: ${{ env.BUILD_OUTPUT }}
+
     - name: Authenticate to nuget
       uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
       id: nugetlogin
@@ -345,7 +438,7 @@ jobs:
 
   createRelease:
     name: Create Release
-    needs: publish
+    needs: [publish, publish-labeler-image]
     runs-on: ubuntu-latest
     environment: release
     permissions:
@@ -380,5 +473,7 @@ jobs:
         --discussion-category "Announcements"
         --verify-tag
         *.nupkg
+        *.image-digest.txt
         *.cdx.json
         *.spdx.json
+        *.zip

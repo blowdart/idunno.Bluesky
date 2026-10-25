@@ -84,8 +84,9 @@ Changing a signing key therefore does not automatically re-sign retained labels.
 It preserves signed fields, creation timestamps and stream sequences without emitting
 replacement events. Retain old public verification keys for historical signatures;
 archiving them alone does not ensure consumers can discover or trust them through the
-current DID document. This separation is between serving and maintenance, not a requirement
-to implement rotation outside the SDK.
+current DID document. The labeler maintenance API and administration CLI coordinate the
+explicit rotation workflow; delivery remains independent of private keys and never repairs
+signatures on demand.
 
 Use lexicon-valid inputs at issuance. Some legacy representations accepted by the SDK,
 such as uppercase base32 CID text, are rejected by stricter official-client validators.

@@ -47,6 +47,44 @@ public class LifecycleTests
     }
 
     [Fact]
+    public async Task MaintenanceReturnsRetryableUnavailableResponsesAndClosesSubscriptionsForReconnect()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        using WebSocket existing = await fixture.ConnectAsync();
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        await maintenance.BeginRotationAsync(
+            operationId: "maintenance-http-boundary",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+
+        using HttpResponseMessage query = await fixture.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*",
+            token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, query.StatusCode);
+        Assert.Equal(TimeSpan.FromSeconds(1), query.Headers.RetryAfter?.Delta);
+        Assert.Contains("ServiceUnavailable", await query.Content.ReadAsStringAsync(token));
+
+        using HttpRequestMessage upgrade = new(HttpMethod.Get, "/xrpc/com.atproto.label.subscribeLabels");
+        upgrade.Headers.TryAddWithoutValidation("Connection", "Upgrade");
+        upgrade.Headers.TryAddWithoutValidation("Upgrade", "websocket");
+        upgrade.Headers.TryAddWithoutValidation("Sec-WebSocket-Version", "13");
+        upgrade.Headers.TryAddWithoutValidation("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+        using HttpResponseMessage newSubscription = await fixture.Client.SendAsync(upgrade, token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, newSubscription.StatusCode);
+        Assert.Equal(TimeSpan.FromSeconds(1), newSubscription.Headers.RetryAfter?.Delta);
+
+        using CancellationTokenSource watchdog = CancellationTokenSource.CreateLinkedTokenSource(token);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(30));
+        byte[] buffer = new byte[1];
+        ValueWebSocketReceiveResult close = await existing.ReceiveAsync(buffer.AsMemory(), watchdog.Token);
+        Assert.Equal(WebSocketMessageType.Close, close.MessageType);
+        Assert.Equal((WebSocketCloseStatus)1012, existing.CloseStatus);
+    }
+
+    [Fact]
     public async Task QueryDeadlineCancelsAnInProgressRead()
     {
         CancellationToken token = TestContext.Current.CancellationToken;

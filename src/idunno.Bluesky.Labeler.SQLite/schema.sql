@@ -48,4 +48,30 @@ CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BLOB PRIMARY KEY
 CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BLOB PRIMARY KEY, token_hash TEXT NOT NULL, actor TEXT NOT NULL, expires_ms INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS label_admin_token_expiry ON label_admin_tokens(expires_ms);
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 4);
+CREATE TABLE IF NOT EXISTS label_maintenance (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    operation_id TEXT,
+    phase INTEGER NOT NULL DEFAULT 0 CHECK(phase BETWEEN 0 AND 5),
+    stream_id TEXT NOT NULL,
+    previous_key_id TEXT,
+    replacement_key_id TEXT,
+    replacement_public_key TEXT,
+    through_seq INTEGER NOT NULL DEFAULT 0 CHECK(through_seq>=0),
+    checkpoint INTEGER NOT NULL DEFAULT 0 CHECK(checkpoint>=0 AND checkpoint<=through_seq),
+    key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS label_hosts (
+    host_id TEXT PRIMARY KEY,
+    started_ms INTEGER NOT NULL,
+    last_seen_ms INTEGER NOT NULL,
+    stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
+    operation_id TEXT NOT NULL,
+    host_id TEXT NOT NULL,
+    acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)),
+    key_activated INTEGER NOT NULL DEFAULT 0 CHECK(key_activated IN (0,1)),
+    PRIMARY KEY(operation_id, host_id)
+);
+INSERT OR IGNORE INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000');
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 5);

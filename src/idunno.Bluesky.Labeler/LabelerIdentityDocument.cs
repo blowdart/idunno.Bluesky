@@ -35,10 +35,31 @@ public static class LabelerIdentityDocument
     {
         ArgumentNullException.ThrowIfNull(did);
         ArgumentNullException.ThrowIfNull(signingKey);
+        return CreateDidWebSnippet(did, signingKey.ExportPublicKeyMultibase(), labelerEndpoint);
+    }
+
+    /// <summary>
+    /// Creates a merge-ready JSON snippet from a public label signing key and service endpoint.
+    /// </summary>
+    /// <param name="did">The labeler's DID.</param>
+    /// <param name="publicKeyMultibase">The public label signing key in multibase form.</param>
+    /// <param name="labelerEndpoint">The public HTTPS labeler endpoint.</param>
+    /// <returns>A JSON object containing only the public verification method and service entries.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="did"/>, <paramref name="publicKeyMultibase"/>, or <paramref name="labelerEndpoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="did"/> is not a <c>did:web</c> identifier, the public key is not a base58btc multibase value, or <paramref name="labelerEndpoint"/> is not an absolute HTTPS URI.</exception>
+    /// <remarks>
+    /// <para>This overload allows an operator tool to prepare identity publication from a remote public-key response without access to private signing material.</para>
+    /// <para>This returns additions for an operator to merge into the existing identity document for <paramref name="did" />. It does not produce a replacement document and contains no private key material.</para>
+    /// </remarks>
+    public static string CreateDidWebSnippet(Did did, string publicKeyMultibase, Uri labelerEndpoint)
+    {
+        ArgumentNullException.ThrowIfNull(did);
+        ArgumentNullException.ThrowIfNull(publicKeyMultibase);
         ValidateDidWeb(did);
+        ValidatePublicKey(publicKeyMultibase);
         ValidateEndpoint(labelerEndpoint);
 
-        JsonObject snippet = CreateSnippet(did, signingKey.ExportPublicKeyMultibase(), labelerEndpoint);
+        JsonObject snippet = CreateSnippet(did, publicKeyMultibase, labelerEndpoint);
         return snippet.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
     }
 
@@ -175,6 +196,16 @@ public static class LabelerIdentityDocument
             throw new ArgumentException(
                 "The labeler endpoint must be an HTTPS origin without credentials, a path, a query, or a fragment.",
                 nameof(labelerEndpoint));
+        }
+    }
+
+    private static void ValidatePublicKey(string publicKeyMultibase)
+    {
+        if (publicKeyMultibase.Length is < 2 or > 512 ||
+            publicKeyMultibase[0] != 'z' ||
+            publicKeyMultibase.Any(char.IsControl))
+        {
+            throw new ArgumentException("A base58btc public key multibase value is required.", nameof(publicKeyMultibase));
         }
     }
 }

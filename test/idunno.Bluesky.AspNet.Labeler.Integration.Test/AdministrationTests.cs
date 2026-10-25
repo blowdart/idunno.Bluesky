@@ -372,6 +372,21 @@ public class AdministrationTests
         using JsonDocument response = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint, $$"""{"method":"{{method}}","operationId":"inspection-operation"{{reasonProperty}}}""", TestContext.Current.CancellationToken));
         Assert.True(response.RootElement.GetProperty("succeeded").GetBoolean());
+        if (method == "getPublicationState")
+        {
+            JsonElement state = response.RootElement.GetProperty("state");
+            Assert.Equal(TestServerBuilder.s_issuer.Value, state.GetProperty("issuer").GetString());
+            Assert.NotEqual(Guid.Empty, state.GetProperty("streamId").GetGuid());
+            Assert.Equal(1, state.GetProperty("issuedThrough").GetInt64());
+            Assert.InRange(state.GetProperty("publishedThrough").GetInt64(), 0, 1);
+            Assert.True(state.GetProperty("revision").GetInt64() > 0);
+            Assert.Equal(0, state.GetProperty("replayFloor").GetInt64());
+            Assert.Equal("Active", state.GetProperty("phase").GetString());
+            Assert.Equal(0, state.GetProperty("retirementUpperBound").GetInt64());
+            Assert.Equal(0, state.GetProperty("retirementThrough").GetInt64());
+            Assert.False(state.TryGetProperty("graceDeadline", out _));
+        }
+
         using JsonDocument mutation = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
             endpoint, """{"method":"issueLabel","operationId":"no-reason","target":"did:plc:subject","value":"spam"}""",
             TestContext.Current.CancellationToken));
@@ -393,6 +408,110 @@ public class AdministrationTests
             fixture, Token(key, now, lifetime: TimeSpan.FromSeconds(31)));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RemoteAdministrationCanBeDisabledAndReenabledThroughReloadableOptions()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, key, identity);
+            },
+            remoteAdministrationEnabled: null);
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        string token = Token(key, now);
+
+        using HttpResponseMessage disabled = await GetTeamAsync(fixture, token);
+        Assert.Equal(HttpStatusCode.NotFound, disabled.StatusCode);
+
+        fixture.RemoteAdministrationEnabled = true;
+        fixture.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitorCache<LabelerAdministrationOptions>>()
+            .TryRemove(Microsoft.Extensions.Options.Options.DefaultName);
+        using HttpResponseMessage enabled = await GetTeamAsync(fixture, token);
+        Assert.Equal(HttpStatusCode.OK, enabled.StatusCode);
+
+        fixture.RemoteAdministrationEnabled = false;
+        fixture.Services.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitorCache<LabelerAdministrationOptions>>()
+            .TryRemove(Microsoft.Extensions.Options.Options.DefaultName);
+        using HttpResponseMessage disabledAgain = await GetTeamAsync(fixture, Token(key, now.AddSeconds(1)));
+        Assert.Equal(HttpStatusCode.NotFound, disabledAgain.StatusCode);
+    }
+
+    [Fact]
+    public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints()
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
+        string endpoint = LocalEndpoint();
+        await using TestServerBuilder fixture = await CreateAsync(key, identity, endpoint);
+        Assert.True((await fixture.Services.BootstrapLocalAdministratorAsync(
+            s_actor, "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
+        DateTimeOffset now = await DatabaseNowAsync(fixture);
+        fixture.Clock.SetUtcNow(now);
+        ILabelStore store = fixture.Services.GetRequiredService<ILabelStore>();
+        await store.AppendAsync(
+            operationId: "retirement-seed",
+            labels:
+            [
+                new SignedLabelSnapshot(key.CreateLabel(
+                    source: TestServerBuilder.s_issuer,
+                    uri: "did:plc:retirement-subject",
+                    value: "spam",
+                    creationTimestamp: now.AddMinutes(-3))),
+                new SignedLabelSnapshot(key.CreateLabel(
+                    source: TestServerBuilder.s_issuer,
+                    uri: "at://did:plc:retirement-subject/app.bsky.feed.post/post",
+                    value: "spam",
+                    creationTimestamp: now.AddMinutes(-2),
+                    cid: new("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"))),
+                new SignedLabelSnapshot(key.CreateLabel(
+                    source: TestServerBuilder.s_issuer,
+                    uri: "at://did:plc:retirement-subject/app.bsky.feed.post/post",
+                    value: "spam",
+                    creationTimestamp: now.AddMinutes(-1),
+                    cid: new("bafyreihw6zqv6pwq3erw5x2rb52tynvb2hmr7e7osetb5w3m6q4h4p5vqm")))
+            ],
+            cancellationToken: TestContext.Current.CancellationToken);
+        await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        using JsonDocument started = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            """{"method":"beginRetirement","operationId":"retirement-begin","reason":"Close issuance."}""",
+            TestContext.Current.CancellationToken));
+        Assert.True(started.RootElement.GetProperty("succeeded").GetBoolean());
+        Assert.Equal("Retiring", started.RootElement.GetProperty("state").GetProperty("phase").GetString());
+
+        using JsonDocument advanced = JsonDocument.Parse(await LabelerLocalAdministration.SendLocalCommandAsync(
+            endpoint,
+            """{"method":"advanceRetirement","operationId":"retirement-advance","reason":"Negate retained active labels."}""",
+            TestContext.Current.CancellationToken));
+        Assert.True(advanced.RootElement.GetProperty("succeeded").GetBoolean());
+        JsonElement state = advanced.RootElement.GetProperty("state");
+        Assert.Equal("Distributing", state.GetProperty("phase").GetString());
+        Assert.Equal(3, state.GetProperty("retirementThrough").GetInt64());
+        Assert.Equal(6, state.GetProperty("issuedThrough").GetInt64());
+        await store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        LabelPage page = await store.ReplayAsync(
+            streamId: Guid.Parse(state.GetProperty("streamId").GetString()!),
+            after: 0,
+            through: 6,
+            limit: 10,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(6, page.Labels.Count);
+        StoredLabel[] negations = [.. page.Labels.Where(label => label.SignedLabel.Label.IsNegationLabel)];
+        Assert.Equal(3, negations.Length);
+        Assert.Contains(negations, label => label.SignedLabel.Label.Uri == "did:plc:retirement-subject");
+        Assert.Equal(2, negations.Count(label => label.SignedLabel.Label.Uri.StartsWith("at://", StringComparison.Ordinal)));
+        Assert.Equal(2, negations.Where(label => label.SignedLabel.Label.Uri.StartsWith("at://", StringComparison.Ordinal))
+            .Select(label => label.SignedLabel.Label.Cid).Distinct().Count());
     }
 
     [Theory]
