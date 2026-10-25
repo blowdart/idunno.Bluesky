@@ -4,6 +4,8 @@
 using System.Text;
 
 using idunno.AtProto;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
 
 namespace idunno.Bluesky.Labeler.Storage;
 

@@ -253,12 +253,12 @@ For dependency-injection scenarios, supply the application's `IMeterFactory` thr
 The SQLite, PostgreSQL and MySQL labeler persistence providers report through the
 `idunno.Bluesky.Labeler.Persistence` meter, version `1.0.0`. Its name and version are exposed by
 `LabelPersistenceMetrics.MeterName` and `LabelPersistenceMetrics.MeterVersion` in the
-`idunno.Bluesky.Labeler` namespace.
+`idunno.Bluesky.Labeler.Storage` namespace.
 
 Register the meter with an existing OpenTelemetry metrics configuration:
 
 ```csharp
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics.AddMeter(LabelPersistenceMetrics.MeterName));

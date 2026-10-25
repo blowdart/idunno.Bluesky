@@ -8,6 +8,10 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -88,8 +92,17 @@ public class ProviderConformanceTests
             0,
             receipt.LastSequence,
             cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        await BeginResigningAsync(fixture, "key-rotation", replacementKey);
 
         SignedLabelSnapshot replacement = new(replacementKey.Sign(stored.SignedLabel.Label));
+        SignedLabelSnapshot changed = new(replacementKey.CreateLabel(
+            StoreFixture.Issuer,
+            "did:plc:subject",
+            "changed",
+            s_instant));
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplaceSignaturesAsync(
+            [new StoredLabel(stored.Sequence, changed)],
+            TestContext.Current.CancellationToken));
         await fixture.Store.ReplaceSignaturesAsync(
             [new StoredLabel(stored.Sequence, replacement)],
             TestContext.Current.CancellationToken);
@@ -110,15 +123,232 @@ public class ProviderConformanceTests
         Assert.True(after.Revision > before.Revision);
         Assert.Equal(before.IssuedThrough, after.IssuedThrough);
         Assert.Equal(before.PublishedThrough, after.PublishedThrough);
+    }
 
-        SignedLabelSnapshot changed = new(replacementKey.CreateLabel(
-            StoreFixture.Issuer,
-            "did:plc:subject",
-            "changed",
-            s_instant));
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task KeylessHostsMustDrainButOnlySignersMustActivate(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid signer = Guid.NewGuid();
+        Guid replica = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(signer, token);
+        await maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: false, cancellationToken: token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: true, cancellationToken: token));
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        const string operation = "keyless-conformance";
+        await maintenance.BeginRotationAsync(
+            operationId: operation,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+        await maintenance.AcknowledgeHostDrainedAsync(operation, signer, token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token));
+        await maintenance.AcknowledgeHostDrainedAsync(operation, replica, token);
+        await maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token);
+        LabelMaintenanceState ready = await maintenance.VerifyRotationKeyPublicationAsync(
+            operation, "zreplacement", cancellationToken: token);
+        Assert.False(Assert.Single(ready.Hosts, host => host.InstanceId == replica).RequiresSigningKey);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.AcknowledgeHostKeyActivatedAsync(operation, replica, "replacement", token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.CompleteRotationAsync(operation, "replacement", cancellationToken: token));
+        await maintenance.AcknowledgeHostKeyActivatedAsync(operation, signer, "replacement", token);
+        LabelMaintenanceState completed = await maintenance.CompleteRotationAsync(
+            operation, "replacement", cancellationToken: token);
+        Assert.Equal(LabelMaintenancePhase.Completed, completed.Phase);
+        Assert.False(Assert.Single(completed.Hosts, host => host.InstanceId == replica).KeyActivated);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task UpgradesLegacyHostRolesConservativelyAndRepeatably(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid host = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(host, token);
+        await maintenance.BeginRotationAsync(
+            operationId: "role-upgrade",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+        await fixture.ExecuteAsync("DROP TABLE label_host_roles; UPDATE label_schema SET version=6");
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.GetStateAsync(token));
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        LabelMaintenanceState upgraded = await maintenance.GetMaintenanceStateAsync(token);
+        Assert.True(Assert.Single(upgraded.Hosts).RequiresSigningKey);
+        Assert.False(upgraded.AllHostsDrained);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task CoordinatesResumableKeyRotationAcrossHostsAndRestart(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await fixture.Store.AppendAsync(
+            "rotation-entry",
+            [Sign(originalKey)],
+            cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid[] hosts = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()];
+        await maintenance.RegisterHostAsync(hosts[0], TestContext.Current.CancellationToken);
+        await maintenance.RegisterHostAsync(hosts[1], TestContext.Current.CancellationToken);
+        LabelMaintenanceState state = await maintenance.BeginRotationAsync(
+            operationId: "rotation-conformance",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        LabelTarget target = LabelTarget.Account(new Did("did:plc:postrotation"));
+        LabelOperationRequest request = LabelOperationRequest.Issue(
+            operationId: "postrotation-issue",
+            target: target,
+            value: "spam",
+            context: new(StoreFixture.Issuer, "Check the signing-key fence."));
+        LabelServiceResult<LabelOperationReceipt> blocked = await fixture.Store.CommitDecisionAsync(
+            new(
+                request: request,
+                resolvedTarget: target,
+                expectedRevision: (await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken)).Revision,
+                signedLabel: Sign(originalKey, target.Subject),
+                audit: new(s_instant, "authorized", "policy", originalKey.ExportPublicKeyMultibase())),
+            TestContext.Current.CancellationToken);
+        Assert.False(blocked.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.IssuanceClosed, blocked.Error.Code);
+
+        state = await maintenance.RegisterHostAsync(hosts[2], TestContext.Current.CancellationToken);
+        Assert.Equal(3, state.Hosts.Count);
+        await maintenance.AcknowledgeHostDrainedAsync("rotation-conformance", hosts[0], TestContext.Current.CancellationToken);
+        await maintenance.AcknowledgeHostDrainedAsync("rotation-conformance", hosts[1], TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => maintenance.CaptureRotationBoundaryAsync(
+            "rotation-conformance",
+            cancellationToken: TestContext.Current.CancellationToken));
+        await maintenance.AcknowledgeHostDrainedAsync("rotation-conformance", hosts[2], TestContext.Current.CancellationToken);
+
+        state = await maintenance.CaptureRotationBoundaryAsync(
+            "rotation-conformance",
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(LabelMaintenancePhase.AwaitingKeyPublication, state.Phase);
+        Assert.Equal(1, state.ThroughSequence);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            "rotation-conformance",
+            replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        LabelStoreState beforeWrongKey = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel[] oldSignatures = [new(1, Sign(originalKey))];
         await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplaceSignaturesAsync(
-            [new StoredLabel(stored.Sequence, changed)],
-            TestContext.Current.CancellationToken));
+            oldSignatures, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidDataException>(() => maintenance.ReplaceRotationBatchAsync(
+            operationId: "rotation-conformance",
+            expectedAfterSequence: 0,
+            checkpoint: 1,
+            replacementLabels: oldSignatures,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(beforeWrongKey, await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, (await maintenance.GetMaintenanceStateAsync(TestContext.Current.CancellationToken)).LastSequence);
+
+        LabelSigningKeyRotationProgress progress = await LabelSigningKeyRotation.ResignNextBatchAsync(
+            store: fixture.Store,
+            maintenanceStore: maintenance,
+            operationId: "rotation-conformance",
+            replacementKey: replacementKey,
+            batchSize: 1,
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(progress.IsComplete);
+
+        ILabelStore restartedStore = fixture.NewStore();
+        await restartedStore.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
+        ILabelMaintenanceStore resumedMaintenance = (ILabelMaintenanceStore)restartedStore;
+        state = await resumedMaintenance.GetMaintenanceStateAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(LabelMaintenancePhase.ReadyToReopen, state.Phase);
+        Assert.Equal(1, state.LastSequence);
+        foreach (Guid host in hosts.Take(2))
+        {
+            await resumedMaintenance.AcknowledgeHostKeyActivatedAsync(
+                "rotation-conformance",
+                host,
+                "replacement",
+                TestContext.Current.CancellationToken);
+        }
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => resumedMaintenance.CompleteRotationAsync(
+            "rotation-conformance",
+            "replacement",
+            cancellationToken: TestContext.Current.CancellationToken));
+        await resumedMaintenance.AcknowledgeHostKeyActivatedAsync(
+            "rotation-conformance",
+            hosts[2],
+            "replacement",
+            TestContext.Current.CancellationToken);
+        state = await resumedMaintenance.CompleteRotationAsync(
+            "rotation-conformance",
+            "replacement",
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(LabelMaintenancePhase.Completed, state.Phase);
+        Assert.False(state.IsActive);
+
+        LabelStoreState reopened = await restartedStore.GetStateAsync(TestContext.Current.CancellationToken);
+        LabelServiceResult<LabelOperationReceipt> staleKey = await restartedStore.CommitDecisionAsync(
+            new(
+                request: request,
+                resolvedTarget: target,
+                expectedRevision: reopened.Revision,
+                signedLabel: Sign(originalKey, target.Subject),
+                audit: new(s_instant, "authorized", "policy", originalKey.ExportPublicKeyMultibase())),
+            TestContext.Current.CancellationToken);
+        Assert.False(staleKey.Succeeded);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, staleKey.Error.Code);
+        Assert.Equal(reopened, await restartedStore.GetStateAsync(TestContext.Current.CancellationToken));
+
+        StoredLabel resigned = Assert.Single((await restartedStore.ReplayAsync(
+            state.StreamId,
+            after: 0,
+            through: 1,
+            cancellationToken: TestContext.Current.CancellationToken)).Labels);
+        resigned.SignedLabel.Label.Verify(Document(replacementKey));
+        Assert.Equal("spam", resigned.SignedLabel.Label.Value);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task RefusesRotationWithoutARegisteredHost(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => maintenance.BeginRotationAsync(
+            operationId: "rotation-without-host",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken));
+        LabelMaintenanceState state = await maintenance.GetMaintenanceStateAsync(TestContext.Current.CancellationToken);
+        Assert.False(state.IsActive);
+        Assert.Equal(LabelMaintenancePhase.None, state.Phase);
     }
 
     [Theory(Timeout = 120_000)]
@@ -135,6 +365,8 @@ public class ProviderConformanceTests
         await fixture.Store.AppendAsync("published", [published], cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.AppendAsync("pending", [unpublished], cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
+        await BeginResigningAsync(fixture, "validated-snapshot", replacementKey);
         StoredLabel expected = new(1, new SignedLabelSnapshot(replacementKey.Sign(published.Label)));
         StoredLabel forbidden = new(2, new SignedLabelSnapshot(replacementKey.Sign(unpublished.Label)));
         MutatingReplacementBatch input = new(expected, forbidden);
@@ -184,6 +416,35 @@ public class ProviderConformanceTests
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
+    private static async Task<ILabelMaintenanceStore> BeginResigningAsync(
+        StoreFixture fixture,
+        string operationId,
+        LabelSigningKey replacementKey)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid host = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(host, cancellationToken);
+        await maintenance.BeginRotationAsync(
+            operationId: operationId,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.AcknowledgeHostDrainedAsync(
+            operationId: operationId,
+            instanceId: host,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.CaptureRotationBoundaryAsync(
+            operationId: operationId,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            operationId: operationId,
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return maintenance;
+    }
+
     [Theory(Timeout = 120_000)]
     [InlineData("sqlite")]
     [InlineData("postgresql")]
@@ -198,32 +459,49 @@ public class ProviderConformanceTests
             [Sign(originalKey), Sign(originalKey, "did:plc:second")],
             cancellationToken: TestContext.Current.CancellationToken);
         await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
-        LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid host = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(host, TestContext.Current.CancellationToken);
+        await maintenance.BeginRotationAsync(
+            operationId: "rotation-batch",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken);
+        await maintenance.AcknowledgeHostDrainedAsync(
+            "rotation-batch",
+            host,
+            TestContext.Current.CancellationToken);
+        LabelMaintenanceState boundary = await maintenance.CaptureRotationBoundaryAsync(
+            "rotation-batch",
+            cancellationToken: TestContext.Current.CancellationToken);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            "rotation-batch",
+            replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: TestContext.Current.CancellationToken);
 
         LabelSigningKeyRotationProgress first = await LabelSigningKeyRotation.ResignNextBatchAsync(
-            fixture.Store,
-            replacementKey,
-            state.StreamId,
-            afterSequence: 0,
-            throughSequence: receipt.LastSequence,
+            store: fixture.Store,
+            maintenanceStore: maintenance,
+            operationId: "rotation-batch",
+            replacementKey: replacementKey,
             batchSize: 1,
             cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(1, first.LastSequence);
         Assert.False(first.IsComplete);
 
         LabelSigningKeyRotationProgress second = await LabelSigningKeyRotation.ResignNextBatchAsync(
-            fixture.Store,
-            replacementKey,
-            first.StreamId,
-            afterSequence: first.LastSequence,
-            throughSequence: first.Through,
+            store: fixture.Store,
+            maintenanceStore: maintenance,
+            operationId: "rotation-batch",
+            replacementKey: replacementKey,
             batchSize: 1,
             cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(receipt.LastSequence, second.LastSequence);
         Assert.True(second.IsComplete);
 
         LabelPage page = await fixture.Store.ReplayAsync(
-            state.StreamId,
+            boundary.StreamId,
             0,
             receipt.LastSequence,
             cancellationToken: TestContext.Current.CancellationToken);
@@ -487,35 +765,35 @@ public class ProviderConformanceTests
         await fixture.Store.AppendAsync("initial", [Sign(key), Sign(key, "did:plc:two")], cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         LabelPage oldPage = await fixture.Store.QueryAsync([], limit: 1, cancellationToken: TestContext.Current.CancellationToken);
-        state = await fixture.Store.BeginRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, state.RetirementUpperBound);
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.AppendAsync("closed", [Sign(key)], cancellationToken: TestContext.Current.CancellationToken));
         SignedLabelSnapshot firstNegation = Sign(key, negation: true);
-        LabelAppendReceipt batch = await fixture.Store.AppendAsync("retire-1", [firstNegation], state.Revision, 1, TestContext.Current.CancellationToken);
+        LabelAppendReceipt batch = await fixture.Store.AppendAsync("retire-1", [firstNegation], state.Revision, 1, cancellationToken: TestContext.Current.CancellationToken);
         ILabelStore restarted = fixture.NewStore();
         Assert.Equal(batch, await restarted.AppendAsync("retire-1", [firstNegation], retirementThrough: 1, cancellationToken: TestContext.Current.CancellationToken));
         // Reload the checkpoint after provider recreation; a new batch must not repeat progress.
         state = await restarted.GetStateAsync(TestContext.Current.CancellationToken);
         Assert.Equal(1, state.RetirementThrough);
-        await restarted.AppendAsync("retire-2", [Sign(key, "did:plc:two", true)], state.Revision, 2, TestContext.Current.CancellationToken);
+        await restarted.AppendAsync("retire-2", [Sign(key, "did:plc:two", true)], state.Revision, 2, cancellationToken: TestContext.Current.CancellationToken);
         state = await restarted.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
-        state = await restarted.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.CompleteRetirementAsync(state.Revision, TestContext.Current.CancellationToken));
+        state = await restarted.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), cancellationToken: TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => restarted.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken));
         await fixture.ExecuteAsync(engine switch
         {
             "sqlite" => "UPDATE label_state SET grace_deadline=CAST(unixepoch('subsec')*1000 AS INTEGER)-1",
             "postgresql" => "UPDATE label_state SET grace_deadline=CAST(EXTRACT(EPOCH FROM clock_timestamp())*1000 AS BIGINT)-1",
             _ => "UPDATE label_state SET grace_deadline=CAST(UNIX_TIMESTAMP(UTC_TIMESTAMP(3))*1000 AS SIGNED)-1"
         });
-        state = await restarted.CompleteRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        state = await restarted.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         await Assert.ThrowsAsync<ArgumentException>(() => restarted.PurgeAsync(state.Revision, false, cancellationToken: TestContext.Current.CancellationToken));
-        state = await restarted.PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+        state = await restarted.PurgeAsync(state.Revision, true, 1, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(1, state.ReplayFloor);
         await Assert.ThrowsAsync<InvalidDataException>(() => restarted.ReplayAsync(state.StreamId, 0, state.PublishedThrough, cancellationToken: TestContext.Current.CancellationToken));
         while (state.Phase != LabelerLifecyclePhase.Purged)
         {
-            state = await fixture.NewStore().PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+            state = await fixture.NewStore().PurgeAsync(state.Revision, true, 1, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         Assert.Equal(4, state.IssuedThrough);
@@ -535,20 +813,20 @@ public class ProviderConformanceTests
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         await fixture.Store.AppendAsync("initial", [Sign(key)], cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
-        state = await fixture.Store.BeginRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
-        await fixture.Store.AppendAsync("checkpoint", [], state.Revision, 1, TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
+        await fixture.Store.AppendAsync("checkpoint", [], state.Revision, 1, cancellationToken: TestContext.Current.CancellationToken);
         state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
-        state = await fixture.Store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), cancellationToken: TestContext.Current.CancellationToken);
         await fixture.ExecuteAsync("UPDATE label_state SET grace_deadline=0");
-        state = await fixture.Store.CompleteRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        state = await fixture.Store.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
 
-        state = await fixture.Store.PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+        state = await fixture.Store.PurgeAsync(state.Revision, true, 1, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(state.IssuedThrough, state.ReplayFloor);
         Assert.Equal(LabelerLifecyclePhase.Purging, state.Phase);
         Assert.Null(await fixture.Store.GetReceiptAsync("initial", TestContext.Current.CancellationToken));
         Assert.NotNull(await fixture.Store.GetReceiptAsync("checkpoint", TestContext.Current.CancellationToken));
 
-        state = await fixture.NewStore().PurgeAsync(state.Revision, true, 1, TestContext.Current.CancellationToken);
+        state = await fixture.NewStore().PurgeAsync(state.Revision, true, 1, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(LabelerLifecyclePhase.Purged, state.Phase);
         Assert.Null(await fixture.Store.GetReceiptAsync("checkpoint", TestContext.Current.CancellationToken));
     }
@@ -698,9 +976,9 @@ public class ProviderConformanceTests
         await fixture.ExecuteAsync(schema[..(schema.IndexOf(';', StringComparison.Ordinal) + 1)]);
         await fixture.Store.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
         LabelStoreState state = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
-        state = await fixture.Store.BeginRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(LabelerLifecyclePhase.Distributing, state.Phase);
-        state = await fixture.Store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
+        state = await fixture.Store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(state.GraceDeadline);
         Assert.Equal(state, await fixture.NewStore().GetStateAsync(TestContext.Current.CancellationToken));
     }

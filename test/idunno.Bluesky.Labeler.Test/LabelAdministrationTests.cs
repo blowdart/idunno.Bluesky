@@ -8,6 +8,10 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.Time.Testing;
 
@@ -17,6 +21,39 @@ public class LabelAdministrationTests
 {
     private static readonly Did s_administrator = new("did:plc:administrator");
     private static readonly Did s_member = new("did:plc:member");
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task RevocationFencesPreviouslyAuthorizedMaintenanceMutations(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelAdministrationStore administration = (ILabelAdministrationStore)fixture.Store;
+        ILabelMaintenanceStore maintenance = (ILabelMaintenanceStore)fixture.Store;
+        LabelAdministrationCaller administrator = await BootstrapAsync(administration);
+        await EnrollAndBindAsync(administration, administrator, LabelTeamRole.Administrator);
+        LabelAdministrationCaller member = (await administration.AuthenticateLocalAsync("uid:1", token)).Result!;
+        Assert.True((await administration.AuthorizeAsync(
+            member, LabelAdministrationPermission.Maintain, "Maintenance authorization.", token)).Succeeded);
+        await maintenance.RegisterHostAsync(Guid.NewGuid(), token);
+        Assert.True((await administration.ChangeTeamAsync(
+            administrator, Change(LabelTeamAction.Suspend, "revoke-maintenance"), token)).Succeeded);
+        using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => maintenance.BeginRotationAsync(
+            operationId: "revoked-rotation",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacement.ExportPublicKeyMultibase(),
+            caller: member,
+            cancellationToken: token));
+        LabelStoreState state = await fixture.Store.GetStateAsync(token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Store.BeginRetirementAsync(
+            state.Revision, member, token));
+        Assert.False((await maintenance.GetMaintenanceStateAsync(token)).IsActive);
+        Assert.Equal(state, await fixture.Store.GetStateAsync(token));
+    }
 
     [Theory]
     [InlineData("sqlite")]

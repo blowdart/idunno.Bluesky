@@ -127,6 +127,7 @@
   </Folder>
   <Folder Name="/docs/docs/labeller/">
     <File Path="docs/docs/labeller/administration.md" />
+    <File Path="docs/docs/labeller/deployment.md" />
     <File Path="docs/docs/labeller/hosting.md" />
     <File Path="docs/docs/labeller/issuance.md" />
     <File Path="docs/docs/labeller/overview.md" />
@@ -364,6 +365,8 @@
     <Project Path="src/idunno.Bluesky.Labeler.MySQL/idunno.Bluesky.Labeler.MySQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.PostgreSQL/idunno.Bluesky.Labeler.PostgreSQL.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler.SQLite/idunno.Bluesky.Labeler.SQLite.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj" />
+    <Project Path="src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj" />
     <Project Path="src/idunno.Bluesky.Labeler/idunno.Bluesky.Labeler.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
@@ -474,6 +477,9 @@
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Labeler.Cli.Test/idunno.Bluesky.Labeler.Cli.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Labeler.Test/idunno.Bluesky.Labeler.Test.csproj">

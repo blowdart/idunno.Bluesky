@@ -3,6 +3,9 @@
 
 using System.Diagnostics.Metrics;
 
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +45,8 @@ public static class PostgreSqlLabelStorageExtensions
                 new StoreMetrics("postgresql", provider.GetService<IMeterFactory>())));
         services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         services.AddSingleton<ILabelAdministrationStore>(provider => (ILabelAdministrationStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelMaintenanceStore>(provider => (ILabelMaintenanceStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelSigningKeySelectionStore>(provider => (ILabelSigningKeySelectionStore)provider.GetRequiredService<ILabelStore>());
         return services;
     }
 }

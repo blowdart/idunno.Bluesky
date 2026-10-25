@@ -17,6 +17,11 @@ Register exactly one storage provider, one `ILabelIssuanceAuthorizer` and one
 and an optional `TimeProvider` registered in DI. It rejects missing or multiple implementations rather than choosing the last registration.
 You can also construct `LabelIssuanceService` directly.
 
+Import `idunno.Bluesky.Labeler.Issuance` for the service, policies, authorizers and operation
+models, and `idunno.Bluesky.Labeler` for common targets and results. Team-backed authorization
+is in `idunno.Bluesky.Labeler.Administration`; storage contracts are in
+`idunno.Bluesky.Labeler.Storage`.
+
 The host supplies an established signing key, separate from its repository key, and a configured
 `HttpClient`. The service borrows both; the host owns disposal. Registration doesn't generate a key,
 connect to a database, publish a declaration, migrate storage or start a worker.

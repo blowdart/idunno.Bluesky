@@ -3,6 +3,8 @@
 
 using System.Collections.Concurrent;
 
+using idunno.Bluesky.Labeler.Issuance;
+
 namespace idunno.Bluesky.Labeler.Test;
 
 /// <summary>Records service authorization checks and optionally denies selected checks.</summary>

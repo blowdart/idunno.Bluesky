@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS label_distribution (
     slot_key BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_distribution_slot ON label_distribution(slot_hash, seq);
+CREATE TABLE IF NOT EXISTS label_decision_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    identity_hash BYTEA NOT NULL CHECK(octet_length(identity_hash)=32),
+    identity_key BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_decision_index_identity ON label_decision_index(identity_hash, seq);
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BYTEA PRIMARY KEY CHECK(octet_length(operation_hash)=32),
     operation_id TEXT COLLATE "C" NOT NULL,
@@ -48,4 +54,41 @@ CREATE TABLE IF NOT EXISTS label_admin_receipts (operation_hash BYTEA PRIMARY KE
 CREATE TABLE IF NOT EXISTS label_admin_tokens (replay_hash BYTEA PRIMARY KEY, token_hash TEXT COLLATE "C" NOT NULL, actor TEXT COLLATE "C" NOT NULL, expires_ms BIGINT NOT NULL);
 CREATE INDEX IF NOT EXISTS label_admin_token_hash ON label_admin_tokens(token_hash);
 CREATE INDEX IF NOT EXISTS label_admin_token_expiry ON label_admin_tokens(expires_ms);
-INSERT INTO label_schema(id, version) VALUES(1, 4) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_maintenance (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    operation_id TEXT COLLATE "C",
+    phase INTEGER NOT NULL DEFAULT 0 CHECK(phase BETWEEN 0 AND 5),
+    stream_id VARCHAR(32) COLLATE "C" NOT NULL,
+    previous_key_id TEXT COLLATE "C",
+    replacement_key_id TEXT COLLATE "C",
+    replacement_public_key TEXT COLLATE "C",
+    through_seq BIGINT NOT NULL DEFAULT 0 CHECK(through_seq>=0),
+    checkpoint BIGINT NOT NULL DEFAULT 0 CHECK(checkpoint>=0 AND checkpoint<=through_seq),
+    key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS label_signing_selection (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    stream_id VARCHAR(32) COLLATE "C" NOT NULL,
+    issuer TEXT COLLATE "C" NOT NULL,
+    key_id VARCHAR(128) COLLATE "C" NOT NULL,
+    public_key VARCHAR(512) COLLATE "C" NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_hosts (
+    host_id VARCHAR(32) COLLATE "C" PRIMARY KEY,
+    started_ms BIGINT NOT NULL,
+    last_seen_ms BIGINT NOT NULL,
+    stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS label_host_roles (
+    host_id VARCHAR(32) COLLATE "C" PRIMARY KEY,
+    requires_signing_key INTEGER NOT NULL CHECK(requires_signing_key IN (0,1))
+);
+CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
+    operation_id TEXT COLLATE "C" NOT NULL,
+    host_id VARCHAR(32) COLLATE "C" NOT NULL,
+    acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)),
+    key_activated INTEGER NOT NULL DEFAULT 0 CHECK(key_activated IN (0,1)),
+    PRIMARY KEY(operation_id, host_id)
+);
+INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 8) ON CONFLICT DO NOTHING;

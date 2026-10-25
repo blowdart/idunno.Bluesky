@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Diagnostics.Metrics;
 
 using idunno.AtProto;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +37,8 @@ internal sealed class StoreFixture : IAsyncDisposable
         {
             fixture.ConnectionString = new SqliteConnectionStringBuilder
             {
-                DataSource = Path.Combine(Path.GetTempPath(), fixture._database + ".db"), Pooling = false
+                DataSource = Path.Combine(Path.GetTempPath(), fixture._database + ".db"),
+                Pooling = false
             }.ConnectionString;
         }
         else

@@ -6,6 +6,7 @@ using System.Text.Json;
 
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.DependencyInjection;
 

@@ -113,7 +113,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException"><paramref name="signedOperation"/> is not an object containing a PLC operation signature.</exception>
     /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
     /// <remarks>
-    /// <para>Use this to resume submission after <see cref="UpdatePlcLabelerIdentity"/> returns <see cref="PlcLabelerIdentityUpdateStage.SubmissionFailed"/>. Resolve the DID before retrying to avoid submitting an operation that already succeeded.</para>
+    /// <para>Use this to resume submission after <see cref="UpdatePlcLabelerIdentity(System.String,System.Uri,System.String,System.Threading.CancellationToken)"/> returns <see cref="PlcLabelerIdentityUpdateStage.SubmissionFailed"/>. Resolve the DID before retrying to avoid submitting an operation that already succeeded.</para>
     /// <para>The PLC operation is accepted as a <see cref="JsonElement"/> rather than an SDK DTO so unknown fields from the PDS-signed operation are preserved when forwarding it unchanged.</para>
     /// </remarks>
     [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode",
@@ -183,32 +183,36 @@ public partial class BlueskyAgent
     /// <summary>
     /// Adds or updates the label verification key and service in the authenticated account's PLC DID document.
     /// </summary>
-    /// <param name="signingKey">The local label signing key whose public key is to be published.</param>
+    /// <param name="publicKeyMultibase">The public label signing key in base58btc multibase form.</param>
     /// <param name="labelerEndpoint">The HTTPS origin for the labeler service.</param>
     /// <param name="authorizationToken">An optional code obtained through <see cref="RequestPlcOperationSignature"/>.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The workflow outcome, including the signed operation when it must be submitted or retried.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="signingKey"/> or <paramref name="labelerEndpoint"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">The labeler endpoint is not a valid HTTPS origin.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="publicKeyMultibase"/> or <paramref name="labelerEndpoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The public key is invalid or the labeler endpoint is not a valid HTTPS origin.</exception>
     /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
     /// <exception cref="InvalidOperationException">The authenticated account does not use a PLC DID.</exception>
     /// <exception cref="InvalidDataException">The current DID document or PLC audit log does not describe a valid active identity.</exception>
     /// <remarks>
-    /// <para>The PDS signs the PLC operation using the account's authorized rotation key. The repository signing key and label signing key do not authorize DID changes.</para>
+    /// <para>The PDS signs the PLC operation using the account's authorized rotation key. The repository signing key and label signing key do not authorize DID changes; this method accepts and publishes only the public label key.</para>
     /// <para>Existing verification methods and services are retained from a versioned PLC audit-log snapshot. If the PDS signs against a different version, the update returns <c>PlcStateChanged</c> without submitting or exposing the unsafe operation. Retry from fresh state, obtaining another authorization code if required.</para>
     /// <para>A signed operation is returned so an operator can recover if submission or subsequent verification fails, including transport failures and timeouts. Explicit caller cancellation still propagates.</para>
     /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
+        Justification = "The overloads differ between a local private-key object and public multibase data; both forms are needed to support keyless publication without removing the existing API.")]
     [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode",
         Justification = "The request and response use JsonObject metadata from the AT Protocol source-generation context.")]
     [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode",
         Justification = "The request and response use JsonObject metadata from the AT Protocol source-generation context.")]
     public async Task<PlcLabelerIdentityUpdateResult> UpdatePlcLabelerIdentity(
-        LabelSigningKey signingKey,
+        string publicKeyMultibase,
         Uri labelerEndpoint,
         string? authorizationToken = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(signingKey);
+        ArgumentNullException.ThrowIfNull(publicKeyMultibase);
+        LabelSignatureVerifier.ValidatePublicKey(publicKeyMultibase);
+
         ValidateLabelerEndpoint(labelerEndpoint);
 
         AccessCredentials credentials = Credentials ?? throw new AuthenticationRequiredException();
@@ -236,7 +240,7 @@ public partial class BlueskyAgent
             throw new InvalidDataException("The resolved DID document belongs to a different identifier.");
         }
 
-        if (IsLabelerPublication(currentDocument, did, signingKey, labelerEndpoint))
+        if (IsLabelerPublication(currentDocument, did, publicKeyMultibase, labelerEndpoint))
         {
             return new(
                 PlcLabelerIdentityUpdateStage.Verified,
@@ -270,7 +274,7 @@ public partial class BlueskyAgent
         }
 
         (string previousCid, JsonObject verificationMethods, JsonObject services) = ParsePlcLabelerState(audit.Result, did);
-        verificationMethods["atproto_label"] = $"did:key:{signingKey.ExportPublicKeyMultibase()}";
+        verificationMethods["atproto_label"] = $"did:key:{publicKeyMultibase}";
 
         services["atproto_labeler"] = new JsonObject
         {
@@ -401,7 +405,7 @@ public partial class BlueskyAgent
 
         try
         {
-            VerifyLabelerPublication(publishedDocument, did, signingKey, labelerEndpoint);
+            VerifyLabelerPublication(publishedDocument, did, publicKeyMultibase, labelerEndpoint);
         }
         catch (InvalidDataException exception)
         {
@@ -423,6 +427,36 @@ public partial class BlueskyAgent
             statusCode: HttpStatusCode.OK,
             error: null,
             recoveryAction: null);
+    }
+
+    /// <summary>
+    /// Adds or updates the label verification key and service in the authenticated account's PLC DID document.
+    /// </summary>
+    /// <param name="signingKey">The local label signing key whose public key is to be published.</param>
+    /// <param name="labelerEndpoint">The HTTPS origin for the labeler service.</param>
+    /// <param name="authorizationToken">An optional code obtained through <see cref="RequestPlcOperationSignature"/>.</param>
+    /// <param name="cancellationToken">A cancellation token for the operation.</param>
+    /// <returns>The workflow outcome, including the signed operation when it must be submitted or retried.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="signingKey"/> or <paramref name="labelerEndpoint"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">The labeler endpoint is not a valid HTTPS origin.</exception>
+    /// <exception cref="AuthenticationRequiredException">The current session is not authenticated.</exception>
+    /// <exception cref="InvalidOperationException">The authenticated account does not use a PLC DID.</exception>
+    /// <exception cref="InvalidDataException">The current DID document or PLC audit log does not describe a valid active identity.</exception>
+    /// <remarks><para>This overload exports only the public key from <paramref name="signingKey"/> and delegates to the public-key workflow.</para></remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
+        Justification = "The overloads differ between a local private-key object and public multibase data; both forms are needed to support keyless publication without removing the existing API.")]
+    public Task<PlcLabelerIdentityUpdateResult> UpdatePlcLabelerIdentity(
+        LabelSigningKey signingKey,
+        Uri labelerEndpoint,
+        string? authorizationToken = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(signingKey);
+        return UpdatePlcLabelerIdentity(
+            publicKeyMultibase: signingKey.ExportPublicKeyMultibase(),
+            labelerEndpoint: labelerEndpoint,
+            authorizationToken: authorizationToken,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>Recognizes recoverable resolution failures, including the DID constructor rejecting a null response identifier.</summary>
@@ -507,17 +541,17 @@ public partial class BlueskyAgent
     private static void VerifyLabelerPublication(
         DidDocument document,
         Did did,
-        LabelSigningKey signingKey,
+        string publicKeyMultibase,
         Uri endpoint)
     {
-        if (!IsLabelerPublication(document, did, signingKey, endpoint))
+        if (!IsLabelerPublication(document, did, publicKeyMultibase, endpoint))
         {
             throw new InvalidDataException("The resolved DID document does not publish the expected labeler key and endpoint.");
         }
     }
 
     /// <summary>Checks whether the DID document already contains the exact requested key and service.</summary>
-    private static bool IsLabelerPublication(DidDocument document, Did did, LabelSigningKey signingKey, Uri endpoint)
+    private static bool IsLabelerPublication(DidDocument document, Did did, string publicKeyMultibase, Uri endpoint)
     {
         if ((document.VerificationMethods ?? []).Any(method => method is null || string.IsNullOrWhiteSpace(method.Id)) ||
             (document.Services ?? []).Any(service => service is null || string.IsNullOrWhiteSpace(service.Id)))
@@ -530,7 +564,6 @@ public partial class BlueskyAgent
             return false;
         }
 
-        string expectedKey = signingKey.ExportPublicKeyMultibase();
         VerificationMethod[] methods =
         [
             .. (document.VerificationMethods ?? [])
@@ -546,7 +579,7 @@ public partial class BlueskyAgent
         if (methods.Length != 1 ||
             methods[0].Type != "Multikey" ||
             methods[0].Controller != did ||
-            methods[0].PublicKeyMultibase != expectedKey ||
+            methods[0].PublicKeyMultibase != publicKeyMultibase ||
             services.Length != 1 ||
             services[0].Type != "AtprotoLabeler" ||
             services[0].ServiceEndpoint is not { IsAbsoluteUri: true } publishedEndpoint ||

@@ -31,8 +31,15 @@ typing-extensions (validator dependency)         PSF-2.0
 Third-party package licenses
 ----------------------------
 
-The following third-party NuGet packages are used by the library projects.
-Package versions are intentionally omitted.
+The following third-party NuGet packages are used by the library projects and
+the published labeler administration CLI. Package versions are intentionally
+omitted.
+
+The labeler administration CLI bundles System.CommandLine (MIT).
+
+The standalone labeler host also uses idunno.Bluesky.AspNet.Authentication for native
+OAuth metadata publication and idunno.Security.Ssrf (MIT) for protected identity resolution.
+These components and their dependencies are listed below.
 
 The idunno.Bluesky.Labeler provider packages use Microsoft.Extensions.DependencyInjection
 and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.Sqlite
@@ -66,6 +73,7 @@ Npgsql                                          PostgreSQL
 OpenTelemetry.Extensions.Hosting                Apache-2.0
 SimpleBase                                      Apache-2.0
 StackExchange.Redis                             MIT
+System.CommandLine                              MIT
 System.Formats.Cbor                             MIT
 System.Text.Json                                MIT
 ZstdSharp.Port                                  MIT

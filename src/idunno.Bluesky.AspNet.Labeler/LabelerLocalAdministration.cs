@@ -12,6 +12,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

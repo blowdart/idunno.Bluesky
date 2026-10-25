@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.Labeler.Administration;
+
 namespace idunno.Bluesky.Labeler.Storage;
 
 /// <summary>Persists the bounded team aggregate under the existing issuer lock.</summary>

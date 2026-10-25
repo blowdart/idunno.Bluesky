@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Cli\idunno.Bluesky.Labeler.Cli.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Host\idunno.Bluesky.Labeler.Host.csproj" />
+  </ItemGroup>
+</Project>

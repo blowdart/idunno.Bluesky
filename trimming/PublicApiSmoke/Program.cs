@@ -14,9 +14,10 @@ using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
+using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
-using idunno.Bluesky.Labeler;
 
 using Microsoft.Extensions.DependencyInjection;
 

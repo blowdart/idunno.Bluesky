@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS label_distribution (
     slot_key LONGBLOB NOT NULL,
     INDEX label_distribution_slot(slot_hash, seq)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_decision_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    identity_hash BINARY(32) NOT NULL,
+    identity_key LONGBLOB NOT NULL,
+    INDEX label_decision_index_identity(identity_hash, seq)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BINARY(32) PRIMARY KEY,
     operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
@@ -63,4 +69,42 @@ CREATE TABLE IF NOT EXISTS label_admin_tokens (
     INDEX label_admin_token_hash(token_hash),
     INDEX label_admin_token_expiry(expires_ms)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 4) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_maintenance (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    operation_id VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin,
+    phase INTEGER NOT NULL DEFAULT 0 CHECK(phase BETWEEN 0 AND 5),
+    stream_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    previous_key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin,
+    replacement_key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin,
+    replacement_public_key VARCHAR(512) CHARACTER SET ascii COLLATE ascii_bin,
+    through_seq BIGINT NOT NULL DEFAULT 0 CHECK(through_seq>=0),
+    checkpoint BIGINT NOT NULL DEFAULT 0,
+    key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1)),
+    CHECK(checkpoint>=0 AND checkpoint<=through_seq)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_signing_selection (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    stream_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    issuer TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    public_key VARCHAR(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_hosts (
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    started_ms BIGINT NOT NULL,
+    last_seen_ms BIGINT NOT NULL,
+    stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_host_roles (
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    requires_signing_key INTEGER NOT NULL CHECK(requires_signing_key IN (0,1))
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
+    operation_id VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)),
+    key_activated INTEGER NOT NULL DEFAULT 0 CHECK(key_activated IN (0,1)),
+    PRIMARY KEY(operation_id, host_id)
+) ENGINE=InnoDB;
+INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 8) ON DUPLICATE KEY UPDATE id=id;

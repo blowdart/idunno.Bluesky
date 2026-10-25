@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Net.WebSockets;
 
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -17,6 +17,12 @@ internal sealed partial class LabelerHost
     /// <summary>Admits bounded public subscriptions and pairs each send loop with a cancellable receive drain.</summary>
     internal async Task SubscribeAsync(HttpContext context)
     {
+        using IDisposable? admission = await AdmitSubscriptionAsync(context).ConfigureAwait(false);
+        if (admission is null)
+        {
+            return;
+        }
+
         if (!HttpMethods.IsGet(context.Request.Method) &&
             !(HttpMethods.IsConnect(context.Request.Method) && context.WebSockets.IsWebSocketRequest))
         {
@@ -67,7 +73,8 @@ internal sealed partial class LabelerHost
         {
             metrics.Subscription(1);
             using WebSocket socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
-            using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, _lifetime.Token);
+            using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(
+                context.RequestAborted);
             await ServeSocketAsync(context, socket, lifetime).ConfigureAwait(false);
         }
         finally
@@ -77,26 +84,51 @@ internal sealed partial class LabelerHost
         }
     }
 
+    /// <summary>Bounds the upgrade's maintenance checks without imposing a lifetime on an established socket.</summary>
+    private async Task<IDisposable?> AdmitSubscriptionAsync(HttpContext context)
+    {
+        using CancellationTokenSource deadline = new(options.QueryTimeout, clock);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            context.RequestAborted, _lifetime.Token, deadline.Token);
+        try
+        {
+            return await AdmitTrafficAsync(context, linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            metrics.Failure("subscription_admission_deadline");
+            context.Response.Headers.RetryAfter = "1";
+            await ErrorAsync(
+                context: context,
+                status: 503,
+                error: "ServiceUnavailable",
+                message: "The subscription admission deadline or host lifetime ended.").ConfigureAwait(false);
+            return null;
+        }
+    }
+
     /// <summary>Joins the receive operation before its caller disposes the socket or linked lifetime.</summary>
     private async Task ServeSocketAsync(HttpContext context, WebSocket socket, CancellationTokenSource lifetime)
     {
+        using CancellationTokenSource streamLifetime = CancellationTokenSource.CreateLinkedTokenSource(
+            lifetime.Token, _lifetime.Token, MaintenanceToken);
         Task receive = DrainAsync(socket, lifetime);
         try
         {
-            await StreamAsync(context, socket, lifetime.Token).ConfigureAwait(false);
+            await StreamAsync(context, socket, streamLifetime.Token).ConfigureAwait(false);
         }
         catch (ArgumentException)
         {
             metrics.Rejection("subscription_cursor");
             await TryTerminalAsync(socket, "InvalidRequest", lifetime.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (!streamLifetime.IsCancellationRequested)
         {
             Disconnected(logger, "send deadline");
             metrics.Failure("send_deadline");
             await TryTerminalAsync(socket, "ConsumerTooSlow", lifetime.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (streamLifetime.IsCancellationRequested)
         {
             Disconnected(logger, "cancelled");
         }
@@ -112,7 +144,7 @@ internal sealed partial class LabelerHost
         }
         finally
         {
-            await CloseAsync(socket).ConfigureAwait(false);
+            await CloseAsync(socket, receive).ConfigureAwait(false);
             await lifetime.CancelAsync().ConfigureAwait(false);
             await receive.ConfigureAwait(false);
         }
@@ -282,7 +314,7 @@ internal sealed partial class LabelerHost
     }
 
     /// <summary>Closes the server half without waiting indefinitely for a peer handshake.</summary>
-    private async Task CloseAsync(WebSocket socket)
+    private async Task CloseAsync(WebSocket socket, Task receive)
     {
         if (socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
         {
@@ -290,10 +322,12 @@ internal sealed partial class LabelerHost
         }
 
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(1), clock);
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token, _lifetime.Token);
         try
         {
-            await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Subscription ended.", linked.Token).ConfigureAwait(false);
+            WebSocketCloseStatus closeStatus = IsDraining ? (WebSocketCloseStatus)1012 : WebSocketCloseStatus.NormalClosure;
+            string description = IsDraining ? "Service maintenance; reconnect and retry." : "Subscription ended.";
+            await socket.CloseOutputAsync(closeStatus, description, deadline.Token).ConfigureAwait(false);
+            await receive.WaitAsync(deadline.Token).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is OperationCanceledException or WebSocketException)
         {

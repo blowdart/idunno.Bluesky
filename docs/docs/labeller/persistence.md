@@ -33,6 +33,7 @@ Let's start with a local SQLite database:
 ```csharp
 using idunno.AtProto;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 ServiceCollection services = new();
@@ -53,6 +54,10 @@ stream identity, so you can't accidentally open the Bureau's database as a diffe
 Registering a provider doesn't connect to or migrate the database.
 The provider opens and disposes a connection for each operation; your host owns any `IMeterFactory`
 you register through DI.
+
+Storage contracts and snapshots are in `idunno.Bluesky.Labeler.Storage`; registration extensions
+remain in `idunno.Bluesky.Labeler`. Lifecycle phases are in `.Maintenance` and signing-key
+selection contracts are in `.Signing`. The provider package names have not changed.
 
 Each provider includes `schema.sql` under `contentFiles/any/any`. You can apply it with the database's
 SQL client or let `InitializeAsync` do it with setup privileges. If you use the script, you'll still need

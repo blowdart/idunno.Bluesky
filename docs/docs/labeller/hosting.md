@@ -7,6 +7,10 @@ WebSocket endpoint. It uses the [shared persistence](persistence.md) and
 explicit opt-in; it does not change these public routes. There is no moderation UI, identity
 provisioning, automatic retention, or signing-key manager.
 
+To deploy the canonical application rather than compose your own host, use
+[`idunno.Bluesky.Labeler.Host`](deployment.md). The package described here remains the reusable
+HTTP distribution layer.
+
 ## Application setup
 
 Register exactly one storage provider and bind its database to your issuer DID.
@@ -18,6 +22,7 @@ The host validates the issuer and schema but never migrates a database while ser
 using idunno.AtProto;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 Did issuer = new("did:plc:your-labeler");
@@ -79,13 +84,15 @@ but would require signing-key access during requests and would only repair newly
 copies, not labels already cached by consumers.
 
 Changing a signing key therefore does not automatically re-sign retained labels. Use
-`LabelSigningKeyRotation` as an explicit maintenance operation, following the
+`LabelSigningKeyRotation` from `idunno.Bluesky.Labeler.Signing` as an explicit maintenance
+operation, following the
 [key rotation guidance](overview.md#2-set-things-up-and-announce-that-youre-open).
 It preserves signed fields, creation timestamps and stream sequences without emitting
 replacement events. Retain old public verification keys for historical signatures;
 archiving them alone does not ensure consumers can discover or trust them through the
-current DID document. This separation is between serving and maintenance, not a requirement
-to implement rotation outside the SDK.
+current DID document. The labeler maintenance API and administration CLI coordinate the
+explicit rotation workflow; delivery remains independent of private keys and never repairs
+signatures on demand.
 
 Use lexicon-valid inputs at issuance. Some legacy representations accepted by the SDK,
 such as uppercase base32 CID text, are rejected by stricter official-client validators.

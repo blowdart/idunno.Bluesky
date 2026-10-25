@@ -10,12 +10,23 @@ using System.Text.Json.Nodes;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Identity;
+using idunno.Bluesky.Labeler.Signing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
 /// <summary>Checks label key custody helpers and public DID-document publication data.</summary>
 public class LabelerIdentityDocumentTests
 {
+    [Theory]
+    [InlineData("z0")]
+    [InlineData("z!")]
+    public void DidWebSnippetRejectsMalformedPublicKeys(string publicKey)
+    {
+        Assert.Throws<ArgumentException>(() => LabelerIdentityDocument.CreateDidWebSnippet(
+            new Did("did:web:labeler.example"), publicKey, new Uri("https://labeler.example")));
+    }
+
     [Fact]
     public void EncryptedKeyFilePreparationAndExportFailuresLeaveNoOutput()
     {

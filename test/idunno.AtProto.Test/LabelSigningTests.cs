@@ -23,6 +23,35 @@ public class LabelSigningTests
     private static Label ReadLabel() => JsonSerializer.Deserialize<Label>(LabelJson, AtProtoServer.AtProtoJsonSerializerOptions)!;
 
     [Theory]
+    [InlineData("z0")]
+    [InlineData("z!")]
+    [InlineData("z")]
+    [InlineData("mAAAA")]
+    public void PublicKeyValidationRejectsMalformedMultikeys(string publicKey)
+    {
+        Assert.Throws<ArgumentException>(() => LabelSignatureVerifier.ValidatePublicKey(publicKey));
+    }
+
+    [Theory]
+    [InlineData(LabelSigningCurve.P256)]
+    [InlineData(LabelSigningCurve.Secp256k1)]
+    public void PublicKeyValidationAndExplicitVerificationRequireTheExpectedKey(LabelSigningCurve curve)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(curve);
+        using LabelSigningKey other = LabelSigningKey.Generate(curve);
+        Label label = key.Sign(ReadLabel());
+        LabelSignatureVerifier.ValidatePublicKey(key.ExportPublicKeyMultibase());
+        LabelSignatureVerifier.Verify(label.Source, key.ExportPublicKeyMultibase(), [label]);
+        Assert.Throws<InvalidDataException>(() =>
+            LabelSignatureVerifier.Verify(label.Source, other.ExportPublicKeyMultibase(), [label]));
+        Assert.Throws<InvalidDataException>(() =>
+            LabelSignatureVerifier.Verify(new Did("did:plc:other"), key.ExportPublicKeyMultibase(), [label]));
+        byte[] invalidPoint = [0x80, 0x24, 0x02, .. Enumerable.Repeat((byte)0xff, 32)];
+        string invalidKey = "z" + SimpleBase.Base58.Bitcoin.Encode(invalidPoint);
+        Assert.Throws<ArgumentException>(() => LabelSignatureVerifier.ValidatePublicKey(invalidKey));
+    }
+
+    [Theory]
     [InlineData("", "A5")]
     [InlineData(",\"neg\":false", "A6")]
     [InlineData(",\"neg\":true", "A6")]

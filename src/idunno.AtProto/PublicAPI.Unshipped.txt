@@ -1,4 +1,6 @@
 #nullable enable
+static idunno.AtProto.Labels.LabelSignatureVerifier.ValidatePublicKey(string! publicKeyMultibase) -> void
+static idunno.AtProto.Labels.LabelSignatureVerifier.Verify(idunno.AtProto.Did! issuer, string! publicKeyMultibase, System.Collections.Generic.IEnumerable<idunno.AtProto.Labels.Label!>! labels) -> void
 idunno.AtProto.AtProtoServiceReference
 idunno.AtProto.AtProtoServiceReference.AtProtoServiceReference(idunno.AtProto.Did! did, string! fragment) -> void
 idunno.AtProto.AtProtoServiceReference.Did.get -> idunno.AtProto.Did!

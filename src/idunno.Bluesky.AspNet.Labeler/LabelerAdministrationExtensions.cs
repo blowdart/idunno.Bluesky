@@ -7,6 +7,11 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +19,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 
@@ -34,6 +40,8 @@ public static class LabelerAdministrationExtensions
     /// <exception cref="InvalidOperationException">Storage, policy or administration registration is missing or ambiguous.</exception>
     /// <remarks><para>Initialize the database and bootstrap explicitly before accepting commands.
     /// Keys and clients are borrowed, not disposed. No permissive authorizer or HTTP bootstrap is installed.</para></remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
+        Justification = "The overloads select between a borrowed single key and a host-owned key ring, which cannot be represented by one unambiguous parameter type.")]
     public static IServiceCollection AddLabelerAdministration(
         this IServiceCollection services,
         AtProtoServiceReference audience,
@@ -41,23 +49,56 @@ public static class LabelerAdministrationExtensions
         HttpClient httpClient,
         TimeSpan? maximumServiceTokenLifetime = null)
     {
+        ArgumentNullException.ThrowIfNull(signingKey);
+        return AddLabelerAdministration(
+            services: services,
+            audience: audience,
+            signingKeyRing: new FixedLabelSigningKeyRing(signingKey),
+            httpClient: httpClient,
+            maximumServiceTokenLifetime: maximumServiceTokenLifetime);
+    }
+
+    /// <summary>Registers administration with a host-owned key ring for issuance and coordinated key rotation.</summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="audience">The exact DID service reference for administrative service tokens.</param>
+    /// <param name="signingKeyRing">The host-owned key ring, including the active and preinstalled replacement keys.</param>
+    /// <param name="httpClient">The caller-owned, hardened identity-resolution client.</param>
+    /// <param name="maximumServiceTokenLifetime">The maximum accepted service-token lifetime. The default is 15 minutes.</param>
+    /// <returns>The service collection.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumServiceTokenLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidOperationException">Storage, policy or administration registration is missing or ambiguous.</exception>
+    /// <remarks><para>The key ring owns its keys and persists the active key identity. Do not transfer private key material
+    /// through administration requests. Initialize the database and bootstrap explicitly before accepting commands.</para></remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters",
+        Justification = "The overloads select between a borrowed single key and a host-owned key ring, which cannot be represented by one unambiguous parameter type.")]
+    public static IServiceCollection AddLabelerAdministration(
+        this IServiceCollection services,
+        AtProtoServiceReference audience,
+        ILabelSigningKeyRing signingKeyRing,
+        HttpClient httpClient,
+        TimeSpan? maximumServiceTokenLifetime = null)
+    {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(audience);
-        ArgumentNullException.ThrowIfNull(signingKey);
+        ArgumentNullException.ThrowIfNull(signingKeyRing);
         ArgumentNullException.ThrowIfNull(httpClient);
         TimeSpan lifetimeLimit = maximumServiceTokenLifetime ?? s_defaultMaximumServiceTokenLifetime;
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetimeLimit, TimeSpan.Zero);
         if (services.Any(descriptor => descriptor.ServiceType == typeof(AdministrationDispatcher)) ||
             services.Count(descriptor => descriptor.ServiceType == typeof(ILabelStore)) != 1 ||
             services.Count(descriptor => descriptor.ServiceType == typeof(ILabelAdministrationStore)) != 1 ||
+            services.Count(descriptor => descriptor.ServiceType == typeof(ILabelMaintenanceStore)) != 1 ||
             services.Count(descriptor => descriptor.ServiceType == typeof(ILabelIssuancePolicyProvider)) != 1)
         {
             throw new InvalidOperationException("Register exactly one administrative store and policy, and register administration once.");
         }
 
         services.AddLogging();
+        services.AddOptions<LabelerAdministrationOptions>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton(new AdministrationConfiguration(audience, httpClient, lifetimeLimit));
+        services.AddSingleton(signingKeyRing);
         services.AddSingleton(provider =>
         {
             ILabelStore store = provider.GetRequiredService<ILabelStore>();
@@ -70,21 +111,55 @@ public static class LabelerAdministrationExtensions
             return new AdministrationDispatcher(
                 store: store,
                 administration: administration,
+                maintenance: provider.GetRequiredService<ILabelMaintenanceStore>(),
                 httpClient: httpClient,
-                signingKey: signingKey,
+                signingKeyRing: provider.GetRequiredService<ILabelSigningKeyRing>(),
                 policy: provider.GetRequiredService<ILabelIssuancePolicyProvider>(),
-                clock: provider.GetRequiredService<TimeProvider>());
+                publicEndpoint: provider.GetService<LabelerHostingOptions>()?.PublicEndpoint,
+                clock: provider.GetRequiredService<TimeProvider>(),
+                host: provider.GetService<LabelerHost>());
         });
         return services;
     }
 
+    /// <summary>Provides a nonrotating adapter for the legacy single-key registration overload.</summary>
+    private sealed class FixedLabelSigningKeyRing(LabelSigningKey signingKey) : ILabelSigningKeyRing
+    {
+        private const string KeyId = "configured";
+
+        /// <inheritdoc/>
+        public string ActiveKeyId => KeyId;
+
+        /// <inheritdoc/>
+        public LabelSigningKey GetSigningKey(string keyId) =>
+            keyId == KeyId ? signingKey : throw new KeyNotFoundException("The configured single signing key has no replacement.");
+
+        /// <inheritdoc/>
+        public string GetPublicKeyMultibase(string keyId) =>
+            keyId == KeyId ? signingKey.ExportPublicKeyMultibase() : throw new KeyNotFoundException("The configured single signing key has no replacement.");
+
+        /// <inheritdoc/>
+        public Task ActivateAsync(string keyId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (keyId != KeyId)
+            {
+                throw new KeyNotFoundException("The configured single signing key cannot activate a replacement.");
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
     /// <summary>Maps HTTPS administration methods using exact-audience service authentication.</summary>
     /// <param name="endpoints">The endpoint route builder.</param>
-    /// <param name="remoteEnabled"><see langword="true"/> to expose remote administration routes at host startup; otherwise, <see langword="false"/>.</param>
+    /// <param name="remoteEnabled">An optional fixed route setting. When <see langword="null"/>, the current reloadable <see cref="LabelerAdministrationOptions.RemoteEnabled"/> setting controls access.</param>
     /// <returns>The endpoint route builder.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
-    /// <remarks><para>When <paramref name="remoteEnabled"/> is <see langword="false"/>, no remote routes are mapped;
-    /// local administration remains available. This is a startup-time setting, so changing it requires a host restart.
+    /// <remarks><para>Remote administration is disabled by default. When <paramref name="remoteEnabled"/> is <see langword="false"/>,
+    /// no remote routes are mapped. When it is <see langword="null"/>, mapped remote routes consult the current
+    /// <see cref="IOptionsMonitor{TOptions}"/> value on each request, so reloadable host configuration can enable or disable access.
+    /// Local administration remains available in either case.
     /// Only service JWTs on requests where <see cref="HttpRequest.IsHttps"/> is <see langword="true"/> are accepted.
     /// For TLS-terminating proxies, call ASP.NET Core's <c>UseForwardedHeaders</c> before mapping endpoints and
     /// configure its trusted proxies and forward limit. Browser OAuth cookies and PDS OAuth
@@ -93,15 +168,17 @@ public static class LabelerAdministrationExtensions
         Justification = "Untrusted authentication and JSON exceptions may contain sensitive input; log only their category.")]
     public static IEndpointRouteBuilder MapLabelerAdministration(
         this IEndpointRouteBuilder endpoints,
-        bool remoteEnabled = true)
+        bool? remoteEnabled = null)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
-        if (!remoteEnabled)
+        if (remoteEnabled is false)
         {
             return endpoints;
         }
 
         AdministrationDispatcher dispatcher = endpoints.ServiceProvider.GetRequiredService<AdministrationDispatcher>();
+        IOptionsMonitor<LabelerAdministrationOptions> remoteOptions =
+            endpoints.ServiceProvider.GetRequiredService<IOptionsMonitor<LabelerAdministrationOptions>>();
         AdministrationConfiguration configuration = endpoints.ServiceProvider.GetRequiredService<AdministrationConfiguration>();
         ILabelAdministrationStore store = endpoints.ServiceProvider.GetRequiredService<ILabelAdministrationStore>();
         TimeProvider clock = endpoints.ServiceProvider.GetRequiredService<TimeProvider>();
@@ -110,6 +187,7 @@ public static class LabelerAdministrationExtensions
         {
             RequestDelegate handler = context => HandleRequestAsync(
                 context: context, method: method, isPost: false, dispatcher: dispatcher, configuration: configuration,
+                remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);
             endpoints.MapGet("/xrpc/dev.idunno.labeler.admin." + method, handler).AllowAnonymous();
         }
@@ -118,6 +196,7 @@ public static class LabelerAdministrationExtensions
         {
             RequestDelegate handler = context => HandleRequestAsync(
                 context: context, method: method, isPost: true, dispatcher: dispatcher, configuration: configuration,
+                remoteOptions: remoteOptions, fixedRemoteEnabled: remoteEnabled,
                 store: store, clock: clock, logger: logger);
             endpoints.MapPost("/xrpc/dev.idunno.labeler.admin." + method, handler).AllowAnonymous();
         }
@@ -134,10 +213,19 @@ public static class LabelerAdministrationExtensions
         bool isPost,
         AdministrationDispatcher dispatcher,
         AdministrationConfiguration configuration,
+        IOptionsMonitor<LabelerAdministrationOptions> remoteOptions,
+        bool? fixedRemoteEnabled,
         ILabelAdministrationStore store,
         TimeProvider clock,
         ILogger logger)
     {
+        if (!(fixedRemoteEnabled ?? remoteOptions.CurrentValue.RemoteEnabled))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            context.Response.Headers.CacheControl = "no-store";
+            return;
+        }
+
         // CodeQL cs/user-controlled-bypass is a false positive here: insecure requests return a denial,
         // never dispatch; HTTPS requests still require service-token authentication and team authorization.
         if (!context.Request.IsHttps)

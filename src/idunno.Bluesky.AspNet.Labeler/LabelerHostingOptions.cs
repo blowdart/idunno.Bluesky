@@ -32,8 +32,13 @@ public sealed record LabelerHostingOptions
     /// <value>The maximum byte count. The default is 1 MiB.</value>
     public int MaximumMessageBytes { get; init; } = 1024 * 1024;
 
+    /// <summary>Gets the explicitly configured public HTTPS origin for the labeler service.</summary>
+    /// <value>The public origin, or <see langword="null"/> when identity publication is not configured.</value>
+    /// <remarks><para>Key-rotation publication verification requires this value. It is never inferred from an incoming request host.</para></remarks>
+    public Uri? PublicEndpoint { get; init; }
+
     /// <summary>Rejects configurations that would disable deadlines or permit unbounded batches.</summary>
-    internal void Validate()
+    internal void Validate(string parameterName)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(MaximumSubscriptions, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaximumSubscriptions, 100_000);
@@ -44,6 +49,19 @@ public sealed record LabelerHostingOptions
         ValidateDuration(PollInterval);
         ValidateDuration(SendTimeout);
         ValidateDuration(QueryTimeout);
+        if (PublicEndpoint is not null &&
+            (!PublicEndpoint.IsAbsoluteUri ||
+                PublicEndpoint.Scheme != Uri.UriSchemeHttps ||
+                string.IsNullOrEmpty(PublicEndpoint.Host) ||
+                !string.IsNullOrEmpty(PublicEndpoint.UserInfo) ||
+                PublicEndpoint.AbsolutePath is not ("" or "/") ||
+                !string.IsNullOrEmpty(PublicEndpoint.Query) ||
+                !string.IsNullOrEmpty(PublicEndpoint.Fragment)))
+        {
+            throw new ArgumentException(
+                "The public labeler endpoint must be an HTTPS origin without credentials, a path, a query, or a fragment.",
+                parameterName);
+        }
     }
 
     /// <summary>Requires finite, bounded timer periods supported on every target framework.</summary>

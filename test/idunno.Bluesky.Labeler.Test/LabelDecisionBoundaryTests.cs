@@ -3,6 +3,9 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +44,7 @@ public class LabelDecisionBoundaryTests
             labels: [signed],
             cancellationToken: TestContext.Current.CancellationToken);
         LabelStoreState original = await fixture.Store.PublishAsync(cancellationToken: TestContext.Current.CancellationToken);
-        await fixture.ExecuteAsync("DROP TABLE label_decisions; UPDATE label_schema SET version=1 WHERE id=1");
+        await fixture.ExecuteAsync("DROP TABLE label_decisions; DROP TABLE label_decision_index; UPDATE label_schema SET version=1 WHERE id=1");
 
         ILabelStore upgraded = fixture.NewStore();
         await upgraded.InitializeAsync(StoreFixture.Issuer, TestContext.Current.CancellationToken);
@@ -154,6 +157,16 @@ public class LabelDecisionBoundaryTests
         LabelServiceResult<LabelDecisionSnapshot> ambiguous = await store.ReadDecisionAsync(s_target, "spam", TestContext.Current.CancellationToken);
         Assert.False(ambiguous.Succeeded);
         Assert.Equal(LabelServiceErrorCode.AmbiguousHistory, ambiguous.Error.Code);
+        IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> batch = await store.ReadDecisionBatchAsync(
+            [(s_target, "spam"), (s_target, "missing"), (s_target, "spam")],
+            TestContext.Current.CancellationToken);
+        Assert.Equal(3, batch.Count);
+        Assert.False(batch[0].Succeeded);
+        Assert.Equal(LabelServiceErrorCode.AmbiguousHistory, batch[0].Error!.Code);
+        Assert.True(batch[1].Succeeded);
+        Assert.Null(batch[1].Result!.CurrentLabel);
+        Assert.False(batch[2].Succeeded);
+        Assert.Equal(LabelServiceErrorCode.AmbiguousHistory, batch[2].Error!.Code);
         await fixture.Store.AppendAsync(
             operationId: "later",
             labels: [new(
@@ -200,11 +213,11 @@ public class LabelDecisionBoundaryTests
             Assert.Null(committed.Result.Label);
         }
 
-        LabelStoreState state = await store.BeginRetirementAsync(3, TestContext.Current.CancellationToken);
-        state = await store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), TestContext.Current.CancellationToken);
+        LabelStoreState state = await store.BeginRetirementAsync(3, cancellationToken: TestContext.Current.CancellationToken);
+        state = await store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(1), cancellationToken: TestContext.Current.CancellationToken);
         // The deadline is controlled in persisted database time, not by sleeping or comparing host clocks.
         await fixture.ExecuteAsync("UPDATE label_state SET grace_deadline=0 WHERE id=1");
-        state = await store.CompleteRetirementAsync(state.Revision, TestContext.Current.CancellationToken);
+        state = await store.CompleteRetirementAsync(state.Revision, cancellationToken: TestContext.Current.CancellationToken);
         for (int index = 0; index < 3; index++)
         {
             state = await fixture.NewStore().PurgeAsync(

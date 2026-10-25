@@ -7,7 +7,7 @@
 #### idunno.Bluesky.AspNet.Labeler
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
-* Added a startup-time switch for mapping or omitting remote administration routes independently of protected local administration.
+* Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
 * Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
 * Keeps service-token routes available under host authorization fallback policies while safely rejecting malformed local pipe frames without stopping the listener.
 * Persists malformed local-frame denials, consumes rejected peers' bounded frames before replying, and supplies inspection reasons consistently across administrative transports.
@@ -17,6 +17,21 @@
 * Supports HTTP/1.1 and HTTP/2 WebSocket handshakes for label subscriptions.
 * Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
 * Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
+* Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
+* Fences maintenance and retirement mutations against revoked callers, drains in-flight administrative issuance, and verifies each host's replacement key before reopening.
+* Includes maintenance admission in query deadlines and sends a reconnectable maintenance close before cancelling WebSocket receives.
+* Bounds subscription admission with a retryable deadline without limiting established sockets; keeps keyless distribution replicas healthy through rotation and restart while still requiring every host to drain.
+
+#### idunno.Bluesky.Labeler.Cli
+
+* Requests `identity:*` for PLC publication and recovery; the standalone host's native metadata advertises that permission.
+* Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
+* Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
+* Bundles native runtime libraries for executable-only self-updates and validates Compose service names before applying image overrides, honoring extended drain deadlines.
+* Parses URI command-line options explicitly for remote administration, identity publication and service updates.
+* Added resumable maintenance and signing-key rotation commands, did:web publication snippets and authenticated PLC publication using public replacement-key material.
+* Added attestation-verified direct CLI updates and confirmed digest-pinned Docker Compose service redeployment with graceful stop, readiness verification and previous-image rollback.
+* Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
 
 #### idunno.Bluesky.Labeler
 
@@ -25,6 +40,21 @@
 * Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
 * Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that snapshots caller-owned batches and preserves label fields and sequence positions.
+* Retirement timestamp lookup tolerates equal-time CID variants without weakening ordinary decision ambiguity checks; rotation verifies every replacement signature against the persisted public key before advancing.
+* Added public-only durable signing-key selection contracts with seed-once initialization and verified, drained rotation activation.
+* Organized the unreleased labeler APIs into `Issuance`, `Administration`, `Maintenance`, `Signing`, `Storage` and `Identity` namespaces/directories, with one type per file. Consumers must update feature imports; common targets and result/error types remain in the root namespace.
+
+#### idunno.Bluesky.Labeler.Host
+
+* Made PEM signing keys honor database-backed selection and coordinated activation, supporting transitions from environment-backed keys and recovery from stale active-ID files.
+* Added a local development launch profile with loopback HTTP/HTTPS endpoints and automatic browser launch disabled pending a landing page.
+* Added a non-secret `appsettings.json` with safe provider, issuance, administration, proxy and logging defaults, plus documented deployment environment variables.
+* Defaults the canonical application and container to PostgreSQL, with a required externally supplied connection string. SQLite and MySQL remain explicit alternatives.
+* Promoted the standalone labeler application from `Samples.LabelerHost` to the canonical `src/idunno.Bluesky.Labeler.Host` project, assembly and namespace, with all three storage providers, mounted-PEM or environment keys, public distribution endpoints, and protected local and remote administration. Updated container publishing and health probes to the new application name; SDK libraries remain independently usable.
+* Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
+* Configures the standalone labeler image's Docker health check to probe ASP.NET readiness using a bounded built-in .NET probe, without curl or starting another host.
+* Supports separate protected environment variables for label-signing keys and database-backed active selection, allowing volume-free deployments such as DigitalOcean App Platform while retaining the PEM provider.
+* Defaults the canonical host to environment-backed current and optional previous keys using separate indexed variables. Filesystem-backed installations must explicitly select the `pem` provider; database-backed active selection and coordinated rotation remain authoritative.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
@@ -36,6 +66,9 @@
 * Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
 * Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
 * Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
+* Adds a restartable schema-version-six decision identity index and bounded batch decision reads so retirement does not scan all label history for each label.
+* Adds schema-version-seven host signing roles so only signing participants must activate replacement keys; legacy hosts conservatively retain their signing role.
+* Adds schema-version-eight issuer/stream-bound signing-key selection, storing only key identities and public keys and rejecting stale or premature activation.
 
 #### idunno.AtProto.Types
 
@@ -48,6 +81,7 @@
 * Rejects malformed Unicode in service JWT JSON as invalid authentication rather than allowing an unhandled JSON-reading exception.
 * Validates optional integer service-token `nbf` timestamps before and after identity resolution, rejecting premature use outside the five-second clock tolerance.
 * Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
+* Added public multikey validation and explicit-public-key label signature verification; identity publication rejects malformed encodings and invalid curve points before contacting PLC.
 * Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
 * Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.
 * Added `Label.Verify()`, resolving `Label.VerifyAsync()`, and collection signature verification using an issuer's DID document, sharing signature encoding and low-S checks with Firehose labels.

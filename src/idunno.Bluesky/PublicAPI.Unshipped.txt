@@ -135,6 +135,7 @@ idunno.Bluesky.BlueskyAgent.EnsureLabelerDeclaration(idunno.Bluesky.Labeler.Serv
 idunno.Bluesky.BlueskyAgent.RequestPlcOperationSignature(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.SubmitPlcLabelerIdentityOperation(System.Text.Json.JsonElement signedOperation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UpdatePlcLabelerIdentity(idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint, string? authorizationToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PlcLabelerIdentityUpdateResult!>!
+idunno.Bluesky.BlueskyAgent.UpdatePlcLabelerIdentity(string! publicKeyMultibase, System.Uri! labelerEndpoint, string? authorizationToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PlcLabelerIdentityUpdateResult!>!
 idunno.Bluesky.PlcLabelerIdentityUpdateResult
 idunno.Bluesky.PlcLabelerIdentityUpdateResult.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.PlcLabelerIdentityUpdateResult.DidDocument.get -> idunno.AtProto.DidDocument?

@@ -21,9 +21,14 @@ storage, distribution, administration and shutdown. You'll still need to choose 
 configure your identity, keys and deployment.
 
 > [!NOTE]
-> This work is being built in stages. The signing APIs, shared issuance service, persistence and distribution packages are parts of that
-> runnable service, not a finished host on their own. The walkthrough below describes the whole service,
-> including the parts still to come.
+> This work is being built in stages. The signing APIs, shared issuance service, persistence and distribution packages
+> are reusable parts of the runnable service. The walkthrough below also describes future features;
+> deploying the host does not supply automatic moderation decisions or a web UI.
+
+For the canonical deployable application, use
+[`idunno.Bluesky.Labeler.Host`](deployment.md). It combines public distribution and protected
+administration with configurable storage and signing-key providers. The SDK packages remain
+independent building blocks for custom hosts; a moderation web UI is not included.
 
 ## Meet the Bean Bureau
 
