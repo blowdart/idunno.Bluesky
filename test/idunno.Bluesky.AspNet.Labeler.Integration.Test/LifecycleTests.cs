@@ -23,6 +23,103 @@ public class LifecycleTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task RestartDuringReadyToReopenDrainsBeforeVerifyingAndActivatingItsKey(bool mismatchedKey)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey otherKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        TestKeyRing originalRing = new(originalKey, replacementKey);
+        await using TestServerBuilder original = await TestServerBuilder.CreateAsync(signingKeyRing: originalRing);
+        ILabelMaintenanceStore maintenance = original.Services.GetRequiredService<ILabelMaintenanceStore>();
+        const string operation = "restart-ready-rotation";
+        await maintenance.BeginRotationAsync(
+            operationId: operation,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: token);
+        await original.StopAsync();
+        await maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            operation, replacementKey.ExportPublicKeyMultibase(), cancellationToken: token);
+        TestKeyRing restartedRing = new(originalKey, mismatchedKey ? otherKey : replacementKey);
+        await using TestServerBuilder restarted = await TestServerBuilder.CreateAsync(
+            database: original.DatabasePath,
+            signingKeyRing: restartedRing);
+        LabelMaintenanceState drained = await maintenance.GetMaintenanceStateAsync(token);
+        Assert.True(drained.AllHostsDrained);
+        Assert.Equal("active", restartedRing.ActiveKeyId);
+        using HttpResponseMessage unavailable = await restarted.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, unavailable.StatusCode);
+        LabelMaintenanceState activated = await maintenance.GetMaintenanceStateAsync(token);
+        Assert.Equal(mismatchedKey ? "active" : "replacement", restartedRing.ActiveKeyId);
+        Assert.Equal(!mismatchedKey, Assert.Single(activated.Hosts, participant => !participant.Stopped).KeyActivated);
+        if (!mismatchedKey)
+        {
+            await maintenance.CompleteRotationAsync(operation, "replacement", cancellationToken: token);
+            restarted.Clock.Advance(TimeSpan.FromSeconds(1));
+            await restarted.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+            using HttpResponseMessage reopened = await restarted.Client.GetAsync(
+                "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+            Assert.Equal(HttpStatusCode.OK, reopened.StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task AdministrativeIssuanceLeasePreventsDrainAcknowledgement()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        IDisposable lease = Assert.IsAssignableFrom<IDisposable>(fixture.Host.TryAdmitAdministrativeIssuance());
+        try
+        {
+            await maintenance.BeginRotationAsync(
+                operationId: "issuer-drain",
+                previousKeyId: "active",
+                replacementKeyId: "replacement",
+                replacementPublicKey: "zreplacement",
+                cancellationToken: token);
+            fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+            await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+            Assert.False((await maintenance.GetMaintenanceStateAsync(token)).AllHostsDrained);
+            Assert.Null(fixture.Host.TryAdmitAdministrativeIssuance());
+        }
+        finally
+        {
+            lease.Dispose();
+        }
+
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        Assert.True((await maintenance.GetMaintenanceStateAsync(token)).AllHostsDrained);
+    }
+
+    /// <summary>Models host-owned keys without transferring ownership to the test host.</summary>
+    internal sealed class TestKeyRing(LabelSigningKey original, LabelSigningKey replacement) : ILabelSigningKeyRing
+    {
+        public string ActiveKeyId { get; private set; } = "active";
+        public LabelSigningKey GetSigningKey(string keyId) => keyId switch
+        {
+            "active" => original,
+            "replacement" => replacement,
+            _ => throw new KeyNotFoundException(keyId)
+        };
+        public string GetPublicKeyMultibase(string keyId) => GetSigningKey(keyId).ExportPublicKeyMultibase();
+        public Task ActivateAsync(string keyId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            _ = GetSigningKey(keyId);
+            ActiveKeyId = keyId;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task HealthReportsDependencyFailureWithoutLeakingDetailsOrFailingLiveness(bool stoppedPublisher)
     {
         CancellationToken token = TestContext.Current.CancellationToken;

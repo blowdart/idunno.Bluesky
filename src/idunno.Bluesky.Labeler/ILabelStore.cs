@@ -38,6 +38,7 @@ public interface ILabelStore : ILabelDistributionStore
     /// An optional inclusive sequence in the frozen pre-retirement history through which the caller has completed
     /// enumeration, not the sequence of a newly appended negation.
     /// </param>
+    /// <param name="caller">The authorized maintenance caller for administrative retirement batches, or <see langword="null"/> for ordinary issuance.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The original receipt for an identical retry, or a newly committed receipt.</returns>
     /// <exception cref="ArgumentException">The operation key or batch is invalid.</exception>
@@ -71,6 +72,7 @@ public interface ILabelStore : ILabelDistributionStore
         IReadOnlyList<SignedLabelSnapshot> labels,
         long? expectedRevision = null,
         long? retirementThrough = null,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Replaces signatures for a bounded set of existing labels without changing their signed fields or sequence positions.</summary>
@@ -95,6 +97,7 @@ public interface ILabelStore : ILabelDistributionStore
     /// </summary>
     /// <param name="expectedRevision">The expected revision.</param>
     /// <param name="gracePeriod">The positive minimum distribution waiting period selected by the caller, not an AT Protocol mandated duration.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resulting durable state.</returns>
     /// <exception cref="ArgumentOutOfRangeException">The grace period is not positive or the resulting deadline is outside the supported timestamp range.</exception>
@@ -112,13 +115,18 @@ public interface ILabelStore : ILabelDistributionStore
     /// deletes history or destroys signing keys. Call <see cref="CompleteRetirementAsync"/> explicitly afterward.
     /// </para>
     /// </remarks>
-    Task<LabelStoreState> BeginGracePeriodAsync(long expectedRevision, TimeSpan gracePeriod, CancellationToken cancellationToken = default);
+    Task<LabelStoreState> BeginGracePeriodAsync(
+        long expectedRevision,
+        TimeSpan gracePeriod,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Permanently closes ordinary label issuance to begin an orderly labeler shutdown, freezing the existing
     /// history boundary that the caller must inspect for retirement negations.
     /// </summary>
     /// <param name="expectedRevision">The expected revision.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resulting durable state.</returns>
     /// <exception cref="InvalidOperationException">The revision is stale or the store is no longer active.</exception>
@@ -135,7 +143,10 @@ public interface ILabelStore : ILabelDistributionStore
     /// bound before <see cref="BeginGracePeriodAsync"/> is permitted. There is no operation to reopen ordinary issuance.
     /// </para>
     /// </remarks>
-    Task<LabelStoreState> BeginRetirementAsync(long expectedRevision, CancellationToken cancellationToken = default);
+    Task<LabelStoreState> BeginRetirementAsync(
+        long expectedRevision,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Atomically commits a decision, audit outcome and optional signed label.</summary>
     /// <param name="decision">The immutable decision commit input.</param>
@@ -152,6 +163,7 @@ public interface ILabelStore : ILabelDistributionStore
     /// making its local history eligible for a separately authorized purge.
     /// </summary>
     /// <param name="expectedRevision">The expected revision.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resulting durable state.</returns>
     /// <exception cref="InvalidOperationException">The revision is stale, the store is not in its grace period, or the database-clock deadline has not been reached.</exception>
@@ -162,7 +174,10 @@ public interface ILabelStore : ILabelDistributionStore
     /// Local removal requires an explicit subsequent call to <see cref="PurgeAsync"/>.
     /// </para>
     /// </remarks>
-    Task<LabelStoreState> CompleteRetirementAsync(long expectedRevision, CancellationToken cancellationToken = default);
+    Task<LabelStoreState> CompleteRetirementAsync(
+        long expectedRevision,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Recovers the original committed service-operation receipt.</summary>
     /// <param name="operationId">The nonblank service-operation identifier.</param>
@@ -268,6 +283,7 @@ public interface ILabelStore : ILabelDistributionStore
     /// <param name="expectedRevision">The expected revision.</param>
     /// <param name="confirmed"><see langword="true"/> to confirm local destruction; otherwise, <see langword="false"/> is rejected.</param>
     /// <param name="limit">The maximum labels and, separately, receipts removed per call, from 1 through 1,000.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resulting checkpoint with advanced replay floor.</returns>
     /// <exception cref="ArgumentException">Local destruction is not explicitly confirmed.</exception>
@@ -289,6 +305,7 @@ public interface ILabelStore : ILabelDistributionStore
         long expectedRevision,
         bool confirmed,
         int limit = 100,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -332,6 +349,17 @@ public interface ILabelStore : ILabelDistributionStore
     Task<LabelServiceResult<LabelDecisionSnapshot>> ReadDecisionAsync(
         LabelTarget resolvedTarget,
         string value,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Reads several current decisions from one consistent indexed history snapshot.</summary>
+    /// <param name="queries">The resolved target and value pairs to inspect.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Decision results in the same order as the supplied queries.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="queries"/> or one of its targets is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">A target is unresolved or a value is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">More than 400 decisions are requested.</exception>
+    Task<IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>>> ReadDecisionBatchAsync(
+        IReadOnlyList<(LabelTarget Target, string Value)> queries,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -19,7 +19,8 @@ internal sealed class AdministrationDispatcher(
     ILabelSigningKeyRing signingKeyRing,
     ILabelIssuancePolicyProvider policy,
     Uri? publicEndpoint,
-    TimeProvider clock)
+    TimeProvider clock,
+    LabelerHost? host)
 {
     internal static readonly string[] s_methods =
     [
@@ -53,7 +54,19 @@ internal sealed class AdministrationDispatcher(
             command = command with { Reason = "Administrative inspection." };
         }
 
-        AdministrationResponse response = await DispatchCoreAsync(caller, command, token).ConfigureAwait(false);
+        AdministrationResponse response;
+        if ((command.Method is "issueLabel" or "negateLabel") && host is not null)
+        {
+            using IDisposable? admission = host.TryAdmitAdministrativeIssuance();
+            response = admission is null
+                ? new(false, "MaintenanceActive", "Label issuance is unavailable during coordinated maintenance.")
+                : await DispatchCoreAsync(caller, command, token).ConfigureAwait(false);
+        }
+        else
+        {
+            response = await DispatchCoreAsync(caller, command, token).ConfigureAwait(false);
+        }
+
         if (!response.Succeeded)
         {
             LabelServiceResult<LabelAdministrationReceipt> audit = await administration.RecordAdministrationDenialAsync(
@@ -262,14 +275,15 @@ internal sealed class AdministrationDispatcher(
         {
             state = command.Method switch
             {
-                "beginRotation" => await BeginRotationAsync(command, token).ConfigureAwait(false),
-                "confirmHostStopped" => await ConfirmHostStoppedAsync(command, token).ConfigureAwait(false),
+                "beginRotation" => await BeginRotationAsync(command, caller, token).ConfigureAwait(false),
+                "confirmHostStopped" => await ConfirmHostStoppedAsync(command, caller, token).ConfigureAwait(false),
                 "captureRotationBoundary" => await maintenance.CaptureRotationBoundaryAsync(
                     operationId: command.OperationId,
-                    cancellationToken: token).ConfigureAwait(false),
+                    cancellationToken: token,
+                    caller: caller).ConfigureAwait(false),
                 "verifyRotationKeyPublication" => await VerifyRotationKeyPublicationAsync(command, caller, token).ConfigureAwait(false),
-                "resignRotationBatch" => await ResignRotationBatchAsync(command, token).ConfigureAwait(false),
-                "completeRotation" => await CompleteRotationAsync(command, token).ConfigureAwait(false),
+                "resignRotationBatch" => await ResignRotationBatchAsync(command, caller, token).ConfigureAwait(false),
+                "completeRotation" => await CompleteRotationAsync(command, caller, token).ConfigureAwait(false),
                 _ => throw new InvalidOperationException("The rotation operation is not supported.")
             };
         }
@@ -311,7 +325,10 @@ internal sealed class AdministrationDispatcher(
     }
 
     /// <summary>Starts maintenance with a preinstalled replacement key and its public value.</summary>
-    private Task<LabelMaintenanceState> BeginRotationAsync(AdministrationCommand command, CancellationToken token)
+    private Task<LabelMaintenanceState> BeginRotationAsync(
+        AdministrationCommand command,
+        LabelAdministrationCaller caller,
+        CancellationToken token)
     {
         if (publicEndpoint is null)
         {
@@ -326,11 +343,15 @@ internal sealed class AdministrationDispatcher(
             previousKeyId: activeKeyId,
             replacementKeyId: replacementKeyId,
             replacementPublicKey: signingKeyRing.GetPublicKeyMultibase(replacementKeyId),
-            cancellationToken: token);
+            cancellationToken: token,
+            caller: caller);
     }
 
     /// <summary>Records an explicit, audited operator confirmation that a host is stopped.</summary>
-    private Task<LabelMaintenanceState> ConfirmHostStoppedAsync(AdministrationCommand command, CancellationToken token)
+    private Task<LabelMaintenanceState> ConfirmHostStoppedAsync(
+        AdministrationCommand command,
+        LabelAdministrationCaller caller,
+        CancellationToken token)
     {
         if (!Guid.TryParse(command.Target, out Guid instanceId))
         {
@@ -340,7 +361,8 @@ internal sealed class AdministrationDispatcher(
         return maintenance.ConfirmHostStoppedAsync(
             operationId: command.OperationId,
             instanceId: instanceId,
-            cancellationToken: token);
+            cancellationToken: token,
+            caller: caller);
     }
 
     /// <summary>Resolves and verifies the configured public identity before recording key publication.</summary>
@@ -379,11 +401,15 @@ internal sealed class AdministrationDispatcher(
         return await maintenance.VerifyRotationKeyPublicationAsync(
             operationId: command.OperationId,
             replacementPublicKey: state.ReplacementPublicKey,
-            cancellationToken: token).ConfigureAwait(false);
+            cancellationToken: token,
+            caller: caller).ConfigureAwait(false);
     }
 
     /// <summary>Re-signs one bounded batch from the persisted stream boundary and checkpoint.</summary>
-    private async Task<LabelMaintenanceState> ResignRotationBatchAsync(AdministrationCommand command, CancellationToken token)
+    private async Task<LabelMaintenanceState> ResignRotationBatchAsync(
+        AdministrationCommand command,
+        LabelAdministrationCaller caller,
+        CancellationToken token)
     {
         LabelMaintenanceState state = await maintenance.GetMaintenanceStateAsync(token).ConfigureAwait(false);
         if (!string.Equals(state.OperationId, command.OperationId, StringComparison.Ordinal) ||
@@ -398,18 +424,38 @@ internal sealed class AdministrationDispatcher(
             operationId: command.OperationId,
             replacementKey: signingKeyRing.GetSigningKey(state.ReplacementKeyId),
             batchSize: command.Limit,
-            cancellationToken: token).ConfigureAwait(false);
+            cancellationToken: token,
+            caller: caller).ConfigureAwait(false);
         return await maintenance.GetMaintenanceStateAsync(token).ConfigureAwait(false);
     }
 
     /// <summary>Activates the local host key before releasing a fully acknowledged rotation.</summary>
-    private async Task<LabelMaintenanceState> CompleteRotationAsync(AdministrationCommand command, CancellationToken token)
+    private async Task<LabelMaintenanceState> CompleteRotationAsync(
+        AdministrationCommand command,
+        LabelAdministrationCaller caller,
+        CancellationToken token)
     {
         LabelMaintenanceState state = await maintenance.GetMaintenanceStateAsync(token).ConfigureAwait(false);
         if (!string.Equals(state.OperationId, command.OperationId, StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(state.ReplacementKeyId))
         {
             throw new InvalidOperationException("The requested rotation has no replacement key.");
+        }
+
+        if (state.Phase != LabelMaintenancePhase.ReadyToReopen ||
+            !state.KeyPublicationVerified ||
+            !state.AllHostsDrained ||
+            state.LastSequence != state.ThroughSequence)
+        {
+            throw new InvalidOperationException("Rotation re-signing and key publication must complete before activating the replacement key.");
+        }
+
+        if (!string.Equals(
+            signingKeyRing.GetPublicKeyMultibase(state.ReplacementKeyId),
+            state.ReplacementPublicKey,
+            StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The locally installed replacement key does not match the verified published key.");
         }
 
         if (!string.Equals(signingKeyRing.ActiveKeyId, state.ReplacementKeyId, StringComparison.Ordinal))
@@ -420,7 +466,8 @@ internal sealed class AdministrationDispatcher(
         return await maintenance.CompleteRotationAsync(
             operationId: command.OperationId,
             activeKeyId: signingKeyRing.ActiveKeyId,
-            cancellationToken: token).ConfigureAwait(false);
+            cancellationToken: token,
+            caller: caller).ConfigureAwait(false);
     }
 
     /// <summary>Persists a failure phase without replacing the original operation outcome.</summary>
@@ -472,17 +519,22 @@ internal sealed class AdministrationDispatcher(
             state = await store.GetStateAsync(token).ConfigureAwait(false);
             state = command.Method switch
             {
-                "beginRetirement" => await store.BeginRetirementAsync(state.Revision, token).ConfigureAwait(false),
+                "beginRetirement" => await store.BeginRetirementAsync(state.Revision, caller, token).ConfigureAwait(false),
                 "advanceRetirement" => await AdvanceRetirementAsync(caller, state, token).ConfigureAwait(false),
                 "beginGracePeriod" when command.GracePeriodDays is >= 1 and <= 365 =>
-                    await store.BeginGracePeriodAsync(state.Revision, TimeSpan.FromDays(command.GracePeriodDays), token).ConfigureAwait(false),
+                    await store.BeginGracePeriodAsync(
+                        expectedRevision: state.Revision,
+                        gracePeriod: TimeSpan.FromDays(command.GracePeriodDays),
+                        caller: caller,
+                        cancellationToken: token).ConfigureAwait(false),
                 "beginGracePeriod" => throw new InvalidOperationException("A valid grace period is required."),
-                "completeRetirement" => await store.CompleteRetirementAsync(state.Revision, token).ConfigureAwait(false),
+                "completeRetirement" => await store.CompleteRetirementAsync(state.Revision, caller, token).ConfigureAwait(false),
                 "purgeRetiredData" => await store.PurgeAsync(
                     expectedRevision: state.Revision,
                     confirmed: command.Confirmed,
                     limit: command.Limit,
-                    cancellationToken: token).ConfigureAwait(false),
+                    cancellationToken: token,
+                    caller: caller).ConfigureAwait(false),
                 _ => throw new InvalidOperationException("The retirement operation is not supported.")
             };
         }
@@ -575,6 +627,8 @@ internal sealed class AdministrationDispatcher(
         }
 
         Dictionary<string, DateTimeOffset> latestTimes = new(StringComparer.Ordinal);
+        List<StoredLabel> candidates = [];
+        List<(LabelTarget Target, string Value)> decisionQueries = [];
         List<SignedLabelSnapshot> negations = [];
         DateTimeOffset now = clock.GetUtcNow();
         foreach (StoredLabel retained in page.Labels)
@@ -591,16 +645,24 @@ internal sealed class AdministrationDispatcher(
                 throw new InvalidDataException("A retained label has an invalid subject URI.");
             }
 
-            string decisionKey = prior.Uri + "\0" + prior.Value;
-            LabelServiceResult<LabelDecisionSnapshot> current = await store.ReadDecisionAsync(
-                resolvedTarget: target,
-                value: prior.Value,
-                cancellationToken: token).ConfigureAwait(false);
+            candidates.Add(retained);
+            decisionQueries.Add((target, prior.Value));
+        }
+
+        IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> currentDecisions = await store.ReadDecisionBatchAsync(
+            decisionQueries,
+            token).ConfigureAwait(false);
+        for (int index = 0; index < candidates.Count; index++)
+        {
+            StoredLabel retained = candidates[index];
+            Label prior = retained.SignedLabel.Label;
+            LabelServiceResult<LabelDecisionSnapshot> current = currentDecisions[index];
             if (!current.Succeeded)
             {
                 throw new InvalidOperationException(current.Error.Message);
             }
 
+            string decisionKey = prior.Uri + "\0" + prior.Value;
             DateTimeOffset latestTimestamp = current.Result.CurrentLabel?.SignedLabel.Label.CreationTimestamp
                 ?? DateTimeOffset.MinValue;
             if (latestTimes.TryGetValue(decisionKey, out DateTimeOffset batchPrevious) &&
@@ -638,7 +700,8 @@ internal sealed class AdministrationDispatcher(
             labels: negations,
             expectedRevision: state.Revision,
             retirementThrough: page.ScannedThrough,
-            cancellationToken: token).ConfigureAwait(false);
+            cancellationToken: token,
+            caller: caller).ConfigureAwait(false);
         return await store.GetStateAsync(token).ConfigureAwait(false);
     }
 

@@ -565,7 +565,7 @@ internal static partial class Program
         Command command = new("did-web-snippet", "Print merge-ready did:web identity additions using public key material only.");
         Argument<string> didText = new("did") { Description = "The labeler's did:web identifier." };
         Option<string> publicKey = new("--public-key") { Description = "The replacement public multibase key from rotation status.", Required = true };
-        Option<Uri> endpoint = new("--endpoint") { Description = "The configured public HTTPS labeler origin.", Required = true };
+        Option<Uri?> endpoint = CreateUriOption("--endpoint", "The configured public HTTPS labeler origin.", required: true);
         command.Arguments.Add(didText);
         command.Options.Add(publicKey);
         command.Options.Add(endpoint);
@@ -601,7 +601,7 @@ internal static partial class Program
         Option<string> handle = new("--handle") { Description = "The administrator's Bluesky handle.", Required = true };
         Option<string> clientId = new("--client-id") { Description = "The HTTPS native OAuth client metadata URL.", Required = true };
         Option<string> publicKey = new("--public-key") { Description = "The replacement public multibase key from rotation status.", Required = true };
-        Option<Uri> endpoint = new("--endpoint") { Description = "The configured public HTTPS labeler origin.", Required = true };
+        Option<Uri?> endpoint = CreateUriOption("--endpoint", "The configured public HTTPS labeler origin.", required: true);
         Option<string?> authorizationToken = new("--authorization-token")
         {
             Description = "The PDS email authorization code, if it was requested separately."
@@ -659,7 +659,7 @@ internal static partial class Program
         Option<string> handle = new("--handle") { Description = "The administrator's Bluesky handle.", Required = true };
         Option<string> clientId = new("--client-id") { Description = "The HTTPS native OAuth client metadata URL.", Required = true };
         Option<string> publicKey = new("--public-key") { Description = "The public label verification key expected in the DID document.", Required = true };
-        Option<Uri> endpoint = new("--endpoint") { Description = "The configured public HTTPS labeler origin.", Required = true };
+        Option<Uri?> endpoint = CreateUriOption("--endpoint", "The configured public HTTPS labeler origin.", required: true);
         Option<FileInfo> operationFile = new("--operation-file") { Description = "A file containing the saved signed PLC operation.", Required = true };
         Option<bool> yes = new("--yes") { Description = "Confirm without an interactive prompt." };
         command.Arguments.Add(didText);
@@ -910,11 +910,36 @@ internal static partial class Program
         return result.Stage == PlcLabelerIdentityUpdateStage.Verified ? 0 : 5;
     }
 
+    /// <summary>Parses absolute URI options explicitly rather than relying on unsupported framework conversions.</summary>
+    internal static Option<Uri?> CreateUriOption(string name, string description, bool required = false) =>
+        new(name)
+        {
+            Description = description,
+            Required = required,
+            Arity = ArgumentArity.ExactlyOne,
+            CustomParser = result =>
+            {
+                if (result.Tokens.Count == 0)
+                {
+                    return null;
+                }
+
+                if (Uri.TryCreate(result.Tokens[0].Value, UriKind.Absolute, out Uri? uri) &&
+                    uri.Scheme is "http" or "https")
+                {
+                    return uri;
+                }
+
+                result.AddError($"Supply an absolute HTTP or HTTPS URI for {name}.");
+                return null;
+            }
+        };
+
     /// <summary>Adds transport-selection and remote-authentication options to a command.</summary>
     private static TransportOptions AddTransportOptions(Command command)
     {
         Option<string?> localEndpoint = new("--local-endpoint") { Description = "Use the configured protected local pipe/socket." };
-        Option<Uri?> adminUrl = new("--admin-url") { Description = "The HTTPS labeler origin for remote administration." };
+        Option<Uri?> adminUrl = CreateUriOption("--admin-url", "The HTTPS labeler origin for remote administration.");
         Option<string?> audienceText = new("--audience") { Description = "The exact labeler service reference, for example did:web:labeler.example#labeler_admin." };
         Option<string?> handle = new("--handle") { Description = "The administrator's Bluesky handle for OAuth." };
         Option<string?> clientId = new("--client-id") { Description = "The HTTPS URL of the registered native OAuth client metadata." };

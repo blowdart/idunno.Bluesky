@@ -37,6 +37,7 @@ internal sealed partial class LabelerHost(
     internal const long MaximumSequence = 9_007_199_254_740_991;
     private readonly Guid _instanceId = Guid.NewGuid();
     private readonly object _admissionLock = new();
+    private readonly SemaphoreSlim _maintenanceRefreshGate = new(1, 1);
     private CancellationTokenSource _maintenanceLifetime = new();
     private TaskCompletionSource? _drained;
     private CancellationTokenRegistration _stoppingRegistration;
@@ -68,7 +69,6 @@ internal sealed partial class LabelerHost(
         _streamId = state.StreamId;
         LabelMaintenanceState maintenance = await maintenanceStore.RegisterHostAsync(_instanceId, cancellationToken).ConfigureAwait(false);
         _registered = true;
-        maintenance = await EnsureRotationKeyAsync(maintenance, cancellationToken).ConfigureAwait(false);
         ApplyMaintenanceState(maintenance);
         _stoppingRegistration = applicationLifetime.ApplicationStopping.Register(BeginLocalDrain);
         await base.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -81,9 +81,7 @@ internal sealed partial class LabelerHost(
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                LabelMaintenanceState maintenance = await maintenanceStore.HeartbeatHostAsync(_instanceId, stoppingToken).ConfigureAwait(false);
-                maintenance = await EnsureRotationKeyAsync(maintenance, stoppingToken).ConfigureAwait(false);
-                ApplyMaintenanceState(maintenance);
+                LabelMaintenanceState maintenance = await RefreshMaintenanceStateAsync(stoppingToken).ConfigureAwait(false);
 
                 LabelStoreState state = maintenance.IsActive
                     ? await store.GetStateAsync(stoppingToken).ConfigureAwait(false)
@@ -99,12 +97,25 @@ internal sealed partial class LabelerHost(
                         CheckState(state);
                     }
 
-                    if (state.PublishedThrough == state.IssuedThrough && ActiveRequestCount == 0)
+                    LabelMaintenanceHost? participant = maintenance.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId);
+                    if (state.PublishedThrough == state.IssuedThrough && ActiveRequestCount == 0 && participant is { Acknowledged: false })
                     {
-                        await maintenanceStore.AcknowledgeHostDrainedAsync(
-                            operationId: maintenance.OperationId!,
-                            instanceId: _instanceId,
-                            cancellationToken: stoppingToken).ConfigureAwait(false);
+                        try
+                        {
+                            await maintenanceStore.AcknowledgeHostDrainedAsync(
+                                operationId: maintenance.OperationId!,
+                                instanceId: _instanceId,
+                                cancellationToken: stoppingToken).ConfigureAwait(false);
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            LabelMaintenanceState refreshed = await RefreshMaintenanceStateAsync(stoppingToken).ConfigureAwait(false);
+                            if (refreshed.OperationId == maintenance.OperationId && refreshed.IsActive &&
+                                refreshed.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId) is { Acknowledged: false })
+                            {
+                                throw;
+                            }
+                        }
                     }
 
                     await Task.Delay(options.PollInterval, clock, stoppingToken).ConfigureAwait(false);
@@ -170,6 +181,7 @@ internal sealed partial class LabelerHost(
         _lifetime.Cancel();
         _lifetime.Dispose();
         _stoppingRegistration.Dispose();
+        _maintenanceRefreshGate.Dispose();
         lock (_admissionLock)
         {
             _maintenanceLifetime.Cancel();
@@ -183,11 +195,7 @@ internal sealed partial class LabelerHost(
     {
         try
         {
-            LabelMaintenanceState state = await maintenanceStore.HeartbeatHostAsync(
-                instanceId: _instanceId,
-                cancellationToken: context.RequestAborted).ConfigureAwait(false);
-            state = await EnsureRotationKeyAsync(state, context.RequestAborted).ConfigureAwait(false);
-            ApplyMaintenanceState(state);
+            LabelMaintenanceState state = await RefreshMaintenanceStateAsync(context.RequestAborted).ConfigureAwait(false);
             if (!state.IsActive && TryEnterRequest())
             {
                 return new AdmissionLease(this);
@@ -224,6 +232,10 @@ internal sealed partial class LabelerHost(
             return true;
         }
     }
+
+    /// <summary>Tracks authorized label mutations so rotation cannot drain while an issuer is resolving a target.</summary>
+    internal IDisposable? TryAdmitAdministrativeIssuance() =>
+        TryEnterRequest() ? new AdmissionLease(this) : null;
 
     /// <summary>Releases one admitted query or subscription and signals an outstanding drain when the count reaches zero.</summary>
     private void ExitRequest()
@@ -312,21 +324,76 @@ internal sealed partial class LabelerHost(
             throw new InvalidOperationException("This host has no signing-key ring for the completed rotation.");
         }
 
+        LabelMaintenanceHost? participant = state.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId);
+        if (state.Phase == LabelMaintenancePhase.ReadyToReopen && !state.AllHostsDrained)
+        {
+            return state;
+        }
+
+        if (!string.Equals(
+            signingKeyRing.GetPublicKeyMultibase(state.ReplacementKeyId),
+            state.ReplacementPublicKey,
+            StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The locally installed replacement key does not match the verified published key.");
+        }
+
         if (!string.Equals(signingKeyRing.ActiveKeyId, state.ReplacementKeyId, StringComparison.Ordinal))
         {
             await signingKeyRing.ActivateAsync(state.ReplacementKeyId, cancellationToken).ConfigureAwait(false);
         }
 
-        if (state.Phase == LabelMaintenancePhase.ReadyToReopen)
+        if (state.Phase == LabelMaintenancePhase.ReadyToReopen && participant is { KeyActivated: false })
         {
-            state = await maintenanceStore.AcknowledgeHostKeyActivatedAsync(
-                operationId: state.OperationId!,
-                instanceId: _instanceId,
-                keyId: state.ReplacementKeyId,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            try
+            {
+                state = await maintenanceStore.AcknowledgeHostKeyActivatedAsync(
+                    operationId: state.OperationId!,
+                    instanceId: _instanceId,
+                    keyId: state.ReplacementKeyId,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
+            {
+                LabelMaintenanceState refreshed = await maintenanceStore.GetMaintenanceStateAsync(cancellationToken).ConfigureAwait(false);
+                LabelMaintenanceHost? latest = refreshed.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId);
+                if (refreshed.OperationId == state.OperationId &&
+                    refreshed.Phase != LabelMaintenancePhase.Completed &&
+                    refreshed.AllHostsDrained &&
+                    latest is not { KeyActivated: true })
+                {
+                    throw;
+                }
+
+                state = refreshed;
+            }
         }
 
         return state;
+    }
+
+    /// <summary>Serializes durable maintenance refreshes with their local admission-state updates.</summary>
+    private async Task<LabelMaintenanceState> RefreshMaintenanceStateAsync(CancellationToken cancellationToken)
+    {
+        await _maintenanceRefreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            LabelMaintenanceState state = await maintenanceStore.HeartbeatHostAsync(
+                instanceId: _instanceId,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (state.IsActive)
+            {
+                ApplyMaintenanceState(state);
+            }
+
+            state = await EnsureRotationKeyAsync(state, cancellationToken).ConfigureAwait(false);
+            ApplyMaintenanceState(state);
+            return state;
+        }
+        finally
+        {
+            _maintenanceRefreshGate.Release();
+        }
     }
 
     /// <summary>Stops local admission and closes active subscriptions for either rotation or process shutdown.</summary>

@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS label_distribution (
     slot_key BLOB NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_distribution_slot ON label_distribution(slot_hash, seq);
+CREATE TABLE IF NOT EXISTS label_decision_index (
+    seq INTEGER PRIMARY KEY CHECK(seq>0),
+    identity_hash BLOB NOT NULL CHECK(length(identity_hash)=32),
+    identity_key BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_decision_index_identity ON label_decision_index(identity_hash, seq);
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BLOB PRIMARY KEY CHECK(length(operation_hash)=32),
     operation_id TEXT NOT NULL,
@@ -74,4 +80,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT OR IGNORE INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000');
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 5);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 6);

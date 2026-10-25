@@ -25,6 +25,12 @@ CREATE TABLE IF NOT EXISTS label_distribution (
     slot_key BYTEA NOT NULL
 );
 CREATE INDEX IF NOT EXISTS label_distribution_slot ON label_distribution(slot_hash, seq);
+CREATE TABLE IF NOT EXISTS label_decision_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    identity_hash BYTEA NOT NULL CHECK(octet_length(identity_hash)=32),
+    identity_key BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_decision_index_identity ON label_decision_index(identity_hash, seq);
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BYTEA PRIMARY KEY CHECK(octet_length(operation_hash)=32),
     operation_id TEXT COLLATE "C" NOT NULL,
@@ -74,4 +80,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 5) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 6) ON CONFLICT DO NOTHING;

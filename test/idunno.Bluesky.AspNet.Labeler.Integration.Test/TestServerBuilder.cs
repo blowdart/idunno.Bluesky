@@ -55,7 +55,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool http2 = false,
         Action<IServiceCollection>? configureAdministration = null,
         bool? remoteAdministrationEnabled = true,
-        bool fallbackAuthorizationRequired = false)
+        bool fallbackAuthorizationRequired = false,
+        ILabelSigningKeyRing? signingKeyRing = null)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -71,6 +72,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         }
 
         builder.Services.AddSingleton<TimeProvider>(fixture.Clock);
+        if (signingKeyRing is not null)
+        {
+            builder.Services.AddSingleton(signingKeyRing);
+        }
+
         builder.Services.AddSqliteLabelStorage($"Data Source={fixture._database}");
         builder.Services.AddBlueskyLabeler(s_issuer, options);
         if (remoteAdministrationEnabled is null)

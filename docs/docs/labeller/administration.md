@@ -23,11 +23,13 @@ grant, not proof that a new member has signed in. Members authenticate independe
 
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
-Schema version five upgrades versions one through four additively through `InitializeAsync`.
+Schema version six upgrades versions one through five additively through `InitializeAsync`.
 Initialization also installs the administrative token-expiry index on existing version-four
 databases so cleanup can select expired replay entries without scanning all retained tokens.
-Version five adds durable coordinated maintenance and signing-key rotation state. Back up all
-tables together and stop older application versions before upgrading.
+Version five adds durable coordinated maintenance and signing-key rotation state. Version six
+adds an indexed subject/value identity for bounded decision lookups during retirement; interrupted
+backfills resume without changing signed history. Back up all tables together and stop older
+application versions before upgrading.
 
 Team changes, last-administrator checks and label commit fences use the same provider serialization
 lock. Concurrent removal, suspension or demotion cannot eliminate the last active administrator.
@@ -51,6 +53,10 @@ builder.Services.AddLabelerAdministration(
 builder.Services.AddLabelerLocalAdministration(
     OperatingSystem.IsWindows() ? "bean-bureau-admin" : "/run/bean-bureau/admin.sock");
 
+// Remote administration is disabled by default and follows reloadable configuration.
+builder.Services.Configure<LabelerAdministrationOptions>(
+    builder.Configuration.GetSection("Labeler:Administration"));
+
 WebApplication app = builder.Build();
 
 // Omit this middleware when the application itself terminates HTTPS.
@@ -62,9 +68,6 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownProxies = { IPAddress.Parse("10.0.0.10"), IPAddress.Parse("10.0.0.11") }
 });
 
-// Remote administration is disabled by default and follows reloadable configuration.
-builder.Services.Configure<LabelerAdministrationOptions>(
-    builder.Configuration.GetSection("Labeler:Administration"));
 app.MapLabelerAdministration();
 ```
 

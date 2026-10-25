@@ -42,7 +42,7 @@ internal static partial class Program
         Option<string> service = new("--service") { Description = "The Compose service name for the labeler.", Required = true };
         Option<string> image = new("--image") { Description = "The new public GHCR image pinned by sha256 digest.", Required = true };
         Option<string> previousImage = new("--previous-image") { Description = "The currently deployed image pinned by sha256 digest for rollback.", Required = true };
-        Option<Uri> readyUrl = new("--ready-url") { Description = "The labeler's readiness endpoint.", Required = true };
+        Option<Uri?> readyUrl = CreateUriOption("--ready-url", "The labeler's readiness endpoint.", required: true);
         Option<bool> backupConfirmed = new("--backup-confirmed") { Description = "Confirm that the database and external configuration have been backed up." };
         Option<bool> schemaCompatible = new("--schema-compatible") { Description = "Confirm that the target release supports the current schema and upgrade path." };
         Option<int> timeoutSeconds = new("--timeout-seconds")
@@ -366,8 +366,13 @@ internal static partial class Program
         string overridePath = Path.Combine(projectDirectory, $".labeler-update-{Guid.NewGuid():N}.yaml");
         try
         {
-            await WriteComposeOverrideAsync(overridePath, service, image!, cancellationToken).ConfigureAwait(false);
-            ProcessResult services = await RunComposeAsync(composeFile, overridePath, projectDirectory, image!, ["config", "--services"], cancellationToken).ConfigureAwait(false);
+            ProcessResult services = await RunComposeAsync(
+                composeFile,
+                overridePath: string.Empty,
+                projectDirectory,
+                image!,
+                ["config", "--services"],
+                cancellationToken).ConfigureAwait(false);
             if (services.ExitCode != 0 ||
                 !services.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                     .Contains(service, StringComparer.Ordinal))
@@ -376,6 +381,7 @@ internal static partial class Program
                 return 2;
             }
 
+            await WriteComposeOverrideAsync(overridePath, service, image!, cancellationToken).ConfigureAwait(false);
             ProcessResult targetPull = await RunComposeAsync(composeFile, overridePath, projectDirectory, image!, ["pull", service], cancellationToken).ConfigureAwait(false);
             if (targetPull.ExitCode != 0)
             {
@@ -398,7 +404,8 @@ internal static partial class Program
                 projectDirectory,
                 image!,
                 ["stop", "--timeout", drainSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture), service],
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                processTimeout: TimeSpan.FromSeconds(drainSeconds + 120)).ConfigureAwait(false);
             if (stop.ExitCode != 0)
             {
                 await Console.Error.WriteLineAsync("Compose could not gracefully stop the service; the update was not started.").ConfigureAwait(false);
@@ -529,9 +536,16 @@ internal static partial class Program
         string projectDirectory,
         string image,
         IReadOnlyList<string> composeArguments,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? processTimeout = null)
     {
-        List<string> arguments = ["compose", "--project-directory", projectDirectory, "--file", composeFile.FullName, "--file", overridePath];
+        List<string> arguments = ["compose", "--project-directory", projectDirectory, "--file", composeFile.FullName];
+        if (!string.IsNullOrEmpty(overridePath))
+        {
+            arguments.Add("--file");
+            arguments.Add(overridePath);
+        }
+
         arguments.AddRange(composeArguments);
         ProcessStartInfo startInfo = new(ResolveExecutableOnPath("docker"))
         {
@@ -547,7 +561,7 @@ internal static partial class Program
             startInfo.ArgumentList.Add(argument);
         }
 
-        return RunProcessAsync(startInfo, TimeSpan.FromMinutes(5), cancellationToken);
+        return RunProcessAsync(startInfo, processTimeout ?? TimeSpan.FromMinutes(5), cancellationToken);
     }
 
     /// <summary>Checks an unauthenticated readiness endpoint for a bounded interval without following redirects.</summary>

@@ -111,7 +111,8 @@ public static class LabelerAdministrationExtensions
                 signingKeyRing: provider.GetRequiredService<ILabelSigningKeyRing>(),
                 policy: provider.GetRequiredService<ILabelIssuancePolicyProvider>(),
                 publicEndpoint: provider.GetService<LabelerHostingOptions>()?.PublicEndpoint,
-                clock: provider.GetRequiredService<TimeProvider>());
+                clock: provider.GetRequiredService<TimeProvider>(),
+                host: provider.GetService<LabelerHost>());
         });
         return services;
     }

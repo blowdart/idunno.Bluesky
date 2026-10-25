@@ -27,6 +27,61 @@ public class AdministrationTests
     private static readonly AtProtoServiceReference s_audience = new(TestServerBuilder.s_issuer, "labeler_admin");
 
     [Theory]
+    [InlineData(LabelMaintenancePhase.Draining)]
+    [InlineData(LabelMaintenancePhase.AwaitingKeyPublication)]
+    [InlineData(LabelMaintenancePhase.Resigning)]
+    public async Task PrematureRotationCompletionDoesNotActivateTheReplacement(LabelMaintenancePhase phase)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey original = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new IdentityHandler(original.ExportPublicKeyMultibase()));
+        LifecycleTests.TestKeyRing ring = new(original, replacement);
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
+            configureAdministration: services =>
+            {
+                services.AddSingleton<ILabelIssuancePolicyProvider, Policy>();
+                services.AddLabelerAdministration(s_audience, ring, identity);
+            });
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        Assert.True((await team.BootstrapAsync(s_actor, "uid:0", "bootstrap", token)).Succeeded);
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        SignedLabelSnapshot signed = new(original.CreateLabel(
+            source: TestServerBuilder.s_issuer,
+            uri: "did:plc:rotation-subject",
+            value: "spam",
+            creationTimestamp: fixture.Clock.GetUtcNow()));
+        await fixture.Store.AppendAsync("rotation-seed", [signed], cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        const string operation = "premature-completion";
+        await maintenance.BeginRotationAsync(
+            operationId: operation,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacement.ExportPublicKeyMultibase(),
+            cancellationToken: token);
+        if (phase != LabelMaintenancePhase.Draining)
+        {
+            await fixture.StopAsync();
+            await maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token);
+            if (phase == LabelMaintenancePhase.Resigning)
+            {
+                await maintenance.VerifyRotationKeyPublicationAsync(
+                    operation, replacement.ExportPublicKeyMultibase(), cancellationToken: token);
+            }
+        }
+
+        AdministrationResponse response = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller: caller,
+            command: new(Method: "completeRotation", OperationId: operation, Reason: "Attempt premature completion."),
+            token: token);
+        Assert.False(response.Succeeded);
+        Assert.Equal("active", ring.ActiveKeyId);
+        Assert.Equal(phase, (await maintenance.GetMaintenanceStateAsync(token)).Phase);
+    }
+
+    [Theory]
     [InlineData("missing", HttpStatusCode.Unauthorized)]
     [InlineData("oauth", HttpStatusCode.Unauthorized)]
     [InlineData("malformed-unicode", HttpStatusCode.Unauthorized)]

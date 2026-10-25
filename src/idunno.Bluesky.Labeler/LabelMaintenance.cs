@@ -97,6 +97,7 @@ public interface ILabelMaintenanceStore
     /// <param name="previousKeyId">The currently active key identity.</param>
     /// <param name="replacementKeyId">The preinstalled replacement key identity.</param>
     /// <param name="replacementPublicKey">The replacement key's public multibase value.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The durable rotation state.</returns>
     /// <exception cref="InvalidOperationException">Another maintenance operation is active or the labeler is not active.</exception>
@@ -105,6 +106,7 @@ public interface ILabelMaintenanceStore
         string previousKeyId,
         string replacementKeyId,
         string replacementPublicKey,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Acknowledges that a participating host has blocked admission, drained work and closed subscriptions.</summary>
@@ -132,31 +134,37 @@ public interface ILabelMaintenanceStore
     /// <summary>Explicitly acknowledges a host that an operator independently verified as stopped.</summary>
     /// <param name="operationId">The active rotation identity.</param>
     /// <param name="instanceId">The unresponsive participating process identity.</param>
+    /// <param name="caller">The authorized maintenance caller.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated maintenance state.</returns>
     /// <remarks><para>The caller must require maintenance authorization, explicit operator confirmation and an audit record.</para></remarks>
     Task<LabelMaintenanceState> ConfirmHostStoppedAsync(
         string operationId,
         Guid instanceId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Fixes the stream boundary after every host has drained and pending publication has completed.</summary>
     /// <param name="operationId">The active rotation identity.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The maintenance state containing the fixed published boundary.</returns>
     /// <exception cref="InvalidOperationException">A host has not drained or publication remains pending.</exception>
     Task<LabelMaintenanceState> CaptureRotationBoundaryAsync(
         string operationId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Records verification that the replacement public key is published for the bound issuer and endpoint.</summary>
     /// <param name="operationId">The active rotation identity.</param>
     /// <param name="replacementPublicKey">The public key value observed in the resolved identity document.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated maintenance state.</returns>
     Task<LabelMaintenanceState> VerifyRotationKeyPublicationAsync(
         string operationId,
         string replacementPublicKey,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Atomically replaces one bounded signature batch and advances the durable rotation checkpoint.</summary>
@@ -164,6 +172,7 @@ public interface ILabelMaintenanceStore
     /// <param name="expectedAfterSequence">The checkpoint from which the batch was read.</param>
     /// <param name="replacementLabels">The re-signed labels, in strictly increasing sequence order.</param>
     /// <param name="checkpoint">The last sequence inspected by this batch.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The updated maintenance state.</returns>
     Task<LabelMaintenanceState> ReplaceRotationBatchAsync(
@@ -171,17 +180,20 @@ public interface ILabelMaintenanceStore
         long expectedAfterSequence,
         IReadOnlyList<StoredLabel> replacementLabels,
         long checkpoint,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Marks re-signing complete after the replacement key is active, then releases maintenance.</summary>
     /// <param name="operationId">The active rotation identity.</param>
     /// <param name="activeKeyId">The key identity made active by the host's key ring.</param>
+    /// <param name="caller">The authorized maintenance caller, or <see langword="null"/> for local administration.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The completed rotation state.</returns>
     /// <exception cref="InvalidOperationException">Re-signing, publication verification or key activation is incomplete.</exception>
     Task<LabelMaintenanceState> CompleteRotationAsync(
         string operationId,
         string activeKeyId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default);
 }
 

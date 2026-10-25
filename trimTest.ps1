@@ -100,6 +100,8 @@ $supportedProjects = @(
 $excludedProjects = @{
     'src/idunno.Bluesky.AspNet.Authentication.UI/idunno.Bluesky.AspNet.Authentication.UI.csproj' =
         'Razor Pages do not support trimming or Native AOT.'
+    'src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj' =
+        'The standalone administration CLI is not currently part of the supported trimming or Native AOT library surface.'
 }
 
 if ([string]::IsNullOrWhiteSpace($Rid))

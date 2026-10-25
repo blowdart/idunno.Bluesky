@@ -9,6 +9,32 @@ namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
 {
+    private async Task RequireMaintenancePermissionAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelStoreState state,
+        LabelAdministrationCaller? caller,
+        CancellationToken token)
+    {
+        if (caller is null)
+        {
+            return;
+        }
+
+        AdministrationState administration = await ReadAdministrationAsync(connection, transaction, token).ConfigureAwait(false);
+        if (!await HasPermissionAsync(
+            connection: connection,
+            transaction: transaction,
+            state: state,
+            administration: administration,
+            caller: caller,
+            permission: LabelAdministrationPermission.Maintain,
+            token: token).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException("Current maintenance authority is required.");
+        }
+    }
+
     public Task<LabelMaintenanceState> RegisterHostAsync(Guid instanceId, CancellationToken cancellationToken = default)
     {
         if (instanceId == Guid.Empty)
@@ -142,6 +168,7 @@ internal abstract partial class RelationalLabelStore
         string previousKeyId,
         string replacementKeyId,
         string replacementPublicKey,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         OperationId(operationId);
@@ -157,6 +184,7 @@ internal abstract partial class RelationalLabelStore
             operation: "begin-rotation",
             action: async (connection, transaction, state) =>
             {
+                await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
                 LabelMaintenanceState current = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (string.Equals(current.OperationId, operationId, StringComparison.Ordinal))
                 {
@@ -272,18 +300,25 @@ internal abstract partial class RelationalLabelStore
     public Task<LabelMaintenanceState> ConfirmHostStoppedAsync(
         string operationId,
         Guid instanceId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default) =>
-        AcknowledgeHostAsync(operationId, instanceId, confirmedStopped: true, cancellationToken);
+        AcknowledgeHostAsync(operationId, instanceId, confirmedStopped: true, cancellationToken, caller);
 
     private Task<LabelMaintenanceState> AcknowledgeHostAsync(
         string operationId,
         Guid instanceId,
         bool confirmedStopped,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        LabelAdministrationCaller? caller = null) =>
         RunAsync(
             operation: confirmedStopped ? "confirm-host-stopped" : "acknowledge-host-drained",
-            action: async (connection, transaction, _) =>
+            action: async (connection, transaction, storeState) =>
             {
+                if (confirmedStopped)
+                {
+                    await RequireMaintenancePermissionAsync(connection, transaction, storeState, caller, cancellationToken).ConfigureAwait(false);
+                }
+
                 LabelMaintenanceState state = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (!state.IsActive || !string.Equals(state.OperationId, operationId, StringComparison.Ordinal))
                 {
@@ -326,11 +361,13 @@ internal abstract partial class RelationalLabelStore
 
     public Task<LabelMaintenanceState> CaptureRotationBoundaryAsync(
         string operationId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default) =>
         RunAsync(
             operation: "capture-rotation-boundary",
             action: async (connection, transaction, state) =>
             {
+                await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
                 LabelMaintenanceState current = await RequireRotationAsync(connection, transaction, operationId, cancellationToken).ConfigureAwait(false);
                 if (current.Phase != LabelMaintenancePhase.Draining)
                 {
@@ -357,13 +394,15 @@ internal abstract partial class RelationalLabelStore
     public Task<LabelMaintenanceState> VerifyRotationKeyPublicationAsync(
         string operationId,
         string replacementPublicKey,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         PublicKey(replacementPublicKey, nameof(replacementPublicKey));
         return RunAsync(
             operation: "verify-rotation-key",
-            action: async (connection, transaction, _) =>
+            action: async (connection, transaction, state) =>
             {
+                await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
                 LabelMaintenanceState current = await RequireRotationAsync(connection, transaction, operationId, cancellationToken).ConfigureAwait(false);
                 if (current.KeyPublicationVerified)
                 {
@@ -401,6 +440,7 @@ internal abstract partial class RelationalLabelStore
         long expectedAfterSequence,
         IReadOnlyList<StoredLabel> replacementLabels,
         long checkpoint,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         OperationId(operationId);
@@ -432,6 +472,7 @@ internal abstract partial class RelationalLabelStore
             operation: "replace-rotation-batch",
             action: async (connection, transaction, state) =>
             {
+                await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
                 LabelMaintenanceState current = await RequireRotationAsync(connection, transaction, operationId, cancellationToken).ConfigureAwait(false);
                 if (current.Phase != LabelMaintenancePhase.Resigning ||
                     !current.KeyPublicationVerified ||
@@ -519,14 +560,16 @@ internal abstract partial class RelationalLabelStore
     public Task<LabelMaintenanceState> CompleteRotationAsync(
         string operationId,
         string activeKeyId,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         OperationId(operationId);
         KeyIdentity(activeKeyId, nameof(activeKeyId));
         return RunAsync(
             operation: "complete-rotation",
-            action: async (connection, transaction, _) =>
+            action: async (connection, transaction, state) =>
             {
+                await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
                 LabelMaintenanceState current = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 if (!string.Equals(current.OperationId, operationId, StringComparison.Ordinal) ||
                     current.Phase == LabelMaintenancePhase.None)

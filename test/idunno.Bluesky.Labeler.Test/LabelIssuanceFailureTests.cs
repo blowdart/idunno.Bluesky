@@ -57,7 +57,7 @@ public class LabelIssuanceFailureTests
 
         if (scenario == "closed")
         {
-            await fixture.Store.BeginRetirementAsync(0, TestContext.Current.CancellationToken);
+            await fixture.Store.BeginRetirementAsync(0, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         LabelStoreState before = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);

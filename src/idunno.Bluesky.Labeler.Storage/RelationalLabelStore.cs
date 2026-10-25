@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
     : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore
 {
-    private const int SchemaVersion = 5;
+    private const int SchemaVersion = 6;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -62,7 +62,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: "SELECT version FROM label_schema WHERE id=1",
             token: token).ConfigureAwait(false);
-        if (version is not null && Integer(version) is not (1 or 2 or 3 or 4 or SchemaVersion))
+        if (version is not null && (Integer(version) is < 1 or > SchemaVersion))
         {
             throw new InvalidDataException("The label database schema version is not supported.");
         }
@@ -72,12 +72,13 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v5.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v6.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
+        await BackfillDecisionIndexAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=5 WHERE id=1",
+            sql: "UPDATE label_schema SET version=6 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 
@@ -478,6 +479,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         IReadOnlyList<SignedLabelSnapshot> labels,
         long? expectedRevision = null,
         long? retirementThrough = null,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         OperationId(operationId);
@@ -496,6 +498,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             action: async (connection, transaction, state) =>
         {
             inserted = false;
+            await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
             (LabelAppendReceipt Receipt, byte[] Request)? existing = await ReceiptAsync(
                 connection: connection,
                 transaction: transaction,
@@ -512,7 +515,8 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 return existing.Value.Receipt;
             }
 
-            if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
+            LabelMaintenanceState maintenance = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+            if (maintenance.IsActive)
             {
                 throw new InvalidOperationException("Label issuance is blocked during coordinated maintenance.");
             }
@@ -565,6 +569,12 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     ("@payload", batch[i].GetCanonicalUnsignedBytes()),
                     ("@now", now)).ConfigureAwait(false);
                 await IndexDistributionAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sequence: state.IssuedThrough + i + 1,
+                    signed: batch[i],
+                    token: cancellationToken).ConfigureAwait(false);
+                await IndexDecisionAsync(
                     connection: connection,
                     transaction: transaction,
                     sequence: state.IssuedThrough + i + 1,
@@ -819,24 +829,50 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 token: cancellationToken));
     }
 
-    /// <summary>Finds the protocol-current decision from authoritative history, including the unpublished tail.</summary>
-    /// <remarks><para>No projection can become stale when legacy or retirement appends write labels. This
-    /// initial implementation scans history under the existing stream lock; it favors consistent semantics
-    /// across providers over an independently maintained state index.</para></remarks>
-    private static async Task<LabelServiceResult<LabelDecisionSnapshot>> DecisionSnapshotAsync(
+    /// <summary>Finds protocol-current decisions from authoritative history, including the unpublished tail.</summary>
+    private static async Task<IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>>> DecisionSnapshotsAsync(
         DbConnection connection,
         DbTransaction transaction,
         LabelStoreState state,
-        LabelTarget target,
-        string value,
+        IReadOnlyList<(LabelTarget Target, string Value)> queries,
         CancellationToken token)
     {
-        StoredLabel? current = null;
-        bool ambiguous = false;
+        Dictionary<(string Subject, string Value), (StoredLabel? Current, bool Ambiguous)> decisions = [];
+        Dictionary<string, List<((string Subject, string Value) Key, byte[] IdentityKey)>> identities = new(StringComparer.Ordinal);
+        foreach ((LabelTarget target, string value) in queries)
+        {
+            (string Subject, string Value) key = (target.Subject, value);
+            decisions.TryAdd(key, (null, false));
+            byte[] identityKey = DecisionIdentityKey(target.Subject, value);
+            string identityHash = Convert.ToHexString(SHA256.HashData(identityKey));
+            if (!identities.TryGetValue(identityHash, out List<((string Subject, string Value) Key, byte[] IdentityKey)>? matchingIdentities))
+            {
+                matchingIdentities = [];
+                identities.Add(identityHash, matchingIdentities);
+            }
+
+            if (!matchingIdentities.Any(identity => identity.Key == key))
+            {
+                matchingIdentities.Add((key, identityKey));
+            }
+        }
+
+        List<(string Name, object? Value)> parameters = new(identities.Count);
+        int parameterIndex = 0;
+        foreach (string identityHash in identities.Keys)
+        {
+            parameters.Add(($"@hash{parameterIndex}", Convert.FromHexString(identityHash)));
+            parameterIndex++;
+        }
+
+        string sql = "SELECT e.seq, e.signed_json, e.payload, e.format_version, d.identity_hash, d.identity_key " +
+            "FROM label_decision_index d JOIN label_entries e ON e.seq=d.seq " +
+            $"WHERE d.identity_hash IN ({string.Join(",", parameters.Select(parameter => parameter.Name))}) ORDER BY e.seq";
         DbCommand command = Command(
             connection: connection,
             transaction: transaction,
-            sql: "SELECT seq, signed_json, payload, format_version FROM label_entries ORDER BY seq");
+            sql: sql,
+            values: parameters.ToArray());
         await using ConfiguredAsyncDisposable commandDisposal = command.ConfigureAwait(false);
         DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
         await using ConfiguredAsyncDisposable readerDisposal = reader.ConfigureAwait(false);
@@ -844,33 +880,63 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         {
             SignedLabelSnapshot signed = Restore(reader);
             Label label = signed.Label;
-            if (!string.Equals(label.Uri, target.Subject, StringComparison.Ordinal) ||
-                !string.Equals(label.Value, value, StringComparison.Ordinal))
+            byte[] indexedHash = (byte[])reader.GetValue(4);
+            byte[] indexedIdentity = (byte[])reader.GetValue(5);
+            byte[] expectedIdentity = DecisionIdentityKey(label.Uri, label.Value);
+            if (!SHA256.HashData(indexedIdentity).AsSpan().SequenceEqual(indexedHash) ||
+                !expectedIdentity.AsSpan().SequenceEqual(indexedIdentity))
             {
-                continue;
+                throw new InvalidDataException("The stored decision identity index is inconsistent.");
             }
 
-            int order = current is null ? 1 : LabelDecisionRules.CompareCreation(signed, current.SignedLabel);
-            if (order > 0)
+            string identityHash = Convert.ToHexString(indexedHash);
+            if (!identities.TryGetValue(identityHash, out List<((string Subject, string Value) Key, byte[] IdentityKey)>? matchingIdentities))
             {
-                current = new(reader.GetInt64(0), signed);
-                ambiguous = false;
+                throw new InvalidDataException("The decision identity query returned an unexpected index row.");
             }
-            else if (order == 0 && current is not null &&
-                !signed.GetCanonicalUnsignedBytes().AsSpan().SequenceEqual(current.SignedLabel.GetCanonicalUnsignedBytes()))
+
+            foreach (((string Subject, string Value) key, byte[] identityKey) in matchingIdentities)
             {
-                ambiguous = true;
+                if (!identityKey.AsSpan().SequenceEqual(indexedIdentity))
+                {
+                    continue;
+                }
+
+                (StoredLabel? Current, bool Ambiguous) currentDecision = decisions[key];
+                StoredLabel? current = currentDecision.Current;
+                int order = current is null ? 1 : LabelDecisionRules.CompareCreation(signed, current.SignedLabel);
+                if (order > 0)
+                {
+                    current = new(reader.GetInt64(0), signed);
+                    currentDecision.Ambiguous = false;
+                }
+                else if (order == 0 && current is not null &&
+                    !signed.GetCanonicalUnsignedBytes().AsSpan().SequenceEqual(current.SignedLabel.GetCanonicalUnsignedBytes()))
+                {
+                    currentDecision.Ambiguous = true;
+                }
+
+                currentDecision.Current = current;
+                decisions[key] = currentDecision;
+                break;
             }
         }
 
-        return ambiguous ? LabelServiceResult<LabelDecisionSnapshot>.Failure(
-            new(
-                code: LabelServiceErrorCode.AmbiguousHistory,
-                message: "Conflicting labels have the same latest creation timestamp; inspect history before deciding."))
-            : LabelServiceResult<LabelDecisionSnapshot>.Success(new(state, current));
+        List<LabelServiceResult<LabelDecisionSnapshot>> results = new(queries.Count);
+        foreach ((LabelTarget target, string value) in queries)
+        {
+            (StoredLabel? Current, bool Ambiguous) decision = decisions[(target.Subject, value)];
+            results.Add(decision.Ambiguous
+                ? LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
+                    code: LabelServiceErrorCode.AmbiguousHistory,
+                    message: "Conflicting labels have the same latest creation timestamp; inspect history before deciding."))
+                : LabelServiceResult<LabelDecisionSnapshot>.Success(new(state, decision.Current)));
+        }
+
+        return results;
     }
 
-    public Task<LabelServiceResult<LabelDecisionSnapshot>> ReadDecisionAsync(
+    public async Task<LabelServiceResult<LabelDecisionSnapshot>> ReadDecisionAsync(
         LabelTarget resolvedTarget,
         string value,
         CancellationToken cancellationToken = default)
@@ -882,18 +948,55 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             throw new ArgumentException("Decision reads require a stable DID target.", nameof(resolvedTarget));
         }
 
-        return DecisionReadAsync(
-            () => RunAsync(
-                operation: "decision-read",
+        IReadOnlyList<(LabelTarget Target, string Value)> queries = [(resolvedTarget, value)];
+        IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> results = await ReadDecisionBatchAsync(
+            queries,
+            cancellationToken).ConfigureAwait(false);
+        return results[0];
+    }
+
+    public async Task<IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>>> ReadDecisionBatchAsync(
+        IReadOnlyList<(LabelTarget Target, string Value)> queries,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queries);
+        queries = queries.ToArray();
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(queries.Count, 400);
+        foreach ((LabelTarget target, string value) in queries)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            LabelInput.ValidateText(value, nameof(queries), 128);
+            if (target.Repository is not Did)
+            {
+                throw new ArgumentException("Decision reads require stable DID targets.", nameof(queries));
+            }
+        }
+
+        if (queries.Count == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            return await RunAsync(
+                operation: "decision-batch-read",
                 action: (connection, transaction, state) =>
-            DecisionSnapshotAsync(
+            DecisionSnapshotsAsync(
                 connection: connection,
                 transaction: transaction,
                 state: state,
-                target: resolvedTarget,
-                value: value,
+                queries: queries,
                 token: cancellationToken),
-                token: cancellationToken));
+                token: cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbException exception)
+        {
+            return queries.Select(_ => LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
+                code: LabelServiceErrorCode.StorageUnavailable,
+                message: "Label storage is unavailable; retry the original request when storage recovers.",
+                exception: exception))).ToArray();
+        }
     }
 
     public async Task<LabelServiceResult<LabelOperationReceipt>> CommitDecisionAsync(
@@ -971,13 +1074,31 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                             message: "Ordinary issuance and negation are closed by the labeler lifecycle."));
                 }
 
-                LabelServiceResult<LabelDecisionSnapshot> snapshot = await DecisionSnapshotAsync(
+                LabelMaintenanceState maintenance = await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (maintenance.IsActive)
+                {
+                    return LabelServiceResult<LabelOperationReceipt>.Failure(
+                        new(
+                            code: LabelServiceErrorCode.IssuanceClosed,
+                            message: "Ordinary issuance and negation are closed during coordinated maintenance."));
+                }
+
+                if (decision.SignedLabel is not null &&
+                    maintenance.Phase == LabelMaintenancePhase.Completed &&
+                    !string.Equals(decision.Audit.SigningKeyMultibase, maintenance.ReplacementPublicKey, StringComparison.Ordinal))
+                {
+                    return LabelServiceResult<LabelOperationReceipt>.Failure(new(
+                        code: LabelServiceErrorCode.StaleDecision,
+                        message: "The selected signing key was replaced; recreate the issuance service with the active key."));
+                }
+
+                IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await DecisionSnapshotsAsync(
                     connection: connection,
                     transaction: transaction,
                     state: state,
-                    target: decision.ResolvedTarget,
-                    value: request.Value,
+                    queries: [(decision.ResolvedTarget, request.Value)],
                     token: cancellationToken).ConfigureAwait(false);
+                LabelServiceResult<LabelDecisionSnapshot> snapshot = snapshots[0];
                 if (!snapshot.Succeeded)
                 {
                     return LabelServiceResult<LabelOperationReceipt>.Failure(snapshot.Error);
@@ -1041,6 +1162,12 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                         ("@payload", signed.GetCanonicalUnsignedBytes()),
                         ("@now", now)).ConfigureAwait(false);
                     await IndexDistributionAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sequence: sequence,
+                        signed: signed,
+                        token: cancellationToken).ConfigureAwait(false);
+                    await IndexDecisionAsync(
                         connection: connection,
                         transaction: transaction,
                         sequence: sequence,
@@ -1196,6 +1323,36 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             ("@key", key));
     }
 
+    /// <summary>Builds the exact binary identity used to find decisions for a subject and value.</summary>
+    private static byte[] DecisionIdentityKey(string subject, string value)
+    {
+        using MemoryStream buffer = new();
+        using BinaryWriter writer = new(buffer, s_strictUtf8);
+        writer.Write(subject);
+        writer.Write(value);
+        writer.Flush();
+        return buffer.ToArray();
+    }
+
+    /// <summary>Indexes one decision identity in the same transaction as its label append.</summary>
+    private static Task IndexDecisionAsync(
+        DbConnection connection,
+        DbTransaction? transaction,
+        long sequence,
+        SignedLabelSnapshot signed,
+        CancellationToken token)
+    {
+        byte[] identityKey = DecisionIdentityKey(signed.Label.Uri, signed.Label.Value);
+        return ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "INSERT INTO label_decision_index(seq, identity_hash, identity_key) VALUES(@seq,@hash,@key)",
+            token: token,
+            ("@seq", sequence),
+            ("@hash", SHA256.HashData(identityKey)),
+            ("@key", identityKey));
+    }
+
     /// <summary>Resumes additive projection migration without rewriting signed blobs or duplicating indexed rows.</summary>
     private static async Task BackfillDistributionAsync(DbConnection connection, DbTransaction? transaction, CancellationToken token)
     {
@@ -1228,6 +1385,49 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             foreach (StoredLabel label in batch)
             {
                 await IndexDistributionAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    sequence: label.Sequence,
+                    signed: label.SignedLabel,
+                    token: token).ConfigureAwait(false);
+            }
+
+            after = batch[^1].Sequence;
+        }
+    }
+
+    /// <summary>Resumes backfilling exact decision identities without rewriting signed history.</summary>
+    private static async Task BackfillDecisionIndexAsync(DbConnection connection, DbTransaction? transaction, CancellationToken token)
+    {
+        long after = 0;
+        while (true)
+        {
+            List<StoredLabel> batch = [];
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT e.seq, e.signed_json, e.payload, e.format_version FROM label_entries e LEFT JOIN label_decision_index d ON d.seq=e.seq WHERE d.seq IS NULL AND e.seq>@after ORDER BY e.seq LIMIT 100",
+                ("@after", after));
+            await using (command.ConfigureAwait(false))
+            {
+                DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        batch.Add(new StoredLabel(reader.GetInt64(0), Restore(reader)));
+                    }
+                }
+            }
+
+            if (batch.Count == 0)
+            {
+                return;
+            }
+
+            foreach (StoredLabel label in batch)
+            {
+                await IndexDecisionAsync(
                     connection: connection,
                     transaction: transaction,
                     sequence: label.Sequence,
@@ -1552,12 +1752,14 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         string operation,
         long expectedRevision,
         Func<LabelStoreState, long, LabelStoreState> transition,
-        CancellationToken token)
+        CancellationToken token,
+        LabelAdministrationCaller? caller = null)
     {
         LabelStoreState result = await RunAsync(
             operation: operation,
             action: async (connection, transaction, state) =>
         {
+            await RequireMaintenancePermissionAsync(connection, transaction, state, caller, token).ConfigureAwait(false);
             if ((await ReadMaintenanceAsync(connection, transaction, token).ConfigureAwait(false)).IsActive)
             {
                 throw new InvalidOperationException("Lifecycle transitions are blocked during coordinated maintenance.");
@@ -1583,7 +1785,10 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         return result;
     }
 
-    public Task<LabelStoreState> BeginRetirementAsync(long expectedRevision, CancellationToken cancellationToken = default) =>
+    public Task<LabelStoreState> BeginRetirementAsync(
+        long expectedRevision,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default) =>
         TransitionAsync(
             operation: "retirement",
             expectedRevision: expectedRevision,
@@ -1600,9 +1805,14 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 RetirementUpperBound = state.IssuedThrough
             };
         },
-            token: cancellationToken);
+            token: cancellationToken,
+            caller: caller);
 
-    public Task<LabelStoreState> BeginGracePeriodAsync(long expectedRevision, TimeSpan gracePeriod, CancellationToken cancellationToken = default)
+    public Task<LabelStoreState> BeginGracePeriodAsync(
+        long expectedRevision,
+        TimeSpan gracePeriod,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(gracePeriod, TimeSpan.Zero);
         return TransitionAsync(
@@ -1617,10 +1827,14 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     GraceDeadline = DateTimeOffset.FromUnixTimeMilliseconds(checked(now + (long)Math.Ceiling(gracePeriod.TotalMilliseconds) + 1))
                 }
                 : throw new InvalidOperationException("Retirement enumeration and publication must finish before grace begins."),
-            token: cancellationToken);
+            token: cancellationToken,
+            caller: caller);
     }
 
-    public Task<LabelStoreState> CompleteRetirementAsync(long expectedRevision, CancellationToken cancellationToken = default) =>
+    public Task<LabelStoreState> CompleteRetirementAsync(
+        long expectedRevision,
+        LabelAdministrationCaller? caller = null,
+        CancellationToken cancellationToken = default) =>
         TransitionAsync(
             operation: "retired",
             expectedRevision: expectedRevision,
@@ -1628,12 +1842,14 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             state.Phase == LabelerLifecyclePhase.Grace && state.GraceDeadline <= DateTimeOffset.FromUnixTimeMilliseconds(now)
                 ? state with { Phase = LabelerLifecyclePhase.Retired }
                 : throw new InvalidOperationException("The distribution grace deadline has not completed."),
-            token: cancellationToken);
+            token: cancellationToken,
+            caller: caller);
 
     public Task<LabelStoreState> PurgeAsync(
         long expectedRevision,
         bool confirmed,
         int limit = 100,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         Limit(limit);
@@ -1646,6 +1862,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             operation: "purge",
             action: async (connection, transaction, state) =>
         {
+            await RequireMaintenancePermissionAsync(connection, transaction, state, caller, cancellationToken).ConfigureAwait(false);
             if ((await ReadMaintenanceAsync(connection, transaction, cancellationToken).ConfigureAwait(false)).IsActive)
             {
                 throw new InvalidOperationException("Retirement purge is blocked during coordinated maintenance.");
@@ -1662,6 +1879,12 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 connection: connection,
                 transaction: transaction,
                 sql: "DELETE FROM label_distribution WHERE seq<=@floor",
+                token: cancellationToken,
+                ("@floor", nextFloor)).ConfigureAwait(false);
+            await ExecuteAsync(
+                connection: connection,
+                transaction: transaction,
+                sql: "DELETE FROM label_decision_index WHERE seq<=@floor",
                 token: cancellationToken,
                 ("@floor", nextFloor)).ConfigureAwait(false);
             await ExecuteAsync(

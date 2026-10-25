@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -10,6 +12,43 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 
 public class AdministrationCliValidationTests
 {
+    [Theory]
+    [InlineData("https://labeler.example", true)]
+    [InlineData("http://127.0.0.1:8080/health/labeler/ready", true)]
+    [InlineData("not-a-uri", false)]
+    [InlineData("/relative/path", false)]
+    [InlineData("file:///C:/labeler", false)]
+    public void UriOptionsUseTheCommandLineParser(string value, bool valid)
+    {
+        Option<Uri?> option = Program.CreateUriOption("--endpoint", "The endpoint.", required: true);
+        RootCommand command = new();
+        command.Options.Add(option);
+        ParseResult parsed = command.Parse(["--endpoint", value]);
+        Assert.Equal(valid, parsed.Errors.Count == 0);
+        if (valid)
+        {
+            Assert.Equal(new Uri(value), parsed.GetValue(option));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MissingUriOptionsRespectRequiredness(bool required)
+    {
+        Option<Uri?> option = Program.CreateUriOption("--admin-url", "The endpoint.", required);
+        RootCommand command = new();
+        command.Options.Add(option);
+        ParseResult parsed = command.Parse([]);
+        Assert.Equal(required, parsed.Errors.Count > 0);
+        if (!required)
+        {
+            Assert.Null(parsed.GetValue(option));
+        }
+
+        Assert.NotEmpty(command.Parse(["--admin-url"]).Errors);
+    }
+
     [Theory]
     [InlineData("did:plc:administration-actor", null, true)]
     [InlineData("alice.bsky.social", null, true)]

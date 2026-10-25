@@ -18,11 +18,14 @@
 * Preserves signed fields from raw mixed-case JSON snapshots in subscription frames and CID-scoped distribution indexes.
 * Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
 * Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
+* Fences maintenance and retirement mutations against revoked callers, drains in-flight administrative issuance, and verifies each host's replacement key before reopening.
 
 #### idunno.Bluesky.Labeler.Cli
 
 * Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
 * Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
+* Bundles native runtime libraries for executable-only self-updates and validates Compose service names before applying image overrides, honoring extended drain deadlines.
+* Parses URI command-line options explicitly for remote administration, identity publication and service updates.
 * Added resumable maintenance and signing-key rotation commands, did:web publication snippets and authenticated PLC publication using public replacement-key material.
 * Added attestation-verified direct CLI updates and confirmed digest-pinned Docker Compose service redeployment with graceful stop, readiness verification and previous-image rollback.
 * Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
@@ -49,6 +52,7 @@
 * Added atomic service decision/audit receipts, unpublished-history reconciliation and additive version-one to version-two upgrades with common decision semantics across providers.
 * Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
 * Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
+* Adds a restartable schema-version-six decision identity index and bounded batch decision reads so retirement does not scan all label history for each label.
 
 #### idunno.AtProto.Types
 

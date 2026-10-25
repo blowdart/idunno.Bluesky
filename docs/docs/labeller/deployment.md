@@ -76,6 +76,11 @@ Release tags publish the standalone `linux/amd64` image to the public package
 produced by that workflow. Verify the release artifact before deployment and pin the image
 by digest rather than using a mutable tag:
 
+Before the first image release, a repository maintainer must set the GHCR container package's
+visibility to **public** in the package settings. GitHub Actions verifies anonymous access to
+the pushed image before uploading its digest; it does not attempt to change package visibility
+through an unsupported API.
+
 ```text
 gh attestation verify idunno.Bluesky.Labeler.image-digest.txt --repo blowdart/idunno.Bluesky
 docker pull ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>

@@ -29,6 +29,12 @@ CREATE TABLE IF NOT EXISTS label_distribution (
     slot_key LONGBLOB NOT NULL,
     INDEX label_distribution_slot(slot_hash, seq)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_decision_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    identity_hash BINARY(32) NOT NULL,
+    identity_key LONGBLOB NOT NULL,
+    INDEX label_decision_index_identity(identity_hash, seq)
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_operations (
     operation_hash BINARY(32) PRIMARY KEY,
     operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
@@ -90,4 +96,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 ) ENGINE=InnoDB;
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 5) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 6) ON DUPLICATE KEY UPDATE id=id;

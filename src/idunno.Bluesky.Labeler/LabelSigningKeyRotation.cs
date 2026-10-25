@@ -39,6 +39,7 @@ public static class LabelSigningKeyRotation
     /// <param name="operationId">The active rotation operation identity.</param>
     /// <param name="replacementKey">The replacement label-signing key.</param>
     /// <param name="batchSize">The maximum number of labels to process, from 1 through 1,000.</param>
+    /// <param name="caller">The authorized maintenance caller, when re-signing through administration.</param>
     /// <param name="cancellationToken">A cancellation token for the operation.</param>
     /// <returns>The durable rotation checkpoint after the next batch.</returns>
     /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
@@ -56,6 +57,7 @@ public static class LabelSigningKeyRotation
         string operationId,
         LabelSigningKey replacementKey,
         int batchSize = 1_000,
+        LabelAdministrationCaller? caller = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(store);
@@ -92,7 +94,8 @@ public static class LabelSigningKeyRotation
             expectedAfterSequence: state.LastSequence,
             replacementLabels: replacements,
             checkpoint: checkpoint,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken,
+            caller: caller).ConfigureAwait(false);
 
         return new(updated.StreamId, updated.ThroughSequence, updated.LastSequence);
     }
