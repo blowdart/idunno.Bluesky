@@ -1,148 +1,158 @@
 #nullable enable
-idunno.Bluesky.Labeler.ILabelStore.ReadRetirementTimestampsAsync(System.Collections.Generic.IReadOnlyList<(idunno.Bluesky.Labeler.LabelTarget! Target, string! Value)>! queries, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.DateTimeOffset?>!>!
-idunno.Bluesky.Labeler.ILabelDistributionStore
-idunno.Bluesky.Labeler.ILabelDistributionStore.ReadDistributionAsync(System.Guid streamId, long after, long through, System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! sources, int limit = 100, int scanLimit = 1000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelDistributionPage!>!
-idunno.Bluesky.Labeler.LabelDistributionPage
-idunno.Bluesky.Labeler.LabelDistributionPage.<Clone>$() -> idunno.Bluesky.Labeler.LabelDistributionPage!
-idunno.Bluesky.Labeler.LabelDistributionPage.Deconstruct(out long ScannedThrough, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels) -> void
-idunno.Bluesky.Labeler.LabelDistributionPage.Equals(idunno.Bluesky.Labeler.LabelDistributionPage? other) -> bool
-idunno.Bluesky.Labeler.LabelDistributionPage.LabelDistributionPage(long ScannedThrough, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels) -> void
-idunno.Bluesky.Labeler.LabelDistributionPage.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>!
-idunno.Bluesky.Labeler.LabelDistributionPage.Labels.init -> void
-idunno.Bluesky.Labeler.LabelDistributionPage.ScannedThrough.get -> long
-idunno.Bluesky.Labeler.LabelDistributionPage.ScannedThrough.init -> void
-override idunno.Bluesky.Labeler.LabelDistributionPage.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelDistributionPage.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelDistributionPage.ToString() -> string!
-static idunno.Bluesky.Labeler.LabelDistributionPage.operator !=(idunno.Bluesky.Labeler.LabelDistributionPage? left, idunno.Bluesky.Labeler.LabelDistributionPage? right) -> bool
-static idunno.Bluesky.Labeler.LabelDistributionPage.operator ==(idunno.Bluesky.Labeler.LabelDistributionPage? left, idunno.Bluesky.Labeler.LabelDistributionPage? right) -> bool
-idunno.Bluesky.Labeler.ILabelIssuanceAuthorizer
-idunno.Bluesky.Labeler.ILabelIssuanceAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
-idunno.Bluesky.Labeler.ILabelIssuancePolicyProvider
-idunno.Bluesky.Labeler.ILabelIssuancePolicyProvider.GetPolicyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelIssuancePolicy!>!>!
-idunno.Bluesky.Labeler.ILabelStore
-idunno.Bluesky.Labeler.ILabelStore.AppendAsync(string! operationId, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.SignedLabelSnapshot!>! labels, long? expectedRevision = null, long? retirementThrough = null, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelAppendReceipt!>!
-idunno.Bluesky.Labeler.ILabelStore.BeginGracePeriodAsync(long expectedRevision, System.TimeSpan gracePeriod, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.BeginRetirementAsync(long expectedRevision, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.CommitDecisionAsync(idunno.Bluesky.Labeler.LabelDecisionCommit! decision, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelOperationReceipt!>!>!
-idunno.Bluesky.Labeler.ILabelStore.CompleteRetirementAsync(long expectedRevision, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.GetOperationAsync(string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelOperationReceipt!>!>!
-idunno.Bluesky.Labeler.ILabelStore.GetReceiptAsync(string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelAppendReceipt?>!
-idunno.Bluesky.Labeler.ILabelStore.GetSnapshotAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreSnapshot!>!
-idunno.Bluesky.Labeler.ILabelStore.GetStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.ReplaceSignaturesAsync(System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! labels, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.Labeler.ILabelStore.InitializeAsync(idunno.AtProto.Did! issuer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.Labeler.ILabelStore.PublishAsync(int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.PurgeAsync(long expectedRevision, bool confirmed, int limit = 100, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelStoreState!>!
-idunno.Bluesky.Labeler.ILabelStore.QueryAsync(System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, idunno.AtProto.Did? source = null, string? cursor = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelPage!>!
-idunno.Bluesky.Labeler.ILabelStore.ReadDecisionAsync(idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, string! value, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelDecisionSnapshot!>!>!
-idunno.Bluesky.Labeler.ILabelStore.ReadDecisionBatchAsync(System.Collections.Generic.IReadOnlyList<(idunno.Bluesky.Labeler.LabelTarget! Target, string! Value)>! queries, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelDecisionSnapshot!>!>!>!
-idunno.Bluesky.Labeler.ILabelStore.ReplayAsync(System.Guid streamId, long after, long through, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelPage!>!
-idunno.Bluesky.Labeler.LabelAppendReceipt
-idunno.Bluesky.Labeler.LabelAppendReceipt.<Clone>$() -> idunno.Bluesky.Labeler.LabelAppendReceipt!
-idunno.Bluesky.Labeler.LabelAppendReceipt.Deconstruct(out string! OperationId, out long FirstSequence, out long LastSequence, out long Revision) -> void
-idunno.Bluesky.Labeler.LabelAppendReceipt.Equals(idunno.Bluesky.Labeler.LabelAppendReceipt? other) -> bool
-idunno.Bluesky.Labeler.LabelAppendReceipt.FirstSequence.get -> long
-idunno.Bluesky.Labeler.LabelAppendReceipt.FirstSequence.init -> void
-idunno.Bluesky.Labeler.LabelAppendReceipt.LabelAppendReceipt(string! OperationId, long FirstSequence, long LastSequence, long Revision) -> void
-idunno.Bluesky.Labeler.LabelAppendReceipt.LastSequence.get -> long
-idunno.Bluesky.Labeler.LabelAppendReceipt.LastSequence.init -> void
-idunno.Bluesky.Labeler.LabelAppendReceipt.OperationId.get -> string!
-idunno.Bluesky.Labeler.LabelAppendReceipt.OperationId.init -> void
-idunno.Bluesky.Labeler.LabelAppendReceipt.Revision.get -> long
-idunno.Bluesky.Labeler.LabelAppendReceipt.Revision.init -> void
-idunno.Bluesky.Labeler.LabelAuditRecord
-idunno.Bluesky.Labeler.LabelAuditRecord.AuthorizationVersion.get -> string!
-idunno.Bluesky.Labeler.LabelAuditRecord.EvaluatedAt.get -> System.DateTimeOffset
-idunno.Bluesky.Labeler.LabelAuditRecord.LabelAuditRecord(System.DateTimeOffset evaluatedAt, string! authorizationVersion, string? policyVersion, string? signingKeyMultibase) -> void
-idunno.Bluesky.Labeler.LabelAuditRecord.PolicyVersion.get -> string?
-idunno.Bluesky.Labeler.LabelAuditRecord.SigningKeyMultibase.get -> string?
-idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationAction.InspectOperation = 2 -> idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationAction.InspectPublication = 3 -> idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationAction.Issue = 0 -> idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationAction.Negate = 1 -> idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationGrant
-idunno.Bluesky.Labeler.LabelAuthorizationGrant.LabelAuthorizationGrant(string! version) -> void
-idunno.Bluesky.Labeler.LabelAuthorizationGrant.Version.get -> string!
-idunno.Bluesky.Labeler.LabelAuthorizationRequest
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.Action.get -> idunno.Bluesky.Labeler.LabelAuthorizationAction
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.Context.get -> idunno.Bluesky.Labeler.LabelOperationContext!
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.IsAdmissionCheck.get -> bool
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.Issuer.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.OperationId.get -> string?
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.RequestedTarget.get -> idunno.Bluesky.Labeler.LabelTarget?
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget?
-idunno.Bluesky.Labeler.LabelAuthorizationRequest.Value.get -> string?
-idunno.Bluesky.Labeler.LabelDecisionCommit
-idunno.Bluesky.Labeler.LabelDecisionCommit.Audit.get -> idunno.Bluesky.Labeler.LabelAuditRecord!
-idunno.Bluesky.Labeler.LabelDecisionCommit.ExpectedRevision.get -> long
-idunno.Bluesky.Labeler.LabelDecisionCommit.LabelDecisionCommit(idunno.Bluesky.Labeler.LabelOperationRequest! request, idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, long expectedRevision, idunno.Bluesky.Labeler.SignedLabelSnapshot? signedLabel, idunno.Bluesky.Labeler.LabelAuditRecord! audit) -> void
-idunno.Bluesky.Labeler.LabelDecisionCommit.Request.get -> idunno.Bluesky.Labeler.LabelOperationRequest!
-idunno.Bluesky.Labeler.LabelDecisionCommit.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget!
-idunno.Bluesky.Labeler.LabelDecisionCommit.SignedLabel.get -> idunno.Bluesky.Labeler.SignedLabelSnapshot?
-idunno.Bluesky.Labeler.LabelDecisionSnapshot
-idunno.Bluesky.Labeler.LabelDecisionSnapshot.CurrentLabel.get -> idunno.Bluesky.Labeler.StoredLabel?
-idunno.Bluesky.Labeler.LabelDecisionSnapshot.LabelDecisionSnapshot(idunno.Bluesky.Labeler.LabelStoreState! state, idunno.Bluesky.Labeler.StoredLabel? currentLabel) -> void
-idunno.Bluesky.Labeler.LabelDecisionSnapshot.State.get -> idunno.Bluesky.Labeler.LabelStoreState!
-idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Active = 0 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Distributing = 2 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Grace = 3 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Purged = 6 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Purging = 5 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Retired = 4 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelerLifecyclePhase.Retiring = 1 -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelIssuancePolicy
-idunno.Bluesky.Labeler.LabelIssuancePolicy.AllowAccounts.get -> bool
-idunno.Bluesky.Labeler.LabelIssuancePolicy.AllowedRecordCollections.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>?
-idunno.Bluesky.Labeler.LabelIssuancePolicy.AllowRecords.get -> bool
-idunno.Bluesky.Labeler.LabelIssuancePolicy.DeclaredValues.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
-idunno.Bluesky.Labeler.LabelIssuancePolicy.LabelIssuancePolicy(string! version, System.Collections.Generic.IReadOnlyCollection<string!>! declaredValues, bool allowAccounts, bool allowRecords, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>? allowedRecordCollections = null) -> void
-idunno.Bluesky.Labeler.LabelIssuancePolicy.Version.get -> string!
-idunno.Bluesky.Labeler.LabelIssuanceService
-idunno.Bluesky.Labeler.LabelIssuanceService.ExecuteAsync(idunno.Bluesky.Labeler.LabelOperationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelOperationReceipt!>!>!
-idunno.Bluesky.Labeler.LabelIssuanceService.GetOperationAsync(string! operationId, idunno.Bluesky.Labeler.LabelOperationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelOperationReceipt!>!>!
-idunno.Bluesky.Labeler.LabelIssuanceService.GetPublicationStateAsync(idunno.Bluesky.Labeler.LabelOperationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelStoreState!>!>!
-idunno.Bluesky.Labeler.LabelIssuanceService.LabelIssuanceService(idunno.AtProto.Did! issuer, idunno.AtProto.Labels.LabelSigningKey! signingKey, idunno.Bluesky.Labeler.ILabelStore! store, idunno.Bluesky.Labeler.ILabelIssuanceAuthorizer! authorizer, idunno.Bluesky.Labeler.ILabelIssuancePolicyProvider! policyProvider, System.Net.Http.HttpClient! httpClient, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
-idunno.Bluesky.Labeler.LabelIssuanceServiceCollectionExtensions
-idunno.Bluesky.Labeler.LabelOperationContext
-idunno.Bluesky.Labeler.LabelOperationContext.Actor.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelOperationContext.CorrelationId.get -> string?
-idunno.Bluesky.Labeler.LabelOperationContext.LabelOperationContext(idunno.AtProto.Did! actor, string! reason, string? correlationId = null) -> void
-idunno.Bluesky.Labeler.LabelOperationContext.Reason.get -> string!
-idunno.Bluesky.Labeler.LabelOperationKind
-idunno.Bluesky.Labeler.LabelOperationKind.Issue = 0 -> idunno.Bluesky.Labeler.LabelOperationKind
-idunno.Bluesky.Labeler.LabelOperationKind.Negate = 1 -> idunno.Bluesky.Labeler.LabelOperationKind
-idunno.Bluesky.Labeler.LabelOperationReceipt
-idunno.Bluesky.Labeler.LabelOperationReceipt.Audit.get -> idunno.Bluesky.Labeler.LabelAuditRecord!
-idunno.Bluesky.Labeler.LabelOperationReceipt.Changed.get -> bool
-idunno.Bluesky.Labeler.LabelOperationReceipt.Label.get -> idunno.Bluesky.Labeler.StoredLabel?
-idunno.Bluesky.Labeler.LabelOperationReceipt.LabelOperationReceipt(idunno.Bluesky.Labeler.LabelOperationRequest! request, idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, bool changed, idunno.Bluesky.Labeler.StoredLabel? label, idunno.Bluesky.Labeler.LabelStoreState! stateAtCommit, idunno.Bluesky.Labeler.LabelAuditRecord! audit) -> void
-idunno.Bluesky.Labeler.LabelOperationReceipt.Request.get -> idunno.Bluesky.Labeler.LabelOperationRequest!
-idunno.Bluesky.Labeler.LabelOperationReceipt.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget!
-idunno.Bluesky.Labeler.LabelOperationReceipt.StateAtCommit.get -> idunno.Bluesky.Labeler.LabelStoreState!
-idunno.Bluesky.Labeler.LabelOperationRequest
-idunno.Bluesky.Labeler.LabelOperationRequest.Context.get -> idunno.Bluesky.Labeler.LabelOperationContext!
-idunno.Bluesky.Labeler.LabelOperationRequest.ExpiresAt.get -> System.DateTimeOffset?
-idunno.Bluesky.Labeler.LabelOperationRequest.Kind.get -> idunno.Bluesky.Labeler.LabelOperationKind
-idunno.Bluesky.Labeler.LabelOperationRequest.OperationId.get -> string!
-idunno.Bluesky.Labeler.LabelOperationRequest.Target.get -> idunno.Bluesky.Labeler.LabelTarget!
-idunno.Bluesky.Labeler.LabelOperationRequest.Value.get -> string!
-idunno.Bluesky.Labeler.LabelPage
-idunno.Bluesky.Labeler.LabelPage.<Clone>$() -> idunno.Bluesky.Labeler.LabelPage!
-idunno.Bluesky.Labeler.LabelPage.Cursor.get -> string?
-idunno.Bluesky.Labeler.LabelPage.Cursor.init -> void
-idunno.Bluesky.Labeler.LabelPage.Deconstruct(out System.Guid StreamId, out long Through, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels, out string? Cursor) -> void
-idunno.Bluesky.Labeler.LabelPage.Equals(idunno.Bluesky.Labeler.LabelPage? other) -> bool
-idunno.Bluesky.Labeler.LabelPage.LabelPage(System.Guid StreamId, long Through, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! Labels, string? Cursor) -> void
-idunno.Bluesky.Labeler.LabelPage.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>!
-idunno.Bluesky.Labeler.LabelPage.Labels.init -> void
-idunno.Bluesky.Labeler.LabelPage.StreamId.get -> System.Guid
-idunno.Bluesky.Labeler.LabelPage.StreamId.init -> void
-idunno.Bluesky.Labeler.LabelPage.Through.get -> long
-idunno.Bluesky.Labeler.LabelPage.Through.init -> void
-idunno.Bluesky.Labeler.LabelPersistenceMetrics
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeySelectionStore
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeySelectionStore.GetSigningKeySelectionAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection?>!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeySelectionStore.InitializeSigningKeySelectionAsync(string! keyId, string! publicKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection!>!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeySelectionStore.ActivateSigningKeySelectionAsync(string! operationId, string! previousKeyId, string! keyId, string! publicKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection!>!
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection.LabelSigningKeySelection(System.Guid streamId, string! issuer, string! keyId, string! publicKey) -> void
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection.Issuer.get -> string!
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection.KeyId.get -> string!
+idunno.Bluesky.Labeler.Signing.LabelSigningKeySelection.PublicKey.get -> string!
+idunno.Bluesky.Labeler.Storage.ILabelStore.ReadRetirementTimestampsAsync(System.Collections.Generic.IReadOnlyList<(idunno.Bluesky.Labeler.LabelTarget! Target, string! Value)>! queries, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.DateTimeOffset?>!>!
+idunno.Bluesky.Labeler.Storage.ILabelDistributionStore
+idunno.Bluesky.Labeler.Storage.ILabelDistributionStore.ReadDistributionAsync(System.Guid streamId, long after, long through, System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! sources, int limit = 100, int scanLimit = 1000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelDistributionPage!>!
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.<Clone>$() -> idunno.Bluesky.Labeler.Storage.LabelDistributionPage!
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.Deconstruct(out long ScannedThrough, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! Labels) -> void
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.Equals(idunno.Bluesky.Labeler.Storage.LabelDistributionPage? other) -> bool
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.LabelDistributionPage(long ScannedThrough, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! Labels) -> void
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>!
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.Labels.init -> void
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.ScannedThrough.get -> long
+idunno.Bluesky.Labeler.Storage.LabelDistributionPage.ScannedThrough.init -> void
+override idunno.Bluesky.Labeler.Storage.LabelDistributionPage.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.LabelDistributionPage.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.LabelDistributionPage.ToString() -> string!
+static idunno.Bluesky.Labeler.Storage.LabelDistributionPage.operator !=(idunno.Bluesky.Labeler.Storage.LabelDistributionPage? left, idunno.Bluesky.Labeler.Storage.LabelDistributionPage? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelDistributionPage.operator ==(idunno.Bluesky.Labeler.Storage.LabelDistributionPage? left, idunno.Bluesky.Labeler.Storage.LabelDistributionPage? right) -> bool
+idunno.Bluesky.Labeler.Issuance.ILabelIssuanceAuthorizer
+idunno.Bluesky.Labeler.Issuance.ILabelIssuanceAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant!>!>!
+idunno.Bluesky.Labeler.Issuance.ILabelIssuancePolicyProvider
+idunno.Bluesky.Labeler.Issuance.ILabelIssuancePolicyProvider.GetPolicyAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy!>!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore
+idunno.Bluesky.Labeler.Storage.ILabelStore.AppendAsync(string! operationId, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot!>! labels, long? expectedRevision = null, long? retirementThrough = null, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelAppendReceipt!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.BeginGracePeriodAsync(long expectedRevision, System.TimeSpan gracePeriod, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.BeginRetirementAsync(long expectedRevision, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.CommitDecisionAsync(idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit! decision, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.CompleteRetirementAsync(long expectedRevision, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.GetOperationAsync(string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.GetReceiptAsync(string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelAppendReceipt?>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.GetSnapshotAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.GetStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.ReplaceSignaturesAsync(System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! labels, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Storage.ILabelStore.InitializeAsync(idunno.AtProto.Did! issuer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Storage.ILabelStore.PublishAsync(int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.PurgeAsync(long expectedRevision, bool confirmed, int limit = 100, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.QueryAsync(System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, idunno.AtProto.Did? source = null, string? cursor = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelPage!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.ReadDecisionAsync(idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, string! value, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot!>!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.ReadDecisionBatchAsync(System.Collections.Generic.IReadOnlyList<(idunno.Bluesky.Labeler.LabelTarget! Target, string! Value)>! queries, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot!>!>!>!
+idunno.Bluesky.Labeler.Storage.ILabelStore.ReplayAsync(System.Guid streamId, long after, long through, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Storage.LabelPage!>!
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.<Clone>$() -> idunno.Bluesky.Labeler.Storage.LabelAppendReceipt!
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.Deconstruct(out string! OperationId, out long FirstSequence, out long LastSequence, out long Revision) -> void
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.Equals(idunno.Bluesky.Labeler.Storage.LabelAppendReceipt? other) -> bool
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.FirstSequence.get -> long
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.FirstSequence.init -> void
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.LabelAppendReceipt(string! OperationId, long FirstSequence, long LastSequence, long Revision) -> void
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.LastSequence.get -> long
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.LastSequence.init -> void
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.OperationId.get -> string!
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.OperationId.init -> void
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.Revision.get -> long
+idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.Revision.init -> void
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord.AuthorizationVersion.get -> string!
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord.EvaluatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord.LabelAuditRecord(System.DateTimeOffset evaluatedAt, string! authorizationVersion, string? policyVersion, string? signingKeyMultibase) -> void
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord.PolicyVersion.get -> string?
+idunno.Bluesky.Labeler.Issuance.LabelAuditRecord.SigningKeyMultibase.get -> string?
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction.InspectOperation = 2 -> idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction.InspectPublication = 3 -> idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction.Issue = 0 -> idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction.Negate = 1 -> idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant.LabelAuthorizationGrant(string! version) -> void
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant.Version.get -> string!
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.Action.get -> idunno.Bluesky.Labeler.Issuance.LabelAuthorizationAction
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.Context.get -> idunno.Bluesky.Labeler.Issuance.LabelOperationContext!
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.IsAdmissionCheck.get -> bool
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.Issuer.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.OperationId.get -> string?
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.RequestedTarget.get -> idunno.Bluesky.Labeler.LabelTarget?
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget?
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest.Value.get -> string?
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.Audit.get -> idunno.Bluesky.Labeler.Issuance.LabelAuditRecord!
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.ExpectedRevision.get -> long
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.LabelDecisionCommit(idunno.Bluesky.Labeler.Issuance.LabelOperationRequest! request, idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, long expectedRevision, idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot? signedLabel, idunno.Bluesky.Labeler.Issuance.LabelAuditRecord! audit) -> void
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.Request.get -> idunno.Bluesky.Labeler.Issuance.LabelOperationRequest!
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget!
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.SignedLabel.get -> idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot?
+idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot
+idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot.CurrentLabel.get -> idunno.Bluesky.Labeler.Storage.StoredLabel?
+idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot.LabelDecisionSnapshot(idunno.Bluesky.Labeler.Storage.LabelStoreState! state, idunno.Bluesky.Labeler.Storage.StoredLabel? currentLabel) -> void
+idunno.Bluesky.Labeler.Issuance.LabelDecisionSnapshot.State.get -> idunno.Bluesky.Labeler.Storage.LabelStoreState!
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Active = 0 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Distributing = 2 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Grace = 3 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Purged = 6 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Purging = 5 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Retired = 4 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase.Retiring = 1 -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.AllowAccounts.get -> bool
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.AllowedRecordCollections.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>?
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.AllowRecords.get -> bool
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.DeclaredValues.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.LabelIssuancePolicy(string! version, System.Collections.Generic.IReadOnlyCollection<string!>! declaredValues, bool allowAccounts, bool allowRecords, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>? allowedRecordCollections = null) -> void
+idunno.Bluesky.Labeler.Issuance.LabelIssuancePolicy.Version.get -> string!
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceService
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceService.ExecuteAsync(idunno.Bluesky.Labeler.Issuance.LabelOperationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceService.GetOperationAsync(string! operationId, idunno.Bluesky.Labeler.Issuance.LabelOperationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt!>!>!
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceService.GetPublicationStateAsync(idunno.Bluesky.Labeler.Issuance.LabelOperationContext! context, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Storage.LabelStoreState!>!>!
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceService.LabelIssuanceService(idunno.AtProto.Did! issuer, idunno.AtProto.Labels.LabelSigningKey! signingKey, idunno.Bluesky.Labeler.Storage.ILabelStore! store, idunno.Bluesky.Labeler.Issuance.ILabelIssuanceAuthorizer! authorizer, idunno.Bluesky.Labeler.Issuance.ILabelIssuancePolicyProvider! policyProvider, System.Net.Http.HttpClient! httpClient, System.TimeProvider? timeProvider = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.Bluesky.Labeler.Issuance.LabelIssuanceServiceCollectionExtensions
+idunno.Bluesky.Labeler.Issuance.LabelOperationContext
+idunno.Bluesky.Labeler.Issuance.LabelOperationContext.Actor.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Issuance.LabelOperationContext.CorrelationId.get -> string?
+idunno.Bluesky.Labeler.Issuance.LabelOperationContext.LabelOperationContext(idunno.AtProto.Did! actor, string! reason, string? correlationId = null) -> void
+idunno.Bluesky.Labeler.Issuance.LabelOperationContext.Reason.get -> string!
+idunno.Bluesky.Labeler.Issuance.LabelOperationKind
+idunno.Bluesky.Labeler.Issuance.LabelOperationKind.Issue = 0 -> idunno.Bluesky.Labeler.Issuance.LabelOperationKind
+idunno.Bluesky.Labeler.Issuance.LabelOperationKind.Negate = 1 -> idunno.Bluesky.Labeler.Issuance.LabelOperationKind
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.Audit.get -> idunno.Bluesky.Labeler.Issuance.LabelAuditRecord!
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.Changed.get -> bool
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.Label.get -> idunno.Bluesky.Labeler.Storage.StoredLabel?
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.LabelOperationReceipt(idunno.Bluesky.Labeler.Issuance.LabelOperationRequest! request, idunno.Bluesky.Labeler.LabelTarget! resolvedTarget, bool changed, idunno.Bluesky.Labeler.Storage.StoredLabel? label, idunno.Bluesky.Labeler.Storage.LabelStoreState! stateAtCommit, idunno.Bluesky.Labeler.Issuance.LabelAuditRecord! audit) -> void
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.Request.get -> idunno.Bluesky.Labeler.Issuance.LabelOperationRequest!
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.ResolvedTarget.get -> idunno.Bluesky.Labeler.LabelTarget!
+idunno.Bluesky.Labeler.Issuance.LabelOperationReceipt.StateAtCommit.get -> idunno.Bluesky.Labeler.Storage.LabelStoreState!
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Context.get -> idunno.Bluesky.Labeler.Issuance.LabelOperationContext!
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.ExpiresAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Kind.get -> idunno.Bluesky.Labeler.Issuance.LabelOperationKind
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.OperationId.get -> string!
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Target.get -> idunno.Bluesky.Labeler.LabelTarget!
+idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Value.get -> string!
+idunno.Bluesky.Labeler.Storage.LabelPage
+idunno.Bluesky.Labeler.Storage.LabelPage.<Clone>$() -> idunno.Bluesky.Labeler.Storage.LabelPage!
+idunno.Bluesky.Labeler.Storage.LabelPage.Cursor.get -> string?
+idunno.Bluesky.Labeler.Storage.LabelPage.Cursor.init -> void
+idunno.Bluesky.Labeler.Storage.LabelPage.Deconstruct(out System.Guid StreamId, out long Through, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! Labels, out string? Cursor) -> void
+idunno.Bluesky.Labeler.Storage.LabelPage.Equals(idunno.Bluesky.Labeler.Storage.LabelPage? other) -> bool
+idunno.Bluesky.Labeler.Storage.LabelPage.LabelPage(System.Guid StreamId, long Through, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! Labels, string? Cursor) -> void
+idunno.Bluesky.Labeler.Storage.LabelPage.Labels.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>!
+idunno.Bluesky.Labeler.Storage.LabelPage.Labels.init -> void
+idunno.Bluesky.Labeler.Storage.LabelPage.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.Storage.LabelPage.StreamId.init -> void
+idunno.Bluesky.Labeler.Storage.LabelPage.Through.get -> long
+idunno.Bluesky.Labeler.Storage.LabelPage.Through.init -> void
+idunno.Bluesky.Labeler.Storage.LabelPersistenceMetrics
 idunno.Bluesky.Labeler.LabelServiceError
 idunno.Bluesky.Labeler.LabelServiceError.AtErrorDetail.get -> idunno.AtProto.AtErrorDetail?
 idunno.Bluesky.Labeler.LabelServiceError.Code.get -> idunno.Bluesky.Labeler.LabelServiceErrorCode
@@ -173,42 +183,42 @@ idunno.Bluesky.Labeler.LabelServiceResult<T>
 idunno.Bluesky.Labeler.LabelServiceResult<T>.Error.get -> idunno.Bluesky.Labeler.LabelServiceError?
 idunno.Bluesky.Labeler.LabelServiceResult<T>.Result.get -> T?
 idunno.Bluesky.Labeler.LabelServiceResult<T>.Succeeded.get -> bool
-idunno.Bluesky.Labeler.LabelStoreSnapshot
-idunno.Bluesky.Labeler.LabelStoreSnapshot.<Clone>$() -> idunno.Bluesky.Labeler.LabelStoreSnapshot!
-idunno.Bluesky.Labeler.LabelStoreSnapshot.Deconstruct(out idunno.Bluesky.Labeler.LabelStoreState! State, out long PendingLabels, out System.TimeSpan OldestPendingAge) -> void
-idunno.Bluesky.Labeler.LabelStoreSnapshot.Equals(idunno.Bluesky.Labeler.LabelStoreSnapshot? other) -> bool
-idunno.Bluesky.Labeler.LabelStoreSnapshot.LabelStoreSnapshot(idunno.Bluesky.Labeler.LabelStoreState! State, long PendingLabels, System.TimeSpan OldestPendingAge) -> void
-idunno.Bluesky.Labeler.LabelStoreSnapshot.OldestPendingAge.get -> System.TimeSpan
-idunno.Bluesky.Labeler.LabelStoreSnapshot.OldestPendingAge.init -> void
-idunno.Bluesky.Labeler.LabelStoreSnapshot.PendingLabels.get -> long
-idunno.Bluesky.Labeler.LabelStoreSnapshot.PendingLabels.init -> void
-idunno.Bluesky.Labeler.LabelStoreSnapshot.State.get -> idunno.Bluesky.Labeler.LabelStoreState!
-idunno.Bluesky.Labeler.LabelStoreSnapshot.State.init -> void
-idunno.Bluesky.Labeler.LabelStoreState
-idunno.Bluesky.Labeler.LabelStoreState.<Clone>$() -> idunno.Bluesky.Labeler.LabelStoreState!
-idunno.Bluesky.Labeler.LabelStoreState.Deconstruct(out System.Guid StreamId, out string! Issuer, out long Revision, out long IssuedThrough, out long PublishedThrough, out long ReplayFloor, out idunno.Bluesky.Labeler.LabelerLifecyclePhase Phase, out long RetirementUpperBound, out long RetirementThrough, out System.DateTimeOffset? GraceDeadline) -> void
-idunno.Bluesky.Labeler.LabelStoreState.Equals(idunno.Bluesky.Labeler.LabelStoreState? other) -> bool
-idunno.Bluesky.Labeler.LabelStoreState.GraceDeadline.get -> System.DateTimeOffset?
-idunno.Bluesky.Labeler.LabelStoreState.GraceDeadline.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.IssuedThrough.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.IssuedThrough.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.Issuer.get -> string!
-idunno.Bluesky.Labeler.LabelStoreState.Issuer.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.LabelStoreState(System.Guid StreamId, string! Issuer, long Revision, long IssuedThrough, long PublishedThrough, long ReplayFloor, idunno.Bluesky.Labeler.LabelerLifecyclePhase Phase, long RetirementUpperBound, long RetirementThrough, System.DateTimeOffset? GraceDeadline) -> void
-idunno.Bluesky.Labeler.LabelStoreState.Phase.get -> idunno.Bluesky.Labeler.LabelerLifecyclePhase
-idunno.Bluesky.Labeler.LabelStoreState.Phase.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.PublishedThrough.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.PublishedThrough.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.ReplayFloor.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.ReplayFloor.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.RetirementThrough.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.RetirementThrough.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.RetirementUpperBound.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.RetirementUpperBound.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.Revision.get -> long
-idunno.Bluesky.Labeler.LabelStoreState.Revision.init -> void
-idunno.Bluesky.Labeler.LabelStoreState.StreamId.get -> System.Guid
-idunno.Bluesky.Labeler.LabelStoreState.StreamId.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.<Clone>$() -> idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot!
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.Deconstruct(out idunno.Bluesky.Labeler.Storage.LabelStoreState! State, out long PendingLabels, out System.TimeSpan OldestPendingAge) -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.Equals(idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot? other) -> bool
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.LabelStoreSnapshot(idunno.Bluesky.Labeler.Storage.LabelStoreState! State, long PendingLabels, System.TimeSpan OldestPendingAge) -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.OldestPendingAge.get -> System.TimeSpan
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.OldestPendingAge.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.PendingLabels.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.PendingLabels.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.State.get -> idunno.Bluesky.Labeler.Storage.LabelStoreState!
+idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.State.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState
+idunno.Bluesky.Labeler.Storage.LabelStoreState.<Clone>$() -> idunno.Bluesky.Labeler.Storage.LabelStoreState!
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Deconstruct(out System.Guid StreamId, out string! Issuer, out long Revision, out long IssuedThrough, out long PublishedThrough, out long ReplayFloor, out idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase Phase, out long RetirementUpperBound, out long RetirementThrough, out System.DateTimeOffset? GraceDeadline) -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Equals(idunno.Bluesky.Labeler.Storage.LabelStoreState? other) -> bool
+idunno.Bluesky.Labeler.Storage.LabelStoreState.GraceDeadline.get -> System.DateTimeOffset?
+idunno.Bluesky.Labeler.Storage.LabelStoreState.GraceDeadline.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.IssuedThrough.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.IssuedThrough.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Issuer.get -> string!
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Issuer.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.LabelStoreState(System.Guid StreamId, string! Issuer, long Revision, long IssuedThrough, long PublishedThrough, long ReplayFloor, idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase Phase, long RetirementUpperBound, long RetirementThrough, System.DateTimeOffset? GraceDeadline) -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Phase.get -> idunno.Bluesky.Labeler.Maintenance.LabelerLifecyclePhase
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Phase.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.PublishedThrough.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.PublishedThrough.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.ReplayFloor.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.ReplayFloor.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.RetirementThrough.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.RetirementThrough.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.RetirementUpperBound.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.RetirementUpperBound.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Revision.get -> long
+idunno.Bluesky.Labeler.Storage.LabelStoreState.Revision.init -> void
+idunno.Bluesky.Labeler.Storage.LabelStoreState.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.Storage.LabelStoreState.StreamId.init -> void
 idunno.Bluesky.Labeler.LabelTarget
 idunno.Bluesky.Labeler.LabelTarget.Cid.get -> idunno.AtProto.Cid?
 idunno.Bluesky.Labeler.LabelTarget.Kind.get -> idunno.Bluesky.Labeler.LabelTargetKind
@@ -217,242 +227,242 @@ idunno.Bluesky.Labeler.LabelTarget.Repository.get -> idunno.AtProto.AtIdentifier
 idunno.Bluesky.Labeler.LabelTargetKind
 idunno.Bluesky.Labeler.LabelTargetKind.Account = 0 -> idunno.Bluesky.Labeler.LabelTargetKind
 idunno.Bluesky.Labeler.LabelTargetKind.Record = 1 -> idunno.Bluesky.Labeler.LabelTargetKind
-idunno.Bluesky.Labeler.SignedLabelSnapshot
-idunno.Bluesky.Labeler.SignedLabelSnapshot.GetCanonicalUnsignedBytes() -> byte[]!
-idunno.Bluesky.Labeler.SignedLabelSnapshot.GetJsonBytes() -> byte[]!
-idunno.Bluesky.Labeler.SignedLabelSnapshot.Label.get -> idunno.AtProto.Labels.Label!
-idunno.Bluesky.Labeler.SignedLabelSnapshot.SignedLabelSnapshot(idunno.AtProto.Labels.Label! label) -> void
-idunno.Bluesky.Labeler.SignedLabelSnapshot.SignedLabelSnapshot(System.ReadOnlySpan<byte> signedJson) -> void
-idunno.Bluesky.Labeler.StoredLabel
-idunno.Bluesky.Labeler.StoredLabel.<Clone>$() -> idunno.Bluesky.Labeler.StoredLabel!
-idunno.Bluesky.Labeler.StoredLabel.Deconstruct(out long Sequence, out idunno.Bluesky.Labeler.SignedLabelSnapshot! SignedLabel) -> void
-idunno.Bluesky.Labeler.StoredLabel.Equals(idunno.Bluesky.Labeler.StoredLabel? other) -> bool
-idunno.Bluesky.Labeler.StoredLabel.Sequence.get -> long
-idunno.Bluesky.Labeler.StoredLabel.Sequence.init -> void
-idunno.Bluesky.Labeler.StoredLabel.SignedLabel.get -> idunno.Bluesky.Labeler.SignedLabelSnapshot!
-idunno.Bluesky.Labeler.StoredLabel.SignedLabel.init -> void
-idunno.Bluesky.Labeler.StoredLabel.StoredLabel(long Sequence, idunno.Bluesky.Labeler.SignedLabelSnapshot! SignedLabel) -> void
-override idunno.Bluesky.Labeler.LabelAppendReceipt.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelAppendReceipt.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelAppendReceipt.ToString() -> string!
-override idunno.Bluesky.Labeler.LabelPage.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelPage.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelPage.ToString() -> string!
-override idunno.Bluesky.Labeler.LabelStoreSnapshot.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelStoreSnapshot.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelStoreSnapshot.ToString() -> string!
-override idunno.Bluesky.Labeler.LabelStoreState.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelStoreState.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelStoreState.ToString() -> string!
-override idunno.Bluesky.Labeler.StoredLabel.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.StoredLabel.GetHashCode() -> int
-override idunno.Bluesky.Labeler.StoredLabel.ToString() -> string!
-static idunno.Bluesky.Labeler.LabelAppendReceipt.operator !=(idunno.Bluesky.Labeler.LabelAppendReceipt? left, idunno.Bluesky.Labeler.LabelAppendReceipt? right) -> bool
-static idunno.Bluesky.Labeler.LabelAppendReceipt.operator ==(idunno.Bluesky.Labeler.LabelAppendReceipt? left, idunno.Bluesky.Labeler.LabelAppendReceipt? right) -> bool
-static idunno.Bluesky.Labeler.LabelIssuanceServiceCollectionExtensions.AddLabelIssuance(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.Did! issuer, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Net.Http.HttpClient! httpClient) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
-static idunno.Bluesky.Labeler.LabelOperationRequest.Issue(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, idunno.Bluesky.Labeler.LabelOperationContext! context, System.DateTimeOffset? expiresAt = null) -> idunno.Bluesky.Labeler.LabelOperationRequest!
-static idunno.Bluesky.Labeler.LabelOperationRequest.Negate(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, idunno.Bluesky.Labeler.LabelOperationContext! context) -> idunno.Bluesky.Labeler.LabelOperationRequest!
-static idunno.Bluesky.Labeler.LabelPage.operator !=(idunno.Bluesky.Labeler.LabelPage? left, idunno.Bluesky.Labeler.LabelPage? right) -> bool
-static idunno.Bluesky.Labeler.LabelPage.operator ==(idunno.Bluesky.Labeler.LabelPage? left, idunno.Bluesky.Labeler.LabelPage? right) -> bool
-static idunno.Bluesky.Labeler.LabelPersistenceMetrics.MeterName.get -> string!
-static idunno.Bluesky.Labeler.LabelPersistenceMetrics.MeterVersion.get -> string!
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot.GetCanonicalUnsignedBytes() -> byte[]!
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot.GetJsonBytes() -> byte[]!
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot.Label.get -> idunno.AtProto.Labels.Label!
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot.SignedLabelSnapshot(idunno.AtProto.Labels.Label! label) -> void
+idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot.SignedLabelSnapshot(System.ReadOnlySpan<byte> signedJson) -> void
+idunno.Bluesky.Labeler.Storage.StoredLabel
+idunno.Bluesky.Labeler.Storage.StoredLabel.<Clone>$() -> idunno.Bluesky.Labeler.Storage.StoredLabel!
+idunno.Bluesky.Labeler.Storage.StoredLabel.Deconstruct(out long Sequence, out idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot! SignedLabel) -> void
+idunno.Bluesky.Labeler.Storage.StoredLabel.Equals(idunno.Bluesky.Labeler.Storage.StoredLabel? other) -> bool
+idunno.Bluesky.Labeler.Storage.StoredLabel.Sequence.get -> long
+idunno.Bluesky.Labeler.Storage.StoredLabel.Sequence.init -> void
+idunno.Bluesky.Labeler.Storage.StoredLabel.SignedLabel.get -> idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot!
+idunno.Bluesky.Labeler.Storage.StoredLabel.SignedLabel.init -> void
+idunno.Bluesky.Labeler.Storage.StoredLabel.StoredLabel(long Sequence, idunno.Bluesky.Labeler.Storage.SignedLabelSnapshot! SignedLabel) -> void
+override idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.ToString() -> string!
+override idunno.Bluesky.Labeler.Storage.LabelPage.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.LabelPage.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.LabelPage.ToString() -> string!
+override idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.ToString() -> string!
+override idunno.Bluesky.Labeler.Storage.LabelStoreState.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.LabelStoreState.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.LabelStoreState.ToString() -> string!
+override idunno.Bluesky.Labeler.Storage.StoredLabel.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Storage.StoredLabel.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Storage.StoredLabel.ToString() -> string!
+static idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.operator !=(idunno.Bluesky.Labeler.Storage.LabelAppendReceipt? left, idunno.Bluesky.Labeler.Storage.LabelAppendReceipt? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelAppendReceipt.operator ==(idunno.Bluesky.Labeler.Storage.LabelAppendReceipt? left, idunno.Bluesky.Labeler.Storage.LabelAppendReceipt? right) -> bool
+static idunno.Bluesky.Labeler.Issuance.LabelIssuanceServiceCollectionExtensions.AddLabelIssuance(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.Did! issuer, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Net.Http.HttpClient! httpClient) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Issue(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, idunno.Bluesky.Labeler.Issuance.LabelOperationContext! context, System.DateTimeOffset? expiresAt = null) -> idunno.Bluesky.Labeler.Issuance.LabelOperationRequest!
+static idunno.Bluesky.Labeler.Issuance.LabelOperationRequest.Negate(string! operationId, idunno.Bluesky.Labeler.LabelTarget! target, string! value, idunno.Bluesky.Labeler.Issuance.LabelOperationContext! context) -> idunno.Bluesky.Labeler.Issuance.LabelOperationRequest!
+static idunno.Bluesky.Labeler.Storage.LabelPage.operator !=(idunno.Bluesky.Labeler.Storage.LabelPage? left, idunno.Bluesky.Labeler.Storage.LabelPage? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelPage.operator ==(idunno.Bluesky.Labeler.Storage.LabelPage? left, idunno.Bluesky.Labeler.Storage.LabelPage? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelPersistenceMetrics.MeterName.get -> string!
+static idunno.Bluesky.Labeler.Storage.LabelPersistenceMetrics.MeterVersion.get -> string!
 static idunno.Bluesky.Labeler.LabelServiceResult<T>.Failure(idunno.Bluesky.Labeler.LabelServiceError! error) -> idunno.Bluesky.Labeler.LabelServiceResult<T!>!
 static idunno.Bluesky.Labeler.LabelServiceResult<T>.Success(T! result) -> idunno.Bluesky.Labeler.LabelServiceResult<T!>!
-static idunno.Bluesky.Labeler.LabelStoreSnapshot.operator !=(idunno.Bluesky.Labeler.LabelStoreSnapshot? left, idunno.Bluesky.Labeler.LabelStoreSnapshot? right) -> bool
-static idunno.Bluesky.Labeler.LabelStoreSnapshot.operator ==(idunno.Bluesky.Labeler.LabelStoreSnapshot? left, idunno.Bluesky.Labeler.LabelStoreSnapshot? right) -> bool
-static idunno.Bluesky.Labeler.LabelStoreState.operator !=(idunno.Bluesky.Labeler.LabelStoreState? left, idunno.Bluesky.Labeler.LabelStoreState? right) -> bool
-static idunno.Bluesky.Labeler.LabelStoreState.operator ==(idunno.Bluesky.Labeler.LabelStoreState? left, idunno.Bluesky.Labeler.LabelStoreState? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.operator !=(idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot? left, idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot.operator ==(idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot? left, idunno.Bluesky.Labeler.Storage.LabelStoreSnapshot? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelStoreState.operator !=(idunno.Bluesky.Labeler.Storage.LabelStoreState? left, idunno.Bluesky.Labeler.Storage.LabelStoreState? right) -> bool
+static idunno.Bluesky.Labeler.Storage.LabelStoreState.operator ==(idunno.Bluesky.Labeler.Storage.LabelStoreState? left, idunno.Bluesky.Labeler.Storage.LabelStoreState? right) -> bool
 static idunno.Bluesky.Labeler.LabelTarget.Account(idunno.AtProto.AtIdentifier! account) -> idunno.Bluesky.Labeler.LabelTarget!
 static idunno.Bluesky.Labeler.LabelTarget.Record(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null) -> idunno.Bluesky.Labeler.LabelTarget!
-static idunno.Bluesky.Labeler.StoredLabel.operator !=(idunno.Bluesky.Labeler.StoredLabel? left, idunno.Bluesky.Labeler.StoredLabel? right) -> bool
-static idunno.Bluesky.Labeler.StoredLabel.operator ==(idunno.Bluesky.Labeler.StoredLabel? left, idunno.Bluesky.Labeler.StoredLabel? right) -> bool
-idunno.Bluesky.Labeler.LabelerIdentityDocument
-static idunno.Bluesky.Labeler.LabelerIdentityDocument.CreateDidWebServiceSnippet(idunno.AtProto.Did! did, System.Uri! labelerEndpoint) -> string!
-static idunno.Bluesky.Labeler.LabelerIdentityDocument.CreateDidWebSnippet(idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> string!
-static idunno.Bluesky.Labeler.LabelerIdentityDocument.CreateDidWebSnippet(idunno.AtProto.Did! did, string! publicKeyMultibase, System.Uri! labelerEndpoint) -> string!
-static idunno.Bluesky.Labeler.LabelerIdentityDocument.VerifyPublication(idunno.AtProto.DidDocument! didDocument, idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> void
-idunno.Bluesky.Labeler.LabelSigningKeyRotation
-static idunno.Bluesky.Labeler.LabelSigningKeyRotation.ResignNextBatchAsync(idunno.Bluesky.Labeler.ILabelStore! store, idunno.Bluesky.Labeler.ILabelMaintenanceStore! maintenanceStore, string! operationId, idunno.AtProto.Labels.LabelSigningKey! replacementKey, int batchSize = 1000, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress!>!
-idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress
-idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.IsComplete.get -> bool
-idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.LastSequence.get -> long
-idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.StreamId.get -> System.Guid
-idunno.Bluesky.Labeler.LabelSigningKeyRotationProgress.Through.get -> long
-idunno.Bluesky.Labeler.LabelSigningKeyFile
-static idunno.Bluesky.Labeler.LabelSigningKeyFile.CreateEncryptedBackup(string! sourcePath, string! backupPath) -> void
-static idunno.Bluesky.Labeler.LabelSigningKeyFile.GenerateEncryptedFile(string! path, idunno.AtProto.Labels.LabelSigningCurve curve, System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> idunno.AtProto.Labels.LabelSigningKey!
-static idunno.Bluesky.Labeler.LabelSigningKeyFile.LoadEncryptedFile(string! path, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
-idunno.Bluesky.Labeler.ILabelAdministrationStore
-idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthenticateLocalAsync(string! localIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationCaller!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthenticateServiceAsync(idunno.AtProto.ServiceAuthenticationResult! authentication, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationCaller!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.LabelAdministrationPermission permission, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.BootstrapAsync(idunno.AtProto.Did! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.ChangeTeamAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.LabelTeamChange! change, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.GetAdministrationAuditAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, long afterSequence = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.GetTeamAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelTeamMember!>!>!>!
-idunno.Bluesky.Labeler.LabelAdministrationCaller
-idunno.Bluesky.Labeler.LabelAdministrationCaller.Actor.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelAdministrationCaller.Issuer.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelAdministrationCaller.LocalIdentity.get -> string?
-idunno.Bluesky.Labeler.LabelAdministrationPermission
-idunno.Bluesky.Labeler.LabelAdministrationPermission.Inspect = 0 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
-idunno.Bluesky.Labeler.LabelAdministrationPermission.Maintain = 3 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
-idunno.Bluesky.Labeler.LabelAdministrationPermission.ManageTeam = 2 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
-idunno.Bluesky.Labeler.LabelAdministrationPermission.Moderate = 1 -> idunno.Bluesky.Labeler.LabelAdministrationPermission
-idunno.Bluesky.Labeler.LabelAdministrationReceipt
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.<Clone>$() -> idunno.Bluesky.Labeler.LabelAdministrationReceipt!
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Action.get -> string!
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Action.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Actor.get -> idunno.AtProto.Did?
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Actor.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Deconstruct(out long Sequence, out string! OperationId, out idunno.AtProto.Did? Actor, out string? LocalIdentity, out string! Action, out string! Reason, out bool Succeeded) -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Equals(idunno.Bluesky.Labeler.LabelAdministrationReceipt? other) -> bool
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.LabelAdministrationReceipt(long Sequence, string! OperationId, idunno.AtProto.Did? Actor, string? LocalIdentity, string! Action, string! Reason, bool Succeeded) -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.LocalIdentity.get -> string?
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.LocalIdentity.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.OperationId.get -> string!
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.OperationId.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Reason.get -> string!
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Reason.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Sequence.get -> long
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Sequence.init -> void
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Succeeded.get -> bool
-idunno.Bluesky.Labeler.LabelAdministrationReceipt.Succeeded.init -> void
-idunno.Bluesky.Labeler.LabelAuthorizationGrant.AdministrationCaller.get -> idunno.Bluesky.Labeler.LabelAdministrationCaller?
-idunno.Bluesky.Labeler.LabelDecisionCommit.AdministrationCaller.get -> idunno.Bluesky.Labeler.LabelAdministrationCaller?
-idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.BindLocal = 5 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.Enroll = 0 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.Reinstate = 3 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.Remove = 4 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.RevokeLocal = 6 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.SetRole = 1 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAction.Suspend = 2 -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamAuthorizer
-idunno.Bluesky.Labeler.LabelTeamAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAuthorizationGrant!>!>!
-idunno.Bluesky.Labeler.LabelTeamAuthorizer.LabelTeamAuthorizer(idunno.Bluesky.Labeler.ILabelAdministrationStore! store, idunno.Bluesky.Labeler.LabelAdministrationCaller! caller) -> void
-idunno.Bluesky.Labeler.LabelTeamChange
-idunno.Bluesky.Labeler.LabelTeamChange.Action.get -> idunno.Bluesky.Labeler.LabelTeamAction
-idunno.Bluesky.Labeler.LabelTeamChange.Credential.get -> string?
-idunno.Bluesky.Labeler.LabelTeamChange.LabelTeamChange(string! operationId, idunno.Bluesky.Labeler.LabelTeamAction action, idunno.AtProto.Did! target, string! reason, idunno.Bluesky.Labeler.LabelTeamRole role = idunno.Bluesky.Labeler.LabelTeamRole.Viewer, string? credential = null) -> void
-idunno.Bluesky.Labeler.LabelTeamChange.OperationId.get -> string!
-idunno.Bluesky.Labeler.LabelTeamChange.Reason.get -> string!
-idunno.Bluesky.Labeler.LabelTeamChange.Role.get -> idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamChange.Target.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelTeamMember
-idunno.Bluesky.Labeler.LabelTeamMember.<Clone>$() -> idunno.Bluesky.Labeler.LabelTeamMember!
-idunno.Bluesky.Labeler.LabelTeamMember.Active.get -> bool
-idunno.Bluesky.Labeler.LabelTeamMember.Active.init -> void
-idunno.Bluesky.Labeler.LabelTeamMember.Deconstruct(out idunno.AtProto.Did! Did, out idunno.Bluesky.Labeler.LabelTeamRole Role, out bool Active, out bool Removed) -> void
-idunno.Bluesky.Labeler.LabelTeamMember.Did.get -> idunno.AtProto.Did!
-idunno.Bluesky.Labeler.LabelTeamMember.Did.init -> void
-idunno.Bluesky.Labeler.LabelTeamMember.Equals(idunno.Bluesky.Labeler.LabelTeamMember? other) -> bool
-idunno.Bluesky.Labeler.LabelTeamMember.LabelTeamMember(idunno.AtProto.Did! Did, idunno.Bluesky.Labeler.LabelTeamRole Role, bool Active, bool Removed) -> void
-idunno.Bluesky.Labeler.LabelTeamMember.Removed.get -> bool
-idunno.Bluesky.Labeler.LabelTeamMember.Removed.init -> void
-idunno.Bluesky.Labeler.LabelTeamMember.Role.get -> idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamMember.Role.init -> void
-idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamRole.Administrator = 2 -> idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamRole.Moderator = 1 -> idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamRole.Viewer = 0 -> idunno.Bluesky.Labeler.LabelTeamRole
-idunno.Bluesky.Labeler.LabelTeamService
-idunno.Bluesky.Labeler.LabelTeamService.BootstrapAsync(idunno.AtProto.AtIdentifier! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.LabelTeamService.EnrollAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, idunno.AtProto.AtIdentifier! member, idunno.Bluesky.Labeler.LabelTeamRole role, string! operationId, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.LabelTeamService.LabelTeamService(idunno.Bluesky.Labeler.ILabelAdministrationStore! store, System.Net.Http.HttpClient! httpClient) -> void
-override idunno.Bluesky.Labeler.LabelAdministrationReceipt.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelAdministrationReceipt.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelAdministrationReceipt.ToString() -> string!
-override idunno.Bluesky.Labeler.LabelTeamMember.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelTeamMember.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelTeamMember.ToString() -> string!
-static idunno.Bluesky.Labeler.LabelAdministrationReceipt.operator !=(idunno.Bluesky.Labeler.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.LabelAdministrationReceipt? right) -> bool
-static idunno.Bluesky.Labeler.LabelAdministrationReceipt.operator ==(idunno.Bluesky.Labeler.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.LabelAdministrationReceipt? right) -> bool
-static idunno.Bluesky.Labeler.LabelTeamMember.operator !=(idunno.Bluesky.Labeler.LabelTeamMember? left, idunno.Bluesky.Labeler.LabelTeamMember? right) -> bool
-static idunno.Bluesky.Labeler.LabelTeamMember.operator ==(idunno.Bluesky.Labeler.LabelTeamMember? left, idunno.Bluesky.Labeler.LabelTeamMember? right) -> bool
-idunno.Bluesky.Labeler.ILabelAdministrationStore.AuditMaintenanceAsync(idunno.Bluesky.Labeler.LabelAdministrationCaller! caller, string! operationId, string! reason, idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase phase = idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Intent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.ILabelAdministrationStore.RecordAdministrationDenialAsync(string! reason, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.LabelAdministrationReceipt!>!>!
-idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
-idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Completed = 1 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
-idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Failed = 2 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
-idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase.Intent = 0 -> idunno.Bluesky.Labeler.LabelMaintenanceAuditPhase
-idunno.Bluesky.Labeler.ILabelMaintenanceStore
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.AcknowledgeHostDrainedAsync(string! operationId, System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.AcknowledgeHostKeyActivatedAsync(string! operationId, System.Guid instanceId, string! keyId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.BeginRotationAsync(string! operationId, string! previousKeyId, string! replacementKeyId, string! replacementPublicKey, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.CaptureRotationBoundaryAsync(string! operationId, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.CompleteRotationAsync(string! operationId, string! activeKeyId, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.ConfirmHostStoppedAsync(string! operationId, System.Guid instanceId, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.GetMaintenanceStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.HeartbeatHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.RegisterHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.RegisterHostWithSigningRoleAsync(System.Guid instanceId, bool requiresSigningKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.ReplaceRotationBatchAsync(string! operationId, long expectedAfterSequence, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! replacementLabels, long checkpoint, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.StopHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelMaintenanceStore.VerifyRotationKeyPublicationAsync(string! operationId, string! replacementPublicKey, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
-idunno.Bluesky.Labeler.ILabelSigningKeyRing
-idunno.Bluesky.Labeler.ILabelSigningKeyRing.ActivateAsync(string! keyId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.Labeler.ILabelSigningKeyRing.ActiveKeyId.get -> string!
-idunno.Bluesky.Labeler.ILabelSigningKeyRing.GetPublicKeyMultibase(string! keyId) -> string!
-idunno.Bluesky.Labeler.ILabelSigningKeyRing.GetSigningKey(string! keyId) -> idunno.AtProto.Labels.LabelSigningKey!
-idunno.Bluesky.Labeler.LabelMaintenanceHost
-idunno.Bluesky.Labeler.LabelMaintenanceHost.<Clone>$() -> idunno.Bluesky.Labeler.LabelMaintenanceHost!
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Acknowledged.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Acknowledged.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Deconstruct(out System.Guid InstanceId, out bool Acknowledged, out bool KeyActivated, out bool Stopped, out System.DateTimeOffset LastSeen) -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Equals(idunno.Bluesky.Labeler.LabelMaintenanceHost? other) -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceHost.InstanceId.get -> System.Guid
-idunno.Bluesky.Labeler.LabelMaintenanceHost.InstanceId.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.KeyActivated.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceHost.KeyActivated.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.RequiresSigningKey.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceHost.RequiresSigningKey.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.LabelMaintenanceHost(System.Guid InstanceId, bool Acknowledged, bool KeyActivated, bool Stopped, System.DateTimeOffset LastSeen) -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.LastSeen.get -> System.DateTimeOffset
-idunno.Bluesky.Labeler.LabelMaintenanceHost.LastSeen.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Stopped.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceHost.Stopped.init -> void
-idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.AwaitingKeyPublication = 2 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.Completed = 5 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.Draining = 1 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.None = 0 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.ReadyToReopen = 4 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenancePhase.Resigning = 3 -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenanceState
-idunno.Bluesky.Labeler.LabelMaintenanceState.<Clone>$() -> idunno.Bluesky.Labeler.LabelMaintenanceState!
-idunno.Bluesky.Labeler.LabelMaintenanceState.AllHostsDrained.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceState.Deconstruct(out string? OperationId, out idunno.Bluesky.Labeler.LabelMaintenancePhase Phase, out System.Guid StreamId, out string? PreviousKeyId, out string? ReplacementKeyId, out string? ReplacementPublicKey, out long ThroughSequence, out long LastSequence, out bool KeyPublicationVerified, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelMaintenanceHost!>! Hosts) -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.Equals(idunno.Bluesky.Labeler.LabelMaintenanceState? other) -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceState.Hosts.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelMaintenanceHost!>!
-idunno.Bluesky.Labeler.LabelMaintenanceState.Hosts.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.IsActive.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceState.KeyPublicationVerified.get -> bool
-idunno.Bluesky.Labeler.LabelMaintenanceState.KeyPublicationVerified.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.LabelMaintenanceState(string? OperationId, idunno.Bluesky.Labeler.LabelMaintenancePhase Phase, System.Guid StreamId, string? PreviousKeyId, string? ReplacementKeyId, string? ReplacementPublicKey, long ThroughSequence, long LastSequence, bool KeyPublicationVerified, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.LabelMaintenanceHost!>! Hosts) -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.LastSequence.get -> long
-idunno.Bluesky.Labeler.LabelMaintenanceState.LastSequence.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.OperationId.get -> string?
-idunno.Bluesky.Labeler.LabelMaintenanceState.OperationId.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.Phase.get -> idunno.Bluesky.Labeler.LabelMaintenancePhase
-idunno.Bluesky.Labeler.LabelMaintenanceState.Phase.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.PreviousKeyId.get -> string?
-idunno.Bluesky.Labeler.LabelMaintenanceState.PreviousKeyId.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.ReplacementKeyId.get -> string?
-idunno.Bluesky.Labeler.LabelMaintenanceState.ReplacementKeyId.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.ReplacementPublicKey.get -> string?
-idunno.Bluesky.Labeler.LabelMaintenanceState.ReplacementPublicKey.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.StreamId.get -> System.Guid
-idunno.Bluesky.Labeler.LabelMaintenanceState.StreamId.init -> void
-idunno.Bluesky.Labeler.LabelMaintenanceState.ThroughSequence.get -> long
-idunno.Bluesky.Labeler.LabelMaintenanceState.ThroughSequence.init -> void
-override idunno.Bluesky.Labeler.LabelMaintenanceHost.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelMaintenanceHost.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelMaintenanceHost.ToString() -> string!
-override idunno.Bluesky.Labeler.LabelMaintenanceState.Equals(object? obj) -> bool
-override idunno.Bluesky.Labeler.LabelMaintenanceState.GetHashCode() -> int
-override idunno.Bluesky.Labeler.LabelMaintenanceState.ToString() -> string!
-static idunno.Bluesky.Labeler.LabelMaintenanceHost.operator !=(idunno.Bluesky.Labeler.LabelMaintenanceHost? left, idunno.Bluesky.Labeler.LabelMaintenanceHost? right) -> bool
-static idunno.Bluesky.Labeler.LabelMaintenanceHost.operator ==(idunno.Bluesky.Labeler.LabelMaintenanceHost? left, idunno.Bluesky.Labeler.LabelMaintenanceHost? right) -> bool
-static idunno.Bluesky.Labeler.LabelMaintenanceState.operator !=(idunno.Bluesky.Labeler.LabelMaintenanceState? left, idunno.Bluesky.Labeler.LabelMaintenanceState? right) -> bool
-static idunno.Bluesky.Labeler.LabelMaintenanceState.operator ==(idunno.Bluesky.Labeler.LabelMaintenanceState? left, idunno.Bluesky.Labeler.LabelMaintenanceState? right) -> bool
+static idunno.Bluesky.Labeler.Storage.StoredLabel.operator !=(idunno.Bluesky.Labeler.Storage.StoredLabel? left, idunno.Bluesky.Labeler.Storage.StoredLabel? right) -> bool
+static idunno.Bluesky.Labeler.Storage.StoredLabel.operator ==(idunno.Bluesky.Labeler.Storage.StoredLabel? left, idunno.Bluesky.Labeler.Storage.StoredLabel? right) -> bool
+idunno.Bluesky.Labeler.Identity.LabelerIdentityDocument
+static idunno.Bluesky.Labeler.Identity.LabelerIdentityDocument.CreateDidWebServiceSnippet(idunno.AtProto.Did! did, System.Uri! labelerEndpoint) -> string!
+static idunno.Bluesky.Labeler.Identity.LabelerIdentityDocument.CreateDidWebSnippet(idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> string!
+static idunno.Bluesky.Labeler.Identity.LabelerIdentityDocument.CreateDidWebSnippet(idunno.AtProto.Did! did, string! publicKeyMultibase, System.Uri! labelerEndpoint) -> string!
+static idunno.Bluesky.Labeler.Identity.LabelerIdentityDocument.VerifyPublication(idunno.AtProto.DidDocument! didDocument, idunno.AtProto.Did! did, idunno.AtProto.Labels.LabelSigningKey! signingKey, System.Uri! labelerEndpoint) -> void
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotation
+static idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotation.ResignNextBatchAsync(idunno.Bluesky.Labeler.Storage.ILabelStore! store, idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore! maintenanceStore, string! operationId, idunno.AtProto.Labels.LabelSigningKey! replacementKey, int batchSize = 1000, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress!>!
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress.IsComplete.get -> bool
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress.LastSequence.get -> long
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyRotationProgress.Through.get -> long
+idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile
+static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.CreateEncryptedBackup(string! sourcePath, string! backupPath) -> void
+static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.GenerateEncryptedFile(string! path, idunno.AtProto.Labels.LabelSigningCurve curve, System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> idunno.AtProto.Labels.LabelSigningKey!
+static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.LoadEncryptedFile(string! path, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthenticateLocalAsync(string! localIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthenticateServiceAsync(idunno.AtProto.ServiceAuthenticationResult! authentication, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthorizeAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission permission, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.BootstrapAsync(idunno.AtProto.Did! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.ChangeTeamAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.Administration.LabelTeamChange! change, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.GetAdministrationAuditAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, long afterSequence = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.GetTeamAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Administration.LabelTeamMember!>!>!>!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller
+idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller.Actor.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller.Issuer.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller.LocalIdentity.get -> string?
+idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
+idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.Inspect = 0 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
+idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.Maintain = 3 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
+idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.ManageTeam = 2 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
+idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission.Moderate = 1 -> idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.<Clone>$() -> idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Action.get -> string!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Action.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Actor.get -> idunno.AtProto.Did?
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Actor.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Deconstruct(out long Sequence, out string! OperationId, out idunno.AtProto.Did? Actor, out string? LocalIdentity, out string! Action, out string! Reason, out bool Succeeded) -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Equals(idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt? other) -> bool
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.LabelAdministrationReceipt(long Sequence, string! OperationId, idunno.AtProto.Did? Actor, string? LocalIdentity, string! Action, string! Reason, bool Succeeded) -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.LocalIdentity.get -> string?
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.LocalIdentity.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.OperationId.get -> string!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.OperationId.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Reason.get -> string!
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Reason.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Sequence.get -> long
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Sequence.init -> void
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Succeeded.get -> bool
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Succeeded.init -> void
+idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant.AdministrationCaller.get -> idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller?
+idunno.Bluesky.Labeler.Issuance.LabelDecisionCommit.AdministrationCaller.get -> idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller?
+idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.BindLocal = 5 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.Enroll = 0 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.Reinstate = 3 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.Remove = 4 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.RevokeLocal = 6 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.SetRole = 1 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAction.Suspend = 2 -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer
+idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer.AuthorizeAsync(idunno.Bluesky.Labeler.Issuance.LabelAuthorizationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant!>!>!
+idunno.Bluesky.Labeler.Administration.LabelTeamAuthorizer.LabelTeamAuthorizer(idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore! store, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller) -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamChange
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.Action.get -> idunno.Bluesky.Labeler.Administration.LabelTeamAction
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.Credential.get -> string?
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.LabelTeamChange(string! operationId, idunno.Bluesky.Labeler.Administration.LabelTeamAction action, idunno.AtProto.Did! target, string! reason, idunno.Bluesky.Labeler.Administration.LabelTeamRole role = idunno.Bluesky.Labeler.Administration.LabelTeamRole.Viewer, string? credential = null) -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.OperationId.get -> string!
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.Reason.get -> string!
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.Role.get -> idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamChange.Target.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Administration.LabelTeamMember
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.<Clone>$() -> idunno.Bluesky.Labeler.Administration.LabelTeamMember!
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Active.get -> bool
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Active.init -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Deconstruct(out idunno.AtProto.Did! Did, out idunno.Bluesky.Labeler.Administration.LabelTeamRole Role, out bool Active, out bool Removed) -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Did.init -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Equals(idunno.Bluesky.Labeler.Administration.LabelTeamMember? other) -> bool
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.LabelTeamMember(idunno.AtProto.Did! Did, idunno.Bluesky.Labeler.Administration.LabelTeamRole Role, bool Active, bool Removed) -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Removed.get -> bool
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Removed.init -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Role.get -> idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamMember.Role.init -> void
+idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamRole.Administrator = 2 -> idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamRole.Moderator = 1 -> idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamRole.Viewer = 0 -> idunno.Bluesky.Labeler.Administration.LabelTeamRole
+idunno.Bluesky.Labeler.Administration.LabelTeamService
+idunno.Bluesky.Labeler.Administration.LabelTeamService.BootstrapAsync(idunno.AtProto.AtIdentifier! administrator, string! localIdentity, string! operationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.LabelTeamService.EnrollAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.AtProto.AtIdentifier! member, idunno.Bluesky.Labeler.Administration.LabelTeamRole role, string! operationId, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.LabelTeamService.LabelTeamService(idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore! store, System.Net.Http.HttpClient! httpClient) -> void
+override idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.ToString() -> string!
+override idunno.Bluesky.Labeler.Administration.LabelTeamMember.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Administration.LabelTeamMember.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Administration.LabelTeamMember.ToString() -> string!
+static idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.operator !=(idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt? right) -> bool
+static idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.operator ==(idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt? left, idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt? right) -> bool
+static idunno.Bluesky.Labeler.Administration.LabelTeamMember.operator !=(idunno.Bluesky.Labeler.Administration.LabelTeamMember? left, idunno.Bluesky.Labeler.Administration.LabelTeamMember? right) -> bool
+static idunno.Bluesky.Labeler.Administration.LabelTeamMember.operator ==(idunno.Bluesky.Labeler.Administration.LabelTeamMember? left, idunno.Bluesky.Labeler.Administration.LabelTeamMember? right) -> bool
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuditMaintenanceAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, string! operationId, string! reason, idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase phase = idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase.Intent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.RecordAdministrationDenialAsync(string! reason, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt!>!>!
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase.Completed = 1 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase.Failed = 2 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase.Intent = 0 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceAuditPhase
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.AcknowledgeHostDrainedAsync(string! operationId, System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.AcknowledgeHostKeyActivatedAsync(string! operationId, System.Guid instanceId, string! keyId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.BeginRotationAsync(string! operationId, string! previousKeyId, string! replacementKeyId, string! replacementPublicKey, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.CaptureRotationBoundaryAsync(string! operationId, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.CompleteRotationAsync(string! operationId, string! activeKeyId, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.ConfirmHostStoppedAsync(string! operationId, System.Guid instanceId, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.GetMaintenanceStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.HeartbeatHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.RegisterHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.RegisterHostWithSigningRoleAsync(System.Guid instanceId, bool requiresSigningKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.ReplaceRotationBatchAsync(string! operationId, long expectedAfterSequence, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Storage.StoredLabel!>! replacementLabels, long checkpoint, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.StopHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Maintenance.ILabelMaintenanceStore.VerifyRotationKeyPublicationAsync(string! operationId, string! replacementPublicKey, idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing.ActivateAsync(string! keyId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing.ActiveKeyId.get -> string!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing.GetPublicKeyMultibase(string! keyId) -> string!
+idunno.Bluesky.Labeler.Signing.ILabelSigningKeyRing.GetSigningKey(string! keyId) -> idunno.AtProto.Labels.LabelSigningKey!
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.<Clone>$() -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost!
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Acknowledged.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Acknowledged.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Deconstruct(out System.Guid InstanceId, out bool Acknowledged, out bool KeyActivated, out bool Stopped, out System.DateTimeOffset LastSeen) -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Equals(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost? other) -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.InstanceId.get -> System.Guid
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.InstanceId.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.KeyActivated.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.KeyActivated.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.RequiresSigningKey.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.RequiresSigningKey.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.LabelMaintenanceHost(System.Guid InstanceId, bool Acknowledged, bool KeyActivated, bool Stopped, System.DateTimeOffset LastSeen) -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.LastSeen.get -> System.DateTimeOffset
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.LastSeen.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Stopped.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Stopped.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.AwaitingKeyPublication = 2 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.Completed = 5 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.Draining = 1 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.None = 0 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.ReadyToReopen = 4 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase.Resigning = 3 -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.<Clone>$() -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState!
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.AllHostsDrained.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Deconstruct(out string? OperationId, out idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase Phase, out System.Guid StreamId, out string? PreviousKeyId, out string? ReplacementKeyId, out string? ReplacementPublicKey, out long ThroughSequence, out long LastSequence, out bool KeyPublicationVerified, out System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost!>! Hosts) -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Equals(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState? other) -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Hosts.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost!>!
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Hosts.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.IsActive.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.KeyPublicationVerified.get -> bool
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.KeyPublicationVerified.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.LabelMaintenanceState(string? OperationId, idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase Phase, System.Guid StreamId, string? PreviousKeyId, string? ReplacementKeyId, string? ReplacementPublicKey, long ThroughSequence, long LastSequence, bool KeyPublicationVerified, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost!>! Hosts) -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.LastSequence.get -> long
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.LastSequence.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.OperationId.get -> string?
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.OperationId.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Phase.get -> idunno.Bluesky.Labeler.Maintenance.LabelMaintenancePhase
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Phase.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.PreviousKeyId.get -> string?
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.PreviousKeyId.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ReplacementKeyId.get -> string?
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ReplacementKeyId.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ReplacementPublicKey.get -> string?
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ReplacementPublicKey.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.StreamId.get -> System.Guid
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.StreamId.init -> void
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ThroughSequence.get -> long
+idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ThroughSequence.init -> void
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.ToString() -> string!
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.ToString() -> string!
+static idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.operator !=(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost? left, idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost? right) -> bool
+static idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost.operator ==(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost? left, idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceHost? right) -> bool
+static idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.operator !=(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState? left, idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState? right) -> bool
+static idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState.operator ==(idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState? left, idunno.Bluesky.Labeler.Maintenance.LabelMaintenanceState? right) -> bool

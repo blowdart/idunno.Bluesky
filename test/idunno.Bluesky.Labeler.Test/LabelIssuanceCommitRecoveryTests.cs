@@ -5,6 +5,8 @@ using System.Data.Common;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 

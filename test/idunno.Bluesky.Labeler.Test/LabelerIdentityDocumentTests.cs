@@ -10,6 +10,8 @@ using System.Text.Json.Nodes;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Identity;
+using idunno.Bluesky.Labeler.Signing;
 
 namespace idunno.Bluesky.Labeler.Test;
 

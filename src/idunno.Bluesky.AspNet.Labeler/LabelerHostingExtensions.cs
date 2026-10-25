@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;

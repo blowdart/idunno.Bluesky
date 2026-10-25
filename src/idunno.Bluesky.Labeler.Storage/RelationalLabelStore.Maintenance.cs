@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
 
 namespace idunno.Bluesky.Labeler.Storage;
 
@@ -228,6 +231,12 @@ internal abstract partial class RelationalLabelStore
                 if (current.IsActive || state.Phase != LabelerLifecyclePhase.Active)
                 {
                     throw new InvalidOperationException("Another maintenance operation is active or the labeler lifecycle is closed.");
+                }
+
+                LabelSigningKeySelection? selection = await ReadSigningSelectionAsync(connection, transaction, state, cancellationToken).ConfigureAwait(false);
+                if (selection is not null && selection.KeyId != previousKeyId)
+                {
+                    throw new InvalidOperationException("The requested previous key is not the persisted active selection.");
                 }
 
                 object? activeHostCount = await ScalarAsync(
@@ -627,6 +636,13 @@ internal abstract partial class RelationalLabelStore
                     current.ReplacementKeyId != activeKeyId)
                 {
                     throw new InvalidOperationException("The replacement key is not verified, active and fully applied.");
+                }
+
+                LabelSigningKeySelection? selection = await ReadSigningSelectionAsync(connection, transaction, state, cancellationToken).ConfigureAwait(false);
+                if (selection is not null &&
+                    (selection.KeyId != activeKeyId || selection.PublicKey != current.ReplacementPublicKey))
+                {
+                    throw new InvalidOperationException("The replacement selection has not been persisted.");
                 }
 
                 await ExecuteAsync(

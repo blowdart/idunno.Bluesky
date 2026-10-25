@@ -7,6 +7,12 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Identity;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 namespace idunno.Bluesky.AspNet.Labeler;
 

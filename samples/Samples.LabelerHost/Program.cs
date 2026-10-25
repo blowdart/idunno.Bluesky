@@ -10,6 +10,11 @@ using idunno.AtProto.Labels;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 using idunno.Security;
 
 using Microsoft.AspNetCore.Builder;
@@ -22,21 +27,35 @@ namespace Samples.LabelerHost;
 
 internal static class Program
 {
-    private static async Task<int> Main(string[] args)
+    /// <summary>Runs either the standalone labeler host or an isolated readiness probe.</summary>
+    internal static async Task<int> Main(string[] args)
     {
+        if (args is ["--health-check", ..])
+        {
+            if (args.Length != 2 ||
+                !Uri.TryCreate(args[1], UriKind.Absolute, out Uri? endpoint) ||
+                endpoint.Scheme is not ("http" or "https") ||
+                !string.IsNullOrEmpty(endpoint.UserInfo))
+            {
+                await Console.Error.WriteLineAsync("Usage: --health-check <absolute HTTP(S) readiness URL without credentials>").ConfigureAwait(false);
+                return 2;
+            }
+
+            return await CheckReadinessAsync(endpoint, CancellationToken.None).ConfigureAwait(false);
+        }
+
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         Did issuer = new(Required(builder.Configuration, "Labeler:IssuerDid"));
         Uri publicEndpoint = new(Required(builder.Configuration, "Labeler:PublicEndpoint"));
         string provider = Required(builder.Configuration, "Labeler:DatabaseProvider");
         string connectionString = Required(builder.Configuration, "Labeler:ConnectionString");
-        string keyDirectory = Required(builder.Configuration, "Labeler:SigningKeyDirectory");
-        string activeKeyPath = Required(builder.Configuration, "Labeler:ActiveKeyPath");
         string localAdministrationEndpoint =
             builder.Configuration["Labeler:LocalAdministrationEndpoint"] ??
             (OperatingSystem.IsWindows() ? "idunno-labeler-admin" : "/run/labeler/admin.sock");
         AtProtoServiceReference audience = ParseAudience(Required(builder.Configuration, "Labeler:AdministrationAudience"));
 
-        PemDirectoryLabelSigningKeyRing keyRing = new(keyDirectory, activeKeyPath);
+        using IDisposable keyRingLifetime = CreateSigningKeyRing(builder.Configuration);
+        ILabelSigningKeyRing keyRing = (ILabelSigningKeyRing)keyRingLifetime;
         using HttpClient identityClient = CreateIdentityClient();
         builder.Services.AddSingleton<ILabelIssuancePolicyProvider>(
             new ConfigurationLabelIssuancePolicyProvider(builder.Configuration));
@@ -70,6 +89,14 @@ internal static class Program
         await app.Services.GetRequiredService<ILabelStore>()
             .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
             .ConfigureAwait(false);
+        if (keyRing is EnvironmentLabelSigningKeyRing environmentKeys)
+        {
+            await environmentKeys.InitializeAsync(
+                selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
+                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                initialKeyId: builder.Configuration["Labeler:InitialSigningKeyId"],
+                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+        }
 
         string? bootstrapAdministrator = builder.Configuration["bootstrap-admin"];
         if (bootstrapAdministrator is not null)
@@ -103,6 +130,63 @@ internal static class Program
         app.MapLabelerAdministration();
         await app.RunAsync().ConfigureAwait(false);
         return 0;
+    }
+
+    /// <summary>Probes the running host without starting services, loading secrets, following redirects or using an outbound proxy.</summary>
+    internal static async Task<int> CheckReadinessAsync(Uri endpoint, CancellationToken cancellationToken)
+    {
+        using HttpClientHandler handler = new()
+        {
+            AllowAutoRedirect = false,
+            UseProxy = false
+        };
+        using HttpClient client = new(handler) { Timeout = TimeSpan.FromSeconds(5) };
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(
+                endpoint,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                return 0;
+            }
+
+            await Console.Error.WriteLineAsync($"Readiness probe returned HTTP {(int)response.StatusCode}.").ConfigureAwait(false);
+            return 1;
+        }
+        catch (HttpRequestException)
+        {
+            await Console.Error.WriteLineAsync("Readiness probe could not reach the host.").ConfigureAwait(false);
+            return 1;
+        }
+        catch (OperationCanceledException)
+        {
+            await Console.Error.WriteLineAsync("Readiness probe timed out or was cancelled.").ConfigureAwait(false);
+            return 1;
+        }
+    }
+
+    /// <summary>Selects an explicit key provider without changing existing PEM configurations.</summary>
+    internal static IDisposable CreateSigningKeyRing(IConfiguration configuration)
+    {
+        string provider = configuration["Labeler:SigningKeyProvider"] ?? "pem";
+        bool environmentKeys = configuration.GetSection("Labeler:SigningKeys").GetChildren().Any();
+        if ((provider == "pem" && environmentKeys) ||
+            (provider == "environment" &&
+                (configuration["Labeler:SigningKeyDirectory"] is not null || configuration["Labeler:ActiveKeyPath"] is not null)))
+        {
+            throw new InvalidOperationException("Configure only the selected signing key provider.");
+        }
+
+        return provider switch
+        {
+            "pem" => new PemDirectoryLabelSigningKeyRing(
+                configuration["Labeler:SigningKeyDirectory"] ?? "/run/labeler-keys",
+                configuration["Labeler:ActiveKeyPath"] ?? "/data/active-key"),
+            "environment" => new EnvironmentLabelSigningKeyRing(configuration),
+            _ => throw new InvalidOperationException("Labeler:SigningKeyProvider must be pem or environment.")
+        };
     }
 
     private static string Required(ConfigurationManager configuration, string key) =>

@@ -14,6 +14,10 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;

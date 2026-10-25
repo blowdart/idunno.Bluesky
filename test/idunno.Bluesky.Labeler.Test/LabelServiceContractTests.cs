@@ -1,6 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.Bluesky.Labeler.Issuance;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Storage;
 namespace idunno.Bluesky.Labeler.Test;
 
 /// <summary>Checks that immutable service contracts validate their construction inputs before exposing state.</summary>

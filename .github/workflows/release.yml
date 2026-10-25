@@ -244,6 +244,13 @@ jobs:
         set -euo pipefail
         printf '%s' "${GH_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
 
+    - name: Configure attestation-capable image builder
+      shell: bash
+      run: |
+        set -euo pipefail
+        docker buildx create --name labeler-release --driver docker-container --use
+        docker buildx inspect --bootstrap
+
     - name: Build and publish immutable release image
       shell: bash
       run: |

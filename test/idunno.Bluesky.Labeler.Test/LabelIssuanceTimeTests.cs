@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Issuance;
 
 using Microsoft.Extensions.Time.Testing;
 

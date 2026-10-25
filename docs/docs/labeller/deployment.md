@@ -2,7 +2,7 @@
 
 `Samples.LabelerHost` is a runnable ASP.NET Core host for the public label distribution
 endpoints, authenticated remote administration, and OS-protected local administration.
-It demonstrates SQLite, PostgreSQL and MySQL storage, an installed PEM key ring, and
+It demonstrates SQLite, PostgreSQL and MySQL storage, PEM or environment-supplied key rings, and
 configuration-driven issuance policy. Its configuration is deliberately external to the
 image: no database password, account credential or private key is baked into the sample.
 
@@ -17,8 +17,12 @@ provider, or a host-owned configuration file:
 | `Labeler:PublicEndpoint` | The externally published HTTPS origin; never inferred from `Host` |
 | `Labeler:DatabaseProvider` | `sqlite`, `postgresql`, or `mysql` |
 | `Labeler:ConnectionString` | Persistent SQLite file or dedicated PostgreSQL/MySQL database |
-| `Labeler:SigningKeyDirectory` | Read-only directory containing one `<key-id>.pem` per preinstalled key |
-| `Labeler:ActiveKeyPath` | Writable persistent file containing the active key ID |
+| `Labeler:SigningKeyProvider` | `pem` (default) or `environment`; configure only the selected provider |
+| `Labeler:SigningKeyDirectory` | PEM provider: read-only directory containing one `<key-id>.pem` per preinstalled key; defaults to `/run/labeler-keys` |
+| `Labeler:ActiveKeyPath` | PEM provider: writable persistent file containing the active key ID; defaults to `/data/active-key` |
+| `Labeler:SigningKeys:<index>:Id` | Environment provider: stable, case-sensitive key ID using ASCII letters, digits, dots, underscores or hyphens |
+| `Labeler:SigningKeys:<index>:PrivateKeyBase64` | Environment provider: separate protected variable per base64-encoded private PEM |
+| `Labeler:InitialSigningKeyId` | Environment provider: explicit initial key ID, used only when the database has no selection |
 | `Labeler:AdministrationAudience` | Exact `did:...#service-fragment` audience for service tokens |
 | `Labeler:DeclaredLabels` | Comma-separated declared label values |
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
@@ -83,16 +87,69 @@ Install private keys on each host before starting or rotating it. Use opaque fil
 `active.pem` and `replacement.pem`; the filename stem is the key ID. Mount the key directory
 read-only and the active-key file on writable persistent storage. Protect PEM contents with
 the host's secret-management permissions (for Unix, mode `0600` and an owner-only directory).
-The key ring loads the preinstalled keys once and atomically replaces only the active-ID file
+The PEM key ring loads the preinstalled keys once and atomically replaces only the active-ID file
 when an authorized rotation completes. Private keys never travel over remote administration.
 
 Use the CLI's `rotation` commands to check status, begin maintenance, verify PLC publication
 or apply the did:web snippet, re-sign bounded batches, and complete the operation. Every live
-host must acknowledge draining and replacement-key activation. A host that cannot acknowledge
+host must acknowledge draining, and signing hosts must acknowledge replacement-key activation.
+Keyless distribution replicas remain keyless. A host that cannot acknowledge
 draining must be independently verified as stopped and explicitly confirmed by an operator.
 Never treat a timeout as proof that a process stopped. If a host restarts during maintenance,
 it reads the durable operation, remains unavailable, and participates in the remaining
 acknowledgements. Do not manually delete maintenance rows or reopen a partial rotation.
+
+### Volume-free hosting on DigitalOcean App Platform
+
+Choose `Labeler__SigningKeyProvider=environment`, use an external PostgreSQL or MySQL database,
+and store its connection string and each private key in App Platform's **encrypted environment
+variables**. Do not use ephemeral SQLite storage. For example, configure these variable names:
+
+```text
+Labeler__SigningKeyProvider=environment
+Labeler__DatabaseProvider=postgresql
+Labeler__ConnectionString=<encrypted external database connection string>
+Labeler__SigningKeys__0__Id=original
+Labeler__SigningKeys__0__PrivateKeyBase64=<encrypted base64-encoded private PEM>
+Labeler__InitialSigningKeyId=original
+```
+
+Base64 only transports the PEM safely as one value; it is not encryption. Protect the original
+key, deployment configuration and access to the running process. Do not put secret values in
+source, image layers, command-line arguments or diagnostic output. The provider imports keys
+into memory without creating private-key files.
+
+On first setup the configured initial identity and its public key are transactionally bound
+to the database's issuer and stream. Later starts use the database selection, ignoring a stale
+initial ID. A missing selected key or a different private key under the same ID prevents startup;
+there is no fallback. The database stores only the key ID and public binding, never the private
+key. Schema version eight adds this selection without guessing one for existing deployments.
+When switching an existing PEM deployment, explicitly seed its current key ID and matching
+private key; a persisted rotation must agree with that ID and, after completion, its public key.
+
+For rotation, add a second encrypted variable (for example,
+`Labeler__SigningKeys__1__PrivateKeyBase64`) and its `Id`, then redeploy through App Platform so
+every signing host has both keys **before beginning rotation**. Keep the original variable during
+that rollout. Use the existing authorized rotation workflow; selection changes are permitted
+only after verified publication, completed re-signing and universal draining. Shared persistence
+does not substitute for each signing host's activation acknowledgement. A restart resumes from
+the database's selection and maintenance checkpoint. After rotation completes and every signing
+host has activated the replacement, the old private key can be removed in a further deployment.
+Do not recycle a key ID with different key material.
+
+Back up the database and protected secret configuration together, and restore a matching set.
+Do not reset selection rows to recover from a missing secret. App Platform redeployments replace
+images/configuration rather than mutating a running container. Configure the platform's HTTP
+readiness check to use `/health/labeler/ready` on the internal port; do not assume it consumes the
+image's Docker health status.
+
+This provider removes the signing-key volume requirement, not other setup requirements.
+The local socket may remain on the ephemeral filesystem without a shared mount. Perform the
+explicit initial administrator bootstrap under the correct OS identity through a supported
+setup execution path; retain the existing authenticated remote-administration requirements.
+Configure explicitly trusted proxy forwarding for the actual deployment topology rather than
+trusting arbitrary forwarded headers. The public origin, issuer, audience and policy settings
+are still required.
 
 ## Run the GHCR image
 
@@ -112,18 +169,45 @@ gh attestation verify idunno.Bluesky.Labeler.image-digest.txt --repo blowdart/id
 docker pull ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>
 ```
 
-The image runs as UID 1654, listens on port 8080 and includes persistent SQLite defaults for
-`/data/labels.db`. Mount `/data` as durable storage, the key directory read-only, and a
+The image runs as UID 1654, listens on port 8080 and includes SQLite defaults for
+`/data/labels.db`. When using SQLite and PEM keys, mount `/data` as durable storage, the key directory read-only, and a
 service-owned mode-`0700` socket directory at `/run/labeler`. A bind mount replaces the image's
 directory permissions: set its ownership to UID 1654 and mode to `0700` on the host too.
 Supply the required identity, policy and
 administration audience settings separately. For remote databases, set
 `Labeler__DatabaseProvider` and `Labeler__ConnectionString` using a secret provider. A
-container deployment must retain its external database, configuration, key files and active
-key state when replacing the image.
+container deployment must retain its external database, configuration, key material and active
+key state when replacing the image. Environment-backed deployments use the shared database and
+encrypted platform variables instead of key/data mounts.
 
-The image exposes `/health/labeler/live` and `/health/labeler/ready`. Liveness does not require
-database access; readiness verifies the publisher and durable store. Configure WebSocket
+The image exposes `/health/labeler/live` and `/health/labeler/ready` through the standard
+ASP.NET Core health-check middleware. Liveness does not require database access; readiness
+verifies the publisher and durable store. Its Docker `HEALTHCHECK` probes readiness on
+`http://127.0.0.1:8080/health/labeler/ready` every 30 seconds, with a 30-second startup grace
+period, a 10-second process timeout and three failures before marking the container unhealthy.
+It runs `dotnet Samples.LabelerHost.dll --health-check <URL>` as the container user, without
+starting another host or loading configuration, keys or database connections. The probe accepts
+only HTTP 200, does not follow redirects or use an outbound HTTP proxy, and has a five-second
+HTTP timeout. No curl installation is required.
+
+Docker Compose inherits this check from the image. If you change the container's listening port
+or use HTTPS-only binding, override the check with the actual internal readiness URL, for example:
+
+```yaml
+healthcheck:
+  test: ["CMD", "dotnet", "Samples.LabelerHost.dll", "--health-check", "http://127.0.0.1:8081/health/labeler/ready"]
+  interval: 30s
+  timeout: 10s
+  start_period: 30s
+  retries: 3
+```
+
+An HTTPS probe requires a certificate trusted by the container and valid for the probe hostname.
+Published host ports do not change the internal probe URL. Maintenance and draining deliberately
+make readiness fail; do not configure automatic restarts solely on failed readiness. Docker's
+health status does not itself restart a container or remove it from traffic. Configure your
+platform to use readiness for routing and `/health/labeler/live` for separate liveness checks.
+Configure WebSocket
 forwarding, TLS termination, idle timeouts, graceful shutdown and readiness-based traffic
 draining at the platform boundary. A filesystem Unix socket can be shared with a host-side
 CLI only when the deployment platform supports a protected bind-mounted socket directory and

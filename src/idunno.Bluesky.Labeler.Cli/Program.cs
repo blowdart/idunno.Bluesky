@@ -12,6 +12,8 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.OAuthCallback;
 using idunno.Bluesky.AspNet.Labeler;
+using idunno.Bluesky.Labeler.Administration;
+using idunno.Bluesky.Labeler.Identity;
 
 namespace idunno.Bluesky.Labeler.Cli;
 

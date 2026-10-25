@@ -82,6 +82,13 @@ CREATE TABLE IF NOT EXISTS label_maintenance (
     key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1)),
     CHECK(checkpoint>=0 AND checkpoint<=through_seq)
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_signing_selection (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    stream_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    issuer TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    key_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    public_key VARCHAR(512) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_hosts (
     host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     started_ms BIGINT NOT NULL,
@@ -100,4 +107,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 ) ENGINE=InnoDB;
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 7) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 8) ON DUPLICATE KEY UPDATE id=id;

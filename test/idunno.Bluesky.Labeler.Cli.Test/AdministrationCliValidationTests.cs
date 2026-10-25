@@ -7,6 +7,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.AspNet.Labeler;
+using idunno.Bluesky.Labeler.Administration;
 
 namespace idunno.Bluesky.Labeler.Cli.Test;
 

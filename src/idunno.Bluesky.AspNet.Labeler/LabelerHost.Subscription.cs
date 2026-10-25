@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Net.WebSockets;
 
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

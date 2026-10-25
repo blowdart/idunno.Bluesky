@@ -41,11 +41,15 @@
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
 * Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that snapshots caller-owned batches and preserves label fields and sequence positions.
 * Retirement timestamp lookup tolerates equal-time CID variants without weakening ordinary decision ambiguity checks; rotation verifies every replacement signature against the persisted public key before advancing.
+* Added public-only durable signing-key selection contracts with seed-once initialization and verified, drained rotation activation.
+* Organized the unreleased labeler APIs into `Issuance`, `Administration`, `Maintenance`, `Signing`, `Storage` and `Identity` namespaces/directories, with one type per file. Consumers must update feature imports; common targets and result/error types remain in the root namespace.
 
 #### Samples
 
 * Added a standalone labeler host sample with all three storage providers, mounted-PEM key-ring example, public distribution endpoints, and protected local and remote administration.
 * Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
+* Configures the standalone labeler image's Docker health check to probe ASP.NET readiness using a bounded built-in .NET probe, without curl or starting another host.
+* Supports separate protected environment variables for label-signing keys and database-backed active selection, allowing volume-free deployments such as DigitalOcean App Platform while retaining the PEM provider.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
@@ -59,6 +63,7 @@
 * Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
 * Adds a restartable schema-version-six decision identity index and bounded batch decision reads so retirement does not scan all label history for each label.
 * Adds schema-version-seven host signing roles so only signing participants must activate replacement keys; legacy hosts conservatively retain their signing role.
+* Adds schema-version-eight issuer/stream-bound signing-key selection, storing only key identities and public keys and rejecting stale or premature activation.
 
 #### idunno.AtProto.Types
 

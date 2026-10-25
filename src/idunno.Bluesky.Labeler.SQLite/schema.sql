@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS label_maintenance (
     checkpoint INTEGER NOT NULL DEFAULT 0 CHECK(checkpoint>=0 AND checkpoint<=through_seq),
     key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1))
 );
+CREATE TABLE IF NOT EXISTS label_signing_selection (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    stream_id TEXT NOT NULL,
+    issuer TEXT NOT NULL,
+    key_id TEXT NOT NULL,
+    public_key TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS label_hosts (
     host_id TEXT PRIMARY KEY,
     started_ms INTEGER NOT NULL,
@@ -84,4 +91,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT OR IGNORE INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000');
-INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 7);
+INSERT OR IGNORE INTO label_schema(id, version) VALUES(1, 8);

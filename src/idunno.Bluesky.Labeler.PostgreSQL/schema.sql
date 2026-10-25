@@ -66,6 +66,13 @@ CREATE TABLE IF NOT EXISTS label_maintenance (
     checkpoint BIGINT NOT NULL DEFAULT 0 CHECK(checkpoint>=0 AND checkpoint<=through_seq),
     key_verified INTEGER NOT NULL DEFAULT 0 CHECK(key_verified IN (0,1))
 );
+CREATE TABLE IF NOT EXISTS label_signing_selection (
+    id INTEGER PRIMARY KEY CHECK(id=1),
+    stream_id VARCHAR(32) COLLATE "C" NOT NULL,
+    issuer TEXT COLLATE "C" NOT NULL,
+    key_id VARCHAR(128) COLLATE "C" NOT NULL,
+    public_key VARCHAR(512) COLLATE "C" NOT NULL
+);
 CREATE TABLE IF NOT EXISTS label_hosts (
     host_id VARCHAR(32) COLLATE "C" PRIMARY KEY,
     started_ms BIGINT NOT NULL,
@@ -84,4 +91,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 7) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 8) ON CONFLICT DO NOTHING;

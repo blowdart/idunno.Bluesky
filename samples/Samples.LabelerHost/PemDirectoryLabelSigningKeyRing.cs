@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Signing;
 
 namespace Samples.LabelerHost;
 

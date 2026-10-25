@@ -5,7 +5,9 @@ using System.Data.Common;
 using System.Text.Json;
 
 using idunno.AtProto;
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;

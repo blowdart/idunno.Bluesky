@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.Bluesky.Labeler.Issuance;
 namespace idunno.Bluesky.Labeler.Test;
 
 /// <summary>Supplies a mutable test policy or a classified policy-unavailable result.</summary>

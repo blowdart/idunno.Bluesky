@@ -9,6 +9,11 @@ must consume this boundary rather than construct actor DIDs from request fields 
 The `dev.idunno.labeler.admin.*` methods are this library's administration protocol, not Ozone or
 standard AT Protocol moderation endpoints.
 
+Team services, callers, permissions and administrative storage contracts are in
+`idunno.Bluesky.Labeler.Administration`. Maintenance coordination is in `.Maintenance`,
+signing providers are in `.Signing`, and common targets/results remain in
+`idunno.Bluesky.Labeler`. HTTP hosting extensions remain in `idunno.Bluesky.AspNet.Labeler`.
+
 ## Roles and persistence
 
 | Role | Permission |
@@ -23,7 +28,7 @@ grant, not proof that a new member has signed in. Members authenticate independe
 
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
-Schema version seven upgrades versions one through six additively through `InitializeAsync`.
+Schema version eight upgrades versions one through seven additively through `InitializeAsync`.
 Initialization also installs the administrative token-expiry index on existing version-four
 databases so cleanup can select expired replay entries without scanning all retained tokens.
 Version five adds durable coordinated maintenance and signing-key rotation state. Version six
@@ -31,6 +36,8 @@ adds an indexed subject/value identity for bounded decision lookups during retir
 backfills resume without changing signed history. Version seven persists immutable host signing
 roles; existing hosts remain signing participants until stopped and replaced with newly registered
 processes. Keyless replicas must still drain but do not activate signing keys.
+Version eight adds optional database-backed signing selection, binding the key ID and public
+key to the issuer/stream without persisting private keys; see [deployment](deployment.md).
 Back up all tables together and stop older
 application versions before upgrading.
 

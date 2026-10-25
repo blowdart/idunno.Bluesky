@@ -8,6 +8,9 @@ using System.Net.WebSockets;
 
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Signing;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;

@@ -3,7 +3,7 @@
 
 using System.Data.Common;
 
-using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Http;
 

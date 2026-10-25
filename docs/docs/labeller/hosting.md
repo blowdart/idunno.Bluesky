@@ -18,6 +18,7 @@ The host validates the issuer and schema but never migrates a database while ser
 using idunno.AtProto;
 using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Storage;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 Did issuer = new("did:plc:your-labeler");
@@ -79,7 +80,8 @@ but would require signing-key access during requests and would only repair newly
 copies, not labels already cached by consumers.
 
 Changing a signing key therefore does not automatically re-sign retained labels. Use
-`LabelSigningKeyRotation` as an explicit maintenance operation, following the
+`LabelSigningKeyRotation` from `idunno.Bluesky.Labeler.Signing` as an explicit maintenance
+operation, following the
 [key rotation guidance](overview.md#2-set-things-up-and-announce-that-youre-open).
 It preserves signed fields, creation timestamps and stream sequences without emitting
 replacement events. Retain old public verification keys for historical signatures;

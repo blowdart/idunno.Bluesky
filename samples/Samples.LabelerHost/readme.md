@@ -16,6 +16,11 @@ dotnet run --project samples\Samples.LabelerHost
 ```
 
 The host requires an issuer DID, explicit HTTPS public origin, database provider and connection,
-an installed signing-key PEM directory with a persisted active-key ID, a DID service audience,
+either an installed PEM directory with a persisted active-key ID or separately configured
+environment keys with database-backed selection, a DID service audience,
 and declared label policy. Missing values fail at startup rather than enabling a permissive
 default.
+
+For volume-free hosting, select `Labeler__SigningKeyProvider=environment` and supply each
+`Labeler__SigningKeys__<index>__PrivateKeyBase64` through the platform's encrypted environment
+settings, with a corresponding `Id`. The deployment guide describes first setup and rotation.
