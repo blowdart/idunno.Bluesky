@@ -70,7 +70,10 @@ internal sealed partial class LabelerHost(
         }
 
         _streamId = state.StreamId;
-        LabelMaintenanceState maintenance = await maintenanceStore.RegisterHostAsync(_instanceId, cancellationToken).ConfigureAwait(false);
+        LabelMaintenanceState maintenance = await maintenanceStore.RegisterHostWithSigningRoleAsync(
+            instanceId: _instanceId,
+            requiresSigningKey: signingKeyRing is not null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         _registered = true;
         ApplyMaintenanceState(maintenance);
         _stoppingRegistration = applicationLifetime.ApplicationStopping.Register(BeginLocalDrain);
@@ -324,7 +327,7 @@ internal sealed partial class LabelerHost(
 
         if (signingKeyRing is null)
         {
-            throw new InvalidOperationException("This host has no signing-key ring for the completed rotation.");
+            return state;
         }
 
         LabelMaintenanceHost? participant = state.Hosts.FirstOrDefault(host => host.InstanceId == _instanceId);

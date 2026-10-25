@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Labeler.Storage;
 internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetrics metrics)
     : ILabelStore, ILabelAdministrationStore, ILabelMaintenanceStore
 {
-    private const int SchemaVersion = 6;
+    private const int SchemaVersion = 7;
     private const long MaximumSequence = 9_007_199_254_740_991;
     private static readonly UTF8Encoding s_strictUtf8 = new(false, true);
     /// <summary>Gets or sets the test hook for failures known to occur before commit submission.</summary>
@@ -72,13 +72,22 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             transaction: transaction,
             sql: schema,
             token: token).ConfigureAwait(false);
-        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v6.
+        // Backfill is repeatable after interrupted nontransactional MySQL DDL. Old writers reject v7.
         await BackfillDistributionAsync(connection, transaction, token).ConfigureAwait(false);
         await BackfillDecisionIndexAsync(connection, transaction, token).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection,
             transaction: transaction,
-            sql: "UPDATE label_schema SET version=6 WHERE id=1",
+            sql: """
+            INSERT INTO label_host_roles(host_id, requires_signing_key)
+            SELECT h.host_id, 1 FROM label_hosts h
+            WHERE NOT EXISTS (SELECT 1 FROM label_host_roles r WHERE r.host_id=h.host_id)
+            """,
+            token: token).ConfigureAwait(false);
+        await ExecuteAsync(
+            connection: connection,
+            transaction: transaction,
+            sql: "UPDATE label_schema SET version=7 WHERE id=1",
             token: token).ConfigureAwait(false);
     }
 

@@ -17,9 +17,7 @@ internal sealed partial class LabelerHost
     /// <summary>Admits bounded public subscriptions and pairs each send loop with a cancellable receive drain.</summary>
     internal async Task SubscribeAsync(HttpContext context)
     {
-        using CancellationTokenSource admissionLifetime = CancellationTokenSource.CreateLinkedTokenSource(
-            context.RequestAborted, _lifetime.Token);
-        using IDisposable? admission = await AdmitTrafficAsync(context, admissionLifetime.Token).ConfigureAwait(false);
+        using IDisposable? admission = await AdmitSubscriptionAsync(context).ConfigureAwait(false);
         if (admission is null)
         {
             return;
@@ -83,6 +81,29 @@ internal sealed partial class LabelerHost
         {
             Interlocked.Decrement(ref _subscriptions);
             metrics.Subscription(-1);
+        }
+    }
+
+    /// <summary>Bounds the upgrade's maintenance checks without imposing a lifetime on an established socket.</summary>
+    private async Task<IDisposable?> AdmitSubscriptionAsync(HttpContext context)
+    {
+        using CancellationTokenSource deadline = new(options.QueryTimeout, clock);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(
+            context.RequestAborted, _lifetime.Token, deadline.Token);
+        try
+        {
+            return await AdmitTrafficAsync(context, linked.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested)
+        {
+            metrics.Failure("subscription_admission_deadline");
+            context.Response.Headers.RetryAfter = "1";
+            await ErrorAsync(
+                context: context,
+                status: 503,
+                error: "ServiceUnavailable",
+                message: "The subscription admission deadline or host lifetime ended.").ConfigureAwait(false);
+            return null;
         }
     }
 

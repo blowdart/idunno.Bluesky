@@ -23,12 +23,15 @@ grant, not proof that a new member has signed in. Members authenticate independe
 
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
-Schema version six upgrades versions one through five additively through `InitializeAsync`.
+Schema version seven upgrades versions one through six additively through `InitializeAsync`.
 Initialization also installs the administrative token-expiry index on existing version-four
 databases so cleanup can select expired replay entries without scanning all retained tokens.
 Version five adds durable coordinated maintenance and signing-key rotation state. Version six
 adds an indexed subject/value identity for bounded decision lookups during retirement; interrupted
-backfills resume without changing signed history. Back up all tables together and stop older
+backfills resume without changing signed history. Version seven persists immutable host signing
+roles; existing hosts remain signing participants until stopped and replaced with newly registered
+processes. Keyless replicas must still drain but do not activate signing keys.
+Back up all tables together and stop older
 application versions before upgrading.
 
 Team changes, last-administrator checks and label commit fences use the same provider serialization
@@ -206,6 +209,9 @@ explicit trusted-proxy configuration when HTTPS terminates before the container.
 The document declares the permitted scope superset; request only needed method-bound permissions
 at sign-in. Add `rpc:<administrative-method>?aud=<encoded-DID#service>` per method. The member's PDS
 checks the requested service token's `lxm` permission, not a scope naming `getServiceAuth` itself.
+The native metadata also advertises `identity:*`. Only PLC publication and recovery request that
+permission (alongside `atproto`) because they mutate identity through the PDS; ordinary labeler
+administration continues to request only its method-bound service permission.
 Metadata can supply a name/logo, but an authorization server need not display untrusted branding.
 
 After OAuth establishes the expected account DID and authoritative PDS/authorization-server
@@ -399,8 +405,9 @@ service failure, and 130 for cancellation.
 
 The CLI exposes shared team, audit, publication/lifecycle state, operation receipts, issuance,
 negation, enrollment, team changes, resumable retirement, and coordinated signing-key rotation.
-Rotation uses durable maintenance shared by all hosts; all participating hosts must drain and
-acknowledge the replacement key before distribution reopens. `rotation recover-plc` checks the
+Rotation uses durable maintenance shared by all hosts; all participating hosts must drain, and
+signing participants must acknowledge the replacement key before distribution reopens.
+Distribution-only replicas remain keyless through rotation and restart. `rotation recover-plc` checks the
 current DID document before resubmitting a saved signed operation.
 
 The `service-update` command is limited to Docker Compose deployments using the published GHCR

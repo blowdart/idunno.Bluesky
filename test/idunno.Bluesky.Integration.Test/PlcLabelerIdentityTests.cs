@@ -6,6 +6,8 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Duende.IdentityModel.OidcClient.DPoP;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
@@ -90,9 +92,11 @@ public class PlcLabelerIdentityTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task PlcIdentityUpdatePreservesExistingEntriesAndVerifiesPublishedDocument(bool legacy)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task PlcIdentityUpdatePreservesExistingEntriesAndVerifiesPublishedDocument(bool legacy, bool identityPermission)
     {
         using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
         JsonObject? signedRequest = null;
@@ -129,6 +133,17 @@ public class PlcLabelerIdentityTests
             }
 
             Assert.Equal("POST", context.Request.Method);
+            Assert.StartsWith("DPoP ", context.Request.Headers.Authorization.ToString(), StringComparison.Ordinal);
+            Assert.False(string.IsNullOrEmpty(context.Request.Headers["DPoP"]));
+            if (!identityPermission)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsync(
+                    """{"error":"InsufficientScope","message":"identity:* is required"}""",
+                    TestContext.Current.CancellationToken);
+                return;
+            }
+
             if (context.Request.Path == "/xrpc/com.atproto.identity.signPlcOperation")
             {
                 using JsonDocument body = await JsonDocument.ParseAsync(
@@ -172,16 +187,72 @@ public class PlcLabelerIdentityTests
             await context.Response.WriteAsync("{}", TestContext.Current.CancellationToken);
         });
         using BlueskyAgent agent = CreateAgent(server);
+        agent.Credentials = new DPoPAccessCredentials(
+            service: TestServerBuilder.DefaultUri,
+            accessJwt: JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString()),
+            refreshToken: "refreshToken",
+            dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+            dPoPNonce: "nonce")
+        {
+            RequestedScope = identityPermission ? "atproto identity:*" : "atproto"
+        };
 
         PlcLabelerIdentityUpdateResult result = await agent.UpdatePlcLabelerIdentity(
             signingKey,
             s_endpoint,
             cancellationToken: TestContext.Current.CancellationToken);
 
+        if (!identityPermission)
+        {
+            Assert.Equal(PlcLabelerIdentityUpdateStage.SigningFailed, result.Stage);
+            Assert.Equal(HttpStatusCode.Forbidden, result.StatusCode);
+            Assert.Equal("InsufficientScope", result.Error?.Error);
+            Assert.Equal(0, submissions);
+            return;
+        }
+
         Assert.Equal(PlcLabelerIdentityUpdateStage.Verified, result.Stage);
         Assert.Equal(2, documentReads);
         Assert.Equal(1, submissions);
         Assert.Null(result.RecoveryAction);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PlcRecoverySubmissionSurfacesPdsIdentityPermissionEnforcement(bool identityPermission)
+    {
+        using LabelSigningKey signingKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        int submissions = 0;
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            submissions++;
+            Assert.Equal("/xrpc/com.atproto.identity.submitPlcOperation", context.Request.Path);
+            Assert.StartsWith("DPoP ", context.Request.Headers.Authorization.ToString(), StringComparison.Ordinal);
+            Assert.False(string.IsNullOrEmpty(context.Request.Headers["DPoP"]));
+            context.Response.ContentType = "application/json";
+            context.Response.StatusCode = identityPermission ? StatusCodes.Status200OK : StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsync(
+                identityPermission ? "{}" : """{"error":"InsufficientScope","message":"identity:* is required"}""",
+                TestContext.Current.CancellationToken);
+        });
+        using BlueskyAgent agent = CreateAgent(server);
+        agent.Credentials = new DPoPAccessCredentials(
+            service: TestServerBuilder.DefaultUri,
+            accessJwt: JwtBuilder.CreateJwt(s_did, TestServerBuilder.DefaultUri.ToString()),
+            refreshToken: "refreshToken",
+            dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+            dPoPNonce: "nonce")
+        {
+            RequestedScope = identityPermission ? "atproto identity:*" : "atproto"
+        };
+        AtProtoHttpResult<EmptyResponse> result = await agent.SubmitPlcLabelerIdentityOperation(
+            JsonSerializer.SerializeToElement(CreateSignedOperation(signingKey), AtProtoJsonSerializerOptions.Default),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(identityPermission, result.Succeeded);
+        Assert.Equal(identityPermission ? HttpStatusCode.OK : HttpStatusCode.Forbidden, result.StatusCode);
+        Assert.Equal(identityPermission ? null : "InsufficientScope", result.AtErrorDetail?.Error);
+        Assert.Equal(1, submissions);
     }
 
     [Fact]

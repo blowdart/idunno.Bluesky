@@ -742,6 +742,13 @@ internal static partial class Program
         return command;
     }
 
+    /// <summary>Requests identity mutation permission only for PLC publication and recovery sign-ins.</summary>
+    internal static OAuthOptions CreatePlcOAuthOptions(Uri clientId) => new()
+    {
+        ClientId = clientId.AbsoluteUri,
+        Scopes = ["atproto", "identity:*"]
+    };
+
     /// <summary>Authenticates, avoids duplicate submission, and verifies a recovered PLC identity operation.</summary>
     private static async Task<int> ExecutePlcRecoveryAsync(
         Did did,
@@ -752,11 +759,7 @@ internal static partial class Program
         JsonElement signedOperation,
         CancellationToken cancellationToken)
     {
-        OAuthOptions oauthOptions = new()
-        {
-            ClientId = clientId.AbsoluteUri,
-            Scopes = ["atproto"]
-        };
+        OAuthOptions oauthOptions = CreatePlcOAuthOptions(clientId);
         using BlueskyAgent agent = new(new BlueskyAgentOptions { OAuthOptions = oauthOptions });
         CallbackServer callback = await CallbackServer.CreateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         await using ConfiguredAsyncDisposable callbackLifetime = callback.ConfigureAwait(false);
@@ -850,11 +853,7 @@ internal static partial class Program
         string? authorizationToken,
         CancellationToken cancellationToken)
     {
-        OAuthOptions oauthOptions = new()
-        {
-            ClientId = clientId.AbsoluteUri,
-            Scopes = ["atproto"]
-        };
+        OAuthOptions oauthOptions = CreatePlcOAuthOptions(clientId);
         BlueskyAgentOptions options = new()
         {
             OAuthOptions = oauthOptions

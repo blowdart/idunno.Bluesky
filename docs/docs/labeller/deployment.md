@@ -40,7 +40,8 @@ The host serves `/native-client-metadata.json` publicly without authentication o
 Its client ID is the configured `Labeler:PublicEndpoint` origin plus that path, never the
 incoming `Host` header. The native public-client document declares `http://127.0.0.1/` as
 its desktop loopback callback, with no fixed port, and the method-bound administrative scope
-superset for `Labeler:AdministrationAudience`. Use this HTTPS metadata URL as the CLI's
+superset for `Labeler:AdministrationAudience`, plus `identity:*` for PLC identity publication
+and recovery. Only those PLC commands request identity mutation permission. Use this HTTPS metadata URL as the CLI's
 `--client-id`; the CLI requests only the method it is executing. The headless host does not
 run the desktop callback listener or distribute an OAuth client secret.
 

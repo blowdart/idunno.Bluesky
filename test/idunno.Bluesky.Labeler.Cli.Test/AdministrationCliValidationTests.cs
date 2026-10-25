@@ -12,6 +12,15 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 
 public class AdministrationCliValidationTests
 {
+    [Fact]
+    public void PlcSignInsRequestOnlyIdentityPermissions()
+    {
+        Uri clientId = new("https://labeler.example/native-client-metadata.json");
+        AtProto.Authentication.OAuthOptions options = Program.CreatePlcOAuthOptions(clientId);
+        Assert.Equal(clientId.AbsoluteUri, options.ClientId);
+        Assert.Equal(["atproto", "identity:*"], options.Scopes);
+    }
+
     [Theory]
     [InlineData("https://labeler.example", true)]
     [InlineData("http://127.0.0.1:8080/health/labeler/ready", true)]

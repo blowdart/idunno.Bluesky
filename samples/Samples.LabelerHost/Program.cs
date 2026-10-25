@@ -156,7 +156,7 @@ internal static class Program
             ClientName = "Labeler administration",
             ClientUri = publicEndpoint,
             ReturnUri = new Uri("http://127.0.0.1/"),
-            Scopes = ["atproto", .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")]
+            Scopes = ["atproto", "identity:*", .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")]
         };
     }
 

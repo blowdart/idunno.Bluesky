@@ -386,6 +386,7 @@ idunno.Bluesky.Labeler.ILabelMaintenanceStore.ConfirmHostStoppedAsync(string! op
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.GetMaintenanceStateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.HeartbeatHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.RegisterHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
+idunno.Bluesky.Labeler.ILabelMaintenanceStore.RegisterHostWithSigningRoleAsync(System.Guid instanceId, bool requiresSigningKey, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.ReplaceRotationBatchAsync(string! operationId, long expectedAfterSequence, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.StoredLabel!>! replacementLabels, long checkpoint, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.StopHostAsync(System.Guid instanceId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
 idunno.Bluesky.Labeler.ILabelMaintenanceStore.VerifyRotationKeyPublicationAsync(string! operationId, string! replacementPublicKey, idunno.Bluesky.Labeler.LabelAdministrationCaller? caller = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelMaintenanceState!>!
@@ -404,6 +405,8 @@ idunno.Bluesky.Labeler.LabelMaintenanceHost.InstanceId.get -> System.Guid
 idunno.Bluesky.Labeler.LabelMaintenanceHost.InstanceId.init -> void
 idunno.Bluesky.Labeler.LabelMaintenanceHost.KeyActivated.get -> bool
 idunno.Bluesky.Labeler.LabelMaintenanceHost.KeyActivated.init -> void
+idunno.Bluesky.Labeler.LabelMaintenanceHost.RequiresSigningKey.get -> bool
+idunno.Bluesky.Labeler.LabelMaintenanceHost.RequiresSigningKey.init -> void
 idunno.Bluesky.Labeler.LabelMaintenanceHost.LabelMaintenanceHost(System.Guid InstanceId, bool Acknowledged, bool KeyActivated, bool Stopped, System.DateTimeOffset LastSeen) -> void
 idunno.Bluesky.Labeler.LabelMaintenanceHost.LastSeen.get -> System.DateTimeOffset
 idunno.Bluesky.Labeler.LabelMaintenanceHost.LastSeen.init -> void

@@ -26,7 +26,12 @@ public enum LabelMaintenancePhase
 /// <param name="KeyActivated">Whether the host activated the replacement signing key.</param>
 /// <param name="Stopped">Whether the host has been explicitly confirmed as stopped.</param>
 /// <param name="LastSeen">The time the host last refreshed its durable presence.</param>
-public sealed record LabelMaintenanceHost(Guid InstanceId, bool Acknowledged, bool KeyActivated, bool Stopped, DateTimeOffset LastSeen);
+public sealed record LabelMaintenanceHost(Guid InstanceId, bool Acknowledged, bool KeyActivated, bool Stopped, DateTimeOffset LastSeen)
+{
+    /// <summary>Gets a value that indicates whether the host must activate the replacement signing key.</summary>
+    /// <value><see langword="true"/> for signing participants; <see langword="false"/> for keyless distribution replicas.</value>
+    public bool RequiresSigningKey { get; init; } = true;
+}
 
 /// <summary>Describes durable maintenance and signing-key rotation progress.</summary>
 /// <param name="OperationId">The stable rotation operation identity, or <see langword="null"/> when no rotation exists.</param>
@@ -74,6 +79,18 @@ public interface ILabelMaintenanceStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The current maintenance state.</returns>
     Task<LabelMaintenanceState> RegisterHostAsync(Guid instanceId, CancellationToken cancellationToken = default);
+
+    /// <summary>Registers a process with an immutable signing role while returning current maintenance progress.</summary>
+    /// <param name="instanceId">The process-unique host identity.</param>
+    /// <param name="requiresSigningKey"><see langword="true"/> to require replacement-key activation; otherwise, <see langword="false"/> for a keyless distribution replica.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The current maintenance state.</returns>
+    /// <exception cref="InvalidOperationException">The host has stopped or was registered with a different signing role.</exception>
+    /// <remarks><para>Every host must drain regardless of its signing role. <see cref="RegisterHostAsync"/> registers a signing participant.</para></remarks>
+    Task<LabelMaintenanceState> RegisterHostWithSigningRoleAsync(
+        Guid instanceId,
+        bool requiresSigningKey,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Refreshes a registered host's presence and reads current maintenance progress.</summary>
     /// <param name="instanceId">The registered process identity.</param>

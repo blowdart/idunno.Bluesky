@@ -21,9 +21,11 @@ public class LifecycleTests
     private const string Prefix = "idunno.bluesky.labeler.host.";
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task QueryDeadlineCoversMaintenanceRefreshAndGateWait(bool waitingForGate)
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task RequestDeadlineCoversMaintenanceRefreshAndGateWait(bool waitingForGate, bool subscription)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
@@ -34,12 +36,14 @@ public class LifecycleTests
             entered.TrySetResult();
             await release.Task.WaitAsync(cancellation);
         };
-        Task<HttpResponseMessage> first = fixture.Client.GetAsync(
-            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        string path = subscription
+            ? "/xrpc/com.atproto.label.subscribeLabels"
+            : "/xrpc/com.atproto.label.queryLabels?uriPatterns=*";
+        Task<HttpResponseMessage> first = fixture.Client.GetAsync(path, token);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
         await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(10));
         Task<HttpResponseMessage> request = waitingForGate
-            ? fixture.Client.GetAsync("/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token)
+            ? fixture.Client.GetAsync(path, token)
             : first;
         if (waitingForGate)
         {
@@ -51,12 +55,102 @@ public class LifecycleTests
             using HttpResponseMessage response = await request.WaitAsync(TimeSpan.FromSeconds(30), token);
             Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
             Assert.Contains("deadline", await response.Content.ReadAsStringAsync(token));
+            if (subscription)
+            {
+                Assert.Equal(TimeSpan.FromSeconds(1), response.Headers.RetryAfter!.Delta);
+            }
         }
         finally
         {
             release.TrySetResult();
             using HttpResponseMessage firstResponse = await first;
         }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task KeylessReplicasDrainAndRecoverAcrossRotationAndRestart(bool restartDuringMaintenance)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey originalKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using LabelSigningKey replacementKey = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        TestKeyRing ring = new(originalKey, replacementKey);
+        await using TestServerBuilder signer = await TestServerBuilder.CreateAsync(signingKeyRing: ring);
+        await using TestServerBuilder replica = await TestServerBuilder.CreateAsync(database: signer.DatabasePath);
+        ILabelMaintenanceStore maintenance = signer.Services.GetRequiredService<ILabelMaintenanceStore>();
+        const string operation = "keyless-rotation";
+        await maintenance.BeginRotationAsync(
+            operationId: operation,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: replacementKey.ExportPublicKeyMultibase(),
+            cancellationToken: token);
+        signer.Clock.Advance(TimeSpan.FromSeconds(1));
+        replica.Clock.Advance(TimeSpan.FromSeconds(1));
+        await signer.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        await replica.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        LabelMaintenanceState drained = await maintenance.GetMaintenanceStateAsync(token);
+        Assert.True(drained.AllHostsDrained);
+        Assert.Single(drained.Hosts, host => host.RequiresSigningKey);
+        Assert.Single(drained.Hosts, host => !host.RequiresSigningKey);
+        await maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token);
+        await maintenance.VerifyRotationKeyPublicationAsync(
+            operation, replacementKey.ExportPublicKeyMultibase(), cancellationToken: token);
+        using HttpResponseMessage signerUnavailable = await signer.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, signerUnavailable.StatusCode);
+        using HttpResponseMessage replicaUnavailable = await replica.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, replicaUnavailable.StatusCode);
+        Assert.Equal("replacement", ring.ActiveKeyId);
+        Assert.False(Assert.Single((await maintenance.GetMaintenanceStateAsync(token)).Hosts,
+            host => !host.RequiresSigningKey).KeyActivated);
+        await replica.StopAsync();
+        if (!restartDuringMaintenance)
+        {
+            await maintenance.CompleteRotationAsync(operation, "replacement", cancellationToken: token);
+        }
+
+        await using TestServerBuilder restarted = await TestServerBuilder.CreateAsync(database: signer.DatabasePath);
+        if (restartDuringMaintenance)
+        {
+            Assert.True((await maintenance.GetMaintenanceStateAsync(token)).AllHostsDrained);
+            await maintenance.CompleteRotationAsync(operation, "replacement", cancellationToken: token);
+            restarted.Clock.Advance(TimeSpan.FromSeconds(1));
+            await restarted.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        }
+
+        using HttpResponseMessage reopened = await restarted.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        Assert.Equal(HttpStatusCode.OK, reopened.StatusCode);
+        using HttpResponseMessage healthy = await restarted.Client.GetAsync("/health/labeler/ready", token);
+        Assert.Equal(HttpStatusCode.OK, healthy.StatusCode);
+    }
+
+    [Fact]
+    public async Task EstablishedSubscriptionOutlivesAdmissionDeadline()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        using WebSocket socket = await fixture.ConnectAsync();
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        fixture.Clock.Advance(TimeSpan.FromSeconds(11));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(1));
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        await fixture.Store.AppendAsync(
+            "after-admission-deadline",
+            [new SignedLabelSnapshot(key.CreateLabel(
+                source: TestServerBuilder.s_issuer,
+                uri: "did:plc:subject",
+                value: "spam",
+                creationTimestamp: fixture.Clock.GetUtcNow()))],
+            cancellationToken: token);
+        await fixture.Store.PublishAsync(cancellationToken: token);
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.NotEmpty(await ReceiveAsync(socket));
+        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Acknowledged.", token);
     }
 
     [Theory]

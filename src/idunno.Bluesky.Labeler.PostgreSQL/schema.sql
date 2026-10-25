@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS label_hosts (
     last_seen_ms BIGINT NOT NULL,
     stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
 );
+CREATE TABLE IF NOT EXISTS label_host_roles (
+    host_id VARCHAR(32) COLLATE "C" PRIMARY KEY,
+    requires_signing_key INTEGER NOT NULL CHECK(requires_signing_key IN (0,1))
+);
 CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     operation_id TEXT COLLATE "C" NOT NULL,
     host_id VARCHAR(32) COLLATE "C" NOT NULL,
@@ -80,4 +84,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 6) ON CONFLICT DO NOTHING;
+INSERT INTO label_schema(id, version) VALUES(1, 7) ON CONFLICT DO NOTHING;

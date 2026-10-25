@@ -38,7 +38,13 @@ internal abstract partial class RelationalLabelStore
         }
     }
 
-    public Task<LabelMaintenanceState> RegisterHostAsync(Guid instanceId, CancellationToken cancellationToken = default)
+    public Task<LabelMaintenanceState> RegisterHostAsync(Guid instanceId, CancellationToken cancellationToken = default) =>
+        RegisterHostWithSigningRoleAsync(instanceId, requiresSigningKey: true, cancellationToken);
+
+    public Task<LabelMaintenanceState> RegisterHostWithSigningRoleAsync(
+        Guid instanceId,
+        bool requiresSigningKey,
+        CancellationToken cancellationToken = default)
     {
         if (instanceId == Guid.Empty)
         {
@@ -66,6 +72,13 @@ internal abstract partial class RelationalLabelStore
                         token: cancellationToken,
                         ("@host", hostId),
                         ("@now", now)).ConfigureAwait(false);
+                    await ExecuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "INSERT INTO label_host_roles(host_id, requires_signing_key) VALUES(@host,@signing)",
+                        token: cancellationToken,
+                        ("@host", hostId),
+                        ("@signing", requiresSigningKey ? 1 : 0)).ConfigureAwait(false);
                 }
                 else if (Integer(existing) != 0)
                 {
@@ -73,6 +86,17 @@ internal abstract partial class RelationalLabelStore
                 }
                 else
                 {
+                    object? signing = await ScalarAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "SELECT requires_signing_key FROM label_host_roles WHERE host_id=@host",
+                        token: cancellationToken,
+                        ("@host", hostId)).ConfigureAwait(false);
+                    if (Integer(signing) != (requiresSigningKey ? 1 : 0))
+                    {
+                        throw new InvalidOperationException("A registered host's signing role cannot change.");
+                    }
+
                     await ExecuteAsync(
                         connection: connection,
                         transaction: transaction,
@@ -266,7 +290,8 @@ internal abstract partial class RelationalLabelStore
                 LabelMaintenanceState state = await RequireRotationAsync(connection, transaction, operationId, cancellationToken).ConfigureAwait(false);
                 if (state.Phase != LabelMaintenancePhase.ReadyToReopen ||
                     state.ReplacementKeyId != keyId ||
-                    !state.AllHostsDrained)
+                    !state.AllHostsDrained ||
+                    state.Hosts.FirstOrDefault(host => host.InstanceId == instanceId) is not { RequiresSigningKey: true })
                 {
                     throw new InvalidOperationException("The host can activate only the verified replacement key after the full stream is re-signed.");
                 }
@@ -597,7 +622,7 @@ internal abstract partial class RelationalLabelStore
                 if (current.Phase != LabelMaintenancePhase.ReadyToReopen ||
                     !current.KeyPublicationVerified ||
                     !current.AllHostsDrained ||
-                    current.Hosts.Any(host => !host.Stopped && !host.KeyActivated) ||
+                    current.Hosts.Any(host => !host.Stopped && host.RequiresSigningKey && !host.KeyActivated) ||
                     current.LastSequence != current.ThroughSequence ||
                     current.ReplacementKeyId != activeKeyId)
                 {
@@ -678,9 +703,10 @@ internal abstract partial class RelationalLabelStore
                 connection: connection,
                 transaction: transaction,
                 sql: """
-                SELECT p.host_id, p.acknowledged, p.key_activated, h.stopped, h.last_seen_ms
+                SELECT p.host_id, p.acknowledged, p.key_activated, h.stopped, h.last_seen_ms, r.requires_signing_key
                 FROM label_maintenance_hosts p
                 JOIN label_hosts h ON h.host_id=p.host_id
+                LEFT JOIN label_host_roles r ON r.host_id=h.host_id
                 WHERE p.operation_id=@operation
                 ORDER BY p.host_id
                 """,
@@ -692,12 +718,20 @@ internal abstract partial class RelationalLabelStore
                 {
                     while (await hostReader.ReadAsync(token).ConfigureAwait(false))
                     {
+                        if (await hostReader.IsDBNullAsync(5, token).ConfigureAwait(false))
+                        {
+                            throw new InvalidDataException("A maintenance participant has no persisted signing role.");
+                        }
+
                         hosts.Add(new(
                             InstanceId: Guid.ParseExact(hostReader.GetString(0), "N"),
                             Acknowledged: hostReader.GetInt32(1) != 0,
                             KeyActivated: hostReader.GetInt32(2) != 0,
                             Stopped: hostReader.GetInt32(3) != 0,
-                            LastSeen: DateTimeOffset.FromUnixTimeMilliseconds(hostReader.GetInt64(4))));
+                            LastSeen: DateTimeOffset.FromUnixTimeMilliseconds(hostReader.GetInt64(4)))
+                        {
+                            RequiresSigningKey = hostReader.GetInt32(5) != 0
+                        });
                     }
                 }
             }

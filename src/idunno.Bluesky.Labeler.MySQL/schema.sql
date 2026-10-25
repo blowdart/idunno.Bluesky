@@ -88,6 +88,10 @@ CREATE TABLE IF NOT EXISTS label_hosts (
     last_seen_ms BIGINT NOT NULL,
     stopped INTEGER NOT NULL DEFAULT 0 CHECK(stopped IN (0,1))
 ) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_host_roles (
+    host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    requires_signing_key INTEGER NOT NULL CHECK(requires_signing_key IN (0,1))
+) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     operation_id VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
     host_id VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -96,4 +100,4 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 ) ENGINE=InnoDB;
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 6) ON DUPLICATE KEY UPDATE id=id;
+INSERT INTO label_schema(id, version) VALUES(1, 7) ON DUPLICATE KEY UPDATE id=id;

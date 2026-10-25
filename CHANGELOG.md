@@ -20,9 +20,11 @@
 * Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
 * Fences maintenance and retirement mutations against revoked callers, drains in-flight administrative issuance, and verifies each host's replacement key before reopening.
 * Includes maintenance admission in query deadlines and sends a reconnectable maintenance close before cancelling WebSocket receives.
+* Bounds subscription admission with a retryable deadline without limiting established sockets; keeps keyless distribution replicas healthy through rotation and restart while still requiring every host to drain.
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Requests `identity:*` for PLC publication and recovery; the standalone host's native metadata advertises that permission.
 * Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
 * Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
 * Bundles native runtime libraries for executable-only self-updates and validates Compose service names before applying image overrides, honoring extended drain deadlines.
@@ -56,6 +58,7 @@
 * Added schema-version-three distribution metadata with additive upgrades from versions one and two, and safe-integer sequence allocation bounds for protocol delivery.
 * Added named-volume MySQL/PostgreSQL labeler development container helpers and SQLite `New-LabelDatabase.ps1`. Renamed authentication container helpers to identify their purpose.
 * Adds a restartable schema-version-six decision identity index and bounded batch decision reads so retirement does not scan all label history for each label.
+* Adds schema-version-seven host signing roles so only signing participants must activate replacement keys; legacy hosts conservatively retain their signing role.
 
 #### idunno.AtProto.Types
 

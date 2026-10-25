@@ -125,6 +125,74 @@ public class ProviderConformanceTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task KeylessHostsMustDrainButOnlySignersMustActivate(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid signer = Guid.NewGuid();
+        Guid replica = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(signer, token);
+        await maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: false, cancellationToken: token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.RegisterHostWithSigningRoleAsync(replica, requiresSigningKey: true, cancellationToken: token));
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        const string operation = "keyless-conformance";
+        await maintenance.BeginRotationAsync(
+            operationId: operation,
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+        await maintenance.AcknowledgeHostDrainedAsync(operation, signer, token);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token));
+        await maintenance.AcknowledgeHostDrainedAsync(operation, replica, token);
+        await maintenance.CaptureRotationBoundaryAsync(operation, cancellationToken: token);
+        LabelMaintenanceState ready = await maintenance.VerifyRotationKeyPublicationAsync(
+            operation, "zreplacement", cancellationToken: token);
+        Assert.False(Assert.Single(ready.Hosts, host => host.InstanceId == replica).RequiresSigningKey);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.AcknowledgeHostKeyActivatedAsync(operation, replica, "replacement", token));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            maintenance.CompleteRotationAsync(operation, "replacement", cancellationToken: token));
+        await maintenance.AcknowledgeHostKeyActivatedAsync(operation, signer, "replacement", token);
+        LabelMaintenanceState completed = await maintenance.CompleteRotationAsync(
+            operation, "replacement", cancellationToken: token);
+        Assert.Equal(LabelMaintenancePhase.Completed, completed.Phase);
+        Assert.False(Assert.Single(completed.Hosts, host => host.InstanceId == replica).KeyActivated);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task UpgradesLegacyHostRolesConservativelyAndRepeatably(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        Guid host = Guid.NewGuid();
+        await maintenance.RegisterHostAsync(host, token);
+        await maintenance.BeginRotationAsync(
+            operationId: "role-upgrade",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+        await fixture.ExecuteAsync("DROP TABLE label_host_roles; UPDATE label_schema SET version=6");
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.GetStateAsync(token));
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        await fixture.Store.InitializeAsync(StoreFixture.Issuer, token);
+        LabelMaintenanceState upgraded = await maintenance.GetMaintenanceStateAsync(token);
+        Assert.True(Assert.Single(upgraded.Hosts).RequiresSigningKey);
+        Assert.False(upgraded.AllHostsDrained);
+    }
+
+    [Theory(Timeout = 120_000)]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task CoordinatesResumableKeyRotationAcrossHostsAndRestart(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
