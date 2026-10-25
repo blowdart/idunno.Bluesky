@@ -46,6 +46,7 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Made PEM signing keys honor database-backed selection and coordinated activation, supporting transitions from environment-backed keys and recovery from stale active-ID files.
 * Added a local development launch profile with loopback HTTP/HTTPS endpoints and automatic browser launch disabled pending a landing page.
 * Added a non-secret `appsettings.json` with safe provider, issuance, administration, proxy and logging defaults, plus documented deployment environment variables.
 * Defaults the canonical application and container to PostgreSQL, with a required externally supplied connection string. SQLite and MySQL remain explicit alternatives.

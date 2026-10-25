@@ -216,12 +216,13 @@ public class EnvironmentSigningKeyTests
     }
 
     [Fact]
-    public void PemProviderStillLoadsItsPersistedSelection()
+    public async Task PemProviderStillLoadsItsPersistedSelection()
     {
         string directory = Path.Combine(Path.GetTempPath(), "labeler-pem-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         string keyPath = Path.Combine(directory, "original.pem");
         string selectionPath = Path.Combine(directory, "active-key");
+        string database = Path.Combine(directory, "labels.db");
         try
         {
             using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -234,7 +235,16 @@ public class EnvironmentSigningKeyTests
                 ["Labeler:ActiveKeyPath"] = selectionPath
             }).Build();
             using IDisposable lifetime = HostProgram.CreateSigningKeyRing(config);
-            ILabelSigningKeyRing ring = Assert.IsAssignableFrom<ILabelSigningKeyRing>(lifetime);
+            PemDirectoryLabelSigningKeyRing ring = Assert.IsType<PemDirectoryLabelSigningKeyRing>(lifetime);
+            ServiceCollection services = new();
+            services.AddSqliteLabelStorage($"Data Source={database};Pooling=False");
+            await using ServiceProvider provider = services.BuildServiceProvider();
+            CancellationToken token = TestContext.Current.CancellationToken;
+            await provider.GetRequiredService<ILabelStore>().InitializeAsync(new Did("did:plc:pem-issuer"), token);
+            await ring.InitializeAsync(
+                selectionStore: provider.GetRequiredService<ILabelSigningKeySelectionStore>(),
+                maintenance: provider.GetRequiredService<ILabelMaintenanceStore>(),
+                cancellationToken: token);
             Assert.Equal("original", ring.ActiveKeyId);
             Assert.Equal(key.ExportPublicKeyMultibase(), ring.GetPublicKeyMultibase(ring.ActiveKeyId));
         }
@@ -242,6 +252,140 @@ public class EnvironmentSigningKeyTests
         {
             File.Delete(keyPath);
             File.Delete(selectionPath);
+            File.Delete(database);
+            Directory.Delete(directory);
+        }
+    }
+
+    [Theory]
+    [InlineData("matching")]
+    [InlineData("mismatched")]
+    [InlineData("missing")]
+    public async Task PemTransitionHonorsDatabaseSelectionAndRecoversRotation(string keyState)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        string directory = Path.Combine(Path.GetTempPath(), "labeler-transition-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string selectionPath = Path.Combine(directory, "active-key");
+        string originalPath = Path.Combine(directory, "original.pem");
+        string replacementPath = Path.Combine(directory, "replacement.pem");
+        string database = Path.Combine(directory, "labels.db");
+        try
+        {
+            using LabelSigningKey original = LabelSigningKey.Generate(LabelSigningCurve.P256);
+            using LabelSigningKey replacement = LabelSigningKey.Generate(LabelSigningCurve.P256);
+            File.WriteAllText(originalPath, (keyState == "mismatched" ? replacement : original).ExportPkcs8PrivateKeyPem());
+            if (keyState == "missing")
+            {
+                File.Delete(originalPath);
+            }
+            File.WriteAllText(replacementPath, replacement.ExportPkcs8PrivateKeyPem());
+            File.WriteAllText(selectionPath, "stale-file-id");
+            ServiceCollection services = new();
+            services.AddSqliteLabelStorage($"Data Source={database};Pooling=False");
+            await using ServiceProvider provider = services.BuildServiceProvider();
+            ILabelStore store = provider.GetRequiredService<ILabelStore>();
+            ILabelSigningKeySelectionStore selections = provider.GetRequiredService<ILabelSigningKeySelectionStore>();
+            ILabelMaintenanceStore maintenance = provider.GetRequiredService<ILabelMaintenanceStore>();
+            await store.InitializeAsync(new Did("did:plc:transition-issuer"), token);
+            using EnvironmentLabelSigningKeyRing environmentKeys = new(
+                new ConfigurationBuilder().AddInMemoryCollection(KeyConfiguration(original, replacement)).Build());
+            await environmentKeys.InitializeAsync(
+                selectionStore: selections, maintenance: maintenance, initialKeyId: "original", cancellationToken: token);
+            using PemDirectoryLabelSigningKeyRing ring = new(directory, selectionPath);
+            Assert.Throws<InvalidOperationException>(() => ring.ActiveKeyId);
+            if (keyState != "matching")
+            {
+                Exception? keyError = await Xunit.Record.ExceptionAsync(() => ring.InitializeAsync(
+                    selectionStore: selections, maintenance: maintenance, cancellationToken: token));
+                if (keyState == "missing")
+                {
+                    Assert.IsType<KeyNotFoundException>(keyError);
+                }
+                else
+                {
+                    Assert.IsType<InvalidOperationException>(keyError);
+                }
+
+                Assert.Equal("stale-file-id", File.ReadAllText(selectionPath));
+                return;
+            }
+
+            await ring.InitializeAsync(selectionStore: selections, maintenance: maintenance, cancellationToken: token);
+            Assert.Equal("original", ring.ActiveKeyId);
+            Assert.Equal("original", File.ReadAllText(selectionPath));
+            await store.AppendAsync(
+                "transition-label",
+                [new SignedLabelSnapshot(original.CreateLabel(
+                    new Did("did:plc:transition-issuer"),
+                    "did:plc:subject",
+                    "spam",
+                    new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)))],
+                cancellationToken: token);
+            await store.PublishAsync(cancellationToken: token);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => ring.ActivateAsync("replacement", token));
+            Guid host = Guid.NewGuid();
+            await maintenance.RegisterHostAsync(host, token);
+            await maintenance.BeginRotationAsync(
+                operationId: "pem-transition",
+                previousKeyId: "original",
+                replacementKeyId: "replacement",
+                replacementPublicKey: replacement.ExportPublicKeyMultibase(),
+                cancellationToken: token);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => ring.ActivateAsync("replacement", token));
+            Assert.Equal("original", File.ReadAllText(selectionPath));
+            await maintenance.AcknowledgeHostDrainedAsync("pem-transition", host, token);
+            await maintenance.CaptureRotationBoundaryAsync("pem-transition", cancellationToken: token);
+            await maintenance.VerifyRotationKeyPublicationAsync(
+                "pem-transition", replacement.ExportPublicKeyMultibase(), cancellationToken: token);
+            await LabelSigningKeyRotation.ResignNextBatchAsync(
+                store: store, maintenanceStore: maintenance, operationId: "pem-transition", replacementKey: replacement, cancellationToken: token);
+            File.Delete(selectionPath);
+            Directory.CreateDirectory(selectionPath);
+            Exception? fileError = await Xunit.Record.ExceptionAsync(() => ring.ActivateAsync("replacement", token));
+            Assert.True(fileError is IOException or UnauthorizedAccessException);
+            Assert.Equal("replacement", (await selections.GetSigningKeySelectionAsync(token))!.KeyId);
+            Assert.Equal("original", ring.ActiveKeyId);
+            Directory.Delete(selectionPath);
+            File.WriteAllText(selectionPath, "original");
+            using (PemDirectoryLabelSigningKeyRing recovered = new(directory, selectionPath))
+            {
+                await recovered.InitializeAsync(selectionStore: selections, maintenance: maintenance, cancellationToken: token);
+                Assert.Equal("replacement", recovered.ActiveKeyId);
+            }
+
+            await ring.ActivateAsync("replacement", token);
+            await ring.ActivateAsync("replacement", token);
+            Assert.Equal("replacement", (await selections.GetSigningKeySelectionAsync(token))!.KeyId);
+            Assert.Equal("replacement", File.ReadAllText(selectionPath));
+            await maintenance.AcknowledgeHostKeyActivatedAsync("pem-transition", host, "replacement", token);
+            await maintenance.CompleteRotationAsync("pem-transition", "replacement", cancellationToken: token);
+
+            File.WriteAllText(selectionPath, "original");
+            File.Delete(originalPath);
+            using PemDirectoryLabelSigningKeyRing restarted = new(directory, selectionPath);
+            await restarted.InitializeAsync(selectionStore: selections, maintenance: maintenance, cancellationToken: token);
+            Assert.Equal("replacement", restarted.ActiveKeyId);
+            Assert.Equal("replacement", File.ReadAllText(selectionPath));
+            using EnvironmentLabelSigningKeyRing backToEnvironment = new(
+                new ConfigurationBuilder().AddInMemoryCollection(KeyConfiguration(original, replacement)).Build());
+            await backToEnvironment.InitializeAsync(
+                selectionStore: selections, maintenance: maintenance, initialKeyId: "original", cancellationToken: token);
+            Assert.Equal("replacement", backToEnvironment.ActiveKeyId);
+        }
+        finally
+        {
+            File.Delete(originalPath);
+            File.Delete(replacementPath);
+            if (Directory.Exists(selectionPath))
+            {
+                Directory.Delete(selectionPath);
+            }
+            else
+            {
+                File.Delete(selectionPath);
+            }
+            File.Delete(database);
             Directory.Delete(directory);
         }
     }

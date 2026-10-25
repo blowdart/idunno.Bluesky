@@ -112,8 +112,17 @@ install private keys on each host before starting or rotating it. Use opaque fil
 `active.pem` and `replacement.pem`; the filename stem is the key ID. Mount the key directory
 read-only and the active-key file on writable persistent storage. Protect PEM contents with
 the host's secret-management permissions (for Unix, mode `0600` and an owner-only directory).
-The PEM key ring loads the preinstalled keys once and atomically replaces only the active-ID file
-when an authorized rotation completes. Private keys never travel over remote administration.
+The PEM key ring loads the preinstalled keys once. On first setup it seeds database selection
+from the active-ID file; thereafter the database selection is authoritative, just as for
+environment-backed keys. Startup validates the selected private key against its persisted
+public key and repairs a stale active-ID file. Authorized activation updates the database
+before atomically updating that local file; a failed file update prevents acknowledgement
+and can be recovered on restart or retry. Private keys never travel over remote administration.
+
+To switch between environment and PEM providers, install the same stable key IDs and matching
+private keys, including any keys needed by an in-progress rotation. PEM still requires a readable
+active-ID file, but its value cannot override an existing database selection. Missing or
+mismatched database-selected keys prevent startup. Do not reset selection rows when switching providers.
 
 Use the CLI's `rotation` commands to check status, begin maintenance, verify PLC publication
 or apply the did:web snippet, re-sign bounded batches, and complete the operation. Every live

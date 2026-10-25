@@ -4,6 +4,7 @@
 using System.Collections.ObjectModel;
 
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Labeler.Maintenance;
 using idunno.Bluesky.Labeler.Signing;
 
 namespace idunno.Bluesky.Labeler.Host;
@@ -14,6 +15,8 @@ internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, ID
     private readonly ReadOnlyDictionary<string, LabelSigningKey> _keys;
     private readonly string _activeKeyPath;
     private readonly SemaphoreSlim _activationGate = new(1, 1);
+    private ILabelSigningKeySelectionStore? _selectionStore;
+    private ILabelMaintenanceStore? _maintenance;
     private string _activeKeyId;
     private int _disposed;
 
@@ -51,11 +54,6 @@ internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, ID
 
             _activeKeyPath = Path.GetFullPath(activeKeyPath);
             _activeKeyId = File.ReadAllText(_activeKeyPath).Trim();
-            if (!keys.ContainsKey(_activeKeyId))
-            {
-                throw new InvalidDataException("The persisted active key ID is not present in the mounted key directory.");
-            }
-
             _keys = new ReadOnlyDictionary<string, LabelSigningKey>(keys);
         }
         catch
@@ -69,12 +67,55 @@ internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, ID
         }
     }
 
+    /// <summary>Seeds database selection from the legacy file or recovers the authoritative database selection.</summary>
+    /// <param name="selectionStore">The initialized database's selection provider.</param>
+    /// <param name="maintenance">The same database's maintenance provider.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    internal async Task InitializeAsync(
+        ILabelSigningKeySelectionStore selectionStore,
+        ILabelMaintenanceStore maintenance,
+        CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        await _activationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_selectionStore is not null)
+            {
+                throw new InvalidOperationException("The signing key ring is already initialized.");
+            }
+
+            LabelSigningKeySelection? selection = await selectionStore.GetSigningKeySelectionAsync(cancellationToken).ConfigureAwait(false);
+            selection ??= await selectionStore.InitializeSigningKeySelectionAsync(
+                _activeKeyId,
+                GetPublicKeyMultibase(_activeKeyId),
+                cancellationToken).ConfigureAwait(false);
+            if (GetPublicKeyMultibase(selection.KeyId) != selection.PublicKey)
+            {
+                throw new InvalidOperationException("The installed private key does not match the persisted selection.");
+            }
+
+            await PersistActiveKeyAsync(selection.KeyId, cancellationToken).ConfigureAwait(false);
+            _maintenance = maintenance;
+            _selectionStore = selectionStore;
+        }
+        finally
+        {
+            _activationGate.Release();
+        }
+    }
+
     /// <inheritdoc/>
     public string ActiveKeyId
     {
         get
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+            if (_selectionStore is null)
+            {
+                throw new InvalidOperationException("Initialize the signing key ring before use.");
+            }
+
             return Volatile.Read(ref _activeKeyId);
         }
     }
@@ -103,30 +144,52 @@ internal sealed class PemDirectoryLabelSigningKeyRing : ILabelSigningKeyRing, ID
         await _activationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            string? directory = Path.GetDirectoryName(_activeKeyPath);
-            if (directory is not null)
+            ILabelSigningKeySelectionStore store = _selectionStore
+                ?? throw new InvalidOperationException("Initialize the signing key ring before activation.");
+            LabelMaintenanceState rotation = await _maintenance!.GetMaintenanceStateAsync(cancellationToken).ConfigureAwait(false);
+            if (rotation.OperationId is null || rotation.PreviousKeyId is null)
             {
-                Directory.CreateDirectory(directory);
+                throw new InvalidOperationException("Signing-key activation requires an existing rotation.");
             }
 
-            string temporaryPath = _activeKeyPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
-            try
-            {
-                await File.WriteAllTextAsync(temporaryPath, keyId, cancellationToken).ConfigureAwait(false);
-                File.Move(temporaryPath, _activeKeyPath, overwrite: true);
-                Volatile.Write(ref _activeKeyId, keyId);
-            }
-            finally
-            {
-                if (File.Exists(temporaryPath))
-                {
-                    File.Delete(temporaryPath);
-                }
-            }
+            LabelSigningKeySelection selected = await store.ActivateSigningKeySelectionAsync(
+                operationId: rotation.OperationId,
+                previousKeyId: rotation.PreviousKeyId,
+                keyId: keyId,
+                publicKey: GetPublicKeyMultibase(keyId),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            await PersistActiveKeyAsync(selected.KeyId, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             _activationGate.Release();
+        }
+    }
+
+    /// <summary>Atomically updates the local selection mirror after database validation or activation.</summary>
+    /// <param name="keyId">The database-selected key identity.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    private async Task PersistActiveKeyAsync(string keyId, CancellationToken cancellationToken)
+    {
+        string? directory = Path.GetDirectoryName(_activeKeyPath);
+        if (directory is not null)
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        string temporaryPath = _activeKeyPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await File.WriteAllTextAsync(temporaryPath, keyId, cancellationToken).ConfigureAwait(false);
+            File.Move(temporaryPath, _activeKeyPath, overwrite: true);
+            Volatile.Write(ref _activeKeyId, keyId);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
         }
     }
 

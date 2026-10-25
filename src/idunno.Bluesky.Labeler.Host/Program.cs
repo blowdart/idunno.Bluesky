@@ -95,6 +95,13 @@ internal static class Program
                 initialKeyId: builder.Configuration["Labeler:InitialSigningKeyId"],
                 cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
         }
+        else if (keyRing is PemDirectoryLabelSigningKeyRing pemKeys)
+        {
+            await pemKeys.InitializeAsync(
+                selectionStore: app.Services.GetRequiredService<ILabelSigningKeySelectionStore>(),
+                maintenance: app.Services.GetRequiredService<ILabelMaintenanceStore>(),
+                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+        }
 
         string? bootstrapAdministrator = builder.Configuration["bootstrap-admin"];
         if (bootstrapAdministrator is not null)
