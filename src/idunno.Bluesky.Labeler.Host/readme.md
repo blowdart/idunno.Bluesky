@@ -15,6 +15,11 @@ or reloadable JSON configuration, then run:
 dotnet run --project src\idunno.Bluesky.Labeler.Host
 ```
 
+The Visual Studio launch profile uses the `Development` environment and loopback-only
+`https://localhost:50656` and `http://localhost:50657` endpoints. HTTPS requires the ASP.NET
+development certificate. Automatic browser launch is disabled until a landing page is available.
+The profile contains no secrets; the deployment-specific settings below are still required.
+
 The checked-in `appsettings.json` contains only non-secret defaults: PostgreSQL,
 environment-backed signing keys, disabled account/record issuance and remote administration,
 no trusted proxies, a forwarding limit of one, and standard logging levels. Environment

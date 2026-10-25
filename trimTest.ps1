@@ -102,6 +102,8 @@ $excludedProjects = @{
         'Razor Pages do not support trimming or Native AOT.'
     'src/idunno.Bluesky.Labeler.Cli/idunno.Bluesky.Labeler.Cli.csproj' =
         'The standalone administration CLI is not currently part of the supported trimming or Native AOT library surface.'
+    'src/idunno.Bluesky.Labeler.Host/idunno.Bluesky.Labeler.Host.csproj' =
+        'The canonical ASP.NET Core host explicitly disables trimming and Native AOT and is not part of the supported library surface.'
 }
 
 if ([string]::IsNullOrWhiteSpace($Rid))
