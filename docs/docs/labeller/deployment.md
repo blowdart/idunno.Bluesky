@@ -24,6 +24,8 @@ provider, or a host-owned configuration file:
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteEnabled` | Whether HTTPS administration is enabled; defaults to `false` |
+| `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
+| `Labeler:ForwardLimit` | Positive maximum forwarding hops; defaults to `1` when trusted proxies are configured |
 
 The host also configures a protected local endpoint. Its default is the Windows named pipe
 `idunno-labeler-admin` or the Linux Unix socket `/run/labeler/admin.sock`. The socket and
@@ -31,6 +33,29 @@ all parent directories must be protected from replacement by other users. Remote
 requires exact-audience method-bound service authentication and live team authorization; local
 administration requires the service process's OS identity to have an explicit active team binding.
 Neither localhost nor container placement is an authorization boundary.
+
+### Native OAuth and TLS forwarding
+
+The host serves `/native-client-metadata.json` publicly without authentication or redirects.
+Its client ID is the configured `Labeler:PublicEndpoint` origin plus that path, never the
+incoming `Host` header. The native public-client document declares `http://127.0.0.1/` as
+its desktop loopback callback, with no fixed port, and the method-bound administrative scope
+superset for `Labeler:AdministrationAudience`. Use this HTTPS metadata URL as the CLI's
+`--client-id`; the CLI requests only the method it is executing. The headless host does not
+run the desktop callback listener or distribute an OAuth client secret.
+
+For TLS termination at a reverse proxy, configure the proxy's **actual immediate peer IP**
+in `Labeler:TrustedProxies`, for example `Labeler__TrustedProxies__0=172.20.0.2`, and keep the
+container HTTP port private to that proxy network. The proxy must replace, not append to
+untrusted client-supplied headers, and forward both `X-Forwarded-For` and
+`X-Forwarded-Proto: https`. Set `Labeler__ForwardLimit` to the exact supported hop count when
+multiple trusted proxies are involved, and list every trusted proxy IP. No forwarding headers
+are processed when the list is empty; arbitrary client addresses never become trusted.
+Without a TLS-terminating proxy, configure Kestrel HTTPS directly. Do not enable the
+ASP.NET Core environment shortcut that trusts all forwarded headers.
+
+Identity resolution uses the existing `idunno.Security.Ssrf` connection-time DNS/IP protection,
+with redirects disabled; private and loopback issuer endpoints are not allowed.
 
 Initialize the store before serving traffic. The sample calls `InitializeAsync` at startup,
 so its database identity must have schema migration privileges. For deployments that separate
@@ -88,7 +113,9 @@ docker pull ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>
 
 The image runs as UID 1654, listens on port 8080 and includes persistent SQLite defaults for
 `/data/labels.db`. Mount `/data` as durable storage, the key directory read-only, and a
-service-owned socket directory at `/run/labeler`. Supply the required identity, policy and
+service-owned mode-`0700` socket directory at `/run/labeler`. A bind mount replaces the image's
+directory permissions: set its ownership to UID 1654 and mode to `0700` on the host too.
+Supply the required identity, policy and
 administration audience settings separately. For remote databases, set
 `Labeler__DatabaseProvider` and `Labeler__ConnectionString` using a secret provider. A
 container deployment must retain its external database, configuration, key files and active

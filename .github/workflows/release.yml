@@ -221,7 +221,9 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     permissions:
+      attestations: write
       contents: read
+      id-token: write
       packages: write
     steps:
     - name: Harden Runner
@@ -261,6 +263,11 @@ jobs:
         printf '%s@%s\n' "${image}" "${digest}" > "${RUNNER_TEMP}/idunno.Bluesky.Labeler.image-digest.txt"
         docker logout ghcr.io
         docker pull "${image}@${digest}"
+
+    - name: Attest immutable image reference
+      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+      with:
+        subject-path: ${{ runner.temp }}/idunno.Bluesky.Labeler.image-digest.txt
 
     - name: Upload immutable image reference
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

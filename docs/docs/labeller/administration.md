@@ -198,6 +198,11 @@ the callback listener. Use the existing OAuth/PAR/PKCE/DPoP and callback librari
 Production loopback callbacks do **not** relax remote PDS/authorization-server HTTPS or SSRF rules.
 Do not use the development `http://localhost` client ID for production.
 
+`Samples.LabelerHost` already publishes `/native-client-metadata.json` with the administrative
+scope superset and its actual desktop callback path, `http://127.0.0.1/`. Use that endpoint
+directly with the CLI. See [deployment](deployment.md#native-oauth-and-tls-forwarding) for
+explicit trusted-proxy configuration when HTTPS terminates before the container.
+
 The document declares the permitted scope superset; request only needed method-bound permissions
 at sign-in. Add `rpc:<administrative-method>?aud=<encoded-DID#service>` per method. The member's PDS
 checks the requested service token's `lxm` permission, not a scope naming `getServiceAuth` itself.

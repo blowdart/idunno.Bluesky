@@ -687,6 +687,10 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                     throw new InvalidOperationException("The replacement batch must cover the next contiguous retained history page.");
                 }
 
+                LabelSignatureVerifier.Verify(
+                    issuer: new Did(state.Issuer),
+                    publicKeyMultibase: rotation.ReplacementPublicKey!,
+                    labels: batch.Select(label => label.SignedLabel.Label));
                 foreach (StoredLabel label in batch)
                 {
                     Label unsigned = label.SignedLabel.Label;
@@ -835,7 +839,8 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         DbTransaction transaction,
         LabelStoreState state,
         IReadOnlyList<(LabelTarget Target, string Value)> queries,
-        CancellationToken token)
+        CancellationToken token,
+        bool allowTiedTimestamps = false)
     {
         Dictionary<(string Subject, string Value), (StoredLabel? Current, bool Ambiguous)> decisions = [];
         Dictionary<string, List<((string Subject, string Value) Key, byte[] IdentityKey)>> identities = new(StringComparer.Ordinal);
@@ -926,7 +931,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
         foreach ((LabelTarget target, string value) in queries)
         {
             (StoredLabel? Current, bool Ambiguous) decision = decisions[(target.Subject, value)];
-            results.Add(decision.Ambiguous
+            results.Add(decision.Ambiguous && !allowTiedTimestamps
                 ? LabelServiceResult<LabelDecisionSnapshot>.Failure(new(
                     code: LabelServiceErrorCode.AmbiguousHistory,
                     message: "Conflicting labels have the same latest creation timestamp; inspect history before deciding."))
@@ -997,6 +1002,51 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 message: "Label storage is unavailable; retry the original request when storage recovers.",
                 exception: exception))).ToArray();
         }
+    }
+
+    public async Task<IReadOnlyList<DateTimeOffset?>> ReadRetirementTimestampsAsync(
+        IReadOnlyList<(LabelTarget Target, string Value)> queries,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queries);
+        queries = queries.ToArray();
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(queries.Count, 400);
+        foreach ((LabelTarget target, string value) in queries)
+        {
+            ArgumentNullException.ThrowIfNull(target);
+            LabelInput.ValidateText(value, nameof(queries), 128);
+            if (target.Repository is not Did)
+            {
+                throw new ArgumentException("Retirement reads require stable DID targets.", nameof(queries));
+            }
+        }
+
+        if (queries.Count == 0)
+        {
+            return [];
+        }
+
+        return await RunAsync<IReadOnlyList<DateTimeOffset?>>(
+            operation: "retirement-timestamps",
+            action: async (connection, transaction, state) =>
+            {
+                if (state.Phase != LabelerLifecyclePhase.Retiring)
+                {
+                    throw new InvalidOperationException("Retirement timestamp reads require closed issuance.");
+                }
+
+                IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await DecisionSnapshotsAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    state: state,
+                    queries: queries,
+                    token: cancellationToken,
+                    allowTiedTimestamps: true).ConfigureAwait(false);
+                return snapshots.Select(result =>
+                    (result.Result ?? throw new InvalidDataException("Retirement timestamp lookup did not return a snapshot."))
+                        .CurrentLabel?.SignedLabel.Label.CreationTimestamp).ToArray();
+            },
+            token: cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<LabelServiceResult<LabelOperationReceipt>> CommitDecisionAsync(

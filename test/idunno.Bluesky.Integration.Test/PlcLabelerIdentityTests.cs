@@ -21,6 +21,20 @@ public class PlcLabelerIdentityTests
     private static readonly Did s_did = new("did:plc:hfgp6pj3akhqxntgqwramlbg");
     private static readonly Uri s_endpoint = new("https://labels.example");
 
+    [Theory]
+    [InlineData("z0")]
+    [InlineData("z!")]
+    public async Task PlcIdentityUpdateRejectsMalformedPublicKeysBeforeNetworkRequests(string publicKey)
+    {
+        using TestServer server = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, _ =>
+            throw new InvalidOperationException("Invalid keys must not reach the PLC workflow."));
+        using BlueskyAgent agent = CreateAgent(server);
+        await Assert.ThrowsAsync<ArgumentException>(() => agent.UpdatePlcLabelerIdentity(
+            publicKeyMultibase: publicKey,
+            labelerEndpoint: s_endpoint,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
     private static BlueskyAgent CreateAgent(TestServer server) => new(new TestHttpClientFactory(server))
     {
         Service = TestServerBuilder.DefaultUri,

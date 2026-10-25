@@ -17,7 +17,9 @@ internal sealed partial class LabelerHost
     /// <summary>Admits bounded public subscriptions and pairs each send loop with a cancellable receive drain.</summary>
     internal async Task SubscribeAsync(HttpContext context)
     {
-        using IDisposable? admission = await AdmitTrafficAsync(context).ConfigureAwait(false);
+        using CancellationTokenSource admissionLifetime = CancellationTokenSource.CreateLinkedTokenSource(
+            context.RequestAborted, _lifetime.Token);
+        using IDisposable? admission = await AdmitTrafficAsync(context, admissionLifetime.Token).ConfigureAwait(false);
         if (admission is null)
         {
             return;
@@ -74,7 +76,7 @@ internal sealed partial class LabelerHost
             metrics.Subscription(1);
             using WebSocket socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
             using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(
-                context.RequestAborted, _lifetime.Token, MaintenanceToken);
+                context.RequestAborted);
             await ServeSocketAsync(context, socket, lifetime).ConfigureAwait(false);
         }
         finally
@@ -87,23 +89,25 @@ internal sealed partial class LabelerHost
     /// <summary>Joins the receive operation before its caller disposes the socket or linked lifetime.</summary>
     private async Task ServeSocketAsync(HttpContext context, WebSocket socket, CancellationTokenSource lifetime)
     {
+        using CancellationTokenSource streamLifetime = CancellationTokenSource.CreateLinkedTokenSource(
+            lifetime.Token, _lifetime.Token, MaintenanceToken);
         Task receive = DrainAsync(socket, lifetime);
         try
         {
-            await StreamAsync(context, socket, lifetime.Token).ConfigureAwait(false);
+            await StreamAsync(context, socket, streamLifetime.Token).ConfigureAwait(false);
         }
         catch (ArgumentException)
         {
             metrics.Rejection("subscription_cursor");
             await TryTerminalAsync(socket, "InvalidRequest", lifetime.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (!lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (!streamLifetime.IsCancellationRequested)
         {
             Disconnected(logger, "send deadline");
             metrics.Failure("send_deadline");
             await TryTerminalAsync(socket, "ConsumerTooSlow", lifetime.Token).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        catch (OperationCanceledException) when (streamLifetime.IsCancellationRequested)
         {
             Disconnected(logger, "cancelled");
         }
@@ -119,7 +123,7 @@ internal sealed partial class LabelerHost
         }
         finally
         {
-            await CloseAsync(socket).ConfigureAwait(false);
+            await CloseAsync(socket, receive).ConfigureAwait(false);
             await lifetime.CancelAsync().ConfigureAwait(false);
             await receive.ConfigureAwait(false);
         }
@@ -289,7 +293,7 @@ internal sealed partial class LabelerHost
     }
 
     /// <summary>Closes the server half without waiting indefinitely for a peer handshake.</summary>
-    private async Task CloseAsync(WebSocket socket)
+    private async Task CloseAsync(WebSocket socket, Task receive)
     {
         if (socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
         {
@@ -302,6 +306,7 @@ internal sealed partial class LabelerHost
             WebSocketCloseStatus closeStatus = IsDraining ? (WebSocketCloseStatus)1012 : WebSocketCloseStatus.NormalClosure;
             string description = IsDraining ? "Service maintenance; reconnect and retry." : "Subscription ended.";
             await socket.CloseOutputAsync(closeStatus, description, deadline.Token).ConfigureAwait(false);
+            await receive.WaitAsync(deadline.Token).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is OperationCanceledException or WebSocketException)
         {

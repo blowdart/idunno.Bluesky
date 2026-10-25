@@ -87,10 +87,16 @@ internal static class SigningKeyVerifier
             throw new InvalidDataException($"The DID document for '{did}' has no usable #{fragment} verification key.");
         }
 
+        return ParseKey(verificationMethod.PublicKeyMultibase);
+    }
+
+    /// <summary>Decodes a supported public multikey and validates its compressed elliptic curve point.</summary>
+    internal static SigningKey ParseKey(string publicKeyMultibase)
+    {
         byte[] publicKeyBytes;
         try
         {
-            publicKeyBytes = SimpleBase.Multibase.Decode(verificationMethod.PublicKeyMultibase);
+            publicKeyBytes = SimpleBase.Multibase.Decode(publicKeyMultibase);
         }
         catch (Exception exception) when (exception is FormatException or ArgumentException)
         {

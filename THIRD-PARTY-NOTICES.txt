@@ -37,6 +37,10 @@ omitted.
 
 The labeler administration CLI bundles System.CommandLine (MIT).
 
+The standalone labeler host also uses idunno.Bluesky.AspNet.Authentication for native
+OAuth metadata publication and idunno.Security.Ssrf (MIT) for protected identity resolution.
+These components and their dependencies are listed below.
+
 The idunno.Bluesky.Labeler provider packages use Microsoft.Extensions.DependencyInjection
 and Microsoft.Extensions.Logging (MIT). The SQLite provider uses Microsoft.Data.Sqlite
 (MIT), the PostgreSQL provider uses Npgsql (PostgreSQL license), and the MySQL

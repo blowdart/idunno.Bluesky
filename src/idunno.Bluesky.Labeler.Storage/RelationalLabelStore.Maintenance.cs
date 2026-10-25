@@ -5,6 +5,9 @@ using System.Data.Common;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
+using idunno.AtProto;
+using idunno.AtProto.Labels;
+
 namespace idunno.Bluesky.Labeler.Storage;
 
 internal abstract partial class RelationalLabelStore
@@ -507,6 +510,10 @@ internal abstract partial class RelationalLabelStore
                     throw new InvalidOperationException("The replacement batch must cover the next contiguous retained history page.");
                 }
 
+                LabelSignatureVerifier.Verify(
+                    issuer: new Did(state.Issuer),
+                    publicKeyMultibase: current.ReplacementPublicKey!,
+                    labels: batch.Select(label => label.SignedLabel.Label));
                 foreach (StoredLabel label in batch)
                 {
                     if (!string.Equals(label.SignedLabel.Label.Source.Value, state.Issuer, StringComparison.Ordinal))

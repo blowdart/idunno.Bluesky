@@ -649,22 +649,15 @@ internal sealed class AdministrationDispatcher(
             decisionQueries.Add((target, prior.Value));
         }
 
-        IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> currentDecisions = await store.ReadDecisionBatchAsync(
+        IReadOnlyList<DateTimeOffset?> latestTimestamps = await store.ReadRetirementTimestampsAsync(
             decisionQueries,
             token).ConfigureAwait(false);
         for (int index = 0; index < candidates.Count; index++)
         {
             StoredLabel retained = candidates[index];
             Label prior = retained.SignedLabel.Label;
-            LabelServiceResult<LabelDecisionSnapshot> current = currentDecisions[index];
-            if (!current.Succeeded)
-            {
-                throw new InvalidOperationException(current.Error.Message);
-            }
-
             string decisionKey = prior.Uri + "\0" + prior.Value;
-            DateTimeOffset latestTimestamp = current.Result.CurrentLabel?.SignedLabel.Label.CreationTimestamp
-                ?? DateTimeOffset.MinValue;
+            DateTimeOffset latestTimestamp = latestTimestamps[index] ?? DateTimeOffset.MinValue;
             if (latestTimes.TryGetValue(decisionKey, out DateTimeOffset batchPrevious) &&
                 batchPrevious > latestTimestamp)
             {

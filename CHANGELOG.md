@@ -19,6 +19,7 @@
 * Applies subscription size limits to encoded CBOR frames rather than stored JSON whitespace.
 * Coordinates durable multi-host signing-key rotation, explicit maintenance responses, host drain/activation acknowledgements and restart-safe signature checkpoints.
 * Fences maintenance and retirement mutations against revoked callers, drains in-flight administrative issuance, and verifies each host's replacement key before reopening.
+* Includes maintenance admission in query deadlines and sends a reconnectable maintenance close before cancelling WebSocket receives.
 
 #### idunno.Bluesky.Labeler.Cli
 
@@ -37,10 +38,12 @@
 * Added shared host-neutral label issuance and signed negation with account or arbitrary record targets, optional CID scope, mandatory authorization/policy providers, durable semantic retries, audited no-ops and explicit operational errors with cause/recovery guidance.
 * Added fixed-tip retained-slot distribution reads, preserving immutable signed history and selecting the latest published source/URI/CID/value slot for Ozone-compatible public delivery.
 * Added encrypted local label-signing key file creation, loading and create-only backups with current-user-only file permissions (protected Windows ACLs or Unix mode `0600`), public-only did:web labeler identity snippets and publication verification, and bounded resumable signature replacement that snapshots caller-owned batches and preserves label fields and sequence positions.
+* Retirement timestamp lookup tolerates equal-time CID variants without weakening ordinary decision ambiguity checks; rotation verifies every replacement signature against the persisted public key before advancing.
 
 #### Samples
 
 * Added a standalone labeler host sample with all three storage providers, mounted-PEM key-ring example, public distribution endpoints, and protected local and remote administration.
+* Publishes native CLI OAuth metadata, supports explicitly trusted TLS-forwarding proxies, protects identity resolution with `idunno.Security.Ssrf`, and creates the local administration socket directory with owner-only permissions.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
 
@@ -65,6 +68,7 @@
 * Rejects malformed Unicode in service JWT JSON as invalid authentication rather than allowing an unhandled JSON-reading exception.
 * Validates optional integer service-token `nbf` timestamps before and after identity resolution, rejecting premature use outside the five-second clock tolerance.
 * Added canonical version-one label payload encoding, signing and negation factories, and disposable P-256/secp256k1 label keys with explicit generation, external PKCS#8 import/export (including encrypted binary and PEM), and public multikey export. Added key-handling guidance and external PowerShell/Linux OpenSSL generation examples.
+* Added public multikey validation and explicit-public-key label signature verification; identity publication rejects malformed encodings and invalid curve points before contacting PLC.
 * Added init-only `JetstreamOptions.StreamBufferCapacity` (default 1,024 events) and matching builder configuration for live async enumeration, separate from replay capacity and byte-oriented message buffers.
 * Added live queue capacity, queued-event count, capacity-wait count and wait-duration metrics, aggregated by sanitized server authority.
 * Added `Label.Verify()`, resolving `Label.VerifyAsync()`, and collection signature verification using an issuer's DID document, sharing signature encoding and low-S checks with Firehose labels.

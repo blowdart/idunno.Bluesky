@@ -14,7 +14,7 @@ ENV ASPNETCORE_HTTP_PORTS=8080 \
     Labeler__SigningKeyDirectory=/run/labeler-keys \
     Labeler__ActiveKeyPath=/data/active-key \
     Labeler__LocalAdministrationEndpoint=/run/labeler/admin.sock
-RUN mkdir -p /data /run/labeler /run/labeler-keys && chown 1654:1654 /data /run/labeler
+RUN mkdir -p /data /run/labeler /run/labeler-keys && chown 1654:1654 /data /run/labeler && chmod 0700 /run/labeler
 COPY --from=build /out .
 USER 1654
 EXPOSE 8080

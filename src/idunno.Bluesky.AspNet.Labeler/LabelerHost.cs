@@ -57,6 +57,9 @@ internal sealed partial class LabelerHost(
     /// <summary>Gets or sets an internal phase barrier for backpressure tests; it shares the actual send deadline.</summary>
     internal Func<CancellationToken, Task>? BeforeSendAsync { get; set; }
 
+    /// <summary>Gets or sets an internal barrier for testing cancellation while maintenance admission is blocked.</summary>
+    internal Func<CancellationToken, Task>? BeforeMaintenanceRefreshAsync { get; set; }
+
     /// <summary>Validates initialized storage before admitting traffic; never migrates under serving credentials.</summary>
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -191,11 +194,11 @@ internal sealed partial class LabelerHost(
     }
 
     /// <summary>Refreshes durable host presence before admitting public distribution work.</summary>
-    private async Task<IDisposable?> AdmitTrafficAsync(HttpContext context)
+    private async Task<IDisposable?> AdmitTrafficAsync(HttpContext context, CancellationToken cancellationToken)
     {
         try
         {
-            LabelMaintenanceState state = await RefreshMaintenanceStateAsync(context.RequestAborted).ConfigureAwait(false);
+            LabelMaintenanceState state = await RefreshMaintenanceStateAsync(cancellationToken).ConfigureAwait(false);
             if (!state.IsActive && TryEnterRequest())
             {
                 return new AdmissionLease(this);
@@ -378,6 +381,11 @@ internal sealed partial class LabelerHost(
         await _maintenanceRefreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (BeforeMaintenanceRefreshAsync is not null)
+            {
+                await BeforeMaintenanceRefreshAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             LabelMaintenanceState state = await maintenanceStore.HeartbeatHostAsync(
                 instanceId: _instanceId,
                 cancellationToken: cancellationToken).ConfigureAwait(false);

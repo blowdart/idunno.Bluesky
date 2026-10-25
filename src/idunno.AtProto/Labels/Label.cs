@@ -236,7 +236,7 @@ public sealed record Label : AtProtoObject
     /// <exception cref="OperationCanceledException">The operation was cancelled.</exception>
     /// <remarks>
     /// <para>This method makes network requests and does not cache the DID document or retry verification with a refreshed key.
-    /// For multiple labels from one issuer, resolve the document once and use <see cref="LabelSignatureVerifier.Verify"/>.</para>
+    /// For multiple labels from one issuer, resolve the document once and use <see cref="LabelSignatureVerifier.Verify(DidDocument, IEnumerable{Label})"/>.</para>
     /// <para>Verification does not establish trust in the issuer or evaluate expiry, negation, or supersession.</para>
     /// </remarks>
     public async Task VerifyAsync(HttpClient? httpClient = null, CancellationToken cancellationToken = default)

@@ -499,8 +499,10 @@ public class AdministrationTests
         Assert.Equal(HttpStatusCode.NotFound, disabledAgain.StatusCode);
     }
 
-    [Fact]
-    public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LocalRetirementAdvancesWithSignedNegationsAndDurableCheckpoints(bool tiedCidTimestamps)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient identity = new(new IdentityHandler(key.ExportPublicKeyMultibase()));
@@ -530,7 +532,7 @@ public class AdministrationTests
                     source: TestServerBuilder.s_issuer,
                     uri: "at://did:plc:retirement-subject/app.bsky.feed.post/post",
                     value: "spam",
-                    creationTimestamp: now.AddMinutes(-1),
+                    creationTimestamp: now.AddMinutes(tiedCidTimestamps ? -2 : -1),
                     cid: new("bafyreihw6zqv6pwq3erw5x2rb52tynvb2hmr7e7osetb5w3m6q4h4p5vqm")))
             ],
             cancellationToken: TestContext.Current.CancellationToken);

@@ -211,12 +211,7 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(publicKeyMultibase);
-        if (publicKeyMultibase.Length is < 2 or > 512 ||
-            publicKeyMultibase[0] != 'z' ||
-            publicKeyMultibase.Any(char.IsControl))
-        {
-            throw new ArgumentException("A base58btc public key multibase value is required.", nameof(publicKeyMultibase));
-        }
+        LabelSignatureVerifier.ValidatePublicKey(publicKeyMultibase);
 
         ValidateLabelerEndpoint(labelerEndpoint);
 

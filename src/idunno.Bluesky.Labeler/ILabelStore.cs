@@ -362,6 +362,19 @@ public interface ILabelStore : ILabelDistributionStore
         IReadOnlyList<(LabelTarget Target, string Value)> queries,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Reads latest subject/value creation timestamps for negating all retained retirement slots, including tied CID variants.</summary>
+    /// <param name="queries">The resolved targets and label values.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The latest timestamps, or <see langword="null"/> for missing history, in query order.</returns>
+    /// <exception cref="ArgumentNullException">The queries or a target are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">A target is unresolved or a value is invalid.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">More than 400 queries are supplied.</exception>
+    /// <exception cref="InvalidOperationException">The store is not in the retirement enumeration phase.</exception>
+    /// <remarks><para>This does not choose a current label. Equal-time conflicting variants remain ambiguous for ordinary decisions.</para></remarks>
+    Task<IReadOnlyList<DateTimeOffset?>> ReadRetirementTimestampsAsync(
+        IReadOnlyList<(LabelTarget Target, string Value)> queries,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Retrieves ordered published label events within explicit stream and sequence boundaries so a subscription
     /// can catch up or resume without renumbering historical events.

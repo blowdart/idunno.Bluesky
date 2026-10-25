@@ -23,6 +23,45 @@ public class LifecycleTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task QueryDeadlineCoversMaintenanceRefreshAndGateWait(bool waitingForGate)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Host.BeforeMaintenanceRefreshAsync = async cancellation =>
+        {
+            entered.TrySetResult();
+            await release.Task.WaitAsync(cancellation);
+        };
+        Task<HttpResponseMessage> first = fixture.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(10));
+        Task<HttpResponseMessage> request = waitingForGate
+            ? fixture.Client.GetAsync("/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token)
+            : first;
+        if (waitingForGate)
+        {
+            await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(10));
+        }
+        fixture.Clock.Advance(TimeSpan.FromSeconds(10));
+        try
+        {
+            using HttpResponseMessage response = await request.WaitAsync(TimeSpan.FromSeconds(30), token);
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            Assert.Contains("deadline", await response.Content.ReadAsStringAsync(token));
+        }
+        finally
+        {
+            release.TrySetResult();
+            using HttpResponseMessage firstResponse = await first;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task RestartDuringReadyToReopenDrainsBeforeVerifyingAndActivatingItsKey(bool mismatchedKey)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -143,12 +182,20 @@ public class LifecycleTests
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
     }
 
-    [Fact]
-    public async Task MaintenanceReturnsRetryableUnavailableResponsesAndClosesSubscriptionsForReconnect()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MaintenanceReturnsRetryableUnavailableResponsesAndClosesSubscriptionsForReconnect(bool network)
     {
         CancellationToken token = TestContext.Current.CancellationToken;
-        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync();
-        using WebSocket existing = await fixture.ConnectAsync();
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(network: network);
+        using ClientWebSocket nativeSocket = new();
+        if (network)
+        {
+            await nativeSocket.ConnectAsync(fixture.SocketAddress, token);
+        }
+
+        using WebSocket existing = network ? nativeSocket : await fixture.ConnectAsync();
         ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
         await maintenance.BeginRotationAsync(
             operationId: "maintenance-http-boundary",
@@ -179,6 +226,37 @@ public class LifecycleTests
         ValueWebSocketReceiveResult close = await existing.ReceiveAsync(buffer.AsMemory(), watchdog.Token);
         Assert.Equal(WebSocketMessageType.Close, close.MessageType);
         Assert.Equal((WebSocketCloseStatus)1012, existing.CloseStatus);
+        await existing.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledged.", watchdog.Token);
+    }
+
+    [Fact]
+    public async Task MaintenanceCloseDeadlineReleasesAnUnresponsivePeer()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using TestServerBuilder fixture = await TestServerBuilder.CreateAsync(network: true);
+        IMeterFactory factory = fixture.Services.GetRequiredService<IMeterFactory>();
+        MetricCollector<long> connections = new(factory, Meter, Prefix + "subscriptions");
+        using ClientWebSocket socket = new();
+        await socket.ConnectAsync(fixture.SocketAddress, token);
+        ILabelMaintenanceStore maintenance = fixture.Services.GetRequiredService<ILabelMaintenanceStore>();
+        await maintenance.BeginRotationAsync(
+            operationId: "unresponsive-close",
+            previousKeyId: "active",
+            replacementKeyId: "replacement",
+            replacementPublicKey: "zreplacement",
+            cancellationToken: token);
+        using HttpResponseMessage unavailable = await fixture.Client.GetAsync(
+            "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", token);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, unavailable.StatusCode);
+        using CancellationTokenSource watchdog = CancellationTokenSource.CreateLinkedTokenSource(token);
+        watchdog.CancelAfter(TimeSpan.FromSeconds(30));
+        byte[] buffer = new byte[1];
+        ValueWebSocketReceiveResult close = await socket.ReceiveAsync(buffer.AsMemory(), watchdog.Token);
+        Assert.Equal(WebSocketMessageType.Close, close.MessageType);
+        Assert.Equal((WebSocketCloseStatus)1012, socket.CloseStatus);
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        await connections.WaitForMeasurementsAsync(2, watchdog.Token);
+        Assert.Equal(0, connections.GetMeasurementSnapshot().Sum(measurement => measurement.Value));
     }
 
     [Fact]
@@ -237,6 +315,7 @@ public class LifecycleTests
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
         fixture.Clock.Advance(TimeSpan.FromSeconds(30));
         Assert.Equal("ConsumerTooSlow", Notice(await ReceiveAsync(socket)));
+        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Acknowledged.", token);
         await fixture.StopAsync();
         using CancellationTokenSource watchdog = new(TimeSpan.FromSeconds(30));
         await connections.WaitForMeasurementsAsync(2, watchdog.Token);
@@ -376,7 +455,15 @@ public class LifecycleTests
         using HttpResponseMessage response = await fixture.Client.SendAsync(excess, token);
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
         Assert.Equal(TimeSpan.FromSeconds(1), response.Headers.RetryAfter!.Delta);
-        await fixture.StopAsync();
+        Task stopping = fixture.StopAsync();
+        byte[] closeBuffer = new byte[1];
+        using CancellationTokenSource closeWatchdog = CancellationTokenSource.CreateLinkedTokenSource(token);
+        closeWatchdog.CancelAfter(TimeSpan.FromSeconds(30));
+        ValueWebSocketReceiveResult close = await socket.ReceiveAsync(closeBuffer.AsMemory(), closeWatchdog.Token);
+        Assert.Equal(WebSocketMessageType.Close, close.MessageType);
+        Assert.Equal((WebSocketCloseStatus)1012, socket.CloseStatus);
+        await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Acknowledged.", closeWatchdog.Token);
+        await stopping;
         using CancellationTokenSource watchdog = new(TimeSpan.FromSeconds(30));
         await connections.WaitForMeasurementsAsync(2, watchdog.Token);
         Assert.Equal(0, connections.GetMeasurementSnapshot().Sum(measurement => measurement.Value));

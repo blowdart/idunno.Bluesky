@@ -1,4 +1,5 @@
 #nullable enable
+idunno.Bluesky.Labeler.ILabelStore.ReadRetirementTimestampsAsync(System.Collections.Generic.IReadOnlyList<(idunno.Bluesky.Labeler.LabelTarget! Target, string! Value)>! queries, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<System.DateTimeOffset?>!>!
 idunno.Bluesky.Labeler.ILabelDistributionStore
 idunno.Bluesky.Labeler.ILabelDistributionStore.ReadDistributionAsync(System.Guid streamId, long after, long through, System.Collections.Generic.IReadOnlyList<string!>! uriPatterns, System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>! sources, int limit = 100, int scanLimit = 1000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelDistributionPage!>!
 idunno.Bluesky.Labeler.LabelDistributionPage

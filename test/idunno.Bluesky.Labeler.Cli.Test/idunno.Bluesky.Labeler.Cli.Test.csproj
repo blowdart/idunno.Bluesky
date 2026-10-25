@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.Cli\idunno.Bluesky.Labeler.Cli.csproj" />
+    <ProjectReference Include="..\..\samples\Samples.LabelerHost\Samples.LabelerHost.csproj" />
   </ItemGroup>
 </Project>

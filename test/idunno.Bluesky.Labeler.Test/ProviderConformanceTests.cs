@@ -183,6 +183,19 @@ public class ProviderConformanceTests
             replacementKey.ExportPublicKeyMultibase(),
             cancellationToken: TestContext.Current.CancellationToken);
 
+        LabelStoreState beforeWrongKey = await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken);
+        StoredLabel[] oldSignatures = [new(1, Sign(originalKey))];
+        await Assert.ThrowsAsync<InvalidDataException>(() => fixture.Store.ReplaceSignaturesAsync(
+            oldSignatures, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<InvalidDataException>(() => maintenance.ReplaceRotationBatchAsync(
+            operationId: "rotation-conformance",
+            expectedAfterSequence: 0,
+            checkpoint: 1,
+            replacementLabels: oldSignatures,
+            cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Equal(beforeWrongKey, await fixture.Store.GetStateAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, (await maintenance.GetMaintenanceStateAsync(TestContext.Current.CancellationToken)).LastSequence);
+
         LabelSigningKeyRotationProgress progress = await LabelSigningKeyRotation.ResignNextBatchAsync(
             store: fixture.Store,
             maintenanceStore: maintenance,

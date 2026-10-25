@@ -14,38 +14,38 @@ internal sealed partial class LabelerHost
     /// <summary>Serves bounded retained-slot queries with stable pagination and explicit XRPC failures.</summary>
     internal async Task QueryAsync(HttpContext context)
     {
-        using IDisposable? admission = await AdmitTrafficAsync(context).ConfigureAwait(false);
-        if (admission is null)
-        {
-            return;
-        }
-
-        if (!HttpMethods.IsGet(context.Request.Method))
-        {
-            context.Response.Headers.Allow = "GET";
-            await ErrorAsync(
-                context: context,
-                status: 405,
-                error: "InvalidRequest",
-                message: "Use GET for label queries.").ConfigureAwait(false);
-            return;
-        }
-
-        if (!_ready)
-        {
-            await ErrorAsync(
-                context: context,
-                status: 503,
-                error: "ServiceUnavailable",
-                message: "Label publication is not available.").ConfigureAwait(false);
-            return;
-        }
-
         using CancellationTokenSource deadline = new(options.QueryTimeout, clock);
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, deadline.Token, _lifetime.Token);
         long started = clock.GetTimestamp();
         try
         {
+            using IDisposable? admission = await AdmitTrafficAsync(context, linked.Token).ConfigureAwait(false);
+            if (admission is null)
+            {
+                return;
+            }
+
+            if (!HttpMethods.IsGet(context.Request.Method))
+            {
+                context.Response.Headers.Allow = "GET";
+                await ErrorAsync(
+                    context: context,
+                    status: 405,
+                    error: "InvalidRequest",
+                    message: "Use GET for label queries.").ConfigureAwait(false);
+                return;
+            }
+
+            if (!_ready)
+            {
+                await ErrorAsync(
+                    context: context,
+                    status: 503,
+                    error: "ServiceUnavailable",
+                    message: "Label publication is not available.").ConfigureAwait(false);
+                return;
+            }
+
             LabelQuery query = LabelQuery.Parse(context.Request);
             LabelStoreState state = await store.GetStateAsync(linked.Token).ConfigureAwait(false);
             CheckState(state);
