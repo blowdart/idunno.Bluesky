@@ -205,11 +205,7 @@ internal abstract partial class RelationalLabelStore
                 binding.Did == caller.Actor.Value && binding.Credential == caller.Credential;
         }
 
-        long now = Integer(await ScalarAsync(
-            connection: connection,
-            transaction: transaction,
-            sql: ClockSql,
-            token: token).ConfigureAwait(false));
+        long now = await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
         return caller.ExpiresAt.ToUnixTimeMilliseconds() > now &&
             Integer(await ScalarAsync(
                 connection: connection,
@@ -332,8 +328,7 @@ internal abstract partial class RelationalLabelStore
         return AdministrationAsync(async (connection, transaction, state) =>
         {
             AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-            long now = Integer(await ScalarAsync(
-                connection: connection, transaction: transaction, sql: ClockSql, token: cancellationToken).ConfigureAwait(false));
+            long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             byte[] replay = SHA256.HashData(Encoding.UTF8.GetBytes(authentication.Issuer.Value + "\n" + authentication.TokenId));
             long expiry = authentication.ExpiresAt.ToUnixTimeMilliseconds();
             if (!team.Bootstrapped || authentication.Audience.Did.Value != state.Issuer ||

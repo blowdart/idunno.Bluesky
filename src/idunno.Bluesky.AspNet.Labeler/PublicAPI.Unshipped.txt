@@ -1,4 +1,17 @@
 #nullable enable
+idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.LabelerModerationOptions() -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumConcurrentReports.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumConcurrentReports.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.ReportsPerMinute.get -> int
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.ReportsPerMinute.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.VerificationFreshness.get -> System.TimeSpan
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.VerificationFreshness.init -> void
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumServiceTokenLifetime.get -> System.TimeSpan
+idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions.MaximumServiceTokenLifetime.init -> void
+static idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions.AddLabelerModeration(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.Did! issuer, System.Net.Http.HttpClient! httpClient, idunno.Bluesky.AspNet.Labeler.LabelerModerationOptions? options = null) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.Bluesky.AspNet.Labeler.LabelerModerationExtensions.MapLabelerModeration(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder! endpoints) -> Microsoft.AspNetCore.Routing.IEndpointRouteBuilder!
 OpenTelemetry.Metrics.LabelerMetricsExtensions
 static OpenTelemetry.Metrics.LabelerMetricsExtensions.AddBlueskyLabelerMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
 idunno.Bluesky.AspNet.Labeler.LabelerHostingExtensions

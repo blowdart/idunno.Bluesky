@@ -6,6 +6,10 @@
 
 #### idunno.Bluesky.AspNet.Labeler
 
+* Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
+* Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
+* Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
+
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
 * Rejects insecure remote administration requests with an audited `403 Forbidden` before service-token authentication.
@@ -24,6 +28,8 @@
 
 #### idunno.Bluesky.Labeler.Cli
 
+* Added explicit policy inspection, save/begin/verify/abandon and conditional publication/recovery commands. Publication separates administrator and labeler-account OAuth authority, preserves raw declaration fields/default omissions, and rejects abandoned, superseded or conflicting intent.
+
 * Requests `identity:*` for PLC publication and recovery; the standalone host's native metadata advertises that permission.
 * Added a self-contained Windows x64/Linux x64/Linux arm64 administration CLI with protected local IPC, OAuth/PDS service-authenticated remote access, team/audit/publication and lifecycle status and operation-receipt reads, and confirmed label issue/negation and team-management commands.
 * Added confirmed retirement begin, bounded checkpointed negation, grace, completion, and explicit bounded-purge CLI commands over the shared authorized administration dispatcher.
@@ -34,6 +40,9 @@
 * Release tags publish an attested standalone labeler container image to the public GHCR package and include its immutable digest in the release assets.
 
 #### idunno.Bluesky.Labeler
+
+* Added exact-subject reports/cases, fixed filtered workflow views with caller/issuer/filter-bound cursors, immutable policy versions and publication history, and explicit appeal capture/internal review and outcomes. Case decisions atomically reuse shared manual label issuance, commit-time authorization and original-signature recovery; report intake never automatically labels content.
+* Rejects cached and transactional policy permission after database-clock rollback, persists bounded sticky conflicts for invalid authoritative declarations, and canonicalizes integer-only declaration extensions before publication.
 
 * Added verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit OS delegations, live member and binding revocation, concurrent last-administrator protection, durable administrative audit and maintenance intent/result contracts. Typed grants fence label/no-op commits against authorization changes.
 * Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.
@@ -46,6 +55,8 @@
 
 #### idunno.Bluesky.Labeler.Host
 
+* Added an optional, disabled-by-default Xenon backend using the canonical host's existing database, keys, administration, proxy configuration and maintenance coordination.
+
 * Made PEM signing keys honor database-backed selection and coordinated activation, supporting transitions from environment-backed keys and recovery from stale active-ID files.
 * Added a local development launch profile with loopback HTTP/HTTPS endpoints and automatic browser launch disabled pending a landing page.
 * Added a non-secret `appsettings.json` with safe provider, issuance, administration, proxy and logging defaults, plus documented deployment environment variables.
@@ -57,6 +68,8 @@
 * Defaults the canonical host to environment-backed current and optional previous keys using separate indexed variables. Filesystem-backed installations must explicitly select the `pem` provider; database-backed active selection and coordinated rotation remain authoritative.
 
 #### idunno.Bluesky.Labeler.SQLite / PostgreSQL / MySQL
+
+* Added schema-nine transactional moderation, policy publication/recovery history, report replay reservations, appeal provenance and atomic case decisions. Additive subject indexing preserves existing signed history; MySQL requires InnoDB for all new tables.
 
 * Validates InnoDB storage for all MySQL administration tables as well as label tables, rejecting nontransactional existing tables.
 * Added additive schema-version-four team, credential replay, audit and receipt persistence with shared transaction-valid administration across all three providers.
@@ -75,6 +88,8 @@
 * Added `IParsable<T>` support to `AtUri`, `Cid`, `Did`, `Handle`, `Nsid` and `RecordKey`, including `Parse` and `TryParse` overloads accepting an `IFormatProvider`.
 
 #### idunno.AtProto
+
+* Added reporting-only service authentication for exact labeler service audiences and legacy bare issuer DIDs without relaxing administration. Added shared explicit label-policy publication validation without restricting remote DTO deserialization.
 
 * Added exact `DID#service` token-acquisition overloads and strict AT Protocol service JWT verification. Production native loopback callbacks no longer implicitly permit insecure remote OAuth endpoints.
 * Service-authentication tokens request a 14-minute-55-second lifetime by default, leaving five seconds of client/PDS clock-skew headroom below the default 15-minute verifier maximum; callers can choose another lifetime, and verifiers can configure their maximum accepted lifetime.

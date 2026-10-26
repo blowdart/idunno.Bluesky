@@ -76,6 +76,14 @@ The application targets .NET 10 and is distributed as the labeler container imag
 NuGet library. SDK consumers can continue to compose their own hosts using the independent
 labeler libraries. This host does not include a moderation web UI.
 
+Optional [Xenon moderation](../../docs/docs/labeller/moderation.md) is disabled by
+default. Set `LabelerModeration__Enabled=true` to add standard independent-labeler
+reports and shared case/appeal/policy administration. The same database, keys,
+roles and maintenance coordination are used. Persisted independently verified
+policy then replaces configuration-backed issuance permissions; declaration drift
+or stale/unavailable verification closes reports and new issuance, not distribution
+or safe withdrawal. Remote administration remains independently opt-in.
+
 Build the container from the repository root:
 
 ```powershell

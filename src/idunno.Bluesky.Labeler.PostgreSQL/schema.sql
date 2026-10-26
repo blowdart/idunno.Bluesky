@@ -91,4 +91,87 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 );
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON CONFLICT DO NOTHING;
-INSERT INTO label_schema(id, version) VALUES(1, 8) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_cases (
+    case_id BIGINT PRIMARY KEY CHECK(case_id>0),
+    subject_hash BYTEA NOT NULL CHECK(octet_length(subject_hash)=32),
+    subject_key BYTEA NOT NULL,
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    assignee_hash BYTEA NULL CHECK(assignee_hash IS NULL OR octet_length(assignee_hash)=32),
+    assignee_key BYTEA NULL,
+    payload BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_cases_subject ON label_cases(subject_hash, status);
+CREATE INDEX IF NOT EXISTS label_cases_status ON label_cases(status, case_id);
+CREATE INDEX IF NOT EXISTS label_cases_assignee ON label_cases(assignee_hash, status, case_id);
+CREATE TABLE IF NOT EXISTS label_case_events (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    case_id BIGINT NOT NULL REFERENCES label_cases(case_id),
+    operation_hash BYTEA NOT NULL UNIQUE CHECK(octet_length(operation_hash)=32),
+    operation_id TEXT COLLATE "C" NOT NULL,
+    intent BYTEA NOT NULL,
+    payload BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_case_events_history ON label_case_events(case_id, seq);
+CREATE TABLE IF NOT EXISTS label_reports (
+    report_id BIGINT PRIMARY KEY CHECK(report_id>0),
+    case_id BIGINT NOT NULL REFERENCES label_cases(case_id),
+    reason_hash BYTEA NOT NULL CHECK(octet_length(reason_hash)=32),
+    reason_type TEXT COLLATE "C" NOT NULL,
+    payload BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_reports_case ON label_reports(case_id, report_id);
+CREATE INDEX IF NOT EXISTS label_reports_reason ON label_reports(reason_hash, case_id);
+CREATE TABLE IF NOT EXISTS label_report_tokens (
+    replay_hash BYTEA PRIMARY KEY CHECK(octet_length(replay_hash)=32),
+    replay_key BYTEA NOT NULL,
+    token_hash BYTEA NOT NULL UNIQUE CHECK(octet_length(token_hash)=32),
+    expires_ms BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_report_tokens_expiry ON label_report_tokens(expires_ms);
+CREATE TABLE IF NOT EXISTS label_policy_gate (id INTEGER PRIMARY KEY CHECK(id=1), payload BYTEA NOT NULL);
+CREATE TABLE IF NOT EXISTS label_policy_history (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    operation_hash BYTEA NULL UNIQUE CHECK(operation_hash IS NULL OR octet_length(operation_hash)=32),
+    payload BYTEA NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_policy_versions (
+    version_hash BYTEA PRIMARY KEY CHECK(octet_length(version_hash)=32),
+    version TEXT COLLATE "C" NOT NULL,
+    payload BYTEA NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_policy_events (
+    operation_hash BYTEA PRIMARY KEY CHECK(octet_length(operation_hash)=32),
+    operation_id TEXT COLLATE "C" NOT NULL,
+    intent BYTEA NOT NULL,
+    payload BYTEA NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_appeals (
+    appeal_id BIGINT PRIMARY KEY CHECK(appeal_id>0),
+    case_id BIGINT NOT NULL REFERENCES label_cases(case_id),
+    status INTEGER NOT NULL,
+    pending_hash BYTEA NOT NULL CHECK(octet_length(pending_hash)=32),
+    pending_key BYTEA NOT NULL,
+    payload BYTEA NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_appeals_case ON label_appeals(case_id, status, appeal_id);
+CREATE INDEX IF NOT EXISTS label_appeals_pending ON label_appeals(pending_hash, status);
+CREATE TABLE IF NOT EXISTS label_appeal_reports (
+    report_id BIGINT PRIMARY KEY REFERENCES label_reports(report_id),
+    appeal_id BIGINT NOT NULL REFERENCES label_appeals(appeal_id)
+);
+CREATE INDEX IF NOT EXISTS label_appeal_reports_appeal ON label_appeal_reports(appeal_id, report_id);
+CREATE TABLE IF NOT EXISTS label_subject_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    subject_hash BYTEA NOT NULL CHECK(octet_length(subject_hash)=32),
+    subject_key BYTEA NOT NULL,
+    value TEXT COLLATE "C" NOT NULL
+);
+CREATE INDEX IF NOT EXISTS label_subject_index_subject ON label_subject_index(subject_hash, seq);
+CREATE TABLE IF NOT EXISTS label_case_decisions (
+    operation_hash BYTEA PRIMARY KEY CHECK(octet_length(operation_hash)=32),
+    operation_id TEXT COLLATE "C" NOT NULL,
+    case_id BIGINT NOT NULL REFERENCES label_cases(case_id),
+    intent BYTEA NOT NULL,
+    payload BYTEA NOT NULL
+);
+INSERT INTO label_schema(id, version) VALUES(1, 9) ON CONFLICT DO NOTHING;

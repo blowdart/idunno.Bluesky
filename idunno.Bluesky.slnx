@@ -130,6 +130,7 @@
     <File Path="docs/docs/labeller/deployment.md" />
     <File Path="docs/docs/labeller/hosting.md" />
     <File Path="docs/docs/labeller/issuance.md" />
+    <File Path="docs/docs/labeller/moderation.md" />
     <File Path="docs/docs/labeller/overview.md" />
     <File Path="docs/docs/labeller/persistence.md" />
   </Folder>

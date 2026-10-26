@@ -15,5 +15,7 @@ public enum LabelAdministrationPermission
     /// <summary>Permits team and credential management.</summary>
     ManageTeam,
     /// <summary>Permits protected maintenance, but does not execute maintenance.</summary>
-    Maintain
+    Maintain,
+    /// <summary>Permits versioned policy management and explicit declaration publication.</summary>
+    ManagePolicy
 }

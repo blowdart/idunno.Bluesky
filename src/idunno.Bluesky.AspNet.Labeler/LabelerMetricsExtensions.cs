@@ -14,11 +14,12 @@ public static class LabelerMetricsExtensions
     /// <param name="builder">The metrics provider builder.</param>
     /// <returns>The builder for chaining additional configuration.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
-    /// <remarks><para>This extension selects the hosting meter. Configure readers and exporters separately.</para></remarks>
+    /// <remarks><para>This extension selects the hosting meter and optional moderation meter.
+    /// Configure readers and exporters separately; selecting a meter does not enable moderation.</para></remarks>
     public static MeterProviderBuilder AddBlueskyLabelerMetrics(this MeterProviderBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        return builder.AddMeter(HostingMetrics.MeterName);
+        return builder.AddMeter(HostingMetrics.MeterName, LabelerModerationHost.MeterName);
     }
 }

@@ -847,7 +847,7 @@ public class AdministrationTests
     }
 
     /// <summary>Marks a test request as arriving through the fixture's configured trusted proxy.</summary>
-    private static void AddTrustedProxyHeaders(HttpRequestMessage request)
+    internal static void AddTrustedProxyHeaders(HttpRequestMessage request)
     {
         request.Headers.TryAddWithoutValidation("X-Test-Remote-IP", "192.0.2.1");
         request.Headers.TryAddWithoutValidation("X-Forwarded-For", "198.51.100.10");
@@ -855,7 +855,7 @@ public class AdministrationTests
     }
 
     /// <summary>Signs short-lived account service assertions using the test account's repository key.</summary>
-    private static string Token(
+    internal static string Token(
         LabelSigningKey key,
         DateTimeOffset now,
         string? audience = null,

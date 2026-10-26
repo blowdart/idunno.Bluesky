@@ -231,12 +231,13 @@ connection or claim that an independent second write is atomic with issuance.
 ## Upgrade and back up your database
 
 Use setup credentials for schema installation/upgrades, and runtime credentials restricted to SELECT,
-INSERT, UPDATE and DELETE on these five tables. Runtime PostgreSQL/MySQL sessions also require permission
+INSERT, UPDATE and DELETE on the provider's tables, including its moderation
+tables when Xenon is enabled. Runtime PostgreSQL/MySQL sessions also require permission
 to read the server settings validated above. Run `InitializeAsync` separately with setup credentials.
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades versions one, two and three to version four additively without changing signed history, legacy receipts,
+`InitializeAsync` upgrades supported earlier schemas to version nine additively without changing signed history, legacy receipts,
 stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
@@ -249,8 +250,15 @@ Its backfill resumes missing entries and never rewrites signed JSON or canonical
 New entries and projection metadata commit atomically. The raw store query/replay contracts
 remain historical; [public hosting](hosting.md) selects the latest published slot at a fixed tip.
 
+Version nine adds [optional moderation](moderation.md): reports, cases, appeals,
+workflow projections and immutable policy/recovery history share the label
+transaction boundary. Subject-index backfill resumes independently of older
+decision projections. No report/case is required for manual issuance, and a
+database without an initialized Xenon gate keeps the existing distribution path.
+
 Back up the whole database together: schema metadata, issuer and stream identity, labels, receipts,
-publication boundaries and lifecycle checkpoints. For SQLite, use its online backup facility or a properly
+publication boundaries, lifecycle checkpoints and all team/moderation/policy/audit
+history. For SQLite, use its online backup facility or a properly
 coordinated filesystem snapshot including WAL. Just copying an open `.db` file isn't safe.
 Use consistent PostgreSQL/MySQL backups too, and practise restoring them.
 Take a backup before a migration. Back up your private signing key separately.

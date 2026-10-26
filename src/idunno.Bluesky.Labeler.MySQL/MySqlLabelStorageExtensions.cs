@@ -5,6 +5,7 @@ using System.Diagnostics.Metrics;
 
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -46,6 +47,10 @@ public static class MySqlLabelStorageExtensions
         services.AddSingleton<ILabelDistributionStore>(provider => provider.GetRequiredService<ILabelStore>());
         services.AddSingleton<ILabelAdministrationStore>(provider => (ILabelAdministrationStore)provider.GetRequiredService<ILabelStore>());
         services.AddSingleton<ILabelMaintenanceStore>(provider => (ILabelMaintenanceStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelModerationStore>(provider => (ILabelModerationStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelPolicyStore>(provider => (ILabelPolicyStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelReportStore>(provider => (ILabelReportStore)provider.GetRequiredService<ILabelStore>());
+        services.AddSingleton<ILabelAppealStore>(provider => (ILabelAppealStore)provider.GetRequiredService<ILabelStore>());
         services.AddSingleton<ILabelSigningKeySelectionStore>(provider => (ILabelSigningKeySelectionStore)provider.GetRequiredService<ILabelStore>());
         return services;
     }

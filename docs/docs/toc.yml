@@ -133,6 +133,8 @@ items:
             href: labeller/hosting.md
           - name: Administrative authentication and teams
             href: labeller/administration.md
+          - name: Optional Xenon moderation
+            href: labeller/moderation.md
           - name: Standalone deployment and updates
             href: labeller/deployment.md
 

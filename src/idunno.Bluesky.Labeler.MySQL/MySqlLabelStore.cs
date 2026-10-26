@@ -69,7 +69,12 @@ internal sealed class MySqlLabelStore(string connectionString, ILogger<MySqlLabe
             await ScalarAsync(
                 connection: connection,
                 transaction: null,
-                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('label_schema','label_state','label_entries','label_operations','label_decisions','label_distribution','label_decision_index','label_team','label_admin_audit','label_admin_receipts','label_admin_tokens','label_maintenance','label_hosts','label_host_roles','label_maintenance_hosts','label_signing_selection') AND engine<>'InnoDB'",
+                sql: "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN " +
+                    "('label_schema','label_state','label_entries','label_operations','label_decisions','label_distribution','label_decision_index'," +
+                    "'label_team','label_admin_audit','label_admin_receipts','label_admin_tokens','label_maintenance','label_hosts'," +
+                    "'label_host_roles','label_maintenance_hosts','label_signing_selection','label_cases','label_case_events','label_case_decisions'," +
+                    "'label_reports','label_report_tokens','label_policy_gate','label_policy_versions','label_policy_events','label_policy_history'," +
+                    "'label_appeals','label_appeal_reports','label_subject_index') AND engine<>'InnoDB'",
                 token: token).ConfigureAwait(false),
             CultureInfo.InvariantCulture);
         if (invalid != 0)

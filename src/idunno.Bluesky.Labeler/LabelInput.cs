@@ -18,11 +18,12 @@ internal static class LabelInput
     /// <param name="value">The text to validate.</param>
     /// <param name="parameterName">The associated parameter name.</param>
     /// <param name="maximumBytes">The maximum encoded UTF-8 byte count.</param>
+    /// <param name="allowBlank"><see langword="true"/> to permit blank protocol text; otherwise, <see langword="false"/>.</param>
     /// <returns>The unchanged validated text.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="value"/> is blank, contains U+0000, or contains invalid UTF-16 that cannot be encoded as UTF-8.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumBytes"/> is negative or the encoded value exceeds it.</exception>
-    internal static string ValidateText(string value, string parameterName, int maximumBytes)
+    internal static string ValidateText(string value, string parameterName, int maximumBytes, bool allowBlank = false)
     {
         if (value is null)
         {
@@ -30,7 +31,7 @@ internal static class LabelInput
         }
 
         ArgumentOutOfRangeException.ThrowIfNegative(maximumBytes);
-        if (string.IsNullOrWhiteSpace(value))
+        if (!allowBlank && string.IsNullOrWhiteSpace(value))
         {
             throw new ArgumentException("Text must not be blank.", parameterName);
         }

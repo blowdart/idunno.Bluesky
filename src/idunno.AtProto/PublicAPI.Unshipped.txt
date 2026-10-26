@@ -1,4 +1,14 @@
 #nullable enable
+idunno.AtProto.Labels.LabelPolicyValidator
+static idunno.AtProto.Labels.LabelPolicyValidator.Validate(System.Collections.Generic.IEnumerable<string!>! labelValues, System.Collections.Generic.IEnumerable<idunno.AtProto.Labels.LabelValueDefinition!>! definitions) -> void
+idunno.AtProto.ModerationReportAuthenticationResult
+idunno.AtProto.ModerationReportAuthenticationResult.Audience.get -> string!
+idunno.AtProto.ModerationReportAuthenticationResult.ExpiresAt.get -> System.DateTimeOffset
+idunno.AtProto.ModerationReportAuthenticationResult.Labeler.get -> idunno.AtProto.Did!
+idunno.AtProto.ModerationReportAuthenticationResult.Reporter.get -> idunno.AtProto.Did!
+idunno.AtProto.ModerationReportAuthenticationResult.TokenHash.get -> string!
+idunno.AtProto.ModerationReportAuthenticationResult.TokenId.get -> string!
+static idunno.AtProto.ServiceAuthentication.VerifyModerationReportAsync(string! token, idunno.AtProto.Did! labeler, System.Net.Http.HttpClient! httpClient, System.TimeProvider? timeProvider = null, System.TimeSpan? maximumLifetime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.ModerationReportAuthenticationResult!>!
 static idunno.AtProto.Labels.LabelSignatureVerifier.ValidatePublicKey(string! publicKeyMultibase) -> void
 static idunno.AtProto.Labels.LabelSignatureVerifier.Verify(idunno.AtProto.Did! issuer, string! publicKeyMultibase, System.Collections.Generic.IEnumerable<idunno.AtProto.Labels.Label!>! labels) -> void
 idunno.AtProto.AtProtoServiceReference

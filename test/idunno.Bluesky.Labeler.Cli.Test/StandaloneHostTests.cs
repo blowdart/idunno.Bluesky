@@ -84,8 +84,12 @@ public class StandaloneHostTests
         Assert.Equal("http://127.0.0.1/", metadata.RootElement.GetProperty("redirect_uris")[0].GetString());
         string[] scopes = metadata.RootElement.GetProperty("scope").GetString()!.Split(' ');
         Assert.Contains("atproto", scopes);
-        Assert.Equal(23, scopes.Length);
+        Assert.Equal(47, scopes.Length);
         Assert.Contains("identity:*", scopes);
+        Assert.Contains("repo:app.bsky.labeler.service?action=create", scopes);
+        Assert.Contains("repo:app.bsky.labeler.service?action=update", scopes);
+        Assert.Contains("rpc:dev.idunno.labeler.admin.beginPolicyPublication?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
+        Assert.Contains("rpc:dev.idunno.labeler.admin.getAppealReports?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);
         Assert.Subset(scopes.ToHashSet(StringComparer.Ordinal),
             Program.CreatePlcOAuthOptions(new Uri("https://labeler.example/native-client-metadata.json")).Scopes.ToHashSet(StringComparer.Ordinal));
         Assert.Contains("rpc:dev.idunno.labeler.admin.issueLabel?aud=did%3Aweb%3Alabeler.example%23labeler_admin", scopes);

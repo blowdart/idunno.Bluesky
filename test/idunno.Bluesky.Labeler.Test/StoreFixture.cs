@@ -11,6 +11,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Time.Testing;
 
 using MySqlConnector;
 
@@ -28,11 +29,22 @@ internal sealed class StoreFixture : IAsyncDisposable
     internal string ConnectionString { get; private set; } = string.Empty;
     internal ILabelStore Store { get; private set; } = null!;
     internal ServiceProvider Services => _providers[0];
+    /// <summary>Gets the shared database-time replacement used by explicitly controlled moderation fixtures.</summary>
+    internal FakeTimeProvider? DatabaseClock { get; private set; }
     private StoreFixture(string engine) => Engine = engine;
 
-    internal static async Task<StoreFixture> CreateAsync(string engine, bool initialize = true)
+    /// <summary>Creates a moderation fixture whose original and restarted stores share one fixed database clock.</summary>
+    internal static Task<StoreFixture> CreateModerationAsync(string engine) =>
+        CreateAsync(
+            engine: engine,
+            databaseClock: new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)));
+
+    internal static async Task<StoreFixture> CreateAsync(
+        string engine,
+        bool initialize = true,
+        FakeTimeProvider? databaseClock = null)
     {
-        StoreFixture fixture = new(engine);
+        StoreFixture fixture = new(engine) { DatabaseClock = databaseClock };
         if (engine == "sqlite")
         {
             fixture.ConnectionString = new SqliteConnectionStringBuilder
@@ -82,7 +94,7 @@ internal sealed class StoreFixture : IAsyncDisposable
         }
     }
 
-    internal ILabelStore NewStore()
+    internal ILabelStore NewStore(FakeTimeProvider? databaseClock = null)
     {
         ServiceCollection services = new();
         services.AddMetrics();
@@ -104,7 +116,21 @@ internal sealed class StoreFixture : IAsyncDisposable
 
         ServiceProvider provider = services.BuildServiceProvider();
         _providers.Add(provider);
-        return provider.GetRequiredService<ILabelStore>();
+        ILabelStore store = provider.GetRequiredService<ILabelStore>();
+        switch (store)
+        {
+            case SqliteLabelStore sqlite:
+                sqlite.DatabaseClock = databaseClock ?? DatabaseClock;
+                break;
+            case PostgreSqlLabelStore postgresql:
+                postgresql.DatabaseClock = databaseClock ?? DatabaseClock;
+                break;
+            case MySqlLabelStore mysql:
+                mysql.DatabaseClock = databaseClock ?? DatabaseClock;
+                break;
+        }
+
+        return store;
     }
 
     internal IMeterFactory MeterFactory => Services.GetRequiredService<IMeterFactory>();

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 using idunno.AtProto;
@@ -231,6 +230,12 @@ internal abstract partial class RelationalLabelStore
                 if (current.IsActive || state.Phase != LabelerLifecyclePhase.Active)
                 {
                     throw new InvalidOperationException("Another maintenance operation is active or the labeler lifecycle is closed.");
+                }
+
+                if ((await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false))?.Phase ==
+                    Moderation.LabelPolicyPhase.Publishing)
+                {
+                    throw new InvalidOperationException("Recover the pending policy publication before beginning rotation.");
                 }
 
                 LabelSigningKeySelection? selection = await ReadSigningSelectionAsync(connection, transaction, state, cancellationToken).ConfigureAwait(false);
@@ -767,9 +772,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     private async Task<long> DatabaseNowAsync(DbConnection connection, DbTransaction transaction, CancellationToken token) =>
-        Convert.ToInt64(
-            await ScalarAsync(connection, transaction, ClockSql, token).ConfigureAwait(false),
-            CultureInfo.InvariantCulture);
+        await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
 
     private static async Task<int> ExecuteCountAsync(
         DbConnection connection,
