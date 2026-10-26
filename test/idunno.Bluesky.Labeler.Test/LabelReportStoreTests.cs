@@ -27,7 +27,7 @@ public class LabelReportStoreTests
     [InlineData("mysql", true)]
     public async Task IndependentReporterNeedsNoTeamMembershipAndReplayRemainsRejectedAfterRestart(string engine, bool legacy)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
         ILabelReportStore store = (ILabelReportStore)fixture.Store;
@@ -59,7 +59,7 @@ public class LabelReportStoreTests
     [InlineData("mysql")]
     public async Task ConcurrentFreshTokensRetainEveryReportButShareOneExactSubjectCase(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
         ILabelReportStore first = (ILabelReportStore)fixture.Store;
@@ -92,7 +92,7 @@ public class LabelReportStoreTests
     [InlineData("mysql")]
     public async Task AcceptanceNeverFetchesSubjectsAndPreservesDistinctRecordVersions(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
         ILabelReportStore store = (ILabelReportStore)fixture.Store;
@@ -126,7 +126,7 @@ public class LabelReportStoreTests
     [InlineData("mysql")]
     public async Task WrongAudienceStalePolicyAndNonownerAppealsCannotCreateReportsOrCases(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
         ILabelReportStore store = (ILabelReportStore)fixture.Store;
@@ -154,7 +154,7 @@ public class LabelReportStoreTests
     [InlineData("mysql")]
     public async Task BeforeCommitFaultRollsBackReportCaseReplayAndAuditButLostAcknowledgementPreservesAll(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
         ILabelReportStore store = (ILabelReportStore)fixture.Store;

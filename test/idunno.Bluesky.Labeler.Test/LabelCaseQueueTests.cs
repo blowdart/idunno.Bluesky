@@ -18,7 +18,7 @@ public class LabelCaseQueueTests
     [InlineData("mysql")]
     public async Task FixedViewsCombineExactSubjectReasonAndManualAssignmentFilters(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
@@ -93,7 +93,7 @@ public class LabelCaseQueueTests
     [InlineData("mysql")]
     public async Task ContinuationsSurviveRestartButRejectChangedFiltersAndCallers(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;

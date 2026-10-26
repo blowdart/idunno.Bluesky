@@ -1,9 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Data.Common;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -37,7 +35,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task OptInIsDurableFailClosedAndDoesNotChangeCoreDistribution(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         ILabelPolicyStore store = fixture.Services.GetRequiredService<ILabelPolicyStore>();
         Assert.Same(fixture.Store, store);
@@ -60,7 +58,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task DraftsAreImmutableAndPublicationRequiresIndependentMatchingObservation(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -106,7 +104,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task DetectedDriftIsStickyUntilExplicitAdministratorReconciliation(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -138,7 +136,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task ObservationsRejectStaleRevisionsExpiredLookupsAndFutureDatabaseTimes(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -148,6 +146,7 @@ public class LabelPolicyStoreTests
         {
             (active.Revision - 1, active.DatabaseTime, "policy changed"),
             (active.Revision, active.DatabaseTime.Subtract(active.VerificationFreshness), "window expired"),
+            (active.Revision, active.DatabaseTime.AddMilliseconds(430), "ahead of the database clock"),
             (active.Revision, active.DatabaseTime.AddDays(1), "ahead of the database clock")
         })
         {
@@ -167,6 +166,62 @@ public class LabelPolicyStoreTests
     }
 
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task DefaultProviderClockExecutesWithoutTheTestReplacement(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        Assert.Null(fixture.DatabaseClock);
+        LabelPolicyState state = await ((ILabelPolicyStore)fixture.Store).InitializePolicyAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.InRange(state.DatabaseTime.Year, 2000, 2100);
+        Assert.Equal(TimeSpan.Zero, state.DatabaseTime.Offset);
+    }
+
+    [Theory]
+    [InlineData("sqlite", -1, true)]
+    [InlineData("sqlite", 0, false)]
+    [InlineData("sqlite", 1, false)]
+    [InlineData("postgresql", -1, true)]
+    [InlineData("postgresql", 0, false)]
+    [InlineData("postgresql", 1, false)]
+    [InlineData("mysql", -1, true)]
+    [InlineData("mysql", 0, false)]
+    [InlineData("mysql", 1, false)]
+    public async Task VerificationExpiryUsesTheSameControlledClockAfterRestart(
+        string engine,
+        int millisecondsFromExpiry,
+        bool succeeds)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        Assert.Equal(fixture.DatabaseClock!.GetUtcNow(), active.DatabaseTime);
+        fixture.DatabaseClock.Advance(active.VerificationFreshness.Add(TimeSpan.FromMilliseconds(millisecondsFromExpiry)));
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore();
+        LabelPolicyState current = Assert.IsType<LabelPolicyState>(await restarted.ReadPolicyStateAsync(token));
+        Assert.Equal(fixture.DatabaseClock.GetUtcNow(), current.DatabaseTime);
+        Assert.Equal(active.VerifiedUntil, current.VerifiedUntil);
+        using JsonDocument declaration = JsonDocument.Parse(Declaration);
+        LabelServiceResult<LabelPolicyState> observation = await restarted.ObservePolicyAsync(
+            expectedRevision: current.Revision,
+            verificationStartedAt: active.DatabaseTime,
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token);
+        Assert.Equal(succeeds, observation.Succeeded);
+        if (!succeeds)
+        {
+            Assert.Equal(LabelServiceErrorCode.StaleDecision, observation.Error!.Code);
+            Assert.Contains("window expired", observation.Error.Message, StringComparison.Ordinal);
+            Assert.Equal(current.Revision, (await restarted.ReadPolicyStateAsync(token))!.Revision);
+        }
+    }
+
+    [Theory]
     [InlineData("sqlite", LabelTeamRole.Viewer)]
     [InlineData("sqlite", LabelTeamRole.Moderator)]
     [InlineData("postgresql", LabelTeamRole.Viewer)]
@@ -175,7 +230,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql", LabelTeamRole.Moderator)]
     public async Task PolicyWritesRequireLiveAdministratorAndReceiptRecoveryDoesNotBypassRevocation(string engine, LabelTeamRole role)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -203,7 +258,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task LostPublicationAcknowledgementRecoversOriginalIntentWithoutReopeningGate(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -232,7 +287,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task AbandonedPublicationRemainsClosedAndRecoversWithoutAssumingRemoteRollback(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -313,7 +368,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task ManualIssuanceRechecksPolicyAtCommitAndSafeWithdrawalSurvivesExpiry(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -334,7 +389,7 @@ public class LabelPolicyStoreTests
         };
         LabelOperationReceipt issued = Success(await fixture.Store.CommitDecisionAsync(prepared, token));
         Assert.True(issued.Changed);
-        await ExpireGateAsync(fixture);
+        fixture.DatabaseClock!.Advance(active.VerificationFreshness);
         LabelDecisionCommit stale = new(
             request: LabelOperationRequest.Issue(operationId: "stale", target: target, value: "scam", context: context),
             resolvedTarget: target,
@@ -368,7 +423,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql")]
     public async Task RetainedVersionsAndRecoveryHistoryPreserveIntentAcrossDriftAbandonmentAndLateWrites(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -431,7 +486,7 @@ public class LabelPolicyStoreTests
     [InlineData("mysql", true)]
     public async Task PolicyHistoryDraftReceiptAndAuditCommitTogetherAndRecoverWithoutDuplicateHistory(string engine, bool afterCommit)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await BootstrapAsync(fixture);
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
@@ -537,8 +592,6 @@ public class LabelPolicyStoreTests
     }
 
     /// <summary>Exercises draft, publication and independent provider observation before returning an active gate.</summary>
-    /// <remarks>Restarts fixture verification after an explicitly rejected database-clock rollback,
-    /// without relaxing the production freshness guard or retrying policy/revision failures.</remarks>
     internal static async Task<LabelPolicyState> ActivateAsync(
         ILabelPolicyStore store, LabelAdministrationCaller administrator, CancellationToken token)
     {
@@ -548,42 +601,11 @@ public class LabelPolicyStoreTests
             caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
             previousCid: null, reason: "Publish.", cancellationToken: token));
         using JsonDocument declaration = JsonDocument.Parse(Declaration);
-        for (int attempt = 0; ; attempt++)
-        {
-            LabelServiceResult<LabelPolicyState> result = await store.ObservePolicyAsync(
-                expectedRevision: publishing.Revision,
-                verificationStartedAt: publishing.DatabaseTime,
-                observedCid: s_cid,
-                declaration: declaration.RootElement,
-                cancellationToken: token);
-            if (attempt == 2 ||
-                result.Error is not { Code: LabelServiceErrorCode.StaleDecision } error ||
-                !error.Message.Contains("ahead of the database clock", StringComparison.Ordinal))
-            {
-                return Success(result);
-            }
-
-            TestContext.Current.TestOutputHelper?.WriteLine($"Restarting fixture verification: {error.Message}");
-            publishing = Assert.IsType<LabelPolicyState>(await store.ReadPolicyStateAsync(token));
-        }
-    }
-
-    /// <summary>Expires the persisted deadline deterministically without assuming application and database clocks agree.</summary>
-    private static async Task ExpireGateAsync(StoreFixture fixture)
-    {
-        await using DbConnection connection = fixture.Connection();
-        await connection.OpenAsync(TestContext.Current.CancellationToken);
-        await using DbCommand read = connection.CreateCommand();
-        read.CommandText = "SELECT payload FROM label_policy_gate WHERE id=1";
-        byte[] payload = Assert.IsType<byte[]>(await read.ExecuteScalarAsync(TestContext.Current.CancellationToken));
-        JsonObject gate = Assert.IsType<JsonObject>(JsonNode.Parse(payload));
-        gate["VerifiedUntil"] = 0;
-        await using DbCommand write = connection.CreateCommand();
-        write.CommandText = "UPDATE label_policy_gate SET payload=@payload WHERE id=1";
-        DbParameter parameter = write.CreateParameter();
-        parameter.ParameterName = "@payload";
-        parameter.Value = System.Text.Encoding.UTF8.GetBytes(gate.ToJsonString());
-        write.Parameters.Add(parameter);
-        await write.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        return Success(await store.ObservePolicyAsync(
+            expectedRevision: publishing.Revision,
+            verificationStartedAt: publishing.DatabaseTime,
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token));
     }
 }

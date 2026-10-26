@@ -401,9 +401,11 @@ internal abstract partial class RelationalLabelStore
                     policy.AllowedRecordCollections.Contains(target.RecordUri!.Collection!)));
     }
 
-    /// <summary>Samples the database clock so providers and hosts share one verification boundary.</summary>
+    /// <summary>Samples the database clock, or its internal test replacement, for every persisted time boundary.</summary>
     private async Task<long> DatabaseTimeAsync(DbConnection connection, DbTransaction transaction, CancellationToken token) =>
-        Integer(await ScalarAsync(connection: connection, transaction: transaction, sql: ClockSql, token: token).ConfigureAwait(false));
+        DatabaseClock is { } clock
+            ? clock.GetUtcNow().ToUnixTimeMilliseconds()
+            : Integer(await ScalarAsync(connection: connection, transaction: transaction, sql: ClockSql, token: token).ConfigureAwait(false));
 
     /// <summary>Reads the optional moderation gate while holding the issuer serialization lock.</summary>
     private static async Task<ModerationPolicyGate?> ReadPolicyGateAsync(DbConnection connection, DbTransaction transaction, CancellationToken token)

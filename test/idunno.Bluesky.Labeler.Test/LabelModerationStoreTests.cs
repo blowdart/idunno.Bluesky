@@ -24,7 +24,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task RegistrationUsesTheSameProviderAndCasesSurviveRecreation(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         ILabelModerationStore store = fixture.Services.GetRequiredService<ILabelModerationStore>();
         Assert.Same(fixture.Store, store);
@@ -51,7 +51,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task ConcurrentOpenOperationsShareOneUnresolvedExactSubject(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore first = (ILabelModerationStore)fixture.Store;
@@ -79,7 +79,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task RecordVersionsAccountsAndProfileRecordsDoNotShareCases(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
@@ -119,7 +119,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task RevisionsTransitionsAndReopeningProtectConcurrentReview(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
@@ -155,7 +155,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql", LabelTeamRole.Administrator, true)]
     public async Task ReadsMutationsAndRecoveryEnforceLiveRoles(string engine, LabelTeamRole role, bool mayModerate)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
@@ -188,7 +188,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task AssignmentRequiresLiveEligibleMembersButRetainsHistoricalProvenance(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
@@ -226,7 +226,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task RetryReturnsOriginalSnapshotAndChangedIntentConflicts(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
@@ -248,7 +248,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task CaseAuditAndReceiptsRollbackTogetherAndUnknownAcknowledgementsRecover(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
@@ -276,7 +276,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task CaseAndHistoryPagesAreBoundedAndSuccessfulReadsDoNotExtendAudit(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
@@ -306,7 +306,7 @@ public class LabelModerationStoreTests
     [InlineData("mysql")]
     public async Task SchemaEightUpgradePreservesIssuerTeamAndStreamState(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);

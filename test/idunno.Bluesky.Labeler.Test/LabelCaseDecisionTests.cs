@@ -11,7 +11,6 @@ using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -28,7 +27,7 @@ public class LabelCaseDecisionTests
     [InlineData("mysql", 2)]
     public async Task AtomicDecisionsResolveCasesAndRecoverExactOutcomesBeforeNetworkAndPolicy(string engine, int count)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         TargetResolutionHandler handler = new();
@@ -36,7 +35,7 @@ public class LabelCaseDecisionTests
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         TestLabelIssuancePolicyProvider policy = new(active.Policy!.Issuance);
-        LabelIssuanceService service = Service(fixture.Store, caller, active, key, http, policy);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http, policy);
         LabelModerationCase moderationCase = await OpenAsync(fixture.Store, caller);
         LabelCaseDecision request = Decision(moderationCase, count == 0 ? [] : [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Issue, "scam")]);
         LabelCaseDecisionReceipt receipt = Success(await service.ExecuteCaseDecisionAsync(caller, request, token));
@@ -67,13 +66,13 @@ public class LabelCaseDecisionTests
     [InlineData("mysql")]
     public async Task LastActionFailureCannotCommitEarlierLabelsOrResolveTheCase(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
-        LabelIssuanceService service = Service(fixture.Store, caller, active, key, http);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
         LabelModerationCase moderationCase = await OpenAsync(fixture.Store, caller);
         LabelCaseDecision request = Decision(moderationCase, [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Issue, "scam", expectedLabelSequence: 42)]);
         LabelCaseDecisionCommit prepared = await PrepareAsync(service, caller, request, active.Revision);
@@ -91,13 +90,13 @@ public class LabelCaseDecisionTests
     [InlineData("mysql")]
     public async Task ConcurrentProvidersCommitOnlyOneCompleteDecisionForTheCaseRevision(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
-        LabelIssuanceService service = Service(fixture.Store, caller, active, key, http);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
         LabelModerationCase moderationCase = await OpenAsync(fixture.Store, caller);
         LabelCaseLabelAction[] actions = [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Issue, "scam")];
         LabelCaseDecisionCommit first = await PrepareAsync(service, caller, Decision(moderationCase, actions), active.Revision);
@@ -120,13 +119,13 @@ public class LabelCaseDecisionTests
     [InlineData("mysql", true)]
     public async Task CommitFaultsPreserveAllOrNothingAndRecoverTheOriginalSignatures(string engine, bool afterCommit)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
-        LabelIssuanceService service = Service(fixture.Store, caller, active, key, http);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
         LabelModerationCase moderationCase = await OpenAsync(fixture.Store, caller);
         LabelCaseDecision request = Decision(moderationCase, [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Issue, "scam")]);
         LabelCaseDecisionCommit prepared = await PrepareAsync(service, caller, request, active.Revision);
@@ -163,13 +162,13 @@ public class LabelCaseDecisionTests
     [InlineData("mysql")]
     public async Task ExactLabelSequencePreventsWithdrawalOfANewerManualOutcome(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
         LabelPolicyState active = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
-        LabelIssuanceService service = Service(fixture.Store, caller, active, key, http);
+        LabelIssuanceService service = Service(fixture, caller, active, key, http);
         LabelOperationContext context = new(caller.Actor, "Manual case-independent labeling.");
         LabelOperationReceipt original = Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "manual", target: LabelTarget.Account(s_subject.Repository), value: "spam", context: context), token));
@@ -194,7 +193,7 @@ public class LabelCaseDecisionTests
     [InlineData("mysql", true)]
     public async Task CommitRechecksPolicyAndLiveModeratorAuthorityAfterPreparation(string engine, bool revoke)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
@@ -211,7 +210,7 @@ public class LabelCaseDecisionTests
             new(operationId: "bind", action: LabelTeamAction.BindLocal, target: member, reason: "Bind moderator.", credential: "uid:1"),
             token));
         LabelAdministrationCaller moderator = Success(await team.AuthenticateLocalAsync("uid:1", token));
-        LabelIssuanceService service = Service(fixture.Store, moderator, active, key, http);
+        LabelIssuanceService service = Service(fixture, moderator, active, key, http);
         LabelModerationCase moderationCase = await OpenAsync(fixture.Store, moderator);
         LabelCaseDecision request = Decision(moderationCase, [new(LabelOperationKind.Issue, "spam"), new(LabelOperationKind.Issue, "scam")]);
         LabelCaseDecisionCommit prepared = await PrepareAsync(service, moderator, request, active.Revision);
@@ -295,7 +294,7 @@ public class LabelCaseDecisionTests
 
     /// <summary>Builds the production issuance service with a fixed fake clock and live shared team authority.</summary>
     private static LabelIssuanceService Service(
-        ILabelStore store,
+        StoreFixture fixture,
         LabelAdministrationCaller caller,
         LabelPolicyState active,
         LabelSigningKey key,
@@ -303,11 +302,11 @@ public class LabelCaseDecisionTests
         TestLabelIssuancePolicyProvider? policy = null) => new(
             issuer: StoreFixture.Issuer,
             signingKey: key,
-            store: store,
-            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)store, caller),
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
             policyProvider: policy ?? new(active.Policy!.Issuance),
             httpClient: http,
-            timeProvider: new FakeTimeProvider(active.DatabaseTime));
+            timeProvider: fixture.DatabaseClock!);
 
     /// <summary>Opens an independently reviewable account case without requiring a report.</summary>
     private static async Task<LabelModerationCase> OpenAsync(ILabelStore store, LabelAdministrationCaller caller) =>

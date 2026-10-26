@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 using idunno.AtProto;
@@ -773,9 +772,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     private async Task<long> DatabaseNowAsync(DbConnection connection, DbTransaction transaction, CancellationToken token) =>
-        Convert.ToInt64(
-            await ScalarAsync(connection, transaction, ClockSql, token).ConfigureAwait(false),
-            CultureInfo.InvariantCulture);
+        await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
 
     private static async Task<int> ExecuteCountAsync(
         DbConnection connection,

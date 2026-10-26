@@ -32,6 +32,9 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
     internal Func<DbConnection, DbTransaction, CancellationToken, Task>? BeforeCommitAsync { get; set; }
     /// <summary>Gets or sets the test hook for a lost acknowledgement after the database accepted a commit.</summary>
     internal Func<DbConnection, CancellationToken, Task>? AfterCommitAsync { get; set; }
+    /// <summary>Gets or sets the internal test clock replacing database-time samples across this store instance.</summary>
+    /// <remarks><para>Production leaves this unset and always executes the provider's database clock query.</para></remarks>
+    internal TimeProvider? DatabaseClock { get; set; }
     /// <summary>Gets the stable provider tag used in safe logs and metrics.</summary>
     protected abstract string Provider { get; }
     /// <summary>Gets the row-lock clause, or empty text when the transaction itself holds the SQLite writer lock.</summary>
@@ -560,12 +563,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             {
                 throw new OverflowException("The label stream sequence space is exhausted.");
             }
-            long now = Integer(
-                await ScalarAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sql: ClockSql,
-                    token: cancellationToken).ConfigureAwait(false));
+            long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             for (int i = 0; i < batch.Length; i++)
             {
                 Label label = batch[i].Label;
@@ -1717,12 +1715,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
             }
 
             Revision(state, expectedRevision);
-            long now = Integer(
-                await ScalarAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sql: ClockSql,
-                    token: token).ConfigureAwait(false));
+            long now = await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
             LabelStoreState next = transition(state, now) with { Revision = checked(state.Revision + 1) };
             await SaveAsync(
                 connection: connection,
@@ -1924,12 +1917,7 @@ internal abstract partial class RelationalLabelStore(ILogger logger, StoreMetric
                 sql: "SELECT MIN(queued_at) FROM label_entries WHERE seq>@published",
                 token: cancellationToken,
                 ("@published", state.PublishedThrough)).ConfigureAwait(false);
-            long now = Integer(
-                await ScalarAsync(
-                    connection: connection,
-                    transaction: transaction,
-                    sql: ClockSql,
-                    token: cancellationToken).ConfigureAwait(false));
+            long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             return new LabelStoreSnapshot(
                 state,
                 state.IssuedThrough - state.PublishedThrough,

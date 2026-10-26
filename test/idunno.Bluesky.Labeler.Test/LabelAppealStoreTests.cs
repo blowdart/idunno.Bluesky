@@ -9,7 +9,6 @@ using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Time.Testing;
 
 namespace idunno.Bluesky.Labeler.Test;
 
@@ -26,7 +25,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task CaptureUsesCurrentSignedTimeAndRetainsSeparateReportsAcrossRestart(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -70,7 +69,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task RecordAppealsCaptureOnlyTheExactCurrentCidAndAccountRemainsSeparate(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -110,12 +109,12 @@ public class LabelAppealStoreTests
     [InlineData("mysql", LabelAppealStatus.Replaced)]
     public async Task ExplicitOutcomesUseSharedAtomicIssuanceAndRecoverOriginalProvenance(string engine, LabelAppealStatus outcome)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
-        LabelIssuanceService service = Service(fixture.Store, caller, policy, key, http);
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
         LabelOperationReceipt manual = Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "manual", target: LabelTarget.Account(s_owner), value: "spam",
             context: new(caller.Actor, "Case-independent labeling.")), token));
@@ -161,12 +160,12 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task ChangedOutcomesRequireSupersededReviewAndOtherPendingAppealsKeepCaseOpen(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
-        LabelIssuanceService service = Service(fixture.Store, caller, policy, key, http);
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
         LabelOperationContext context = new(caller.Actor, "Independent manual correction.");
         Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "manual", target: LabelTarget.Account(s_owner), value: "spam", context: context), token));
@@ -198,7 +197,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task IntakeFaultsRollbackReportAppealAndReplayTogetherAndRecoverLostAcknowledgement(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(s_owner, policy.DatabaseTime, "appeal");
@@ -230,7 +229,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task ViewerReadsAreLiveAuthorizedAndSuccessfulInspectionDoesNotAppendAudit(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         await SubmitAsync(fixture.Store, policy, "appeal", s_account);
@@ -281,12 +280,12 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task InternalReviewsNeedNoExternalReportAndStableRetryCannotRecaptureNewerLabels(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
-        LabelIssuanceService service = Service(fixture.Store, caller, policy, key, http);
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
         LabelOperationContext context = new(caller.Actor, "Manual labeling.");
         LabelOperationReceipt original = Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "manual", target: LabelTarget.Account(s_owner), value: "spam", context: context), token));
@@ -320,7 +319,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task NewerRecordCidCannotBeUpheldOrWithdrawnThroughAnOlderCapturedAppeal(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -361,12 +360,12 @@ public class LabelAppealStoreTests
     [InlineData("mysql", true)]
     public async Task ResolutionFaultsKeepLabelAppealCaseReceiptAndAuditAtomic(string engine, bool afterCommit)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         using HttpClient http = new(new TargetResolutionHandler());
-        LabelIssuanceService service = Service(fixture.Store, caller, policy, key, http);
+        LabelIssuanceService service = Service(fixture, caller, policy, key, http);
         Success(await service.ExecuteAsync(LabelOperationRequest.Issue(
             operationId: "manual", target: LabelTarget.Account(s_owner), value: "spam", context: new(caller.Actor, "Manual labeling.")), token));
         LabelModerationReport report = await SubmitAsync(fixture.Store, policy, "appeal", s_account);
@@ -418,7 +417,7 @@ public class LabelAppealStoreTests
     [InlineData("mysql")]
     public async Task CaptureBoundRejectsTheWholeReportInsteadOfTruncatingChallenges(string engine)
     {
-        await using StoreFixture fixture = await StoreFixture.CreateAsync(engine);
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         (LabelAdministrationCaller caller, LabelPolicyState policy) = await ActivateAsync(fixture);
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -479,18 +478,18 @@ public class LabelAppealStoreTests
 
     /// <summary>Creates production shared issuance with a fixed clock and provider-backed moderator authority.</summary>
     private static LabelIssuanceService Service(
-        ILabelStore store,
+        StoreFixture fixture,
         LabelAdministrationCaller caller,
         LabelPolicyState policy,
         LabelSigningKey key,
         HttpClient http) => new(
             issuer: StoreFixture.Issuer,
             signingKey: key,
-            store: store,
-            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)store, caller),
+            store: fixture.Store,
+            authorizer: new LabelTeamAuthorizer((ILabelAdministrationStore)fixture.Store, caller),
             policyProvider: new TestLabelIssuancePolicyProvider(policy.Policy!.Issuance),
             httpClient: http,
-            timeProvider: new FakeTimeProvider(policy.DatabaseTime));
+            timeProvider: fixture.DatabaseClock!);
 
     /// <summary>Specifies appeal resolution independently of the current provider observations.</summary>
     private static LabelCaseDecision Decision(

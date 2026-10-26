@@ -64,8 +64,7 @@ internal abstract partial class RelationalLabelStore
                     }
                 }
 
-                long now = Integer(await ScalarAsync(
-                    connection: connection, transaction: transaction, sql: ClockSql, token: cancellationToken).ConfigureAwait(false));
+                long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
                 DateTimeOffset timestamp = DateTimeOffset.FromUnixTimeMilliseconds(now);
                 bool opening = change.Action is LabelCaseAction.Open or LabelCaseAction.OpenAppeal;
                 ModerationCaseData? current = opening
