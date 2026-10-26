@@ -61,7 +61,10 @@ public sealed class LabelPolicyHistoryEntry
     /// <summary>Gets the independently observed authoritative record CID.</summary>
     /// <value>The observed CID, or <see langword="null"/> for absence or a non-observation event.</value>
     public Cid? ObservedCid { get; }
-    /// <summary>Gets the complete independently observed canonical declaration.</summary>
-    /// <value>The canonical JSON, including JSON <c>null</c> for authoritative absence, or <see langword="null"/> for a non-observation.</value>
+    /// <summary>Gets the independently observed canonical declaration or a bounded invalid-observation marker.</summary>
+    /// <value>The canonical JSON, JSON <c>null</c> for authoritative absence or an invalid declaration,
+    /// or <see langword="null"/> for a non-observation.</value>
+    /// <remarks><para>An observed CID distinguishes an invalid declaration from authoritative absence.
+    /// Invalid declarations close the policy gate without retaining unbounded or malformed payloads.</para></remarks>
     public string? ObservedDeclarationJson { get; }
 }

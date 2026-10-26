@@ -7,6 +7,7 @@
 #### idunno.Bluesky.AspNet.Labeler
 
 * Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
+* Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.
@@ -40,6 +41,7 @@
 #### idunno.Bluesky.Labeler
 
 * Added exact-subject reports/cases, fixed filtered workflow views with caller/issuer/filter-bound cursors, immutable policy versions and publication history, and explicit appeal capture/internal review and outcomes. Case decisions atomically reuse shared manual label issuance, commit-time authorization and original-signature recovery; report intake never automatically labels content.
+* Rejects cached and transactional policy permission after database-clock rollback, persists bounded sticky conflicts for invalid authoritative declarations, and canonicalizes integer-only declaration extensions before publication.
 
 * Added verified DID/handle enrollment, Administrator/Moderator/Viewer roles, explicit OS delegations, live member and binding revocation, concurrent last-administrator protection, durable administrative audit and maintenance intent/result contracts. Typed grants fence label/no-op commits against authorization changes.
 * Added host-neutral signed-label storage contracts, fixed signed snapshots, durable operation receipts, ordered publication/replay, stable query cursors, retirement/purge checkpoints, structured source-generated logging and persistence metrics.

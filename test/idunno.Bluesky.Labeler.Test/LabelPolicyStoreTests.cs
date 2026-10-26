@@ -134,6 +134,79 @@ public class LabelPolicyStoreTests
     [InlineData("sqlite")]
     [InlineData("postgresql")]
     [InlineData("mysql")]
+    public async Task CachedVerificationRejectsRollbackWithoutNetworkAndRecoversAtObservationStart(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        LabelPolicyState active = await ActivateAsync((ILabelPolicyStore)fixture.Store, administrator, token);
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider clock = new(active.DatabaseTime.AddMilliseconds(-430));
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore(clock);
+        TargetResolutionHandler handler = new() { Offline = true };
+        using HttpClient client = new(handler);
+        LabelPolicyService verifier = new(issuer: StoreFixture.Issuer, store: restarted, httpClient: client);
+        foreach (bool force in new[] { false, true })
+        {
+            Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
+                (await verifier.GetVerifiedStateAsync(force, token)).Error!.Code);
+        }
+
+        Assert.Equal(0, handler.Requests);
+        Assert.Equal(active.Revision, (await restarted.ReadPolicyStateAsync(token))!.Revision);
+        clock.Advance(TimeSpan.FromMilliseconds(430));
+        Assert.True((await verifier.GetVerifiedStateAsync(cancellationToken: token)).Succeeded);
+        Assert.Equal(0, handler.Requests);
+    }
+
+    [Theory]
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task InvalidObservationsAreBoundedStickyAndRevisionFencedAcrossRestart(string engine, bool deep)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState active = await ActivateAsync(store, administrator, token);
+        string invalid = Declaration.TrimEnd()[..^1] + ",\"invalid\":" +
+            (deep ? new string('[', 33) + "0" + new string(']', 33) : "\"" + new string('x', 65536) + "\"") + "}";
+        using JsonDocument declaration = JsonDocument.Parse(invalid);
+        Assert.Equal(LabelServiceErrorCode.StaleDecision, (await store.ObservePolicyAsync(
+            expectedRevision: active.Revision - 1,
+            verificationStartedAt: active.DatabaseTime,
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token)).Error!.Code);
+        Assert.Equal(active.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
+        LabelPolicyState conflicted = Success(await store.ObservePolicyAsync(
+            expectedRevision: active.Revision,
+            verificationStartedAt: active.DatabaseTime,
+            observedCid: s_cid,
+            declaration: declaration.RootElement,
+            cancellationToken: token));
+        Assert.Equal(LabelPolicyPhase.Conflict, conflicted.Phase);
+        Assert.Null(conflicted.VerifiedUntil);
+        ILabelPolicyStore restarted = (ILabelPolicyStore)fixture.NewStore();
+        LabelPolicyHistoryEntry history = Success(await restarted.GetPolicyHistoryAsync(administrator, cancellationToken: token))[^1];
+        Assert.Equal(s_cid, history.ObservedCid);
+        Assert.Equal("null", history.ObservedDeclarationJson);
+        using JsonDocument restored = JsonDocument.Parse(Declaration);
+        Assert.Equal(LabelPolicyPhase.Conflict, Success(await restarted.ObservePolicyAsync(
+            expectedRevision: conflicted.Revision,
+            verificationStartedAt: conflicted.DatabaseTime,
+            observedCid: s_cid,
+            declaration: restored.RootElement,
+            cancellationToken: token)).Phase);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
     public async Task ObservationsRejectStaleRevisionsExpiredLookupsAndFutureDatabaseTimes(string engine)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
@@ -363,10 +436,13 @@ public class LabelPolicyStoreTests
     }
 
     [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task ManualIssuanceRechecksPolicyAtCommitAndSafeWithdrawalSurvivesExpiry(string engine)
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task ManualIssuanceRechecksPolicyAtCommitAndSafeWithdrawalSurvivesInvalidClock(string engine, bool rollback)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
@@ -389,7 +465,16 @@ public class LabelPolicyStoreTests
         };
         LabelOperationReceipt issued = Success(await fixture.Store.CommitDecisionAsync(prepared, token));
         Assert.True(issued.Changed);
-        fixture.DatabaseClock!.Advance(active.VerificationFreshness);
+        ILabelStore commitStore;
+        if (rollback)
+        {
+            commitStore = fixture.NewStore(new(active.DatabaseTime.AddMilliseconds(-430)));
+        }
+        else
+        {
+            fixture.DatabaseClock!.Advance(active.VerificationFreshness);
+            commitStore = fixture.Store;
+        }
         LabelDecisionCommit stale = new(
             request: LabelOperationRequest.Issue(operationId: "stale", target: target, value: "scam", context: context),
             resolvedTarget: target,
@@ -399,7 +484,7 @@ public class LabelPolicyStoreTests
         {
             AdministrationCaller = administrator
         };
-        Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, (await fixture.Store.CommitDecisionAsync(stale, token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, (await commitStore.CommitDecisionAsync(stale, token)).Error!.Code);
         Assert.Equal(issued.StateAtCommit, await fixture.Store.GetStateAsync(token));
         Assert.Contains(Success(await ((ILabelAdministrationStore)fixture.Store).GetAdministrationAuditAsync(
             administrator, cancellationToken: token)), receipt =>
@@ -413,7 +498,7 @@ public class LabelPolicyStoreTests
         {
             AdministrationCaller = administrator
         };
-        Assert.True(Success(await fixture.Store.CommitDecisionAsync(negate, token)).Changed);
+        Assert.True(Success(await commitStore.CommitDecisionAsync(negate, token)).Changed);
         Assert.Equal(active.Revision, (await store.ReadPolicyStateAsync(token))!.Revision);
     }
 
@@ -533,6 +618,47 @@ public class LabelPolicyStoreTests
     public void DraftValidationRejectsImplicitUnsupportedNullOrAmbiguousScope(string json)
     {
         Assert.ThrowsAny<ArgumentException>(() => Policy(json: json));
+    }
+
+    [Theory]
+    [InlineData("""{"\uD800":true}""")]
+    [InlineData("""{"value":"\uD800"}""")]
+    [InlineData("""{"value":0.0}""")]
+    [InlineData("""{"value":1e0}""")]
+    [InlineData("""{"value":1.00000000000000000000000000001}""")]
+    [InlineData("""{"value":9223372036854775808}""")]
+    [InlineData("""{"value":-9223372036854775809}""")]
+    public void DraftsRejectMalformedUnicodeAndNonRepositoryNumbers(string extension)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => Policy(json:
+            Declaration.Replace("""{"preserve":true}""", extension, StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task CanonicalRepositoryNumbersSurvivePublicationAndObservation(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
+        LabelPolicyState initial = await store.InitializePolicyAsync(cancellationToken: token);
+        LabelPolicyDefinition policy = Policy(json: Declaration.Replace(
+            """{"preserve":true}""", """{"zero":-0,"min":-9223372036854775808,"max":9223372036854775807}""", StringComparison.Ordinal));
+        Success(await store.SavePolicyAsync(administrator, "draft", policy, "Integer extensions.", token));
+        Assert.Contains("\"zero\":0", policy.DeclarationJson, StringComparison.Ordinal);
+        LabelPolicyState publication = Success(await store.BeginPolicyPublicationAsync(
+            caller: administrator, operationId: "publish", version: "v1", expectedRevision: initial.Revision,
+            previousCid: null, reason: "Publish.", cancellationToken: token));
+        using JsonDocument remote = JsonDocument.Parse(policy.DeclarationJson);
+        Assert.Equal(LabelPolicyPhase.VerifiedActive, Success(await store.ObservePolicyAsync(
+            expectedRevision: publication.Revision,
+            verificationStartedAt: publication.DatabaseTime,
+            observedCid: s_cid,
+            declaration: remote.RootElement,
+            cancellationToken: token)).Phase);
     }
 
     [Theory]

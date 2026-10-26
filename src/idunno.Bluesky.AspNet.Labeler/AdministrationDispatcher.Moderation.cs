@@ -221,10 +221,19 @@ internal sealed partial class AdministrationDispatcher
                         return new(false, "InvalidRequest", "A complete versioned declaration and explanatory rules are required.");
                     }
 
-                    LabelPolicyDefinition draft = new(
-                        version: input.PolicyVersion, declaration: declaration, allowAccounts: input.AllowAccounts,
-                        allowRecords: input.AllowRecords, rules: input.Rules,
-                        allowedRecordCollections: input.AllowedRecordCollections?.Select(value => new Nsid(value)).ToArray());
+                    LabelPolicyDefinition draft;
+                    try
+                    {
+                        draft = new(
+                            version: input.PolicyVersion, declaration: declaration, allowAccounts: input.AllowAccounts,
+                            allowRecords: input.AllowRecords, rules: input.Rules,
+                            allowedRecordCollections: input.AllowedRecordCollections?.Select(value => new Nsid(value)).ToArray());
+                    }
+                    catch (ArgumentException)
+                    {
+                        return new(false, "InvalidRequest", "The policy declaration, permissions or rules are invalid.");
+                    }
+
                     LabelServiceResult<LabelPolicyDefinition> result = await policies.SavePolicyAsync(
                         caller: caller, operationId: command.OperationId, policy: draft, reason: command.Reason, cancellationToken: token).ConfigureAwait(false);
                     return result.Succeeded ? new(true, Moderation: new(Definition: DefinitionView(result.Result))) : Failure(result.Error);

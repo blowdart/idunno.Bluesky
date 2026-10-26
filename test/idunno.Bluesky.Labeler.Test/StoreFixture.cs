@@ -94,7 +94,7 @@ internal sealed class StoreFixture : IAsyncDisposable
         }
     }
 
-    internal ILabelStore NewStore()
+    internal ILabelStore NewStore(FakeTimeProvider? databaseClock = null)
     {
         ServiceCollection services = new();
         services.AddMetrics();
@@ -120,13 +120,13 @@ internal sealed class StoreFixture : IAsyncDisposable
         switch (store)
         {
             case SqliteLabelStore sqlite:
-                sqlite.DatabaseClock = DatabaseClock;
+                sqlite.DatabaseClock = databaseClock ?? DatabaseClock;
                 break;
             case PostgreSqlLabelStore postgresql:
-                postgresql.DatabaseClock = DatabaseClock;
+                postgresql.DatabaseClock = databaseClock ?? DatabaseClock;
                 break;
             case MySqlLabelStore mysql:
-                mysql.DatabaseClock = DatabaseClock;
+                mysql.DatabaseClock = databaseClock ?? DatabaseClock;
                 break;
         }
 

@@ -92,7 +92,7 @@ public static class LabelerHostingExtensions
         endpoints.Map("/xrpc/com.atproto.label.queryLabels", (RequestDelegate)host.QueryAsync).AllowAnonymous();
         endpoints.Map("/xrpc/com.atproto.label.subscribeLabels", (RequestDelegate)host.SubscribeAsync).AllowAnonymous();
         endpoints.MapHealthChecks("/health/labeler/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
-        endpoints.MapHealthChecks("/health/labeler/ready", new HealthCheckOptions { Predicate = check => check.Name is "bluesky_labeler" or "xenon_moderation" }).AllowAnonymous();
+        endpoints.MapHealthChecks("/health/labeler/ready", new HealthCheckOptions { Predicate = check => check.Name == "bluesky_labeler" }).AllowAnonymous();
         return endpoints;
     }
 }

@@ -66,6 +66,11 @@ public sealed class LabelPolicyService(
                 return Reject(LabelServiceErrorCode.PolicyUnavailable, "An explicit verified policy publication is required.");
             }
 
+            if (state.VerifiedUntil is { } deadline && state.DatabaseTime < deadline - state.VerificationFreshness)
+            {
+                return Reject(LabelServiceErrorCode.PolicyUnavailable, "Database time precedes the verified observation.");
+            }
+
             if (!forceVerification && state.Phase == LabelPolicyPhase.VerifiedActive && state.VerifiedUntil > state.DatabaseTime)
             {
                 return LabelServiceResult<LabelPolicyState>.Success(state);
@@ -109,16 +114,7 @@ public sealed class LabelPolicyService(
                 }
 
                 observedCid = response.Result.Cid;
-                try
-                {
-                    observedJson = response.Result.Value.ToJsonString();
-                    using JsonDocument remote = JsonDocument.Parse(observedJson);
-                    _ = LabelPolicyDefinition.CanonicalDeclaration(remote.RootElement);
-                }
-                catch (ArgumentException exception)
-                {
-                    return Reject(LabelServiceErrorCode.PolicyUnavailable, "The authoritative declaration is invalid or exceeds its bounds.", exception);
-                }
+                observedJson = response.Result.Value.ToJsonString();
             }
             else
             {

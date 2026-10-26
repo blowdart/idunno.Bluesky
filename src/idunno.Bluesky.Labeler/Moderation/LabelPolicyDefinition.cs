@@ -91,7 +91,14 @@ public sealed class LabelPolicyDefinition
         ArrayBufferWriter<byte> buffer = new();
         using (Utf8JsonWriter writer = new(buffer))
         {
-            WriteCanonical(writer, declaration, 0);
+            try
+            {
+                WriteCanonical(writer, declaration, 0);
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new ArgumentException("The declaration contains invalid Unicode.", nameof(declaration), exception);
+            }
         }
 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(buffer.WrittenCount, 65536);
@@ -163,6 +170,19 @@ public sealed class LabelPolicyDefinition
             }
 
             writer.WriteEndArray();
+        }
+        else if (value.ValueKind == JsonValueKind.Number)
+        {
+            if (!value.TryGetInt64(out long number))
+            {
+                throw new ArgumentException("Declaration numbers must be signed 64-bit integers.", nameof(value));
+            }
+
+            writer.WriteNumberValue(number);
+        }
+        else if (value.ValueKind == JsonValueKind.String)
+        {
+            writer.WriteStringValue(value.GetString());
         }
         else
         {

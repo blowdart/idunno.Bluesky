@@ -16,6 +16,19 @@ internal static class ModerationWire
     /// <summary>Reads exact account/strong references and preserves submitted record CIDs without fetching targets.</summary>
     internal static LabelReportSubmission ParseReport(byte[] bytes)
     {
+        try
+        {
+            return ParseReportCore(bytes);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new JsonException("The report contains invalid Unicode.", exception);
+        }
+    }
+
+    /// <summary>Decodes the bounded report while leaving Unicode failures to the parser boundary.</summary>
+    private static LabelReportSubmission ParseReportCore(byte[] bytes)
+    {
         using JsonDocument document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 16 });
         JsonElement root = document.RootElement;
         ValidateObject(root, ["reasonType", "reason", "subject", "modTool"]);
@@ -117,6 +130,10 @@ internal static class ModerationWire
             {
                 RejectDuplicateProperties(item);
             }
+        }
+        else if (element.ValueKind == JsonValueKind.String)
+        {
+            _ = element.GetString();
         }
     }
 }

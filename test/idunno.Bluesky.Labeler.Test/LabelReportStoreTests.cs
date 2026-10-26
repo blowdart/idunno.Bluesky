@@ -137,6 +137,9 @@ public class LabelReportStoreTests
         ModerationReportAuthenticationResult reporter = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "valid");
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
             (await store.SubmitReportAsync(reporter, new(s_account, Reason), policy.Revision - 1, token)).Error!.Code);
+        ILabelReportStore rolledBack = (ILabelReportStore)fixture.NewStore(new(policy.DatabaseTime.AddMilliseconds(-430)));
+        Assert.Equal(LabelServiceErrorCode.PolicyUnavailable,
+            (await rolledBack.SubmitReportAsync(reporter, new(s_account, Reason), policy.Revision, token)).Error!.Code);
         foreach (string appeal in new[] { "com.atproto.moderation.defs#reasonAppeal", "tools.ozone.report.defs#reasonAppeal" })
         {
             Assert.Equal(LabelServiceErrorCode.Unauthorized,

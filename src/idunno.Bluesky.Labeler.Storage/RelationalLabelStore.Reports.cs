@@ -66,7 +66,8 @@ internal abstract partial class RelationalLabelStore
     {
         ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, token).ConfigureAwait(false);
         if (gate is null || gate.Revision != expectedPolicyRevision || gate.Phase != LabelPolicyPhase.VerifiedActive ||
-            gate.VerifiedUntil is null || gate.VerifiedUntil <= now || gate.Policy is null)
+            gate.VerifiedUntil is null || gate.VerifiedUntil <= now ||
+            now < gate.VerifiedUntil - gate.FreshnessMilliseconds || gate.Policy is null)
         {
             return CaseFailure<LabelModerationReport>(LabelServiceErrorCode.PolicyUnavailable, "The verified report policy changed or expired.");
         }

@@ -41,9 +41,14 @@ publication and independently verifies the authoritative declaration.
 
 All hosts sharing a database must use its persisted verification freshness.
 Traffic limits are process-local, not cluster quotas. Apply additional
-deployment-wide limits at the trusted proxy. Report intake and readiness
+deployment-wide limits at the trusted proxy. Report intake and policy-health
 verification have bounded deadlines; a lookup timeout does not refresh
 permission.
+
+`MapLabelerModeration()` maps `/health/labeler/moderation` for separate policy
+monitoring. Do not use this endpoint for traffic routing: a closed policy gate
+must not hide distribution or authenticated recovery routes.
+`/health/labeler/ready` continues to check only the distribution host and store.
 
 ## Reports and scope
 
@@ -155,7 +160,10 @@ second reviewer is not required.
 `LabelPolicyDefinition` retains the complete declaration, creation time, custom
 definitions and extension data, plus independent issuance permissions and rules.
 Definitions use the SDK's publication validator. Canonical declaration encoding
-is bounded to 64 KiB and rejects duplicate object names.
+is bounded to 64 KiB and rejects duplicate object names and malformed Unicode.
+Numbers, including extension values, must use signed 64-bit integer syntax
+as required by repository records; fractional and exponent spellings are rejected.
+Negative zero is normalized to zero before persistence and publication.
 Saving an immutable version does not disrupt the current active policy.
 
 Publication is deliberately separate from a database transaction:
@@ -182,12 +190,19 @@ unavailable verification fails closed; neither extends permission. Reads,
 public distribution and safe negations remain possible. Matching content alone
 cannot clear a detected conflict: an administrator must explicitly begin
 reconciliation and independently verify it.
+An oversized, excessively deep or otherwise invalid authoritative declaration
+also creates a durable conflict. History retains its CID and JSON `null` as a
+bounded invalid-observation marker, not the malformed payload. Authoritative
+absence instead has no observed CID.
 
 Verification windows use database time. If the database clock moves backwards
 behind the lookup's start, the observation is rejected rather than extending
 permission. Restart independent verification from a fresh database sample;
 do not backdate the observation, weaken the guard or repeat a PDS write merely
 because verification was rejected.
+Previously verified permission also fails closed if database time precedes
+that observation's start, both in cached checks and transactional report and
+issuance commits. Safe negations and recovery reads remain available.
 
 `AbandonPolicyPublicationAsync` records an explicit fail-closed recovery result.
 It does not cancel an in-flight PDS write or assume rollback. A late write may

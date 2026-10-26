@@ -310,7 +310,18 @@ internal abstract partial class RelationalLabelStore
             throw new ArgumentException("Authoritative absence requires a null declaration.", nameof(declaration));
         }
 
-        string observed = observedCid is null ? string.Empty : LabelPolicyDefinition.CanonicalDeclaration(declaration);
+        string observed;
+        bool invalidDeclaration = false;
+        try
+        {
+            observed = observedCid is null ? string.Empty : LabelPolicyDefinition.CanonicalDeclaration(declaration);
+        }
+        catch (ArgumentException)
+        {
+            // Retain a bounded invalid-observation marker, never the oversized or malformed payload.
+            observed = "null";
+            invalidDeclaration = true;
+        }
         return AdministrationAsync(async (connection, transaction, _) =>
         {
             ModerationPolicyGate? gate = await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
@@ -336,7 +347,7 @@ internal abstract partial class RelationalLabelStore
             bool matching = gate.Policy.Declaration == observed;
             LabelPolicyPhase phase = (matching, gate.Phase) switch
             {
-                (false, LabelPolicyPhase.Publishing) => LabelPolicyPhase.Publishing,
+                (false, LabelPolicyPhase.Publishing) when !invalidDeclaration => LabelPolicyPhase.Publishing,
                 (true, not LabelPolicyPhase.Conflict) => LabelPolicyPhase.VerifiedActive,
                 _ => LabelPolicyPhase.Conflict
             };
@@ -388,6 +399,7 @@ internal abstract partial class RelationalLabelStore
 
         long now = await DatabaseTimeAsync(connection, transaction, token).ConfigureAwait(false);
         if (gate.Phase != LabelPolicyPhase.VerifiedActive || gate.VerifiedUntil is null || gate.VerifiedUntil <= now ||
+            now < gate.VerifiedUntil - gate.FreshnessMilliseconds ||
             gate.Policy is null || gate.Policy.Version != decision.Audit.PolicyVersion)
         {
             return false;

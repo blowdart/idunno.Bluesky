@@ -78,6 +78,9 @@ public class ModerationTests
     [InlineData("""{"reasonType":"x","subject":{"$type":"chat.bsky.convo.defs#messageRef","did":"did:plc:subject"}}""")]
     [InlineData("""{"reasonType":"x","subject":{"$type":"com.atproto.repo.strongRef","uri":"at://subject.example/app.bsky.feed.post/key","cid":"bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"}}""")]
     [InlineData("""{"reasonType":"x","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},"modTool":{"name":"tool","meta":{"x":1,"x":2}}}""")]
+    [InlineData("""{"reasonType":"\uD800","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}}""")]
+    [InlineData("""{"\uD800":"x","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}}""")]
+    [InlineData("""{"reasonType":"x","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"},"modTool":{"name":"tool","meta":{"x":"\uD800"}}}""")]
     public async Task RejectsMalformedUnsupportedAndForgedInputBeforeAuthentication(string body)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
@@ -119,12 +122,14 @@ public class ModerationTests
     }
 
     [Fact]
-    public async Task PolicyDriftClosesReportsAndReadinessButLeavesDistributionReadable()
+    public async Task PolicyDriftClosesReportsButLeavesDistributionRoutingReady()
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
         DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
-        await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        using HttpResponseMessage initiallyReady = await fixture.Client.GetAsync("/health/labeler/ready", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, initiallyReady.StatusCode);
         LabelPolicyService verifier = fixture.Services.GetRequiredService<LabelPolicyService>();
         Assert.True((await verifier.GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
         handler.Declaration = Declaration.Replace("\"spam\"", "\"scam\"", StringComparison.Ordinal);
@@ -136,9 +141,27 @@ public class ModerationTests
             "/xrpc/com.atproto.label.queryLabels?uriPatterns=*", TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, distribution.StatusCode);
         using HttpResponseMessage health = await fixture.Client.GetAsync("/health/labeler/ready", TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, health.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+        using HttpResponseMessage moderation = await fixture.Client.GetAsync("/health/labeler/moderation", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, moderation.StatusCode);
         handler.Declaration = Declaration;
         Assert.False((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        LabelPolicyState conflict = (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+            .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!;
+        using HttpRequestMessage inspect = AdministrativeRequest(
+            key: key, now: fixture.Clock.GetUtcNow(), method: "getPolicy", command: new());
+        using HttpResponseMessage inspected = await fixture.Client.SendAsync(inspect, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, inspected.StatusCode);
+        using HttpRequestMessage reconcile = AdministrativeRequest(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            method: "beginPolicyPublication",
+            command: new(
+                OperationId: "reconcile", Reason: "Recover detected drift.",
+                Moderation: new(PolicyVersion: "v1", ExpectedRevision: conflict.Revision, PreviousCid: Cid)));
+        using HttpResponseMessage reconciled = await fixture.Client.SendAsync(reconcile, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, reconciled.StatusCode);
+        Assert.True((await verifier.GetVerifiedStateAsync(forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
     }
 
     [Theory]
@@ -152,7 +175,7 @@ public class ModerationTests
         await using TestServerBuilder fixture = await CreateAsync(
             key, identity, new LabelerModerationOptions { MaximumConcurrentReports = 1 });
         using HttpRequestMessage request = health
-            ? new(HttpMethod.Get, "/health/labeler/ready")
+            ? new(HttpMethod.Get, "/health/labeler/moderation")
             : ReportRequest(key, fixture.Clock.GetUtcNow());
         Task<HttpResponseMessage> pending = fixture.Client.SendAsync(request, TestContext.Current.CancellationToken);
         await handler.DeclarationRequested.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -163,6 +186,7 @@ public class ModerationTests
             Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
         }
 
+        await fixture.Clock.WaitForTimerAsync(TimeSpan.FromSeconds(30));
         fixture.Clock.Advance(TimeSpan.FromSeconds(30));
         using HttpResponseMessage response = await pending;
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
@@ -174,22 +198,28 @@ public class ModerationTests
         Assert.Equal(HttpStatusCode.OK, recovered.StatusCode);
     }
 
-    [Fact]
-    public async Task InvalidRemoteDeclarationDoesNotEscapeAsAnInputExceptionOrRefreshPermission()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InvalidRemoteDeclarationDurablyConflictsWithoutRefreshingPermission(bool deep)
     {
         using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
-        DeclarationHandler handler = new(key.ExportPublicKeyMultibase())
-        {
-            Declaration = Declaration.TrimEnd()[..^1] + ",\"oversized\":\"" + new string('x', 65536) + "\"}"
-        };
+        DeclarationHandler handler = new(key.ExportPublicKeyMultibase());
         using HttpClient identity = new(handler);
         await using TestServerBuilder fixture = await CreateAsync(key, identity);
+        Assert.True((await fixture.Services.GetRequiredService<LabelPolicyService>().GetVerifiedStateAsync(
+            cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
+        handler.Declaration = Declaration.TrimEnd()[..^1] + ",\"invalid\":" +
+            (deep ? new string('[', 33) + "0" + new string(']', 33) : "\"" + new string('x', 65536) + "\"") + "}";
         LabelServiceResult<LabelPolicyState> result = await fixture.Services.GetRequiredService<LabelPolicyService>()
-            .GetVerifiedStateAsync(cancellationToken: TestContext.Current.CancellationToken);
+            .GetVerifiedStateAsync(forceVerification: true, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Succeeded);
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, result.Error!.Code);
-        Assert.Equal(LabelPolicyPhase.Publishing, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+        Assert.Equal(LabelPolicyPhase.Conflict, (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
             .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!.Phase);
+        handler.Declaration = Declaration;
+        Assert.False((await fixture.Services.GetRequiredService<LabelPolicyService>().GetVerifiedStateAsync(
+            forceVerification: true, cancellationToken: TestContext.Current.CancellationToken)).Succeeded);
     }
 
     [Fact]
@@ -208,6 +238,46 @@ public class ModerationTests
         Assert.Equal(LabelServiceErrorCode.PolicyUnavailable, (await wrongIssuer.GetVerifiedStateAsync(
             cancellationToken: TestContext.Current.CancellationToken)).Error!.Code);
         Assert.Equal(1, handler.DeclarationReads);
+    }
+
+    [Theory]
+    [InlineData("""{"\uD800":true}""")]
+    [InlineData("""{"value":"\uD800"}""")]
+    [InlineData("""{"value":0.0}""")]
+    [InlineData("""{"value":1e0}""")]
+    public async Task InvalidPolicyExtensionsReturnInvalidRequestOnLocalAndHttpsAdministration(string extension)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        string json = Declaration.TrimEnd()[..^1] + ",\"invalid\":" + extension + "}";
+        using JsonDocument declaration = JsonDocument.Parse(json);
+        LabelAdministrationCaller caller = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationResponse local = await fixture.Services.GetRequiredService<AdministrationDispatcher>().DispatchAsync(
+            caller,
+            new(
+                Method: "savePolicy", OperationId: "invalid", Reason: "Validate input.",
+                Moderation: new(
+                    PolicyVersion: "v2", Declaration: declaration.RootElement,
+                    AllowAccounts: true, AllowRecords: true, Rules: "Review.")),
+            token);
+        Assert.False(local.Succeeded);
+        Assert.Equal("InvalidRequest", local.Error);
+        using HttpRequestMessage request = AdministrativeRequest(
+            key: key, now: fixture.Clock.GetUtcNow(), method: "savePolicy", command: new());
+        request.Content = new StringContent(
+            """{"operationId":"invalid","reason":"Validate input.","moderation":{"policyVersion":"v2","declaration":""" +
+                json + ""","allowAccounts":true,"allowRecords":true,"rules":"Review."}}""",
+            Encoding.UTF8,
+            "application/json");
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal("InvalidRequest", output.RootElement.GetProperty("error").GetString());
+        Assert.Single((await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+            .GetPolicyVersionsAsync(caller, cancellationToken: token)).Result!);
     }
 
     [Theory]

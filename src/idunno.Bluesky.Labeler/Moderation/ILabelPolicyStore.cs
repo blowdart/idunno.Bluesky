@@ -126,7 +126,9 @@ public interface ILabelPolicyStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The resulting verified or conflicted gate, or a stale-observation failure.</returns>
     /// <remarks><para>A matching observation cannot clear a previously detected conflict; an administrator
-    /// must first create a new publication/reconciliation intent. No network work occurs inside the transaction.</para></remarks>
+    /// must first create a new publication/reconciliation intent. Invalid declarations produce a conflict
+    /// with a bounded JSON <c>null</c> history marker and the observed CID rather than retaining invalid payloads.
+    /// Stale observations cannot change the gate. No network work occurs inside the transaction.</para></remarks>
     Task<LabelServiceResult<LabelPolicyState>> ObservePolicyAsync(
         long expectedRevision, DateTimeOffset verificationStartedAt, Cid? observedCid, JsonElement declaration, CancellationToken cancellationToken = default);
 }

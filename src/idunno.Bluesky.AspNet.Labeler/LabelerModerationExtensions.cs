@@ -9,6 +9,7 @@ using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Storage;
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,12 +94,18 @@ public static class LabelerModerationExtensions
     /// <returns>The endpoint route builder.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
     /// <remarks><para>Call only when moderation is explicitly enabled. HTTPS is mandatory; configure
-    /// trusted proxy forwarding before mapping. Browser cookies and team membership do not authenticate reports.</para></remarks>
+    /// trusted proxy forwarding before mapping. Browser cookies and team membership do not authenticate reports.</para>
+    /// <para>The separate <c>/health/labeler/moderation</c> endpoint reports policy health; do not use it
+    /// for distribution or administration traffic routing.</para></remarks>
     public static IEndpointRouteBuilder MapLabelerModeration(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         LabelerModerationHost host = endpoints.ServiceProvider.GetRequiredService<LabelerModerationHost>();
         endpoints.MapPost("/xrpc/com.atproto.moderation.createReport", (RequestDelegate)host.ReportAsync).AllowAnonymous();
+        endpoints.MapHealthChecks("/health/labeler/moderation", new HealthCheckOptions
+        {
+            Predicate = registration => registration.Name == "xenon_moderation"
+        }).AllowAnonymous();
         return endpoints;
     }
 }
