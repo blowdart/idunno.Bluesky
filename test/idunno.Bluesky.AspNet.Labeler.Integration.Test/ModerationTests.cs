@@ -35,6 +35,56 @@ public class ModerationTests
         """;
 
     [Theory]
+    [InlineData(10001)]
+    [InlineData(15005000)]
+    [InlineData(863999999999)]
+    public void RegistrationRejectsFractionalMillisecondFreshness(long ticks)
+    {
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage("Data Source=registration-only.db");
+        using HttpClient identity = new();
+        ArgumentOutOfRangeException exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            services.AddLabelerModeration(
+                issuer: TestServerBuilder.s_issuer,
+                httpClient: identity,
+                options: new() { VerificationFreshness = TimeSpan.FromTicks(ticks) }));
+        Assert.Contains(nameof(LabelerModerationOptions.VerificationFreshness), exception.ParamName!, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(1500)]
+    [InlineData(86400000)]
+    public void RegistrationAcceptsWholeMillisecondFreshness(int milliseconds)
+    {
+        ServiceCollection services = new();
+        services.AddSqliteLabelStorage("Data Source=registration-only.db");
+        using HttpClient identity = new();
+        Assert.Same(services, services.AddLabelerModeration(
+            issuer: TestServerBuilder.s_issuer,
+            httpClient: identity,
+            options: new() { VerificationFreshness = TimeSpan.FromMilliseconds(milliseconds) }));
+    }
+
+    [Theory]
+    [InlineData(1500)]
+    [InlineData(86400000)]
+    public async Task WholeMillisecondFreshnessPersistsExactlyAndPolicyHealthSucceeds(int milliseconds)
+    {
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        TimeSpan freshness = TimeSpan.FromMilliseconds(milliseconds);
+        await using TestServerBuilder fixture = await CreateAsync(
+            key: key, identity: identity, options: new() { VerificationFreshness = freshness });
+        LabelPolicyState state = (await fixture.Services.GetRequiredService<ILabelPolicyStore>()
+            .ReadPolicyStateAsync(TestContext.Current.CancellationToken))!;
+        Assert.Equal(freshness, state.VerificationFreshness);
+        using HttpResponseMessage health = await fixture.Client.GetAsync(
+            "/health/labeler/moderation", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task StandardReportWorksWithRemoteAdministrationDisabledAndDoesNotCreateTeamAuthority(bool legacy)

@@ -8,6 +8,7 @@
 
 * Added explicitly optional Xenon report intake, bounded service authentication/admission and independent declaration verification, plus shared local/HTTPS case, appeal, workflow-queue and policy-recovery administration. Public label distribution and remote CLI enablement remain independent.
 * Separates optional moderation policy health at `/health/labeler/moderation` from distribution readiness so policy failures do not remove recovery routes from traffic; malformed Unicode reports and policy inputs return classified input errors.
+* Rejects fractional-millisecond moderation verification freshness during registration so configured and persisted health-check intervals cannot disagree.
 
 * Added opt-in exact-audience, method-bound service-token administrative endpoints and protected Windows named-pipe/Linux Unix-socket administration, including explicit browserless root/SID setup and shared team authorization.
 * Remote administration is disabled by default and can be enabled or disabled through reloadable host options independently of protected local administration.

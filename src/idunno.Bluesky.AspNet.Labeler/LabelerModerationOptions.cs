@@ -15,7 +15,7 @@ public sealed class LabelerModerationOptions
     public int ReportsPerMinute { get; init; } = 120;
 
     /// <summary>Gets the maximum declaration-observation age.</summary>
-    /// <value>The shared persisted freshness, initially 60 seconds, from one millisecond to one day.</value>
+    /// <value>The shared persisted freshness, initially 60 seconds, from one millisecond to one day in whole milliseconds.</value>
     public TimeSpan VerificationFreshness { get; init; } = TimeSpan.FromSeconds(60);
 
     /// <summary>Gets the maximum accepted reporter service-token lifetime.</summary>
@@ -31,6 +31,9 @@ public sealed class LabelerModerationOptions
         ArgumentOutOfRangeException.ThrowIfGreaterThan(ReportsPerMinute, 100000);
         ArgumentOutOfRangeException.ThrowIfLessThan(VerificationFreshness, TimeSpan.FromMilliseconds(1));
         ArgumentOutOfRangeException.ThrowIfGreaterThan(VerificationFreshness, TimeSpan.FromDays(1));
+        ArgumentOutOfRangeException.ThrowIfNotEqual(
+            VerificationFreshness.Ticks % TimeSpan.TicksPerMillisecond,
+            0);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(MaximumServiceTokenLifetime, TimeSpan.Zero);
     }
 }

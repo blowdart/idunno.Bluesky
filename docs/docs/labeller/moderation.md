@@ -40,6 +40,8 @@ publication and independently verifies the authoritative declaration.
 | `MaximumServiceTokenLifetime` | 15 minutes | Maximum reporting assertion lifetime |
 
 All hosts sharing a database must use its persisted verification freshness.
+Configure freshness in whole milliseconds; registration rejects fractional
+milliseconds rather than silently truncating them to database precision.
 Traffic limits are process-local, not cluster quotas. Apply additional
 deployment-wide limits at the trusted proxy. Report intake and policy-health
 verification have bounded deadlines; a lookup timeout does not refresh

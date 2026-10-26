@@ -21,7 +21,10 @@ native desktop OAuth, local channels, roles, revocation and audit.
 Explicit `AddLabelerModeration` / `MapLabelerModeration` opt into independent-labeler
 report intake and shared Xenon case, appeal and versioned-policy administration.
 Register moderation before administration and explicitly initialize its persisted
-policy gate. Readiness then also checks independent declaration freshness.
+policy gate. The separate `/health/labeler/moderation` endpoint checks independent
+declaration freshness. Use it for monitoring, not traffic routing: a closed policy
+gate must leave public distribution and authenticated recovery reachable.
+`/health/labeler/ready` continues to check only distribution readiness.
 This does not enable remote CLI administration, add a moderation UI, or change the
 distribution-only default. See [Xenon moderation](https://bluesky.idunno.dev/docs/labeller/moderation.html).
 `AddBlueskyLabelerMetrics()` also selects the optional
