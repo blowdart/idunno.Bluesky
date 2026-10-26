@@ -8,6 +8,7 @@ using System.Threading.Channels;
 
 using idunno.AtProto;
 using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 
@@ -58,7 +59,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         Action<IServiceCollection>? configureAdministration = null,
         bool? remoteAdministrationEnabled = true,
         bool fallbackAuthorizationRequired = false,
-        ILabelSigningKeyRing? signingKeyRing = null)
+        ILabelSigningKeyRing? signingKeyRing = null,
+        bool moderation = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -138,6 +140,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
 
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
+        if (moderation)
+        {
+            fixture._app.MapLabelerModeration();
+        }
         if (configureAdministration is not null)
         {
             if (remoteAdministrationEnabled.HasValue)
@@ -151,6 +157,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         }
 
         await fixture.Store.InitializeAsync(s_issuer);
+        if (moderation)
+        {
+            await fixture.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
+                fixture.Services.GetRequiredService<LabelerModerationOptions>().VerificationFreshness);
+        }
         if (initialize is not null)
         {
             await initialize(fixture.Store);

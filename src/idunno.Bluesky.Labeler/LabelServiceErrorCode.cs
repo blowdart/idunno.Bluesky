@@ -61,5 +61,14 @@ public enum LabelServiceErrorCode
     StorageUnavailable,
 
     /// <summary>A commit was submitted but its durable outcome could not be established.</summary>
-    OutcomeUnknown
+    OutcomeUnknown,
+
+    /// <summary>The requested moderation case or exact subject was not found.</summary>
+    CaseNotFound,
+
+    /// <summary>The case revision, status or unresolved-subject constraint conflicts with the requested change.</summary>
+    CaseConflict,
+
+    /// <summary>A moderation continuation is malformed or belongs to different filters, caller or issuer.</summary>
+    InvalidCursor
 }

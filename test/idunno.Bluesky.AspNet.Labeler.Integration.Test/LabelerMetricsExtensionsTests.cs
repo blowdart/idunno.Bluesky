@@ -30,7 +30,7 @@ public class LabelerMetricsExtensionsTests
     }
 
     [Fact]
-    public void CollectsOnlyHostingMetrics()
+    public void CollectsHostingAndOptionalModerationMetricsOnly()
     {
         using RecordingMetricExporter exporter = new();
         using PeriodicExportingMetricReader reader = new(exporter, exportIntervalMilliseconds: int.MaxValue);
@@ -42,14 +42,18 @@ public class LabelerMetricsExtensionsTests
         services.AddMetrics();
         using ServiceProvider serviceProvider = services.BuildServiceProvider();
         using HostingMetrics hosting = new(serviceProvider.GetRequiredService<IMeterFactory>());
+        using Meter moderationMeter = serviceProvider.GetRequiredService<IMeterFactory>().Create(LabelerModerationHost.MeterName);
+        Counter<long> reports = moderationMeter.CreateCounter<long>("idunno.bluesky.labeler.moderation.reports");
         using Meter otherMeter = new("idunno.Bluesky.AspNet.Labeler.Integration.Test.Unregistered");
         Counter<long> otherCounter = otherMeter.CreateCounter<long>("test.unregistered.messages");
 
         hosting.Frame();
+        reports.Add(1);
         otherCounter.Add(1);
 
         Assert.True(provider.ForceFlush());
         Assert.Contains("idunno.bluesky.labeler.host.frames", exporter.MetricNames);
+        Assert.Contains("idunno.bluesky.labeler.moderation.reports", exporter.MetricNames);
         Assert.DoesNotContain("test.unregistered.messages", exporter.MetricNames);
     }
 

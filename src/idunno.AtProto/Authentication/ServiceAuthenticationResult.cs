@@ -25,6 +25,7 @@ public sealed class ServiceAuthenticationResult
         TokenId = tokenId;
         ExpiresAt = expiresAt;
         TokenHash = tokenHash;
+        TokenAudience = audience.ToString();
     }
 
     /// <summary>
@@ -51,4 +52,9 @@ public sealed class ServiceAuthenticationResult
     /// Gets the uppercase hexadecimal SHA-256 hash of the complete compact token.
     /// </summary>
     public string TokenHash { get; }
+
+    /// <summary>
+    /// Gets the original audience for the report-specific compatibility adapter.
+    /// </summary>
+    internal string TokenAudience { get; init; }
 }

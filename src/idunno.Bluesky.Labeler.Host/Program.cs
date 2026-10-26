@@ -13,6 +13,7 @@ using idunno.Bluesky.AspNet.Labeler;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Issuance;
 using idunno.Bluesky.Labeler.Maintenance;
+using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
 using idunno.Bluesky.Labeler.Storage;
 using idunno.Security;
@@ -54,8 +55,6 @@ internal static class Program
         using IDisposable keyRingLifetime = CreateSigningKeyRing(builder.Configuration);
         ILabelSigningKeyRing keyRing = (ILabelSigningKeyRing)keyRingLifetime;
         using HttpClient identityClient = CreateIdentityClient();
-        builder.Services.AddSingleton<ILabelIssuancePolicyProvider>(
-            new ConfigurationLabelIssuancePolicyProvider(builder.Configuration));
         switch (provider)
         {
             case "sqlite":
@@ -69,6 +68,19 @@ internal static class Program
                 break;
             default:
                 throw new InvalidOperationException("Labeler:DatabaseProvider must be sqlite, postgresql, or mysql.");
+        }
+
+        bool moderationEnabled = builder.Configuration.GetValue<bool>("LabelerModeration:Enabled");
+        LabelerModerationOptions moderationOptions = new();
+        if (moderationEnabled)
+        {
+            moderationOptions = builder.Configuration.GetSection("LabelerModeration").Get<LabelerModerationOptions>() ?? new();
+            builder.Services.AddLabelerModeration(issuer: issuer, httpClient: identityClient, options: moderationOptions);
+        }
+        else
+        {
+            builder.Services.AddSingleton<ILabelIssuancePolicyProvider>(
+                new ConfigurationLabelIssuancePolicyProvider(builder.Configuration));
         }
 
         builder.Services.AddBlueskyLabeler(
@@ -87,6 +99,12 @@ internal static class Program
         await app.Services.GetRequiredService<ILabelStore>()
             .InitializeAsync(issuer, app.Lifetime.ApplicationStopping)
             .ConfigureAwait(false);
+        if (moderationEnabled)
+        {
+            await app.Services.GetRequiredService<ILabelPolicyStore>().InitializePolicyAsync(
+                verificationFreshness: moderationOptions.VerificationFreshness,
+                cancellationToken: app.Lifetime.ApplicationStopping).ConfigureAwait(false);
+        }
         if (keyRing is EnvironmentLabelSigningKeyRing environmentKeys)
         {
             await environmentKeys.InitializeAsync(
@@ -133,6 +151,10 @@ internal static class Program
         app.UseWebSockets();
         app.MapBlueskyLabeler();
         app.MapLabelerAdministration();
+        if (moderationEnabled)
+        {
+            app.MapLabelerModeration();
+        }
         await app.RunAsync().ConfigureAwait(false);
         return 0;
     }
@@ -250,7 +272,11 @@ internal static class Program
             "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
             "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
             "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
-            "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation"
+            "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
+            "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
+            "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
+            "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
+            "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
         ];
         return new OAuthOptions
         {
@@ -258,7 +284,12 @@ internal static class Program
             ClientName = "Labeler administration",
             ClientUri = publicEndpoint,
             ReturnUri = new UriBuilder(Uri.UriSchemeHttp, IPAddress.Loopback.ToString()).Uri,
-            Scopes = ["atproto", "identity:*", .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")]
+            Scopes =
+            [
+                "atproto", "identity:*",
+                "repo:app.bsky.labeler.service?action=create", "repo:app.bsky.labeler.service?action=update",
+                .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")
+            ]
         };
     }
 

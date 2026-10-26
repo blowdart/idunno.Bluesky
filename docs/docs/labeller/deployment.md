@@ -34,6 +34,8 @@ provider, or a host-owned configuration file:
 | `Labeler:AllowAccountLabels` | Whether the issuance policy permits account labels |
 | `Labeler:AllowRecordLabels` | Whether the issuance policy permits record labels |
 | `LabelerAdministration:RemoteEnabled` | Whether HTTPS administration is enabled; defaults to `false` |
+| `LabelerModeration:Enabled` | Optional Xenon report/case/policy backend; defaults to `false` |
+| `LabelerModeration:VerificationFreshness` | Persisted declaration-observation lifetime; defaults to `00:01:00` |
 | `Labeler:TrustedProxies` | Optional array of exact proxy IP addresses trusted to forward client IP and HTTPS scheme |
 | `Labeler:ForwardLimit` | Positive maximum forwarding hops; defaults to `1` when trusted proxies are configured |
 
@@ -51,8 +53,11 @@ Its client ID is the configured `Labeler:PublicEndpoint` origin plus that path, 
 incoming `Host` header. The native public-client document declares `http://127.0.0.1/` as
 its desktop loopback callback, with no fixed port, and the method-bound administrative scope
 superset for `Labeler:AdministrationAudience`, plus `identity:*` for PLC identity publication
-and recovery. Only those PLC commands request identity mutation permission. Use this HTTPS metadata URL as the CLI's
-`--client-id`; the CLI requests only the method it is executing. The headless host does not
+and recovery, and create/update permission for `app.bsky.labeler.service` publication.
+Only PLC commands request identity mutation permission. Policy publication uses a separate
+labeler-account sign-in with only its selected declaration write action. Use this HTTPS metadata URL as the CLI's
+`--client-id`; ordinary commands request only their method, and policy publication requests its three
+specific administration methods. The headless host does not
 run the desktop callback listener or distribute an OAuth client secret.
 
 For TLS termination at a reverse proxy, configure the proxy's **actual immediate peer IP**
@@ -87,7 +92,65 @@ This one-shot command initializes storage, verifies the DID/handle and records t
 OS binding. It exits without starting the HTTP host. Do not put bootstrap parameters in a
 service's ordinary startup arguments or configuration.
 
+## Custom applications and derived images
+
+Custom .NET 10 applications can compose the same independent provider,
+`AddBlueskyLabeler`, optional `AddLabelerModeration`, and
+`AddLabelerAdministration` services. Initialize the shared store and optional
+policy gate before serving, using the same issuer, hardened caller-owned HTTP
+client and protected signing-key ring. Bootstrap deliberately through the
+existing setup boundary, never automatically from an anonymous request.
+
+Map `MapBlueskyLabeler()`, `MapLabelerModeration()` when enabled, and protected
+administration. `MapBlueskyLabeler()` already maps liveness and readiness; mapping
+another endpoint at the same paths creates ambiguous routes. Preserve WebSocket
+middleware, explicit trusted-proxy configuration and remote administration's
+disabled-by-default setting.
+
+Custom decisioning consumes `LabelCaseDecision` and shared issuance rather than
+appending separately signed labels or inventing caller DIDs. Keep runtime
+mutations on the shared protected administration adapters so they participate
+in host admission/draining and key rotation. A custom worker that owns signing
+must also honor the existing durable host-role, draining and key-activation
+contracts; sharing a database alone is not a drain acknowledgment. Do not expose
+raw trusted infrastructure services as anonymous HTTP handlers.
+
+The existing canonical image supplies the non-root runtime, port, writable
+directory layout and probe. A derived image can add a framework-dependent custom
+publish directory without copying secrets or replacing that infrastructure:
+
+```dockerfile
+ARG LABELER_BASE
+FROM ${LABELER_BASE}
+COPY --chown=1654:1654 publish/ /app/custom/
+ENTRYPOINT ["dotnet", "/app/custom/CustomLabeler.dll"]
+```
+
+Publish the custom application for the image's .NET version and architecture,
+including its dependencies and native runtime assets, into `publish/`.
+Set `LABELER_BASE` at build time to the verified immutable
+`ghcr.io/blowdart/idunno-bluesky-labeler@sha256:<release-digest>` reference.
+The default `/app` working directory keeps the inherited canonical readiness
+probe executable available. Retain UID 1654, private networking and externally
+supplied database/key configuration. If changing probe paths, explicitly update
+the probe rather than weakening readiness.
+
+An isolated derived-image exercise covered a custom two-label atomic decision,
+public distribution, UID 1654, the inherited probe, persistent-volume restart
+and byte-for-byte signature recovery. Its identity/declaration responses and
+setup authority were deterministic fixtures, not live OAuth/PDS validation.
+Production deployments must use real discovery and independent policy
+verification. Integrated application samples, direct image signing/attestation
+and canonical-host trimming evaluation remain separate follow-ups.
+
 ## Key installation and rotation
+
+[Optional Xenon moderation](moderation.md) is enabled with
+`LabelerModeration__Enabled=true`. Its immutable, independently verified policy
+replaces configuration-backed issuance permissions; `Labeler:DeclaredLabels`
+and `Labeler:Allow*Labels` do not override that persisted policy. A new gate is
+fail-closed until explicit policy publication and verification. The public report
+route does not require enabling remote administration.
 
 The canonical host defaults to environment-backed keys. Supply the current key and, when
 needed, a retained previous key as separate indexed variables:

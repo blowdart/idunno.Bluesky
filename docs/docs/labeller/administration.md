@@ -22,13 +22,19 @@ signing providers are in `.Signing`, and common targets/results remain in
 | Moderator | Viewer permissions plus issue and negate labels |
 | Administrator | Moderator permissions plus team/binding management and maintenance authorization |
 
+When [Xenon](moderation.md) is explicitly enabled, Viewer also inspects confidential
+reports, cases, workflow views, appeals and policy history; Moderator manages cases
+and explicit atomic decisions/appeal outcomes; Administrator manages versioned
+policy publication and recovery. Manual labeling still needs no report or case.
+The shared local and HTTPS dispatcher uses these same services and live roles.
+
 Authority is persisted by **DID**, never handle. `LabelTeamService` verifies a matching DID document;
 enrollment by handle also verifies the handle in both directions. Enrollment is an administrator's
 grant, not proof that a new member has signed in. Members authenticate independently.
 
 Choose one existing SQLite, PostgreSQL or MySQL provider. Team state, bindings, token replay state,
 revocations, administrative audit and receipts live in that provider's issuer-bound database.
-Schema version eight upgrades versions one through seven additively through `InitializeAsync`.
+Schema version nine upgrades supported earlier versions additively through `InitializeAsync`.
 Initialization also installs the administrative token-expiry index on existing version-four
 databases so cleanup can select expired replay entries without scanning all retained tokens.
 Version five adds durable coordinated maintenance and signing-key rotation state. Version six
@@ -38,6 +44,9 @@ roles; existing hosts remain signing participants until stopped and replaced wit
 processes. Keyless replicas must still drain but do not activate signing keys.
 Version eight adds optional database-backed signing selection, binding the key ID and public
 key to the issuer/stream without persisting private keys; see [deployment](deployment.md).
+Version nine adds optional moderation persistence, immutable appeal provenance,
+report replay reservations and policy publication/recovery history without
+changing existing signatures, stream progress or team/key-selection state.
 Back up all tables together and stop older
 application versions before upgrading.
 

@@ -17,7 +17,7 @@ using idunno.Bluesky.Labeler.Storage;
 namespace idunno.Bluesky.AspNet.Labeler;
 
 /// <summary>Dispatches both transports through the same typed authorization and application services.</summary>
-internal sealed class AdministrationDispatcher(
+internal sealed partial class AdministrationDispatcher(
     ILabelStore store,
     ILabelAdministrationStore administration,
     ILabelMaintenanceStore maintenance,
@@ -28,13 +28,22 @@ internal sealed class AdministrationDispatcher(
     TimeProvider clock,
     LabelerHost? host)
 {
+    // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
+    internal static readonly string[] s_moderationMethods =
+    [
+        "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
+        "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
+        "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
+        "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
+    ];
     internal static readonly string[] s_methods =
     [
         "getTeam", "getAudit", "changeTeam", "enroll", "issueLabel", "negateLabel",
         "getOperation", "getPublicationState", "getMaintenanceState", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement",
         "purgeRetiredData", "beginRotation", "confirmHostStopped", "captureRotationBoundary",
-        "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation"
+        "verifyRotationKeyPublication", "resignRotationBatch", "completeRotation",
+        .. s_moderationMethods
     ];
     internal static readonly string[] s_getMethods =
     [
@@ -45,7 +54,8 @@ internal sealed class AdministrationDispatcher(
         "changeTeam", "enroll", "issueLabel", "negateLabel", "authorizeMaintenance",
         "beginRetirement", "advanceRetirement", "beginGracePeriod", "completeRetirement", "purgeRetiredData",
         "beginRotation", "confirmHostStopped", "captureRotationBoundary", "verifyRotationKeyPublication",
-        "resignRotationBatch", "completeRotation"
+        "resignRotationBatch", "completeRotation",
+        .. s_moderationMethods
     ];
 
     /// <summary>Validates one bounded command and invokes no transport-specific business logic.</summary>
@@ -61,7 +71,9 @@ internal sealed class AdministrationDispatcher(
         }
 
         AdministrationResponse response;
-        if ((command.Method is "issueLabel" or "negateLabel") && host is not null)
+        bool labelBearing = command.Method is "issueLabel" or "negateLabel" ||
+            command.Method == "decideCase" && command.Moderation?.Actions is { Length: > 0 };
+        if (labelBearing && host is not null)
         {
             using IDisposable? admission = host.TryAdmitAdministrativeIssuance();
             response = admission is null
@@ -97,6 +109,11 @@ internal sealed class AdministrationDispatcher(
         if (!s_methods.Contains(command.Method, StringComparer.Ordinal))
         {
             return new(false, "InvalidRequest", "The administrative method is unknown.");
+        }
+
+        if (s_moderationMethods.Contains(command.Method, StringComparer.Ordinal))
+        {
+            return await DispatchModerationAsync(caller, command, token).ConfigureAwait(false);
         }
 
         LabelIssuanceService issuance = new(
@@ -765,7 +782,8 @@ internal sealed record AdministrationCommand(
     int Limit = 16,
     int GracePeriodDays = 0,
     bool Confirmed = false,
-    string? ReplacementKeyId = null)
+    string? ReplacementKeyId = null,
+    ModerationCommand? Moderation = null)
 {
     internal const int MaximumAuditPageSize = 16;
 
@@ -790,7 +808,8 @@ internal sealed record AdministrationResponse(
     AdministrationMemberView[]? Members = null,
     AdministrationAuditView[]? Audit = null,
     AdministrationPublicationView? State = null,
-    AdministrationMaintenanceView? Maintenance = null);
+    AdministrationMaintenanceView? Maintenance = null,
+    ModerationResponse? Moderation = null);
 
 /// <summary>Contains public team inspection fields.</summary>
 internal sealed record AdministrationMemberView(string Did, LabelTeamRole Role, bool Active, bool Removed);
@@ -840,7 +859,7 @@ internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 /// <summary>Bounds messages independently from untrusted content-length values.</summary>
 internal static class AdministrationWire
 {
-    internal const int MaximumRequestBytes = 16 * 1024;
+    internal const int MaximumRequestBytes = 128 * 1024;
     internal const int MaximumResponseBytes = 4 * 1024 * 1024;
 
     /// <summary>Reads one length-prefixed local message or a bounded HTTP request body.</summary>

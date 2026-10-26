@@ -53,6 +53,72 @@ public static class ServiceAuthentication
         TimeProvider? timeProvider = null,
         TimeSpan? maximumLifetime = null,
         CancellationToken cancellationToken = default)
+        => await VerifyCoreAsync(
+            token: token,
+            audience: audience,
+            method: method,
+            httpClient: httpClient,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            allowLegacyReportAudience: false,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Verifies an independent labeler's report token without granting team administration authority.
+    /// </summary>
+    /// <param name="token">The compact signed service JWT.</param>
+    /// <param name="labeler">The destination labeler DID.</param>
+    /// <param name="httpClient">The hardened HTTP client used to resolve the reporter's DID document.</param>
+    /// <param name="timeProvider">An optional clock used to validate the lifetime.</param>
+    /// <param name="maximumLifetime">The maximum accepted token lifetime. The default is 15 minutes.</param>
+    /// <param name="cancellationToken">A cancellation token for DID resolution.</param>
+    /// <returns>The authenticated reporter and replay identifiers, not an administrative caller.</returns>
+    /// <exception cref="ArgumentNullException">A required argument is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maximumLifetime"/> is zero or negative.</exception>
+    /// <exception cref="InvalidDataException">The token, claims, DID document or signature is invalid.</exception>
+    /// <exception cref="HttpRequestException">DID resolution fails at the transport layer.</exception>
+    /// <exception cref="OperationCanceledException">The operation is canceled.</exception>
+    /// <remarks>
+    /// <para>Accepts only <c>com.atproto.moderation.createReport</c>, addressed either to the exact
+    /// <c>labeler#atproto_labeler</c> service or to the same bare labeler DID for legacy PDS proxies.
+    /// This compatibility does not apply to <see cref="VerifyAsync"/> or administrative authentication.</para>
+    /// <para>Uses the same signature, key, lifetime and required replay-identifier validation as
+    /// <see cref="VerifyAsync"/>. The caller must durably prevent replay before accepting the report.
+    /// A verified reporter does not need labeler team membership.</para>
+    /// </remarks>
+    public static async Task<ModerationReportAuthenticationResult> VerifyModerationReportAsync(
+        string token,
+        Did labeler,
+        HttpClient httpClient,
+        TimeProvider? timeProvider = null,
+        TimeSpan? maximumLifetime = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(labeler);
+        ServiceAuthenticationResult verified = await VerifyCoreAsync(
+            token: token,
+            audience: new(labeler, "atproto_labeler"),
+            method: new("com.atproto.moderation.createReport"),
+            httpClient: httpClient,
+            timeProvider: timeProvider,
+            maximumLifetime: maximumLifetime,
+            allowLegacyReportAudience: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return new(verified);
+    }
+
+    /// <summary>
+    /// Applies common token validation with legacy audience compatibility restricted to report intake.
+    /// </summary>
+    private static async Task<ServiceAuthenticationResult> VerifyCoreAsync(
+        string token,
+        AtProtoServiceReference audience,
+        Nsid method,
+        HttpClient httpClient,
+        TimeProvider? timeProvider,
+        TimeSpan? maximumLifetime,
+        bool allowLegacyReportAudience,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(token);
         ArgumentNullException.ThrowIfNull(audience);
@@ -102,8 +168,13 @@ public static class ServiceAuthentication
 
             JsonWebTokenHandler handler = new() { MaximumTokenSizeInBytes = MaximumTokenLength };
             JsonWebToken jwt = handler.ReadJsonWebToken(token);
+            string tokenAudience = ReadString(payload, "aud");
+            bool legacyReportAudience = allowLegacyReportAudience &&
+                method.ToString() == "com.atproto.moderation.createReport" &&
+                audience.Fragment == "atproto_labeler" &&
+                tokenAudience == audience.Did.Value;
             if (jwt.IsEncrypted ||
-                ReadString(payload, "aud") != audience.ToString() ||
+                (tokenAudience != audience.ToString() && !legacyReportAudience) ||
                 ReadString(payload, "lxm") != method.ToString())
             {
                 throw new InvalidDataException("The service token audience or method does not match the request.");
@@ -150,7 +221,10 @@ public static class ServiceAuthentication
                 audience: audience,
                 tokenId: tokenId,
                 expiresAt: expiresAt,
-                tokenHash: Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(token))));
+                tokenHash: Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(token))))
+            {
+                TokenAudience = tokenAudience
+            };
         }
         catch (Exception exception) when (exception is JsonException or ArgumentException or FormatException or CryptographicException or SecurityTokenException)
         {

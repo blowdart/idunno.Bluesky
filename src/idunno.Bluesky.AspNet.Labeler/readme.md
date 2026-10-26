@@ -17,3 +17,12 @@ See the [hosting guide](https://bluesky.idunno.dev/docs/labeller/hosting.html) f
 configuration, discovery, Ozone-compatible retained content, cursors and limits.
 See [administration](https://bluesky.idunno.dev/docs/labeller/administration.html) for bootstrap,
 native desktop OAuth, local channels, roles, revocation and audit.
+
+Explicit `AddLabelerModeration` / `MapLabelerModeration` opt into independent-labeler
+report intake and shared Xenon case, appeal and versioned-policy administration.
+Register moderation before administration and explicitly initialize its persisted
+policy gate. Readiness then also checks independent declaration freshness.
+This does not enable remote CLI administration, add a moderation UI, or change the
+distribution-only default. See [Xenon moderation](https://bluesky.idunno.dev/docs/labeller/moderation.html).
+`AddBlueskyLabelerMetrics()` also selects the optional
+`idunno.Bluesky.AspNet.Labeler.Moderation` meter; selecting it does not enable Xenon.

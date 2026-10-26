@@ -11,6 +11,10 @@ To deploy the canonical application rather than compose your own host, use
 [`idunno.Bluesky.Labeler.Host`](deployment.md). The package described here remains the reusable
 HTTP distribution layer.
 
+[Optional Xenon moderation](moderation.md) adds independently authenticated
+reports and shared case, appeal and policy workflows without changing the public
+distribution protocol or requiring an Ozone server.
+
 ## Application setup
 
 Register exactly one storage provider and bind its database to your issuer DID.

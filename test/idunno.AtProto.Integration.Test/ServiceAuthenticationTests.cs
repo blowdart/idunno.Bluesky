@@ -23,6 +23,98 @@ public class ServiceAuthenticationTests
     private static readonly Nsid s_method = new("com.atproto.label.applyLabels");
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReportingCompatibilityRetainsSignedAudienceWithoutWeakeningExactVerification(bool legacy)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        string audience = legacy ? s_audience.Did.Value : s_audience.ToString();
+        payload["aud"] = audience;
+        payload["lxm"] = "com.atproto.moderation.createReport";
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        ModerationReportAuthenticationResult result = await ServiceAuthentication.VerifyModerationReportAsync(
+            token: token,
+            labeler: s_audience.Did,
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(new Did(TestDid), result.Reporter);
+        Assert.Equal(s_audience.Did, result.Labeler);
+        Assert.Equal(audience, result.Audience);
+        Assert.Equal("unique-token", result.TokenId);
+        Assert.Equal(clock.GetUtcNow().AddSeconds(60), result.ExpiresAt);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes(token))), result.TokenHash);
+        if (legacy)
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyAsync(
+                token: token,
+                audience: s_audience,
+                method: new("com.atproto.moderation.createReport"),
+                httpClient: client,
+                timeProvider: clock,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Theory]
+    [InlineData("aud", "\"did:plc:other\"")]
+    [InlineData("aud", "\"did:plc:g6ylltenitt4tp27bpwalh7b#labeler_admin\"")]
+    [InlineData("aud", "[\"did:plc:g6ylltenitt4tp27bpwalh7b\"]")]
+    [InlineData("lxm", "\"dev.idunno.labeler.admin.issueLabel\"")]
+    [InlineData("lxm", "null")]
+    [InlineData("jti", "null")]
+    [InlineData("exp", "0")]
+    public async Task ReportingCompatibilityRejectsUnrelatedAudienceMethodAndInvalidClaims(string claim, string value)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["aud"] = s_audience.Did.Value;
+        payload["lxm"] = "com.atproto.moderation.createReport";
+        payload[claim] = JsonNode.Parse(value);
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        using TestServer server = Resolver(DidDocumentFor(TestDid, "atproto", key));
+        using HttpClient client = server.CreateClient();
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyModerationReportAsync(
+            token: token,
+            labeler: s_audience.Did,
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task ReportingChecksSignatureAndExpiryAfterResolution(bool legacy, bool expiresDuringResolution)
+    {
+        FakeTimeProvider clock = CreateClock();
+        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using ECDsa otherKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        JsonObject payload = Payload(clock);
+        payload["aud"] = legacy ? s_audience.Did.Value : s_audience.ToString();
+        payload["lxm"] = "com.atproto.moderation.createReport";
+        string token = Sign(key, """{"typ":"JWT","alg":"ES256"}""", payload.ToJsonString());
+        using TestServer server = Resolver(
+            DidDocumentFor(TestDid, "atproto", expiresDuringResolution ? key : otherKey),
+            expiresDuringResolution ? () => clock.Advance(TimeSpan.FromSeconds(66)) : null);
+        using HttpClient client = server.CreateClient();
+        await Assert.ThrowsAsync<InvalidDataException>(() => ServiceAuthentication.VerifyModerationReportAsync(
+            token: token,
+            labeler: s_audience.Did,
+            httpClient: client,
+            timeProvider: clock,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
     [InlineData(-5)]
     [InlineData(-1)]
     [InlineData(0)]

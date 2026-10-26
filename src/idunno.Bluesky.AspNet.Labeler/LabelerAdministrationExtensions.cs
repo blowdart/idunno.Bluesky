@@ -379,6 +379,7 @@ public static class LabelerAdministrationExtensions
     internal static int ResponseStatus(AdministrationResponse response) => response.Error switch
     {
         null => StatusCodes.Status200OK,
+        "ModerationDisabled" => StatusCodes.Status404NotFound,
         "Unauthorized" => StatusCodes.Status403Forbidden,
         "StorageUnavailable" or "OutcomeUnknown" or "ServiceUnavailable" or "ResponseTooLarge" => StatusCodes.Status503ServiceUnavailable,
         _ => StatusCodes.Status400BadRequest

@@ -32,7 +32,7 @@ namespace idunno.Bluesky.Labeler.Issuance;
 /// integrate commit-valid authorization with the team provider before exposing mutation endpoints.</para>
 /// <para>The host owns key/client disposal. Storage initialization and publication are separate operations.</para>
 /// </remarks>
-public sealed class LabelIssuanceService(
+public sealed partial class LabelIssuanceService(
     Did issuer,
     LabelSigningKey signingKey,
     ILabelStore store,
@@ -110,195 +110,21 @@ public sealed class LabelIssuanceService(
             return recovered;
         }
 
-        LabelTarget resolved;
-        if (request.Kind == LabelOperationKind.Negate)
+        LabelServiceResult<LabelDecisionCommit> prepared = await PrepareDecisionAsync(request, token).ConfigureAwait(false);
+        if (!prepared.Succeeded)
         {
-            if (request.Target.Repository is not Did)
-            {
-                return Failure<LabelOperationReceipt>(
-                    LabelServiceErrorCode.InvalidTarget,
-                    "Withdrawal requires a stable DID target and does not resolve handles.");
-            }
-
-            resolved = request.Target;
-        }
-        else
-        {
-            LabelServiceResult<LabelTarget> resolution = await _resolver.ResolveAsync(request.Target, token).ConfigureAwait(false);
-            if (!resolution.Succeeded)
-            {
-                return LabelServiceResult<LabelOperationReceipt>.Failure(resolution.Error);
-            }
-
-            resolved = resolution.Result;
+            return LabelServiceResult<LabelOperationReceipt>.Failure(prepared.Error);
         }
 
-        LabelServiceResult<LabelAuthorizationGrant> grant = await AuthorizeAsync(
-            action: action,
-            context: request.Context,
-            operationId: request.OperationId,
-            requested: request.Target,
-            resolved: resolved,
-            value: request.Value,
-            admission: false,
-            token: token).ConfigureAwait(false);
-        if (!grant.Succeeded)
-        {
-            return LabelServiceResult<LabelOperationReceipt>.Failure(grant.Error);
-        }
-
-        string? policyVersion = null;
-        if (request.Kind == LabelOperationKind.Issue)
-        {
-            LabelServiceResult<LabelIssuancePolicy> policy = await _policyProvider.GetPolicyAsync(token).ConfigureAwait(false);
-            if (!policy.Succeeded)
-            {
-                return LabelServiceResult<LabelOperationReceipt>.Failure(policy.Error);
-            }
-
-            policyVersion = policy.Result.Version;
-            if (!policy.Result.DeclaredValues.Contains(request.Value, StringComparer.Ordinal))
-            {
-                return Failure<LabelOperationReceipt>(
-                    LabelServiceErrorCode.ValueNotDeclared,
-                    "The requested label value is not declared by the active policy.");
-            }
-
-            if ((resolved.Kind == LabelTargetKind.Account && !policy.Result.AllowAccounts) ||
-                (resolved.Kind == LabelTargetKind.Record && (!policy.Result.AllowRecords ||
-                    (policy.Result.AllowedRecordCollections is { } collections && !collections.Contains(resolved.RecordUri!.Collection!)))))
-            {
-                return Failure<LabelOperationReceipt>(
-                    LabelServiceErrorCode.TargetNotAllowed,
-                    "The active issuance policy does not allow this target.");
-            }
-        }
-
-        LabelServiceResult<LabelDecisionSnapshot> snapshot = await _store.ReadDecisionAsync(resolved, request.Value, token).ConfigureAwait(false);
-        if (!snapshot.Succeeded)
-        {
-            return LabelServiceResult<LabelOperationReceipt>.Failure(snapshot.Error);
-        }
-
-        CheckIssuer(snapshot.Result.State);
-        if (snapshot.Result.State.Phase != LabelerLifecyclePhase.Active)
-        {
-            return Failure<LabelOperationReceipt>(
-                LabelServiceErrorCode.IssuanceClosed,
-                "Ordinary issuance and negation are closed by the labeler lifecycle.");
-        }
-
-        StoredLabel? current = snapshot.Result.CurrentLabel;
-        if (request.Kind == LabelOperationKind.Negate)
-        {
-            if (request.Target.Cid is not null && (current is null || request.Target.Cid != current.SignedLabel.Label.Cid))
-            {
-                return Failure<LabelOperationReceipt>(
-                    LabelServiceErrorCode.StaleDecision,
-                    "The withdrawal CID does not match the current stored decision.");
-            }
-
-            if (resolved.RecordUri is { } uri &&
-                current is not null &&
-                resolved.Cid != current.SignedLabel.Label.Cid)
-            {
-                resolved = LabelTarget.Record(uri, current.SignedLabel.Label.Cid);
-                // Copying a stored CID changes the authorized scope, including for audited no-ops.
-                // Use the final grant in the audit and reject denial before signing or committing.
-                grant = await AuthorizeAsync(
-                    action: action,
-                    context: request.Context,
-                    operationId: request.OperationId,
-                    requested: request.Target,
-                    resolved: resolved,
-                    value: request.Value,
-                    admission: false,
-                    token: token).ConfigureAwait(false);
-                if (!grant.Succeeded)
-                {
-                    return LabelServiceResult<LabelOperationReceipt>.Failure(grant.Error);
-                }
-            }
-        }
-
-        DateTimeOffset now = _timeProvider.GetUtcNow();
-        SignedLabelSnapshot? signed = null;
-        string? publicKey = null;
-        if (LabelDecisionRules.NeedsLabel(request, current, now))
-        {
-            DateTimeOffset created = now;
-            if (current is not null && created <= current.SignedLabel.Label.CreationTimestamp)
-            {
-                DateTimeOffset previous = current.SignedLabel.Label.CreationTimestamp.ToUniversalTime();
-                if (previous == DateTimeOffset.MaxValue)
-                {
-                    return Failure<LabelOperationReceipt>(
-                        LabelServiceErrorCode.TimestampExhausted,
-                        "No representable creation instant is later than the current decision.");
-                }
-
-                // One tick beyond the truncated value is also strictly beyond any retained sub-tick
-                // fraction. The provider rechecks exact timestamp ordering under its stream lock.
-                created = previous.AddTicks(1);
-            }
-
-            if (request.ExpiresAt is { } expiry && expiry <= created)
-            {
-                return Failure<LabelOperationReceipt>(
-                    LabelServiceErrorCode.InvalidExpiry,
-                    "Expiry must be later than the final service-assigned creation timestamp.");
-            }
-
-            try
-            {
-                Label label = request.Kind == LabelOperationKind.Issue
-                    ? _signingKey.CreateLabel(
-                        source: _issuer,
-                        uri: resolved.Subject,
-                        value: request.Value,
-                        creationTimestamp: created,
-                        cid: resolved.Cid,
-                        expiresAt: request.ExpiresAt)
-                    : _signingKey.CreateNegation(
-                        source: _issuer,
-                        uri: resolved.Subject,
-                        value: request.Value,
-                        creationTimestamp: created,
-                        cid: resolved.Cid);
-                signed = new(label);
-                publicKey = _signingKey.ExportPublicKeyMultibase();
-            }
-            catch (Exception exception) when (exception is CryptographicException or PlatformNotSupportedException)
-            {
-                return LabelServiceResult<LabelOperationReceipt>.Failure(
-                    new(
-                        code: LabelServiceErrorCode.SigningFailed,
-                        message: "The established signing key could not sign this decision.",
-                        exception: exception));
-            }
-        }
-
-        LabelAuditRecord audit = new(
-            evaluatedAt: now,
-            authorizationVersion: grant.Result.Version,
-            policyVersion: policyVersion,
-            signingKeyMultibase: publicKey);
-        LabelDecisionCommit commit = new(
-            request: request,
-            resolvedTarget: resolved,
-            expectedRevision: snapshot.Result.State.Revision,
-            signedLabel: signed,
-            audit: audit)
-        {
-            AdministrationCaller = grant.Result.AdministrationCaller
-        };
+        LabelDecisionCommit commit = prepared.Result;
         LabelServiceResult<LabelOperationReceipt> committed = await _store.CommitDecisionAsync(commit, token).ConfigureAwait(false);
         if (committed.Succeeded)
         {
             CheckIssuer(committed.Result.StateAtCommit);
             // A concurrent same-ID writer can win after our initial lookup, including a handle
             // resolving differently. Authorize the stored target, never merely our discarded one.
-            if (committed.Result.ResolvedTarget.Subject == resolved.Subject && committed.Result.ResolvedTarget.Cid == resolved.Cid)
+            if (committed.Result.ResolvedTarget.Subject == commit.ResolvedTarget.Subject &&
+                committed.Result.ResolvedTarget.Cid == commit.ResolvedTarget.Cid)
             {
                 return committed;
             }
@@ -343,6 +169,198 @@ public sealed class LabelIssuanceService(
         }
 
         return committed;
+    }
+
+    /// <summary>Prepares one resolved, authorized and signed decision without writing labels or receipts.</summary>
+    /// <remarks><para>The caller must perform coarse admission and same-intent receipt recovery first.
+    /// Compound workflows reuse this preparation before submitting all actions in one provider transaction.</para></remarks>
+    internal async Task<LabelServiceResult<LabelDecisionCommit>> PrepareDecisionAsync(LabelOperationRequest request, CancellationToken token)
+    {
+        LabelAuthorizationAction action = request.Kind == LabelOperationKind.Issue
+            ? LabelAuthorizationAction.Issue : LabelAuthorizationAction.Negate;
+        LabelTarget resolved;
+        if (request.Kind == LabelOperationKind.Negate)
+        {
+            if (request.Target.Repository is not Did)
+            {
+                return Failure<LabelDecisionCommit>(
+                    LabelServiceErrorCode.InvalidTarget,
+                    "Withdrawal requires a stable DID target and does not resolve handles.");
+            }
+
+            resolved = request.Target;
+        }
+        else
+        {
+            LabelServiceResult<LabelTarget> resolution = await _resolver.ResolveAsync(request.Target, token).ConfigureAwait(false);
+            if (!resolution.Succeeded)
+            {
+                return LabelServiceResult<LabelDecisionCommit>.Failure(resolution.Error);
+            }
+
+            resolved = resolution.Result;
+        }
+
+        LabelServiceResult<LabelAuthorizationGrant> grant = await AuthorizeAsync(
+            action: action,
+            context: request.Context,
+            operationId: request.OperationId,
+            requested: request.Target,
+            resolved: resolved,
+            value: request.Value,
+            admission: false,
+            token: token).ConfigureAwait(false);
+        if (!grant.Succeeded)
+        {
+            return LabelServiceResult<LabelDecisionCommit>.Failure(grant.Error);
+        }
+
+        string? policyVersion = null;
+        if (request.Kind == LabelOperationKind.Issue)
+        {
+            LabelServiceResult<LabelIssuancePolicy> policy = await _policyProvider.GetPolicyAsync(token).ConfigureAwait(false);
+            if (!policy.Succeeded)
+            {
+                return LabelServiceResult<LabelDecisionCommit>.Failure(policy.Error);
+            }
+
+            policyVersion = policy.Result.Version;
+            if (!policy.Result.DeclaredValues.Contains(request.Value, StringComparer.Ordinal))
+            {
+                return Failure<LabelDecisionCommit>(
+                    LabelServiceErrorCode.ValueNotDeclared,
+                    "The requested label value is not declared by the active policy.");
+            }
+
+            if ((resolved.Kind == LabelTargetKind.Account && !policy.Result.AllowAccounts) ||
+                (resolved.Kind == LabelTargetKind.Record && (!policy.Result.AllowRecords ||
+                    (policy.Result.AllowedRecordCollections is { } collections && !collections.Contains(resolved.RecordUri!.Collection!)))))
+            {
+                return Failure<LabelDecisionCommit>(
+                    LabelServiceErrorCode.TargetNotAllowed,
+                    "The active issuance policy does not allow this target.");
+            }
+        }
+
+        LabelServiceResult<LabelDecisionSnapshot> snapshot = await _store.ReadDecisionAsync(resolved, request.Value, token).ConfigureAwait(false);
+        if (!snapshot.Succeeded)
+        {
+            return LabelServiceResult<LabelDecisionCommit>.Failure(snapshot.Error);
+        }
+
+        CheckIssuer(snapshot.Result.State);
+        if (snapshot.Result.State.Phase != LabelerLifecyclePhase.Active)
+        {
+            return Failure<LabelDecisionCommit>(
+                LabelServiceErrorCode.IssuanceClosed,
+                "Ordinary issuance and negation are closed by the labeler lifecycle.");
+        }
+
+        StoredLabel? current = snapshot.Result.CurrentLabel;
+        if (request.Kind == LabelOperationKind.Negate)
+        {
+            if (request.Target.Cid is not null && (current is null || request.Target.Cid != current.SignedLabel.Label.Cid))
+            {
+                return Failure<LabelDecisionCommit>(
+                    LabelServiceErrorCode.StaleDecision,
+                    "The withdrawal CID does not match the current stored decision.");
+            }
+
+            if (resolved.RecordUri is { } uri &&
+                current is not null &&
+                resolved.Cid != current.SignedLabel.Label.Cid)
+            {
+                resolved = LabelTarget.Record(uri, current.SignedLabel.Label.Cid);
+                // Copying a stored CID changes the authorized scope, including for audited no-ops.
+                // Use the final grant in the audit and reject denial before signing or committing.
+                grant = await AuthorizeAsync(
+                    action: action,
+                    context: request.Context,
+                    operationId: request.OperationId,
+                    requested: request.Target,
+                    resolved: resolved,
+                    value: request.Value,
+                    admission: false,
+                    token: token).ConfigureAwait(false);
+                if (!grant.Succeeded)
+                {
+                    return LabelServiceResult<LabelDecisionCommit>.Failure(grant.Error);
+                }
+            }
+        }
+
+        DateTimeOffset now = _timeProvider.GetUtcNow();
+        SignedLabelSnapshot? signed = null;
+        string? publicKey = null;
+        if (LabelDecisionRules.NeedsLabel(request, current, now))
+        {
+            DateTimeOffset created = now;
+            if (current is not null && created <= current.SignedLabel.Label.CreationTimestamp)
+            {
+                DateTimeOffset previous = current.SignedLabel.Label.CreationTimestamp.ToUniversalTime();
+                if (previous == DateTimeOffset.MaxValue)
+                {
+                    return Failure<LabelDecisionCommit>(
+                        LabelServiceErrorCode.TimestampExhausted,
+                        "No representable creation instant is later than the current decision.");
+                }
+
+                // One tick beyond the truncated value is also strictly beyond any retained sub-tick
+                // fraction. The provider rechecks exact timestamp ordering under its stream lock.
+                created = previous.AddTicks(1);
+            }
+
+            if (request.ExpiresAt is { } expiry && expiry <= created)
+            {
+                return Failure<LabelDecisionCommit>(
+                    LabelServiceErrorCode.InvalidExpiry,
+                    "Expiry must be later than the final service-assigned creation timestamp.");
+            }
+
+            try
+            {
+                Label label = request.Kind == LabelOperationKind.Issue
+                    ? _signingKey.CreateLabel(
+                        source: _issuer,
+                        uri: resolved.Subject,
+                        value: request.Value,
+                        creationTimestamp: created,
+                        cid: resolved.Cid,
+                        expiresAt: request.ExpiresAt)
+                    : _signingKey.CreateNegation(
+                        source: _issuer,
+                        uri: resolved.Subject,
+                        value: request.Value,
+                        creationTimestamp: created,
+                        cid: resolved.Cid);
+                signed = new(label);
+                publicKey = _signingKey.ExportPublicKeyMultibase();
+            }
+            catch (Exception exception) when (exception is CryptographicException or PlatformNotSupportedException)
+            {
+                return LabelServiceResult<LabelDecisionCommit>.Failure(
+                    new(
+                        code: LabelServiceErrorCode.SigningFailed,
+                        message: "The established signing key could not sign this decision.",
+                        exception: exception));
+            }
+        }
+
+        LabelAuditRecord audit = new(
+            evaluatedAt: now,
+            authorizationVersion: grant.Result.Version,
+            policyVersion: policyVersion,
+            signingKeyMultibase: publicKey);
+        LabelDecisionCommit commit = new(
+            request: request,
+            resolvedTarget: resolved,
+            expectedRevision: snapshot.Result.State.Revision,
+            signedLabel: signed,
+            audit: audit)
+        {
+            AdministrationCaller = grant.Result.AdministrationCaller
+        };
+        return LabelServiceResult<LabelDecisionCommit>.Success(commit);
     }
 
     /// <summary>Checks recovered scope before returning any original outcome or intent conflict.</summary>

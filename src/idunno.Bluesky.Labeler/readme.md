@@ -17,6 +17,7 @@ Feature directories match their namespaces, with one type per file:
 | `idunno.Bluesky.Labeler.Issuance` | Issuance service, policies, authorization and decision requests/receipts |
 | `idunno.Bluesky.Labeler.Administration` | Team services, roles, permissions and administrative persistence |
 | `idunno.Bluesky.Labeler.Maintenance` | Lifecycle phases, draining, host participation and durable coordination |
+| `idunno.Bluesky.Labeler.Moderation` | Optional Xenon reports, exact-subject cases, workflow views, appeals and immutable policy/recovery history |
 | `idunno.Bluesky.Labeler.Signing` | Key rings, durable selection, protected key files and re-signing |
 | `idunno.Bluesky.Labeler.Storage` | Label persistence contracts, signed snapshots, pages and metrics |
 | `idunno.Bluesky.Labeler.Identity` | Public labeler identity-document creation and verification |
@@ -30,3 +31,9 @@ Start with the [labeller overview](https://bluesky.idunno.dev/docs/labeller/over
 and [issuance guide](https://bluesky.idunno.dev/docs/labeller/issuance.html), including error causes,
 retry rules and [administration setup](https://bluesky.idunno.dev/docs/labeller/administration.html)
 required before exposing administrative endpoints.
+
+[Optional Xenon moderation](https://bluesky.idunno.dev/docs/labeller/moderation.html)
+shares provider authorization, issuance and audit rather than requiring Ozone or
+a second persistence system. Intake never automatically labels content. Explicit
+case decisions atomically commit bounded label actions and appeal outcomes; manual
+labeling remains independent of reports and cases.

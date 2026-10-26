@@ -107,4 +107,93 @@ CREATE TABLE IF NOT EXISTS label_maintenance_hosts (
     PRIMARY KEY(operation_id, host_id)
 ) ENGINE=InnoDB;
 INSERT INTO label_maintenance(id, stream_id) VALUES(1, '00000000000000000000000000000000') ON DUPLICATE KEY UPDATE id=id;
-INSERT INTO label_schema(id, version) VALUES(1, 8) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_cases (
+    case_id BIGINT PRIMARY KEY CHECK(case_id>0),
+    subject_hash BINARY(32) NOT NULL,
+    subject_key LONGBLOB NOT NULL,
+    status INTEGER NOT NULL CHECK(status BETWEEN 0 AND 2),
+    assignee_hash BINARY(32) NULL,
+    assignee_key LONGBLOB NULL,
+    payload LONGBLOB NOT NULL,
+    INDEX label_cases_subject(subject_hash, status),
+    INDEX label_cases_status(status, case_id),
+    INDEX label_cases_assignee(assignee_hash, status, case_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_case_events (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    case_id BIGINT NOT NULL,
+    operation_hash BINARY(32) NOT NULL UNIQUE,
+    operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    intent LONGBLOB NOT NULL,
+    payload LONGBLOB NOT NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id),
+    INDEX label_case_events_history(case_id, seq)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_reports (
+    report_id BIGINT PRIMARY KEY CHECK(report_id>0),
+    case_id BIGINT NOT NULL,
+    reason_hash BINARY(32) NOT NULL,
+    reason_type TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    payload LONGBLOB NOT NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id),
+    INDEX label_reports_case(case_id, report_id),
+    INDEX label_reports_reason(reason_hash, case_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_report_tokens (
+    replay_hash BINARY(32) PRIMARY KEY,
+    replay_key LONGBLOB NOT NULL,
+    token_hash BINARY(32) NOT NULL UNIQUE,
+    expires_ms BIGINT NOT NULL,
+    INDEX label_report_tokens_expiry(expires_ms)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_policy_gate (id INTEGER PRIMARY KEY CHECK(id=1), payload LONGBLOB NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_policy_history (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    operation_hash BINARY(32) NULL UNIQUE,
+    payload LONGBLOB NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_policy_versions (
+    version_hash BINARY(32) PRIMARY KEY,
+    version TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    payload LONGBLOB NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_policy_events (
+    operation_hash BINARY(32) PRIMARY KEY,
+    operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    intent LONGBLOB NOT NULL,
+    payload LONGBLOB NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_appeals (
+    appeal_id BIGINT PRIMARY KEY CHECK(appeal_id>0),
+    case_id BIGINT NOT NULL,
+    status INTEGER NOT NULL,
+    pending_hash BINARY(32) NOT NULL,
+    pending_key LONGBLOB NOT NULL,
+    payload LONGBLOB NOT NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id),
+    INDEX label_appeals_case(case_id, status, appeal_id),
+    INDEX label_appeals_pending(pending_hash, status)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_appeal_reports (
+    report_id BIGINT PRIMARY KEY,
+    appeal_id BIGINT NOT NULL,
+    FOREIGN KEY(report_id) REFERENCES label_reports(report_id),
+    FOREIGN KEY(appeal_id) REFERENCES label_appeals(appeal_id),
+    INDEX label_appeal_reports_appeal(appeal_id, report_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_subject_index (
+    seq BIGINT PRIMARY KEY CHECK(seq>0),
+    subject_hash BINARY(32) NOT NULL,
+    subject_key LONGBLOB NOT NULL,
+    value TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    INDEX label_subject_index_subject(subject_hash, seq)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_case_decisions (
+    operation_hash BINARY(32) PRIMARY KEY,
+    operation_id TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    case_id BIGINT NOT NULL,
+    intent LONGBLOB NOT NULL,
+    payload LONGBLOB NOT NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
+) ENGINE=InnoDB;
+INSERT INTO label_schema(id, version) VALUES(1, 9) ON DUPLICATE KEY UPDATE id=id;

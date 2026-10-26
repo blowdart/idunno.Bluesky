@@ -40,6 +40,7 @@ internal static partial class Program
         root.Subcommands.Add(CreateRotationCommand());
         root.Subcommands.Add(CreateCliUpdateCommand());
         root.Subcommands.Add(CreateServiceUpdateCommand());
+        root.Subcommands.Add(CreatePolicyCommand());
         return root.Parse(args).InvokeAsync();
     }
 
@@ -958,7 +959,8 @@ internal static partial class Program
         AdministrationCommand request,
         TransportOptions transport,
         ParseResult parseResult,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AdministrationWorkflow? workflow = null)
     {
         try
         {
@@ -966,6 +968,18 @@ internal static partial class Program
             Uri? adminUrl = parseResult.GetValue(transport.AdminUrl);
             if (!string.IsNullOrWhiteSpace(localEndpoint) && adminUrl is null)
             {
+                if (workflow is not null)
+                {
+                    return await workflow(
+                        async (command, token) => new(
+                            await LabelerLocalAdministration.SendLocalCommandAsync(
+                                endpoint: localEndpoint,
+                                command: JsonSerializer.Serialize(command, AdministrationJsonContext.Default.AdministrationCommand),
+                                cancellationToken: token).ConfigureAwait(false),
+                            HttpStatusCode.OK),
+                        cancellationToken).ConfigureAwait(false);
+                }
+
                 string command = JsonSerializer.Serialize(request, AdministrationJsonContext.Default.AdministrationCommand);
                 string localResponse = await LabelerLocalAdministration.SendLocalCommandAsync(
                     endpoint: localEndpoint,
@@ -983,7 +997,8 @@ internal static partial class Program
                     audienceText: parseResult.GetValue(transport.AudienceText),
                     handleText: parseResult.GetValue(transport.Handle),
                     clientId: parseResult.GetValue(transport.ClientId),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                    cancellationToken: cancellationToken,
+                    workflow: workflow).ConfigureAwait(false);
             }
 
             await Console.Error.WriteLineAsync("Select exactly one transport: --local-endpoint or --admin-url.").ConfigureAwait(false);
@@ -1016,7 +1031,8 @@ internal static partial class Program
         string? audienceText,
         string? handleText,
         string? clientId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        AdministrationWorkflow? workflow = null)
     {
         if (!IsHttpsOrigin(adminUrl) ||
             handleText is null ||
@@ -1037,20 +1053,47 @@ internal static partial class Program
         OAuthOptions oauthOptions = new()
         {
             ClientId = metadataUri.AbsoluteUri,
-            Scopes = ["atproto", $"rpc:{lxm}?aud={encodedAudience}"]
+            Scopes = workflow is null
+                ? ["atproto", $"rpc:{lxm}?aud={encodedAudience}"]
+                : ["atproto", .. s_policyPublicationMethods.Select(value => $"rpc:{AdminMethodPrefix}{value}?aud={encodedAudience}")]
         };
         AtProtoAgentOptions options = new()
         {
             OAuthOptions = oauthOptions
         };
         using AtProtoAgent agent = new(new Uri(DefaultPds), options);
+        if (!await SignInAsync(agent, handle, oauthOptions.Scopes, cancellationToken).ConfigureAwait(false))
+        {
+            return 4;
+        }
+
+        if (workflow is not null)
+        {
+            return await workflow(
+                (command, token) => SendRemoteCommandAsync(
+                    agent: agent, adminUrl: adminUrl, audience: audience, request: command, cancellationToken: token),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        AdministrationReply reply = await SendRemoteCommandAsync(
+            agent: agent, adminUrl: adminUrl, audience: audience, request: request, cancellationToken: cancellationToken).ConfigureAwait(false);
+        return await WriteResponseAsync(reply.Body, reply.StatusCode).ConfigureAwait(false);
+    }
+
+    /// <summary>Establishes one ephemeral operator session without retaining its credentials.</summary>
+    private static async Task<bool> SignInAsync(
+        AtProtoAgent agent,
+        Handle handle,
+        IEnumerable<string> scopes,
+        CancellationToken cancellationToken)
+    {
         CallbackServer callback = await CallbackServer.CreateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         await using ConfiguredAsyncDisposable callbackLifetime = callback.ConfigureAwait(false);
         OAuthClient loginClient = agent.CreateOAuthClient();
         Uri loginUri = await agent.BuildOAuth2LoginUri(
             oAuthClient: loginClient,
             handle: handle,
-            scopes: oauthOptions.Scopes,
+            scopes: scopes,
             returnUri: callback.Uri,
             allowLoopback: true,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1062,9 +1105,21 @@ internal static partial class Program
             !agent.IsAuthenticated)
         {
             await Console.Error.WriteLineAsync("OAuth sign-in did not establish an authenticated session.").ConfigureAwait(false);
-            return 4;
+            return false;
         }
 
+        return true;
+    }
+
+    /// <summary>Sends one independently method-bound request without coupling transport to console output.</summary>
+    private static async Task<AdministrationReply> SendRemoteCommandAsync(
+        AtProtoAgent agent,
+        Uri adminUrl,
+        AtProtoServiceReference audience,
+        AdministrationCommand request,
+        CancellationToken cancellationToken)
+    {
+        string lxm = AdminMethodPrefix + request.Method;
         AtProtoHttpResult<ServiceCredential> tokenResult = await agent.GetServiceAuth(
             service: agent.Service,
             audience: audience,
@@ -1073,7 +1128,9 @@ internal static partial class Program
         if (!tokenResult.Succeeded)
         {
             await Console.Error.WriteLineAsync($"The PDS could not issue the requested service token ({(int)tokenResult.StatusCode}).").ConfigureAwait(false);
-            return 4;
+            return new(
+                """{"succeeded":false,"error":"Unauthorized","detail":"The PDS could not issue the requested method-bound service token."}""",
+                HttpStatusCode.Forbidden);
         }
 
         Uri requestUri = BuildRemoteRequestUri(
@@ -1100,7 +1157,7 @@ internal static partial class Program
         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenResult.Result.AccessJwt);
         using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
         string responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return await WriteResponseAsync(responseBody, response.StatusCode).ConfigureAwait(false);
+        return new(responseBody, response.StatusCode);
     }
 
     /// <summary>Writes the service's JSON result and maps authorization and availability failures to process exit codes.</summary>
@@ -1318,5 +1375,15 @@ internal static partial class Program
         int Limit = 16,
         int GracePeriodDays = 0,
         bool Confirmed = false,
-        string? ReplacementKeyId = null);
+        string? ReplacementKeyId = null,
+        PolicyCommand? Moderation = null);
+
+    /// <summary>Separates a bounded administrative response from its presentation.</summary>
+    private sealed record AdministrationReply(string Body, HttpStatusCode StatusCode);
+
+    /// <summary>Sends commands through one authenticated administration connection.</summary>
+    private delegate Task<AdministrationReply> AdministrationSender(AdministrationCommand command, CancellationToken token);
+
+    /// <summary>Coordinates a bounded workflow without conflating administrator and labeler-account credentials.</summary>
+    private delegate Task<int> AdministrationWorkflow(AdministrationSender sender, CancellationToken token);
 }

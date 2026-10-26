@@ -233,6 +233,12 @@ internal abstract partial class RelationalLabelStore
                     throw new InvalidOperationException("Another maintenance operation is active or the labeler lifecycle is closed.");
                 }
 
+                if ((await ReadPolicyGateAsync(connection, transaction, cancellationToken).ConfigureAwait(false))?.Phase ==
+                    Moderation.LabelPolicyPhase.Publishing)
+                {
+                    throw new InvalidOperationException("Recover the pending policy publication before beginning rotation.");
+                }
+
                 LabelSigningKeySelection? selection = await ReadSigningSelectionAsync(connection, transaction, state, cancellationToken).ConfigureAwait(false);
                 if (selection is not null && selection.KeyId != previousKeyId)
                 {
