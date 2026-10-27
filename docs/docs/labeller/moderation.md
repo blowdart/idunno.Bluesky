@@ -80,6 +80,17 @@ Missing `reasonTypes` and `subjectCollections` mean unrestricted within the
 supported subject kinds; empty arrays permit none. Explicit JSON null and
 unsupported subjects, including chat messages, are rejected.
 
+An authenticated report for an allowed subject whose reason is outside
+`reasonTypes` receives the normal report receipt, but is immediately retained as
+handled with resolution reason `Not Applicable`. It does not enter the open-work
+counts, create a pending appeal or change labels. Existing case status, assignment
+and revision are unchanged; if no unresolved case exists, its case is created
+already resolved. The original reporter, reason and evidence remain available.
+History and audit attribute the automatic action to the issuer DID with
+`system:report-reason` provenance. Authentication, token replay protection,
+verified-policy fencing, subject restrictions and appeal ownership still apply.
+The report, resolution, history, audit and token reservation commit atomically.
+
 The host bounds request bytes, depth, report context and optional tool metadata,
 and rejects duplicate, unknown and forged fields. Report context may be empty
 or whitespace. Limits apply before costly authentication and durable audit where
@@ -147,8 +158,8 @@ capture creates another pending appeal.
 
 A case decision explicitly names up to sixteen pending appeals and an outcome:
 `Upheld` and `Superseded` cannot mutate labels; `Withdrawn` explicitly negates
-selected challenged values; `Replaced` explicitly issues replacement outcomes,
-optionally withdrawing challenged labels. Arbitrary reason text never chooses
+selected challenged values; `Replaced` explicitly adds or removes labels,
+including partial withdrawal that retains other labels. Arbitrary reason text never chooses
 labels to reverse. Every captured sequence must still be current and active for
 an uphold or correction. Newer or expired outcomes require an explicit
 superseded acknowledgment instead of withdrawing a newer outcome.
@@ -230,6 +241,21 @@ database, using the existing cross-process transaction boundary. Schema nine
 additively preserves schema-eight stream/signature, team, maintenance and key
 selection state. Stop old writers and take a consistent backup before upgrading.
 MySQL requires InnoDB for moderation tables as well as ordinary label tables.
+
+Schema ten adds local search projections and restart-resumed deleted-post checks.
+`AddLabelerModeration` runs one bounded existence-check batch each minute, with
+database-timed five-minute spacing between checks of a case. Only
+`app.bsky.feed.post` record cases with unresolved reports or pending appeals are
+eligible. The checker fetches the current record without pinning its old CID:
+an edited record still exists. An explicit authoritative PDS `RecordNotFound`
+with HTTP 400 or 404 resolves the case, handles remaining reports and marks
+pending appeals Superseded, all with reason `Post deleted`. It never changes
+labels, challenges, signed history or original report text. Inconclusive failures
+are logged and leave review work open. A case revision change or stale lookup
+rejects closure; the durable schedule allows a later fresh check after restart.
+History and audit use explicit `system:deleted-post` provenance.
+This shared worker operates with or without the UI and independently of remote
+CLI administration.
 
 Audit is application-append-only and atomic with mutations. Successful
 inspection does not append another audit entry; denied operations remain

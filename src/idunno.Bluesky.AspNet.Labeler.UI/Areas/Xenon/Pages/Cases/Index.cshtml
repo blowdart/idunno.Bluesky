@@ -1,0 +1,124 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Cases.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Cases awaiting moderation";
+    ViewData["WideLayout"] = true;
+    JsonElement? cases = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+        moderation.TryGetProperty("cases", out JsonElement values) ? values : null;
+}
+<h1>Cases awaiting moderation</h1>
+<nav class="queue-tabs" aria-label="Case workflow queues">
+    @foreach ((LabelCaseWorkflow queue, string title) in new[]
+    {
+        (LabelCaseWorkflow.Unresolved, "Unresolved"),
+        (LabelCaseWorkflow.InReview, "In review"),
+        (LabelCaseWorkflow.Resolved, "Resolved"),
+        (LabelCaseWorkflow.All, "All")
+    })
+    {
+        <a asp-area="Xenon" asp-page="/Cases/Index" asp-route-Queue="@queue" aria-current="@(Model.Queue == queue ? "page" : null)">@title</a>
+    }
+</nav>
+<form method="get" class="panel">
+    <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
+    <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
+    <label for="queue">Workflow queue</label>
+    <select id="queue" name="Queue">
+        @foreach (LabelCaseWorkflow queue in Enum.GetValues<LabelCaseWorkflow>())
+        {
+            string title = queue switch
+            {
+                LabelCaseWorkflow.InReview => "In review",
+                LabelCaseWorkflow.AssignedToMe => "Assigned to me",
+                LabelCaseWorkflow.PendingAppeals => "Pending appeals",
+                _ => queue.ToString()
+            };
+            <option value="@queue" selected="@(Model.Queue == queue)">@title</option>
+        }
+    </select>
+    <button type="submit" aria-label="Filter cases" title="Filter cases"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
+</form>
+@if (cases is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
+{
+    <section class="panel">
+        <table class="cases-table">
+            <caption class="sr-only">@Model.Table!.Total cases in the @Model.Queue queue</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Case", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Subject"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Status"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Assignee, "Assignee"))
+                <th scope="col" class="numeric"><span class="sr-only">Author report summary</span></th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Received"))
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement item in list.EnumerateArray())
+                {
+                    JsonElement subject = item.GetProperty("subject");
+                    string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
+                    <tr>
+                        <td class="numeric"><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@item.GetProperty("id").GetInt64()">#@item.GetProperty("id").GetInt64()</a></td>
+                        <td class="case-subject">@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
+                        <td>@{
+                            bool appealed = Model.Data.GetProperty("moderation").TryGetProperty("pendingAppealCaseIds", out JsonElement pendingIds) &&
+                                pendingIds.EnumerateArray().Any(id => id.GetInt64() == item.GetProperty("id").GetInt64());
+                        }
+                        @await Html.PartialAsync("_WorkflowStatus", appealed ? "Appealed" : item.GetProperty("status").GetString())</td>
+                        <td class="case-assignee">@if (item.TryGetProperty("assignee", out JsonElement assignee) && assignee.GetString() is string assigned)
+                            {
+                                @await Html.PartialAsync("_Identity", new IdentityDisplayModel(assigned))
+                            }
+                            else
+                            {
+                                <span>Unassigned</span>
+                            }</td>
+                        <td class="numeric">
+                            @{
+                                string? author = new IdentityDisplayModel(target).Did?.Value;
+                                JsonElement? summary = null;
+                                if (Model.Data.TryGetProperty("authorSummaries", out JsonElement summaries) && summaries.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (JsonElement candidate in summaries.EnumerateArray())
+                                    {
+                                        if (candidate.GetProperty("did").GetString() == author)
+                                        {
+                                            summary = candidate;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            @if (summary is { } counts)
+                            {
+                                long reportCount = counts.GetProperty("reports").GetInt64();
+                                string summaryId = $"author-summary-{item.GetProperty("id").GetInt64()}";
+                                <span class="identity summary-badge" tabindex="0" aria-label="Author report summary" aria-describedby="@summaryId">
+                                    <span class="fa-icon author-card fa-address-card" aria-hidden="true"></span>
+                                    <span id="@summaryId" class="identity-tooltip report-summary-tooltip" role="tooltip">
+                                        @foreach (JsonProperty kind in counts.GetProperty("reportKinds").EnumerateObject())
+                                        {
+                                            long count = kind.Value.GetInt64();
+                                            if (count > 0)
+                                            {
+                                                <span class="report-summary-line">@count open @kind.Name @(count == 1 ? "report" : "reports")</span>
+                                            }
+                                        }
+                                        <span class="report-summary-total">@reportCount account @(reportCount == 1 ? "report" : "reports") in total, including previously handled reports.</span>
+                                    </span>
+                                </span>
+                            }
+                        </td>
+                        <td><time data-relative-time datetime="@item.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@item.GetProperty("createdAt").GetDateTimeOffset().ToString("u")</time></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.Table)
+    </section>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">No cases are available in this queue.</p>
+}

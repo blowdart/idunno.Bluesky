@@ -196,4 +196,21 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     payload LONGBLOB NOT NULL,
     FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
 ) ENGINE=InnoDB;
-INSERT INTO label_schema(id, version) VALUES(1, 9) ON DUPLICATE KEY UPDATE id=id;
+CREATE TABLE IF NOT EXISTS label_search_handles (
+    subject_hash BINARY(32) PRIMARY KEY,
+    subject_key BLOB NOT NULL,
+    handle TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NULL,
+    checked_ms BIGINT NOT NULL
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_search_text (
+    kind INT NOT NULL CHECK(kind IN (0,1)),
+    source_id BIGINT NOT NULL,
+    content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL,
+    PRIMARY KEY(kind,source_id)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS label_post_review_checks (
+    case_id BIGINT PRIMARY KEY,
+    checked_ms BIGINT NOT NULL,
+    FOREIGN KEY(case_id) REFERENCES label_cases(case_id)
+) ENGINE=InnoDB;
+INSERT INTO label_schema(id, version) VALUES(1, 10) ON DUPLICATE KEY UPDATE id=id;

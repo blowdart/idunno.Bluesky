@@ -86,6 +86,15 @@ public static class LabelerModerationExtensions
             logger: provider.GetRequiredService<ILogger<LabelerModerationHost>>(),
             meterFactory: provider.GetRequiredService<IMeterFactory>()));
         services.AddHealthChecks().AddCheck<LabelerModerationHost>("xenon_moderation");
+        services.AddSingleton(provider => new DeletedPostReviewService(
+            store: provider.GetRequiredService<ILabelStore>(),
+            httpClient: httpClient,
+            loggerFactory: provider.GetRequiredService<ILoggerFactory>(),
+            clock: provider.GetRequiredService<TimeProvider>()));
+        services.AddHostedService(provider => new DeletedPostReviewWorker(
+            reviews: provider.GetRequiredService<DeletedPostReviewService>(),
+            clock: provider.GetRequiredService<TimeProvider>(),
+            logger: provider.GetRequiredService<ILogger<DeletedPostReviewWorker>>()));
         return services;
     }
 

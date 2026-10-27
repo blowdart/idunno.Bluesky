@@ -1,4 +1,8 @@
 #nullable enable
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Labeler.Administration.LabelAdministrationReceipt.CreatedAt.init -> void
+idunno.Bluesky.Labeler.Moderation.LabelModerationReport.ResolutionReason.get -> string?
+idunno.Bluesky.Labeler.Moderation.LabelAppeal.ResolutionReason.get -> string?
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyStore.GetPolicyVersionAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, string! version, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Moderation.LabelPolicyDefinition!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyStore.GetPolicyVersionsAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, string? afterVersion = null, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Moderation.LabelPolicyDefinition!>!>!>!
 idunno.Bluesky.Labeler.Moderation.ILabelPolicyStore.GetPolicyHistoryAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, long afterSequence = 0, int limit = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Moderation.LabelPolicyHistoryEntry!>!>!>!
@@ -68,7 +72,11 @@ idunno.Bluesky.Labeler.Moderation.LabelCaseDecision
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.Actions.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>!
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.CaseId.get -> long
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.ExpectedRevision.get -> long
-idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.LabelCaseDecision(string! operationId, long caseId, long expectedRevision, string! policyVersion, string! reason, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>! actions, System.Collections.Generic.IReadOnlyCollection<long>? appealIds = null, idunno.Bluesky.Labeler.Moderation.LabelAppealStatus? appealOutcome = null) -> void
+idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.LabelCaseDecision(string! operationId, long caseId, long expectedRevision, string! policyVersion, string! reason, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Labeler.Moderation.LabelCaseLabelAction!>! actions, System.Collections.Generic.IReadOnlyCollection<long>? appealIds = null, idunno.Bluesky.Labeler.Moderation.LabelAppealStatus? appealOutcome = null, long? reportId = null, bool handleOtherReports = false) -> void
+idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.ReportId.get -> long?
+idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.HandleOtherReports.get -> bool
+idunno.Bluesky.Labeler.Moderation.LabelModerationReport.DecisionOperationId.get -> string?
+idunno.Bluesky.Labeler.Moderation.LabelModerationReport.HandledAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.AppealIds.get -> System.Collections.Generic.IReadOnlyList<long>!
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.AppealOutcome.get -> idunno.Bluesky.Labeler.Moderation.LabelAppealStatus?
 idunno.Bluesky.Labeler.Moderation.LabelCaseDecision.OperationId.get -> string!
@@ -498,6 +506,7 @@ static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.CreateEncryptedBackup(
 static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.GenerateEncryptedFile(string! path, idunno.AtProto.Labels.LabelSigningCurve curve, System.ReadOnlySpan<char> password, System.Security.Cryptography.PbeParameters! pbeParameters) -> idunno.AtProto.Labels.LabelSigningKey!
 static idunno.Bluesky.Labeler.Signing.LabelSigningKeyFile.LoadEncryptedFile(string! path, System.ReadOnlySpan<char> password) -> idunno.AtProto.Labels.LabelSigningKey!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore
+idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthenticateBrowserAsync(idunno.AtProto.Did! actor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthenticateLocalAsync(string! localIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthenticateServiceAsync(idunno.AtProto.ServiceAuthenticationResult! authentication, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller!>!>!
 idunno.Bluesky.Labeler.Administration.ILabelAdministrationStore.AuthorizeAsync(idunno.Bluesky.Labeler.Administration.LabelAdministrationCaller! caller, idunno.Bluesky.Labeler.Administration.LabelAdministrationPermission permission, string! reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Labeler.LabelServiceResult<idunno.Bluesky.Labeler.Issuance.LabelAuthorizationGrant!>!>!

@@ -1,0 +1,85 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.SearchModel
+@{
+    ViewData["Title"] = "Search";
+    ViewData["WideLayout"] = true;
+}
+<h1>Search reports and appeals</h1>
+<p>Find partial subject handles, canonical DIDs/record URIs, report text and appeal messages. Matches are case-insensitive; punctuation is literal.</p>
+@if (Model.Results is { } results)
+{
+    @if (results.PendingHandleCases > 0)
+    {
+        <p class="notice notice-status" role="status">Handle indexing is updating for @results.PendingHandleCases cases. Text and canonical-identifier search remain available; handle matches may be incomplete until refresh finishes.</p>
+    }
+    @if (results.UnavailableHandleCases > 0)
+    {
+        <p class="notice notice-status" role="status">Handles could not be verified for @results.UnavailableHandleCases cases. Their stored text and canonical identifiers are still searchable.</p>
+    }
+    <p>@results.Total results for <strong>@Model.Q</strong></p>
+    <ol class="search-results">
+        @foreach (ModerationSearchHitView hit in results.Hits)
+        {
+            <li class="panel">
+                @if (hit.Report is { } report)
+                {
+                    <h2><a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@report.Report.Id">Report #@report.Report.Id</a></h2>
+                    <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.Report.Subject.Uri ?? report.Report.Subject.Did, Subject: true))
+                        · @await Html.PartialAsync("_WorkflowStatus", report.DecisionOperationId is null ? "Open" : "Handled")</p>
+                    <p class="preview-text">@report.Report.Reason</p>
+                    @if (report.ResolutionReason is { } reportResolution)
+                    {
+                        <p>Resolution: @reportResolution</p>
+                    }
+                    <p>Received <time data-relative-time datetime="@report.Report.CreatedAt.ToString("O")">@report.Report.CreatedAt.ToUniversalTime().ToString("u")</time></p>
+                }
+                else if (hit.Appeal is { } appeal)
+                {
+                    <h2><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@appeal.CaseId" asp-route-ReportId="@hit.RelatedReportId" asp-route-AppealId="@appeal.Id">Appeal #@appeal.Id</a></h2>
+                    <p>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(appeal.Subject.Uri ?? appeal.Subject.Did, Subject: true))
+                        · @await Html.PartialAsync("_WorkflowStatus", appeal.Status)</p>
+                    @if (hit.Text is { } text)
+                    {
+                        <p class="preview-text">@text</p>
+                    }
+                    @if (appeal.ResolutionReason is { } appealResolution)
+                    {
+                        <p>Resolution: @appealResolution</p>
+                    }
+                    <p>Received <time data-relative-time datetime="@appeal.CreatedAt.ToString("O")">@appeal.CreatedAt.ToUniversalTime().ToString("u")</time></p>
+                }
+            </li>
+        }
+    </ol>
+    @if (results.Total == 0)
+    {
+        <p>No stored report or appeal matches this search.</p>
+    }
+    long pages = Math.Max(1, (results.Total + 15) / 16);
+    @if (pages > 1)
+    {
+    <nav class="pagination table-pagination" aria-label="Search result pages">
+        @if (results.Page > 1)
+        {
+            <a asp-route-Q="@Model.Q" asp-route-PageNumber="@(results.Page - 1)">&lt; Previous</a>
+        }
+        else
+        {
+            <span aria-disabled="true">&lt; Previous</span>
+        }
+        <span>@results.Page of @pages pages</span>
+        @if (results.Page < pages)
+        {
+            <a asp-route-Q="@Model.Q" asp-route-PageNumber="@(results.Page + 1)">Next &gt;</a>
+        }
+        else
+        {
+            <span aria-disabled="true">Next &gt;</span>
+        }
+    </nav>
+    }
+}
+else if (ViewData["Error"] is null)
+{
+    <p>Enter a handle fragment or text in the search box above.</p>
+}

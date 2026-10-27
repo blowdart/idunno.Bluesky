@@ -59,6 +59,17 @@ public interface ILabelAdministrationStore
         string localIdentity,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Creates short-lived caller evidence for an authenticated browser identity.</summary>
+    /// <param name="actor">The DID established by a trusted browser authentication handler.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Invocation evidence for an active member or an explicit denial.</returns>
+    /// <remarks><para>Call only after validating the browser's authenticated principal. This method does not
+    /// authenticate an identity itself. It rechecks live membership and issues expiring provider-backed
+    /// evidence that is revalidated for every operation and mutation commit.</para></remarks>
+    Task<LabelServiceResult<LabelAdministrationCaller>> AuthenticateBrowserAsync(
+        Did actor,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Consumes a verified service token's replay identity across all hosts.</summary>
     /// <param name="authentication">The protocol verifier's successful result.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

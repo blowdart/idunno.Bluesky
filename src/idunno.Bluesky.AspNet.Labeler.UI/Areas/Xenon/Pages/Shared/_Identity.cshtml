@@ -1,0 +1,38 @@
+@model IdentityDisplayModel
+@using idunno.AtProto
+@inject IDidHandleResolver Handles
+@{
+    Did? did = Model.Did;
+    Handle? handle = did is null ? null : await Handles.ResolveHandleAsync(did, Context.RequestAborted);
+    (string icon, string prefix, string _) = Model.SubjectDescription;
+}
+@if (Model.Subject)
+{
+    <span class="subject-icon fa-@icon" aria-hidden="true"></span>
+}
+@if (handle is { IsValid: true })
+{
+    string display = Model.Subject ? $"{prefix}@{handle}" : $"@{handle}{Model.RecordPath}";
+    if (Model.Detailed)
+    {
+        <span class="identity-detail"><span>@display</span><code>@Model.Value</code></span>
+    }
+    else
+    {
+        string tooltipId = $"identity-{Guid.NewGuid():N}";
+        <span class="identity" tabindex="0" aria-describedby="@tooltipId">
+            <span>@display</span>
+            <span class="identity-tooltip" role="tooltip" id="@tooltipId"><code>@Model.Value</code></span>
+        </span>
+    }
+}
+else
+{
+    <span class="identity-detail">@if (Model.Subject)
+        {
+            <span>@prefix</span>
+        }<code>@(Model.Value ?? "Unknown")</code>@if (did is not null)
+        {
+            <span class="muted">Handle unavailable</span>
+        }</span>
+}

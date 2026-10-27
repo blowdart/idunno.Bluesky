@@ -21,6 +21,15 @@ public class LabelCaseQueueTests
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
         LabelAdministrationCaller caller = await LabelPolicyStoreTests.BootstrapAsync(fixture);
+        Success(await ((ILabelAdministrationStore)fixture.Store).ChangeTeamAsync(
+            caller,
+            new(
+                operationId: "second-moderator",
+                action: LabelTeamAction.Enroll,
+                target: new("did:plc:another-moderator"),
+                reason: "Exercise manual routing with multiple eligible moderators.",
+                role: LabelTeamRole.Moderator),
+            token));
         LabelPolicyState policy = await LabelPolicyStoreTests.ActivateAsync((ILabelPolicyStore)fixture.Store, caller, token);
         ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
         ILabelReportStore reports = (ILabelReportStore)fixture.Store;

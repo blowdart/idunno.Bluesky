@@ -121,6 +121,33 @@ public class ModerationTests
         Assert.All(metrics.GetMeasurementSnapshot(), measurement => Assert.All(measurement.Tags, tag => Assert.Equal("outcome", tag.Key)));
     }
 
+    [Fact]
+    public async Task OutOfScopeReportReasonsReturnNormalReceiptsButAreAutomaticallyHandled()
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        string declaration = Declaration.TrimEnd()[..^1] + ""","reasonTypes":["tools.ozone.report.defs#reasonOther"]}""";
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()) { Declaration = declaration });
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, declarationJson: declaration);
+        using HttpRequestMessage request = ReportRequest(key, fixture.Clock.GetUtcNow());
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal("tools.ozone.report.defs#reasonMisleadingSpam", output.RootElement.GetProperty("reasonType").GetString());
+        Assert.False(output.RootElement.TryGetProperty("resolutionReason", out _));
+        ILabelAdministrationStore team = fixture.Services.GetRequiredService<ILabelAdministrationStore>();
+        LabelAdministrationCaller caller = (await team.AuthenticateLocalAsync("uid:0", token)).Result!;
+        LabelModerationReport report = (await fixture.Services.GetRequiredService<ILabelReportStore>().GetReportAsync(
+            caller, output.RootElement.GetProperty("id").GetInt64(), token)).Result!;
+        Assert.Equal("Not Applicable", report.ResolutionReason);
+        Assert.NotNull(report.DecisionOperationId);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        using HttpRequestMessage replay = ReportRequest(key, fixture.Clock.GetUtcNow());
+        replay.Headers.Authorization = request.Headers.Authorization;
+        using HttpResponseMessage replayed = await fixture.Client.SendAsync(replay, token);
+        Assert.Equal(HttpStatusCode.Unauthorized, replayed.StatusCode);
+    }
+
     [Theory]
     [InlineData("""{"reasonType":"x","subject":null}""")]
     [InlineData("""{"reasonType":"x","reportedBy":"did:plc:forged","subject":{"$type":"com.atproto.admin.defs#repoRef","did":"did:plc:subject"}}""")]
@@ -435,6 +462,7 @@ public class ModerationTests
             {
                 Assert.Equal(1, moderation.GetProperty("reportIds").GetArrayLength());
             }
+
             else
             {
                 Assert.Equal(1, moderation.GetProperty("appeals")[0].GetProperty("challenges")[0].GetProperty("sequence").GetInt64());
@@ -463,6 +491,52 @@ public class ModerationTests
             administrator, new(Method: "getAppeal", Moderation: new(AppealId: appeal.Id)), token);
         Assert.Equal("Upheld", Assert.Single(retained.Moderation!.Appeals!).Status);
         Assert.Equal(1, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+    }
+
+    [Theory]
+    [InlineData(LabelAppealStatus.Upheld, true)]
+    [InlineData(LabelAppealStatus.Superseded, true)]
+    [InlineData(LabelAppealStatus.Withdrawn, true)]
+    [InlineData(LabelAppealStatus.Withdrawn, false)]
+    [InlineData(LabelAppealStatus.Replaced, false)]
+    public async Task MismatchedAppealActionsReturnAuditedInvalidRequestsInsteadOfExceptions(LabelAppealStatus outcome, bool issue)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using LabelSigningKey key = LabelSigningKey.Generate(LabelSigningCurve.P256);
+        using HttpClient identity = new(new DeclarationHandler(key.ExportPublicKeyMultibase()));
+        await using TestServerBuilder fixture = await CreateAsync(key: key, identity: identity, remoteEnabled: true);
+        LabelAdministrationCaller administrator = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .AuthenticateLocalAsync("uid:0", token)).Result!;
+        AdministrationDispatcher dispatcher = fixture.Services.GetRequiredService<AdministrationDispatcher>();
+        AdministrationCommand command = new(
+            Method: "decideCase",
+            OperationId: "invalid-appeal",
+            Reason: "Reject incompatible appeal intent.",
+            Moderation: new(
+                CaseId: 1,
+                ExpectedRevision: 1,
+                PolicyVersion: "v1",
+                Actions: issue ? [new(LabelOperationKind.Issue, "spam")] : [],
+                AppealIds: [1],
+                AppealOutcome: outcome));
+        AdministrationResponse local = await dispatcher.DispatchAsync(administrator, command, token);
+        Assert.False(local.Succeeded);
+        Assert.Equal("InvalidRequest", local.Error);
+        Assert.Contains("does not match the label selection", local.Message, StringComparison.Ordinal);
+        using HttpRequestMessage request = AdministrativeRequest(
+            key: key,
+            now: fixture.Clock.GetUtcNow(),
+            method: "decideCase",
+            command: command);
+        using HttpResponseMessage response = await fixture.Client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using JsonDocument output = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(token));
+        Assert.Equal("InvalidRequest", output.RootElement.GetProperty("error").GetString());
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        IReadOnlyList<LabelAdministrationReceipt> audit = (await fixture.Services.GetRequiredService<ILabelAdministrationStore>()
+            .GetAdministrationAuditAsync(administrator, cancellationToken: token)).Result!;
+        Assert.Equal(2, audit.Count(entry => !entry.Succeeded &&
+            entry.Reason.Contains("InvalidRequest", StringComparison.Ordinal)));
     }
 
     [Theory]
@@ -564,7 +638,8 @@ public class ModerationTests
         LabelSigningKey key,
         HttpClient identity,
         LabelerModerationOptions? options = null,
-        bool remoteEnabled = false)
+        bool remoteEnabled = false,
+        string declarationJson = Declaration)
     {
         TestServerBuilder fixture = await TestServerBuilder.CreateAsync(
             configureAdministration: services =>
@@ -578,7 +653,7 @@ public class ModerationTests
                 Assert.True((await team.BootstrapAsync(s_administrator, "uid:0", "bootstrap", TestContext.Current.CancellationToken)).Succeeded);
                 LabelAdministrationCaller administrator = (await team.AuthenticateLocalAsync("uid:0", TestContext.Current.CancellationToken)).Result!;
                 ILabelPolicyStore policies = (ILabelPolicyStore)store;
-                using JsonDocument declaration = JsonDocument.Parse(Declaration);
+                using JsonDocument declaration = JsonDocument.Parse(declarationJson);
                 LabelPolicyDefinition draft = new(
                     version: "v1", declaration: declaration.RootElement, allowAccounts: true, allowRecords: true, rules: "Review reports.");
                 Assert.True((await policies.SavePolicyAsync(

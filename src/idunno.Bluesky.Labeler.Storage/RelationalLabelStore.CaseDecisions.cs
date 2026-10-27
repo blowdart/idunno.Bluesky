@@ -56,6 +56,23 @@ internal abstract partial class RelationalLabelStore
                 }
 
                 LabelStoreState state = await StateAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+                if (request.ReportId is { } reportId)
+                {
+                    object? payload = await ScalarAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "SELECT payload FROM label_reports WHERE report_id=@id",
+                        token: cancellationToken,
+                        ("@id", reportId)).ConfigureAwait(false);
+                    if (payload is not byte[] bytes ||
+                        DecodeReport(bytes) is not { } report ||
+                        report.CaseId != current.Id || report.Subject != current.Subject || report.Cid != current.Cid ||
+                        report.DecisionOperationId is not null)
+                    {
+                        return CaseFailure<LabelCaseDecisionReceipt>(
+                            LabelServiceErrorCode.CaseConflict, "The selected report is not open in this exact-subject case. Reload the report.");
+                    }
+                }
                 LabelServiceResult<IReadOnlyList<ModerationAppealData>> appeals = await ValidateAppealDecisionAsync(
                     connection: connection,
                     transaction: transaction,
@@ -95,7 +112,7 @@ internal abstract partial class RelationalLabelStore
                     }
 
                     observations[index] = validated.Result.CurrentLabel;
-                    if (action.ExpectedLabelSequence is { } sequence && observations[index]?.Sequence != sequence)
+                    if (action.ExpectedLabelSequence is { } sequence && (observations[index]?.Sequence ?? 0) != sequence)
                     {
                         return CaseFailure<LabelCaseDecisionReceipt>(
                             LabelServiceErrorCode.StaleDecision, "The challenged label is no longer the current decision.");
@@ -119,6 +136,13 @@ internal abstract partial class RelationalLabelStore
 
                 DateTimeOffset completedAt = DateTimeOffset.FromUnixTimeMilliseconds(
                     await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false));
+                bool remainingReports = await HandleDecisionReportsAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    current: current,
+                    request: request,
+                    completedAt: completedAt,
+                    token: cancellationToken).ConfigureAwait(false);
                 foreach (ModerationAppealData appeal in appeals.Result)
                 {
                     await SaveAppealOutcomeAsync(
@@ -128,11 +152,22 @@ internal abstract partial class RelationalLabelStore
                         {
                             Status = request.AppealOutcome!.Value,
                             UpdatedAt = completedAt,
-                            DecisionOperationId = request.OperationId
+                            DecisionOperationId = request.OperationId,
+                            ResolutionReason = request.Reason
                         },
                         token: cancellationToken).ConfigureAwait(false);
                 }
 
+                IReadOnlyList<ModerationAppealData> superseded = request.AppealIds.Count == 0
+                        ? []
+                        : await SupersedeObsoleteAppealsAsync(
+                            connection: connection,
+                            transaction: transaction,
+                            state: state,
+                            subject: current.ToCase().Subject,
+                            request: request,
+                            completedAt: completedAt,
+                            token: cancellationToken).ConfigureAwait(false);
                 long pending = Integer(await ScalarAsync(
                     connection: connection,
                     transaction: transaction,
@@ -143,7 +178,7 @@ internal abstract partial class RelationalLabelStore
                 ModerationCaseData next = current with
                 {
                     Revision = checked(current.Revision + 1),
-                    Status = pending == 0 ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview,
+                    Status = pending == 0 && !remainingReports ? LabelCaseStatus.Resolved : LabelCaseStatus.InReview,
                     UpdatedAt = completedAt
                 };
                 await SaveCaseAsync(
@@ -165,6 +200,36 @@ internal abstract partial class RelationalLabelStore
                     intent: intentBytes,
                     operationNamespace: "decision",
                     token: cancellationToken).ConfigureAwait(false);
+                foreach (ModerationAppealData appeal in superseded)
+                {
+                    ModerationCaseData affected = next;
+                    if (appeal.CaseId != next.Id)
+                    {
+                        affected = await ReadCaseAsync(connection, transaction, appeal.CaseId, cancellationToken).ConfigureAwait(false)
+                            ?? throw new InvalidDataException("A superseded appeal has no retained case.");
+                        affected = affected with { Revision = checked(affected.Revision + 1), UpdatedAt = completedAt };
+                        await SaveCaseAsync(
+                            connection: connection,
+                            transaction: transaction,
+                            next: affected,
+                            subject: affected.ToCase().Subject,
+                            insert: false,
+                            token: cancellationToken).ConfigureAwait(false);
+                    }
+
+                    await AppendCaseEventAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        next: affected,
+                        operationId: request.OperationId,
+                        action: LabelCaseAction.Note,
+                        actor: decision.Caller.Actor,
+                        localIdentity: decision.Caller.LocalIdentity,
+                        reason: $"Appeal #{appeal.Id} automatically superseded: all captured label outcomes are no longer current after appeal decision {request.OperationId}.",
+                        intent: intentBytes,
+                        operationNamespace: $"appeal-superseded/{appeal.Id}",
+                        token: cancellationToken).ConfigureAwait(false);
+                }
                 ModerationDecisionData result = new(request.OperationId, intent, caseEvent, [.. receipts], state);
                 await ExecuteAsync(
                     connection: connection,
@@ -180,6 +245,78 @@ internal abstract partial class RelationalLabelStore
             },
             token: cancellationToken,
             auditAction: "case-decision");
+    }
+
+    /// <summary>Handles exact-target reports in bounded batches under the atomic decision lock, preserving original evidence.</summary>
+    private static async Task<bool> HandleDecisionReportsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        ModerationCaseData current,
+        LabelCaseDecision request,
+        DateTimeOffset completedAt,
+        CancellationToken token)
+    {
+        long after = 0;
+        bool remaining = false;
+        while (true)
+        {
+            List<ModerationReportData> page = [];
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT r.payload FROM label_reports r JOIN label_cases c ON c.case_id=r.case_id " +
+                    "WHERE c.subject_hash=@subject AND r.report_id>@after ORDER BY r.report_id LIMIT 128",
+                ("@subject", System.Security.Cryptography.SHA256.HashData(CaseSubjectKey(current.ToCase().Subject))),
+                ("@after", after));
+            await using (command.ConfigureAwait(false))
+            {
+                DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        page.Add(DecodeReport((byte[])reader.GetValue(0)));
+                    }
+                }
+            }
+
+            foreach (ModerationReportData report in page)
+            {
+                if (report.Subject != current.Subject || report.Cid != current.Cid || report.DecisionOperationId is not null)
+                {
+                    continue;
+                }
+
+                if (request.HandleOtherReports || request.ReportId == report.Id)
+                {
+                    ModerationReportData handled = report with
+                    {
+                        DecisionOperationId = request.OperationId,
+                        HandledAt = completedAt,
+                        ResolutionReason = request.Reason
+                    };
+                    await ExecuteAsync(
+                        connection: connection,
+                        transaction: transaction,
+                        sql: "UPDATE label_reports SET payload=@payload WHERE report_id=@id",
+                        token: token,
+                        ("@payload", JsonSerializer.SerializeToUtf8Bytes(handled, ModerationJsonContext.Default.ModerationReportData)),
+                        ("@id", report.Id)).ConfigureAwait(false);
+                    await UpdateReportSearchTextAsync(connection, transaction, handled, token).ConfigureAwait(false);
+                }
+                else if (report.CaseId == current.Id)
+                {
+                    remaining = true;
+                }
+            }
+
+            if (page.Count < 128)
+            {
+                return remaining;
+            }
+
+            after = page[^1].Id;
+        }
     }
 
     public Task<LabelServiceResult<LabelCaseDecisionReceipt>> GetCaseDecisionAsync(

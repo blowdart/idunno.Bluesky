@@ -5,6 +5,7 @@ using System.Net;
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky.Labeler.Administration;
 using idunno.Bluesky.Labeler.Host;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using HostProgram = idunno.Bluesky.Labeler.Host.Program;
 
@@ -25,6 +27,68 @@ namespace idunno.Bluesky.Labeler.Cli.Test;
 /// <summary>Exercises the standalone host's public native-client metadata and explicit proxy trust boundary.</summary>
 public class StandaloneHostTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WebsiteMetadataUsesTheSignInOptionsAlongsideNativeMetadata(bool configured)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(server => server.Listen(IPAddress.Loopback, 0));
+        if (configured)
+        {
+            builder.Configuration["BlueskyAgent:OAuthOptions:ClientId"] = "https://labeler.example/custom-metadata.json";
+            builder.Configuration["BlueskyAgent:OAuthOptions:ReturnUri"] = "https://labeler.example/custom-callback";
+        }
+
+        HostProgram.AddWebsiteAuthentication(builder.Services, new Uri("https://labeler.example"));
+        await using WebApplication app = builder.Build();
+        app.UseBlueskyOAuthClientMetadata(
+            HostProgram.CreateNativeOAuthOptions(
+                new Uri("https://labeler.example"),
+                new AtProtoServiceReference(new Did("did:web:labeler.example"), "labeler_admin")),
+            new BlueskyOAuthClientMetadataOptions { ApplicationType = BlueskyOAuthClientApplicationType.Native });
+        app.UseBlueskyOAuthClientMetadata();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapGet("/protected", () => "Protected").RequireAuthorization();
+        await app.StartAsync(token);
+        Uri address = new(app.Services.GetRequiredService<IServer>()
+            .Features.Get<IServerAddressesFeature>()!.Addresses.Single());
+        using HttpClient client = new() { BaseAddress = address };
+        string path = configured ? "/custom-metadata.json" : "/oauth-client-metadata.json";
+        using HttpRequestMessage request = new(HttpMethod.Get, path);
+        request.Headers.Host = "untrusted.example";
+        using HttpResponseMessage response = await client.SendAsync(request, token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType!.MediaType);
+        using JsonDocument metadata = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
+        OAuthOptions options = app.Services
+            .GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.OAuthOptions!;
+        BlueskyAuthenticationOptions authentication = app.Services
+            .GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>()
+            .Get(BlueskyAuthenticationDefaults.AuthenticationScheme);
+        Assert.Equal("/Bluesky/Login", authentication.LoginPath.Value);
+        Assert.Equal("/Bluesky/Logout", authentication.LogoutPath.Value);
+        Assert.Equal("/Bluesky/Error", authentication.AccessDeniedPath.Value);
+        Assert.Equal(options.ClientId, metadata.RootElement.GetProperty("client_id").GetString());
+        Assert.Equal(options.ReturnUri!.ToString(), metadata.RootElement.GetProperty("redirect_uris")[0].GetString());
+        Assert.Equal("web", metadata.RootElement.GetProperty("application_type").GetString());
+        Assert.Equal("atproto rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview", metadata.RootElement.GetProperty("scope").GetString());
+        Assert.Equal("https://labeler.example" + path, options.ClientId);
+        Assert.Equal(
+            configured ? "https://labeler.example/custom-callback" : "https://labeler.example/Bluesky/Callback",
+            options.ReturnUri.AbsoluteUri);
+
+        using HttpResponseMessage nativeResponse = await client.GetAsync("/native-client-metadata.json", token);
+        Assert.Equal(HttpStatusCode.OK, nativeResponse.StatusCode);
+        using JsonDocument native = JsonDocument.Parse(await nativeResponse.Content.ReadAsStringAsync(token));
+        Assert.Equal("native", native.RootElement.GetProperty("application_type").GetString());
+        Assert.Equal("http://127.0.0.1/", native.RootElement.GetProperty("redirect_uris")[0].GetString());
+        await app.StopAsync(token);
+    }
+
     [Fact]
     public void CanonicalHostSerializesBootstrapReceiptWithGeneratedMetadata()
     {

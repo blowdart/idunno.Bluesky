@@ -5,6 +5,7 @@
     <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <PackageReference Include="System.Formats.Cbor" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky.AspNet.Labeler.UI\idunno.Bluesky.AspNet.Labeler.UI.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky.Labeler.SQLite\idunno.Bluesky.Labeler.SQLite.csproj" />
   </ItemGroup>
 </Project>

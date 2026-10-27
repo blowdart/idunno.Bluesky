@@ -71,6 +71,12 @@ internal static class Program
         }
 
         bool moderationEnabled = builder.Configuration.GetValue<bool>("LabelerModeration:Enabled");
+        bool uiEnabled = builder.Configuration.GetValue<bool>("LabelerUI:Enabled");
+        if (uiEnabled && !moderationEnabled)
+        {
+            throw new InvalidOperationException("Enable LabelerModeration before enabling the Xenon web UI.");
+        }
+
         LabelerModerationOptions moderationOptions = new();
         if (moderationEnabled)
         {
@@ -93,6 +99,11 @@ internal static class Program
         builder.Services.Configure<LabelerAdministrationOptions>(
             builder.Configuration.GetSection("LabelerAdministration"));
         builder.Services.AddLabelerLocalAdministration(localAdministrationEndpoint);
+        if (uiEnabled)
+        {
+            AddWebsiteAuthentication(builder.Services, publicEndpoint);
+            builder.Services.AddLabelerUI();
+        }
 
         WebApplication app = builder.Build();
         await using ConfiguredAsyncDisposable appDisposal = app.ConfigureAwait(false);
@@ -148,6 +159,13 @@ internal static class Program
             {
                 ApplicationType = BlueskyOAuthClientApplicationType.Native
             });
+        if (uiEnabled)
+        {
+            app.UseBlueskyOAuthClientMetadata();
+            app.UseAuthentication();
+            app.UseAuthorization();
+        }
+
         app.UseWebSockets();
         app.MapBlueskyLabeler();
         app.MapLabelerAdministration();
@@ -155,6 +173,12 @@ internal static class Program
         {
             app.MapLabelerModeration();
         }
+        if (uiEnabled)
+        {
+            app.MapStaticAssets();
+            app.MapRazorPages().WithStaticAssets();
+        }
+
         await app.RunAsync().ConfigureAwait(false);
         return 0;
     }
@@ -291,6 +315,33 @@ internal static class Program
                 .. methods.Select(method => $"rpc:dev.idunno.labeler.admin.{method}?aud={encodedAudience}")
             ]
         };
+    }
+
+    /// <summary>Registers website sign-in and metadata with origin-based defaults before binding host OAuth configuration.</summary>
+    /// <param name="services">The host service collection.</param>
+    /// <param name="publicEndpoint">The configured public HTTPS origin.</param>
+    internal static void AddWebsiteAuthentication(IServiceCollection services, Uri publicEndpoint)
+    {
+        services.Configure<BlueskyAgentOptions>(options => options.OAuthOptions = new OAuthOptions
+        {
+            ClientId = new Uri(publicEndpoint, "/oauth-client-metadata.json").AbsoluteUri,
+            ClientName = "Xenon labeler administration",
+            ClientUri = publicEndpoint,
+            ReturnUri = new Uri(publicEndpoint, "/Bluesky/Callback"),
+            Scopes = ["atproto", "rpc:app.bsky.actor.getProfile?aud=did%3Aweb%3Aapi.bsky.app%23bsky_appview"]
+        });
+        services
+            .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
+            .AddBluesky(options =>
+            {
+                options.LoginPath = BlueskyAuthenticationDefaults.LoginPath;
+                options.LogoutPath = BlueskyAuthenticationDefaults.LogoutPath;
+                options.AccessDeniedPath = "/Bluesky/Error";
+            })
+            .AddBlueskyAuthenticationUI();
+        services.AddAuthorization();
+        services.AddBlueskyClaimsTransformer();
+        services.AddBlueskyOAuthClientMetadata();
     }
 
     /// <summary>Trusts only explicitly installed proxy addresses and never accepts arbitrary forwarded headers.</summary>

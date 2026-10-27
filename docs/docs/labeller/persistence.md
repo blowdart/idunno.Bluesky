@@ -237,7 +237,7 @@ to read the server settings validated above. Run `InitializeAsync` separately wi
 Registration and ordinary operations do not run DDL.
 
 Version two adds `label_decisions` for immutable service receipts and audit, including no-ops.
-`InitializeAsync` upgrades supported earlier schemas to version nine additively without changing signed history, legacy receipts,
+`InitializeAsync` upgrades supported earlier schemas to version ten additively without changing signed history, legacy receipts,
 stream identity or progress. `label_schema` records completion only after all creation steps.
 PostgreSQL setup takes an advisory lock and commits DDL transactionally; SQLite takes an immediate
 transaction. MySQL takes a connection-scoped schema lock and resumes repeatable creation steps after
@@ -255,6 +255,14 @@ workflow projections and immutable policy/recovery history share the label
 transaction boundary. Subject-index backfill resumes independently of older
 decision projections. No report/case is required for manual issuance, and a
 database without an initialized Xenon gate keeps the existing distribution path.
+
+Version ten adds local normalized moderation-search text, expiring verified
+subject-handle observations and persisted deleted-post review scheduling.
+Text backfill resumes in bounded batches without changing original evidence or
+contacting external services. Report/appeal resolution reasons are additive
+payload fields; older handled records without a retained reason remain readable.
+Back up these tables with the rest of the moderation database. Older writers
+reject the newer schema; stop them before upgrading.
 
 Back up the whole database together: schema metadata, issuer and stream identity, labels, receipts,
 publication boundaries, lifecycle checkpoints and all team/moderation/policy/audit

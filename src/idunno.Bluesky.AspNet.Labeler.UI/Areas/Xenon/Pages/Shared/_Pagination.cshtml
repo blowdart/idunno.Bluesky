@@ -1,0 +1,25 @@
+@model TableNavigation
+@if (Model.Pages > 1)
+{
+<nav class="table-pagination" aria-label="Table pagination">
+    @if (Model.Page > 1)
+    {
+        <a href="@Model.PageUrl(Model.Page - 1)" rel="prev">&lt; Previous</a>
+    }
+    else
+    {
+        <span aria-disabled="true">&lt; Previous</span>
+    }
+    <span aria-hidden="true">|</span>
+    <span aria-current="page">@Model.Page of @Model.Pages pages</span>
+    <span aria-hidden="true">|</span>
+    @if (Model.Page < Model.Pages)
+    {
+        <a href="@Model.PageUrl(Model.Page + 1)" rel="next">Next &gt;</a>
+    }
+    else
+    {
+        <span aria-disabled="true">Next &gt;</span>
+    }
+</nav>
+}

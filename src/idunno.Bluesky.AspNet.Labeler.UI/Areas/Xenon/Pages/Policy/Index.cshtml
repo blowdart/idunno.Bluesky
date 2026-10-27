@@ -1,0 +1,101 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Policy.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Policy";
+    JsonElement? policy = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+        moderation.TryGetProperty("policy", out JsonElement state) ? state : null;
+}
+<h1>Moderation policy</h1>
+<p>Policy drafts and publication history are durable shared state. Saving a draft does not publish it. The declaration's remote verification gate remains authoritative for new reports and issuance.</p>
+@if (policy is { ValueKind: JsonValueKind.Object } current)
+{
+    <section class="panel">
+        <h2>Current state</h2>
+        <dl>
+            <dt>Phase</dt><dd>@current.GetProperty("phase").GetString()</dd>
+            <dt>Revision</dt><dd>@current.GetProperty("revision").GetInt64()</dd>
+            <dt>Issuer</dt><dd>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(current.GetProperty("issuer").GetString(), Detailed: true))</dd>
+            <dt>Verified declaration CID</dt><dd>@(current.TryGetProperty("verifiedCid", out JsonElement cid) ? cid.GetString() : "Not verified")</dd>
+            <dt>Verification freshness deadline</dt>
+            <dd>@if (current.TryGetProperty("verifiedUntil", out JsonElement deadline))
+                {
+                    <time datetime="@deadline.GetDateTimeOffset().ToString("O")">@deadline.GetDateTimeOffset().ToUniversalTime().ToString("u")</time>
+                }
+                else
+                {
+                    <span>Unavailable</span>
+                }</dd>
+            <dt>Publication operation</dt><dd>@(current.TryGetProperty("publicationOperationId", out JsonElement op) ? op.GetString() : "None")</dd>
+        </dl>
+        @if (current.TryGetProperty("definition", out JsonElement definition) && definition.ValueKind == JsonValueKind.Object)
+        {
+            <h3>Selected immutable definition</h3>
+            <p>Version: <code>@definition.GetProperty("version").GetString()</code></p>
+            <pre>@definition.GetProperty("declaration").GetRawText()</pre>
+            <p>@definition.GetProperty("rules").GetString()</p>
+        }
+    </section>
+    <section class="panel">
+        <h2>Begin policy publication</h2>
+        <form method="post" asp-page-handler="Publish">
+            <input type="hidden" name="revision" value="@current.GetProperty("revision").GetInt64()" />
+            <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+            <label class="field">Saved version<input name="version" required maxlength="256" /></label>
+            <label class="field">Previous declaration CID (optional)<input name="previousCid" maxlength="128" /></label>
+            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm the conditional publication operation</label>
+            <p class="form-actions"><button type="submit">Begin publication</button></p>
+        </form>
+        <form method="post" asp-page-handler="Verify">
+            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm external policy verification now</label>
+            <p class="form-actions"><button type="submit">Verify declaration</button></p>
+        </form>
+    </section>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">The moderation policy state is unavailable. Xenon moderation may not be enabled on this host.</p>
+}
+<section class="panel">
+    <h2>Save a policy draft</h2>
+    <form method="post" asp-page-handler="Save">
+        <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+        <label class="field">Version identifier<input name="version" required maxlength="256" /></label>
+        <fieldset>
+            <legend>Accepted report reasons</legend>
+            <label class="field">Accept
+                <select name="reasonMode">
+                    <option value="all" selected="@(Model.ReasonTypes is null)">All reasons, including future and custom reasons</option>
+                    <option value="selected" selected="@(Model.ReasonTypes is not null)">Only the selected reasons below</option>
+                </select>
+            </label>
+            <p>Reports with other reasons are automatically handled as Not Applicable. They do not enter the open queue or change labels.</p>
+            @foreach (var group in ReportReasonOptions.All.GroupBy(option => option.Group))
+            {
+                <details>
+                    <summary>@group.Key</summary>
+                    @foreach (var option in group)
+                    {
+                        <label class="field-check"><input type="checkbox" name="reasonTypes" value="@option.Id" checked="@(Model.ReasonTypes?.Contains(option.Id, StringComparer.Ordinal) == true)" /> @option.Title</label>
+                    }
+                </details>
+            }
+            <label class="field">Custom reason identifiers (optional, one per line)
+                <textarea name="customReasons" maxlength="32768" spellcheck="false">@string.Join("\n", (Model.ReasonTypes ?? []).Where(reason => !ReportReasonOptions.All.Any(option => option.Id == reason)))</textarea>
+            </label>
+            <p>Selecting no reasons accepts none. Original and Ozone reason identifiers are separate; select both versions when you want to support both.</p>
+        </fieldset>
+        <label class="field">Declaration JSON<textarea name="declaration" required maxlength="32768" spellcheck="false">@Model.DeclarationText</textarea></label>
+        <p>The report reason choices above replace <code>reasonTypes</code> in this declaration when the draft is saved. They take effect only after publication and verification.</p>
+        <label><input type="checkbox" name="allowAccounts" value="true" /> Allow account targets</label>
+        <label><input type="checkbox" name="allowRecords" value="true" /> Allow record targets</label>
+        <label class="field">Allowed record collections (comma-separated NSIDs; optional)<input name="collections" maxlength="2048" /></label>
+        <label class="field">Operator guidance<textarea name="rules" required maxlength="4096"></textarea></label>
+        <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+        <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this immutable policy version</label>
+        <p class="form-actions"><button type="submit">Save draft</button></p>
+    </form>
+</section>

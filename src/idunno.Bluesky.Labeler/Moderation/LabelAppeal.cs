@@ -22,7 +22,8 @@ public sealed class LabelAppeal
         LabelAppealStatus status,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        string? decisionOperationId)
+        string? decisionOperationId,
+        string? resolutionReason = null)
     {
         Id = id;
         CaseId = caseId;
@@ -33,6 +34,7 @@ public sealed class LabelAppeal
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         DecisionOperationId = decisionOperationId;
+        ResolutionReason = resolutionReason;
     }
 
     /// <summary>Gets the durable appeal identifier.</summary>
@@ -59,7 +61,10 @@ public sealed class LabelAppeal
     /// <summary>Gets the database-clock time of the latest review transition.</summary>
     /// <value>The latest persisted transition instant.</value>
     public DateTimeOffset UpdatedAt { get; }
-    /// <summary>Gets the atomic moderation decision that resolved this appeal.</summary>
-    /// <value>The decision identity, or <see langword="null"/> while pending.</value>
+    /// <summary>Gets the atomic moderation decision or automatic closure that resolved this appeal.</summary>
+    /// <value>The resolving operation identity, or <see langword="null"/> while pending.</value>
     public string? DecisionOperationId { get; }
+    /// <summary>Gets the original review or automatic closure reason.</summary>
+    /// <value>The resolution reason, or <see langword="null"/> for pending or older outcomes without retained text.</value>
+    public string? ResolutionReason { get; }
 }

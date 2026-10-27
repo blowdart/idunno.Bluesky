@@ -1,0 +1,94 @@
+@model ReviewHistoryDisplay
+<section class="panel" aria-labelledby="review-history-heading">
+    <h2 id="review-history-heading">Moderation history</h2>
+    @if (Model.Activity is { } activity)
+    {
+        <ol class="review-timeline">
+            @foreach (ModerationActivityView entry in activity.Entries)
+            {
+                <li>
+                    @if (entry.Report is { } report)
+                    {
+                        <p class="history-heading"><strong>Reported</strong> <time datetime="@report.Report.CreatedAt.ToString("O")">@report.Report.CreatedAt.ToUniversalTime().ToString("u")</time></p>
+                        <div class="history-card">
+                            <p>By @await Html.PartialAsync("_Identity", new IdentityDisplayModel(report.Report.ReportedBy))</p>
+                            <p class="history-reference"><a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@report.Report.Id">Report #@report.Report.Id</a>
+                                @await Html.PartialAsync("_WorkflowStatus", report.DecisionOperationId is null ? "Open" : "Handled")</p>
+                            <p class="preview-text">@report.Report.Reason</p>
+                            @if (report.HandledAt is { } handled)
+                            {
+                                <p>Handled <time datetime="@handled.ToString("O")">@handled.ToUniversalTime().ToString("u")</time> by operation <code>@report.DecisionOperationId</code>.</p>
+                                @if (report.ResolutionReason is { } resolution)
+                                {
+                                    <p>Resolution: @resolution</p>
+                                }
+                            }
+                        </div>
+                    }
+                    else if (entry.Event is { } caseEvent)
+                    {
+                        <p class="history-heading"><strong>@caseEvent.Action</strong> <time datetime="@caseEvent.CreatedAt.ToString("O")">@caseEvent.CreatedAt.ToUniversalTime().ToString("u")</time></p>
+                        <div class="history-card">
+                            @if (caseEvent.LocalIdentity == "system:deleted-post")
+                            {
+                                <p>Automatic deleted-post review by this labeler.</p>
+                            }
+                            else
+                            {
+                                <p>By @await Html.PartialAsync("_Identity", new IdentityDisplayModel(caseEvent.Actor))</p>
+                            }
+                            <p class="history-reference"><span>Case event #@caseEvent.Sequence</span> @await Html.PartialAsync("_WorkflowStatus", caseEvent.Case.Status)</p>
+                            <p class="preview-text">@caseEvent.Reason</p>
+                            @if (entry.Decision is { } decision)
+                            {
+                                @foreach (ModerationLabelOutcomeView action in decision.Actions)
+                                {
+                                    <p>@(action.Kind == "Negate" ? "Removed" : "Applied"): <span class="history-label">@action.Value</span>@(!action.Changed ? " (unchanged)" : "")</p>
+                                }
+                                @if (decision.ReportId is { } reportId)
+                                {
+                                    <p>Reviewed report #@reportId.</p>
+                                }
+                                @if (decision.HandleOtherReports)
+                                {
+                                    <p>Other open reports for the exact subject and CID handled.</p>
+                                }
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ol>
+        @if (activity.Total == 0)
+        {
+            <p>No history recorded.</p>
+        }
+        long pages = Math.Max(1, (activity.Total + 15) / 16);
+        @if (pages > 1)
+        {
+        <nav class="pagination" aria-label="Moderation history pages">
+            @if (activity.Page > 1)
+            {
+                <a asp-route-id="@Model.RouteId" asp-route-ReportId="@Model.ReportId" asp-route-HistoryPage="@(activity.Page - 1)" aria-label="Previous history page">&lt; Previous</a>
+            }
+            else
+            {
+                <span aria-disabled="true">&lt; Previous</span>
+            }
+            <span>@activity.Page of @pages pages</span>
+            @if (activity.Page < pages)
+            {
+                <a asp-route-id="@Model.RouteId" asp-route-ReportId="@Model.ReportId" asp-route-HistoryPage="@(activity.Page + 1)" aria-label="Next history page">Next &gt;</a>
+            }
+            else
+            {
+                <span aria-disabled="true">Next &gt;</span>
+            }
+        </nav>
+        }
+    }
+    else
+    {
+        <p role="status">History could not be loaded. Reload to try again.</p>
+    }
+</section>

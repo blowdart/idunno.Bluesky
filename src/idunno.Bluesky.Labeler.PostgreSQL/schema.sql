@@ -174,4 +174,20 @@ CREATE TABLE IF NOT EXISTS label_case_decisions (
     intent BYTEA NOT NULL,
     payload BYTEA NOT NULL
 );
-INSERT INTO label_schema(id, version) VALUES(1, 9) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS label_search_handles (
+    subject_hash BYTEA PRIMARY KEY CHECK(octet_length(subject_hash)=32),
+    subject_key BYTEA NOT NULL,
+    handle TEXT COLLATE "C" NULL,
+    checked_ms BIGINT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS label_search_text (
+    kind INTEGER NOT NULL CHECK(kind IN (0,1)),
+    source_id BIGINT NOT NULL,
+    content TEXT COLLATE "C" NOT NULL,
+    PRIMARY KEY(kind,source_id)
+);
+CREATE TABLE IF NOT EXISTS label_post_review_checks (
+    case_id BIGINT PRIMARY KEY REFERENCES label_cases(case_id),
+    checked_ms BIGINT NOT NULL
+);
+INSERT INTO label_schema(id, version) VALUES(1, 10) ON CONFLICT DO NOTHING;

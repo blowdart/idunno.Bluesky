@@ -143,13 +143,19 @@ internal abstract partial class RelationalLabelStore
                     transaction: transaction,
                     sql: "SELECT COALESCE(MAX(case_id),0) FROM label_cases",
                     token: cancellationToken).ConfigureAwait(false)) + 1);
+                string? assigneeDid = change.Action == LabelCaseAction.Assign ? change.Assignee?.Value : current?.Assignee;
+                if (status != LabelCaseStatus.Resolved && SoleModerator(administration) is string sole)
+                {
+                    assigneeDid = sole;
+                }
+
                 ModerationCaseData next = new(
                     Id: id,
                     Revision: checked((current?.Revision ?? 0) + 1),
                     Subject: change.Subject.Subject,
                     Cid: change.Subject.Cid?.ToString(),
                     Status: status.Value,
-                    Assignee: change.Action == LabelCaseAction.Assign ? change.Assignee?.Value : current?.Assignee,
+                    Assignee: assigneeDid,
                     CreatedAt: current?.CreatedAt ?? timestamp,
                     UpdatedAt: timestamp);
                 await SaveCaseAsync(
@@ -330,6 +336,10 @@ internal abstract partial class RelationalLabelStore
             bool allowed = await HasPermissionAsync(
                 connection: connection, transaction: transaction, state: state, administration: team,
                 caller: caller, permission: permission, token: token).ConfigureAwait(false);
+            if (allowed)
+            {
+                await ReconcileAssignmentsAsync(connection, transaction, team, caller, token).ConfigureAwait(false);
+            }
             LabelServiceResult<T> result = allowed ? await action(connection, transaction, team).ConfigureAwait(false)
                 : CaseFailure<T>(LabelServiceErrorCode.Unauthorized, "Current team authority is required.");
             if (!result.Succeeded || permission != LabelAdministrationPermission.Inspect)
@@ -437,7 +447,8 @@ internal abstract partial class RelationalLabelStore
         string reason,
         byte[] intent,
         string operationNamespace,
-        CancellationToken token)
+        CancellationToken token,
+        DateTimeOffset? createdAt = null)
     {
         long sequence = checked(Integer(await ScalarAsync(
             connection: connection, transaction: transaction,
@@ -449,7 +460,7 @@ internal abstract partial class RelationalLabelStore
             Actor: actor.Value,
             LocalIdentity: localIdentity,
             Reason: reason,
-            CreatedAt: next.UpdatedAt,
+            CreatedAt: createdAt ?? next.UpdatedAt,
             Case: next);
         await ExecuteAsync(
             connection: connection, transaction: transaction,
@@ -458,6 +469,8 @@ internal abstract partial class RelationalLabelStore
             ("@seq", sequence), ("@id", next.Id), ("@hash", CaseOperationHash(operationId, operationNamespace)),
             ("@operation", operationId), ("@intent", intent),
             ("@payload", JsonSerializer.SerializeToUtf8Bytes(result, ModerationJsonContext.Default.ModerationCaseEvent))).ConfigureAwait(false);
+        await IndexSearchTextAsync(
+            connection: connection, transaction: transaction, kind: 1, id: sequence, content: reason, token: token).ConfigureAwait(false);
         return result;
     }
 

@@ -31,7 +31,7 @@ internal sealed partial class AdministrationDispatcher(
     // Bounded POST bodies keep confidential moderation filters out of URLs on both adapters.
     internal static readonly string[] s_moderationMethods =
     [
-        "getCase", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
+        "getCase", "getCaseLabels", "getManualLabelChoices", "getModerationOverview", "getCaseActivity", "searchModeration", "getCases", "getCaseHistory", "getCaseOperation", "changeCase", "decideCase", "getCaseDecision",
         "getAppeal", "getAppeals", "getAppealReports", "getCaseQueue",
         "getPolicyVersion", "getPolicyVersions", "getPolicyHistory", "getPolicyOperation",
         "getReport", "getReports", "getPolicy", "savePolicy", "beginPolicyPublication", "abandonPolicyPublication", "verifyPolicy"
@@ -201,7 +201,9 @@ internal sealed partial class AdministrationDispatcher(
                             context: context, expiresAt: command.ExpiresAt)
                         : LabelOperationRequest.Negate(
                             operationId: command.OperationId, target: target, value: command.Value, context: context);
-                    LabelServiceResult<LabelOperationReceipt> result = await issuance.ExecuteAsync(request, token).ConfigureAwait(false);
+                    LabelServiceResult<LabelOperationReceipt> result = command.ExpectedLabelSequence is { } sequence
+                        ? await issuance.ExecuteObservedAsync(request, sequence, token).ConfigureAwait(false)
+                        : await issuance.ExecuteAsync(request, token).ConfigureAwait(false);
                     return result.Succeeded ? Receipt(result.Result) : Failure(result.Error);
                 }
             case "getOperation":
@@ -758,7 +760,15 @@ internal sealed partial class AdministrationDispatcher(
 
     /// <summary>Projects a durable audit event into its wire representation.</summary>
     private static AdministrationAuditView AuditView(LabelAdministrationReceipt receipt) =>
-        new(receipt.Sequence, receipt.OperationId, receipt.Actor?.Value, receipt.LocalIdentity, receipt.Action, receipt.Reason, receipt.Succeeded);
+        new(
+            Sequence: receipt.Sequence,
+            OperationId: receipt.OperationId,
+            Actor: receipt.Actor?.Value,
+            LocalIdentity: receipt.LocalIdentity,
+            Action: receipt.Action,
+            Reason: receipt.Reason,
+            Succeeded: receipt.Succeeded,
+            CreatedAt: receipt.CreatedAt);
 
     /// <summary>Surfaces only classified operational errors at the transport boundary.</summary>
     private static AdministrationResponse Failure(LabelServiceError error) =>
@@ -783,7 +793,8 @@ internal sealed record AdministrationCommand(
     int GracePeriodDays = 0,
     bool Confirmed = false,
     string? ReplacementKeyId = null,
-    ModerationCommand? Moderation = null)
+    ModerationCommand? Moderation = null,
+    long? ExpectedLabelSequence = null)
 {
     internal const int MaximumAuditPageSize = 16;
 
@@ -809,12 +820,19 @@ internal sealed record AdministrationResponse(
     AdministrationAuditView[]? Audit = null,
     AdministrationPublicationView? State = null,
     AdministrationMaintenanceView? Maintenance = null,
-    ModerationResponse? Moderation = null);
+    ModerationResponse? Moderation = null,
+    long? TotalCount = null,
+    long? PageNumber = null,
+    AdministrationAuthorSummaryView[]? AuthorSummaries = null,
+    string? Target = null);
+
+/// <summary>Contains all-time issuer-local report counts for the authors on one authorized case page.</summary>
+internal sealed record AdministrationAuthorSummaryView(string Did, long Reports, long Records, IReadOnlyDictionary<string, long> ReportKinds);
 
 /// <summary>Contains public team inspection fields.</summary>
 internal sealed record AdministrationMemberView(string Did, LabelTeamRole Role, bool Active, bool Removed);
 /// <summary>Contains authorized audit inspection fields.</summary>
-internal sealed record AdministrationAuditView(long Sequence, string OperationId, string? Actor, string? LocalIdentity, string Action, string Reason, bool Succeeded);
+internal sealed record AdministrationAuditView(long Sequence, string OperationId, string? Actor, string? LocalIdentity, string Action, string Reason, bool Succeeded, DateTimeOffset? CreatedAt = null);
 /// <summary>Contains authorized publication and lifecycle checkpoints.</summary>
 internal sealed record AdministrationPublicationView(
     Guid StreamId,
@@ -854,6 +872,7 @@ internal sealed record AdministrationMaintenanceHostView(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(AdministrationCommand))]
 [JsonSerializable(typeof(AdministrationResponse))]
+[JsonSerializable(typeof(AdministrationAuditView))]
 internal sealed partial class AdministrationJsonContext : JsonSerializerContext;
 
 /// <summary>Bounds messages independently from untrusted content-length values.</summary>

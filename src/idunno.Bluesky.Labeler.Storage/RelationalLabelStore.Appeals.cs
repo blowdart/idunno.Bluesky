@@ -128,9 +128,27 @@ internal abstract partial class RelationalLabelStore
         LabelStoreState state,
         LabelReportSubject subject,
         long now,
+        CancellationToken token) =>
+        await ReadTargetLabelsAsync(
+            connection: connection,
+            transaction: transaction,
+            state: state,
+            target: subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository),
+            exactVersion: true,
+            now: now,
+            token: token).ConfigureAwait(false);
+
+    /// <summary>Captures bounded active label values, optionally retaining other record versions for manual review.</summary>
+    private static async Task<LabelServiceResult<StoredLabel[]>> ReadTargetLabelsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelStoreState state,
+        LabelTarget target,
+        bool exactVersion,
+        long now,
         CancellationToken token)
     {
-        byte[] key = s_strictUtf8.GetBytes(subject.Subject);
+        byte[] key = s_strictUtf8.GetBytes(target.Subject);
         List<string> values = [];
         DbCommand command = Command(
             connection: connection,
@@ -152,7 +170,7 @@ internal abstract partial class RelationalLabelStore
 
         if (values.Count > 1000)
         {
-            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "The appeal subject requires explicit review beyond the bounded capture limit.");
+            return CaseFailure<StoredLabel[]>(LabelServiceErrorCode.PolicyUnavailable, "The label target requires explicit review beyond the bounded capture limit.");
         }
 
         if (values.Count == 0)
@@ -160,7 +178,6 @@ internal abstract partial class RelationalLabelStore
             return LabelServiceResult<StoredLabel[]>.Success([]);
         }
 
-        LabelTarget target = subject.RecordUri is { } record ? LabelTarget.Record(record, subject.Cid) : LabelTarget.Account(subject.Repository);
         IReadOnlyList<LabelServiceResult<LabelDecisionSnapshot>> snapshots = await DecisionSnapshotsAsync(
             connection: connection,
             transaction: transaction,
@@ -175,7 +192,7 @@ internal abstract partial class RelationalLabelStore
                 return LabelServiceResult<StoredLabel[]>.Failure(snapshot.Error);
             }
 
-            if (snapshot.Result.CurrentLabel is { } current && current.SignedLabel.Label.Cid == subject.Cid &&
+            if (snapshot.Result.CurrentLabel is { } current && (!exactVersion || current.SignedLabel.Label.Cid == target.Cid) &&
                 LabelDecisionRules.IsActive(current.SignedLabel, DateTimeOffset.FromUnixTimeMilliseconds(now)))
             {
                 challenges.Add(current);
@@ -388,6 +405,85 @@ internal abstract partial class RelationalLabelStore
         }
 
         return LabelServiceResult<IReadOnlyList<ModerationAppealData>>.Success(appeals.AsReadOnly());
+    }
+
+    /// <summary>Closes only fully obsolete exact-target appeals under the decision transaction, retaining original evidence.</summary>
+    private static async Task<IReadOnlyList<ModerationAppealData>> SupersedeObsoleteAppealsAsync(
+        DbConnection connection,
+        DbTransaction transaction,
+        LabelStoreState state,
+        LabelReportSubject subject,
+        LabelCaseDecision request,
+        DateTimeOffset completedAt,
+        CancellationToken token)
+    {
+        LabelServiceResult<StoredLabel[]> observed = await ReadAppealChallengesAsync(
+            connection: connection,
+            transaction: transaction,
+            state: state,
+            subject: subject,
+            now: completedAt.ToUnixTimeMilliseconds(),
+            token: token).ConfigureAwait(false);
+        if (!observed.Succeeded)
+        {
+            throw new InvalidDataException("Current appeal outcomes could not be inspected: " + observed.Error.Message);
+        }
+
+        HashSet<long> current = observed.Result.Select(label => label.Sequence).ToHashSet();
+        List<ModerationAppealData> superseded = [];
+        long after = 0;
+        while (true)
+        {
+            List<ModerationAppealData> page = [];
+            DbCommand command = Command(
+                connection: connection,
+                transaction: transaction,
+                sql: "SELECT a.payload FROM label_appeals a JOIN label_cases c ON c.case_id=a.case_id " +
+                    "WHERE c.subject_hash=@subject AND a.status=0 AND a.appeal_id>@after ORDER BY a.appeal_id LIMIT 128",
+                ("@subject", SHA256.HashData(CaseSubjectKey(subject))),
+                ("@after", after));
+            await using (command.ConfigureAwait(false))
+            {
+                DbDataReader reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                await using (reader.ConfigureAwait(false))
+                {
+                    while (await reader.ReadAsync(token).ConfigureAwait(false))
+                    {
+                        page.Add(DecodeAppeal((byte[])reader.GetValue(0)));
+                    }
+                }
+            }
+
+            foreach (ModerationAppealData appeal in page)
+            {
+                if (appeal.Subject != subject.Subject || appeal.Cid != subject.Cid?.ToString() ||
+                    appeal.Challenges.Length == 0 || appeal.Challenges.Any(challenge => current.Contains(challenge.Sequence)))
+                {
+                    continue;
+                }
+
+                ModerationAppealData resolved = appeal with
+                {
+                    Status = LabelAppealStatus.Superseded,
+                    UpdatedAt = completedAt,
+                    DecisionOperationId = request.OperationId,
+                    ResolutionReason = $"Automatically superseded by appeal decision {request.OperationId}: all captured label outcomes are no longer current."
+                };
+                await SaveAppealOutcomeAsync(
+                    connection: connection,
+                    transaction: transaction,
+                    appeal: resolved,
+                    token: token).ConfigureAwait(false);
+                superseded.Add(resolved);
+            }
+
+            if (page.Count < 128)
+            {
+                return superseded;
+            }
+
+            after = page[^1].Id;
+        }
     }
 
     /// <summary>Retains capture provenance while atomically recording an explicit moderator resolution.</summary>

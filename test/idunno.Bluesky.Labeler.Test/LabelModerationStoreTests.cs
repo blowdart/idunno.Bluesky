@@ -35,7 +35,7 @@ public class LabelModerationStoreTests
         Assert.Equal(1, snapshot.Revision);
         Assert.Equal(s_subject.Subject, snapshot.Subject.Subject);
         Assert.Equal(LabelCaseStatus.Open, snapshot.Status);
-        Assert.Null(snapshot.Assignee);
+        Assert.Equal(s_administrator, snapshot.Assignee);
         Assert.Equal(created.CreatedAt, snapshot.CreatedAt);
         LabelCaseReceipt recovered = Success(await restarted.GetCaseOperationAsync(administrator, "open", token));
         Assert.Equal(created.Sequence, recovered.Sequence);
@@ -212,12 +212,80 @@ public class LabelModerationStoreTests
                 operationId: "suspend", action: LabelTeamAction.Suspend, target: s_member,
                 reason: "Revoke assignment eligibility."),
             token));
-        Assert.Equal(s_member, Success(await store.GetCaseAsync(administrator, assigned.Id, token)).Assignee);
+        LabelModerationCase automatic = Success(await store.GetCaseAsync(administrator, assigned.Id, token));
+        Assert.Equal(s_administrator, automatic.Assignee);
+        Assert.Equal(s_member, Success(await store.GetCaseOperationAsync(administrator, "assign", token)).Case.Assignee);
+        Assert.Equal(LabelServiceErrorCode.CaseConflict, (await store.ChangeCaseAsync(
+            administrator, Change(assigned, "stale-assignment", LabelCaseAction.Assign), token)).Error!.Code);
         Assert.Equal(LabelServiceErrorCode.Unauthorized, (await store.ChangeCaseAsync(
-            administrator, Change(assigned, "assign-revoked", LabelCaseAction.Assign, s_member), token)).Error!.Code);
+            administrator, Change(automatic, "assign-revoked", LabelCaseAction.Assign, s_member), token)).Error!.Code);
         LabelModerationCase released = Success(await store.ChangeCaseAsync(
-            administrator, Change(assigned, "release", LabelCaseAction.Assign), token)).Case;
-        Assert.Null(released.Assignee);
+            administrator, Change(automatic, "release", LabelCaseAction.Assign), token)).Case;
+        Assert.Equal(s_administrator, released.Assignee);
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task SoleModeratorAssignmentReconcilesBatchesAtomicallyAndPreservesResolvedCasesAndReceipts(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        LabelAdministrationCaller administrator = await BootstrapAsync(fixture);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        ILabelModerationStore store = (ILabelModerationStore)fixture.Store;
+        await EnrollAsync(team, administrator, LabelTeamRole.Moderator, token);
+        List<LabelCaseReceipt> opened = [];
+        for (int index = 0; index < 130; index++)
+        {
+            string suffix = index.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            opened.Add(Success(await store.ChangeCaseAsync(
+                administrator,
+                new(
+                    operationId: "open-" + suffix,
+                    subject: LabelReportSubject.Account(new("did:plc:subject" + suffix)),
+                    action: LabelCaseAction.Open,
+                    reason: "Exercise automatic assignment batches."),
+                token)));
+        }
+
+        Assert.All(opened, receipt => Assert.Null(receipt.Case.Assignee));
+        LabelModerationCase resolved = Success(await store.ChangeCaseAsync(
+            administrator, Change(opened[0].Case, "resolve-one", LabelCaseAction.Resolve), token)).Case;
+        LabelTeamChange suspend = new(
+            operationId: "suspend-auto",
+            action: LabelTeamAction.Suspend,
+            target: s_member,
+            reason: "Leave one active moderator.");
+        fixture.SetCommitHooks(beforeCommit: (_, _, _) => throw new SqliteException("Injected rollback.", 10));
+        Assert.Equal(LabelServiceErrorCode.StorageUnavailable, (await team.ChangeTeamAsync(administrator, suspend, token)).Error!.Code);
+        fixture.SetCommitHooks();
+        Assert.All(Success(await store.GetCasesAsync(administrator, cancellationToken: token)), item => Assert.Null(item.Assignee));
+        Success(await team.ChangeTeamAsync(administrator, suspend, token));
+        ILabelModerationStore restarted = (ILabelModerationStore)fixture.NewStore();
+        LabelModerationCase first = Success(await restarted.GetCaseAsync(administrator, opened[1].Case.Id, token));
+        LabelModerationCase last = Success(await restarted.GetCaseAsync(administrator, opened[^1].Case.Id, token));
+        Assert.Equal(s_administrator, first.Assignee);
+        Assert.Equal(s_administrator, last.Assignee);
+        Assert.Equal(2, first.Revision);
+        Assert.Equal(resolved.Revision, Success(await restarted.GetCaseAsync(administrator, resolved.Id, token)).Revision);
+        Assert.Null(Success(await restarted.GetCaseAsync(administrator, resolved.Id, token)).Assignee);
+        Assert.Null(Success(await restarted.GetCaseOperationAsync(administrator, "open-1", token)).Case.Assignee);
+        LabelCaseReceipt automatic = Success(await restarted.GetCaseHistoryAsync(administrator, first.Id, cancellationToken: token))[^1];
+        Assert.Equal(LabelCaseAction.Assign, automatic.Action);
+        Assert.Contains("Automatically assigned", automatic.Reason, StringComparison.Ordinal);
+        Success(await team.ChangeTeamAsync(administrator, suspend, token));
+        Assert.Equal(2, Success(await restarted.GetCaseHistoryAsync(administrator, first.Id, cancellationToken: token)).Count);
+
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(operationId: "reinstate", action: LabelTeamAction.Reinstate, target: s_member, reason: "Restore manual routing."),
+            token));
+        LabelModerationCase manual = Success(await restarted.ChangeCaseAsync(
+            administrator, Change(first, "unassign", LabelCaseAction.Assign), token)).Case;
+        Assert.Null(manual.Assignee);
+        Assert.Equal(s_administrator, Success(await restarted.GetCaseAsync(administrator, last.Id, token)).Assignee);
     }
 
     [Theory]
@@ -318,6 +386,9 @@ public class LabelModerationStoreTests
         await fixture.Store.AppendAsync("before-upgrade", [original], cancellationToken: token);
         LabelStoreState before = await fixture.Store.GetStateAsync(token);
         await fixture.ExecuteAsync("""
+            DROP TABLE label_post_review_checks;
+            DROP TABLE label_search_handles;
+            DROP TABLE label_search_text;
             DROP TABLE label_report_tokens;
             DROP TABLE label_appeal_reports;
             DROP TABLE label_appeals;

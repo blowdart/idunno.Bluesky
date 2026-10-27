@@ -19,6 +19,95 @@ public class LabelReportStoreTests
     private const string Reason = "tools.ozone.report.defs#reasonMisleadingSpam";
 
     [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task CasePageAuthorSummariesCountAllReportsButDeduplicateRecordUrisAcrossCids(string engine)
+    {
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        AtUri uri = new($"at://{s_account.Repository}/app.bsky.actor.profile/self");
+        LabelReportSubject[] subjects =
+        [
+            s_account,
+            LabelReportSubject.Record(uri, new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(uri, new("bafyreif2pall7yry6b3sh5rttgeczzmhnnemy6rtbwwsvxeceebzxtpfwu")),
+            LabelReportSubject.Record(uri, new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(new($"at://{s_account.Repository}/app.bsky.feed.post/example"), new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(new($"at://{s_account.Repository}/app.bsky.graph.starterpack/example"), new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(new($"at://{s_account.Repository}/app.bsky.graph.list/example"), new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(new($"at://{s_account.Repository}/app.bsky.feed.generator/example"), new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Record(new($"at://{s_account.Repository}/example.custom.record/example"), new(TargetResolutionHandler.RecordCid)),
+            LabelReportSubject.Account(new("did:plc:subject-other"))
+        ];
+        long closedCaseId = 0;
+        for (int index = 0; index < subjects.Length; index++)
+        {
+            ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+                s_reporter, policy.DatabaseTime, "summary-" + index);
+            LabelModerationReport report = Success(await reports.SubmitReportAsync(
+                authentication, new(subjects[index], Reason), policy.Revision, token));
+            if (index == 0)
+            {
+                closedCaseId = report.CaseId;
+            }
+        }
+
+        LabelModerationCase current = Success(await cases.GetCaseAsync(administrator, closedCaseId, token));
+        Success(await cases.CommitCaseDecisionAsync(
+            new(
+                caller: administrator,
+                request: new(
+                    operationId: "resolve-account",
+                    caseId: current.Id,
+                    expectedRevision: current.Revision,
+                    policyVersion: policy.Policy!.Issuance.Version,
+                    reason: "Retain handled reports in all-time summary.",
+                    actions: [],
+                    handleOtherReports: true),
+                expectedPolicyRevision: policy.Revision,
+                preparedActions: []),
+            token));
+        ILabelTableStore table = Assert.IsAssignableFrom<ILabelTableStore>(fixture.NewStore());
+        LabelTablePage page = Success(await table.ReadTableAsync(
+            administrator, new(LabelTableKind.Cases), token));
+        LabelAuthorReportSummary summary = Assert.Single(page.AuthorSummaries!, item => item.Did == s_account.Repository.Value);
+        Assert.Equal(9, summary.Reports);
+        Assert.Equal(6, summary.Records);
+        Assert.Equal(3, summary.ReportKinds["profile"]);
+        Assert.Equal(1, summary.ReportKinds["post"]);
+        Assert.Equal(1, summary.ReportKinds["starter pack"]);
+        Assert.Equal(1, summary.ReportKinds["list"]);
+        Assert.Equal(1, summary.ReportKinds["feed"]);
+        Assert.Equal(1, summary.ReportKinds["other record"]);
+        LabelAuthorReportSummary other = Assert.Single(page.AuthorSummaries!, item => item.Did == "did:plc:subject-other");
+        Assert.Equal(1, other.Reports);
+        Assert.Equal(0, other.Records);
+        Assert.Equal(1, other.ReportKinds["profile"]);
+        Assert.Equal(0, other.ReportKinds["post"]);
+        Assert.DoesNotContain(page.Cases!, item => item.Id == closedCaseId);
+        ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(
+                operationId: "summary-viewer",
+                action: LabelTeamAction.Enroll,
+                target: s_reporter,
+                reason: "Verify live summary access.",
+                role: LabelTeamRole.Viewer),
+            token));
+        LabelAdministrationCaller viewer = Success(await team.AuthenticateBrowserAsync(s_reporter, token));
+        Success(await team.ChangeTeamAsync(
+            administrator,
+            new(operationId: "summary-revoke", action: LabelTeamAction.Suspend, target: s_reporter, reason: "Revoke summary inspection."),
+            token));
+        Assert.Equal(LabelServiceErrorCode.Unauthorized, (await table.ReadTableAsync(viewer, new(LabelTableKind.Cases), token)).Error!.Code);
+    }
+
+    [Theory]
     [InlineData("sqlite", false)]
     [InlineData("sqlite", true)]
     [InlineData("postgresql", false)]
@@ -152,14 +241,18 @@ public class LabelReportStoreTests
     }
 
     [Theory]
-    [InlineData("sqlite")]
-    [InlineData("postgresql")]
-    [InlineData("mysql")]
-    public async Task BeforeCommitFaultRollsBackReportCaseReplayAndAuditButLostAcknowledgementPreservesAll(string engine)
+    [InlineData("sqlite", false)]
+    [InlineData("sqlite", true)]
+    [InlineData("postgresql", false)]
+    [InlineData("postgresql", true)]
+    [InlineData("mysql", false)]
+    [InlineData("mysql", true)]
+    public async Task BeforeCommitFaultRollsBackReportCaseReplayAndAuditButLostAcknowledgementPreservesAll(string engine, bool disallowed)
     {
         await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
         CancellationToken token = TestContext.Current.CancellationToken;
-        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture);
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(
+            fixture, disallowed ? ""","reasonTypes":["tools.ozone.report.defs#reasonOther"]""" : "");
         ILabelReportStore store = (ILabelReportStore)fixture.Store;
         ModerationReportAuthenticationResult reporter = await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "one");
         fixture.SetCommitHooks(beforeCommit: (_, _, _) => throw new SqliteException("Before commit.", 10));
@@ -188,15 +281,144 @@ public class LabelReportStoreTests
         Assert.Throws<ArgumentException>(() => new LabelReportSubmission(s_account, Reason, "\ud800"));
     }
 
+    [Theory]
+    [InlineData("sqlite", false, false)]
+    [InlineData("sqlite", true, false)]
+    [InlineData("sqlite", false, true)]
+    [InlineData("postgresql", false, false)]
+    [InlineData("postgresql", true, false)]
+    [InlineData("postgresql", false, true)]
+    [InlineData("mysql", false, false)]
+    [InlineData("mysql", true, false)]
+    [InlineData("mysql", false, true)]
+    public async Task DisallowedReasonsAreHandledWithoutChangingExistingWorkAndSurviveRestart(
+        string engine,
+        bool existingCase,
+        bool acceptNone)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(
+            fixture, acceptNone ? ""","reasonTypes":[]""" : ""","reasonTypes":["tools.ozone.report.defs#reasonOther"]""");
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ILabelModerationStore cases = (ILabelModerationStore)fixture.Store;
+        LabelModerationReport? allowed = null;
+        LabelModerationCase? baseline = null;
+        if (existingCase)
+        {
+            allowed = Success(await reports.SubmitReportAsync(
+                await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "allowed"),
+                new(s_account, "tools.ozone.report.defs#reasonOther"), policy.Revision, token));
+            Success(await cases.ChangeCaseAsync(
+                administrator,
+                new(
+                    operationId: "pending-review",
+                    subject: s_account,
+                    action: LabelCaseAction.OpenAppeal,
+                    reason: "Keep existing appeal work pending."),
+                token));
+            baseline = Success(await cases.GetCaseAsync(administrator, allowed.CaseId, token));
+        }
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_reporter, policy.DatabaseTime, "disallowed");
+        LabelReportSubmission submission = new(s_account, Reason, "Retain the original report.");
+        LabelModerationReport report = Success(await reports.SubmitReportAsync(authentication, submission, policy.Revision, token));
+        Assert.Equal("Not Applicable", report.ResolutionReason);
+        Assert.Equal(report.CreatedAt, report.HandledAt);
+        Assert.NotNull(report.DecisionOperationId);
+        Assert.Equal(s_reporter, report.ReportedBy);
+        Assert.Equal(submission.Reason, report.Submission.Reason);
+        LabelModerationCase current = Success(await cases.GetCaseAsync(administrator, report.CaseId, token));
+        if (baseline is not null)
+        {
+            Assert.Equal(baseline.Id, current.Id);
+            Assert.Equal(baseline.Revision, current.Revision);
+            Assert.Equal(baseline.Status, current.Status);
+            Assert.Equal(baseline.Assignee, current.Assignee);
+            Assert.Equal(baseline.UpdatedAt, current.UpdatedAt);
+            Assert.Null(Success(await reports.GetReportAsync(administrator, allowed!.Id, token)).DecisionOperationId);
+        }
+        else
+        {
+            Assert.Equal(LabelCaseStatus.Resolved, current.Status);
+        }
+        ILabelTableStore tables = Assert.IsAssignableFrom<ILabelTableStore>(fixture.NewStore());
+        LabelNavigationCounts counts = Success(await tables.ReadNavigationCountsAsync(administrator, token));
+        Assert.Equal(existingCase ? 1 : 0, counts.Reports);
+        LabelTablePage openCases = Success(await tables.ReadTableAsync(administrator, new(LabelTableKind.Cases), token));
+        Assert.Equal(existingCase, openCases.Cases!.Any(item => item.Id == report.CaseId));
+        ILabelReportStore restarted = (ILabelReportStore)fixture.NewStore();
+        Assert.Equal("Not Applicable", Success(await restarted.GetReportAsync(administrator, report.Id, token)).ResolutionReason);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized,
+            (await restarted.SubmitReportAsync(authentication, submission, policy.Revision, token)).Error!.Code);
+        Assert.Equal(0, (await fixture.Store.GetStateAsync(token)).IssuedThrough);
+        LabelAdministrationReceipt automatic = Assert.Single(Success(await ((ILabelAdministrationStore)fixture.Store)
+            .GetAdministrationAuditAsync(administrator, cancellationToken: token)),
+            entry => entry.Action == "report-not-applicable");
+        Assert.Equal(StoreFixture.Issuer, automatic.Actor);
+        Assert.Equal("system:report-reason", automatic.LocalIdentity);
+        Assert.Equal("Not Applicable", automatic.Reason);
+        IReadOnlyList<LabelAppeal> appeals = Success(await ((ILabelAppealStore)fixture.Store)
+            .GetAppealsAsync(administrator, cancellationToken: token));
+        if (existingCase)
+        {
+            Assert.Equal(LabelAppealStatus.Pending, Assert.Single(appeals).Status);
+        }
+        else
+        {
+            Assert.Empty(appeals);
+            if (!acceptNone)
+            {
+                LabelModerationReport subsequent = Success(await reports.SubmitReportAsync(
+                    await ReportTestAuthentication.CreateAsync(s_reporter, policy.DatabaseTime, "after-automatic"),
+                    new(s_account, "tools.ozone.report.defs#reasonOther"), policy.Revision, token));
+                Assert.NotEqual(report.CaseId, subsequent.CaseId);
+                Assert.Null(subsequent.HandledAt);
+                Assert.Equal(LabelCaseStatus.Open, Success(await cases.GetCaseAsync(administrator, subsequent.CaseId, token)).Status);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("sqlite")]
+    [InlineData("postgresql")]
+    [InlineData("mysql")]
+    public async Task AutomaticReasonHandlingStillRequiresAllowedSubjectsAndOwnerAppeals(string engine)
+    {
+        CancellationToken token = TestContext.Current.CancellationToken;
+        await using StoreFixture fixture = await StoreFixture.CreateModerationAsync(engine);
+        (LabelAdministrationCaller administrator, LabelPolicyState policy) = await ActivateAsync(fixture,
+            ""","reasonTypes":["tools.ozone.report.defs#reasonOther"],"subjectCollections":["app.bsky.feed.post"]""");
+        ILabelReportStore reports = (ILabelReportStore)fixture.Store;
+        ModerationReportAuthenticationResult authentication = await ReportTestAuthentication.CreateAsync(
+            s_reporter, policy.DatabaseTime, "invalid-scope");
+        LabelReportSubject profile = LabelReportSubject.Record(
+            new($"at://{s_account.Repository}/app.bsky.actor.profile/self"), new(TargetResolutionHandler.RecordCid));
+        Assert.Equal(LabelServiceErrorCode.TargetNotAllowed,
+            (await reports.SubmitReportAsync(authentication, new(profile, Reason), policy.Revision, token)).Error!.Code);
+        Assert.Equal(LabelServiceErrorCode.Unauthorized,
+            (await reports.SubmitReportAsync(authentication,
+                new(s_account, "tools.ozone.report.defs#reasonAppeal"), policy.Revision, token)).Error!.Code);
+        Assert.Empty(Success(await reports.GetReportsAsync(administrator, cancellationToken: token)));
+        ModerationReportAuthenticationResult owner = await ReportTestAuthentication.CreateAsync(
+            s_account.Repository, policy.DatabaseTime, "owner-appeal");
+        LabelModerationReport report = Success(await reports.SubmitReportAsync(
+            owner, new(s_account, "tools.ozone.report.defs#reasonAppeal"), policy.Revision, token));
+        Assert.Equal("Not Applicable", report.ResolutionReason);
+        Assert.Empty(Success(await ((ILabelAppealStore)fixture.Store).GetAppealsAsync(administrator, cancellationToken: token)));
+    }
+
     /// <summary>Requires successful classified outcomes without hiding diagnostic messages.</summary>
     private static T Success<T>(LabelServiceResult<T> result) where T : class
     {
-        Assert.True(result.Succeeded, result.Error?.Message);
+        Assert.True(result.Succeeded, $"{result.Error?.Message}{Environment.NewLine}{result.Error?.Exception}");
         return result.Result;
     }
 
     /// <summary>Bootstraps protected review and independently verifies a complete report-accepting policy.</summary>
-    private static async Task<(LabelAdministrationCaller Administrator, LabelPolicyState Policy)> ActivateAsync(StoreFixture fixture)
+    private static async Task<(LabelAdministrationCaller Administrator, LabelPolicyState Policy)> ActivateAsync(
+        StoreFixture fixture,
+        string reasonFields = "")
     {
         CancellationToken token = TestContext.Current.CancellationToken;
         ILabelAdministrationStore team = (ILabelAdministrationStore)fixture.Store;
@@ -204,9 +426,9 @@ public class LabelReportStoreTests
         LabelAdministrationCaller administrator = Success(await team.AuthenticateLocalAsync("uid:0", token));
         ILabelPolicyStore store = (ILabelPolicyStore)fixture.Store;
         LabelPolicyState initial = await store.InitializePolicyAsync(cancellationToken: token);
-        using JsonDocument declaration = JsonDocument.Parse("""
+        using JsonDocument declaration = JsonDocument.Parse($$"""
             {"$type":"app.bsky.labeler.service","policies":{"labelValues":["spam"]},
-             "createdAt":"2026-01-01T00:00:00Z","subjectTypes":["account","record"]}
+             "createdAt":"2026-01-01T00:00:00Z","subjectTypes":["account","record"]{{reasonFields}}}
             """);
         LabelPolicyDefinition definition = new(
             version: "v1", declaration: declaration.RootElement, allowAccounts: true, allowRecords: true, rules: "Review reports.");

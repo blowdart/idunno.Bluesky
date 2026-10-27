@@ -1,0 +1,35 @@
+@model ReviewLabelDisplay
+<dl class="review-labels">
+    @if (Model.IsRecord)
+    {
+        <dt>Account labels</dt>
+        <dd>
+            @if (Model.AccountLabels.Length == 0)
+            {
+                <span class="muted">None</span>
+            }
+            else
+            {
+                <ul class="current-labels">@foreach (string label in Model.AccountLabels)
+                    {
+                        <li>@label</li>
+                    }</ul>
+            }
+        </dd>
+    }
+    <dt>@(Model.IsRecord ? "Post / record labels" : "Account labels")</dt>
+    <dd>
+        @if (Model.SubjectLabels.Length == 0)
+        {
+            <span class="muted">None</span>
+        }
+        else
+        {
+            <ul class="current-labels">@foreach (string label in Model.SubjectLabels)
+                {
+                    <li>@label</li>
+                }</ul>
+        }
+    </dd>
+</dl>
+<p class="muted label-context-help">Active labels from this labeler. Record labels apply only to the reported CID; account labels are separate.</p>

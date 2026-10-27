@@ -31,7 +31,6 @@ internal abstract partial class RelationalLabelStore
         return AdministrationAsync(async (connection, transaction, state) =>
         {
             long now = await DatabaseTimeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
-            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             LabelServiceResult<LabelModerationReport> result;
             if (state.Issuer != authentication.Labeler.Value || authentication.ExpiresAt.AddSeconds(5).ToUnixTimeMilliseconds() <= now)
             {
@@ -44,6 +43,7 @@ internal abstract partial class RelationalLabelStore
                     submission: submission, expectedPolicyRevision: expectedPolicyRevision, state: state, now: now, token: cancellationToken).ConfigureAwait(false);
             }
 
+            AdministrationState team = await ReadAdministrationAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
             await AuditAdministrationAsync(
                 connection: connection, transaction: transaction, administration: team, actor: authentication.Reporter,
                 localIdentity: null, operationId: result.Succeeded ? "report/" + result.Result.Id.ToString(CultureInfo.InvariantCulture) : string.Empty,
@@ -54,7 +54,7 @@ internal abstract partial class RelationalLabelStore
     }
 
     /// <summary>Commits a scoped, single-use reporter submission without team authority or subject retrieval.</summary>
-    private static async Task<LabelServiceResult<LabelModerationReport>> CommitReportAsync(
+    private async Task<LabelServiceResult<LabelModerationReport>> CommitReportAsync(
         DbConnection connection,
         DbTransaction transaction,
         ModerationReportAuthenticationResult authentication,
@@ -72,11 +72,15 @@ internal abstract partial class RelationalLabelStore
             return CaseFailure<LabelModerationReport>(LabelServiceErrorCode.PolicyUnavailable, "The verified report policy changed or expired.");
         }
 
-        if (!gate.Policy.ToPolicy().ReportScope.Accepts(submission.Subject, submission.ReasonType))
+        LabelReportScope scope = gate.Policy.ToPolicy().ReportScope;
+        if (!scope.SubjectTypes.Contains(submission.Subject.SubjectType, StringComparer.Ordinal) ||
+            submission.Subject.RecordUri is { } recordUri && scope.SubjectCollections is { } collections &&
+            !collections.Contains(recordUri.Collection!))
         {
             return CaseFailure<LabelModerationReport>(LabelServiceErrorCode.TargetNotAllowed, "The declaration does not accept this report scope.");
         }
 
+        bool notApplicable = scope.ReasonTypes is { } reasons && !reasons.Contains(submission.ReasonType, StringComparer.Ordinal);
         bool appeal = submission.ReasonType is "com.atproto.moderation.defs#reasonAppeal" or "tools.ozone.report.defs#reasonAppeal";
         if (appeal && authentication.Reporter != submission.Subject.Repository)
         {
@@ -99,7 +103,7 @@ internal abstract partial class RelationalLabelStore
         }
 
         StoredLabel[]? challenges = null;
-        if (appeal)
+        if (appeal && !notApplicable)
         {
             LabelServiceResult<StoredLabel[]> capture = await ReadAppealChallengesAsync(
                 connection: connection,
@@ -121,21 +125,27 @@ internal abstract partial class RelationalLabelStore
             token: token).ConfigureAwait(false)) + 1);
         DateTimeOffset timestamp = DateTimeOffset.FromUnixTimeMilliseconds(now);
         ModerationCaseData? current = await OpenCaseAsync(connection, transaction, submission.Subject, token).ConfigureAwait(false);
+        AdministrationState team = await ReadAdministrationAsync(connection, transaction, token).ConfigureAwait(false);
         long caseId = current?.Id ?? checked(Integer(await ScalarAsync(
             connection: connection, transaction: transaction, sql: "SELECT COALESCE(MAX(case_id),0) FROM label_cases",
             token: token).ConfigureAwait(false)) + 1);
-        ModerationCaseData next = new(
+        LabelCaseStatus status = notApplicable ? LabelCaseStatus.Resolved : current?.Status ?? LabelCaseStatus.Open;
+        ModerationCaseData next = notApplicable && current is not null ? current : new(
             Id: caseId,
             Revision: checked((current?.Revision ?? 0) + 1),
             Subject: submission.Subject.Subject,
             Cid: submission.Subject.Cid?.ToString(),
-            Status: current?.Status ?? LabelCaseStatus.Open,
-            Assignee: current?.Assignee,
+            Status: status,
+            Assignee: SoleModerator(team) ?? current?.Assignee,
             CreatedAt: current?.CreatedAt ?? timestamp,
             UpdatedAt: timestamp);
-        await SaveCaseAsync(
-            connection: connection, transaction: transaction, next: next, subject: submission.Subject,
-            insert: current is null, token: token).ConfigureAwait(false);
+        if (!notApplicable || current is null)
+        {
+            await SaveCaseAsync(
+                connection: connection, transaction: transaction, next: next, subject: submission.Subject,
+                insert: current is null, token: token).ConfigureAwait(false);
+        }
+        string operation = "report/" + id.ToString(CultureInfo.InvariantCulture);
         ModerationReportData report = new(
             Id: id,
             CaseId: caseId,
@@ -149,18 +159,47 @@ internal abstract partial class RelationalLabelStore
             CreatedAt: timestamp,
             PolicyVersion: gate.Policy.Version,
             Audience: authentication.Audience,
-            TokenHash: authentication.TokenHash);
+            TokenHash: authentication.TokenHash,
+            DecisionOperationId: notApplicable ? operation : null,
+            HandledAt: notApplicable ? timestamp : null,
+            ResolutionReason: notApplicable ? "Not Applicable" : null);
         byte[] payload = JsonSerializer.SerializeToUtf8Bytes(report, ModerationJsonContext.Default.ModerationReportData);
+        LabelCaseAction reportAction = (notApplicable, current) switch
+        {
+            (true, null) => LabelCaseAction.Resolve,
+            (true, _) => LabelCaseAction.Note,
+            _ => LabelCaseAction.Open
+        };
         await AppendCaseEventAsync(
-            connection: connection, transaction: transaction, next: next, operationId: "report/" + id.ToString(CultureInfo.InvariantCulture),
-            action: LabelCaseAction.Open, actor: authentication.Reporter, localIdentity: null, reason: "Report accepted.",
-            intent: payload, operationNamespace: "report", token: token).ConfigureAwait(false);
+            connection: connection, transaction: transaction, next: next, operationId: operation,
+            action: reportAction,
+            actor: notApplicable ? state.Issuer : authentication.Reporter,
+            localIdentity: notApplicable ? "system:report-reason" : null,
+            reason: notApplicable ? "Not Applicable" : "Report accepted.",
+            intent: payload, operationNamespace: "report", token: token, createdAt: timestamp).ConfigureAwait(false);
         await ExecuteAsync(
             connection: connection, transaction: transaction,
             sql: "INSERT INTO label_reports(report_id,case_id,reason_hash,reason_type,payload) VALUES(@id,@case,@hash,@reason,@payload)",
             token: token,
             ("@id", id), ("@case", caseId), ("@hash", OperationHash(submission.ReasonType)),
             ("@reason", submission.ReasonType), ("@payload", payload)).ConfigureAwait(false);
+        await IndexSearchTextAsync(
+            connection: connection, transaction: transaction, kind: 0, id: id,
+            content: report.Subject + "\n" + report.Reason, token: token).ConfigureAwait(false);
+        if (notApplicable)
+        {
+            await AuditAdministrationAsync(
+                connection: connection,
+                transaction: transaction,
+                administration: team,
+                actor: state.Issuer,
+                localIdentity: "system:report-reason",
+                operationId: operation,
+                action: "report-not-applicable",
+                reason: "Not Applicable",
+                succeeded: true,
+                token: token).ConfigureAwait(false);
+        }
         if (challenges is not null)
         {
             await CaptureReportAppealAsync(

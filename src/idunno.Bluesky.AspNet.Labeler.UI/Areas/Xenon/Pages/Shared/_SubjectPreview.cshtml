@@ -1,0 +1,147 @@
+@model SubjectPreview
+@{
+    bool blurImages = Model.MediaWarnings is { Length: > 0 };
+}
+<section class="subject-preview" aria-label="@Model.Kind preview">
+    <h3>@Model.Kind preview</h3>
+    @if (Model.Url is { } url)
+    {
+        <p><a class="bluesky-link" href="@url" target="_blank" rel="noopener noreferrer" aria-label="Open reported @Model.Kind.ToLowerInvariant() on Bluesky (opens in a new tab)"><span class="fa-icon fa-bluesky" aria-hidden="true"></span>Open @Model.Kind.ToLowerInvariant() on Bluesky</a></p>
+    }
+    @if (!Model.MatchesReportedVersion)
+    {
+        <p class="muted">Current public content, not a snapshot of the content when it was reported.</p>
+    }
+    @if (Model.Error is { } error)
+    {
+        <p role="status">@error</p>
+    }
+    else
+    {
+        @if (Model.ModerationUnavailable)
+        {
+            <p class="notice notice-status" role="status">Bluesky moderation labels could not be fully checked. Images without a known warning are shown normally.</p>
+        }
+        <div class="@(blurImages ? "media-warning media-blurred" : null)" data-media-warning="@blurImages.ToString().ToLowerInvariant()">
+        <article class="@(Model.Kind == "Profile" ? "profile-preview" : null)" aria-label="Current @Model.Kind.ToLowerInvariant() content">
+            @if (Model.Kind == "Profile")
+            {
+                <div class="profile-preview-banner">
+                    @if (Model.Banner?.DataUrl is { } banner)
+                    {
+                        <img src="@banner" alt="@Model.Banner.Alt" data-sensitive-image="@(blurImages ? "" : null)" aria-hidden="@(blurImages ? "true" : null)" />
+                        @if (blurImages)
+                        {
+                            <partial name="_MediaRevealButton" />
+                        }
+                    }
+                </div>
+                <div class="profile-preview-avatar">
+                    @if (Model.Avatar?.DataUrl is { } avatar)
+                    {
+                        <img src="@avatar" alt="@Model.Avatar.Alt" data-sensitive-image="@(blurImages ? "" : null)" aria-hidden="@(blurImages ? "true" : null)" />
+                        @if (blurImages)
+                        {
+                            <partial name="_MediaRevealButton" />
+                        }
+                    }
+                    else
+                    {
+                        <span class="subject-icon fa-user" aria-hidden="true"></span>
+                    }
+                </div>
+                @if (Model.Banner?.Error is { } bannerError)
+                {
+                    <p role="status">@bannerError</p>
+                }
+                @if (Model.Avatar?.Error is { } avatarError)
+                {
+                    <p role="status">@avatarError</p>
+                }
+            }
+            <p>
+                @if (Model.Kind != "Profile")
+                {
+                    <span class="subject-icon fa-user" aria-hidden="true"></span>
+                }
+                <strong>@Model.DisplayName</strong> <span>@(Model.Handle?.StartsWith("did:", StringComparison.Ordinal) == true ? Model.Handle : "@" + Model.Handle)</span>
+            </p>
+            @if (Model.Kind == "Profile" && Model.Followers is { } followers && Model.Following is { } following && Model.Posts is { } posts)
+            {
+                <p class="profile-preview-counts"><span><strong>@followers.ToString("N0")</strong> followers</span> <span><strong>@following.ToString("N0")</strong> following</span> <span><strong>@posts.ToString("N0")</strong> posts</span></p>
+            }
+            <p class="preview-text" dir="auto">@Model.Text</p>
+            @if (Model.CreatedAt is { } createdAt)
+            {
+                <p><time datetime="@createdAt.ToString("O")">@createdAt.ToUniversalTime().ToString("u")</time></p>
+            }
+            @if (Model.DifferentVersion)
+            {
+                <p class="notice notice-error" role="note">The current @Model.Kind.ToLowerInvariant() CID differs from the reported CID. This preview is not the reported version.</p>
+            }
+            @if (!Model.MatchesReportedVersion && Model.Cid is { } cid)
+            {
+                <p>Current CID: <code>@cid</code></p>
+            }
+            @if (Model.Images is { Length: > 0 } images)
+            {
+                <div class="@(Model.Gallery ? "preview-images preview-gallery" : "preview-images")" tabindex="@(Model.Gallery ? "0" : null)" role="@(Model.Gallery ? "region" : null)" aria-label="@(Model.Gallery ? "Post image gallery; scroll horizontally to see all images" : null)">
+                    @foreach (PreviewImage image in images)
+                    {
+                        <figure>
+                            @if (image.DataUrl is { } dataUrl)
+                            {
+                                <div class="preview-image">
+                                    <img src="@dataUrl" alt="@(string.IsNullOrWhiteSpace(image.Alt) ? "Reported image (no description supplied)" : image.Alt)" data-sensitive-image="@(blurImages ? "" : null)" aria-hidden="@(blurImages ? "true" : null)" />
+                                    @if (blurImages)
+                                    {
+                                        <partial name="_MediaRevealButton" />
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p>@image.Error</p>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(image.Alt))
+                            {
+                                <figcaption>@image.Alt</figcaption>
+                            }
+                        </figure>
+                    }
+                </div>
+            }
+            @if (Model.MediaNotice is { } notice)
+            {
+                <p class="muted">@notice</p>
+            }
+            @if (Model.VideoToken is { } videoToken)
+            {
+                <div class="video-preview">
+                    <button type="button" class="video-placeholder" data-video-open data-video-width="@Model.VideoWidth" data-video-height="@Model.VideoHeight" data-video-url="@Url.Page("/Media", new { area = "Xenon", token = videoToken })" aria-haspopup="dialog" aria-label="Open video player" title="Open video player">
+                        <span class="fa-icon fa-circle-play" aria-hidden="true"></span>
+                    </button>
+                    <p class="muted video-player-note">Videos require opening the player.</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.VideoAlt))
+                    {
+                        <p>@Model.VideoAlt</p>
+                    }
+                    <dialog class="video-dialog" aria-label="Post video player">
+                        <button type="button" data-video-close>Close video</button>
+                        <video controls preload="none" playsinline aria-label="@(Model.VideoAlt ?? "Post video")"></video>
+                        <p role="status" data-video-error hidden>The video could not be loaded. Close the player and reload the details to try again.</p>
+                    </dialog>
+                    <noscript><p>Opening the video player requires JavaScript.</p></noscript>
+                </div>
+            }
+        </article>
+        @if (blurImages)
+        {
+            <div class="media-warning-caption">
+                <p role="note"><span class="fa-icon fa-circle-exclamation" aria-hidden="true"></span> Sensitive media: @string.Join(", ", Model.MediaWarnings!).</p>
+                <noscript><p>Showing blurred images requires JavaScript.</p></noscript>
+            </div>
+        }
+        </div>
+    }
+</section>

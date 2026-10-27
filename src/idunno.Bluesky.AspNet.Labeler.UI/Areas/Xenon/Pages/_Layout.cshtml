@@ -1,0 +1,136 @@
+@using System.Reflection
+@using idunno.Bluesky.AspNet.Authentication
+@{
+    LabelTeamRole? role = ViewData["CurrentRole"] is LabelTeamRole currentRole ? currentRole : null;
+    string? status = ViewData["Status"] as string;
+    string? error = ViewData["Error"] as string;
+    Assembly uiAssembly = typeof(Microsoft.Extensions.DependencyInjection.LabelerUIExtensions).Assembly;
+    string? version = uiAssembly.GetName().Version?.ToString(3);
+    string? build = uiAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+    ModerationOpenCountsView? counts = ViewData["OpenCounts"] as ModerationOpenCountsView;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · Xenon</title>
+    <link rel="icon" type="image/svg+xml" sizes="any" href="~/Xenon/images/xenon.svg" asp-append-version="true" />
+    <script src="~/Xenon/js/theme.js" asp-append-version="true"></script>
+    <link rel="stylesheet" href="~/Xenon/css/xenon.css" asp-append-version="true" />
+</head>
+<body data-date-times>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+        <a class="brand" asp-area="Xenon" asp-page="/Index" aria-label="Xenon home"><img src="~/Xenon/images/xenon.svg" asp-append-version="true" width="36" height="36" alt="" /></a>
+        @if (role is not null)
+        {
+            <nav aria-label="Primary navigation">
+                <a asp-area="Xenon" asp-page="/Cases/Index">Cases@(counts is null ? "" : $" ({counts.Cases})")</a>
+                <a asp-area="Xenon" asp-page="/Reports/Index">Reports@(counts is null ? "" : $" ({counts.Reports})")</a>
+                <a asp-area="Xenon" asp-page="/Appeals/Index">Appeals@(counts is null ? "" : $" ({counts.Appeals})")</a>
+                <a asp-area="Xenon" asp-page="/Labels/Index">Labels</a>
+                <a asp-area="Xenon" asp-page="/Audit/Index">Audit</a>
+                @if (role == LabelTeamRole.Administrator)
+                {
+                    <a asp-area="Xenon" asp-page="/Policy/Index">Policy</a>
+                    <a asp-area="Xenon" asp-page="/Team/Index">Team</a>
+                    <a asp-area="Xenon" asp-page="/Lifecycle/Index">Lifecycle</a>
+                }
+            </nav>
+        }
+        <div class="header-actions">
+            @if (role is not null)
+            {
+                <form method="get" asp-area="Xenon" asp-page="/Search" class="header-search" role="search" aria-label="Search moderation">
+                    <button type="submit" aria-label="Search reports and appeals" title="Search reports and appeals">
+                        <span class="fa-icon fa-magnifying-glass" aria-hidden="true"></span>
+                    </button>
+                    <label class="sr-only" for="moderation-search">Search reports and appeals</label>
+                    <input type="search" id="moderation-search" name="Q" value="@ViewData["SearchQuery"]" placeholder="Search" maxlength="256" />
+                </form>
+            }
+            <div class="date-time-controls" data-time-controls hidden>
+                <button type="button" class="time-zone-toggle" data-time-zone-toggle hidden
+                        aria-label="Switch displayed dates to your local time zone" aria-pressed="false"
+                        aria-controls="page-content" aria-describedby="time-zone-help"
+                        title="Switch displayed dates to your local time zone."><span class="fa-icon fa-globe" aria-hidden="true"></span> <span data-time-zone aria-live="polite">UTC</span></button>
+                <span class="sr-only" id="time-zone-help">Choose UTC or your browser's local time zone for displayed dates. Your choice is remembered in this browser.</span>
+                <p data-time-status role="status"></p>
+            </div>
+            @if (User.Identity?.IsAuthenticated is true)
+            {
+                string accountHandle = User.GetHandle()?.ToString() ?? "Account";
+                <details class="account-menu">
+                    <summary aria-label="Account menu for @accountHandle">
+                        <span class="account-handle" title="@accountHandle">@accountHandle</span>
+                        @if (User.GetAvatar() is { } avatar)
+                        {
+                            <img class="profile-avatar" src="@avatar" width="32" height="32" alt="Your profile picture" referrerpolicy="no-referrer" decoding="async" />
+                        }
+                        else
+                        {
+                            <span class="profile-avatar avatar-placeholder" role="img" aria-label="Profile picture unavailable">
+                                <span class="fa-icon fa-circle-user" aria-hidden="true"></span>
+                            </span>
+                        }
+                        <span class="fa-icon fa-chevron-down" aria-hidden="true"></span>
+                    </summary>
+                    <div class="account-menu-panel">
+                        @if (role is not null)
+                        {
+                            <p class="account-role">@role</p>
+                        }
+                        <a class="sign-out" href="/Bluesky/Logout?ReturnUrl=%2FXenon">Sign out</a>
+                    </div>
+                </details>
+            }
+            else
+            {
+                <a class="sign-out" href="/Bluesky/Login?ReturnUrl=%2FXenon">Sign in</a>
+            }
+        </div>
+    </header>
+    <main id="main" class="@(ViewData["WideLayout"] is true ? "page page-wide" : "page")">
+        @if (ViewData["EnvironmentNotice"] is string environmentNotice)
+        {
+            <div class="notice notice-status" role="note">@environmentNotice</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div class="notice notice-error" role="alert">@error</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(status))
+        {
+            <div class="notice notice-status" role="status">@status</div>
+        }
+        <div id="page-content">@RenderBody()</div>
+    </main>
+    <footer class="site-footer">
+        <div class="theme-picker">
+            <label for="theme-choice">Theme</label>
+            <select id="theme-choice" aria-describedby="theme-help" disabled>
+                <option value="system">System</option>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+            <span id="theme-help" class="sr-only">System follows your operating system appearance. Your choice is remembered in this browser.</span>
+            <p id="theme-status" role="status"></p>
+            <noscript><p>Theme selection requires JavaScript. Appearance follows your operating system.</p></noscript>
+        </div>
+        <p>&copy; 2026 Barry Dorrans</p>
+        <p>V@(version ?? "Unknown")</p>
+        <p><a href="https://github.com/blowdart/idunno.Bluesky">Get the source on GitHub</a></p>
+        <p>Icons by <a href="https://fontawesome.com/">Font Awesome Free</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+        <p><a asp-area="Xenon" asp-page="/Terms">Terms and conditions</a> &middot; <a asp-area="Xenon" asp-page="/Privacy">Privacy</a></p>
+        <p class="build-number">Build number <code>@(build ?? "Unknown")</code></p>
+    </footer>
+<script src="~/Xenon/js/identities.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/times.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/audit-filters.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/video.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/media-warning.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/appeal-outcome.js" asp-append-version="true" defer></script>
+<script src="~/Xenon/js/manual-labels.js" asp-append-version="true" defer></script>
+</body>
+</html>

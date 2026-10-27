@@ -2,11 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Encodings.Web;
 using System.Threading.Channels;
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Moderation;
 using idunno.Bluesky.Labeler.Signing;
@@ -60,7 +62,8 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         bool? remoteAdministrationEnabled = true,
         bool fallbackAuthorizationRequired = false,
         ILabelSigningKeyRing? signingKeyRing = null,
-        bool moderation = false)
+        bool moderation = false,
+        bool xenonUi = false)
     {
         TestServerBuilder fixture = new(database);
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
@@ -98,6 +101,16 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
         }
 
         configureAdministration?.Invoke(builder.Services);
+        if (xenonUi)
+        {
+            builder.Services.AddAuthentication(XenonTestAuthenticationHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, XenonTestAuthenticationHandler>(
+                    XenonTestAuthenticationHandler.SchemeName,
+                    _ => { });
+            builder.Services.AddAuthorization();
+            builder.Services.AddLabelerUI();
+        }
+
         fixture._app = builder.Build();
         if (configureAdministration is not null)
         {
@@ -137,6 +150,11 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             fixture._app.UseAuthorization();
             fixture._app.MapGet("/test/fallback", () => "fallback");
         }
+        else if (xenonUi)
+        {
+            fixture._app.UseAuthentication();
+            fixture._app.UseAuthorization();
+        }
 
         fixture._app.UseWebSockets();
         fixture._app.MapBlueskyLabeler();
@@ -154,6 +172,10 @@ internal sealed class TestServerBuilder(string? database = null) : IAsyncDisposa
             {
                 fixture._app.MapLabelerAdministration();
             }
+        }
+        if (xenonUi)
+        {
+            fixture._app.MapRazorPages();
         }
 
         await fixture.Store.InitializeAsync(s_issuer);
@@ -254,6 +276,29 @@ internal sealed class RejectingAuthenticationHandler(
 {
     protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
         Task.FromResult(AuthenticateResult.NoResult());
+}
+
+/// <summary>Authenticates only explicitly marked test requests as a named Bluesky DID.</summary>
+internal sealed class XenonTestAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    internal const string SchemeName = "xenon-test";
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        if (!Request.Headers.TryGetValue("X-Test-Did", out Microsoft.Extensions.Primitives.StringValues did))
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        ClaimsPrincipal principal = new(new ClaimsIdentity(
+            [new Claim(AtProtoClaims.Did, did.ToString())],
+            SchemeName));
+        AuthenticationTicket ticket = new(principal, SchemeName);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
 }
 
 /// <summary>Uses official fake time while signaling timer registration before a test advances deadlines.</summary>

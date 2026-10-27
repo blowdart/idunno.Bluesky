@@ -17,6 +17,8 @@ public sealed class LabelCaseDecision
     /// <param name="actions">The ordered collection of up to sixteen distinct label values.</param>
     /// <param name="appealIds">The optional set of up to sixteen pending appeals explicitly reviewed.</param>
     /// <param name="appealOutcome">The explicit outcome applied to those appeals.</param>
+    /// <param name="reportId">The optional current report explicitly reviewed by this decision.</param>
+    /// <param name="handleOtherReports"><see langword="true"/> to also handle other open reports for the exact subject and CID; otherwise, <see langword="false"/>.</param>
     /// <exception cref="ArgumentNullException"><paramref name="actions"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Text, actions or explicit appeal resolution arguments are invalid.</exception>
     /// <exception cref="ArgumentOutOfRangeException">An identifier, revision, text, action count or appeal count exceeds its bounds.</exception>
@@ -30,12 +32,18 @@ public sealed class LabelCaseDecision
         string reason,
         IReadOnlyCollection<LabelCaseLabelAction> actions,
         IReadOnlyCollection<long>? appealIds = null,
-        LabelAppealStatus? appealOutcome = null)
+        LabelAppealStatus? appealOutcome = null,
+        long? reportId = null,
+        bool handleOtherReports = false)
     {
         ArgumentNullException.ThrowIfNull(actions);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(caseId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(expectedRevision);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(actions.Count, 16);
+        if (reportId is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(reportId));
+        }
         LabelCaseLabelAction[] copy = actions.ToArray();
         if (copy.Any(action => action is null) || copy.Select(action => action.Value).Distinct(StringComparer.Ordinal).Count() != copy.Length)
         {
@@ -53,7 +61,7 @@ public sealed class LabelCaseDecision
 
         if (appealOutcome is LabelAppealStatus.Upheld or LabelAppealStatus.Superseded && copy.Length != 0 ||
             appealOutcome == LabelAppealStatus.Withdrawn && (copy.Length == 0 || copy.Any(action => action.Kind != Issuance.LabelOperationKind.Negate)) ||
-            appealOutcome == LabelAppealStatus.Replaced && !copy.Any(action => action.Kind == Issuance.LabelOperationKind.Issue))
+            appealOutcome == LabelAppealStatus.Replaced && copy.Length == 0)
         {
             throw new ArgumentException("Label actions do not match the explicit appeal outcome.", nameof(actions));
         }
@@ -66,6 +74,8 @@ public sealed class LabelCaseDecision
         Actions = Array.AsReadOnly(copy);
         AppealIds = Array.AsReadOnly(appeals);
         AppealOutcome = appealOutcome;
+        ReportId = reportId;
+        HandleOtherReports = handleOtherReports;
     }
 
     /// <summary>Gets the stable retry identifier.</summary>
@@ -92,12 +102,19 @@ public sealed class LabelCaseDecision
     /// <summary>Gets the explicit review outcome.</summary>
     /// <value>The resolved status, or <see langword="null"/> for an ordinary non-appeal decision.</value>
     public LabelAppealStatus? AppealOutcome { get; }
+    /// <summary>Gets the current report explicitly handled by this decision.</summary>
+    /// <value>The report identifier, or <see langword="null"/> for a case-level decision.</value>
+    public long? ReportId { get; }
+    /// <summary>Gets whether other open reports for the exact target are handled by this decision.</summary>
+    /// <value><see langword="true"/> to acknowledge matching reports without dismissing them as unfounded.</value>
+    public bool HandleOtherReports { get; }
 
     /// <summary>Compares complete semantic intent without depending on signed-label regeneration.</summary>
     internal bool SemanticallyEquals(LabelCaseDecision other) =>
         CaseId == other.CaseId && ExpectedRevision == other.ExpectedRevision &&
         PolicyVersion == other.PolicyVersion && Reason == other.Reason &&
         AppealOutcome == other.AppealOutcome && AppealIds.SequenceEqual(other.AppealIds) &&
+        ReportId == other.ReportId && HandleOtherReports == other.HandleOtherReports &&
         Actions.Count == other.Actions.Count && Actions.Zip(other.Actions).All(pair =>
             pair.First.Kind == pair.Second.Kind && pair.First.Value == pair.Second.Value &&
             pair.First.ExpiresAt == pair.Second.ExpiresAt && pair.First.ExpectedLabelSequence == pair.Second.ExpectedLabelSequence);

@@ -19,7 +19,11 @@ public interface ILabelReportStore
     /// <returns>The accepted report or an explicit authentication, scope, policy or storage failure.</returns>
     /// <remarks><para>Tokens are single-use, including identical retries. The standard protocol has no
     /// operation ID, so a retry with a fresh token is a distinct report, not content-deduplicated.
-    /// An uncertain commit is not evidence of rollback.</para></remarks>
+    /// An uncertain commit is not evidence of rollback.</para>
+    /// <para>An authenticated, in-scope subject submitted with a disallowed reason is retained as handled
+    /// with resolution reason <c>Not Applicable</c>. Automatic handling does not change labels or existing
+    /// case workflow and is audited under the issuer with <c>system:report-reason</c> provenance.
+    /// Subject restrictions and ownership checks on appeals still apply.</para></remarks>
     Task<LabelServiceResult<LabelModerationReport>> SubmitReportAsync(
         ModerationReportAuthenticationResult authentication,
         LabelReportSubmission submission,

@@ -32,6 +32,9 @@ internal sealed record AdministrationAudit(
     string Reason,
     bool Succeeded)
 {
+    /// <summary>Gets the original database timestamp, absent from legacy persisted events.</summary>
+    public DateTimeOffset? CreatedAt { get; init; }
+
     /// <summary>Projects persisted primitive values into the typed public audit result.</summary>
     internal LabelAdministrationReceipt ToReceipt() => new(
         Sequence,
@@ -40,7 +43,10 @@ internal sealed record AdministrationAudit(
         LocalIdentity,
         Action,
         Reason,
-        Succeeded);
+        Succeeded)
+    {
+        CreatedAt = CreatedAt
+    };
 }
 
 /// <summary>Supplies trimming-safe metadata for the provider's administration formats.</summary>

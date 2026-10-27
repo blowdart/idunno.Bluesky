@@ -8,7 +8,8 @@ image: no database password, account credential or private key is baked into the
 
 The project lives in `src\idunno.Bluesky.Labeler.Host`, targets .NET 10, and is published as the
 labeler container image, not a NuGet library. The independent SDK libraries remain available
-for custom hosts. This application hosts the administration backend but does not include a web UI.
+for custom hosts. This application hosts the administration backend and an
+[optional Xenon web UI](ui.md), disabled by default.
 Build the image from the repository root with
 `docker build --file src\idunno.Bluesky.Labeler.Host\Dockerfile --tag idunno-bluesky-labeler .`.
 

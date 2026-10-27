@@ -1,0 +1,68 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Reports.IndexModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Reports";
+    ViewData["WideLayout"] = true;
+    JsonElement? reports = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("moderation", out JsonElement moderation) &&
+        moderation.TryGetProperty("reports", out JsonElement values) ? values : null;
+}
+<h1>Reports</h1>
+<form method="get" class="panel">
+    <input type="hidden" name="Sort" value="@(Model.Table?.Query.Sort ?? LabelTableSort.Received)" />
+    <input type="hidden" name="Ascending" value="@((Model.Table?.Query.Ascending ?? false).ToString())" />
+    <label for="status">Status</label>
+    <select id="status" name="Status">
+        <option value="Unresolved" selected="@(Model.Status == "Unresolved")">Unresolved</option>
+        <option value="Handled" selected="@(Model.Status == "Handled")">Handled</option>
+        <option value="All" selected="@(Model.Status == "All")">All</option>
+    </select>
+    <button type="submit" aria-label="Filter reports" title="Filter reports"><span class="fa-icon fa-filter" aria-hidden="true"></span></button>
+</form>
+@if (ViewData["Error"] is string error)
+{
+    <p class="panel" role="alert">@error</p>
+}
+@if (reports is { ValueKind: JsonValueKind.Array } list && list.GetArrayLength() > 0)
+{
+    <section class="panel">
+        <table>
+            <caption>@Model.Table!.Total accepted reports</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Number, "Report", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Case, "Case", Numeric: true))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Subject"))
+                <th scope="col">Reason</th>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Status"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Received, "Received"))
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement report in list.EnumerateArray())
+                {
+                    JsonElement submitted = report.GetProperty("report");
+                    JsonElement subject = submitted.GetProperty("subject");
+                    string target = subject.TryGetProperty("uri", out JsonElement uri) ? uri.GetString()! : subject.GetProperty("did").GetString()!;
+                    <tr>
+                        <td class="numeric"><a asp-area="Xenon" asp-page="/Reports/Detail" asp-route-id="@submitted.GetProperty("id").GetInt64()" aria-label="View report @submitted.GetProperty("id").GetInt64()">#@submitted.GetProperty("id").GetInt64()</a></td>
+                        <td class="numeric"><a asp-area="Xenon" asp-page="/Cases/Detail" asp-route-id="@report.GetProperty("caseId").GetInt64()" asp-route-ReportId="@submitted.GetProperty("id").GetInt64()">#@report.GetProperty("caseId").GetInt64()</a></td>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(target, Subject: true))</td>
+                        <td>@submitted.GetProperty("reasonType").GetString()<br />@submitted.GetProperty("reason").GetString()</td>
+                        <td>@await Html.PartialAsync("_WorkflowStatus", report.TryGetProperty("decisionOperationId", out _) ? "Handled" : "Open")
+                            @if (report.TryGetProperty("resolutionReason", out JsonElement resolution))
+                            {
+                                <p>@resolution.GetString()</p>
+                            }
+                        </td>
+                        <td><time data-relative-time datetime="@submitted.GetProperty("createdAt").GetDateTimeOffset().ToString("O")">@submitted.GetProperty("createdAt").GetDateTimeOffset().ToString("u")</time></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.Table)
+    </section>
+}
+else if (ViewData["Error"] is null)
+{
+    <p class="panel">No reports match this filter.</p>
+}

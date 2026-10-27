@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <Description>Optional Xenon Razor Pages administration UI for standalone AT Protocol labelers.</Description>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageTags>atproto;bluesky;aspnetcore;labeler;moderation;razorpages</PackageTags>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <StaticWebAssetBasePath>Xenon</StaticWebAssetBasePath>
+    <IsTrimmable>false</IsTrimmable>
+    <IsAotCompatible>false</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\idunno.Bluesky.AspNet.Authentication\idunno.Bluesky.AspNet.Authentication.csproj" />
+    <ProjectReference Include="..\idunno.Bluesky.AspNet.Labeler\idunno.Bluesky.AspNet.Labeler.csproj" />
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+  </ItemGroup>
+</Project>

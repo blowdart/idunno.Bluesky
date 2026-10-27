@@ -1,0 +1,69 @@
+@page
+@model idunno.Bluesky.AspNet.Labeler.UI.Areas.Xenon.Pages.Team.IndexModel
+@using System.Text.Json
+@using idunno.Bluesky.Labeler.Administration
+@{
+    ViewData["Title"] = "Team";
+    ViewData["WideLayout"] = true;
+    JsonElement? members = Model.Data.ValueKind == JsonValueKind.Object &&
+        Model.Data.TryGetProperty("members", out JsonElement values) ? values : null;
+}
+<h1>Team and membership</h1>
+<p>Team authority is persisted by DID. Suspension, removal and role changes take effect on the next server-side authorization check.</p>
+@if (members is { ValueKind: JsonValueKind.Array } list)
+{
+    <section class="panel">
+        <table>
+            <caption>@Model.Table!.Total members, including retained tombstones</caption>
+            <thead><tr>
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Subject, "Member"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Role, "Role"))
+                @await Html.PartialAsync("_SortHeader", new TableSortHeader(Model.Table!, LabelTableSort.Status, "Active"))
+                <th scope="col">Removed</th>
+            </tr></thead>
+            <tbody>
+                @foreach (JsonElement member in list.EnumerateArray())
+                {
+                    <tr>
+                        <td>@await Html.PartialAsync("_Identity", new IdentityDisplayModel(member.GetProperty("did").GetString()))</td>
+                        <td>@((LabelTeamRole)member.GetProperty("role").GetInt32())</td>
+                        <td>@member.GetProperty("active").GetBoolean()</td>
+                        <td>@member.GetProperty("removed").GetBoolean()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", Model.Table)
+    </section>
+}
+<div class="grid">
+    <section class="panel">
+        <h2>Enroll member</h2>
+        <form method="post" asp-page-handler="Enroll">
+            <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+            <label class="field">Verified DID or handle<input name="target" required maxlength="256" /></label>
+            <label class="field">Role
+                <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
+            </label>
+            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm member enrollment</label>
+            <p class="form-actions"><button type="submit">Enroll</button></p>
+        </form>
+    </section>
+    <section class="panel">
+        <h2>Change member</h2>
+        <form method="post" asp-page-handler="Change">
+            <input type="hidden" name="operationId" value="@(ViewData["OperationId"] ?? Guid.NewGuid().ToString("N"))" />
+            <label class="field">Member DID<input name="target" required maxlength="256" /></label>
+            <label class="field">Action
+                <select name="action"><option value="SetRole">Change role</option><option value="Suspend">Suspend</option><option value="Reinstate">Reinstate</option><option value="Remove">Remove</option></select>
+            </label>
+            <label class="field">Role (used for Change role)
+                <select name="role"><option value="Viewer">Viewer</option><option value="Moderator">Moderator</option><option value="Administrator">Administrator</option></select>
+            </label>
+            <label class="field">Reason<input name="reason" required maxlength="4096" /></label>
+            <label><input type="checkbox" name="confirmed" value="true" required /> Confirm this membership change</label>
+            <p class="form-actions"><button type="submit">Apply membership change</button></p>
+        </form>
+    </section>
+</div>

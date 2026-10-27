@@ -1,0 +1,18 @@
+@model string
+@{
+    bool resolved = Model is "Resolved" or "Handled" or "Upheld" or "Replaced" or "Withdrawn" or "Superseded";
+    bool appealed = Model is "Appealed" or "Pending";
+    string kind = (appealed, resolved) switch { (true, _) => "appealed", (_, true) => "resolved", _ => "unresolved" };
+    string text = Model switch { "Open" => "Unresolved", "InReview" => "In review", "Pending" => "Appeal pending", "Withdrawn" => "Labels withdrawn", "Replaced" => "Labels changed", "Upheld" => "Labels kept", _ => Model };
+    string icon = (appealed, resolved, Model) switch
+    {
+        (true, _, _) => "scale-balanced",
+        (_, true, _) => "circle-check",
+        (_, _, "InReview") => "clipboard-check",
+        _ => "circle-exclamation"
+    };
+}
+<span class="workflow-status @kind">
+    <span class="fa-icon fa-@icon" aria-hidden="true"></span>
+    <span>@text</span>
+</span>

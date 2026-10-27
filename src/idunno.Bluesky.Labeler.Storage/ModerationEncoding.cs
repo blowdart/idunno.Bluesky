@@ -184,7 +184,9 @@ internal sealed record ModerationDecisionIntent(
     string Reason,
     ModerationDecisionAction[] Actions,
     long[] AppealIds,
-    LabelAppealStatus? AppealOutcome)
+    LabelAppealStatus? AppealOutcome,
+    long? ReportId = null,
+    bool HandleOtherReports = false)
 {
     /// <summary>Copies immutable request intent before entering the provider transaction.</summary>
     internal static ModerationDecisionIntent FromDecision(Did actor, LabelCaseDecision decision) => new(
@@ -196,7 +198,9 @@ internal sealed record ModerationDecisionIntent(
         [.. decision.Actions.Select(action => new ModerationDecisionAction(
             action.Kind, action.Value, action.ExpiresAt, action.ExpectedLabelSequence))],
         [.. decision.AppealIds],
-        decision.AppealOutcome);
+        decision.AppealOutcome,
+        decision.ReportId,
+        decision.HandleOtherReports);
 
     /// <summary>Revalidates retained semantic intent when recovering a historical receipt.</summary>
     internal LabelCaseDecision ToDecision(string operationId) => new(
@@ -211,7 +215,9 @@ internal sealed record ModerationDecisionIntent(
             expiresAt: action.ExpiresAt,
             expectedLabelSequence: action.ExpectedLabelSequence)).ToArray(),
         appealIds: AppealIds,
-        appealOutcome: AppealOutcome);
+        appealOutcome: AppealOutcome,
+        reportId: ReportId,
+        handleOtherReports: HandleOtherReports);
 }
 
 /// <summary>Retains the atomic case event and original signed receipt encodings without reconstructing signatures.</summary>
@@ -245,7 +251,8 @@ internal sealed record ModerationAppealData(
     LabelAppealStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string? DecisionOperationId)
+    string? DecisionOperationId,
+    string? ResolutionReason = null)
 {
     /// <summary>Restores immutable challenge signatures without consulting current label state.</summary>
     internal LabelAppeal ToAppeal() => new(
@@ -257,7 +264,8 @@ internal sealed record ModerationAppealData(
         status: Status,
         createdAt: CreatedAt,
         updatedAt: UpdatedAt,
-        decisionOperationId: DecisionOperationId);
+        decisionOperationId: DecisionOperationId,
+        resolutionReason: ResolutionReason);
 }
 
 /// <summary>Retains submitted report content and authentication provenance without retaining bearer tokens.</summary>
@@ -274,7 +282,10 @@ internal sealed record ModerationReportData(
     DateTimeOffset CreatedAt,
     string PolicyVersion,
     string Audience,
-    string TokenHash)
+    string TokenHash,
+    string? DecisionOperationId = null,
+    DateTimeOffset? HandledAt = null,
+    string? ResolutionReason = null)
 {
     /// <summary>Revalidates a retained report and defensively clones arbitrary tool metadata.</summary>
     internal LabelModerationReport ToReport()
@@ -298,7 +309,10 @@ internal sealed record ModerationReportData(
             reportedBy: new(Reporter),
             createdAt: CreatedAt,
             policyVersion: PolicyVersion,
-            audience: Audience);
+            audience: Audience,
+            decisionOperationId: DecisionOperationId,
+            handledAt: HandledAt,
+            resolutionReason: ResolutionReason);
     }
 }
 
